@@ -5,6 +5,7 @@ unchanged whole-soil interpretation over the actual observed mapunit keys.
 """
 from __future__ import annotations
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import datetime as dt
 from decimal import Decimal
 import email.utils
@@ -16,6 +17,7 @@ import math
 import os
 from pathlib import Path
 import re
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -264,39 +266,86 @@ def _geometry_ids(client, name, aoi):
         raise ValueError("Original SDA polygon ID coverage differs from its count")
     return rows
 
-def _geometry_pages(client, tile, *, page_size, on_page=None):
+def _geometry_pages(client, tile, *, page_size, on_page=None, page_workers=1):
+    """Receive original pages with ordered validation/ingest and bounded overlap."""
+    if type(page_workers) is not int or page_workers not in (1, 2):
+        raise ValueError("Choose one or two native soil page workers")
     name = tile["name"]
     aoi = _int(tile["aoiid"])
     ids = _geometry_ids(client, name, aoi)
     by_id = {_int(row[POLYGON_ID]): row for row in ids}
     ordered = sorted(by_id)
     pages = []
-    for start in range(0, len(ordered), page_size):
-        selected = ordered[start:start + page_size]
-        query_name = name + f"/polygons-{start:07d}"
-        fields = ", ".join(POLYGON_FIELDS)
-        sql = (f"SELECT {fields}, AoiSoilMapUnitPolygonGeo.STSrid AS GeometrySrid, "
-               "AoiSoilMapUnitPolygonGeo.STGeometryType() AS GeometryType, "
-               "CONVERT(varchar(max), AoiSoilMapUnitPolygonGeo.STAsBinary(), 2) AS GeometryWkb "
-               f"FROM {POLYGON_FUNCTION}({aoi}) WHERE {POLYGON_ID} IN ("
-               + ",".join(map(str, selected)) + f") ORDER BY {POLYGON_ID}")
-        rows = client.query(query_name, sql, maximum_bytes=64 * 1024 * 1024)
-        actual = [_int(row[POLYGON_ID]) for row in rows]
-        if actual != selected:
-            raise ValueError("An original native polygon page differs from its exact ID selection")
-        for row in rows:
-            baseline = by_id[_int(row[POLYGON_ID])]
-            if any(row[key] != baseline[key] for key in baseline):
-                raise ValueError("Native polygon attributes changed between ID and geometry capture")
-            if _int(row["AoiId"]) != aoi or _int(row["GeometrySrid"]) != 4326:
-                raise ValueError("Native soil polygon has another AOI or coordinate reference")
-            if not isinstance(row["GeometryWkb"], str) or not re.fullmatch(r"[0-9A-Fa-f]+", row["GeometryWkb"]):
-                raise ValueError("Native soil geometry lacks its original hexadecimal WKB")
-        if on_page is not None:
-            on_page(rows)
-        pages.append({"request": query_name, "ids": selected, "sql": sql})
-        # Release the complete WKB response before receiving the next page.
-        del rows, row
+    failed = threading.Event()
+
+    def receive(start):
+        # Each page has its own immutable request/response directory. Workers
+        # only receive and validate originals; the caller alone changes SQLite.
+        try:
+            selected = ordered[start:start + page_size]
+            query_name = name + f"/polygons-{start:07d}"
+            fields = ", ".join(POLYGON_FIELDS)
+            sql = (f"SELECT {fields}, AoiSoilMapUnitPolygonGeo.STSrid AS GeometrySrid, "
+                   "AoiSoilMapUnitPolygonGeo.STGeometryType() AS GeometryType, "
+                   "CONVERT(varchar(max), AoiSoilMapUnitPolygonGeo.STAsBinary(), 2) AS GeometryWkb "
+                   f"FROM {POLYGON_FUNCTION}({aoi}) WHERE {POLYGON_ID} IN ("
+                   + ",".join(map(str, selected)) + f") ORDER BY {POLYGON_ID}")
+            rows = client.query(query_name, sql, maximum_bytes=64 * 1024 * 1024)
+            actual = [_int(row[POLYGON_ID]) for row in rows]
+            if actual != selected:
+                raise ValueError("An original native polygon page differs from its exact ID selection")
+            for row in rows:
+                baseline = by_id[_int(row[POLYGON_ID])]
+                if any(row[key] != baseline[key] for key in baseline):
+                    raise ValueError("Native polygon attributes changed between ID and geometry capture")
+                if _int(row["AoiId"]) != aoi or _int(row["GeometrySrid"]) != 4326:
+                    raise ValueError("Native soil polygon has another AOI or coordinate reference")
+                if not isinstance(row["GeometryWkb"], str) or not re.fullmatch(r"[0-9A-Fa-f]+", row["GeometryWkb"]):
+                    raise ValueError("Native soil geometry lacks its original hexadecimal WKB")
+            return rows, {"request": query_name, "ids": selected, "sql": sql}
+        except BaseException:
+            failed.set()
+            raise
+
+    starts = iter(range(0, len(ordered), page_size))
+    if page_workers == 1:
+        for start in starts:
+            rows, page = receive(start)
+            if on_page is not None:
+                on_page(rows)
+            pages.append(page)
+            del rows
+        return ids, pages
+
+    # At most two page results (running or received) exist in this window.
+    # Consume in the original ID order before admitting another request.
+    executor = ThreadPoolExecutor(max_workers=page_workers, thread_name_prefix="soil-page")
+    pending = []
+    try:
+        for unused in range(page_workers):
+            if failed.is_set():
+                break
+            start = next(starts, None)
+            if start is not None:
+                pending.append(executor.submit(receive, start))
+        while pending:
+            rows, page = pending.pop(0).result()
+            if on_page is not None:
+                on_page(rows)
+            pages.append(page)
+            del rows
+            if not failed.is_set():
+                start = next(starts, None)
+                if start is not None:
+                    pending.append(executor.submit(receive, start))
+    finally:
+        # No future page is scheduled after an observed failure. Finish any
+        # already admitted response so Sda retains its body/receipt for resume;
+        # the enclosing tile transaction still rolls back on any exception.
+        failed.set()
+        for future in pending:
+            future.cancel()
+        executor.shutdown(wait=True, cancel_futures=True)
     return ids, pages
 
 def _choice_coefficients(ratings, legend, aoi, result_id):
