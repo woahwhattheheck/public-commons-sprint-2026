@@ -28,7 +28,8 @@ The default Workspace is
 To receive into an existing scientific Workspace, also pass
 `--workspace "$ACTUAL_WORKSPACE"`.
 That Workspace is opened as an existing project; the argument does not silently
-create a new project.
+create a new project. Keep the receiving output directory outside that Workspace
+so its complete backup does not collect earlier receipt archives.
 
 The original source may be the complete retained ZIP, its
 `model-domain.esri.json.gz` member, or its decoded JSON.
