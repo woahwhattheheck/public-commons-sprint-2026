@@ -64,12 +64,13 @@ the original successful settlement hook supplies the catalog outcome and
 `EXTENSION-RESPONSES` header. The existing gateway forwards those committed
 discovery resources through its network-specific route.
 
-Earlier saved profiles that omitted the then-optional catalog field reopen with
-their original JSON bytes, SHA-256, filename and original CLI arguments. The store
-recognizes that specific earlier encoding while still checking every normalized
-field and the full canonical bytes. Reviewing an equivalent disabled policy under
-that existing name reopens the original file. A changed policy or enabled catalog
-requires its own immutable profile name. The current normalized review hash is
+Earlier profiles saved before catalog publication or payment timing was added
+reopen with their original JSON bytes, SHA-256, filename and CLI arguments. An
+omitted catalog remains disabled, and omitted `payments.paymentFlows` retains
+authorization timing. The store preserves either or both earlier omissions while
+checking every other normalized field and the full canonical bytes. Reviewing the
+same effective policy under its existing name reopens the original file. A changed
+policy uses a new immutable profile name. The current normalized review hash is
 available as `reviewSha256`; the selected profile's `sha256` always identifies
 the original downloaded file.
 
