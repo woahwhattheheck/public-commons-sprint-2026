@@ -54,7 +54,8 @@ class ScientificReportEditions:
             for entry in collection.get("entries", []):
                 metadata = entry.get("metadata") or {}
                 if (entry.get("kind") == "document"
-                        and metadata.get("report_schema") == observed_context.SCHEMA):
+                        and (metadata.get("report_schema") == observed_context.SCHEMA
+                             or entry.get("role") == observed_context.ROLE)):
                     rows.append({"source_collection_id": collection["id"], "source_id": entry["id"],
                                  "title": entry["title"], "vintage": entry["vintage"],
                                  "uri": entry["uri"], "body_sha256": entry["body"]["sha256"],
