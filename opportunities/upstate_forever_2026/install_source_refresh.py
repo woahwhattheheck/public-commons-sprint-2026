@@ -28,6 +28,8 @@ FILES = (
     "model/source_refresh_report_transfer.py",
     "model/source_refresh_comparison.py",
     "source_tools/receive_source_refresh_report.py",
+    "source_tools/prepare_headwaters_source_clarification.py",
+    "source_tools/HEADWATERS_SOURCE_CLARIFICATION.md",
     "docs/source-refresh-scientific-report.md",
     "source/source-refresh-report-integration.json",
     "model/source_refresh.py",
@@ -150,7 +152,8 @@ KNOWN_RELEASES = {
         "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
         "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
         "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579",
-        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c"
+        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c",
+        "e3493cfcec20a59d8213bfa7257f793ad7af5e1802841b502622ad6af99d951e"
     ],
     "operator/extensions/source-updates.json": [
         "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5",
@@ -178,7 +181,8 @@ KNOWN_RELEASES = {
         "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
         "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
         "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579",
-        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c"
+        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c",
+        "e3493cfcec20a59d8213bfa7257f793ad7af5e1802841b502622ad6af99d951e"
     ],
     "model/source_refresh_compat.py": [
         "cf775aa3c318ab2f9ae7b1432faa932f57303f754f44d0cc6cc50ce939932de4"
