@@ -158,7 +158,7 @@ export function attachMapAtlas(host) {
   return rowBy(data(),'sources',choice?.source_collection_id)?.entries?.find(e=>e.id===choice?.source_id);
  }
  function sourceCard(group,key,label,required) {
-  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(choice.source_id);
+  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(draft[group]?.[key]);
   const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
   const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
