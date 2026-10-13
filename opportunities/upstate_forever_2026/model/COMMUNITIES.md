@@ -231,3 +231,38 @@ Community populations remain the RFP's whole block-group counts.
 Original completed result: [ECO-WATERSHED13](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9JNBA7EU).
 Its regional JSON is 470,519 bytes, SHA-256
 `54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34`.
+
+
+## Review the complete saved-plan revision
+
+Build the report for a saved plan revision to compare it with its actual
+immediate parent. The report's **Saved plan changes** register shows every changed
+intervention field with its previous and current values, including order, owner,
+priority, recorded status, watershed assignment, costs, next step and notes.
+Added and removed interventions retain their complete original saved rows.
+The current plan and its parent stay separately available.
+
+The same report shows title, purpose, notes and scientific selection changes;
+both editions' utility and watershed filters; the original selected block-group
+GEOIDs and whole-group counts; and the saved source-context identities.
+A change in selected population describes the chosen source geography. The
+register does not interpret it as demographic growth or decline.
+
+Entered planning estimates are compared with exact decimal arithmetic. Each
+edition's known and unspecified estimate counts stay visible. The displayed
+difference is the change in entered estimates; it does not treat missing costs
+as measured zero or estimate savings or environmental benefit.
+
+The normal report ZIP includes these additional editable companions:
+
+- `plan-revision-summary.json`: the complete revision register, selection,
+  entered-cost context, source identifiers and both plan identities.
+- `plan-revision-changes.csv`: exact before/after intervention field values,
+  encoded as JSON in separate columns so null, empty text and numeric text stay
+  distinct.
+- `previous-plan.json`: the original saved parent plan used for the comparison.
+
+The original Community source must match between parent and child, and the
+revision must point to its immediate predecessor. The existing **Add to scientific
+report** workflow carries the same register and all three original companions into
+the ordered scientific report.
