@@ -6,7 +6,7 @@ export function renderScientificFigureSvg(figure,d3){
   if(axis.unit==="days since 1970-01-01 UTC"){
    const date=new Date(value*86400000);
    if(!Number.isFinite(date.getTime()))throw Error("Figure date must be finite");
-   return date.toISOString().slice(0,10)+" UTC";
+   return date.toISOString().slice(0,10);
   }
   return String(value)+(axis.unit&&axis.unit!=="station index"?" "+axis.unit:"");
  };
