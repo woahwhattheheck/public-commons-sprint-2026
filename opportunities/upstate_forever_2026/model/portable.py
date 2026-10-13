@@ -19,7 +19,7 @@ APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_deliv
                      "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md",
                      "environment.yml", "PROGRAMMES.md", "PAIRED_ENSEMBLES.md",
                      "install_programmes.py", "requirements-paired-ensemble.txt")
-APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source", "ecsa_runs")
+APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source", "source_data", "ecsa_runs")
 MAX_MANIFEST = 64 * 1024 * 1024
 
 def member_name(value):
