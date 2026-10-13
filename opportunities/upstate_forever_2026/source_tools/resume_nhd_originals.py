@@ -194,23 +194,192 @@ def original_inventory(root, retained, entry, exact=False):
     }, requests, observed_scope
 
 
+def published_huc_members(path, document, raw):
+    """Read the completed ECO-GEO metadata/CSV family without rewriting it."""
+    from source_tools.original_huc12_bounds import parsed
+    names = {
+        "domain217-native3857-bounds.csv", "domain217-native3857-bounds.json",
+        "sources.json", "derive_domain217_bounds.py", "README.md",
+    }
+    if document.get("schema") == "commons.source-map/1":
+        if (document.get("operation_id") != "ECO-GEO-0D0F-DOMAIN217-NATIVE-BOUNDS"
+                or document.get("edition") != "original217-native3857-20261013"):
+            raise ValueError("Choose the completed original217 ECO-GEO bounds edition")
+        members = {}
+        for entry in document.get("files", []):
+            name, content = entry.get("path"), entry.get("content")
+            if name not in names or name in members or not isinstance(content, str):
+                raise ValueError("Published HUC bank has an unexpected/duplicate member")
+            body = content.encode("utf-8")
+            if entry.get("bytes") != len(body) or entry.get("sha256") != sha(body):
+                raise ValueError("Published HUC member differs from its byte/hash identity")
+            members[name] = body
+        if set(members) != names:
+            raise ValueError("Select the complete five-member original217 bounds bank")
+        metadata = parsed(members["domain217-native3857-bounds.json"])
+        if document.get("source_decoded_sha256") != metadata.get("source", {}).get("decoded_sha256"):
+            raise ValueError("Published bank source differs from its metadata")
+    elif document.get("schema") == "upstate.original-domain-bounds/v1":
+        metadata = document
+        members = {
+            name: member(Path(path).resolve().parent, name).read_bytes()
+            for name in names
+        }
+        if members["domain217-native3857-bounds.json"] != raw:
+            raise ValueError("Select the original metadata file beside its complete companions")
+    else:
+        raise ValueError("Unsupported completed original217 bounds source")
+    output = metadata.get("output", {})
+    csv_name = "domain217-native3857-bounds.csv"
+    if (output.get("path") != csv_name
+            or output.get("bytes") != len(members[csv_name])
+            or output.get("sha256") != sha(members[csv_name])):
+        raise ValueError("Published bounds CSV differs from its original metadata")
+    manifest = parsed(members["sources.json"])
+    entries = manifest.get("entries", [])
+    if manifest.get("schema") != "upstate.sources/v1" or len(entries) != 1:
+        raise ValueError("Select the original single-source bounds manifest")
+    entry = entries[0]
+    if (entry.get("id") != "upstate-domain217-native3857-bounds-20261013"
+            or entry.get("role") != "ORIGINAL_DOMAIN_QUERY_BOUNDS"
+            or entry.get("path") != csv_name or entry.get("metadata") != metadata
+            or entry.get("sha256") != output["sha256"]):
+        raise ValueError("Published bounds manifest differs from its original CSV/metadata")
+    companions = entry.get("companions", [])
+    companion_names = set()
+    for companion in companions:
+        name = companion.get("path")
+        if name in companion_names or name not in names - {csv_name, "sources.json"}:
+            raise ValueError("Published bounds companion identity is ambiguous")
+        companion_names.add(name)
+        if companion.get("sha256") != sha(members[name]):
+            raise ValueError("Published bounds companion differs from its original SHA256")
+    if companion_names != names - {csv_name, "sources.json"}:
+        raise ValueError("Published bounds manifest omits an original companion")
+    return metadata, members
+
+
+def verify_published_huc_rows(metadata, csv_raw, actual):
+    """Match the published float-rendered table to the exact original polygons."""
+    import csv
+    import io
+    from source_tools.original_huc12_bounds import parsed, exact_json
+    source = metadata.get("source", {})
+    original = actual["source"]
+    if (metadata.get("schema") != "upstate.original-domain-bounds/v1"
+            or metadata.get("feature_count") != actual["feature_count"]
+            or metadata.get("original_spatial_reference") != actual["spatial_reference"]
+            or source.get("sha256") != original["member"]["sha256"]
+            or source.get("bytes") != original["member"]["bytes"]
+            or source.get("decoded_sha256") != original["decoded"]["sha256"]
+            or source.get("decoded_bytes") != original["decoded"]["bytes"]
+            or source.get("source_crs") != "EPSG:3857"):
+        raise ValueError("Published bounds refer to different original geometry")
+    keys = [
+        "huc12", "objectid", "name", "globalid", "tnmid",
+        "xmin", "ymin", "xmax", "ymax", "native_wkid", "latest_wkid",
+        "source_feature_index", "ring_count", "coordinate_count",
+        "original_rings_pointer", "source_id", "source_uri", "source_vintage",
+        "source_compressed_sha256", "source_decoded_sha256",
+    ]
+    reader = csv.DictReader(io.StringIO(csv_raw.decode("utf-8"), newline=""))
+    if reader.fieldnames != keys:
+        raise ValueError("Published bounds CSV has a different original column contract")
+    rows = list(reader)
+    expected = {row["huc12"]: row for row in actual["rows"]}
+    seen_hucs, seen_oids, seen_indexes = set(), set(), set()
+    if len(rows) != actual["feature_count"]:
+        raise ValueError("Published bounds CSV does not contain all original217 features")
+    for row in rows:
+        if set(row) != set(keys) or any(value is None for value in row.values()):
+            raise ValueError("Published bounds CSV has a malformed row")
+        huc = row["huc12"]
+        original_row = expected.get(huc)
+        if original_row is None or huc in seen_hucs:
+            raise ValueError("Published bounds HUC is missing, duplicated or outside the original domain")
+        oid = str(original_row["object_id"])
+        if row["objectid"] != oid or oid in seen_oids:
+            raise ValueError("Published bounds HUC/OID relationship differs from the original")
+        index = row["source_feature_index"]
+        if (not index.isdigit() or str(int(index)) != index or int(index) in seen_indexes
+                or not 0 <= int(index) < actual["feature_count"]
+                or row["original_rings_pointer"] != "/features/" + index + "/geometry/rings"):
+            raise ValueError("Published original-ring reference is incomplete or duplicated")
+        for key in ("xmin", "ymin", "xmax", "ymax"):
+            value = original_row[key]
+            # ECO-GEO's retained producer json.loads() used Python floats, then
+            # csv.DictWriter rendered them with str(). Reproduce that exact
+            # historical representation ONLY to verify its published table.
+            rendered = str(value if isinstance(value, int) else float(value))
+            if row[key] != rendered:
+                raise ValueError("Published bounds coordinate differs from the original producer: " + huc + "/" + key)
+        checks = {
+            "native_wkid": str(actual["spatial_reference"]["wkid"]),
+            "latest_wkid": str(actual["spatial_reference"]["latestWkid"]),
+            "ring_count": str(original_row["ring_count"]),
+            "coordinate_count": str(original_row["vertex_count"]),
+            "source_id": source.get("id"), "source_uri": source.get("uri"),
+            "source_vintage": source.get("vintage"),
+            "source_compressed_sha256": original["member"]["sha256"],
+            "source_decoded_sha256": original["decoded"]["sha256"],
+        }
+        if any(row[key] != value for key, value in checks.items()):
+            raise ValueError("Published bounds feature/source metadata differs from the original")
+        seen_hucs.add(huc)
+        seen_oids.add(oid)
+        seen_indexes.add(int(index))
+    # Use the original producer's documented float round trip for its summary;
+    # every query below still uses unchanged Decimal extrema from actual.
+    historical_extent = parsed(json.dumps(json.loads(exact_json(actual["domain_bounds"]))))
+    if metadata.get("native_extent") != historical_extent:
+        raise ValueError("Published bounds summary differs from the original producer conversion")
+    return {
+        "feature_count": len(rows), "matched_huc12_and_object_ids": True,
+        "matched_ring_and_vertex_counts": True,
+        "coordinate_comparison": "Original ECO-GEO json.loads float then CSV str serialization, checked exactly against the original polygon extrema.",
+        "query_coordinates": "Unchanged original Decimal extrema from the pinned ZIP; published CSV coordinates are retained as received.",
+    }
+
+
 def load_huc_envelopes(path, expected_sha, archive_path, root):
-    """Verify the complete derived inventory against the unchanged original ZIP."""
+    """Verify either completed bounds format against the unchanged original ZIP."""
     from source_tools.original_huc12_bounds import extract, parsed, exact_json
     raw = Path(path).read_bytes()
     if sha(raw) != expected_sha:
         raise ValueError("Selected HUC envelope table differs from its published SHA256")
-    report = parsed(raw)
-    if report.get("schema") != "upstate.original-huc12-native-bounds/v1":
-        raise ValueError("Select the original 217-HUC native bounds inventory")
+    selected = parsed(raw)
     actual = extract(Path(archive_path).resolve(strict=True))
-    # The same original ZIP may have been materialized with a different basename.
-    if isinstance(report.get("source"), dict):
-        actual["source"]["archive_name"] = report["source"].get("archive_name")
-    if report != actual:
-        raise ValueError("HUC envelope inventory differs from the original native polygons")
-    retained_path = root / "huc-envelopes" / expected_sha / "original-217-huc12-native-bounds.json"
-    retain(retained_path, raw)
+    selected_schema = selected.get("schema")
+    received = []
+    verification = None
+    directory = root / "huc-envelopes" / expected_sha
+    if selected_schema == "upstate.original-huc12-native-bounds/v1":
+        report = selected
+        # The same original ZIP may have been materialized with a different basename.
+        if isinstance(report.get("source"), dict):
+            actual["source"]["archive_name"] = report["source"].get("archive_name")
+        if report != actual:
+            raise ValueError("HUC envelope inventory differs from the original native polygons")
+        query_raw = raw
+    elif selected_schema in {"commons.source-map/1", "upstate.original-domain-bounds/v1"}:
+        metadata, members = published_huc_members(path, selected, raw)
+        verification = verify_published_huc_rows(
+            metadata, members["domain217-native3857-bounds.csv"], actual)
+        # Keep query inventory identity independent of a materialized ZIP basename.
+        actual["source"]["archive_name"] = "dbc61-upstate-model-domain-20261012.zip"
+        report = actual
+        query_raw = (exact_json(report) + "\n").encode("utf-8")
+        selected_path = directory / "received" / "selected-source.json"
+        retain(selected_path, raw)
+        received.append({"path": relative(root, selected_path), "bytes": len(raw), "sha256": expected_sha})
+        for name, body in sorted(members.items()):
+            target = directory / "received" / name
+            retain(target, body)
+            received.append({"path": relative(root, target), "bytes": len(body), "sha256": sha(body)})
+    else:
+        raise ValueError("Select the original217 bounds inventory or completed ECO-GEO five-member bank")
+    retained_path = directory / "original-217-huc12-native-bounds.json"
+    retain(retained_path, query_raw)
     grid = []
     for row in report["rows"]:
         envelope = {key: row[key] for key in ("xmin", "ymin", "xmax", "ymax")}
@@ -218,13 +387,17 @@ def load_huc_envelopes(path, expected_sha, archive_path, root):
         grid.append({"id": "huc-" + row["huc12"], "huc12": row["huc12"],
                      "native_object_id": row["object_id"],
                      "envelope": exact_json(envelope)})
-    descriptor = {"path": relative(root, retained_path), "bytes": len(raw),
-                  "sha256": expected_sha, "feature_count": len(grid),
+    descriptor = {"path": relative(root, retained_path), "bytes": len(query_raw),
+                  "sha256": sha(query_raw), "feature_count": len(grid),
                   "source": report["source"], "spatial_reference": report["spatial_reference"]}
+    if received:
+        descriptor.update({"selected_input_sha256": expected_sha,
+                           "selected_input_schema": selected_schema,
+                           "received_members": received,
+                           "published_comparison": verification})
     # JSON-safe metadata retains original numerical SR fields inside a string.
     descriptor["spatial_reference_json"] = exact_json(descriptor.pop("spatial_reference"))
     return grid, descriptor
-
 
 def request_scope(record, kind, exact=False):
     request = record.get("request", {})
@@ -448,6 +621,7 @@ def resume(args):
             "selection": "Complete union of retained broad candidates and original HUC12 envelope candidates",
         })
         descriptor["companions"].append(huc_inventory["path"])
+        descriptor["companions"].extend(item["path"] for item in huc_inventory.get("received_members", []))
     # Retain completed old tile/HUC inventories before replacing the live capture.
     # This preserves IDs whose geometry was already received from broader queries.
     retained_partial_inventories(root, previous_capture, descriptor, selected, covered,
@@ -631,7 +805,7 @@ def main(argv=None):
     parser.add_argument("--bank", required=True, help="Decoded exact source-bank JSON from F0C8UD4L25S revision2 or later")
     parser.add_argument("--bank-sha256", required=True)
     parser.add_argument("--domain-archive", required=True)
-    parser.add_argument("--huc-bounds", help="Exact original-217-huc12-native-bounds.json; uses retained per-HUC envelopes")
+    parser.add_argument("--huc-bounds", help="Exact original bounds JSON, or completed ECO-GEO metadata/five-file JSON bank; preserves original per-HUC envelopes")
     parser.add_argument("--huc-bounds-sha256", help="SHA256 of the selected original HUC envelope inventory")
     parser.add_argument("--download-directory", default=".", help="Directory containing large original geometry filenames")
     parser.add_argument("--downloads", help="Optional JSON mapping original filename to path or fresh HTTPS download URL")
