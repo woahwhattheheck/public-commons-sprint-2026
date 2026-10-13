@@ -65,6 +65,9 @@ class ProgrammeViews:
             if digest(value["selection"]) != key:
                 raise ValueError("Original run selection changed")
             validate_completed_run(value)
+            # Apply the maintained full reader\'s scope/stage-shape checks once
+            # before retaining its smaller count projection.
+            _run_snapshot(value)
             return {**{name: value.get(name) for name in ("selection", "state", "error")},
                     "source_sha256": digest(value)}
         return self.native.read(workspace.root / "runs" / key / "run.json", project)
