@@ -273,3 +273,94 @@ seat on host f5dd7c7e9cd6 is a separate receiver.
 - Original experiment source: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8MU63NB0
 - Selected-model source and reuse: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JJQ2JBX
 - Shared extension contract: operator/EXTENSIONS.md in the same public application.
+
+## Author receiving areas on the original map
+
+Open a saved **Original watershed network**, then choose **Edit receiving-area
+study**. The editor starts from that complete saved profile and its original
+source bytes. It retains the full draft in the existing workspace-specific
+browser storage.
+
+Choose **New receiving area**, or edit/duplicate one of the current study areas.
+Give the area a title, choose its drinking-water or high-quality-water study
+purpose, and retain the source reference and reason for choosing its anchors.
+An original source URI is used when available; a source received directly from
+the standalone CLI also has its original content-identity URN.
+
+Select a polygon in the original map and choose **Add selected watershed**.
+The same original HUC12 values are available through the editor's searchable
+input; several can be pasted separated by spaces, commas or semicolons. Every
+anchor must be a twelve-character HUC12 present in that exact retained source.
+Draft anchors have dashed outlines. The existing shaded map continues to
+describe the opened saved study until the edited study is saved.
+
+**Apply area to study** updates the current profile selection. Titles, source
+references, area purpose and full original anchor IDs remain together.
+Editing an existing area's anchors or reference retains its original source
+reference in source_receptor_reference, while the new definition carries the
+chosen source URI, stated basis and original source-body identity. An
+unchanged source reference retains its complete original metadata, including
+any document identity and page references.
+
+An edited area's original ID remains stable. Newly created or duplicated
+areas receive unique IDs derived from their titles. Removing an area affects
+the current draft; the saved source study remains available. **Reset area
+edits** restores the applied area's fields, and **Reset draft to source study**
+restores the complete starting profile. A hidden editor can be reopened from
+the retained draft. **Open study source map** also restores its original
+geography after a browser reload.
+
+**Preview edited watershed connections** uses the maintained original graph
+reader to resolve the selected upstream sets. **Save complete receiving-area
+study** enters the existing receptor.network.build queue and produces a normal
+immutable source-water network product: original bytes, full receptor JSON,
+original links, memberships and area CSVs, geographic SVG, HTML explorer and
+result record. Pending field and anchor edits are applied before either action.
+The completed study opens through the normal saved-result path and is included
+in the existing complete-package and portable-workspace transfers.
+
+The complete current receptor specification is also available through
+**Download current receptor JSON**. The saved study's original profile download
+is retained with its full byte identity. Choose **Use these receiving areas
+again**, then select direct native results or an experiment; the existing
+original-body match restricts the native grid to the same watershed source.
+
+## Continue from a received source-water study
+
+The watershed source picker now includes **Retained source-water studies** as
+well as imported original vector sources. A network received from the standalone
+CLI can supply its exact retained original JSON or GZIP directly. This makes the
+source-only receive → edit → rebuild → package → reopen flow complete even when
+that particular body has not been added as a separate Workspace source entry.
+
+The existing network-plan and network-build selection accepts either its
+original source_collection_id/network_source_id pair, or:
+
+~~~json
+{
+  "network_result_id": "<saved source-water network ID>",
+  "receptor_spec": {"schema": "upstate.receptor-spec/v1", "title": "...", "receptors": []},
+  "expected_decoded_sha256": "<original decoded body identity>"
+}
+~~~
+
+The example shows the selection envelope; the receptor list must contain the
+actual complete receiving-area definitions. The source-result branch loads the
+retained network through the existing identity/file reader and selects its
+verified source_body descriptor. It copies that source's collection/reference
+bindings into the new profile when those bindings exist. Native model execution
+continues to resolve the matching original grid source through the maintained
+nativeSpecification path.
+
+A retained network has already selected its original archive member, so this
+selection does not include member. The source product's original body is
+read directly. The scientific selection remains stable when the same source
+and profile are rebuilt; the backend does not append a new chain of product
+IDs to the receptor specification.
+
+The catalog emits the saved source's body/decoded hashes, filename, byte length
+and original source reference from the existing cached summaries. Opening the
+result verifies the original descriptors before the UI uses it for authoring.
+The workflow adds no new top-level Workspace collection or parallel job service.
+
+Changing from the area editor to a native inventory or experiment first applies the pending area edits. If an anchor or source reference is invalid, the desk keeps the original watershed mode open and displays the specific error. The matching native selection receives the corrected, fully applied receptor profile.
