@@ -117,6 +117,17 @@ def _captured(closure, entry):
             or checkpoint.get("workspace_id") != project):
         raise ValueError("The Parameter source checkpoint belongs to another study")
     cases = _cases(checkpoint)
+    spec = {name: value for name, value in checkpoint["selection"].items() if name not in ("id", "schema")}
+    spec["schema"] = "upstate.experiment-specs/v1"
+    if digest(spec) != key:
+        raise ValueError("The captured Parameter design changed its immutable specification")
+    adopted = checkpoint["selection"].get("retained_native_cases")
+    if adopted is not None:
+        roster = [{name: deepcopy(case[name]) for name in (
+            "id", "label", "overrides", "axis_values", "run_id", "profile_id", "run_selection")}
+                  for case in checkpoint["cases"]]
+        if roster != adopted:
+            raise ValueError("The Parameter source changed its adopted original native cases")
     chosen = selection.get("case_ids")
     if (not isinstance(chosen, list) or not chosen or len(set(chosen)) != len(chosen)
             or any(case not in cases for case in chosen)
