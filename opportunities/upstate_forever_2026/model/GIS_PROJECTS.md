@@ -386,12 +386,16 @@ atlas producer. Receiving a complete package and switching its styles use the
 retained lookup. The QGIS shader encodes adjacent representable class boundaries
 so its interpolated renderer follows the atlas's discrete color lookup instead
 of inventing a new continuous stretch. Display reprojection and overview sampling
-still use their declared native QGIS or nearest-cell display methods.
+still use their declared native QGIS or nearest-cell display methods. Floating-point
+normalization immediately beside a color-bin boundary can choose an adjacent
+lookup color; the saved legend limits, units and resolved palette are retained.
 
 Desktop edits remain authoritative in the selected QGS/QGZ. When sealing an
 edition, a recognized original atlas style also selects its matching offline
-overview. If desktop styling has been changed, the package retains that native
+overview. If the desktop renderer cannot be recognized, the package retains that native
 renderer and explicitly labels the offline view as an original atlas view.
+Recognition is conservative: native QGIS may add neutral pipe stages when saving,
+which remain retained even when they are outside this original-style matcher.
 It does not overwrite the recipient's native styling or describe an original
 overview as a reproduction of an unrecognized desktop renderer.
 

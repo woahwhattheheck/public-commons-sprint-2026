@@ -45,7 +45,12 @@ def inspect_atlas_styles(layer, expected, *, require_original):
                 continue
             ramp = renderer.shader().rasterShaderFunction()
             entries = ramp.colorRampItemList()
-            matches = (renderer.classificationMin() == style["minimum"]
+            transparency = renderer.rasterTransparency()
+            matches = (ramp.colorRampTypeAsQString() == "INTERPOLATED"
+                       and renderer.band() == expected["data"]["band"]
+                       and renderer.opacity() == 1 and renderer.alphaBand() == -1
+                       and (transparency is None or transparency.isEmpty())
+                       and renderer.classificationMin() == style["minimum"]
                        and renderer.classificationMax() == style["maximum"]
                        and not ramp.clip() and len(entries) == len(style["entries"])
                        and all(a.value == b["value"] and a.color.name().lower() == b["color"]
