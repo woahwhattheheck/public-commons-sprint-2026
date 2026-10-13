@@ -1,0 +1,50 @@
+{
+  "schema": "upstate.original-module-closure/v1",
+  "operation_id": "UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012",
+  "source_carriers": [
+    "F0C8TU1NM60",
+    "F0C8NKC04EA"
+  ],
+  "closed_imports": [
+    {
+      "caller": "model/receptor_experiments.py",
+      "module": "model/receptor_cli.py"
+    },
+    {
+      "caller": "source_tools/designation_crosswalk.py",
+      "module": "model/water_designations.py"
+    }
+  ],
+  "shared_common": {
+    "source_ref": "68ba68d65bf688bb7b86abc936ea5ec9109edac9",
+    "sha256": "aabda2bb16dbae553f1a63ec86e9e90985ac8c20e6dc62faa6be8238e5be27d6",
+    "comparison": "All existing scientific constants and functions remain identical except retain_file. The source adds four private helpers and stat, and uses the authored independently copied, locked and verified source-intake implementation."
+  },
+  "adopted_files": [
+    "model/water_designations.py",
+    "operator/water_designations.py",
+    "operator/extensions/water-designations.json",
+    "operator/web/water_designations.mjs",
+    "operator/web/water_designations.css",
+    "operator/WATER_DESIGNATIONS.md",
+    "source_tools/receive_water_designations.py",
+    "source/water-designations-case/chattooga_chauga_classified_water.geojson",
+    "source/water-designations-case/water_classification_layer_metadata.json",
+    "source/water-designations-case/water_classification_distinct_codes.json",
+    "source/water-designations-case/water_designation_integration.json",
+    "source/water-designations-case/chattooga_chauga_source_ids.json",
+    "source_tools/prepare_utility_designations.py",
+    "operator/WATER_SOURCE_DECISIONS.md",
+    "model/receptor_network.py",
+    "model/receptors.py",
+    "model/receptor_cli.py",
+    "model/RECEPTORS.md",
+    "source/receptor-profiles/utility-focus-20261012.json",
+    "model/receptor_network_cli.py",
+    "model/RECEPTOR_NETWORK.md",
+    "model/common.py",
+    "receiving/receive_original_receptor.py",
+    "receiving/receive_original_receptor_browser.mjs",
+    "receiving/RECEPTOR_RECEIVING.md"
+  ]
+}

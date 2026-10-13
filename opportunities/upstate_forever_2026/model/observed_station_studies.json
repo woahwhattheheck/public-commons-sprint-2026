@@ -209,7 +209,7 @@
       "native_id_field": "monitoring_location_id",
       "source_crs": "EPSG:4269",
       "expected_features": 13,
-      "source_manifest_sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+      "source_manifest_sha256": "b88243132759a1737c68d06dd93a5e046e13738ac060de91ba5c06f44e4b1fc9"
     },
     "additional_nldi_gauges": {
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
@@ -221,7 +221,7 @@
       "native_id_field": "station_id",
       "source_crs": "EPSG:4326",
       "expected_features": 13,
-      "source_manifest_sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+      "source_manifest_sha256": "b88243132759a1737c68d06dd93a5e046e13738ac060de91ba5c06f44e4b1fc9"
     },
     "additional_whole_basins": {
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
@@ -232,7 +232,7 @@
       "id_field": "basin_id",
       "source_crs": "EPSG:4326",
       "expected_features": 13,
-      "source_manifest_sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+      "source_manifest_sha256": "b88243132759a1737c68d06dd93a5e046e13738ac060de91ba5c06f44e4b1fc9"
     },
     "additional_original_daily": {
       "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
@@ -241,7 +241,7 @@
       "kind": "table",
       "title": "Original daily mean discharge with native source lines",
       "station_id_field": "site_no",
-      "source_manifest_sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+      "source_manifest_sha256": "b88243132759a1737c68d06dd93a5e046e13738ac060de91ba5c06f44e4b1fc9"
     },
     "regional_year_flow": {
       "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
