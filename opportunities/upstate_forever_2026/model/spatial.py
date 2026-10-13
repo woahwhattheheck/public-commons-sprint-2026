@@ -237,8 +237,8 @@ class SpatialReview:
             for path in sorted((ws.root / "comparisons").glob("*/comparison.json")):
                 comparison = read_json(path)
                 ids = [comparison["baseline_run_id"]] + [a["run_id"] for a in comparison["alternatives"]]
-                if comparison["id"] != digest({"runs": ids, "direction": DIRECTION}) or comparison.get("direction") != DIRECTION:
-                    raise ValueError("Original run comparison selection changed")
+                from .native_versions import validate_run_comparison
+                validate_run_comparison(ws, comparison, expected_id=path.parent.name)
                 for alternative in comparison["alternatives"]:
                     for role, item in alternative["artifacts"].items():
                         add("comparison", comparison["id"], alternative["run_id"] + "/" + role, item,
