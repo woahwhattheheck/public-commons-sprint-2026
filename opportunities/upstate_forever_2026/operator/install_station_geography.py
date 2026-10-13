@@ -4,6 +4,7 @@ import argparse
 import ast
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -13,6 +14,8 @@ import sys
 import tempfile
 
 FILES = (
+    "source_tools/component_fragments.py",
+    "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/component_fragments/assessment-scientific-report-consumer.json",
     "integration/observed-station-wbd-components.json",
     "model/station_geography.py",
@@ -115,6 +118,28 @@ def installation_files(source_root):
             or catalogue.get("schema") != "upstate.application-components/v1"
             or not isinstance(catalogue.get("components"), dict)):
         raise ValueError("Retain the original WBD application component catalogue")
+    fragment_name = "integration/component_fragments/observed-station-wbd-nldi-197.json"
+    loader_path = source_root / "source_tools/component_fragments.py"
+    spec = importlib.util.spec_from_file_location("_station_component_fragments", loader_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Retain the maintained component fragment reader")
+    reader = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(reader)
+    fragment, _ = reader._load(fragment_name, (source_root / fragment_name).read_text(encoding="utf-8"))
+    if fragment.get("components"):
+        raise ValueError("The WBD source extension must preserve its original component definitions")
+    for component_id, extension in fragment.get("extend_components", {}).items():
+        component = catalogue["components"].get(component_id)
+        if not isinstance(component, dict):
+            raise ValueError("The WBD extension names an unavailable original component: " + component_id)
+        for field, additions in extension.items():
+            existing = component.get(field, [])
+            if not isinstance(existing, list):
+                raise ValueError("The WBD catalogue needs its original array: " + field)
+            component[field] = [*existing, *(value for value in additions if value not in existing)]
+    for component_id in fragment.get("required_components", []):
+        if component_id not in catalogue.get("required_components", []):
+            raise ValueError("The WBD extension changes the original standalone component selection")
     selected = catalogue.get("required_components")
     if (not isinstance(selected, list) or not selected
             or any(not isinstance(value, str) or not value for value in selected)

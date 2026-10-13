@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "study-original-profile-report",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3577",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "model/profile_report_comparison.py",
+        "model/study_report.py",
+        "model/STUDY_COMPARISON_REPORT.md"
+      ]
+    }
+  },
+  "required_components": []
+}

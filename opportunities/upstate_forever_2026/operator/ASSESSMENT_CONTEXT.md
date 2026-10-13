@@ -411,3 +411,8 @@ For a focused receiving check, use the same actual saved context, prepare and im
 The station installer composes its owned source with the original WBD producer's selected component inventory. Every selected original response, input and source companion is included and checked before any file changes. The WBD context module remains available when opening the existing station studies; its dated boundary association preserves each selected point's original datum and coordinates.
 
 The additive assessment scientific-report component declaration names the existing composer runtime files directly. Their implementation stays with the maintained Scientific reports producer. This explicit source membership avoids a dependency cycle with the broader observed-context data component and keeps ordinary station and assessment selections usable without introducing unrelated source datasets.
+
+
+### NLDI station source extension
+
+The station installer composes the original WBD catalogue with its maintained `observed-station-wbd-nldi-197` extension before selecting files. The extension contributes the original NLDI point file and all 13 original WBD responses, retaining 197 coordinate-specific context rows and both gauge-coordinate variants. The existing component fragment reader validates the declaration; all selected source members and declared hashes are checked before any application file changes. Geographic source context remains separate from the assessment cause and use inventory.

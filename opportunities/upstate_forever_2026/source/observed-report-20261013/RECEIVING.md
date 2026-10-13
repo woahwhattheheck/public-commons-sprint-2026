@@ -96,3 +96,7 @@ The browser journal includes the original edition, completed downloads, screensh
 If both native and browser execution are available on the same authorized host, pass **--browser-node /absolute/path/to/node** and optionally **--video** to the native command. It opens the original server over loopback, creates a private URL file with owner-only permissions, runs the adjacent browser continuation, and closes that server when finished. The private URL is omitted from the published journal.
 
 The existing ASTRA13 operation0669 owns the native source/render/receiving course. Its original browser owner can run the browser continuation against the completed native record. Source preparation, model studies and their original report producers continue in their existing project operations.
+
+## Continue several accepted report operations
+
+Use **--course regional-report-course.example.json** to run an explicit ordered group of original report selections through this same receiver. Each item retains its original output, queue tasks, report edition and complete receiving record. Missing source inputs or a failed item are recorded while independent ready items continue. Resume the same course with **--resume**. The complete three-operation native example, original source preparations and identity behavior are in [RECEIVING_COURSE.md](RECEIVING_COURSE.md).

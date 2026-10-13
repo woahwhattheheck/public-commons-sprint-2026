@@ -21,6 +21,20 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/community_study_transfer.py",
+    "model/COMMUNITY_STUDY_TRANSFER.md",
+    "operator/web/community.mjs",
+    "operator/web/community_revisions.mjs",
+    "integration/community_study_transfer_ui.patch.json",
+    "integration/component_fragments/community-study-transfer.json",
+    "model/conservation_study_transfer.py",
+    "operator/CONSERVATION_STUDY_TRANSFER.md",
+    "operator/web/conservation.mjs",
+    "operator/source_report_editions.py",
+    "integration/component_fragments/conservation-study-transfer.json",
+    "model/native_process_study_transfer.py",
+    "model/NATIVE_PROCESS_STUDY_TRANSFER.md",
+    "integration/component_fragments/native-process-study-transfer.json",
     "model/receiving_water_report_transfer.py",
     "model/RECEIVING_WATER_REPORT_TRANSFER.md",
     "integration/component_fragments/receiving-water-report-transfer.json",
@@ -65,6 +79,20 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/community_study_transfer.py",
+    "model/COMMUNITY_STUDY_TRANSFER.md",
+    "operator/web/community.mjs",
+    "operator/web/community_revisions.mjs",
+    "integration/community_study_transfer_ui.patch.json",
+    "integration/component_fragments/community-study-transfer.json",
+    "model/conservation_study_transfer.py",
+    "operator/CONSERVATION_STUDY_TRANSFER.md",
+    "operator/web/conservation.mjs",
+    "operator/source_report_editions.py",
+    "integration/component_fragments/conservation-study-transfer.json",
+    "model/native_process_study_transfer.py",
+    "model/NATIVE_PROCESS_STUDY_TRANSFER.md",
+    "integration/component_fragments/native-process-study-transfer.json",
     "model/receiving_water_report_transfer.py",
     "model/RECEIVING_WATER_REPORT_TRANSFER.md",
     "integration/component_fragments/receiving-water-report-transfer.json",
@@ -272,9 +300,24 @@ def verify_composition(application, pending):
         assembled_data(application, pending, PACKAGE_ROOT + "eco_robust/decision_delivery.py")
     if transfer is not None:
         for module in ("scientific_report_study_transfer", "calibration_study_transfer",
-                       "study_report_transfer", "monitoring_study_transfer"):
+                       "study_report_transfer", "monitoring_study_transfer",
+                       "community_study_transfer", "conservation_study_transfer",
+                       "native_process_study_transfer"):
             if module.encode("ascii") in transfer:
                 assembled_data(application, pending, "model/" + module + ".py")
+        if b"community_study_transfer" in transfer:
+            for dependency in ("model/communities.py", "model/community_reports.py",
+                               "model/community_report_context.py", "model/community_revisions.py",
+                               "operator/web/community_revisions.mjs"):
+                assembled_data(application, pending, dependency)
+        if b"conservation_study_transfer" in transfer:
+            for dependency in ("model/conservation.py", "model/conservation_reporting.py",
+                               "model/source_lineage.py", "model/observed_context.py"):
+                assembled_data(application, pending, dependency)
+        if b"native_process_study_transfer" in transfer:
+            process = assembled_data(application, pending, "model/native_process_study_transfer.py")
+            if b"def include_source(" not in process or b"def lock_paths(" not in process:
+                raise ValueError("Receive the matching original native-process lineage and operation-lock helper")
         if b"calibration_study_transfer" in transfer:
             for dependency in ("model/calibration.py", "model/calibration_uncertainty.py",
                                "model/calibration_maps.py", "model/calibration_review.py",
@@ -285,6 +328,13 @@ def verify_composition(application, pending):
                                "model/receiving_water_report_transfer.py",
                                "operator/source_report_editions.py"):
                 assembled_data(application, pending, dependency)
+            dispatcher = assembled_data(application, pending, "model/scientific_report_study_transfer.py")
+            for module in ("community_study_transfer", "conservation_study_transfer",
+                           "native_process_study_transfer"):
+                if module.encode("ascii") in dispatcher:
+                    helper = assembled_data(application, pending, "model/" + module + ".py")
+                    if b"def include_source(" not in helper:
+                        raise ValueError("Receive the matching scoped scientific-report lineage helper: " + module)
             lineage = assembled_data(application, pending, "model/study_report_transfer.py")
             monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
             if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:

@@ -187,3 +187,5 @@ The complete original comparison ZIP and every member are retained, hashed and s
 | `report-source.json` | Typed original scientific-report sections and links. |
 
 The unchanged original plan/campaign report path remains available. Older saved reports are inspected using their retained source editions. The new comparison helper's full source digest participates in the preparation identity, so a formatter change produces its own report edition.
+
+For this report kind, the scientific composer uses the prepared per-plan observed sections. It preserves every nested original companion while skipping its separate single-published-study concentration inference, which cannot combine distinct study editions into one source. Other original report kinds retain their current enrichment behavior.

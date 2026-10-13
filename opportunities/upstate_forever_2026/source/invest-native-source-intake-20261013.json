@@ -1,0 +1,144 @@
+{
+  "schema": "upstate.invest-native-source-intake/v1",
+  "version": "1.0.1",
+  "created_at": "2026-10-13",
+  "operation": "A73C5156 / ASTRA-NATIVE13 existing offline-runtime intake",
+  "target_reported": {
+    "host": "dfd2b4494bfc",
+    "python": "3.13.5",
+    "gdal": "3.10.3",
+    "compiler_present": true
+  },
+  "packages": [
+    {
+      "name": "natcap.invest",
+      "version": "3.20.0",
+      "filename": "natcap_invest-3.20.0.tar.gz",
+      "bytes": 2175814,
+      "sha256": "95fb4ce2c19b520edd40b37b561ccd220a6aeb46abaf399b609e828c2c3ea3f7",
+      "url": "https://files.pythonhosted.org/packages/1d/da/c003159f301a7965231117f5021c61be351c0efc1536a302c2ad2f0d6a39/natcap_invest-3.20.0.tar.gz",
+      "metadata_url": "https://pypi.org/pypi/natcap.invest/3.20.0/json",
+      "requires_python": ">=3.10"
+    },
+    {
+      "name": "pygeoprocessing",
+      "version": "2.4.11",
+      "filename": "pygeoprocessing-2.4.11.tar.gz",
+      "bytes": 1077805,
+      "sha256": "5e1f49e4f925400f140280120b2ba563263c96f0ae11a8b12444bcc899d2787a",
+      "url": "https://files.pythonhosted.org/packages/a1/76/7a2422c65242d2a3d3959879d4b8535878557429ce44f7e893cb3b611127/pygeoprocessing-2.4.11.tar.gz",
+      "metadata_url": "https://pypi.org/pypi/pygeoprocessing/2.4.11/json",
+      "requires_python": ">=3.6"
+    }
+  ],
+  "platform": {
+    "linux_pypi_wheels": false,
+    "build_order": [
+      "pygeoprocessing==2.4.11",
+      "natcap.invest==3.20.0"
+    ],
+    "language_standard": "C++20",
+    "gdal_binding_constraint": "GDAL==3.10.*",
+    "constraint_source": "Published natcap.invest3.20.0 PyPI metadata; differs from Git tag requirements.txt>=3.4.2",
+    "numpy_build_constraint": ">=2",
+    "cython_build_constraint": ">=3.0.0",
+    "requirements_authority": "Read exact PKG-INFO/requirements.txt/pyproject.toml from verified source archives before building; prefer packaged artifact over tag if they differ."
+  },
+  "build_requirements": {
+    "pygeoprocessing": [
+      "setuptools",
+      "wheel",
+      "setuptools_scm",
+      "Cython>=3.0.0",
+      "numpy>=2"
+    ],
+    "natcap.invest": [
+      "setuptools>=64",
+      "wheel",
+      "setuptools_scm>=8.0",
+      "Cython>=3.0.0",
+      "Babel",
+      "numpy>=2",
+      "pygeoprocessing==2.4.11"
+    ]
+  },
+  "runtime_requirements": {
+    "pygeoprocessing": [
+      "GDAL>=3.0.4",
+      "numpy>=1.10.1",
+      "Rtree>=0.8.3",
+      "scipy>=0.14.1,!=0.19.1",
+      "Shapely>=1.6.4",
+      "importlib_metadata"
+    ],
+    "natcap.invest": [
+      "GDAL==3.10.*",
+      "Pyro5",
+      "pandas>=1.2.1",
+      "numpy>=1.11.0,!=1.16.0",
+      "rtree>=0.8.2,!=0.9.1",
+      "shapely>=2.0.0",
+      "scipy>=1.9.0,!=1.12.*",
+      "pygeoprocessing>=2.4.10",
+      "taskgraph>=0.11.0",
+      "psutil>=5.6.6",
+      "chardet>=3.0.4",
+      "pint",
+      "babel",
+      "flask",
+      "flask_cors",
+      "requests",
+      "geometamaker>=0.3.1",
+      "pydantic",
+      "certifi",
+      "docutils",
+      "altair>=6.0.0",
+      "fiona",
+      "geopandas",
+      "jinja2",
+      "matplotlib",
+      "distinctipy"
+    ]
+  },
+  "source_documents": [
+    {
+      "package": "natcap.invest",
+      "path": "pyproject.toml",
+      "url": "https://raw.githubusercontent.com/natcap/invest/3.20.0/pyproject.toml"
+    },
+    {
+      "package": "natcap.invest",
+      "path": "setup.py",
+      "url": "https://raw.githubusercontent.com/natcap/invest/3.20.0/setup.py"
+    },
+    {
+      "package": "natcap.invest",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/natcap/invest/3.20.0/requirements.txt"
+    },
+    {
+      "package": "pygeoprocessing",
+      "path": "pyproject.toml",
+      "url": "https://raw.githubusercontent.com/natcap/pygeoprocessing/2.4.11/pyproject.toml"
+    },
+    {
+      "package": "pygeoprocessing",
+      "path": "setup.py",
+      "url": "https://raw.githubusercontent.com/natcap/pygeoprocessing/2.4.11/setup.py"
+    },
+    {
+      "package": "pygeoprocessing",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/natcap/pygeoprocessing/2.4.11/requirements.txt"
+    }
+  ],
+  "required_receiver_observations": [
+    "sys.executable/sys.version/SOABI/platform.machine",
+    "actual installed distributions and versions",
+    "matching gdal-config version,cflags,libs; osgeo.gdal runtime version and module path",
+    "Python.h/GDAL headers/NumPy headers",
+    "actual compiler version",
+    "packaged source metadata and exact artifact hash",
+    "post-build imports of pygeoprocessing routing and InVEST ndr_core/sdr_core"
+  ]
+}
