@@ -329,3 +329,124 @@ replace this visual and functional inspection. Keep numerical/source changes
 with the original scientific owner and preserve original captured bytes.
 If a corrected presentation is needed, its separately created original render
 has its own capture; this receiving mode never rewrites the earlier edition.
+
+
+## Receive an authored review of a complete saved report comparison
+
+Use **Report changes** to retain the original comparison of two actual saved
+local editions. The existing native receiver can then continue its authored
+review through the same complete offline export, full Workspace restore and
+selected editable Study receiving course.
+
+List complete pairs from that Workspace:
+
+~~~sh
+python -B source_tools/receive_scientific_report_review.py \
+  --workspace /path/to/original-workspace --list-comparisons
+~~~
+
+Each row verifies the complete saved comparison and both local edition
+fingerprints. It returns the exact comparison ID, earlier and later edition
+IDs, original matching plan, complete change/page counts and member count.
+
+Save the actual review purpose, requirements and notes using the same native
+four-field request shown above. Run the original consumer with that comparison:
+
+~~~sh
+python -B source_tools/receive_scientific_report_review.py \
+  --workspace /path/to/original-workspace \
+  --comparison-id EXACT_SAVED_COMPARISON_ID \
+  --review-selection /path/to/authored-comparison-review.json \
+  --output /path/to/original-owned-receiving-output \
+  --selected-study
+~~~
+
+Choose either `--edition-id` or `--comparison-id`. Completed-capture adoption
+belongs to the single-edition mode: adopt both originals before preparing their
+comparison. The comparison mode imports the complete saved pair through
+`model.report_changes_review` and retains the same original review creation
+time on retry. Its existing source document contains the comparison index,
+matching identity, every change page, full CSV/SQLite register and both report
+trees. The original review exporter preserves this relative tree.
+
+The original receiver verifies the complete pair source before export and
+after full restoration and review-package import. It compares the frozen pair
+identity and both local edition fingerprints. Selected Study receiving requires
+the original review, comparison and both edition nodes, plus the exact typed
+CustomerReview comparison receipt. The same received review retains captured
+feedback and later responses.
+
+A comparison-mode result retains `comparison_id` and its ordered
+`scientific_report_edition_ids`. Single-edition results retain their original
+`scientific_report_edition_id` field. Existing completed-capture, full restore,
+response-generation, lost-acknowledgement and feedback paths continue on this
+same consumer.
+
+Reuse the original output on an interrupted retry. When the original receiving
+result already exists, continue its saved target with:
+
+~~~sh
+python -B source_tools/receive_scientific_report_review.py \
+  --workspace /path/to/original-workspace \
+  --continue-receipt /path/to/original-result.json
+~~~
+
+The saved receipt identifies whether this is a single report or a complete
+comparison. Use the original `--response` option for an actual returned
+response; it continues the same selected received copy and review history.
+
+Open and use the actual complete reviewer package and restored Study. Follow
+the original review to its comparison and both saved editions. Inspect the
+record-matching display, complete change pages, both PDF/HTML reports, figures
+and source files, then operate original corrections, response history and
+downloads at desktop and narrow widths. Keep scientific corrections and the
+separate native scenario operations with their current owners.
+
+
+## Complete current owner direction
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

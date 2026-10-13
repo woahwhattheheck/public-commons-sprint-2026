@@ -54,8 +54,72 @@ def original_preparation(path):
     return workspace, plan, record(path)
 
 
+
+def original_geographic_context(path, workspace_path, relationship):
+    """Resolve the actual producer context without recasting its input schema."""
+    if workspace_path is None:
+        raise ValueError("Supply the original --workspace with --geographic-context")
+    path = path.expanduser().resolve(strict=True)
+    supplied = read_json(path)
+    if (supplied.get("schema") != "upstate.geographic-receiving-context/v1"
+            or supplied.get("state") != "complete"):
+        raise ValueError("Select the complete original geographic receiving context")
+    workspace = Workspace(workspace_path.expanduser().resolve(strict=True))
+    from model import geographic_receiving_context
+    retained = geographic_receiving_context.inspect(workspace, identifier(supplied.get("id")))
+    if supplied != retained:
+        raise ValueError("Use the exact geographic context retained in this Workspace")
+    if retained["project_id"] != workspace.project["id"]:
+        raise ValueError("The geographic receiving context belongs to another project")
+    if relationship not in ("upstream_huc", "published_protection"):
+        raise ValueError("Choose the original upstream HUC or published protection relationship")
+    plan_id = identifier(retained["plan_ids"].get(relationship))
+    plan = receiving_waters.inspect_plan(workspace, plan_id)
+    if plan["state"] != "complete":
+        raise ValueError("The original geographic receiving source plan is incomplete")
+    if plan["identity"]["selection"] != retained["identity"]["plan_selections"][relationship]:
+        raise ValueError("The original source plan differs from the geographic context selection")
+    rows = [item for item in retained["analyses"] if item["relationship"] == relationship]
+    selected = {}
+    for scope in ("reporting", "model_domain"):
+        matches = [item for item in rows if item["quantity_scope"] == scope]
+        if len(matches) != 1:
+            raise ValueError("Retain one complete reporting and model-domain analysis for this relationship")
+        item = matches[0]
+        analysis = receiving_waters.inspect(workspace, identifier(item["analysis_id"]))
+        if (analysis["state"] != "complete" or analysis["plan_id"] != plan_id
+                or analysis["quantity_scope"] != scope
+                or analysis["baseline_run_id"] != retained["baseline_run_id"]
+                or analysis["alternative_run_ids"] != retained["alternative_run_ids"]):
+            raise ValueError("The saved analysis differs from the original geographic context")
+        selected[scope] = analysis["id"]
+    source = {
+        "file": record(path), "id": retained["id"], "relationship": relationship,
+        "prepared_id": retained["prepared_id"], "plan_id": plan_id,
+        "reporting_analysis_id": selected["reporting"],
+        "model_domain_analysis_id": selected["model_domain"],
+        "baseline_run_id": retained["baseline_run_id"],
+        "alternative_run_ids": retained["alternative_run_ids"],
+    }
+    return workspace, plan, source, selected
+
 def operate(args):
-    workspace, plan, preparation = original_preparation(args.preparation)
+    geographic_input = None
+    if getattr(args, "geographic_context", None):
+        relationship = args.relationship or "published_protection"
+        workspace, plan, geographic_input, scopes = original_geographic_context(
+            args.geographic_context, args.workspace, relationship)
+        for key, value in (("analysis_id", scopes["reporting"]),
+                           ("scope_analysis_id", scopes["model_domain"])):
+            supplied = getattr(args, key, None)
+            if supplied is not None and supplied != value:
+                raise ValueError("The explicit " + key + " differs from the selected original geographic context")
+            setattr(args, key, value)
+        preparation = None
+    else:
+        if getattr(args, "workspace", None) or getattr(args, "relationship", None):
+            raise ValueError("--workspace and --relationship are used with --geographic-context")
+        workspace, plan, preparation = original_preparation(args.preparation)
     if args.analysis_id:
         analysis = receiving_waters.inspect(workspace, identifier(args.analysis_id))
         if analysis["state"] != "complete" or analysis["plan_id"] != plan["id"]:
@@ -105,6 +169,10 @@ def operate(args):
                          "operator/web/receiving_waters.css",
                          "operator/web/receiving_waters_extension.mjs",
                          "operator/extensions/receiving-waters.json")
+    if geographic_input:
+        source_paths += ("model/geographic_receiving_context.py",
+                         "model/receiving_water_report_source.py",
+                         "model/receiving_waters.py")
     source_paths = tuple(dict.fromkeys(source_paths))
     sources = [{"name": name, **record(APP / name)} for name in source_paths]
     identity = {
@@ -113,6 +181,7 @@ def operate(args):
         "analysis_id": args.analysis_id,
         **({"scope_analysis_id": args.scope_analysis_id} if args.scope_analysis_id else {}),
         "preparation": preparation, "operator_state": str(state),
+        **({"geographic_context": geographic_input} if geographic_input else {}),
         "application_identity": digest([
             {key: row[key] for key in ("name", "bytes", "sha256")} for row in sources
         ]),
@@ -247,7 +316,14 @@ def operate(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--preparation", type=Path, required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--preparation", type=Path)
+    selection.add_argument("--geographic-context", type=Path,
+                           help="Exact completed geographic-receiving context.json")
+    parser.add_argument("--workspace", type=Path,
+                        help="Original Workspace for --geographic-context")
+    parser.add_argument("--relationship", choices=("upstream_huc", "published_protection"),
+                        help="Original relationship in the geographic context; default published_protection")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--node", default=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE", "node"))
     parser.add_argument("--node-modules", default=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE_MODULES"))

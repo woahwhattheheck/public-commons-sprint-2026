@@ -133,3 +133,75 @@ Keep a failed chapter's recorded source/version, downloads and images with the
 same receiving operation. Fix its first actual exception and continue from the
 existing project. The current chapter and runner do not create another browser
 context, server or native model case.
+
+## Continue the selected Study into editable assessment geography
+
+The same runner automatically continues a completed
+`selected_study_receiving` receipt through **Study transfer → Received studies**.
+It keeps the same authenticated page, Workspace, browser context, recording and
+server. This chapter does not require the original preparation directory: its
+source of truth is the actual independently received Study and its retained
+ordered scientific sources.
+
+The original report-reopening segment first finishes its existing zero-new-action
+check. The additional chapter then:
+
+1. Opens the exact received Study from the complete paginated catalogue and
+   captures its original detail response.
+2. Uses **Open this report source only** for each retained assessment source and
+   previews the exact single-source order, preserving its original source body
+   hash, publication edition and project identity.
+3. For a Study that already contains native records, opens the original saved
+   Assessment context, optional parcel associations and Station geography through
+   their actual retained IDs.
+4. For an older or foreign report whose native records were not part of the
+   selected Study, selects **Receive editable assessment**. The normal
+   `assessment.context.adopt_source` action receives the complete retained
+   original package using its exact collection/source/body-SHA binding. It opens
+   the context, station study and optional parcel association using the actual
+   IDs returned by that completed task. The historical Study detail remains its
+   original capture; adoption does not rewrite it to manufacture a new native
+   lineage.
+5. Opens the actual editable context at desktop and narrow widths, checks its
+   visible title and original record counts, downloads its complete context ZIP
+   through the UI and compares the downloaded bytes/hash to that edition's
+   actual saved descriptor. It then opens the exact Station geography study.
+   Existing HTML/PDF/data/report-ZIP viewing stays in the original report journey.
+
+An existing caller can use this continuation without creating another recording:
+
+```js
+import { runReceivedAssessmentChapter } from './assessment_browser.mjs';
+
+const chapter = await runReceivedAssessmentChapter({
+  page,
+  receivingReceipt, // original native receipt, including selected_study_receiving
+  operatorURL,       // remains private
+  outputDirectory,
+  timeout: 120000,
+  redact,
+});
+```
+
+The chapter checkpoints `received-assessment-browser.json` separately. Its
+binding includes the original project, report operation, selected Study and
+receiving Workspace. It records exact source identities, adopted task and
+operation IDs, actual returned context/station/parcel IDs, screenshot paths and
+download hashes. Queue request identity is persisted when its request is issued
+and the actual task ID as soon as its response arrives. On interruption it
+recovers that original task from the retained server state; failed or interrupted
+tasks use the visible **Resume** control. An unreturned original task remains
+identified in that same journal instead of creating another queue intent.
+
+The original Sources report segment still permits no newly submitted actions.
+The separate editable continuation permits only the explicit, source-bound
+assessment adoption action. A selected Study containing no assessment sources
+returns `not_applicable` for this chapter while the ordinary report journey
+retains its actual result.
+
+Open and inspect the new screenshots alongside the existing recording and final
+report files. Operate the actual received desks, inspect every outgoing attachment
+and ZIP, and fix visible or functional defects in this same receiving operation.
+Current product direction remains `CURRENT_OWNER_DIRECTION.md` version
+`2026-10-13.3`; the editable original-source handover supports the real Upper
+Savannah production workflow.

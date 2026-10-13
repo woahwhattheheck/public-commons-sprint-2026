@@ -11112,6 +11112,13 @@
     "application_git_blob": "15c2a09c49fc72e63179e17211ff7395c756955d",
     "draft_schema": "stellar-forge.grant-submission-draft.v1",
     "export_schema": "stellar-forge.grant-submission-export.v1",
+    "required_content_review": {
+      "schema": "stellar-forge.grant-required-content-review.v1",
+      "coverage_schema": "stellar-forge.grant-required-content-coverage.v1",
+      "route": "/grant-submission.html",
+      "view": "review",
+      "operation": "SCF-REQUIRED-CONTENT-REVIEW-7108-20261013"
+    },
     "form_map_schema": "stellar-forge.grant-form-map.v1",
     "operation": "SCF-SUBMISSION-WORKSPACE-22B705-20261012",
     "planning": {
@@ -11131,9 +11138,9 @@
       "registration_schema": "stellar-forge.grant-product-registration.v1",
       "route": "/grant-submission.html",
       "view": "products",
-      "guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_PRODUCT_AUTHORING.md"
+      "guide": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_PRODUCT_AUTHORING.md"
     },
-    "guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md",
+    "guide": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md",
     "handover": {
       "schema": "stellar-forge.grant-submission-handover.v1",
       "prepared_schema": "stellar-forge.grant-prepared-submission.v1",
@@ -11149,7 +11156,7 @@
         "/grant-data/budget.csv",
         "/grant-data/product-and-finance.md"
       ],
-      "guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_HANDOVER.md",
+      "guide": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_HANDOVER.md",
       "meaning": "Exact source/evidence, prepared output and operator-recorded issuer observations inside the original editable draft. No automatic issuer action.",
       "issuer_programmes": {
         "schema": "stellar-forge.grant-issuer-context.v1",
@@ -11159,7 +11166,7 @@
         "route": "/grant-submission.html",
         "view": "handover",
         "operation": "SCF-ISSUER-PREPARED-APPLICATION-94FE-20261013",
-        "guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_ISSUER_CONTEXT.md",
+        "guide": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_ISSUER_CONTEXT.md",
         "original_files": [
           "operations.json",
           "planning.zip",
@@ -11315,7 +11322,7 @@
     "working_schema": "stellar-forge.grant-review-working-copy.v1",
     "working_export_schema": "stellar-forge.grant-review-working-export.v1",
     "operation": "SCF-SUBMISSION-REVIEW-ROUND-7108-20261012",
-    "guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS.md"
+    "guide": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS.md"
   },
   "companion_reader": {
     "schema": "stellar-forge.grant-companion-reader.v1",

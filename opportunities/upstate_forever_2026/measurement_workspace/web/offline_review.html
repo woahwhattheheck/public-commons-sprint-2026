@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Measured data · Offline review</title>
+<style>
+:root{color-scheme:light;--ink:#202020;--muted:#5b5b5b;--line:#c6c6c6;--paper:#fff;--panel:#f3f3f3;--dark:#292929}
+*{box-sizing:border-box}body{margin:0;background:var(--panel);color:var(--ink);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit;color:inherit}button,.file-link{border:1px solid #8a8a8a;background:#fff;border-radius:3px;padding:8px 12px;cursor:pointer;min-height:40px}button:hover{background:#e8e8e8}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #444;outline-offset:3px}button[disabled]{opacity:.45;cursor:default}.primary{background:var(--dark);color:white;border-color:var(--dark)}.primary:hover{background:#484848}input,select,textarea{border:1px solid #a3a3a3;border-radius:3px;background:white;padding:8px;min-width:0;max-width:100%}textarea{width:100%;min-height:100px;resize:vertical}label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}input[type=checkbox]{width:18px;height:18px}.check{flex-direction:row;align-items:center;gap:8px}h1,h2,h3,p{margin:0}h1{font-size:clamp(24px,3.2vw,34px);line-height:1.18;letter-spacing:-.02em}h2{font-size:20px}h3{font-size:16px}p+p{margin-top:10px}a{color:inherit}code{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:750}.muted{color:var(--muted)}.shell{max-width:1560px;margin:0 auto;padding:26px 28px 50px}.masthead{display:flex;gap:28px;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #444;padding-bottom:22px}.masthead p{max-width:780px;margin-top:10px}.stamp{min-width:160px;border:1px solid var(--line);padding:10px 14px;background:var(--paper)}.stamp strong{display:block;font-size:23px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.stat{border:1px solid var(--line);background:white;padding:12px 16px}.stat strong{display:block;font-size:24px;line-height:1.3}.stat span{font-size:12px;color:var(--muted)}.bar{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.bar>label{flex:1 1 170px}.bar>label.date{flex:0 1 150px}.bar .actions{display:flex;flex-wrap:wrap;gap:8px}.panel{background:white;border:1px solid var(--line);padding:18px;margin-top:16px}.panel h2{margin-bottom:12px}.status{padding:12px 16px;border-left:4px solid #777;background:#e8e8e8;margin:16px 0;overflow-wrap:anywhere}.status[data-error=true]{border:2px solid #222;font-weight:600}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}.workspace>.panel{margin-top:0;min-width:0}.list{min-width:0}.toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;padding:14px 0}.table-wrap{overflow:auto;background:white;border:1px solid var(--line)}table{border-collapse:collapse;width:100%;font-size:13px}thead{background:#ececec}th,td{padding:10px 11px;text-align:left;vertical-align:top;border-bottom:1px solid #d7d7d7}th{font-size:11px;letter-spacing:.025em;white-space:nowrap}tbody tr:last-child td{border-bottom:0}tbody tr[data-active=true]{background:#e7e7e7}td.station{min-width:116px}td.measure{min-width:135px}td.state{min-width:120px}.record-open{font-size:12px;white-space:nowrap;min-height:34px;padding:5px 9px}.small{font-size:12px}.nowrap{white-space:nowrap}.badge{display:inline-block;padding:2px 7px;border:1px solid #aaa;border-radius:2px;font-size:11px;background:#f0f0f0}.detail{position:static}.detail h2{margin-bottom:8px}.detail .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 0}.detail .grid div{min-width:0}.detail dt{font-size:11px;font-weight:700;color:var(--muted)}.detail dd{margin:3px 0 0;overflow-wrap:anywhere;font-size:13px}.detail label{margin-top:12px}.detail button{margin-top:12px}.divider{border-top:1px solid var(--line);margin-top:16px;padding-top:16px}details{margin-top:12px}summary{cursor:pointer;font-weight:600;line-height:1.5}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;background:#f2f2f2;padding:10px;max-height:400px;overflow:auto}ul{padding-left:20px}li+li{margin-top:6px}.source-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px}.source-card{border:1px solid var(--line);padding:12px;min-width:0;background:#fafafa}.source-card p{overflow-wrap:anywhere}.source-card button{margin-top:10px;width:100%}.empty{padding:35px 18px;text-align:center;background:white;border:1px solid var(--line)}.footer{margin-top:26px;padding-top:16px;border-top:1px solid var(--line)}[hidden]{display:none!important}.file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}.review-summary{margin-top:12px;max-height:290px;overflow:auto}.review-summary table{min-width:520px}.buttons{display:flex;flex-wrap:wrap;gap:8px}.measurements-table{min-width:780px}.note{padding:10px;background:#f3f3f3;border:1px solid #ccc;margin:12px 0}.page-count{font-variant-numeric:tabular-nums}
+@media(max-width:1050px){.workspace{grid-template-columns:minmax(0,1fr)}.detail{position:static}.detail .grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.shell{padding:18px 14px 34px}.masthead{display:block}.stamp{margin-top:16px;display:flex;align-items:center;gap:12px}.stamp strong{font-size:20px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0}.stat{padding:10px 12px}.panel{padding:14px}.bar>label,.bar>label.date{flex:1 1 calc(50% - 12px)}.bar>label.search{flex-basis:100%}.detail .grid{grid-template-columns:1fr 1fr}.source-list{grid-template-columns:1fr}.toolbar .buttons{width:100%;justify-content:space-between}h2{font-size:19px}}
+@media print{body{background:white}.shell{padding:0;max-width:none}.bar,.toolbar,.detail,.actions,.buttons,button,input,select,textarea,.review-editor,.source-list{display:none!important}.workspace{display:block}.table-wrap{overflow:visible}table{min-width:0!important;font-size:10px}th,td{padding:5px}.masthead,.panel,.stat{break-inside:avoid}.stats{grid-template-columns:repeat(4,1fr)}.status{border:1px solid #aaa}.footer code{font-size:9px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="masthead"><div><div class="eyebrow">UPPER SAVANNAH / MEASURED DATA</div><h1>Offline observation review</h1><p id="collection-title"></p><p class="muted">Inspect original results and source history. Save reasoned review changes for an independently editable native workspace.</p></div><div class="stamp"><span class="eyebrow">SOURCE EDITION</span><strong id="revision"></strong><span class="small">Works without a server</span></div></header>
+<div class="stats" aria-label="Complete source population"><div class="stat"><strong id="total-records"></strong><span>Original records</span></div><div class="stat"><strong id="total-stations"></strong><span>Source stations</span></div><div class="stat"><strong id="total-censored"></strong><span>Censored records</span></div><div class="stat"><strong id="total-changes">0</strong><span>Draft review changes</span></div></div>
+<section class="panel" aria-label="Review filters"><div class="bar"><label class="search">Search original results<input id="search" type="search" placeholder="Station, characteristic, result, method or qualifier"></label><label>Station<select id="station"><option value="">All stations</option></select></label><label>Characteristic<select id="characteristic"><option value="">All characteristics</option></select></label><label>Review view<select id="state"><option value="">All records</option><option value="changed">Draft changes</option><option value="pending">Pending</option><option value="include">Include</option><option value="exclude">Exclude</option><option value="censored">Censored</option></select></label><label class="date">From date<input type="date" id="from"></label><label class="date">Through date<input type="date" id="to"></label><button id="reset-filters">Reset filters</button></div></section>
+<div id="status" class="status" role="status" aria-live="polite">Opening complete source edition…</div>
+<div class="workspace"><section class="list" aria-label="Original measurement records"><div class="toolbar"><p id="page-count" class="page-count"></p><div class="buttons"><button id="previous">Previous</button><button id="next">Next</button></div></div><div class="table-wrap"><table class="measurements-table"><thead><tr><th>SELECT</th><th>STATION / DATE</th><th>CHARACTERISTIC / METHOD</th><th>VALUE / CENSOR BOUNDS</th><th>REVIEW</th><th>DETAIL</th></tr></thead><tbody id="rows"></tbody></table></div><div id="empty" class="empty" hidden>No records match these filters. Reset filters to see the full collection.</div><section class="panel review-editor"><h2>Review selected records</h2><p class="small muted">The same explicit decision and rationale will apply to the checked records. Reported measurements, methods and censor bounds remain unchanged.</p><div class="bar" style="margin-top:12px"><label>Decision<select id="batch-state"><option value="pending">Pending</option><option value="exclude">Exclude</option><option value="include">Include</option></select></label><label>Shared rationale<input id="batch-reason" placeholder="Explain this review decision"></label><button id="batch-apply">Apply to checked records</button><button id="clear-checked">Clear selection</button></div></section></section><aside id="detail" class="panel detail" aria-label="Selected original measurement"><h2>Original result details</h2><p class="muted">Open a record to inspect its exact source value, method, qualifiers, native eligibility reasons and review history.</p></aside></div>
+<section class="panel" aria-labelledby="handover-title"><h2 id="handover-title">Save and return review changes</h2><p class="muted">Review drafts are separate from the original scientific records. Receiving applies each decision through the original Measurements engine and recomputes eligibility.</p><div class="bar" style="margin-top:14px"><label>Reviewer name<input id="reviewer" autocomplete="name" placeholder="Name attached to the native review history"></label><div class="actions"><button class="primary" id="save-changes">Download review changes</button><button id="load-changes">Reopen saved changes</button><button id="download-review-csv">Download change table</button><button id="clear-draft">Clear draft</button></div></div><input type="file" id="changes-file" class="file-input" accept=".json,application/json"><div id="change-summary" class="review-summary"></div><p id="draft-state" class="small muted" style="margin-top:10px"></p></section>
+<section class="panel" aria-labelledby="source-title"><h2 id="source-title">Complete original study and source files</h2><p class="muted">These downloads contain the unchanged native source edition. The complete editable project preserves every original source row, review, source choice and history.</p><div id="files" class="source-list"></div></section>
+<footer class="footer"><p class="small"><strong>Native receiving:</strong> run <code>measurement_workspace/engine/offline_review_cli.mjs receive --package PACKAGE --changes review-changes.json --workspace NEW_RECIPIENT</code> with the supplied engine. The recipient contains a complete native measured workspace and a fresh offline review edition.</p><details><summary>Source identity and interpretation</summary><p class="small muted">Values and bounds are displayed exactly as retained by the original normalization engine. Methods, fractions, units and qualifiers remain separate. Including a review does not remove censoring or native-domain restrictions. Reviewer names are user-entered; review files are not authenticated signatures.</p><p class="small">Package <code id="package-id"></code></p><p class="small">Original project SHA-256 <code id="project-sha"></code></p><p class="small">Collection <code id="collection-id"></code></p></details></footer>
+</div>
+<script>
+'use strict';
+const DATA=/*__REVIEW_DATA__*/;
+const FORMAT='upper-savannah-offline-review-changes/v1';
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const records=new Map(DATA.records.map(r=>[r.id,r]));
+const PAGE=40, storageKey='measurement-offline-review:'+DATA.id;
+let page=0, filtered=[...DATA.records], active=null, checked=new Set(), changes=new Map(), reviewer='', storageAvailable=true;
+const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);let operationId=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+function message(text,error=false){$('status').textContent=text;$('status').dataset.error=String(error);}
+function valueText(value){return value===null||value===undefined?'—':String(value);}
+function bounds(row){return row.censor==='none'?'Uncensored':`${row.censor}; lower ${valueText(row.lower)} · upper ${valueText(row.upper)}`;}
+function effective(row){return changes.get(row.id)||row.review;}
+function download(name,data,type='application/json'){
+ const blob=data instanceof Blob?data:new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+function documentValue(){return {format:FORMAT,packageId:DATA.id,projectSha256:DATA.projectSha256,operationId,reviewer:reviewer.trim(),changes:[...changes.values()].sort((a,b)=>a.id.localeCompare(b.id))};}
+function validateChanges(input,requireReviewer=true){
+ if(input?.format!==FORMAT||input.packageId!==DATA.id||input.projectSha256!==DATA.projectSha256)throw new Error('These changes belong to a different original study edition.');
+ if(typeof input.operationId!=='string'||!input.operationId.trim()||!Array.isArray(input.changes))throw new Error('The saved review file is incomplete.');
+ if(typeof input.reviewer!=='string'||(requireReviewer&&!input.reviewer.trim()))throw new Error('Enter a reviewer name before saving changes.');
+ const seen=new Set(),selected=new Set();
+ for(const c of input.changes){
+  const r=records.get(c.id);if(!r||c.expectedFingerprint!==r.fingerprint||seen.has(c.id))throw new Error('A saved decision does not match its original measurement.');seen.add(c.id);
+  if(!['pending','include','exclude'].includes(c.state)||typeof c.reason!=='string'||!c.reason.trim()||typeof c.selectVersion!=='boolean')throw new Error('Every decision needs a valid state and rationale.');
+  if(c.selectVersion&&c.state!=='include')throw new Error('An explicitly selected source version must be included.');
+  if(c.selectVersion){if(selected.has(r.logicalKey))throw new Error('Only one version of a logical measurement can be selected.');selected.add(r.logicalKey);}
+ }
+ return input;
+}
+function saveDraft(){
+ try{localStorage.setItem(storageKey,JSON.stringify(documentValue()));}catch{storageAvailable=false;}
+ $('draft-state').textContent=storageAvailable?'Draft saved in this browser. Download the change file before sharing or moving to another device.':'Browser storage is unavailable. Use Download review changes to retain your work.';
+ renderChanges();
+}
+function renderChanges(){
+ $('total-changes').textContent=String(changes.size);
+ $('change-summary').innerHTML=changes.size?`<table><thead><tr><th>RECORD</th><th>DECISION</th><th>RATIONALE</th><th></th></tr></thead><tbody>${[...changes.values()].map(c=>{const r=records.get(c.id);return `<tr><td>${esc(r.stationId)}<br>${esc(r.sampledDate)} / ${esc(r.characteristic)}</td><td>${esc(c.state)}${c.selectVersion?' · selected source version':''}</td><td>${esc(c.reason)}</td><td><button data-remove="${c.id}">Remove draft change</button></td></tr>`;}).join('')}</tbody></table>`:'<p class="small muted">No review changes in this draft.</p>';
+}
+function applyFilters(reset=true){
+ if(reset)page=0;
+ const q=$('search').value.trim().toLowerCase(),station=$('station').value,characteristic=$('characteristic').value,state=$('state').value,from=$('from').value,to=$('to').value;
+ filtered=DATA.records.filter(r=>(!station||r.stationId===station)&&(!characteristic||r.characteristic===characteristic)&&(!from||r.sampledDate>=from)&&(!to||r.sampledDate<=to)&&(!q||[r.id,r.stationId,r.characteristic,r.sourceResultId,r.method,r.qualifier,r.parameter,r.laboratory].join(' ').toLowerCase().includes(q))&&(!state||(state==='changed'?changes.has(r.id):state==='censored'?r.censor!=='none':effective(r).state===state)));
+ page=Math.max(0,Math.min(page,Math.ceil(filtered.length/PAGE)-1));
+ if(reset&&active&&!filtered.some(r=>r.id===active)){active=null;$('detail').innerHTML='<h2>Original result details</h2><p class="muted">Open a matching record to inspect its source and review history.</p>';}
+ renderRows();
+}
+function renderRows(){
+ const rows=filtered.slice(page*PAGE,(page+1)*PAGE);
+ $('rows').innerHTML=rows.map(r=>`<tr data-active="${r.id===active}"><td><input type="checkbox" data-check="${r.id}" aria-label="Select ${esc(r.sourceResultId||r.id)}"${checked.has(r.id)?' checked':''}></td><td class="station">${esc(r.stationId)}<br><span class="small muted">${esc(r.sampledDate)}</span></td><td class="measure">${esc(r.characteristic)}<br><span class="small muted">${esc(r.fraction||'Fraction unspecified')} · ${esc(r.method||'Method unspecified')}</span></td><td class="measure">${esc(valueText(r.value))} ${esc(r.unit)}<br><span class="small muted">${esc(bounds(r))}</span></td><td class="state"><span class="badge">${esc(effective(r).state)}</span>${changes.has(r.id)?'<br><span class="small">Draft change</span>':''}</td><td><button class="record-open" data-open="${r.id}">Open result</button></td></tr>`).join('');
+ $('empty').hidden=filtered.length>0;$('rows').closest('.table-wrap').hidden=!filtered.length;
+ $('page-count').textContent=filtered.length?`${page*PAGE+1}–${Math.min((page+1)*PAGE,filtered.length)} of ${filtered.length} matching records · ${checked.size} selected`:`0 matching records · ${checked.size} selected`;
+ $('previous').disabled=page===0;$('next').disabled=(page+1)*PAGE>=filtered.length;
+}
+function detail(id){
+ active=id;const r=records.get(id),draft=changes.get(id),v=draft||r.review;renderRows();
+ const info=[['Station',r.stationId],['Result ID',r.sourceResultId||'Not supplied; retained ID above'],['Date',r.sampledDate],['Sampling time',r.sampledAt||r.sourceTime||'Date only'],['Characteristic',r.characteristic],['Fraction / basis',[r.fraction,r.basis].filter(Boolean).join(' / ')||'Unspecified'],['Retained value',valueText(r.value)+' '+r.unit],['Censor support',bounds(r)],['Method',r.method||'Unspecified'],['Qualifier / status',[r.qualifier,r.status].filter(Boolean).join(' / ')||'None supplied'],['Laboratory',r.laboratory||'Unspecified'],['Native review',r.review.state]];
+ $('detail').innerHTML=`<h2>Original result</h2><code>${r.id}</code><dl class="grid">${info.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="note small"><strong>Native eligibility at source edition</strong><p>${r.eligible.ok?'Eligible measured input':esc(r.eligible.reasons.join('; '))}</p></div><h3>Draft review</h3><label>Decision<select id="detail-state">${['pending','include','exclude'].map(x=>`<option value="${x}"${v.state===x?' selected':''}>${x[0].toUpperCase()+x.slice(1)}</option>`).join('')}</select></label><label>Rationale<textarea id="detail-reason" placeholder="Explain the review decision">${esc(v.reason||'')}</textarea></label><label class="check"><input type="checkbox" id="select-version"${v.selectVersion?' checked':''}>Explicitly select this included source version</label><div class="buttons"><button class="primary" id="detail-save">Save draft decision</button><button id="detail-revert">Restore original review</button></div><details class="divider"><summary>Original source rows and lineage</summary>${r.sources.map(s=>`<p class="small">${esc(s.label)} · original line ${esc(s.source_line)}<br><code>${esc(s.sha)}</code></p>`).join('')}<pre>${esc(JSON.stringify(r.raw,null,2))}</pre></details><details><summary>Native review history (${r.history.length})</summary><pre>${esc(JSON.stringify(r.history,null,2))}</pre></details><details><summary>Complete original normalized record</summary><pre>${esc(JSON.stringify({...r,fingerprint:undefined},null,2))}</pre></details>`;
+ $('detail-save').addEventListener('click',()=>{try{setDecision(r,$('detail-state').value,$('detail-reason').value,$('select-version').checked);saveDraft();applyFilters(false);message('Draft decision saved. The original measurement remains unchanged.');}catch(e){message(e.message,true);}});
+ $('detail-revert').addEventListener('click',()=>{changes.delete(id);saveDraft();applyFilters(false);detail(id);message('Original review restored in this draft.');});
+}
+function setDecision(r,state,reason,selectVersion=false){
+ reason=reason.trim();if(!reason)throw new Error('Enter a rationale for each review decision.');
+ const next=new Map(changes);next.set(r.id,{id:r.id,expectedFingerprint:r.fingerprint,state,reason,selectVersion});
+ validateChanges({...documentValue(),changes:[...next.values()]},false);changes=next;
+}
+function renderFiles(){
+ $('files').innerHTML=DATA.files.map((f,i)=>`<div class="source-card"><p><strong>${esc(f.path)}</strong></p><p class="small muted">${f.bytes.toLocaleString()} bytes · ${esc(f.mediaType)}</p><details><summary class="small">Original file identity</summary><code>${f.sha256}</code></details><button data-file="${i}">Download original file</button></div>`).join('');
+}
+document.addEventListener('click',event=>{
+ const open=event.target.closest('[data-open]');if(open){detail(open.dataset.open);if(innerWidth<1050)$('detail').scrollIntoView({behavior:'smooth',block:'start'});return;}
+ const remove=event.target.closest('[data-remove]');if(remove){changes.delete(remove.dataset.remove);saveDraft();applyFilters(false);if(active)detail(active);return;}
+ const file=event.target.closest('[data-file]');if(file){const f=DATA.files[Number(file.dataset.file)],raw=atob(f.base64),arr=Uint8Array.from(raw,x=>x.charCodeAt(0));download(f.path.split('/').pop(),new Blob([arr],{type:f.mediaType}));message('Downloaded unchanged original: '+f.path);}
+});
+$('rows').addEventListener('change',event=>{const id=event.target.dataset.check;if(id){event.target.checked?checked.add(id):checked.delete(id);renderRows();}});
+for(const id of ['search','station','characteristic','state','from','to'])$(id).addEventListener(id==='search'?'input':'change',()=>applyFilters());
+$('previous').onclick=()=>{page--;renderRows();};$('next').onclick=()=>{page++;renderRows();};
+$('reset-filters').onclick=()=>{for(const id of ['search','station','characteristic','state','from','to'])$(id).value='';applyFilters();};
+$('clear-checked').onclick=()=>{checked.clear();renderRows();};
+$('reviewer').addEventListener('input',()=>{reviewer=$('reviewer').value;saveDraft();});
+$('batch-apply').onclick=()=>{
+ try{
+  if(!checked.size)throw new Error('Select at least one original record.');
+  const reason=$('batch-reason').value.trim();if(!reason)throw new Error('Enter the shared review rationale.');
+  const next=new Map(changes);for(const id of checked){const r=records.get(id);next.set(id,{id,expectedFingerprint:r.fingerprint,state:$('batch-state').value,reason,selectVersion:false});}
+  validateChanges({...documentValue(),changes:[...next.values()]},false);changes=next;saveDraft();applyFilters(false);if(active)detail(active);message(`${checked.size} selected records now have draft decisions.`);
+ }catch(e){message(e.message,true);}
+};
+$('save-changes').onclick=()=>{try{const doc=validateChanges(documentValue());download('review-changes.json',JSON.stringify(doc,null,2)+'\n');message(`Saved ${changes.size} review changes for native receiving.`);}catch(e){message(e.message,true);}};
+$('load-changes').onclick=()=>$('changes-file').click();
+$('changes-file').onchange=async()=>{
+ const file=$('changes-file').files[0];if(!file)return;
+ try{
+  const input=validateChanges(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer())));
+  changes=new Map(input.changes.map(c=>[c.id,{id:c.id,expectedFingerprint:c.expectedFingerprint,state:c.state,reason:c.reason,selectVersion:c.selectVersion}]));reviewer=input.reviewer;operationId=input.operationId;$('reviewer').value=reviewer;saveDraft();applyFilters(false);if(active)detail(active);message(`Reopened ${changes.size} saved review changes against the exact original edition.`);
+ }catch(e){message(e.message,true);}finally{$('changes-file').value='';}
+};
+$('clear-draft').onclick=()=>{if(!changes.size||confirm('Clear all draft review changes? Original records and already downloaded files remain intact.')){changes.clear();saveDraft();applyFilters(false);if(active)detail(active);message('Draft cleared; original reviews are displayed.');}};
+$('download-review-csv').onclick=()=>{
+ try{
+  const doc=validateChanges(documentValue()),fields=['recordId','stationId','date','characteristic','state','reviewer','reason','selectVersion'];
+  const cell=value=>{let text=String(value??'');if(/^[=+\-@\t\r]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
+  const lines=[fields, ...doc.changes.map(c=>{const r=records.get(c.id);return [c.id,r.stationId,r.sampledDate,r.characteristic,c.state,doc.reviewer,c.reason,c.selectVersion];})];
+  download('review-changes.csv',lines.map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n','text/csv');message('Downloaded the complete review-change table.');
+ }catch(e){message(e.message,true);}
+};
+const years=[...new Set(DATA.records.map(r=>r.sampledDate.slice(0,4)))].sort();$('collection-title').textContent=`Observation collection · ${new Set(DATA.records.map(r=>r.stationId)).size} stations · ${years.length===1?years[0]:years[0]+'–'+years.at(-1)}`;$('revision').textContent='Revision '+DATA.revision;
+$('total-records').textContent=DATA.recordCount.toLocaleString();$('total-stations').textContent=new Set(DATA.records.map(r=>r.stationId)).size.toLocaleString();$('total-censored').textContent=DATA.records.filter(r=>r.censor!=='none').length.toLocaleString();
+$('package-id').textContent=DATA.id;$('project-sha').textContent=DATA.projectSha256;$('collection-id').textContent=DATA.collectionId;
+for(const [id,values]of [['station',[...new Set(DATA.records.map(r=>r.stationId))]],['characteristic',[...new Set(DATA.records.map(r=>r.characteristic))]]])for(const value of values.sort()){const option=document.createElement('option');option.value=value;option.textContent=value;$(id).append(option);}
+try{const raw=localStorage.getItem(storageKey);if(raw){const input=validateChanges(JSON.parse(raw),false);changes=new Map(input.changes.map(c=>[c.id,c]));reviewer=input.reviewer;operationId=input.operationId;$('reviewer').value=reviewer;}}catch{storageAvailable=false;}
+renderFiles();applyFilters();saveDraft();message(`${DATA.recordCount} original records ready. Open a result to begin review.`);
+</script>
+</body>
+</html>

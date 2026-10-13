@@ -12,7 +12,8 @@ import { managedResult, managedResultUncertain } from './managed-result.mjs';
 import { defaultApplicationProviders, applicationProviderForKind } from './application-providers.mjs';
 import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
-  operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError } from './storage.mjs';
+  operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError,
+  workspaceReceivingState, receivedOperation, requireCurrentOperation, receivedApplication, requireCurrentApplication } from './storage.mjs';
 
 
 const SCHEMA = 'stellar-forge.runtime-application.v1';
@@ -137,6 +138,13 @@ async function operationView(root, id, observations = null) {
   const directory = operationPath(root, id);
   const request = await readJSON(join(directory, 'request.json'), true);
   const state = await readJSON(join(directory, 'state.json'), true);
+  const received = await receivedOperation(root, id);
+  if (received) {
+    const commandResult = await readJSON(join(directory, 'command-result.json'), true);
+    return { id, request, state, ...managedResult(state, commandResult), active: false,
+      phase: 'RECEIVED_HISTORY', originalPhase: state?.phase ?? 'PENDING', receivedHistory: true,
+      receivingId: received.receivingId, stop: await readJSON(join(directory, 'stop.json'), true), url: null };
+  }
   let active, observation = null;
   if (observations) {
     const observed = observations.get(id);
@@ -211,6 +219,13 @@ async function runViews(root, applicationId, history, observations = null) {
   }));
 }
 async function view(root, saved, { homes = null, historyLimit = 30, observations = null } = {}) {
+  if (await receivedApplication(root, saved.id)) {
+    const page = await applicationRunPage(root, { applicationId: saved.id, limit: historyLimit });
+    const rows = await runViews(root, saved.id, page.runs, observations);
+    return { ...saved, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, release: null, home: null,
+      adoption: null, current: rows[0] ?? null, runs: rows, totalRuns: page.totalRuns,
+      history: { limit: page.limit, nextCursor: page.nextCursor } };
+  }
   const [{ home, release, adoption, connected }, page] = await Promise.all([
     applicationConnection(root, saved, homes, observations),
     applicationRunPage(root, { applicationId: saved.id, limit: historyLimit }),
@@ -284,7 +299,8 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   }
   const release = home.releases.find(item => item.runtime && bindingKeys.every(key => item.runtime[key] === runtime[key]));
   const adoptionReview = release ? null : await reviewManagedAdoption(root, { homeId: home.id, runtimeId, runtimeDirectory });
-  const value = { schema: 'stellar-forge.application-review.v1', applicationId, previousRevision: previous?.revision ?? null,
+  const receiving = await workspaceReceivingState(root);
+  const value = { ...(receiving?.mode === 'new-host' ? { receivingId: receiving.receivingId } : {}), schema: 'stellar-forge.application-review.v1', applicationId, previousRevision: previous?.revision ?? null,
     runtimeId, runtime: binding(runtime), kind, settings, label: label.trim(), command,
     applicationProvider: selection.binding,
     homeId: home.id, homeDirectory: home.directory, releaseId: release?.id ?? null,
@@ -312,6 +328,9 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
       need(previous.saveRequestHash === requestHash, 'APPLICATION_SAVE_ID_REUSED');
       return previous;
     }
+    const receiving = await workspaceReceivingState(root);
+    need(receiving?.mode !== 'new-host' || reviewed.receivingId === receiving.receivingId,
+      'APPLICATION_HOST_REVIEW_REQUIRED', 'Create a current-host application review before saving new settings; the imported review remains unchanged.', 409);
     need((previous?.revision ?? null) === reviewed.previousRevision, 'APPLICATION_REVIEW_CHANGED');
     if (previous) need(!await busyApplication(root, id), 'APPLICATION_RUNNING');
     const selection = await applicationSelection(reviewed.kind, reviewed.applicationProvider?.id ?? null,
@@ -337,10 +356,12 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
   } finally { await lease.close(); }
 }
 export async function applicationBindingOperation(root, id) {
+  await requireCurrentApplication(root, id);
   const saved = await application(root, id), { connected } = await applicationConnection(root, saved);
   return connected ? null : saved.adoption;
 }
 export async function reviewApplicationStart(root, id, { navigationOrigin = null } = {}) {
+  await requireCurrentApplication(root, id);
   const saved = await application(root, id);
   need(!await busyApplication(root, id), 'APPLICATION_RUNNING', 'Reopen the retained application operation', 409);
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
@@ -367,6 +388,7 @@ export async function reviewApplicationStart(root, id, { navigationOrigin = null
 }
 export async function prepareApplicationStart(root, { applicationId, requestId, reviewId } = {}) {
   const id = recordId(applicationId); operationId(requestId);
+  await requireCurrentOperation(root, requestId); await requireCurrentApplication(root, id);
   const saved = await application(root, id), directory = directoryFor(root, id), file = join(directory, 'runs', requestId + '.json');
   const requestHash = hash({ applicationId, requestId, reviewId });
   const original = await readJSON(file, true);
@@ -425,6 +447,7 @@ export async function dispatchApplicationStart(root, input, dispatch) {
 }
 export async function cancelApplicationRun(root, input, stop) {
   const { applicationId, operationId: id } = input;
+  await requireCurrentOperation(root, id);
   const lease = await operationLease(join(directoryFor(root, applicationId), 'application.lock'));
   try {
     await applicationOperation(root, input);

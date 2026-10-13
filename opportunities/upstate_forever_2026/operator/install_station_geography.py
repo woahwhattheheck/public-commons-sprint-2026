@@ -15,6 +15,7 @@ import tempfile
 
 FILES = (
     "AGENTS.md",
+    "CURRENT_OWNER_DIRECTION.md",
     "operator/web/source_report_editions.mjs",
     "model/native_assessment_review.py",
     "operator/web/native_assessment_review.mjs",
@@ -23,6 +24,7 @@ FILES = (
     "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/component_fragments/assessment-scientific-report-consumer.json",
     "integration/component_fragments/assessment-receiving-browser.json",
+    "integration/component_fragments/assessment-study-receiving.json",
     "integration/observed-station-wbd-components.json",
     "model/station_geography.py",
     "model/station_inventory.py",
@@ -201,6 +203,24 @@ def installation_files(source_root):
         for name in originals:
             if name not in names:
                 names.append(name)
+    receiving_name = "integration/component_fragments/assessment-study-receiving.json"
+    receiving, _ = reader._load(
+        receiving_name, (source_root / receiving_name).read_text(encoding="utf-8"))
+    if receiving.get("components") or receiving.get("required_components"):
+        raise ValueError("The assessment Study workflow must extend the maintained components")
+    extensions = receiving.get("extend_components", {})
+    if set(extensions) != {"assessment-context", "station-assessment", "study-transfer",
+                           "scientific-report-editions"}:
+        raise ValueError("Retain the complete assessment Study component declarations")
+    for component_id, extension in extensions.items():
+        if set(extension) - {"paths", "requires"} or not extension.get("paths"):
+            raise ValueError("The assessment Study workflow needs its original runtime paths")
+        expected = ["station-assessment"] if component_id == "study-transfer" else []
+        if extension.get("requires", []) != expected:
+            raise ValueError("Keep the original assessment Study dependency relationship")
+        for name in extension["paths"]:
+            if name not in names:
+                names.append(name)
     if "model/station_wbd_context.py" not in names:
         raise ValueError("The station geography source requires its original WBD context module")
     return tuple(names)
@@ -245,6 +265,43 @@ def scientific_report_host(application, pending, previous):
                         "previous_sha256": sha(original) if original is not None else None})
     return checked
 
+def study_transfer_host(application, pending, previous):
+    """Check the existing native Study engine and mount-ready desk navigation."""
+    contracts = {
+        "model/study_transfer.py": (
+            r"(?m)^class\s+_Closure\b",
+            r"(?m)^def\s+export_study\s*\(",
+            r"(?m)^def\s+verify_received_studies\s*\(",
+        ),
+        "operator/study_transfer.py": (
+            r"(?m)^class\s+StudyTransfer\b",
+            r"received-detail",
+            r"\bstudy_receiving\.read\s*\(",
+        ),
+        "operator/web/extensions/study_transfer.mjs": (
+            r"\bfunction\s+attachStudyTransfer\s*\(",
+            r"\battachReceivedStudies\s*\(",
+        ),
+        "operator/web/extension_host.mjs": (
+            r"\basync\s+function\s+openDesk\s*\(",
+            r"\bawait\s+selectedView\.ready\b",
+        ),
+    }
+    checked = []
+    for name, patterns in contracts.items():
+        staged = name in pending
+        path = application / name
+        if not staged and not path.is_file():
+            raise ValueError("Receive the complete native Study application before adding assessment reopening: " + name)
+        body = pending[name] if staged else path.read_bytes()
+        original = previous[name] if staged else body
+        if any(re.search(pattern, body.decode("utf-8")) is None for pattern in patterns):
+            raise ValueError("The existing application lacks its native Study/desk contract: " + name)
+        checked.append({"path": name, "source": "staged" if staged else "installed",
+                        "bytes": len(body), "sha256": sha(body),
+                        "previous_sha256": sha(original) if original is not None else None})
+    return checked
+
 def install(application, source_root, *, dry_run=False):
     application, source_root = Path(application).resolve(strict=True), Path(source_root).resolve(strict=True)
     for name in ("model/workspace.py", "model/spatial_esri.py", "model/observed_context.py",
@@ -266,6 +323,7 @@ def install(application, source_root, *, dry_run=False):
         pending[name] = body
         previous[name] = (application / name).read_bytes() if (application / name).exists() else None
     report_host = scientific_report_host(application, pending, previous)
+    study_host = study_transfer_host(application, pending, previous)
     original_sources = {}
     for name, body in pending.items():
         if not name.endswith(".json"):
@@ -282,6 +340,7 @@ def install(application, source_root, *, dry_run=False):
     receipt = {"schema": "upstate.station-geography-install/v1", "application": str(application),
         "dry_run": dry_run, "changed": changed, "installed_files": len(files), "existing_host_install_needed": host_needed,
         "original_sources": original_sources, "scientific_report_host": report_host,
+        "study_transfer_host": study_host,
         "files": [{"path": name, "bytes": len(pending[name]), "sha256": sha(pending[name]),
                   "previous_sha256": sha(previous[name]) if previous[name] is not None else None} for name in files]}
     if dry_run:
@@ -294,11 +353,11 @@ def install(application, source_root, *, dry_run=False):
             target = staging / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(pending[name])
-        for member in report_host:
+        for member in [*report_host, *study_host]:
             destination = application / member["path"]
             current = destination.read_bytes() if destination.exists() else None
             if (sha(current) if current is not None else None) != member["previous_sha256"]:
-                raise RuntimeError("Scientific reports host changed during station installation: " + member["path"])
+                raise RuntimeError("The original operator host changed during station installation: " + member["path"])
         for name in changed:
             target = application / name
             current = target.read_bytes() if target.exists() else None

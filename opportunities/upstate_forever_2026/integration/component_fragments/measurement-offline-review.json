@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-offline-review",
+  "source_reference": "ECO-CLOUD-COMPARE13 complete original-source offline review exchange 1.0.0",
+  "components": {
+    "measurement-offline-review": {
+      "title": "Complete offline measured-data review and independently editable native receiving",
+      "paths": [
+        "MEASUREMENT_OFFLINE_REVIEWS.md",
+        "install_measurement_offline_review.py",
+        "measurement_workspace/engine/offline_review.mjs",
+        "measurement_workspace/engine/offline_review_cli.mjs",
+        "measurement_workspace/web/offline_review.html",
+        "MEASUREMENT_OFFLINE_REVIEWS_SOURCE.json"
+      ],
+      "requires": [
+        "measurement-collections"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-offline-review"
+  ]
+}

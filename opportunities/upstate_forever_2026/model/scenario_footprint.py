@@ -508,14 +508,155 @@ def _preview_inputs(workspace, run_id):
             baseline, sources, request)
 
 
-def reuse_prepared_landcover(workspace, run_id, directory):
-    """Adopt a completed exact footprint without recompiling its regional grid.
+def _landcover_binding(request, profile, scenario):
+    """Inputs to categorical editing, excluding native model parameters."""
+    return {
+        "schema": "upstate.prepared-landcover-inputs/v1",
+        "compiler_version": request["compiler_version"],
+        "compiler_sha256": request["compiler_sha256"],
+        "selection": {key: value for key, value in request["selection"].items()
+                      if key != "profile_id"},
+        "baseline": copy.deepcopy(request["baseline"]),
+        "scenario_kind": scenario["kind"],
+        "ordered_patches": copy.deepcopy(scenario.get("patches", [])),
+        "masks": copy.deepcopy(request["masks"]),
+        "coefficient_body": copy.deepcopy(request["coefficient_body"]),
+        "coefficient_selection": {
+            "source_collection_id": profile["source_collection_id"],
+            "source_id": profile["biophysical_source_id"],
+        },
+        "allowed_classes": sorted(set(profile["table_summary"]["lucodes"])),
+    }
 
-    Missing or superseded previews fall back to normal native preparation.
-    A present exact preview must verify before its independent copy is retained.
-    All locations resolve beneath the receiving Workspace, including after restore.
+
+def _equivalent_previews(workspace, base, request, profile, scenario):
+    """Discover completed original donors from metadata, never their raster arrays.
+
+    The current target sources have already been checked by _preview_inputs.
+    Every eligible donor is checked against its saved run/profile/scenario;
+    changing any categorical input keeps the normal compiler path.
     """
+    target_selection = {key: value for key, value in request["selection"].items()
+                        if key != "profile_id"}
+    binding = _landcover_binding(request, profile, scenario)
+    exact_key = digest(request)
+    for original in sorted(base.iterdir()):
+        if (original.name == exact_key or len(original.name) != 64
+                or any(char not in "0123456789abcdef" for char in original.name)
+                or not original.is_dir() or original.is_symlink()):
+            continue
+        manifest_path = original / "complete.json"
+        if not manifest_path.is_file():
+            continue
+        try:
+            manifest = read_json(manifest_path)
+        except (OSError, ValueError):
+            # Incomplete unrelated derived metadata is not a donor.
+            continue
+        if not isinstance(manifest, dict):
+            continue
+        candidate = manifest.get("request")
+        if (manifest.get("schema") != "upstate.scenario-footprint-files/v1"
+                or not isinstance(candidate, dict)
+                or not isinstance(candidate.get("selection"), dict)
+                or candidate.get("run_id") == request["run_id"]
+                or candidate.get("compiler_version") != request["compiler_version"]
+                or candidate.get("compiler_sha256") != request["compiler_sha256"]):
+            continue
+        selection = candidate["selection"]
+        if {key: value for key, value in selection.items() if key != "profile_id"} != target_selection:
+            continue
+        # Retain the whole original request, including any future added source
+        # fields. Only these two original native identities may differ.
+        expected = {**request, "run_id": candidate.get("run_id"),
+                    "selection": selection}
+        if candidate != expected or digest(candidate) != original.name:
+            continue
+        try:
+            donor = workspace.inspect_run(identifier(candidate["run_id"]))
+            donor_profile = workspace._get("profiles", selection["profile_id"])
+            donor_scenario = workspace._get("scenarios", selection["scenario_id"])
+        except FileNotFoundError:
+            # A selected Study may retain a footprint without its donor run.
+            # Its absence is unavailable reuse, not a new source requirement.
+            continue
+        if donor["selection"] != selection:
+            raise ValueError("The prepared footprint donor's native selection changed")
+        if (donor_profile["table_summary"]["sha256"] != candidate["coefficient_body"]["sha256"]
+                or _landcover_binding(candidate, donor_profile, donor_scenario) != binding):
+            continue
+        yield original, manifest, candidate, donor_profile, donor_scenario
+
+
+def _adopt_prepared_landcover(workspace, directory, original, manifest, request,
+                              target_request, profile, scenario, target_profile,
+                              target_scenario, target_codes):
     from .reuse import copy_verified
+
+    if (manifest.get("schema") != "upstate.scenario-footprint-files/v1"
+            or manifest.get("request") != request
+            or original.name != digest(request)):
+        raise ValueError("The prepared land-cover footprint request differs")
+    files = manifest["files"]
+    verified = {name: verify_file(original, descriptor)
+                for name, descriptor in files.items()}
+    report = read_json(verified["report"])
+    if (report.get("request") != request or report.get("run_id") != request["run_id"]
+            or report.get("selection") != request["selection"]
+            or report.get("compiler_version") != VERSION
+            or report.get("declared_target_codes") != target_codes):
+        raise ValueError("The prepared land-cover report differs from its native selection")
+    binding = _landcover_binding(request, profile, scenario)
+    if binding != _landcover_binding(target_request, target_profile, target_scenario):
+        raise ValueError("The prepared land cover differs from the target's categorical inputs")
+    transfer = {}
+    artifact = copy_verified(
+        original, files["scenario_lulc"], directory, path="scenario_lulc.tif",
+        transfer=transfer, replace_mismatch=True)
+    # Existing Study capture resolves every nested descriptor under runs/<id>.
+    # Both original outputs and the complete source-binding record live there.
+    retained_report = copy_verified(
+        original, files["report"], directory, path="prepared-footprint.json",
+        transfer=transfer, replace_mismatch=True)
+    kind = ("same-run" if request["run_id"] == target_request["run_id"]
+            else "parameter-variant")
+    identity = {
+        "schema": "upstate.prepared-landcover-reuse/v1", "kind": kind,
+        "project_id": workspace.project["id"],
+        "source_request_id": digest(request), "source_request": request,
+        "target_request_id": digest(target_request), "target_request": target_request,
+        "categorical_input_id": digest(binding), "categorical_inputs": binding,
+        "source_profile": profile, "target_profile": target_profile,
+        "source_scenario": scenario, "target_scenario": target_scenario,
+        "native_parameters": "The target retains its own profile parameters; this adoption covers categorical inputs only.",
+    }
+    identity_path = directory / "prepared-landcover-reuse.json"
+    atomic_json(identity_path, identity)
+    artifact = {**artifact, "units": "class"}
+    return {
+        "completed_at": now(), "edits": report["patches"],
+        "artifact": artifact,
+        "prepared_footprint": {
+            "request_id": digest(request), "run_id": request["run_id"],
+            "target_run_id": target_request["run_id"], "reuse_kind": kind,
+            "compiler_version": VERSION,
+            "compiler_sha256": request["compiler_sha256"],
+            "categorical_input_id": identity["categorical_input_id"],
+            "identity": describe_file(directory, identity_path),
+            "report": retained_report, "landcover": artifact,
+            "original_workspace_directory": original.relative_to(workspace.root).as_posix(),
+            "transfer": transfer,
+        },
+    }
+
+
+def reuse_prepared_landcover(workspace, run_id, directory):
+    """Adopt exact completed categorical inputs before original native execution.
+
+    Prefer this run's complete footprint, then an equivalent parameter variant.
+    Missing/superseded inputs fall back to the original compiler. A selected
+    donor must verify its original report/raster and saved source identities.
+    """
     base = workspace.root / OUTPUT_ROOT
     if not base.is_dir():
         return None
@@ -527,48 +668,18 @@ def reuse_prepared_landcover(workspace, run_id, directory):
      baseline, sources, request) = _preview_inputs(workspace, run_id)
     if scenario["kind"] != "landcover":
         return None
-    key = digest(request)
-    original = base / key
+    original = base / digest(request)
     manifest_path = original / "complete.json"
-    if not manifest_path.exists():
-        return None
-    manifest = read_json(manifest_path)
-    if (manifest.get("schema") != "upstate.scenario-footprint-files/v1"
-            or manifest.get("request") != request):
-        raise ValueError("The prepared land-cover footprint request differs")
-    files = manifest["files"]
-    # The report supplies the original patch accounting; the raster supplies
-    # the exact same completed categorical pixels. Verify the full source report.
-    for descriptor in files.values():
-        verify_file(original, descriptor)
-    report = read_json(verify_file(original, files["report"]))
-    if (report.get("request") != request or report.get("run_id") != run_id
-            or report.get("selection") != selection
-            or report.get("compiler_version") != VERSION
-            or report.get("declared_target_codes") != target_codes):
-        raise ValueError("The prepared land-cover report differs from its native selection")
-    transfer = {}
-    artifact = copy_verified(
-        original, files["scenario_lulc"], directory, path="scenario_lulc.tif",
-        transfer=transfer, replace_mismatch=True)
-    # Native stages are recursively retained relative to their run directory by
-    # the existing Study exporter. Keep every nested descriptor in that scope.
-    retained_report = copy_verified(
-        original, files["report"], directory, path="prepared-footprint.json",
-        transfer=transfer, replace_mismatch=True)
-    artifact = {**artifact, "units": "class"}
-    return {
-        "completed_at": now(), "edits": report["patches"],
-        "artifact": artifact,
-        "prepared_footprint": {
-            "request_id": key, "run_id": run_id,
-            "compiler_version": VERSION,
-            "compiler_sha256": request["compiler_sha256"],
-            "report": retained_report, "landcover": artifact,
-            "original_workspace_directory": original.relative_to(workspace.root).as_posix(),
-            "transfer": transfer,
-        },
-    }
+    if manifest_path.exists():
+        return _adopt_prepared_landcover(
+            workspace, directory, original, read_json(manifest_path), request,
+            request, profile, scenario, profile, scenario, target_codes)
+    for original, manifest, candidate, donor_profile, donor_scenario in _equivalent_previews(
+            workspace, base, request, profile, scenario):
+        return _adopt_prepared_landcover(
+            workspace, directory, original, manifest, candidate, request,
+            donor_profile, donor_scenario, profile, scenario, target_codes)
+    return None
 
 
 def preview_run(workspace, run_id):

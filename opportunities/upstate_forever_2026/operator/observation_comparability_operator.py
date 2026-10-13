@@ -7,7 +7,8 @@ ACTIONS = {"observation.comparability.save"}
 def _downloads(operator, workspace_key, edition):
     workspace = operator.ws(workspace_key)
     from model.common import verify_file
-    visible = {"source/figures/index.html", "source/figures/paired-period-data.json",
+    visible = {"source/figures/activity-contributions.json", "source/figures/activity-contributions.csv",
+               "source/figures/index.html", "source/figures/paired-period-data.json",
                "source/figures/paired-period-data.csv", "source/figures/paired-period-figures.json",
                "comparable-period-source.zip", "source/index.html", "source/comparability.json",
                "source/comparisons.csv", "source/monthly-support.csv", "source/activity-measurements.csv",
@@ -36,6 +37,17 @@ def _figures(operator, workspace_key, edition):
     return output
 
 
+def _contributions(workspace, edition):
+    from model.common import read_json, verify_file
+    row = edition["files"].get("source/figures/activity-contributions.json")
+    if row is None:
+        return None
+    value = read_json(verify_file(workspace.root, row))
+    if value.get("schema") != "upstate.cohort-activity-contributions/v1":
+        raise ValueError("Retain the original complete activity contribution ledger")
+    return value
+
+
 def invoke(operator, workspace_key, action, payload):
     if action != "observation.comparability.save":
         raise ValueError("Choose an original comparable-period operation")
@@ -52,6 +64,7 @@ def read(operator, workspace_key, operation, payload):
         result = comparisons.inspect(workspace, payload["id"])
         result["_downloads"] = _downloads(operator, workspace_key, result["edition"])
         result["_figures"] = _figures(operator, workspace_key, result["edition"])
+        result["_contributions"] = _contributions(workspace, result["edition"])
         return result
     raise ValueError("Choose an original comparable-period reader")
 

@@ -183,16 +183,37 @@ async function recoverOriginalTask(saved,label){
  await assertWorkspace();
  const request=retainedRequest(saved);
  check(request.workspace===workspace,'The saved request belongs to another selected Workspace.');
- // Active-request deduplication may have returned a task under a different
- // operation ID without creating an alias. Once it finishes, posting only our
- // operation ID could create another task. Inspect complete original history.
+ // Older queues could deduplicate an active request without retaining an
+ // operation alias. Current queues persist that alias before acknowledging.
+ // Reconcile older hosts from complete history without adopting past work.
  const history=await api('/api/state');
  check(history.workspace_key===workspace&&Array.isArray(history.tasks),'Complete original task history is unavailable.');
  const scoped=history.tasks.filter(task=>task.workspace===workspace&&task.action===request.action);
  check(scoped.every(task=>task.payload&&typeof task.payload==='object'&&!Array.isArray(task.payload)),
   'Original task history omitted request payloads; preserve this journal and reopen Operations.');
  const exact=scoped.filter(task=>task.operation_id===request.operation_id);
- const candidates=exact.length?exact:scoped.filter(task=>canonical(task.payload)===canonical(request.payload));
+ let candidates=exact;
+ if(!exact.length){
+  const matching=scoped.filter(task=>canonical(task.payload)===canonical(request.payload));
+  const timestamp=value=>typeof value==='string'&&value.trim()?Date.parse(value):NaN;
+  const submitted=timestamp(saved.submitted_at);
+  const ambiguous=[];
+  candidates=matching.filter(task=>{
+   const created=timestamp(task.created_at),ended=timestamp(task.ended_at);
+   const stopped=['complete','failed','interrupted','cancelled'].includes(task.state);
+   const active=['queued','running'].includes(task.state);
+   // A completed attempt predating admission cannot be the task this request
+   // reused. Even one otherwise identical historical result is ineligible.
+   if(stopped&&Number.isFinite(submitted)&&Number.isFinite(ended)&&ended<submitted)return false;
+   const valid=Number.isFinite(submitted)&&Number.isFinite(created)&&
+    ((stopped&&Number.isFinite(ended)&&ended>=created)||
+     (active&&(task.ended_at===null||task.ended_at===undefined||task.ended_at==='')));
+   if(!valid){ambiguous.push(task.id);return false;}
+   return true;
+  });
+  check(!ambiguous.length,'Original task timing cannot establish request admission for '+ambiguous.join(', ')+
+   '. Reconcile the original task ID in Operations; preserve this journal and its submitted_at.');
+ }
  check(candidates.length<=1,'More than one retained task matches the unacknowledged request. Reconcile its original task ID in Operations; preserve this journal.');
  if(candidates.length){
   const task=verifiedTask(await api('/api/task',{id:candidates[0].id}),saved);

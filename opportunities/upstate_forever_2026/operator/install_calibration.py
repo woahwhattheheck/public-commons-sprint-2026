@@ -90,6 +90,7 @@ PREDECESSORS = {
         "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
     },
     "operator/web/calibration.mjs": {
+        "9b874fed0bfd7f5a2f6f2a27d29cded1f47094f77dc6f28aef2e47faee8cac65",
         "358559970a76544956a4988a18eab052f1cbef6f5f24ad55a90ec67b6f15f780",
         "572ce68d4682b68d4597956647b6c153887761e9e4d83afeb572f0977c34021f",
         "dfaa6e6a9032269f8f8d00a45a372646b6441675c34e4a2187fc6abbd58468b3",
@@ -119,6 +120,7 @@ PREDECESSORS = {
         "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
     },
     "operator/CALIBRATION.md": {
+        "fc04482cae69d0d3694737d8afa90654bcebe3fa6715972056f56e71559943ac",
         "4cb2bf68e96b6ad33001194cbe76afdaef72a1a6c53ea2044ac818c8db58b0b9",
         "82652a6f5c7ab6491017afc6e5d29c8f27ae6823456fb41940310bd550af4cbd",
         "458bdc8545c8a7a4dc99d9e294cee0b2a12692d6f24ea178377784d5426d5119",
@@ -134,6 +136,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "35fcea9ce6f171550662efbf729ffe67e1b16a522abc060745b22c7ae8d64077",
         "dd27fc657abc78015b482b00e1d00a37e7614361a600d03b231393fa12e47ceb",
         "d471c637ad921ed51f0be2bde91610edd37d978070ff228aa174c132addb3563",
         "7e4668a5b7d45ced54e92dd9bc077ab009441eabe4d3befdefcdd56fe9d4972c",

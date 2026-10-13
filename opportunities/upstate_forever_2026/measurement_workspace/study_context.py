@@ -19,6 +19,14 @@ STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "three_twenty_2026.sources.json": {
+        "studies": ("scdes-three-twenty-water-quality-2026",),
+        "retained_root": "application-context/three-twenty-2026",
+        "prefixes": ("observations/three_twenty_2026/",
+                     "source/three-twenty-water-quality-20261013/",
+                     "source/sv833-water-quality-20261013/"),
+        "paths": ("source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",),
+    },
     "source/rl18151-lake-phosphorus-20261013/sources.json": {
         "studies": (RL18151_STUDY,),
         "retained_root": RL18151_ROOT,

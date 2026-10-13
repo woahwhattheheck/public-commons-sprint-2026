@@ -17,11 +17,12 @@ from .parameter_result_query import DEFAULT_RESULTS
 from .parameter_exports import member_descriptors, MEMBER_SCHEMA
 from .parameter_views import DEFAULT_VIEWS
 from . import parameter_scientific_figures as figures
+from . import ensemble_study_scope as source_scope
 
 DIRECTORY = "parameter-report-sources"
 SCHEMA = "upstate.parameter-report-source/v1"
 SOURCE_ID = "saved-parameter-study"
-EDITION = 2
+EDITION = 3
 
 
 def _choices(value, available, label):
@@ -168,6 +169,74 @@ def _retain_source(workspace, directory, collection_id, source_id, records, bind
                     "body_sha256": entry["body"]["sha256"]})
 
 
+def _source_scope(workspace, directory, grid, profiles, areas, scenario_id, records, bindings):
+    """Present the original input declarations without copying large raster bodies."""
+    roles = {}
+    for profile in profiles.values():
+        ref = (identifier(profile["source_collection_id"]), profile["biophysical_source_id"])
+        roles.setdefault(ref, set()).add("biophysical table")
+    for area in areas:
+        choice = area.get("source", {}).get("selection")
+        if choice:
+            ref = (identifier(choice["source_collection_id"]), choice["source_id"])
+            roles.setdefault(ref, set()).add("selected reporting area: " + area["id"])
+    scenario = workspace._get("scenarios", identifier(scenario_id))
+    atomic_json(directory / "original" / "scenarios" / (scenario["id"] + ".json"),
+                scenario, immutable=True)
+    for patch in scenario.get("patches", []):
+        ref = (identifier(scenario["source_collection_id"]), patch["mask_source_id"])
+        roles.setdefault(ref, set()).add("scenario mask: " + scenario["id"])
+    spec = grid["spec"]
+    collection_id = identifier(spec["source_collection_id"])
+    for role, source_id in spec["input_sources"].items():
+        roles.setdefault((collection_id, source_id), set()).add(role)
+    for role in ("model_domain", "reporting_area"):
+        choice = spec.get(role)
+        if isinstance(choice, dict) and choice.get("source_id"):
+            roles.setdefault((collection_id, choice["source_id"]), set()).add(role)
+    # Keep the shared scope section's original-grid link independently usable.
+    atomic_json(directory / "original" / "grid.json", grid, immutable=True)
+    collections = {}
+    for ref in sorted(roles):
+        collection_id, source_id = ref
+        if collection_id not in collections:
+            collection = workspace._get("sources", collection_id)
+            collections[collection_id] = collection
+            atomic_json(directory / "original" / "source-collections" /
+                        (collection_id + ".json"), collection, immutable=True)
+            shared._copy(workspace, collection["original_manifest"],
+                         directory / "original" / "source-manifests" /
+                         (collection_id + ".json"))
+        matches = [entry for entry in collections[collection_id]["entries"]
+                   if entry["id"] == source_id]
+        if len(matches) != 1:
+            raise ValueError("An original Parameter input is absent from its retained source edition")
+        entry = matches[0]
+        if ref in bindings:
+            if bindings[ref]["entry"] != entry:
+                raise ValueError("The original Parameter source changed while its report was retained")
+            bindings[ref]["roles"] = sorted(roles[ref])
+            bindings[ref]["original_bytes_in_report_package"] = True
+        else:
+            bindings[ref] = {
+                "source_collection_id": collection_id, "source_id": source_id,
+                "roles": sorted(roles[ref]), "entry": deepcopy(entry),
+                "original_bytes_in_report_package": False,
+            }
+            records.append({
+                "id": "original-%04d" % len(records), "source_collection_id": collection_id,
+                "source_id": source_id, "title": entry.get("title", source_id),
+                "uri": entry.get("uri", ""), "vintage": entry.get("vintage", ""),
+                "body_sha256": entry["body"]["sha256"],
+            })
+    scope, extras, reference_records = source_scope.capture(
+        workspace, directory, grid, profiles, list(bindings.values()), collections)
+    for binding in extras:
+        bindings[(binding["source_collection_id"], binding["source_id"])] = binding
+    records.extend(reference_records)
+    return scope
+
+
 def _freeze(workspace, key, directory, selected, state):
     original = workspace.root / "experiments" / key
     artifact = state["artifacts"]["results"]
@@ -221,10 +290,11 @@ def _freeze(workspace, key, directory, selected, state):
                                value.startswith(("=", "+", "-", "@", "\t", "\r")) else value)
                          for name, value in row.items()})
     atomic_bytes(directory / "selected-results.csv", buffer.getvalue().encode("utf-8"), immutable=True)
-    records, bindings = [], {}
+    records, bindings, profiles = [], {}, {}
     for profile_id in dict.fromkeys([state["baseline_selection"]["profile_id"],
                                     *(row["profile_id"] for row in selected["cases"])]):
         profile = workspace._get("profiles", identifier(profile_id))
+        profiles[profile_id] = profile
         atomic_json(directory / "profiles" / (profile_id + ".json"), profile, immutable=True)
         _retain_source(workspace, directory, profile["source_collection_id"],
                        profile["biophysical_source_id"], records, bindings)
@@ -242,15 +312,19 @@ def _freeze(workspace, key, directory, selected, state):
             shared._copy(workspace, {**item, "path": relative_file(
                 grid_root, item["path"]).relative_to(workspace.root).as_posix()},
                          directory / "geography" / shared._member(item["path"]))
+    scope = _source_scope(workspace, directory, grid, profiles, selected["areas"],
+                          state["baseline_selection"]["scenario_id"], records, bindings)
     atomic_json(directory / "original-source-editions.json", records, immutable=True)
     atomic_json(directory / "native-input-inventory.json", {
         "workspace_id": workspace.project["id"], "experiment_id": key,
         "baseline_selection": state["baseline_selection"], "grid": grid,
         "source_bindings": list(bindings.values()),
         "scope": "Complete original study exports, native arguments and aggregation context are retained. "
-                 "The full Workspace archive retains the large original/aligned model-input and output rasters."
+                 "Original source classifications, fixed scenario and explicitly referenced assumption or recipe "
+                 "documents are retained with the selected profile and source editions. The full Workspace "
+                 "archive retains the large original/aligned model-input and output rasters and scenario masks."
     }, immutable=True)
-    return rows, ranges, records
+    return rows, ranges, records, scope
 
 
 def _sections(selected, rows, ranges):
@@ -439,9 +513,26 @@ def _sections(selected, rows, ranges):
     return sections
 
 
-def _recipe(directory, selected, rows, ranges):
+def _recipe(directory, selected, rows, ranges, scope):
     graphics = figures.write(directory, selected, rows)
-    sections = _sections(selected, rows, ranges)
+    source_sections = source_scope.sections(scope)
+    scenario_id = identifier(selected["reference"]["scenario_id"])
+    scenario_path = "original/scenarios/" + scenario_id + ".json"
+    scenario = read_json(directory / scenario_path)
+    scenario_section = ["Original fixed land-cover scenario", [
+        "Every selected parameter case retains this exact original land-cover scenario. "
+        "Its source declarations and change masks remain distinct from the tested parameter assignments.",
+        _table(["Original scenario property", "Retained value"], [
+            ["Title", scenario.get("title")],
+            ["Scenario ID", scenario["id"]],
+            ["Kind", scenario.get("kind")],
+            ["Reason", scenario.get("reason")],
+        ]),
+        {"kind": "links", "items": [
+            {"title": "Complete original fixed scenario and patch selections", "path": scenario_path}]},
+    ]]
+    sections = [source_sections[0], scenario_section, *_sections(selected, rows, ranges),
+                *source_sections[1:]]
     sections.append(["Original figure coverage", [
         "Figures preserve each original pair separately. Undefined quantities have no plotted point. "
         "Full geographic support and original case/profile/run keys accompany each figure.",
@@ -528,7 +619,8 @@ def prepare(workspace, value, *, render=True):
                 "export_manifest": state.get("artifacts", {}).get("export_manifest"),
                 "producer_sha256": file_digest(Path(__file__)),
                 "figure_helper_sha256": file_digest(Path(figures.__file__)),
-                "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__))}
+                "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__)),
+                "source_scope_helper_sha256": file_digest(Path(source_scope.__file__))}
     operation_id = digest(identity)
     directory = workspace.root / DIRECTORY / operation_id
     directory.mkdir(parents=True, exist_ok=True)
@@ -550,8 +642,8 @@ def prepare(workspace, value, *, render=True):
                         state = parameter_studies._read(workspace, key)
                         if state.get("artifacts", {}).get("export_manifest") != identity["export_manifest"]:
                             raise ValueError("The original export edition changed during report preparation")
-                        rows, ranges, records = _freeze(workspace, key, source, selected, state)
-                    _recipe(source, selected, rows, ranges)
+                        rows, ranges, records, scope = _freeze(workspace, key, source, selected, state)
+                    _recipe(source, selected, rows, ranges, scope)
                 recipe = read_json(source / "scientific-report.json")
                 if recipe["basis"] != selected:
                     raise ValueError("The retained report recipe has another selected native result")
@@ -573,7 +665,8 @@ def prepare(workspace, value, *, render=True):
                                ("selected_csv", "selected-results.csv"), ("report_recipe", "scientific-report.json"),
                                ("figure_specification", figures.SPEC), ("figure_coordinates", figures.COORDINATES),
                                ("figure_coordinates_json", "parameter-figure-coordinates.json"),
-                               ("figure_coverage", figures.COVERAGE)):
+                               ("figure_coverage", figures.COVERAGE),
+                               ("original_source_scope", source_scope.SCOPE_FILE)):
                 operation["files"][name] = describe_file(workspace.root, source / path)
             operation["delivery_selection"] = shared.delivery_selection(operation["source"])
             operation.pop("error", None)

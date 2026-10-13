@@ -4,7 +4,7 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 4 source parts contain **43 complete UTF-8 files / 915,538 source bytes**:
+The 4 source parts contain **43 complete UTF-8 files / 917,324 source bytes**:
 
 - All **38** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files are staged beside the complete component.
@@ -37,7 +37,7 @@ node "$STAGE/source/chemistry-report-receiving/browser.mjs" \
   --write-config /actual/chemistry-browser-selection.json
 ```
 
-Use that configuration in the existing browser command with the accepting host's private operator URL and Playwright. The current composer replace/append/preview controls are operated, then the exact native combined edition is opened for its original downloads, selected Study export and independent reopening. The journal retains the current composer preview separately from the selected scientific edition; historical contact identity remains unchanged. The existing durable request admission/recovery is preserved.
+Use that configuration in the existing browser command with the accepting host's private operator URL and Playwright. The current composer replace/append/preview controls are operated, then the exact native combined edition is opened for its original downloads, selected Study export and independent reopening. The journal retains the current composer preview separately from the selected scientific edition; historical contact identity remains unchanged. The original native-edition opening is preserved. The complete request-recovery continuation is retained from source commit `1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332`: exact original operation identity takes priority; the legacy matching-payload fallback excludes tasks that ended before this retained submission, and unresolved timing or multiple candidates remain an actionable original-task ambiguity.
 
 Only the browser receiving driver and its guide change in this complete source edition. All 38 installed component leaves, the native receiving command, original numerical results, other three source parts and bootstrap remain unchanged. The two full source postimages are identified by public source bank `82fcbaafaab280c38de102b76e1744668a1af2cc` and their exact member hashes in `manifest.json`. Stage into a fresh source directory at the existing source boundary, preserving any active accepted browser process and its original configuration/journal.
 
