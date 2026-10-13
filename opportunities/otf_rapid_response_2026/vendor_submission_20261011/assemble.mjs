@@ -14,7 +14,10 @@ const json=x=>JSON.stringify(x,null,2)+'\n';
 export function prepareVendorPackage(doc,template,inputBytes=encode(json(doc))) {
   const quality=check(doc),budget=buildIssuerBudget(template,doc);
   for(const key of budget.mapping.missing)if(!quality.needs.includes(key))quality.needs.push(key);
-  const submissionComplete=quality.needs.length===0&&quality.warnings.length===0;
+  const contentComplete=quality.needs.length===0&&quality.warnings.length===0;
+  const submissionIssues=[];let submission=null;
+  if(contentComplete){try{submission=render(doc,quality,{audience:'submission'});}catch(e){submissionIssues.push(e.message);}}
+  const submissionComplete=contentComplete&&submissionIssues.length===0;
   const outputs={
     'proposal-review.md':encode(render(doc,quality)),
     [budget.mapping.output.file]:budget.bytes,
@@ -24,14 +27,15 @@ export function prepareVendorPackage(doc,template,inputBytes=encode(json(doc))) 
       schema:'otf-rrf-vendor-readiness/v2',
       issuer:'https://www.opentech.fund/news/open-technology-fund-requests-proposals-for-the-rapid-response-fund/',
       deadline:'2026-11-23 23:59 EST',
-      completeness:submissionComplete?'CONTENT_COMPLETE':'INCOMPLETE',
+      completeness:contentComplete?'CONTENT_COMPLETE':'INCOMPLETE',
+      submissionEdition:submissionComplete?'INCLUDED':'AWAITING_SOURCE_FIELDS',submissionIssues,
       missing:quality.needs,warnings:quality.warnings,
       budget:{file:budget.mapping.output.file,sha256:budget.mapping.output.sha256},
       sourceTemplate:{file:ISSUER_TEMPLATE.file,sha256:ISSUER_TEMPLATE.sha256}
     }))
   };
-  if(submissionComplete)outputs['proposal-submission.md']=encode(render(doc,quality,{audience:'submission'}));
-  return {outputs,quality,budget:budget.mapping,submissionComplete};
+  if(submissionComplete)outputs['proposal-submission.md']=encode(submission);
+  return {outputs,quality,budget:budget.mapping,contentComplete,submissionComplete,submissionIssues};
 }
 async function existing(path) {
   try{return await readFile(path);}catch(e){if(e.code==='ENOENT')return null;throw e;}
@@ -59,7 +63,7 @@ export async function materializeVendorPackage(directory,prepared,source={}) {
   for(const [name,content] of entries)results.push({name,state:await retainExact(join(directory,name),content,requestId)});
   const completed={schema:'otf-rrf-vendor-build-complete/v1',requestId,files:plan.files};
   await retainExact(join(directory,'complete.json'),encode(json(completed)),requestId);
-  return {requestId,outDir:directory,status:prepared.submissionComplete?'CONTENT_COMPLETE':'INCOMPLETE',missing:prepared.quality.needs.length,warnings:prepared.quality.warnings.length,files:results};
+  return {requestId,outDir:directory,status:prepared.contentComplete?'CONTENT_COMPLETE':'INCOMPLETE',submissionEdition:prepared.submissionComplete?'INCLUDED':'AWAITING_SOURCE_FIELDS',missing:prepared.quality.needs.length,warnings:prepared.quality.warnings.length,files:results};
 }
 async function main(){
   const [input,flag,dir,...tail]=process.argv.slice(2);

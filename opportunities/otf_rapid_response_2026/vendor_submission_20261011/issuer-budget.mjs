@@ -139,7 +139,7 @@ export function buildIssuerBudget(template,doc) {
   const originalXfs=match[1].match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g);
   if(!originalXfs||originalXfs.length!==13)fail('Original style catalogue changed');
   const wrapStyle=originalXfs[10].replace(/<alignment[^>]*\/>/,'<alignment vertical="top" wrapText="1"/>');
-  const moneyStyle=originalXfs[11].replace('numFmtId="0"','numFmtId="164"').replace('/>',' applyNumberFormat="1"/>');
+  const moneyStyle=originalXfs[11].replace('numFmtId="0"','numFmtId="164"').replace('/>',' applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>');
   const nameStyle=originalXfs[3].replace('/>',' applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>');
   styles=styles.replace(match[0],'<cellXfs count="16">'+match[1]+wrapStyle+moneyStyle+nameStyle+'</cellXfs>');
   const setStyle=(ref,index)=>{const re=new RegExp('(<c\\b[^>]*\\br="'+ref+'"[^>]*\\bs=")\\d+(")');if(!re.test(xml))fail('Missing original cell style '+ref);xml=xml.replace(re,(_m,a,b)=>a+index+b);};
