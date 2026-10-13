@@ -323,7 +323,8 @@
         "operator/web/study_report_navigation.mjs",
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
-        "source/retained_point_sources.py"
+        "source/retained_point_sources.py",
+        "operator/study_transfer.py"
       ]
     },
     "station-assessment": {
@@ -646,7 +647,8 @@
         "operator/web/study_report_navigation.mjs",
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
-        "source/retained_point_sources.py"
+        "source/retained_point_sources.py",
+        "operator/study_transfer.py"
       ]
     },
     "study-transfer": {
@@ -969,7 +971,8 @@
         "operator/web/study_report_navigation.mjs",
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
-        "source/retained_point_sources.py"
+        "source/retained_point_sources.py",
+        "operator/study_transfer.py"
       ],
       "requires": [
         "station-assessment"
