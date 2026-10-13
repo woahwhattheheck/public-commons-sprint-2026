@@ -302,6 +302,8 @@ def presentation(data: dict[str, Any], index_name: str, *,
     stations = sorted({row["station"] for row in data["original_rows"]})
     if title is not None and (not isinstance(title, str) or not title.strip()):
         raise ValueError("Use a nonempty report title")
+    if source_prefix is None and index_name == INDEX and stations == ["SV-833"]:
+        source_prefix = "sv833-observation-comparability"
     if source_prefix is None:
         station_key = re.sub(r"[^a-z0-9]+", "-", stations[0].lower()).strip("-") if len(stations) == 1 else ""
         if station_key and not station_key[0].isalpha():
