@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+from copy import deepcopy
 import hashlib
 import importlib.util
 import io
@@ -51,6 +52,65 @@ def definitions(source, names, namespace):
          namespace)
 
 
+def prepared_contact(application, helper, supplied):
+    """Exercise the original native-study admission before the XML writer."""
+    source = (application / "model/native_study.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    editions = [node.value for node in tree.body if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == "EDITION"
+                        for target in node.targets)]
+    if len(editions) != 1:
+        raise ValueError("Retain the original native-study edition declaration")
+    namespace = {"deepcopy": deepcopy, "EDITION": ast.literal_eval(editions[0]),
+                 "validate_contact": helper.validate_contact}
+    definitions(source, ("mode", "prepare"), namespace)
+
+    def selection(contact):
+        return {"delivery_mode": "native_study",
+                "native_study": {"title": " Contact receiving ", "purpose": " Original declarations "},
+                "contact": contact}
+
+    original = deepcopy(supplied)
+    chosen = selection(supplied)
+    assert namespace["prepare"](chosen) is True
+    expected = deepcopy(original)
+    for key in ("name", "organization", "email"):
+        expected[key] = original.get(key, "").strip()
+    assert chosen["contact"] == expected and supplied == original
+    assert chosen["contact"] is not supplied
+    assert chosen["contact"]["addresses"] is not supplied["addresses"]
+    assert chosen["contact"]["retained_extra"] is not supplied["retained_extra"]
+    assert chosen["contact"]["retained_extra"]["source_notes"] is not supplied["retained_extra"]["source_notes"]
+    empty = selection({})
+    assert namespace["prepare"](empty) is True
+    assert empty["contact"] == {"name": "", "organization": "", "email": ""}
+    absent = selection({"phone": None, "addresses": [], "position": None})
+    assert namespace["prepare"](absent) is True
+    assert absent["contact"]["phone"] is None and absent["contact"]["addresses"] == []
+    malformed = (
+        {"phone": {"number": "Example telephone"}},
+        {"addresses": {"city": "Example city"}},
+        {"addresses": [{"postal_code": 12345}]},
+        {"address": {"lines": ["Example address", 123]}},
+        {"position": ["Example position"]},
+        {"email": None},
+    )
+    for contact in malformed:
+        try:
+            namespace["prepare"](selection(contact))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Malformed declared contact was accepted")
+    regional = {"contact": supplied}
+    before = deepcopy(regional)
+    assert namespace["prepare"](regional) is False and regional == before
+    return chosen["contact"], {"source_sha256": sha(source.encode("utf-8")),
+                               "original_contact_preserved": True,
+                               "known_field_validation": True,
+                               "legacy_normalization_preserved": True}
+
+
 def writer_examples(application, output, validator):
     # These controlled metadata descriptors are validator inputs, not model results.
     helper_path = application / "model/fgdc_metadata.py"
@@ -71,10 +131,18 @@ def writer_examples(application, output, validator):
     definitions(delivery_source, ("_grid_measurements", "_fgdc"), namespace)
     output.mkdir(parents=True, exist_ok=False)
     contact = {"organization": "Retained metadata exercise", "email": "metadata@example.invalid"}
-    complete_contact = {"name": "Metadata fixture", "organization": "Retained metadata exercise",
-                        "address": {"type": "mailing", "lines": ["Example address"],
-                                    "city": "Example city", "state": "SC", "postal_code": "00000"},
-                        "phone": "Example telephone", "email": "metadata@example.invalid"}
+    complete_contact, contact_receiving = prepared_contact(application, helper, {
+        "name": " Metadata fixture ", "organization": " Retained metadata exercise ",
+        "addresses": [
+            {"type": "mailing", "lines": ["Example address"], "city": "Example city",
+             "state": "SC", "postal_code": "00000", "country": "Example country"},
+            {"type": "physical", "lines": ["Second address"], "city": "Second city",
+             "state": "SC", "postal_code": "00001"}],
+        "phone": ["Example telephone", "Second telephone"], "fax": "Example fax",
+        "tdd": "Example TDD", "position": "Example position", "hours": "Declared hours",
+        "instructions": "Retained contact instruction", "email": " metadata@example.invalid ",
+        "retained_extra": {"source_notes": ["Original declaration not rendered as a contact field"]},
+    })
     sources = [
         {"id": "LULC", "title": "Controlled annual source", "vintage": "Annual class edition 2025",
          "uri": "https://example.invalid/source", "sha256": "a" * 64,
@@ -152,7 +220,15 @@ def writer_examples(application, output, validator):
                 assert value("spref/horizsys/planar/gridsys/othergrd")
             if kind == "scenario_difference":
                 assert value("metainfo/metc/cntinfo/cntperp/cntper") == complete_contact["name"]
-                assert value("distinfo/distrib/cntinfo/cntaddr/postal") == "00000"
+                for route in ("metainfo/metc/cntinfo", "distinfo/distrib/cntinfo"):
+                    assert [node.findtext("postal") for node in tree.findall(route + "/cntaddr")] == ["00000", "00001"]
+                    assert [node.text for node in tree.findall(route + "/cntvoice")] == complete_contact["phone"]
+                    assert value(route + "/cntfax") == complete_contact["fax"]
+                    assert value(route + "/cnttdd") == complete_contact["tdd"]
+                    assert value(route + "/cntpos") == complete_contact["position"]
+                    assert value(route + "/hours") == complete_contact["hours"]
+                    assert value(route + "/cntemail") == complete_contact["email"]
+                    assert value(route + "/cntinst").startswith(complete_contact["instructions"])
             else:
                 assert value("metainfo/metc/cntinfo/cntorgp/cntorg") == contact["organization"]
                 assert value("metainfo/metc/cntinfo/cntvoice") == "Unknown"
@@ -164,7 +240,8 @@ def writer_examples(application, output, validator):
         assert helper.calendar_date(raw) == expected
     return {"fixture": "controlled metadata only; no physical simulation or scientific output",
             "writer_source_sha256": sha(delivery_source.encode()),
-            "helper_source_sha256": sha(helper_path.read_bytes()), "xml": rows}
+            "helper_source_sha256": sha(helper_path.read_bytes()),
+            "native_contact_receiving": contact_receiving, "xml": rows}
 
 
 def main():
