@@ -208,9 +208,12 @@ export function attachStationGeography(host) {
     if(watershedFilter&&!['__outside__','__unresolved__'].includes(watershedFilter)&&!coverage.some(row=>row.key===watershedFilter))watershedFilter='';
     const outside=rows().filter(row=>row.watershed_status==='outside').length;
     const unresolved=rows().filter(row=>row.watershed_status==='unresolved').length;
+    const repeated=new Map();for(const row of coverage)repeated.set(String(row.watershed_id),(repeated.get(String(row.watershed_id))||0)+1);
     const options=[['','All retained watersheds'],['__outside__','Outside retained polygons · '+outside+' stations'],
       ['__unresolved__','Unresolved station location · '+unresolved+' stations'],
-      ...coverage.map(row=>[row.key,String(row.watershed_id)+(row.name?' · '+row.name:'')+' · '+row.station_count+' stations'])];
+      ...coverage.map(row=>[row.key,String(row.watershed_id)+(row.name?' · '+row.name:'')+
+        (repeated.get(String(row.watershed_id))>1?' · '+(row.source_ref.source_id||'original source')+' / '+short(row.source_ref.collection_id)+' / '+String(row.source_ref.native_feature_id??row.source_ref.source_feature_index??''):'')+
+        ' · '+row.station_count+' stations'])];
     target.innerHTML=options.map(([value,label])=>'<option value="'+esc(value)+'"'+(value===watershedFilter?' selected':'')+'>'+esc(label)+'</option>').join('');
     target.disabled=!edition;
   }
@@ -364,13 +367,14 @@ export function attachStationGeography(host) {
     const target=node?.querySelector('[data-sg-map]');if(!target)return;
     const selected=filteredRows(), selectedIDs=new Set(selected.map(r=>String(r.station_id)));
     const stationFeatures=features('station_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id??f.id))&&point(f));
-    const candidateFeatures=features('candidate_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id))&&point(f));
+    const unresolved=new Set(selected.filter(r=>!validPoint(stationPoint(r))).map(r=>String(r.station_id)));
+    const candidateFeatures=features('candidate_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id))&&unresolved.has(String(f.properties?.station_id))&&point(f));
     const polygons=features('watershed_geojson');
     const focused=watershedFilter&&!watershedFilter.startsWith('__')?polygons.filter(f=>watershedKey(f.properties)===watershedFilter):[];
     const extentPolygons=focused.length?focused:polygons;
     const pairs=[...extentPolygons.flatMap(f=>coordinatePairs(f.geometry)),
       ...(focused.length?stationFeatures:features('station_geojson')).map(point),
-      ...(focused.length?candidateFeatures:features('candidate_geojson')).map(point)].filter(validPoint);
+      ...candidateFeatures.map(point)].filter(validPoint);
     if(!pairs.length){target.innerHTML='<div class="sg-map-empty">No map coordinates are available for this selection. Original unmatched station rows remain in the table.</div>';return;}
     let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity; for(const p of pairs){minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minY=Math.min(minY,p[1]);maxY=Math.max(maxY,p[1]);}
     const aspect=Math.max(0.05,Math.cos((minY+maxY)/2*Math.PI/180));
@@ -384,7 +388,6 @@ export function attachStationGeography(host) {
       const polygons=geometry.type==='Polygon'?[geometry.coordinates]:geometry.type==='MultiPolygon'?geometry.coordinates:[];
       return polygons.map(poly=>poly.map(ring=>ring.map((p,i)=>{const q=projectPoint(p);return(i?'L':'M')+q[0]+' '+q[1];}).join(' ')+'Z').join(' ')).join(' ');
     };
-    const unresolved=new Set(selected.filter(r=>!validPoint(stationPoint(r))).map(r=>String(r.station_id)));
     const diameter=Math.max(viewBox[2],viewBox[3])/170;
     const mark=(f,candidate)=>{
       const station=String(f.properties?.station_id??f.id),xy=projectPoint(point(f)),active=station===String(selectedStation);
@@ -394,7 +397,7 @@ export function attachStationGeography(host) {
     };
     target.innerHTML='<svg class="sg-map-svg" data-sg-svg viewBox="'+viewBox.join(' ')+'" role="img" aria-label="Selected original stations and retained watershed boundaries" tabindex="0">'+
       '<g class="sg-watersheds">'+polygons.map(f=>'<path class="'+(focused.length?(watershedKey(f.properties)===watershedFilter?'sg-watershed-focus':'sg-watershed-context'):'')+'" d="'+pathFor(f.geometry)+'" fill-rule="evenodd" vector-effect="non-scaling-stroke"><title>'+esc(f.properties?.watershed_id??f.id??'Retained watershed')+'</title></path>').join('')+'</g>'+
-      '<g>'+candidateFeatures.filter(f=>unresolved.has(String(f.properties?.station_id))).map(f=>mark(f,true)).join('')+stationFeatures.map(f=>mark(f,false)).join('')+'</g></svg>'+
+      '<g>'+candidateFeatures.map(f=>mark(f,true)).join('')+stationFeatures.map(f=>mark(f,false)).join('')+'</g></svg>'+
       '<p class="sg-map-note">● Resolved station · ○ Original candidate · Retained watershed boundaries · WGS84 display</p>';
   }
   function renderResult(reset=false) {renderCauseFilter();renderWatershedFilter();renderCoverage();renderSummary();renderDownloads();renderTable();renderDetail();renderMap(reset);save();}
