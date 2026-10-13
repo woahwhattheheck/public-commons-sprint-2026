@@ -43,7 +43,8 @@ def _summary(record):
 def _rows(before, after):
     rows = []
     def add(group, field, left, right, left_present=True, right_present=True):
-        state = ("added" if not left_present else "removed" if not right_present else
+        state = ("unchanged" if not left_present and not right_present else
+                 "added" if not left_present else "removed" if not right_present else
                  "unchanged" if canonical(left) == canonical(right) else "changed")
         rows.append({"group": group, "field": field, "before_present": left_present,
                      "after_present": right_present, "before": deepcopy(left),
