@@ -90,10 +90,52 @@ Choose plan_id or campaign_id. A network-only context is also supported. The act
 
 Queue writes are monitoring.context.prepare and monitoring.context.export. Existing GET /api/monitoring reads are context.catalog, context.list, context.get and context.preview. The established monitoring.export accepts optional context_id. The current 1.2.1 queued-export selection/completion record, expected campaign revision, workspace lock and task file decoration are preserved.
 
-Source schema: upstate.monitoring-observed-source/v1.
+Source schemas: upstate.monitoring-observed-source/v1 (retained nutrient context) and upstate.monitoring-observed-source/v2 (explicit station flow scope).
 Source role: monitoring_observed_context.
 Saved result schema: upstate.monitoring_observed_contexts/v1 (the native Workspace collection schema).
 Collection: monitoring_observed_contexts.
+
+## Station-specific microbial observations
+
+The original microbial source is selected through `microbial_monitoring_context.sources.json`. Its complete source document uses `upstate.monitoring-observed-source/v2` and retains the 36-station, 730-observation cohort under `source/ecoli_temporal_analysis/20261013/monitoring-context/`. The original Eighteenmile nutrient document remains version 1 and retains its existing regional date-context interpretation.
+
+Version 2 requires an explicit flow scope:
+
+```json
+{
+  "mode": "same_station_only",
+  "gauge_station_id": "USGS-02177000",
+  "station_ids": ["USGS-02177000"],
+  "start_inclusive": "2022-01-01",
+  "end_inclusive": "2022-12-31"
+}
+```
+
+The saved calendar receives Chattooga daily discharge only when its original campaign binding resolves to that exact source station and its date lies within the declared scope. An unbound visit has `station_not_bound_to_source`; another station has `station_outside_flow_scope`; a date beyond the declared period has `date_outside_flow_scope`. An eligible date missing from the original daily table remains `outside_received_daily_series`. Those states retain null discharge and threshold fields. A coincident sampling date at another station never supplies station-specific Chattooga flow.
+
+Episode activity support uses only matched, in-scope `Sample-Routine` activities. The retained `Quality Control Sample-Field Replicate` remains an original observation and activity, while episode sampling coverage excludes it. Calendar episode overlap likewise requires the original scoped station/date. A selected network without the source gauge has no applicable matched-station unsampled-episode statistic; full original-source episode counts remain separately labeled.
+
+Both source versions are accepted by the current receiver. Version 1 may retain its legacy unscoped regional date context. A version 2 source without a scope is rejected. Using a new source version ensures an earlier version-1-only receiver cannot silently apply the new microbial gauge data across the whole station cohort.
+
+### Original station datum
+
+Source coordinates can declare `WGS84` or `NAD83`. Every station match retains `original_longitude`, `original_latitude` and `original_datum`. Exact identifier or explicit station mapping remains available for both datums.
+
+The two original NAD83 microbial stations retain that declaration. Their comparison to a WGS84 native station is marked `different_datum`, and `coordinate_difference_m` is null. The adapter performs no implicit datum transformation or relabeling. WGS84-to-WGS84 coordinates retain the existing spherical distance diagnostic and 100-metre review flag.
+
+### Complete observed records
+
+The optional source `observations` table binds each unique `observation_id` to an existing source station/activity/date. For the microbial source, the identity is the original source filename plus `#row=` and its one-based source row. The saved context preserves every matched-station observation as the complete unchanged source row.
+
+Original reported results, detection limits, statuses, methods, units, interval endpoints, sample clocks/time zones, activity types, comments and comment flags remain available. A null upper bound with `upper_unbounded: true` is an unbounded censoring interval; a missing reported value remains missing. The adapter does not replace censored values with zero, combine distinct activities, convert original units, or attribute load from concentration.
+
+The Monitoring desk offers station, original-status and comment filters, pages of 50 records, and an Inspect control for each complete original row. Filters affect only the display. Summary counts distinguish the full source from matched stations. The original full-context JSON, report, standalone ZIP, campaign field package and report-source bridge carry `observed-context/observations.csv` with all fields from every matched observation. The original document and all retained companions remain in the same export source closure. A historical saved context without an observations table keeps its original report columns, sections and export member set; a new context retains observations.csv even when its matched subset is empty.
+
+### Adopt and receive the complete update
+
+Use the same `integrations/monitoring/install_observed_context.py` installer and existing extension registration. Its source inventory contains byte counts, hashes and allowed published predecessors. It snapshots the manifest and each validated source body, compiles those exact Python bytes, then atomically writes the same postimages. A concurrently changed target or target manifest is rejected without substituting newly read, unverified source bytes.
+
+Import the microbial manifest into the original receiving Workspace, then use the existing `observed_context` selection with its actual imported source ID and existing network/plan/campaign. Prepare, inspect and export through the ordinary Monitoring commands. The same `operator/monitoring_receiving.py` route reopens the source and saved context after Workspace transfer. Review one gauge-bound 2022 visit and one other-station visit: only the first can carry original Chattooga discharge. Review a NAD83 station and an unbounded result through Inspect and the exported source rows.
 
 ## Reproduce the source context
 

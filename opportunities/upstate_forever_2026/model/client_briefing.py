@@ -13,7 +13,7 @@ import html
 import json
 import re
 from pathlib import Path, PurePosixPath
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlsplit
 
 EDITION = "upstate.client-briefing/v1"
 NOTES_SCHEMA = "upstate.client-briefing-notes/v1"
@@ -91,6 +91,9 @@ def _source_binding(report, report_model_bytes=None):
 
 
 def _binding(report, report_model_bytes=None):
+    if report.get("schema") == "upstate.scientific-briefing-report/v1":
+        from .scientific_briefing import report_binding
+        return report_binding(report, report_model_bytes)
     if report.get("schema") == "upstate.source-context-report/v1":
         return _source_binding(report, report_model_bytes)
     if report.get("schema") != "upstate.client-report/v1":
@@ -127,19 +130,51 @@ def _binding(report, report_model_bytes=None):
     }
 
 
+
+def _scientific_cell(value):
+    """Render original scientific scalar and link values with their source labels."""
+    if isinstance(value, dict) and value.get("kind") == "link":
+        label, href = str(value.get("label", value.get("href", ""))), str(value.get("href") or "")
+        safe = bool(href) and "\\" not in href and not any(ord(c) < 32 or ord(c) == 127 for c in href)
+        try:
+            parsed = urlsplit(href)
+            if parsed.scheme:
+                safe = safe and parsed.scheme.lower() in ("http", "https") and bool(parsed.netloc)
+            else:
+                decoded = unquote(parsed.path)
+                safe = (safe and not parsed.netloc and bool(decoded) and not decoded.startswith(("/", "\\"))
+                        and "\\" not in decoded and ".." not in decoded.split("/")
+                        and not any(ord(c) < 32 or ord(c) == 127 for c in decoded))
+        except ValueError:
+            safe = False
+        return ('<a href="' + _text(href) + '">' + _text(label) + '</a>') if safe else _text(label)
+    return _text(str(value))
+
+
+def _scientific_figure(figure, images=None):
+    path = _path(figure.get("path"))
+    if path is None or not figure["path"].lower().endswith(".svg"):
+        raise ValueError("Retain each original scientific figure in its delivered source path")
+    return ('<figure class="scientific-figure"><img style="display:block;max-width:100%;height:auto" src="' +
+            _text((images or {}).get(figure["path"], path)) + '" alt="' + _text(figure["alt"]) + '"><figcaption>' +
+            ('<strong>' + _text(figure["title"]) + '</strong> ' if figure.get("title") else '') +
+            _scientific_cell(figure["caption"]) + '</figcaption></figure>')
+
+
 def _table(table, rows, start, total):
     columns = table["columns"]
+    cell = _scientific_cell if table.get("scientific_cells") else _text
     if any(not isinstance(row, (list, tuple)) or len(row) != len(columns) for row in rows):
         raise ValueError("Keep every original report column with each table row")
-    caption = str(table.get("caption") or "")
+    caption = (table.get("caption") or "") if table.get("scientific_cells") else str(table.get("caption") or "")
     scope = ("Rows " + str(start + 1) + "–" + str(start + len(rows)) +
              " of " + str(total)) if total else "No retained rows"
-    return ('<div class="table-scroll"><table><caption>' + _text(caption) +
+    return ('<div class="table-scroll"><table><caption>' + cell(caption) +
             (' · ' if caption else '') + _text(scope) +
             '</caption><thead><tr>' +
-            ''.join('<th scope="col">' + _text(value) + '</th>' for value in columns) +
+            ''.join('<th scope="col">' + cell(value) + '</th>' for value in columns) +
             '</tr></thead><tbody>' +
-            ''.join('<tr>' + ''.join('<td>' + _text(value) + '</td>' for value in row) +
+            ''.join('<tr>' + ''.join('<td>' + cell(value) + '</td>' for value in row) +
                     '</tr>' for row in rows) + '</tbody></table></div>')
 
 
@@ -153,7 +188,7 @@ def _assets(values):
     return '<ul class="assets">' + ''.join(links) + '</ul>' if links else ''
 
 
-def _slides(report):
+def _slides(report, figure_images=None):
     slides, chapters = [], []
     seen = set()
 
@@ -168,7 +203,7 @@ def _slides(report):
         })
 
     chapters.append({"id": "opening", "title": "Study and meeting purpose", "core": True})
-    if report.get("schema") == "upstate.source-context-report/v1":
+    if report.get("schema") in ("upstate.source-context-report/v1", "upstate.scientific-briefing-report/v1"):
         opening = ('<p class="lead">' + _text(report["report_kind_label"]) +
                    '</p><dl class="facts">' +
                    ''.join('<div><dt>' + _text(row["label"]) + '</dt><dd>' +
@@ -198,7 +233,7 @@ def _slides(report):
         chapter = "chapter-" + str(index + 1)
         title = str(section.get("title") or source_id)
         chapters.append({"id": chapter, "source_id": source_id,
-                         "title": title, "core": (bool(section.get("core")) if report.get("schema") == "upstate.source-context-report/v1" else source_id in CORE_SECTIONS)})
+                         "title": title, "core": (bool(section.get("core")) if report.get("schema") in ("upstate.source-context-report/v1", "upstate.scientific-briefing-report/v1") else source_id in CORE_SECTIONS)})
         paragraphs = section.get("paragraphs", [])
         tables = section.get("tables", [])
         if not isinstance(paragraphs, list) or not isinstance(tables, list):
@@ -207,6 +242,11 @@ def _slides(report):
             add(chapter, title,
                 ''.join('<p>' + _text(value) + '</p>' for value in values),
                 source_section=source_id)
+        for start, values in _chunks(section.get("scientific_paragraphs", []), PARAGRAPHS_PER_PAGE):
+            add(chapter, title, "".join("<p>" + _scientific_cell(value) + "</p>" for value in values),
+                source_section=source_id)
+        for figure in section.get("figures", []):
+            add(chapter, title, _scientific_figure(figure, figure_images), source_section=source_id, kind="figure")
         for table_index, table in enumerate(tables):
             columns, rows = table.get("columns"), table.get("rows")
             if not isinstance(columns, list) or not isinstance(rows, list):
@@ -224,7 +264,7 @@ def _slides(report):
         if assets:
             add(chapter, title + " — working material", assets, source_section=source_id,
                 kind="assets")
-        if not paragraphs and not tables and not assets:
+        if not paragraphs and not tables and not assets and not section.get("figures") and not section.get("scientific_paragraphs"):
             add(chapter, title, "<p>This retained section has no additional content.</p>",
                 source_section=source_id)
     chapters.append({"id": "maps", "title": "Open the retained maps", "core": True})
@@ -360,7 +400,7 @@ function renderNotes(){
 }
 document.getElementById('add-note').onclick=function(){if(notes.entries.length>=500){message('Export this meeting before starting another; this file supports 500 entries.');return;}var meta=currentMeta();if(!meta)return;notes.entries.push({id:(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),kind:document.getElementById('new-note-kind').value,status:'open',slide_id:meta.id,body:'',owner:'',due:''});save();renderNotes();var fields=document.querySelectorAll('#note-list textarea');fields[fields.length-1].focus();};
 function markdown(){
- var lines=['# '+(notes.meeting.title||binding.title)+' — meeting notes','','Report: '+binding.title,'Delivery: '+text(binding.delivery_id),(binding.report_kind==='source_context'?'Source context: '+text(binding.source_context.context_id):'Baseline: '+binding.baseline_run_id),'Report edition: '+text(binding.report_edition),'Report SHA-256: '+binding.report_sha256,'Digest method: '+binding.report_digest_method,'Date: '+notes.meeting.date,'Participants: '+notes.meeting.participants,'','## Meeting purpose','',notes.meeting.purpose,'','## Selected agenda',''];
+ var lines=['# '+(notes.meeting.title||binding.title)+' — meeting notes','','Report: '+binding.title,'Delivery: '+text(binding.delivery_id),(binding.report_kind==='source_context'?'Source context: '+text(binding.source_context.context_id):binding.report_kind==='scientific_report'?'Saved scientific report: '+text(binding.source_report.edition_id):'Baseline: '+binding.baseline_run_id),'Report edition: '+text(binding.report_edition),'Report SHA-256: '+binding.report_sha256,'Digest method: '+binding.report_digest_method,'Date: '+notes.meeting.date,'Participants: '+notes.meeting.participants,'','## Meeting purpose','',notes.meeting.purpose,'','## Selected agenda',''];
  model.chapters.filter(function(c){return agenda.has(c.id);}).forEach(function(c){lines.push('- '+c.title);});
  lines.push('','## Questions, decisions and follow-up','');
  notes.entries.forEach(function(v,i){var s=model.slides.find(function(x){return x.id===v.slide_id;});lines.push('### '+(i+1)+'. '+v.kind+' — '+v.status,'','Report section: '+s.title+' / '+v.slide_id,'Owner: '+v.owner,'Due: '+v.due,'',v.body,'');});
@@ -388,12 +428,12 @@ bindMeeting();renderNotes();update();document.querySelectorAll('[data-enhanced]'
 """
 
 
-def render(report, *, report_href, model_href, report_model_bytes=None):
+def render(report, *, report_href, model_href, report_model_bytes=None, figure_images=None):
     binding = _binding(report, report_model_bytes)
     for value in (report_href, model_href):
         if not _path(value):
             raise ValueError("Briefing links must refer to files in the same delivery")
-    slides, chapters = _slides(report)
+    slides, chapters = _slides(report, figure_images)
     model = {"schema": EDITION, "binding": binding, "notes_schema": NOTES_SCHEMA,
              "chapters": chapters,
              "slides": [{key: value for key, value in slide.items() if key != "html"}
@@ -411,7 +451,8 @@ def render(report, *, report_href, model_href, report_model_bytes=None):
     for index, slide in enumerate(slides):
         section_link = _path(report_href)
         if slide["source_section"]:
-            section_link += "#" + quote(slide["source_section"], safe="")
+            section = next(row for row in report["sections"] if row["id"] == slide["source_section"])
+            section_link += "#" + quote(section.get("original_anchor", slide["source_section"]), safe="")
         pages.append('<section tabindex="-1" class="slide" id="' + slide["id"] +
                      '" data-chapter="' + slide["chapter"] + '"><div class="kicker">' +
                      _text(report.get("report_kind_label") or "Study briefing") + " · " +
@@ -423,7 +464,8 @@ def render(report, *, report_href, model_href, report_model_bytes=None):
     data = _json(model).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     script_hash = base64.b64encode(hashlib.sha256(SCRIPT.encode("utf-8")).digest()).decode("ascii")
     policy = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-" + script_hash +
-              "'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'")
+              "'; img-src " + ("'self' data:" if report.get("schema") == "upstate.scientific-briefing-report/v1" else "'none'") +
+              "; object-src 'none'; base-uri 'none'; form-action 'none'")
     document = (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'

@@ -29,6 +29,13 @@
         "pdf-bundles.mjs",
         "text/javascript"
       ]
+    ],
+    [
+      "/documents/corrections.mjs",
+      [
+        "corrections.mjs",
+        "text/javascript"
+      ]
     ]
   ]
 }

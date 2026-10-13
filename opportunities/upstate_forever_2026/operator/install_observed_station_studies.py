@@ -11,6 +11,14 @@ import tempfile
 
 FILES = (
     "model/observed_station_studies.py",
+    "model/station_wbd_context.py",
+    "operator/observed_station_wbd_hooks.json",
+    "observations/wbd_station_join_20261013/station-context.sources.json",
+    "observations/wbd_station_join_20261013/station_context.mjs",
+    "observations/wbd_station_join_20261013/rebuild_station_context.mjs",
+    "observations/wbd_station_join_20261013/STATION_CONTEXT.md",
+    "integration/component_fragments/observed-station-wbd.json",
+    "integration/observed-station-wbd-components.json",
     "model/observed_station_studies.json",
     "observations/station_context.sources.json",
     "calibration_station_geography.sources.json",
@@ -33,6 +41,19 @@ def catalogue_source(current):
     if current.count(ANCHOR) != 1:
         raise ValueError("Choose the maintained Station Geography catalogue")
     return current.replace(ANCHOR, HOOK + ANCHOR, 1)
+
+def wbd_source(current, hooks):
+    if hooks.get("schema") != "upstate.observed-station-wbd-hooks/v1":
+        raise ValueError("Choose the authored WBD station integration hooks")
+    for edit in hooks["edits"]:
+        before, after = edit["before"], edit["after"]
+        if current.count(after) == 1:
+            continue
+        if current.count(before) != 1:
+            raise ValueError("Compose the current Station Geography WBD hook explicitly: " + before)
+        current = current.replace(before, after, 1)
+    return current
+
 
 # These generated native manifests share the source identity added by this
 # component. Install their current authored edition together; raw observations
@@ -94,7 +115,9 @@ def install(application, source_root, *, dry_run=False):
     pending = {}
     for name in FILES:
         pending[name] = (source_root / name).read_bytes()
-    pending["model/station_geography.py"] = catalogue_source(original.decode("utf-8")).encode("utf-8")
+    current_catalogue = catalogue_source(original.decode("utf-8"))
+    hooks = json.loads(pending["operator/observed_station_wbd_hooks.json"])
+    pending["model/station_geography.py"] = wbd_source(current_catalogue, hooks).encode("utf-8")
     spec = json.loads(pending["model/observed_station_studies.json"])
     manifest = json.loads(pending["observations/station_context.sources.json"])
     if spec.get("schema") != "upstate.observed-station-recipes/v1" or manifest.get("schema") != "upstate.sources/v1":
