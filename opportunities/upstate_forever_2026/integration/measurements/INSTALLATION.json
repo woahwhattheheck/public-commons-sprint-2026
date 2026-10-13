@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-returned-review-registry-load-20261013",
+  "edition": "complete-measurements-returned-review-native-operator-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -21,8 +21,8 @@
   "files": [
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6094,
-      "sha256": "4ea34a3c562729773214977f6098d5aa304cc34b9265bc91d44aef3f05c05c64"
+      "bytes": 6093,
+      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
     },
     {
       "path": "MEASURED_CHEMISTRY.md",
@@ -251,13 +251,13 @@
     },
     {
       "path": "measurement_workspace/web/chemistry.mjs",
-      "bytes": 35156,
-      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 8945,
-      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2"
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
@@ -266,18 +266,18 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17979,
-      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12"
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b"
     },
     {
       "path": "measurement_workspace/web/returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
+      "bytes": 20239,
+      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
     },
     {
       "path": "measurement_workspace/web/workspace.css",
-      "bytes": 4996,
-      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039"
+      "bytes": 10857,
+      "sha256": "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d"
     },
     {
       "path": "measurement_workspace/web/workspace.js",
@@ -311,8 +311,8 @@
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 9106,
-      "sha256": "9f73f969706819bfe1d31e230247b477af26d976ed9a6f14006651601ee76fa3"
+      "bytes": 10159,
+      "sha256": "cd3de40036d47db9c61eb5e0581326042aeb950ad22bbfc57916b049f78cf894"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -336,23 +336,23 @@
     },
     {
       "path": "operator/web/measured_chemistry.mjs",
-      "bytes": 35156,
-      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
     },
     {
       "path": "operator/web/measured_collections.mjs",
-      "bytes": 8945,
-      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2"
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5"
     },
     {
       "path": "operator/web/measured_large_files.mjs",
-      "bytes": 17979,
-      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12"
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b"
     },
     {
       "path": "operator/web/measured_observations.css",
-      "bytes": 4996,
-      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039"
+      "bytes": 10857,
+      "sha256": "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d"
     },
     {
       "path": "operator/web/measured_observations.mjs",
@@ -366,8 +366,8 @@
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
+      "bytes": 20239,
+      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
     },
     {
       "path": "source/MEASURED_CHEMISTRY_RECEIVING.md",
@@ -460,10 +460,14 @@
       "58b15a5326a40e5f7f836d85a114c7ad75bf6a23dc34aeda02f0682eda73f577",
       "23f8338db897fe1fa8132dbf3ff17cbcb214ac62fbdc6eba957787384ddea3ca",
       "a603c97d6e02bd70964682d91455c93019b6fc41cc939809a8fdd546452faa3c",
-      "746bd5e68bacc9c2e47bab4589a69a3585679eea239562a7aacbfcb168ca5fb2"
+      "746bd5e68bacc9c2e47bab4589a69a3585679eea239562a7aacbfcb168ca5fb2",
+      "7cb7a1e24592dabdd2c5d2fa85b22b4318b1c9424c05ce93aa1c253108f23880",
+      "95ebc0c41d8cb8c139f37f4412de4838bffc029b6b28f34f7c364ab21d9ec91e",
+      "3ca590c7321151db63d72eb02b080641cd921325d992e486a37173d8f6bbf5a5"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
-      "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+      "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+      "4ea34a3c562729773214977f6098d5aa304cc34b9265bc91d44aef3f05c05c64"
     ],
     "MEASUREMENT_COLLECTIONS.md": [
       "3c30d46f3b46ac1ae51ee40803bc0ba57022db54699514de45772231451b4a97"
@@ -589,10 +593,12 @@
       "307f98afc3ccbecb294bb18cf4d4b1fe3a0e4b05bc3f4390883169178407e056"
     ],
     "measurement_workspace/web/large_files.mjs": [
-      "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54"
+      "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12"
     ],
     "operator/web/measured_large_files.mjs": [
-      "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54"
+      "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12"
     ],
     "measurement_workspace/__init__.py": [
       "4952e0eec7fa862a4603ae7612b02661dfc97aa20a5910229fad70bade543332"
@@ -626,7 +632,14 @@
       "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f"
     ],
     "operator/MEASUREMENT_RETURNED_REVIEWS.md": [
-      "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85"
+      "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85",
+      "9f73f969706819bfe1d31e230247b477af26d976ed9a6f14006651601ee76fa3"
+    ],
+    "measurement_workspace/web/returned_reviews.mjs": [
+      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
+    ],
+    "operator/web/measured_returned_reviews.mjs": [
+      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
     ]
   },
   "requires": [
