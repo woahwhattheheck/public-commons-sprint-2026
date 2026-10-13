@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "collection-customer-delivery",
+  "description": "Complete original Collection or received InboxTask responses with fixed customer review, complete selected source and independent receiving.",
+  "commands": {
+    "buyer-customer-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/cli.mjs",
+    "mcp-collection-delivery": "stellar-forge/mcp-paid-agent/native-collection-delivery-cli.mjs"
+  },
+  "commandDescriptions": {
+    "buyer-customer-delivery": "Package and receive complete original saved customer responses without starting purchases.",
+    "mcp-collection-delivery": "Review, download, upload and receive complete original customer packages through registered MCP hosts."
+  },
+  "exports": {
+    "./buyer/customer-delivery": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/model.mjs",
+    "./buyer/customer-delivery/format": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/format.mjs",
+    "./buyer/customer-delivery/receiving": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/receiving/receive.mjs",
+    "./mcp/collection-delivery": "./source/stellar-forge/mcp-paid-agent/native-collection-delivery-client.mjs",
+    "./mcp/collection-delivery/download": "./source/stellar-forge/mcp-paid-agent/native-collection-delivery-download.mjs",
+    "./mcp/collection-delivery/receiving": "./source/stellar-forge/mcp-paid-agent/native-collection-delivery-receiving.mjs",
+    "./buyer/customer-delivery/inbox-task": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/inbox-task.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json"
+    }
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/OPERATOR.md",
+    "stellar-forge/mcp-paid-agent/COLLECTION_DELIVERY.md",
+    "stellar-forge/mcp-paid-agent/native-collection-delivery-client.d.mts",
+    "stellar-forge/mcp-paid-agent/native-collection-delivery-download.d.mts"
+  ],
+  "components": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery"
+  ]
+}

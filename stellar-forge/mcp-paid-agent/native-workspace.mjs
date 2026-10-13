@@ -12,6 +12,7 @@ import {createNativeDatasets, nativeDatasetActions} from './native-datasets.mjs'
 import {createNativeAnalysis, nativeAnalysisActions} from './native-analysis.mjs';
 import {createNativeDuckDB,nativeDuckDBActions} from './native-duckdb.mjs';
 import {createNativeCollections,nativeCollectionActions} from './native-collections.mjs';
+import {createNativeCollectionDelivery,nativeCollectionDeliveryActions} from './native-collection-delivery.mjs';
 import {createNativeCollectionRecovery,nativeCollectionRecoveryActions} from './native-collections-recovery.mjs';
 import {createNativeOperationsHandoff,nativeOperationsHandoffActions} from './native-operations-handoff.mjs';
 import {NATIVE_SOURCE,nativeSourceFiles,checkNativeSourceFiles,sealNativeSource,
@@ -277,6 +278,7 @@ export async function openNativeWorkspace(directory) {
   const analysis=createNativeAnalysis({manifest,completedDataset:datasets.completedDataset,
     completedObject:objects.completedObject,completedResponse,isClosed:()=>closed});
   const collections=createNativeCollections({manifest,isClosed:()=>closed});
+  const collectionDelivery=createNativeCollectionDelivery({manifest,isClosed:()=>closed});
   const collectionRecovery=createNativeCollectionRecovery({manifest,registerCollections:collections.register,isClosed:()=>closed});
   const duckdb=createNativeDuckDB({manifest,isClosed:()=>closed});
   const operationsHandoff=createNativeOperationsHandoff({manifest,currentWorkspace,runOwned,isClosed:()=>closed});
@@ -483,6 +485,7 @@ export async function openNativeWorkspace(directory) {
     registerAnalysis:analysis.register,
     registerDuckDB:duckdb.register,
     registerCollections:collections.register,
+    registerCollectionDelivery:collectionDelivery.register,
     registerCollectionRecovery:collectionRecovery.register,
     collectionRecoveryOpenedConnection:collectionRecovery.openedConnection,
     async registerSourceInbox(options){need(!closed,'MCP_NATIVE_WORKSPACE_CLOSING');await currentWorkspace();return registerNativeSourceInbox(manifest,options);},
@@ -496,6 +499,7 @@ export async function openNativeWorkspace(directory) {
       if(nativeAnalysisActions.includes(action))return analysis.call(args,context);
       if(nativeDuckDBActions.includes(action))return duckdb.call(args,context);
       if(nativeCollectionActions.includes(action))return collections.call(args,context);
+      if(nativeCollectionDeliveryActions.includes(action))return collectionDelivery.call(args,context);
       if(nativeCollectionRecoveryActions.includes(action))return collectionRecovery.call(args,context);
       if(nativeOperationsHandoffActions.includes(action))return operationsHandoff.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
@@ -534,7 +538,7 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), collectionRecovery.close(), duckdb.close(), operationsHandoff.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), collectionDelivery.close(), collectionRecovery.close(), duckdb.close(), operationsHandoff.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }

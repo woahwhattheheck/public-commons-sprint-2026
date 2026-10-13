@@ -9,6 +9,7 @@ import {initializationDirectory as privateDirectory,initializationBytes as priva
   from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs';
 import {need,InputError} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs';
 import {createNativeCollections,nativeCollectionActions,nativeCollectionsSchema} from './native-collections.mjs';
+import {createNativeCollectionDelivery,nativeCollectionDeliveryActions,nativeCollectionDeliverySchema} from './native-collection-delivery.mjs';
 import {createNativeCollectionRecovery,nativeCollectionRecoveryActions,nativeCollectionRecoverySchema,
   NATIVE_COLLECTION_RECOVERY_RECEIVER} from './native-collections-recovery.mjs';
 import {createMcpToolHandler} from './http-tools.mjs';
@@ -36,14 +37,14 @@ async function originalManifest(directory){
 }
 export const collectionReceiverTool=Object.freeze({
   name:TOOL,
-  description:'Operate the host-registered original Request Collections and encrypted recovery journals. '
+  description:'Operate the host-registered original Request Collections, encrypted recovery journals and complete customer packages. '
     +'Inspect exact profiles and saved operation IDs before verification, restoration or reopening. '
     +'Collection execution retains the separately owned original listener approval. '
     +'This receiver exposes no generic Bazaar purchase, quote, wallet or signing operation.',
   inputSchema:{type:'object',additionalProperties:false,required:['action'],
-    properties:{action:{enum:[...nativeCollectionActions,...nativeCollectionRecoveryActions]},
-      ...nativeCollectionsSchema.properties,...nativeCollectionRecoverySchema.properties},
-    anyOf:[...nativeCollectionsSchema.anyOf,...nativeCollectionRecoverySchema.anyOf]}
+    properties:{action:{enum:[...nativeCollectionActions,...nativeCollectionDeliveryActions,...nativeCollectionRecoveryActions]},
+      ...nativeCollectionsSchema.properties,...nativeCollectionDeliverySchema.properties,...nativeCollectionRecoverySchema.properties},
+    anyOf:[...nativeCollectionsSchema.anyOf,...nativeCollectionDeliverySchema.anyOf,...nativeCollectionRecoverySchema.anyOf]}
 });
 export async function initializeCollectionReceiver({directory}={}){
   const root=path(directory);await privateDirectory(dirname(root));let created=false;
@@ -59,12 +60,15 @@ export async function openCollectionReceiver(directory){
   const manifest=await originalManifest(directory),shutdown=new AbortController();
   let closing=null,closed=false;
   const collections=createNativeCollections({manifest,isClosed:()=>closed});
+  // This listener declares maxRequestBytes:256*1024 below; generic hosts default to one part.
+  const collectionDelivery=createNativeCollectionDelivery({manifest,isClosed:()=>closed,maxUploadBatchChunks:2});
   const recovery=createNativeCollectionRecovery({manifest,registerCollections:collections.register,isClosed:()=>closed});
   const available=()=>need(!closed,'MCP_NATIVE_WORKSPACE_CLOSING');
   return Object.freeze({
     manifest:structuredClone(manifest),tools:[structuredClone(collectionReceiverTool)],
     async registerRecovery(description){available();return recovery.register(description);},
     async registerCollections(description){available();return collections.register(description);},
+    async registerCollectionDelivery(description){available();return collectionDelivery.register(description);},
     async openedConnection(name,requestId){available();return recovery.openedConnection(name,requestId);},
     async call(args={},context={}){
       available();need(plain(args)&&plain(context)&&
@@ -74,13 +78,14 @@ export async function openCollectionReceiver(directory){
       signal.throwIfAborted();
       if(nativeCollectionRecoveryActions.includes(args.action))return recovery.call(args,{signal});
       if(nativeCollectionActions.includes(args.action))return collections.call(args,{signal});
+      if(nativeCollectionDeliveryActions.includes(args.action))return collectionDelivery.call(args,{signal});
       fail('MCP_COLLECTION_RECEIVER_ACTION_UNAVAILABLE');
     },
     close(){
       if(closing)return closing;
       closed=true;shutdown.abort();
       closing=(async()=>{
-        const outcomes=await Promise.allSettled([recovery.close(),collections.close()]);
+        const outcomes=await Promise.allSettled([recovery.close(),collections.close(),collectionDelivery.close()]);
         const failure=outcomes.find(v=>v.status==='rejected');if(failure)throw failure.reason;
       })();return closing;
     }
@@ -127,7 +132,7 @@ export async function startCollectionReceiver({directory,port=0,environment=proc
       {...access.transportOptions,allowedClientOrigins:[...new Set([...origins,address])],
         serverName:'starforge-collections-receiver',serverVersion:'1.0.0',
         maxRequestBytes:256*1024,
-        instructions:'This operator-selected host exposes original Request Collections and recovery only. '
+        instructions:'This operator-selected host exposes original Request Collections, recovery and complete customer delivery only. '
           +'Use registered aliases and exact profile, request, record and file hashes. '
           +'After a lost reply inspect the same request ID. Verification does not restore. '
           +'Restoration and collection execution require their original separate source checks and approvals. '

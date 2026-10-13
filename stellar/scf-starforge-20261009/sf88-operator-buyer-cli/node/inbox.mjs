@@ -212,6 +212,32 @@ export class Inbox {
   inspectOperations(file, {signal} = {}) {
     return this._command('inspect-operations', {file:absolute(file)}, {signal});
   }
+  /** Discover the original saved RPC read editions and their full response digests. */
+  rpcResponses(intentId, {commerceDirectory, signal} = {}) {
+    return this._command('rpc-responses', {intentId:intent(intentId),
+      commerceDirectory:absolute(commerceDirectory)}, {signal});
+  }
+  /** Open one exact recovery edition through the original authenticated reader. */
+  async rpcResponse(intentId, {commerceDirectory, readId, expectedResponseSha256, signal} = {}) {
+    intentId = intent(intentId);
+    need(typeof readId === 'string' &&
+      /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(readId) &&
+      typeof expectedResponseSha256 === 'string' && /^[a-f0-9]{64}$/.test(expectedResponseSha256),
+      'INBOX_RPC_RECOVERY_EDITION_REQUIRED');
+    const {result, responseFile} = await command(this.buyer, 'rpc-response', {
+      root:this.directory, intentId, commerceDirectory:absolute(commerceDirectory),
+      readId, expectedResponseSha256}, {signal});
+    const job = result.native, recovered = job.rpcRecovery;
+    if (!recovered?.responseFile || !responseFile) return null;
+    need(recovered.schema === 'stellar-forge.commerce-rpc-saved-results.v1' &&
+      recovered.readId === readId && recovered.responseFile.sha256 === expectedResponseSha256 &&
+      recovered.inboxDirectory === this.directory &&
+      recovered.commerceDirectory === absolute(commerceDirectory) &&
+      recovered.providerReads === 0 && responseFile.destination === job.responseDestination,
+      'INBOX_RPC_RESPONSE_BINDING_MISMATCH');
+    return new InboxRpcResponse(job, responseFile, this.buyer.runtime.directory);
+  }
+
   async response(intentId, {signal} = {}) {
     const {result, responseFile} = await command(this.buyer, 'response', {
       root:this.directory, intentId:intent(intentId)}, {signal});
@@ -242,4 +268,11 @@ export class InboxResponse extends VerifiedFile {
   _records(format, options) { return BuyerResult.prototype._records.call(this, format, options); }
   events(options) { return BuyerResult.prototype.events.call(this, options); }
   ndjson(options) { return BuyerResult.prototype.ndjson.call(this, options); }
+}
+
+/** Complete bytes from a separately timed original recovery read. The native
+ * getter continues to return the original attempt's unchanged outcome. */
+export class InboxRpcResponse extends InboxResponse {
+  get recovery() { return this.job.rpcRecovery; }
+  get delivery() { return this.recovery.responseFile; }
 }

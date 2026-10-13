@@ -53,6 +53,7 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `buyer-task-desk` | Original Inbox tasks, saved RPC read editions and complete customer packages | Inbox tasks; Runtime management; Merchant tools | [Installation, original-root launch and independent receiving](../sf88-operator-buyer-cli/node/agents/task-desk/INSTALLATION.md) |
 | `merchant-receivables` | Customer invoices, native Stellar collection and refunds, service calendars, payment plans, dated collections and cash planning, Xero handovers and customer closing | Merchant receivables, payment plans, service agreements, receivables Xero, customer closing and Runtime management | [Complete installed financial workflow](../../../products/merchant-receivables/README.md) |
 | `merchant-payment-plans` | Reviewed customer installment editions, historical allocations and complete collection schedules | Customer payment plans, Merchant receivables and Runtime management | [Payment-plan operation](../../../products/merchant-payment-plans/README.md) |
 | `merchant-service-agreements` | Accepted service quotation and renewal sources, dated recurring billing calendars and original receivables drafts | Merchant service agreements, Merchant receivables and Runtime management | [Service billing operation](../../../products/merchant-service-agreements/README.md) |

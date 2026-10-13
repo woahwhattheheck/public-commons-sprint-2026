@@ -50,6 +50,34 @@
         "recovery.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/customer-delivery",
+      [
+        "../delivery/public/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/customer-delivery/app.mjs",
+      [
+        "../delivery/public/app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/customer-delivery/style.css",
+      [
+        "../delivery/public/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/customer-delivery/guide",
+      [
+        "../delivery/OPERATOR.md",
+        "text/markdown; charset=utf-8"
+      ]
     ]
   ]
 }

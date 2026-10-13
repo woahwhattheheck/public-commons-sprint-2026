@@ -5,7 +5,7 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {initializeCollectionReceiver,openCollectionReceiver,startCollectionReceiver}
   from './native-collections-receiver.mjs';
-const commands={init:[],register:['--description'],'collections-register':['--description'],
+const commands={init:[],register:['--description'],'collections-register':['--description'],'collection-delivery-register':['--description'],
   inspect:[],call:['--input'],opened:['--name','--request-id'],serve:['--port']};
 const fail=code=>{throw Object.assign(new Error(code),{code});};
 const print=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
@@ -32,6 +32,7 @@ export async function main(args=process.argv.slice(2)){
       'init --dir PRIVATE_NEW_DIRECTORY\n'+
       'register --dir PRIVATE --description ORIGINAL_RECOVERY_REGISTRATION_JSON\n'+
       'collections-register --dir PRIVATE --description ORIGINAL_COLLECTION_REGISTRATION_JSON\n'+
+      'collection-delivery-register --dir PRIVATE --description PRIVATE_CUSTOMER_DELIVERY_REGISTRATION_JSON\n'+
       'inspect --dir PRIVATE\ncall --dir PRIVATE --input ORIGINAL_TOOL_ARGUMENTS_JSON\n'+
       'opened --dir PRIVATE --name RECOVERY_ALIAS --request-id ORIGINAL_RESTORE_UUID\n'+
       'serve --dir PRIVATE [--port 0..65535]\n'+
@@ -59,10 +60,12 @@ export async function main(args=process.argv.slice(2)){
     try{
       if(command==='register')print(await native.registerRecovery(await input(v['--description'])));
       else if(command==='collections-register')print(await native.registerCollections(await input(v['--description'])));
+      else if(command==='collection-delivery-register')print(await native.registerCollectionDelivery(await input(v['--description'])));
       else if(command==='call')print(await native.call(await input(v['--input'])));
       else if(command==='opened')print(await native.openedConnection(v['--name'],v['--request-id']));
       else print({schema:native.manifest.schema,id:native.manifest.id,directory,
         collections:await native.call({action:'collections',collectionOperation:'workspaces'}),
+        customerDelivery:await native.call({action:'collection-delivery',deliveryOperation:'workspaces'}),
         recovery:await native.call({action:'collection-recovery',recoveryOperation:'workspaces'}),
         walletCreated:false,originalListenerOwned:false});
     }finally{await native.close();}
