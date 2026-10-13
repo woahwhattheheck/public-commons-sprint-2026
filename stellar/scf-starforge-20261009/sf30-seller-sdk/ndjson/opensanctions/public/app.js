@@ -1,4 +1,8 @@
 /* MIT. Original-source operator on the retained NDJSON Workspace. */
+import {mountReviewCycles} from "./review-cycles.js";
+import {mountGleifIntake} from "./gleif-intake.js";
+import {mountPortfolioRefresh} from "./portfolio-refresh.js";
+import {mountReviewExchange} from "./review-exchange.js";
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const pretty = value => JSON.stringify(value, null, 2);
@@ -12,6 +16,7 @@ let state, contract, busy = false, view = "overview", selectedUpdate, selectedCh
 let entityOffset=0, counterpartyOffset=0, changeOffset=0;
 let currentChangeRows=[];
 let pendingCandidate=null;
+let portfolioRefresh=null,reviewExchange=null;
 const escape = value => String(value ?? "—").replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const p = value => "<pre class='scroll-box'>" + escape(pretty(value)) + "</pre>";
 const message = (text, error=false) => { const n=$("#notice"); n.textContent=text; n.className=error?"error":"success"; };
@@ -37,7 +42,7 @@ async function api(path, body, options={}) {
   }
   let data;
   try {data=await response.json();} catch {throw new Error("The local application returned an unreadable response ("+response.status+")");}
-  if (!response.ok || data?.ok===false && data?.error) throw new Error(data.error || data.message || pretty(data));
+  if (!response.ok || data?.ok===false && data?.error) {const error=new Error(data.error || data.message || pretty(data));error.native=data;error.status=response.status;throw error;}
   return data;
 }
 async function run(label, task) {
@@ -70,10 +75,14 @@ function edition(id) {return state.editions.find(item=>item.id===id);}
 function comparison(id) {return state.comparisons.find(item=>item.id===id);}
 function editionLabel(row) {return row.dataset+" · "+row.version;}
 function comparisonLabel(row) {return row.dataset+" · "+(edition(row.before)?.version||short(row.before))+" → "+(edition(row.after)?.version||short(row.after));}
-function navigate(name) {
+function navigate(name,{activate=true}={}) {
+  if(view==='portfolio-refresh'&&name!==view)portfolioRefresh?.deactivate();
+  if(view==='review-exchange'&&name!==view)reviewExchange?.deactivate();
   view=name;
   $$("nav [data-view]").forEach(el=>el.classList.toggle("selected",el.dataset.view===name));
   $$("main>section").forEach(el=>el.hidden=el.id!=="view-"+name);
+  if(name==="portfolio-refresh"&&activate)portfolioRefresh?.activate();
+  if(name==="review-exchange"&&activate)reviewExchange?.activate();
 }
 $$("[data-view]").forEach(el=>el.addEventListener("click",()=>navigate(el.dataset.view)));
 function renderState() {
@@ -120,7 +129,7 @@ function renderState() {
 async function refresh() {
   state=await api("state");
   if (!contract) contract=await api("contract");
-  renderState();
+  renderState();gleifIntake.refresh(state);portfolioRefresh?.refresh();
   await Promise.all([loadEntities(),loadCounterparties(),loadChanges()]);
   if (selectedUpdate) inspectUpdate(selectedUpdate.id);
   if (selectedRequest) await inspectRequest(selectedRequest.id);
@@ -413,4 +422,16 @@ document.addEventListener("click",event=>{
     if (action==="candidate") await reviewNativeCandidate(id,trigger.dataset.counterparty);
   });
 });
+const gleifIntake=await mountGleifIntake({root:$("#gleif-intake"),api,refresh,getState:()=>state,escape,download,message,
+  openPortfolio:async id=>{$("#portfolio-selection").value=id;counterpartyOffset=0;await loadCounterparties();navigate("portfolios");},
+  useMonitoringPolicy:policy=>{
+    const form=$("#case-form"),current=objectValue(form,"monitoring",contract.monitoring);
+    named(form,"monitoring").value=pretty({...current,resolutionProperties:[...new Set([...(current.resolutionProperties??policy.resolutionProperties),"leiCode"])]});
+    navigate("review");message("LEI is included in this case monitoring draft. Review the unchanged identity and relevance choices before saving.");
+  }});
+await mountReviewCycles({api,run,navigate,inspectCase,getState:()=>state,refresh,escape,pretty,
+  openPortfolioRefresh:async(id,entity)=>{navigate("portfolio-refresh",{activate:false});await portfolioRefresh.openComparison(id,entity);}});
+portfolioRefresh=await mountPortfolioRefresh({root:$("#view-portfolio-refresh"),api,getState:()=>state,refresh,
+  inspectCase:id=>run("Open original case",()=>inspectCase(id)),message,escape});
+reviewExchange=await mountReviewExchange({root:$("#view-review-exchange"),api,refresh,navigate,inspectCase,message});
 await run("Open retained source workspace",refresh);

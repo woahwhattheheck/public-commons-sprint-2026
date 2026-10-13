@@ -1,0 +1,1343 @@
+{
+  "schema": "stellar-forge.product-public-source.v1",
+  "product": "source-monitoring",
+  "publication": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "source_branch_owner": "The existing complete-product integration owns branch reconciliation, publication and receiving.",
+    "source_only_checkpoint": true,
+    "private_customer_content": "Excluded. The existing original customer source and operation remain with their selected owner.",
+    "integratedPublicBase": "aa954971e7f3ece0e66fb797510db66bd1513f2e"
+  },
+  "originalGenericSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "pull_request": 1948,
+    "commit": "4752d65b7e67dff5e2ebf8284213c9339ec89820",
+    "source_blob": "b5f9db153080a6c85ef73d4a7d73eae813cd61d8",
+    "bytes": 1233156,
+    "sha256": "c7fd70e5518a6c84cb6cf3a548bbb71af7b063e8ee96152228b938d3bc4e00a1",
+    "files": [
+      {
+        "path": "products/source-monitoring/agent-client.d.mts",
+        "bytes": 1924,
+        "sha256": "fb79754b2ce4a47ae2369f7a36015a42cdd64642c68f1f7d83483a8a8c10723f"
+      },
+      {
+        "path": "products/source-monitoring/agent-client.mjs",
+        "bytes": 13810,
+        "sha256": "b0b87836c043046153a47a97d19cd0f7c661f212a6e832ec2f402a2d419f3b24"
+      },
+      {
+        "path": "products/source-monitoring/agent-files.mjs",
+        "bytes": 13088,
+        "sha256": "6e3265f9469012d2377101ea4735f36ad6ad8a71930a85f74ef131c0fd73a4cc"
+      },
+      {
+        "path": "products/source-monitoring/AGENT.md",
+        "bytes": 34975,
+        "sha256": "7631a2858a62f57fed72a66ebcd274b6792fde0742297ecf50e387a4a11e88a1"
+      },
+      {
+        "path": "products/source-monitoring/catalog.mjs",
+        "bytes": 18092,
+        "sha256": "c6c9f8cbf1320656176cb9a6394bf21549a8d1ce07992387936468153965db0b"
+      },
+      {
+        "path": "products/source-monitoring/cli.mjs",
+        "bytes": 8685,
+        "sha256": "5a06d9936f619970fdf4991442e182fdf874cdbcfe2559de110328ea5b458969"
+      },
+      {
+        "path": "products/source-monitoring/client.d.mts",
+        "bytes": 4780,
+        "sha256": "3c07feb3786ac5ec841ec743807aaad47c67908e7a96f8a0ba0dbcbdf7f41c36"
+      },
+      {
+        "path": "products/source-monitoring/client.mjs",
+        "bytes": 29604,
+        "sha256": "f7cda638eb1b26c050bf62725a5012e8af960a43e632c289a15322bd0b91e5de"
+      },
+      {
+        "path": "products/source-monitoring/CUSTOMER_SETUP.md",
+        "bytes": 20848,
+        "sha256": "3b4621571a89256e0542b0823155cea8e24ae736ee62826aec44cb255133615f"
+      },
+      {
+        "path": "products/source-monitoring/customer-setup.d.mts",
+        "bytes": 5310,
+        "sha256": "f3d2060a8f8c20a9d7b000f61e52f5c76968aeb8718babe31f60251cb60cdb31"
+      },
+      {
+        "path": "products/source-monitoring/customer-setup.mjs",
+        "bytes": 19361,
+        "sha256": "7a20d12f81c0fa44363911bbe63a091ed55d11db3b6fc5664b970b25774bc57b"
+      },
+      {
+        "path": "products/source-monitoring/merchant-provider.mjs",
+        "bytes": 2006,
+        "sha256": "382ec64a7bdd29a60a3596a626223c65b7de8627f634f1ce02857a41ad30aac4"
+      },
+      {
+        "path": "products/source-monitoring/merchant.d.mts",
+        "bytes": 11220,
+        "sha256": "288447692e9de8bba4ba4083ee4b88f97750d28db15aa7fa7ac90fa9b351a6fe"
+      },
+      {
+        "path": "products/source-monitoring/merchant.mjs",
+        "bytes": 11011,
+        "sha256": "4539e5bee6044cf9b97026d18a128417d20940bc2b9ecfdbcbd4d27be968cdd3"
+      },
+      {
+        "path": "products/source-monitoring/OPERATING.md",
+        "bytes": 25313,
+        "sha256": "d4b768b1f2212aea0ca9f5c791d7170d35ce0ad1aed1bb62a4b90c2efa1294c2"
+      },
+      {
+        "path": "products/source-monitoring/receiving/customer-agent.d.mts",
+        "bytes": 1466,
+        "sha256": "fbc9020cbd2e17a7751c90c895bb935b6ed7e3d6db470a2669ee4b5d07da882e"
+      },
+      {
+        "path": "products/source-monitoring/receiving/customer-agent.mjs",
+        "bytes": 11196,
+        "sha256": "d9f101c4be0f4452f5cf1acd9a15f9067df9a1d44c840e9efcadd78641f23aad"
+      },
+      {
+        "path": "products/source-monitoring/receiving/reviewer-copy-browser.mjs",
+        "bytes": 28995,
+        "sha256": "92547818cfcb14d591a50e2634f87579f61068cc93cda1435db4a6b987e3fc8b"
+      },
+      {
+        "path": "products/source-monitoring/receiving/reviewer-exchange.mjs",
+        "bytes": 27440,
+        "sha256": "ae273c1ceb07ed794204a6efc274f34987b12666b325e6c14f4e07d83af48d55"
+      },
+      {
+        "path": "products/source-monitoring/REVIEW_CYCLES.md",
+        "bytes": 17191,
+        "sha256": "74c8cf7bcad9ea83d6de10772ff8055e9079067bd3d798516e8c702a1095aeff"
+      },
+      {
+        "path": "products/source-monitoring/REVIEWER_EXCHANGE.md",
+        "bytes": 26618,
+        "sha256": "beedcae40aaec8ad86a02775b22ee685490418286884ed4c1b3fc83990410ce5"
+      },
+      {
+        "path": "products/source-monitoring/verification/agent-boundary.json",
+        "bytes": 1308,
+        "sha256": "bd190169f7dd6760e3ded2bc2a7b6c3591666cff973d57dcebf4e344fd85ce33"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/gleif-research.json",
+        "bytes": 4328,
+        "sha256": "7cfc9bc9a98b0b74c0f36d41c2a5c0529cac58b6209beaf5c73138d364976ccf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/ndjson.json",
+        "bytes": 3795,
+        "sha256": "e0d815713c0facf87131b0ab287b740cf509d2d12fee48884a20d4e9956d7282"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/source-monitoring-product.json",
+        "bytes": 2525,
+        "sha256": "20240dbfe49cc2e8b806ba09ab25f8a39812b96fd098454003661323237f80b9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/browser-assets.json",
+        "bytes": 632,
+        "sha256": "a2a43dbe3779da6089d4b592c25d067102ff936773e8a5f5d72fb017b5a5110a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/cli.mjs",
+        "bytes": 6704,
+        "sha256": "9eabf0214d900c374b5d6a3b4fc56caa06e1f575cf037686fe81336be5ccb71b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/client.d.mts",
+        "bytes": 4171,
+        "sha256": "96e7dccac071a2e0fe8b161912f6a90245af87f49d90e2eba53ec05cd27a658c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/client.mjs",
+        "bytes": 4529,
+        "sha256": "8a72ba34582ab9f9b80eeee0ae260abb740e3682680c34725a0840744c899f89"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/managed.mjs",
+        "bytes": 2069,
+        "sha256": "58f7ae144df4f6fa533472fa29a4612802e6affc9122c8e85582a8702f5b5d4e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/MONITORING_FIELD_MAPPING.md",
+        "bytes": 6114,
+        "sha256": "4b31b49e049a857a2c9338b2a11647a042a232e68c513556a80bf9b0dff75ca8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/MONITORING_HANDOVER.md",
+        "bytes": 19932,
+        "sha256": "e72b728f55500c95b2ea362e2ceb848e0c3767288e15db1a5a379cb497e67d40"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/monitoring-portfolio.mjs",
+        "bytes": 8416,
+        "sha256": "d537bdb37a34f126f56bdb1dea179f1ef0bf3d7aa7c34559e5716fcd31f9b382"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/operator-tools.mjs",
+        "bytes": 6560,
+        "sha256": "8b43633a4c80e3880fc584f33c095b512a58204350b068defc902bb4a9bb0918"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/operator.mjs",
+        "bytes": 4545,
+        "sha256": "ba45c83039ee673ea00d9d6a4501532a41d7e56bc75ca35206fd64c38829fd2c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/app.mjs",
+        "bytes": 30098,
+        "sha256": "5001d3397fd826458a8df8cb5689dd1c37d3004f0e3c8d727b42b7003459b8ed"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/index.html",
+        "bytes": 7153,
+        "sha256": "7103ebe49a3698ea96507b0a976791c25f9524eaaa8ff34e3fbf6076c39db6f2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/monitoring.mjs",
+        "bytes": 6917,
+        "sha256": "3adff9f833fc863b254c8baf5f096ed67b02e14c00706cde2261906393aab7e3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/style.css",
+        "bytes": 4000,
+        "sha256": "986fe9bdba1e408cc182193f20dfca2813af5577e05ffbd49aac81b41c6e9448"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/receiving/monitoring.mjs",
+        "bytes": 22307,
+        "sha256": "9e4d398637cec49d3b5cfe7069b912214caf511fd185797cafd3ff881463fc7c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/server.mjs",
+        "bytes": 7631,
+        "sha256": "bbe31808200700ad2bea4f270923584d594d95aafc57ce3784a58e9f74ae7edf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/workspace.mjs",
+        "bytes": 32049,
+        "sha256": "8e2c0e7678f21155ecadbb1a71ac4aafb5019a040a72751d5e3bd4475870c34d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/application.py",
+        "bytes": 4771,
+        "sha256": "20d7bac99ecbf5acc391377173e9384f24518835baef583735bccaacb30c87b0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/managed.py",
+        "bytes": 5220,
+        "sha256": "b92f3b69b32d48827e1bd12a80733b58ae28e01e367877b6b13604209a9448de"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/ndjson_source.py",
+        "bytes": 15810,
+        "sha256": "e7e861aea7b62b3785c7cd1fa4cacf3884735d234e2aca2eedd603dda4646482"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application_binding.py",
+        "bytes": 3423,
+        "sha256": "c61a92ef3483c6a8569f706178b0b0f9a45c8a6779cee7cb04a2dba3362a9b9e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application-provider.mjs",
+        "bytes": 1103,
+        "sha256": "b2cc8b7b9594964cc144eff33405fbca36817d016b264663eb47f9ab872b1694"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/cli.mjs",
+        "bytes": 1586,
+        "sha256": "8e46aae8b15e9a23d698cd787e414786139d8eb1c732cde259c1ccaaed404269"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/cli.py",
+        "bytes": 15475,
+        "sha256": "4e7b8eeab8e352efb34d48d05c10449f0c5b0a8a62e1f65a8591ecf9a6fd541d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/gleif_portfolio.py",
+        "bytes": 21277,
+        "sha256": "bf387e9a1a736aaaa5e1a8aef01b05fea7bc9e7fdaaf0b284e6ac6db09e8fd15"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/MANAGED_APPLICATIONS.md",
+        "bytes": 7867,
+        "sha256": "c6f1f5679fb8730db69bbbc2df69b3aaee99e0ac78befe096a2e5f7e579f388b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/managed.mjs",
+        "bytes": 9873,
+        "sha256": "f9e2f424cc52c7a074e34699ac9b4da53c41d7f250ac058ffe7b031af91f5581"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/matching.py",
+        "bytes": 20439,
+        "sha256": "0f0dacd0296b634385a5449a63c85e8a9651fce9d59ef75c93106bc10e150168"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/model.py",
+        "bytes": 63077,
+        "sha256": "2553a3171d00c0d4fa387a4e34e6ee393fefa8fa2223f3eaabc3f01a28ddbb03"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REFRESH.md",
+        "bytes": 14497,
+        "sha256": "07cd1c9e625a07bbb731fb261ec678f7a4487cddecafce51a74ccbad9f3c6e94"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_refresh.py",
+        "bytes": 23639,
+        "sha256": "3d02b75d61413656d34aa2035fa09f1c57c890d4b3332643a38967a67f06680f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REVIEW_CYCLES.md",
+        "bytes": 15284,
+        "sha256": "6202a5313c78b1a4e132d181a708a78692c9e061fbd47b3f5635f03fcce1ecf7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_review_cycles.py",
+        "bytes": 6283,
+        "sha256": "884cd0f4e65158c6ec8700c093021bb3cf4a468e82e3f7fce6341b825ba79837"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/app.js",
+        "bytes": 35089,
+        "sha256": "23812482c2f31b825e12100f8e197f0f59870c986669c1f40ae5316273e5e45a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/gleif-intake.js",
+        "bytes": 8773,
+        "sha256": "a10b5f9c1d95eb0464e98e1637be028f8fd219ed3ae7bf1e09945f0c7eabd40d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/index.html",
+        "bytes": 19303,
+        "sha256": "2fd7659f66888fc5a38c5638ba9bd83f219c8c8c13e3399f0d1a4cad63bd6d0d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/portfolio-refresh.js",
+        "bytes": 19978,
+        "sha256": "8176d4339ab8f460419a999fa11289d62b961ce5f121e9d49f6607a47895423b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/review-cycles.js",
+        "bytes": 23174,
+        "sha256": "dad2081ae9e631486d4140ed8b50aa5396f873cea0958711196ee7028cc2f79e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/review-exchange.js",
+        "bytes": 32901,
+        "sha256": "e6e3a28de67838830001f423619c0e431722fdec32511c8560010a33afc743f0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.css",
+        "bytes": 4655,
+        "sha256": "5af6a0dac7f57835469d1ab50d2f56c1ad9f0b8bbece29ec7a13bb685348b5bf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.html",
+        "bytes": 1307,
+        "sha256": "bb17418b01169d15405b97a08ef84ce4aeacd894d820f03c24b6976352b6c06a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.js",
+        "bytes": 49498,
+        "sha256": "2267b799f8f49f109f8752fa4ec3944a391e8a74ed9ef9014cd60b872010dbfc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/style.css",
+        "bytes": 8781,
+        "sha256": "cf9d5d016aa3d9f09f9759db1de0c74e6ba74845407a26415059864e3adb9017"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/README.md",
+        "bytes": 16211,
+        "sha256": "ac75cbc5e632900eb677464762e913ab6d89b92232d7bc80ec82fa67c5999e99"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_cycles.py",
+        "bytes": 27923,
+        "sha256": "df69c62a0ac54fcef9ebb3b593a6031e97e8b74aca61e81bc078540e03fa26da"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange_delivery.py",
+        "bytes": 4888,
+        "sha256": "128e5e6f5d11bb544aef95d774a35f9052810746d92132769a8921ad329b57a8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange.py",
+        "bytes": 66485,
+        "sha256": "3ed87d5a39155e39f7a6992c9e9929153fb78ff4a21c7b8b9595d3bf6d7b3bdf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_workspace_archive.py",
+        "bytes": 13751,
+        "sha256": "0d106a4b3d8d65bb568d6dc2fe8e6a498f8bab56a9e93632a3c1c5a3b06c89dc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/REVIEW_WORKSPACE_ARCHIVES.md",
+        "bytes": 12314,
+        "sha256": "e69cc71a0fd79be9ed1b774d6ed4ee7d678865ea962969dcebe18946b58ba0f7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/SOURCE_CONTRACT.json",
+        "bytes": 3889,
+        "sha256": "978ab6ab19cc2a0d1385aa5005ff130fcf4ba40015520a8ead19252a53eed445"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/updates.py",
+        "bytes": 15460,
+        "sha256": "55883d613103af3203fc83ca290b33509f13806ddefa23723db1af2818c72331"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/web.py",
+        "bytes": 16798,
+        "sha256": "92373ef620db4cf8b9a0aae7d3519987af1cf79ac8cdd6230179def506e6edaf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/server.py",
+        "bytes": 9434,
+        "sha256": "c5ae9b7e4203bca1d661b762203ed952a48687647080d214b0d7a50e56dc401d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/workspace.py",
+        "bytes": 37331,
+        "sha256": "cbaae62d1a3191637eb5907943e4e59ea469e4fb2df7d992bd7eb88b629069ba"
+      }
+    ]
+  },
+  "dependencyComposition": {
+    "source_blob": "bcd80a2e2b4632e9441c03f8390ed0973038ad87",
+    "bytes": 1408773,
+    "sha256": "e1bbe72925e5414f692e74c358511ef49519aeef3afdc4e12819443807bd0955",
+    "original_files": 79,
+    "recovered_gleif_files": 20,
+    "complete_source_files": 99,
+    "preserved_public": [
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/application.py",
+        "gitBlob": "7259aeb46307b2fe7c636d7df70959cb8b034a89",
+        "bytes": 6651,
+        "sha256": "c608cc72b8302070d3db8eb07626a7bcb890104be5a8066c8840a9512ab91467"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/managed.py",
+        "gitBlob": "cae6a6a11e260ecb1dab5a0fd78ff0091a125f66",
+        "bytes": 5255,
+        "sha256": "f1247aa672091e265e40356ea38abfa6d86a79e62c1e950af4a651dcfce0dd52"
+      }
+    ],
+    "reason": "Retain complete missing GLEIF core/provider/contract/example/guide sources and preserve newer public NDJSON MerchantPackages APIs and physical source inventory."
+  },
+  "publicMaintenance": {
+    "files": [
+      {
+        "path": "products/source-monitoring/client.mjs",
+        "bytes": 30692,
+        "sha256": "e2898c440bfb4811c198b28dba89b4440a57e895c90d6ffe5fd432babe9cdfb8",
+        "git_blob": "dd030abe0cc7effb17fbcc492da595a9091799a8"
+      },
+      {
+        "path": "products/source-monitoring/agent-client.mjs",
+        "bytes": 15073,
+        "sha256": "902d7dab30d350755115a44d7ddc822fa2120996e7273777ad5006925b4b85ee",
+        "git_blob": "ff120253e1ad8fd0b158d5ef9007217c5257ead3"
+      },
+      {
+        "path": "products/source-monitoring/receiving/customer-agent.mjs",
+        "bytes": 11549,
+        "sha256": "f7deb758e133acec800fa5e0f035e8072d1bdc3eae76b0dcdd839ece1e5cc58d",
+        "git_blob": "f36ece3079182418369a489cf5fdecd2f97a2523"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/app.js",
+        "bytes": 35090,
+        "sha256": "f3c842351e9d0d8e52c50203afd0fa6c9b7a9ef39cf15e80686c46c464920bbd",
+        "git_blob": "8403e605e69db875001b782bde495948f09a2b7c"
+      }
+    ],
+    "changes": [
+      "Complete-download, retained-file release, temporary provider and client cleanup preserve original action failures and each independent owned-resource outcome.",
+      "Browser navigation retains the original collection selector while preserving current Monitoring controls."
+    ]
+  },
+  "grantAuthorSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "pull_request": 1954,
+    "commit": "01a4b989488d57cfef00c1469b922c3cbc5a2b00",
+    "files": [
+      {
+        "path": "products/source-monitoring/GRANT.md",
+        "bytes": 32178,
+        "sha256": "7a96b6d8dd17af974313db71ff0b98c3bdc1868a71688b47af8fa2aae1353012",
+        "git_blob": "4472a9d6b7fcf1217c7de42a1fa467ae79384968"
+      },
+      {
+        "path": "stellar-forge/developer-site/grant-products/source-monitoring.json",
+        "bytes": 18191,
+        "sha256": "744145e5e28897ddf2c1f03c50591166b9f477c59bc0cf1e50a5961a13257780",
+        "git_blob": "dcdf4ff4cf7dcdd1ca7d1c34685f0e099cee1f05"
+      }
+    ],
+    "preservation": "Both complete latest source bodies are unchanged; all prior grant author references remain. This adoption does not claim a new grant run."
+  },
+  "packaging": {
+    "original_monitoring_selection": "503df4f7d078b33b6935b4b25b18925679c086a5",
+    "original_gleif_selection": "4436917a7ebd3b7f44007a83879f4a9d8cd8a0ae",
+    "unchanged_local_dataset_guide": {
+      "path": "products/local-dataset/OPERATING.md",
+      "bytes": 16515,
+      "sha256": "ae505bcf3252f296eb068c955122f8e0969352a491cc3adcaa7d7e3fe50295eb",
+      "git_blob": "e3555105dd699b4b1712a4054e5bc9be93a3199e"
+    },
+    "changes": [
+      "Select existing Runtime and MCP commands/providers together with the full Monitoring, NDJSON, XML and GLEIF source dependencies.",
+      "Keep the original standalone GLEIF research selection with public repository metadata and its actual whole NDJSON/XML/Monitoring reviewer-exchange native dependencies.",
+      "Retain the complete original local-dataset operating guide referenced by the standalone GLEIF package.",
+      "Use existing Runtime installation, Applications and original customer-setup preparation/advance/verification; no absent Monitoring-specific Grant Installation profile is invented.",
+      "Retain latest complete grant chapter/declaration as original source support."
+    ]
+  },
+  "sharedContracts": {
+    "observed_public_root_tree": "92dad696f40ccd0241c3cbb88e4312d1a1e643e3",
+    "tree_observation": "Three task-relevant complete subtree inventories were read independently. The final branch must reconcile its actual current source; this observation is not asserted to be the later main commit tree.",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+        "bytes": 10353,
+        "sha256": "0e694a9aac52045689d56960ff2aadb9fece91c3f61e1ce120cd0a9e86ae24f7",
+        "observed_tree_git_blob": "b792444200a7d95d42d899bea846c0097e4becc3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+        "bytes": 26279,
+        "sha256": "6f0232c5cd5ecc5a82670b6ce0116f0fa06e75bd5780d0054c38d84deaed3ed0",
+        "observed_tree_git_blob": "a1eb20c79f2bd6486c9d01149ee8cf19605ac43f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+        "bytes": 3764,
+        "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d",
+        "observed_tree_git_blob": "2c668933f214f201137ac6d3c6b7410525955c9b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/build.mjs",
+        "bytes": 32630,
+        "sha256": "a363b714c4c6715eb630e64b51d8861d6ab58fe80a5f3ef578f4da8b73634389",
+        "observed_tree_git_blob": "ee1c91b0a7d65c7ceadcd855dc4dc3d830049d05"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+        "bytes": 79313,
+        "sha256": "d69e41fbefa5b37aab2644ffca147429e1e183c7550b92b590182b43a034285a",
+        "observed_tree_git_blob": "9015c2283f26710496509069313cfbe347e7060b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+        "bytes": 737,
+        "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c",
+        "observed_tree_git_blob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-console-browser-assets.json",
+        "bytes": 416,
+        "sha256": "380fe3b4eed9172b6e69fad28a275f4dcd1bb981b822358bf0551da423cde809",
+        "observed_tree_git_blob": "d4990d79b5da6803fe6f507cf0d119adf1c92581"
+      }
+    ]
+  },
+  "currentProductSource": {
+    "files": [
+      {
+        "path": "products/gleif/OPERATING.md",
+        "bytes": 20733,
+        "sha256": "409138638ba373cc2cfe3204529ae5e93246146cf7a2caa0be00779146f8ff25",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "products/local-dataset/OPERATING.md",
+        "bytes": 16515,
+        "sha256": "ae505bcf3252f296eb068c955122f8e0969352a491cc3adcaa7d7e3fe50295eb",
+        "git_blob": "e3555105dd699b4b1712a4054e5bc9be93a3199e",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "products/source-monitoring/agent-client.d.mts",
+        "bytes": 1924,
+        "sha256": "fb79754b2ce4a47ae2369f7a36015a42cdd64642c68f1f7d83483a8a8c10723f",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/agent-client.mjs",
+        "bytes": 15073,
+        "sha256": "902d7dab30d350755115a44d7ddc822fa2120996e7273777ad5006925b4b85ee",
+        "git_blob": "ff120253e1ad8fd0b158d5ef9007217c5257ead3",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "products/source-monitoring/agent-files.mjs",
+        "bytes": 13088,
+        "sha256": "6e3265f9469012d2377101ea4735f36ad6ad8a71930a85f74ef131c0fd73a4cc",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/AGENT.md",
+        "bytes": 34975,
+        "sha256": "7631a2858a62f57fed72a66ebcd274b6792fde0742297ecf50e387a4a11e88a1",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/catalog.mjs",
+        "bytes": 18092,
+        "sha256": "c6c9f8cbf1320656176cb9a6394bf21549a8d1ce07992387936468153965db0b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/cli.mjs",
+        "bytes": 8685,
+        "sha256": "5a06d9936f619970fdf4991442e182fdf874cdbcfe2559de110328ea5b458969",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/client.d.mts",
+        "bytes": 4780,
+        "sha256": "3c07feb3786ac5ec841ec743807aaad47c67908e7a96f8a0ba0dbcbdf7f41c36",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/client.mjs",
+        "bytes": 30692,
+        "sha256": "e2898c440bfb4811c198b28dba89b4440a57e895c90d6ffe5fd432babe9cdfb8",
+        "git_blob": "dd030abe0cc7effb17fbcc492da595a9091799a8",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "products/source-monitoring/CUSTOMER_SETUP.md",
+        "bytes": 20848,
+        "sha256": "3b4621571a89256e0542b0823155cea8e24ae736ee62826aec44cb255133615f",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/customer-setup.d.mts",
+        "bytes": 5310,
+        "sha256": "f3d2060a8f8c20a9d7b000f61e52f5c76968aeb8718babe31f60251cb60cdb31",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/customer-setup.mjs",
+        "bytes": 19361,
+        "sha256": "7a20d12f81c0fa44363911bbe63a091ed55d11db3b6fc5664b970b25774bc57b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/GRANT.md",
+        "bytes": 32178,
+        "sha256": "7a96b6d8dd17af974313db71ff0b98c3bdc1868a71688b47af8fa2aae1353012",
+        "git_blob": "4472a9d6b7fcf1217c7de42a1fa467ae79384968",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "products/source-monitoring/merchant-provider.mjs",
+        "bytes": 2006,
+        "sha256": "382ec64a7bdd29a60a3596a626223c65b7de8627f634f1ce02857a41ad30aac4",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/merchant.d.mts",
+        "bytes": 11220,
+        "sha256": "288447692e9de8bba4ba4083ee4b88f97750d28db15aa7fa7ac90fa9b351a6fe",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/merchant.mjs",
+        "bytes": 11011,
+        "sha256": "4539e5bee6044cf9b97026d18a128417d20940bc2b9ecfdbcbd4d27be968cdd3",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/OPERATING.md",
+        "bytes": 25313,
+        "sha256": "d4b768b1f2212aea0ca9f5c791d7170d35ce0ad1aed1bb62a4b90c2efa1294c2",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/receiving/customer-agent.d.mts",
+        "bytes": 1466,
+        "sha256": "fbc9020cbd2e17a7751c90c895bb935b6ed7e3d6db470a2669ee4b5d07da882e",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/receiving/customer-agent.mjs",
+        "bytes": 11549,
+        "sha256": "f7deb758e133acec800fa5e0f035e8072d1bdc3eae76b0dcdd839ece1e5cc58d",
+        "git_blob": "f36ece3079182418369a489cf5fdecd2f97a2523",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "products/source-monitoring/receiving/reviewer-copy-browser.mjs",
+        "bytes": 28995,
+        "sha256": "92547818cfcb14d591a50e2634f87579f61068cc93cda1435db4a6b987e3fc8b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/receiving/reviewer-exchange.mjs",
+        "bytes": 27440,
+        "sha256": "ae273c1ceb07ed794204a6efc274f34987b12666b325e6c14f4e07d83af48d55",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/REVIEW_CYCLES.md",
+        "bytes": 17191,
+        "sha256": "74c8cf7bcad9ea83d6de10772ff8055e9079067bd3d798516e8c702a1095aeff",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/REVIEWER_EXCHANGE.md",
+        "bytes": 26618,
+        "sha256": "beedcae40aaec8ad86a02775b22ee685490418286884ed4c1b3fc83990410ce5",
+        "origin": "original complete source"
+      },
+      {
+        "path": "products/source-monitoring/verification/agent-boundary.json",
+        "bytes": 1308,
+        "sha256": "bd190169f7dd6760e3ded2bc2a7b6c3591666cff973d57dcebf4e344fd85ce33",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar-forge/developer-site/grant-products/source-monitoring.json",
+        "bytes": 18191,
+        "sha256": "744145e5e28897ddf2c1f03c50591166b9f477c59bc0cf1e50a5961a13257780",
+        "git_blob": "dcdf4ff4cf7dcdd1ca7d1c34685f0e099cee1f05",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/gleif-research.json",
+        "bytes": 4328,
+        "sha256": "7cfc9bc9a98b0b74c0f36d41c2a5c0529cac58b6209beaf5c73138d364976ccf",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/ndjson.json",
+        "bytes": 3795,
+        "sha256": "e0d815713c0facf87131b0ab287b740cf509d2d12fee48884a20d4e9956d7282",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/source-monitoring-product.json",
+        "bytes": 2525,
+        "sha256": "20240dbfe49cc2e8b806ba09ab25f8a39812b96fd098454003661323237f80b9",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/application-provider.mjs",
+        "bytes": 3888,
+        "sha256": "deb7f06b315acbf74c36934be037786fc2e41d3b7f0270d420775f11ac8bffdb",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/browser-assets.json",
+        "bytes": 632,
+        "sha256": "a2a43dbe3779da6089d4b592c25d067102ff936773e8a5f5d72fb017b5a5110a",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/cli.mjs",
+        "bytes": 6704,
+        "sha256": "9eabf0214d900c374b5d6a3b4fc56caa06e1f575cf037686fe81336be5ccb71b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/client.d.mts",
+        "bytes": 4171,
+        "sha256": "96e7dccac071a2e0fe8b161912f6a90245af87f49d90e2eba53ec05cd27a658c",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/client.mjs",
+        "bytes": 4529,
+        "sha256": "8a72ba34582ab9f9b80eeee0ae260abb740e3682680c34725a0840744c899f89",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/core.mjs",
+        "bytes": 23816,
+        "sha256": "48eef498fca03184b2c72f8610ca5282e62db2c7385ec4e6dd4f4e6e15ddcde7",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/gleif-foundation-plan.json",
+        "bytes": 55,
+        "sha256": "a1fbd0195ef763212cd4a790dddd110fb3d98bf02747b9fe167281ddf68ed93d",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/name-plan.json",
+        "bytes": 96,
+        "sha256": "6535196dce6f74f1f4f56e1056f34ec7c77118cc1c3df4dc1aeb7eabb50b5d65",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/entities.csv",
+        "bytes": 4589,
+        "sha256": "0a133a65363d5c5e2308978a2eac64f9b988b488d5e5f4c090df141f86ba2562",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/entities.jsonl",
+        "bytes": 10711,
+        "sha256": "91cbd1079f988d010272589a0e3a4a2c71667c96e700f8eeb95c5f10dd356e44",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/entities.spreadsheet.csv",
+        "bytes": 4589,
+        "sha256": "0a133a65363d5c5e2308978a2eac64f9b988b488d5e5f4c090df141f86ba2562",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/import-exact.json",
+        "bytes": 5028,
+        "sha256": "c114494c029a3484a89699fdda1adc66ccfd8670088d46ed329f80ff2497155b",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/import-name.json",
+        "bytes": 8658,
+        "sha256": "c080790ecf6c244ca61adf788480c62aaea33947edd8fbd778a1ea2b74d4c150",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/prepare-dataset.json",
+        "bytes": 222,
+        "sha256": "fa03c278e74880ec081a4e887d418c08faf0d6931520c421ffc8ed00880bb4e5",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/prepare-report.json",
+        "bytes": 251,
+        "sha256": "dcf6c086b2e09afc48dcb6230e2de8838a80ad21ffb7255589e26643d9bc2b31",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/README.md",
+        "bytes": 3772,
+        "sha256": "ea3572b9ba30cc920d5599eafe6ea0528b0a135d0dc8c2bac88e0a4d70b1e870",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/report.html",
+        "bytes": 21442,
+        "sha256": "a9bb970586bf7f03235b5aaaf984e1a2ec93127e46bf53b0a7cbd2102de5db4e",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/report.json",
+        "bytes": 33030,
+        "sha256": "2f54572919b30284fea015e4b2b7fb6536ac35fcacb0ff4dce1129c8e6e849a0",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/review-branch.json",
+        "bytes": 742,
+        "sha256": "0d475894c7878c844e842b572f9609b4ec08886b47a9e65cf289ac0e8bc8ccd2",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/examples/observed-foundation-20261012/review-foundation.json",
+        "bytes": 713,
+        "sha256": "b6789e2ef1a1dd44cdb84f57df0ee21dbc9fe453d7954818e9eff25b0b3b04db",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/managed.mjs",
+        "bytes": 2069,
+        "sha256": "58f7ae144df4f6fa533472fa29a4612802e6affc9122c8e85582a8702f5b5d4e",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/MONITORING_FIELD_MAPPING.md",
+        "bytes": 6114,
+        "sha256": "4b31b49e049a857a2c9338b2a11647a042a232e68c513556a80bf9b0dff75ca8",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/MONITORING_HANDOVER.md",
+        "bytes": 19932,
+        "sha256": "e72b728f55500c95b2ea362e2ceb848e0c3767288e15db1a5a379cb497e67d40",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/monitoring-portfolio.mjs",
+        "bytes": 8416,
+        "sha256": "d537bdb37a34f126f56bdb1dea179f1ef0bf3d7aa7c34559e5716fcd31f9b382",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/operator-provider.mjs",
+        "bytes": 1752,
+        "sha256": "4bb3b05487ae3e4fb939c66ccae491993594643272df8f8a8fd7d24135ae8a29",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/operator-tools.mjs",
+        "bytes": 6560,
+        "sha256": "8b43633a4c80e3880fc584f33c095b512a58204350b068defc902bb4a9bb0918",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/operator.mjs",
+        "bytes": 4545,
+        "sha256": "ba45c83039ee673ea00d9d6a4501532a41d7e56bc75ca35206fd64c38829fd2c",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/app.mjs",
+        "bytes": 30098,
+        "sha256": "5001d3397fd826458a8df8cb5689dd1c37d3004f0e3c8d727b42b7003459b8ed",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/index.html",
+        "bytes": 7153,
+        "sha256": "7103ebe49a3698ea96507b0a976791c25f9524eaaa8ff34e3fbf6076c39db6f2",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/monitoring.mjs",
+        "bytes": 6917,
+        "sha256": "3adff9f833fc863b254c8baf5f096ed67b02e14c00706cde2261906393aab7e3",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/public/style.css",
+        "bytes": 4000,
+        "sha256": "986fe9bdba1e408cc182193f20dfca2813af5577e05ffbd49aac81b41c6e9448",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/receiving/monitoring.mjs",
+        "bytes": 22307,
+        "sha256": "9e4d398637cec49d3b5cfe7069b912214caf511fd185797cafd3ff881463fc7c",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/server.mjs",
+        "bytes": 7631,
+        "sha256": "bbe31808200700ad2bea4f270923584d594d95aafc57ce3784a58e9f74ae7edf",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/SOURCE_CONTRACT.md",
+        "bytes": 8251,
+        "sha256": "f7fe812fa5ed5bc730e172513e440a77e4f769c19b91a4cf6e02f6f9e25f5add",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/source.mjs",
+        "bytes": 7081,
+        "sha256": "c2e45139ec84d0e69b6ba7ace2a3756321b3d95b8ef96c60966b54bef3609e4b",
+        "origin": "recovered complete dependency or source guide"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gleif/workspace.mjs",
+        "bytes": 32049,
+        "sha256": "8e2c0e7678f21155ecadbb1a71ac4aafb5019a040a72751d5e3bd4475870c34d",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/application.py",
+        "bytes": 6651,
+        "sha256": "c608cc72b8302070d3db8eb07626a7bcb890104be5a8066c8840a9512ab91467",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/managed.py",
+        "bytes": 5255,
+        "sha256": "f1247aa672091e265e40356ea38abfa6d86a79e62c1e950af4a651dcfce0dd52",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/ndjson_source.py",
+        "bytes": 15810,
+        "sha256": "e7e861aea7b62b3785c7cd1fa4cacf3884735d234e2aca2eedd603dda4646482",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application_binding.py",
+        "bytes": 3423,
+        "sha256": "c61a92ef3483c6a8569f706178b0b0f9a45c8a6779cee7cb04a2dba3362a9b9e",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application-provider.mjs",
+        "bytes": 1103,
+        "sha256": "b2cc8b7b9594964cc144eff33405fbca36817d016b264663eb47f9ab872b1694",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/cli.mjs",
+        "bytes": 1586,
+        "sha256": "8e46aae8b15e9a23d698cd787e414786139d8eb1c732cde259c1ccaaed404269",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/cli.py",
+        "bytes": 15475,
+        "sha256": "4e7b8eeab8e352efb34d48d05c10449f0c5b0a8a62e1f65a8591ecf9a6fd541d",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/gleif_portfolio.py",
+        "bytes": 21277,
+        "sha256": "bf387e9a1a736aaaa5e1a8aef01b05fea7bc9e7fdaaf0b284e6ac6db09e8fd15",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/MANAGED_APPLICATIONS.md",
+        "bytes": 7867,
+        "sha256": "c6f1f5679fb8730db69bbbc2df69b3aaee99e0ac78befe096a2e5f7e579f388b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/managed.mjs",
+        "bytes": 9873,
+        "sha256": "f9e2f424cc52c7a074e34699ac9b4da53c41d7f250ac058ffe7b031af91f5581",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/matching.py",
+        "bytes": 20439,
+        "sha256": "0f0dacd0296b634385a5449a63c85e8a9651fce9d59ef75c93106bc10e150168",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/model.py",
+        "bytes": 63077,
+        "sha256": "2553a3171d00c0d4fa387a4e34e6ee393fefa8fa2223f3eaabc3f01a28ddbb03",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REFRESH.md",
+        "bytes": 14497,
+        "sha256": "07cd1c9e625a07bbb731fb261ec678f7a4487cddecafce51a74ccbad9f3c6e94",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_refresh.py",
+        "bytes": 23639,
+        "sha256": "3d02b75d61413656d34aa2035fa09f1c57c890d4b3332643a38967a67f06680f",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REVIEW_CYCLES.md",
+        "bytes": 15284,
+        "sha256": "6202a5313c78b1a4e132d181a708a78692c9e061fbd47b3f5635f03fcce1ecf7",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_review_cycles.py",
+        "bytes": 6283,
+        "sha256": "884cd0f4e65158c6ec8700c093021bb3cf4a468e82e3f7fce6341b825ba79837",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/app.js",
+        "bytes": 35090,
+        "sha256": "f3c842351e9d0d8e52c50203afd0fa6c9b7a9ef39cf15e80686c46c464920bbd",
+        "git_blob": "8403e605e69db875001b782bde495948f09a2b7c",
+        "origin": "maintained source successor"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/gleif-intake.js",
+        "bytes": 8773,
+        "sha256": "a10b5f9c1d95eb0464e98e1637be028f8fd219ed3ae7bf1e09945f0c7eabd40d",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/index.html",
+        "bytes": 19303,
+        "sha256": "2fd7659f66888fc5a38c5638ba9bd83f219c8c8c13e3399f0d1a4cad63bd6d0d",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/portfolio-refresh.js",
+        "bytes": 19978,
+        "sha256": "8176d4339ab8f460419a999fa11289d62b961ce5f121e9d49f6607a47895423b",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/review-cycles.js",
+        "bytes": 23174,
+        "sha256": "dad2081ae9e631486d4140ed8b50aa5396f873cea0958711196ee7028cc2f79e",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/review-exchange.js",
+        "bytes": 32901,
+        "sha256": "e6e3a28de67838830001f423619c0e431722fdec32511c8560010a33afc743f0",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.css",
+        "bytes": 4655,
+        "sha256": "5af6a0dac7f57835469d1ab50d2f56c1ad9f0b8bbece29ec7a13bb685348b5bf",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.html",
+        "bytes": 1307,
+        "sha256": "bb17418b01169d15405b97a08ef84ce4aeacd894d820f03c24b6976352b6c06a",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.js",
+        "bytes": 49498,
+        "sha256": "2267b799f8f49f109f8752fa4ec3944a391e8a74ed9ef9014cd60b872010dbfc",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/style.css",
+        "bytes": 8781,
+        "sha256": "cf9d5d016aa3d9f09f9759db1de0c74e6ba74845407a26415059864e3adb9017",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/README.md",
+        "bytes": 16211,
+        "sha256": "ac75cbc5e632900eb677464762e913ab6d89b92232d7bc80ec82fa67c5999e99",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_cycles.py",
+        "bytes": 27923,
+        "sha256": "df69c62a0ac54fcef9ebb3b593a6031e97e8b74aca61e81bc078540e03fa26da",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange_delivery.py",
+        "bytes": 4888,
+        "sha256": "128e5e6f5d11bb544aef95d774a35f9052810746d92132769a8921ad329b57a8",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange.py",
+        "bytes": 66485,
+        "sha256": "3ed87d5a39155e39f7a6992c9e9929153fb78ff4a21c7b8b9595d3bf6d7b3bdf",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_workspace_archive.py",
+        "bytes": 13751,
+        "sha256": "0d106a4b3d8d65bb568d6dc2fe8e6a498f8bab56a9e93632a3c1c5a3b06c89dc",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/REVIEW_WORKSPACE_ARCHIVES.md",
+        "bytes": 12314,
+        "sha256": "e69cc71a0fd79be9ed1b774d6ed4ee7d678865ea962969dcebe18946b58ba0f7",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/SOURCE_CONTRACT.json",
+        "bytes": 3889,
+        "sha256": "978ab6ab19cc2a0d1385aa5005ff130fcf4ba40015520a8ead19252a53eed445",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/updates.py",
+        "bytes": 15460,
+        "sha256": "55883d613103af3203fc83ca290b33509f13806ddefa23723db1af2818c72331",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/web.py",
+        "bytes": 16798,
+        "sha256": "92373ef620db4cf8b9a0aae7d3519987af1cf79ac8cdd6230179def506e6edaf",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/server.py",
+        "bytes": 9434,
+        "sha256": "c5ae9b7e4203bca1d661b762203ed952a48687647080d214b0d7a50e56dc401d",
+        "origin": "original complete source"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/workspace.py",
+        "bytes": 37331,
+        "sha256": "cbaae62d1a3191637eb5907943e4e59ea469e4fb2df7d992bd7eb88b629069ba",
+        "origin": "original complete source"
+      }
+    ],
+    "complete_source_and_guide_files": 102,
+    "total_utf8_bytes": 1407206
+  },
+  "ownedPostimages": [
+    {
+      "path": "products/local-dataset/OPERATING.md",
+      "bytes": 16515,
+      "sha256": "ae505bcf3252f296eb068c955122f8e0969352a491cc3adcaa7d7e3fe50295eb"
+    },
+    {
+      "path": "products/source-monitoring/AGENTS.md",
+      "bytes": 7327,
+      "sha256": "497313680a1132c0e0f2489c5a37465c80b2e39a70559cfda01114642537afbb"
+    },
+    {
+      "path": "products/source-monitoring/GRANT.md",
+      "bytes": 32178,
+      "sha256": "7a96b6d8dd17af974313db71ff0b98c3bdc1868a71688b47af8fa2aae1353012"
+    },
+    {
+      "path": "products/source-monitoring/PACKAGE_README.md",
+      "bytes": 16656,
+      "sha256": "f115727f3d144e2f2aa37c0ad32f5bc37ebcf3952aad7ea678b78e3d78d5600c"
+    },
+    {
+      "path": "stellar-forge/developer-site/grant-products/source-monitoring.json",
+      "bytes": 18191,
+      "sha256": "744145e5e28897ddf2c1f03c50591166b9f477c59bc0cf1e50a5961a13257780"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/selections/gleif-research.json",
+      "bytes": 6005,
+      "sha256": "ffe382787c832d6400d456cf964a3d2abebb7a63466026c633eed8584946a2ef"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/selections/source-monitoring.json",
+      "bytes": 12229,
+      "sha256": "fb859fcf159a5f3854a9bc87f0d2bbf8cbad0c77d6db0ed34d69553836dfad11"
+    }
+  ],
+  "sourceComposition": {
+    "method": "Execute unchanged maintained pure source-selection/specification/product-package functions and original builder initial runtime-file selection logic against the complete observed public inventory plus all current selected postimages.",
+    "recipes": {
+      "source-monitoring": {
+        "initial_files": 509,
+        "contributions": [
+          "gleif-research",
+          "merchant-console-browser-assets",
+          "merchant-provider-tools",
+          "ndjson",
+          "source-monitoring-product"
+        ],
+        "components": 17,
+        "support_files": 135,
+        "commands": [
+          "installation",
+          "runtime-profile",
+          "runtime-install",
+          "runtime-workspace",
+          "runtime-transfer",
+          "merchant-mcp",
+          "merchant-mcp-stdio",
+          "merchant-mcp-client-config",
+          "gleif",
+          "gleif-monitoring-receive",
+          "merchant-providers",
+          "dataset-ndjson",
+          "dataset-ndjson-merchant",
+          "dataset-ndjson-customer",
+          "dataset-ndjson-job",
+          "source-monitoring",
+          "source-monitoring-client",
+          "source-monitoring-customer-setup",
+          "source-monitoring-customer-receive"
+        ],
+        "missing_required": [],
+        "missing_components": [],
+        "original79_admitted": true,
+        "all_current_source_admitted": true,
+        "unselected_current_sources": [],
+        "ndjson_native_cli_admitted": true,
+        "native_import_closure": "The original builder must parse and bind the final source. Only unchanged pure registration composition and initial inventory selection were executed in this V8 review."
+      },
+      "gleif-research": {
+        "initial_files": 3576,
+        "contributions": [
+          "dataset",
+          "dataset-buyer",
+          "duckdb",
+          "frictionless",
+          "gleif-research",
+          "local-dataset-customer",
+          "merchant-provider-dataset",
+          "merchant-provider-publishers",
+          "python"
+        ],
+        "components": 32,
+        "support_files": 91,
+        "commands": [
+          "installation",
+          "runtime-profile",
+          "runtime-install",
+          "runtime-workspace",
+          "runtime-transfer",
+          "seller",
+          "merchant",
+          "buyer",
+          "buyer-node",
+          "dataset",
+          "dataset-workspace",
+          "dataset-publisher",
+          "buyer-dataset",
+          "buyer-dataset-workspace",
+          "dataset-delivery",
+          "merchant-mcp",
+          "merchant-mcp-stdio",
+          "merchant-mcp-client-config",
+          "mcp-native",
+          "mcp-client-config",
+          "mcp-stdio",
+          "native-signer",
+          "facilitator",
+          "client",
+          "releases",
+          "merchant-host",
+          "duckdb",
+          "duckdb-inspect",
+          "duckdb-prepare",
+          "duckdb-workbench",
+          "duckdb-workspace",
+          "cloud-workspace",
+          "cloud-mcp",
+          "cloud-remote",
+          "frictionless",
+          "gleif",
+          "gleif-monitoring-receive",
+          "local-dataset",
+          "local-dataset-agent",
+          "python-merchant",
+          "python-workspace"
+        ],
+        "missing_required": [],
+        "missing_components": [],
+        "original79_admitted": false,
+        "all_current_source_admitted": false,
+        "unselected_current_sources": [
+          "stellar/scf-starforge-20261009/distribution/contributions/ndjson.json",
+          "stellar/scf-starforge-20261009/distribution/contributions/source-monitoring-product.json",
+          "stellar-forge/developer-site/grant-products/source-monitoring.json"
+        ],
+        "ndjson_native_cli_admitted": true,
+        "native_import_closure": "The original builder must parse and bind the final source. Only unchanged pure registration composition and initial inventory selection were executed in this V8 review."
+      }
+    },
+    "limits": [
+      "No native archive build, static parser dependency closure, Node installation, native customer programme or browser execution is asserted by this source-only composition.",
+      "The unchanged original builder must bind actual final Git source, dependency closure, browser assets and complete immutable archive.",
+      "The selected original native/browser operation must personally inspect the exact outgoing product and all attachments before client-facing readiness."
+    ]
+  },
+  "continuation": {
+    "existing_course": "Continue the selected existing native operation and exact source-bound preparation; do not replace an in-progress source selection or relabel historical outputs.",
+    "configuration": "Keep actual private connection and customer records external. Reuse complete original setup plans and retained Runtime requests.",
+    "publication": "Integrate all eight owned full postimages with the complete 99-source product and final maintained source bodies. Preserve other current public changes."
+  }
+}

@@ -23,6 +23,9 @@ import zipfile
 from xml_source import InputError, MAX_SOURCE, inventory, validate_plan, extract, dataset_spec
 
 HERE = Path(__file__).resolve().parent
+# The retained catalogue database shares the original OAI backup member allowance.
+# Individual XML sources keep their independent MAX_SOURCE limit.
+MAX_DATABASE = 16 * MAX_SOURCE
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 VERSION = "stellar-forge.xml-workspace.v1"
 BUILD = "stellar-forge.xml-build.v1"
@@ -247,7 +250,7 @@ class Workspace:
         db_path = self.root / "workspace.sqlite"
         if not db_path.exists():
             private_write(db_path, b"")
-        regular(db_path)
+        regular(db_path, max_bytes=MAX_DATABASE)
         self.db = sqlite3.connect(db_path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -481,10 +484,16 @@ class Workspace:
             return self.native.query(config, params)
 
     @contextmanager
-    def _comparison_connection(self, before_id: str, after_id: str):
+    def _comparison_connection(self, before_id: str, after_id: str, compatible_plans: bool = False):
         before, after = self.build_view(before_id), self.build_view(after_id)
-        if before["plan"] != after["plan"] or not after["keys"]:
+        if not after["keys"]:
+            raise InputError("Edition comparison requires explicit unique keys")
+        if before["plan"] != after["plan"] and not compatible_plans:
             raise InputError("Edition comparison requires the same mapping with explicit unique keys; build both editions with that mapping")
+        if compatible_plans:
+            left, right = self.plan(before["plan"]), self.plan(after["plan"])
+            if left["columns"] != right["columns"] or left["keys"] != right["keys"]:
+                raise InputError("Compatible edition comparison requires identical complete columns and keys")
         before_path = self._build_path(before_id, "rows.sqlite")
         after_path = self._build_path(after_id, "rows.sqlite")
         db = sqlite3.connect(after_path.as_uri() + "?mode=ro", uri=True)
@@ -496,13 +505,18 @@ class Workspace:
         finally:
             db.close()
 
-    def compare(self, before_id: str, after_id: str) -> dict:
+    def compare(self, before_id: str, after_id: str, *, compatible_plans: bool = False) -> dict:
+        if type(compatible_plans) is not bool:
+            raise InputError("compatible_plans must be an explicit boolean")
         with self.mutex:
-            ident = digest(json_bytes({"schema": self.comparison_schema, "before": before_id, "after": after_id}))
+            identity = {"schema": self.comparison_schema, "before": before_id, "after": after_id}
+            if compatible_plans:
+                identity["compatibleMappings"] = True
+            ident = digest(json_bytes(identity))
             existing = self.db.execute("SELECT summary FROM comparisons WHERE id=?", (ident,)).fetchone()
             if existing:
                 return load_json(existing["summary"])
-            with self._comparison_connection(before_id, after_id) as (db, before, after), self.scratch() as temp:
+            with self._comparison_connection(before_id, after_id, compatible_plans) as (db, before, after), self.scratch() as temp:
                 counts = {"added": 0, "removed": 0, "changed": 0, "unchanged": 0}
                 plan = self.plan(after["plan"])
                 names = [c["name"] for c in plan["columns"]]
@@ -530,6 +544,8 @@ class Workspace:
                     "before": before_id, "after": after_id, "plan": after["plan"], "keys": after["keys"],
                     "semantics": "exact projected CSV cells; record order changes are not field changes",
                     "counts": counts, "changesSha256": file_digest(temp / "changes.jsonl", 4 * MAX_SOURCE)}
+                if compatible_plans:
+                    summary.update(compatibleMappings=True, beforePlan=before["plan"], afterPlan=after["plan"])
                 private_write(temp / "summary.json", json_bytes(summary))
                 destination = self.root / "comparisons" / ident
                 if destination.exists():
