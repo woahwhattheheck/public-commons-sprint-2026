@@ -735,7 +735,7 @@ const IMPLEMENTATION_UI = (() => {
 const {SCHEMA,COLLECTIONS,clone,esc,today,uid,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,deleteRow,csvPlan,reportHtml,fieldSheetHtml,safeLink} = IMPLEMENTATION_CORE;
 const {openImplementationDialog,saveImplementationForm} = IMPLEMENTATION_FORMS;
 const {normalizeResultsView,reviewResults,renderResults,resultInspectionHtml,inspectResult,matchingResultsCsv,matchingResultsDocument} = IMPLEMENTATION_RESULTS;
-const TABS=[['overview','Overview'],['tasks','Work plan'],['budget','Costs'],['sites','Sites & monitoring'],['field','Field records'],['sources','Source selections'],['handover','Handover']];
+const TABS=[['overview','Overview'],['tasks','Work plan'],['budget','Costs'],['sites','Sites & monitoring'],['field','Field records'],['outcomes','Outcomes'],['sources','Source selections'],['handover','Handover']];
 const LABELS={tasks:'task',budget_lines:'cost entry',sites:'site',monitoring_plans:'monitoring plan',visits:'visit',activities:'activity',observations:'result',candidates:'candidate',source_links:'source reference'};
 const button=(action,label,extra='',classes='')=>'<button type="button" data-impl="'+esc(action)+'" '+extra+' class="'+esc(classes)+'">'+esc(label)+'</button>';
 const empty=text=>'<p class="iw-empty">'+esc(text)+'</p>';
@@ -755,12 +755,13 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.outcomeController=null;this.outcomeModule=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
+    this.onOutcomeInput=e=>{if(e.target.matches('[data-outcome-control]'))this.outcomeController?.capture();};
     this.onResultsKey=e=>{if(e.key==='Enter'&&e.target.matches('[data-result-filter="query"]')){e.preventDefault();this.change(e).catch(x=>this.fail(x));}};
     this.onSubmit=e=>{if(e.target.matches('[data-impl-form]')){e.preventDefault();this.saveForm(e.target).catch(x=>this.fail(x));}};
-    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);
+    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);this.root.addEventListener('input',this.onOutcomeInput);
     this.beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',this.beforeUnload);
     this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.readEconomic();
   }
@@ -973,6 +974,17 @@ class ImplementationWorkbench {
   cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,observationFlow:this.observationFlow?clone(this.observationFlow):null,observationReceipts:clone(this.observationReceipts||[]),labIntake:this.labIntake?clone(this.labIntake):null,labDispatch:this.labDispatch?clone(this.labDispatch):null,resultView:normalizeResultsView(this.resultView),updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
   status(message){this.message=message;this.error='';this.render();}
   fail(error){if(this.gone)return;this.error=error?.message||String(error);const dialog=this.root.querySelector('dialog[open]');if(dialog){let notice=dialog.querySelector('.iw-form-error');if(!notice){notice=document.createElement('pre');notice.className='iw-error iw-form-error';notice.setAttribute('role','alert');dialog.querySelector('[data-impl-dialog]').prepend(notice);}notice.textContent=this.error;}else this.render();this.host.toast?.(this.error.slice(0,180));}
+  async outcomeCapability(){
+    if(!this.native)throw Error('Open the saved implementation plan in its native workspace.');
+    if(!this.outcomeModule)this.outcomeModule=await import('./implementation_outcomes.mjs');
+    if(!this.outcomeController)this.outcomeController=this.outcomeModule.createOutcomeController(this);
+    return this.outcomeController;
+  }
+  outcomePanel(){
+    if(!this.native)return '<p>Receive the complete field plan into its original native Workspace, then open its saved revision to compare observations.</p>';
+    if(this.outcomeController)return this.outcomeController.render();
+    return '<section><h3>Observed implementation outcomes</h3><p>Compare before and after observations from an exact saved revision, with optional original control sites, measurement support and intervention evidence.</p>'+button('outcomes-open','Open saved-revision observations')+'</section>';
+  }
   async read(path,args={}){return this.host.api(this.host.endpoint?this.host.endpoint(path,args):path+'?'+new URLSearchParams({workspace:this.workspace,...args}));}
   async reloadList(){if(this.native){const r=await this.read('/api/implementation/list');if(this.gone)return;this.planList=r.plans||r.implementation_plans||[];}else this.planList=Object.values(this.offlineCopies).map(x=>x.document);}
   async openPlan(id,preferNative=false,revision=null){
@@ -1053,6 +1065,8 @@ class ImplementationWorkbench {
     if(this.gone||!this.native)return;
     if(state?.workspace_key&&state.workspace_key!==this.workspace){this.detach();return;}
     this.lastState=state;this.planList=state?.data?.implementation_plans||this.planList;
+    if(this.outcomeController)await this.outcomeController.update(state);
+    if(this.gone||state?.workspace_key&&state.workspace_key!==this.workspace)return;
     const pending=this.pending;if(!pending)return;
     const task=(state.tasks||[]).find(t=>(pending.id&&t.id===pending.id)||t.operation_id===pending.operation_id);if(!task)return;
     pending.id=task.id;pending.state=task.state;
@@ -1096,7 +1110,7 @@ class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
     if(this.gone)return;const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
@@ -1125,6 +1139,7 @@ class ImplementationWorkbench {
     if(this.tab==='sites'){
       return '<div class="iw-section-head"><h3>Sites</h3>'+this.addButton('sites')+'</div>'+this.table(['Site','Coordinates','Candidate',''],p.sites.map(s=>[esc(s.label),esc(s.latitude===null||s.latitude===undefined?'':s.latitude+', '+s.longitude),esc(p.candidates.find(c=>c.id===s.candidate_id)?.label||''),this.editButton('sites',s.id)]))+'<div class="iw-section-head"><h3>Monitoring questions</h3>'+this.addButton('monitoring_plans')+'</div>'+this.table(['Plan','Objective','Sites','Parameters','Frequency',''],p.monitoring_plans.map(m=>[esc(m.title),esc(m.objective),(m.site_ids||[]).map(id=>esc(p.sites.find(s=>s.id===id)?.label||id)).join('<br>'),esc((m.parameters||[]).join(', ')),esc(m.frequency||''),this.editButton('monitoring_plans',m.id)]));
     }
+    if(this.tab==='outcomes')return this.outcomePanel();
     if(this.tab==='field'){
       const show=(collection,heads,cells,label)=>'<div class="iw-section-head"><h3>'+label+'</h3><div class="iw-actions">'+this.addButton(collection)+button('csv','Export','data-collection="'+collection+'"')+'</div></div>'+this.table(heads,p[collection].map(cells));
       return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)],'Samples and activities')+renderResults(this);
@@ -1139,6 +1154,7 @@ class ImplementationWorkbench {
   }
   async act(b){
     const action=b.dataset.impl;
+    if(action.startsWith('outcomes-')){const controller=await this.outcomeCapability();if(!this.gone)await controller.act(b);return;}
     if(action==='results-clear'){this.resultView=normalizeResultsView();this.cache();this.render();return;}
     if(action==='results-prev'||action==='results-next'){const current=reviewResults(this.plan,this.resultView);this.resultView={...current.view,page:Math.max(0,Math.min(current.page_count-1,current.view.page+(action==='results-prev'?-1:1)))};this.cache();this.render();return;}
     if(action==='results-inspect'){this.dialog(resultInspectionHtml(this,b.dataset.id));return;}
@@ -1180,6 +1196,7 @@ class ImplementationWorkbench {
     if(action==='delete'){const collection=b.dataset.collection,id=b.dataset.id;this.commitLocal(deleteRow(this.plan,collection,id),'Record removed from this draft; native revision history remains retained.');return;}
   }
   async change(e){
+    if(e.target.matches('[data-outcome-control]')){const controller=await this.outcomeCapability();if(!this.gone)controller.change(e);return;}
     if(e.target.dataset.resultFilter){const key=e.target.dataset.resultFilter;this.resultView=normalizeResultsView({...this.resultView,[key]:key==='page_size'?Number(e.target.value):e.target.value,page:0});this.cache();this.render();return;}
     if(e.target.matches('[data-dispatch-field],[data-dispatch-filter],[data-dispatch-campaign],[data-dispatch-sample],[data-dispatch-analyte],[data-dispatch-order],[data-dispatch-attachment]')){const turn=this.generation,selected=this.plan?.id;const dispatch=await this.dispatchCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await dispatch.change(this,e);return;}
     if(e.target.matches('[data-lab-file],[data-lab-mapping-file],[data-lab-map],[data-lab-format],[data-lab-json],[data-lab-issue-filter]')){const lab=await this.labCapability();if(!this.gone)await lab.change(this,e);return;}
