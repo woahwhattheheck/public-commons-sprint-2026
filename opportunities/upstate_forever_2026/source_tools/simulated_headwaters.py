@@ -282,7 +282,15 @@ def operate_locked(args, output):
         except Exception as exc:
             receipt["stages"].setdefault(name, {})["last_error"] = {
                 "type": type(exc).__name__, "message": str(exc), "at": utc_now()}
-            save(state="failed")
+            try:
+                save(state="failed")
+            except OSError as receipt_error:
+                exc.demo_receipt_error = {
+                    "type": type(receipt_error).__name__,
+                    "message": str(receipt_error), "errno": receipt_error.errno,
+                }
+                if hasattr(exc, "add_note"):
+                    exc.add_note("Could not retain the demo failure record: " + str(receipt_error))
             raise
         elapsed = time.perf_counter() - started
         prior = receipt["stages"].get(name, {})
@@ -479,6 +487,7 @@ def operate_locked(args, output):
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
         "ensemble_id": parameter_plan["ensemble_id"],
+        "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
     edition_suffix = hashlib.sha256(json.dumps(
         archive_selection, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
@@ -582,6 +591,18 @@ def operate_locked(args, output):
     if received_course.get("state") != "complete":
         raise ValueError("Reopened parameter course is incomplete")
     save(received_fieldwork=received_campaign, received_ensemble_id=received_ensemble["id"])
+    from source_tools.simulated_headwaters_receiving import cold_reopen
+    cold_receiving = phase("cold_reopen", lambda: cold_reopen(
+        restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            {"kind": "parameter_course", "ensemble_id": receipt["ensemble_id"],
+             "expected": {"project_id": ws.project["id"]}},
+            {"kind": "field_campaign", "operation_id": campaign["operation_id"],
+             "expected": {"phase": "closeout", "plan_id": campaign["plan_id"],
+                          "original_project_id": ws.project["id"],
+                          "recipe_sha256": receipt["recipe_sha256"],
+                          "completed_steps": campaign["completed_steps"]}},
+        ]))
+    save(cold_receiving=cold_receiving)
     save(state="complete", active_stage=None, reopened_project_id=reopened.project["id"],
          completed_at=receipt.get("completed_at", utc_now()))
     event("demo_complete", receipt=str(receipt_path), baseline_run_id=runs[0]["id"],

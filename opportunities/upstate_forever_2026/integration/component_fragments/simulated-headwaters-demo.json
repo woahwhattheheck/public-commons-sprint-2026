@@ -30,7 +30,8 @@
         "source/simulated_headwaters_20261013/terrain-diagnostic.mjs",
         "source_tools/prepare_simulated_fieldwork.py",
         "model/simulated_fieldwork.py",
-        "docs/SIMULATED_FIELDWORK.md"
+        "docs/SIMULATED_FIELDWORK.md",
+        "source_tools/simulated_headwaters_receiving.py"
       ],
       "requires": [
         "core",
