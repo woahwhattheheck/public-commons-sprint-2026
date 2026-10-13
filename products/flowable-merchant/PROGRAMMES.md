@@ -153,3 +153,47 @@ Programme review records retain every selected child record ID, revision and has
 Whole handover uses the existing workspace exporter and adopter. The programme record kind participates in the same immutable revision and source inventory. Use a source edition containing this programme feature at both ends; the older receiver does not know the new programme record kind.
 
 The source contribution includes the full browser control, core/adapter, case compiler, typed client, native receiving helper, complete reference programme and this guide. Existing Flowable process, decision and case semantics remain owned by their original native adapters.
+
+## Complete BPMN process programme
+
+The existing original BPMN source can also be operated as a complete programme. The reference `workspace/examples/process-commissioning.programme.json` contains 29 original operations and ten complete source members: the unchanged three-family catalogue, all six BPMN XML resources and three complete typed initial requests. It selects the same authored grant-review, customer-onboarding and vendor-approval models already used by the original native receiving journey.
+
+The course deploys each first source edition, starts one process per family and completes intake. Customer intake includes claim, unclaim, reclaim, delegation and resolution. It then deploys all three second source editions, prepares the original running-review migration for grant and vendor, and completes the native review/final work. Customer onboarding continues on its explicitly selected first edition. The programme records all prepared operations and their original engine results through the existing programme API and operator screens.
+
+Source edition 1 or 2 is the selected XML from the catalogue. Native definition versions may already be higher in a populated engine. The compiler binds each selected definition by the actual deployment ID in that release's retained reconciliation and its exact process key. Starts bind the actual returned process ID; task selectors include that process ID and the original task-definition key. Migration binds the selected second deployment's definition and preserves the complete original review-to-review mapping. The original preparation invokes Flowable's migration validation before dispatch.
+
+### Author the complete selected process edition
+
+Copy `workspace/examples/process-commissioning.compile.json` and its `process-inputs/` sources into the intended source edition. Select the actual native operator and reviewer IDs. Its catalogue path is relative to that configuration file; preserve the existing complete catalogue and six XML sources. The default configuration selects all three original families. To commission one family, set `familyKeys` to that key, select its explicit `migrateKeys` and set `delegationKey` to that same family.
+
+For example, a proposed onboarding commissioning scope uses:
+
+~~~json
+{
+  "familyKeys": ["sf_customer_onboarding"],
+  "migrateKeys": ["sf_customer_onboarding"],
+  "delegationKey": "sf_customer_onboarding"
+}
+~~~
+
+Those are the selection fields in the complete compile configuration; retain its schema, operation, roles, catalogue and input paths. That selection yields thirteen original operations: two deployments, one process start, the complete intake assignment/delegation course, one migration and review/final completion. The reference source remains authored commissioning material; a customer selects its actual process topology, policy, permissions and interface data before implementation.
+
+Run the maintained compiler with the original Node executable:
+
+~~~bash
+node stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs \
+  stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.compile.json \
+  /absolute/private/selected-process.programme.json
+~~~
+
+The compiler receives every original ordinary file, rejects changed or incomplete reads, retains exact member bytes and SHA-256, and publishes a complete private JSON output. Repeating the same selection accepts the same existing output. A different edition requires another output filename. Its returned record includes the original configuration identity, every received member and the complete resulting programme identity.
+
+The source inputs preserve the complete native JSON number text, including `9223372036854775806`. Compilation substitutes only the declared quoted definition, business-key and optional tenant tokens; it does not parse and reconstruct numeric input. A tenant-scoped configuration requires the complete typed source to declare that same tenant or its exact placeholder. A selected family may use its own complete typed-input file. Include every business input needed by that model and preserve its customer authority in the commissioning workshare.
+
+### Operate and receive
+
+Import the complete resulting file through `saveProgramme` on the actual process-service connection. The existing Programme screen presents dependencies, source, current native outcomes and the next ready step. Prepare each selected operation, review its exact plan and preimage, dispatch through the original action, then refresh or reconcile that saved record. Preparation failures and uncertain outcomes remain on their original operation IDs.
+
+The private Capacity commission supports this same file through frozen programme intake; select its original commissioned phase and process connection. The original child operation continues into the existing explicit plan review and dispatch. Its final workspace export, complete original response files, Draft artifact and DeliveryReturn remain the selected delivery.
+
+`receiveFlowableProgramme` accepts this complete source through its existing original-client contract, so the retained native owner can include it in the same selected receiving programme. It exports every source and operation, downloads the full original delivery and receives that exact programme into the independently selected existing workspace. Native execution results are supplied by the existing engine operation. Current compilation and source checks establish the complete executable selection and preserve the original process source.
