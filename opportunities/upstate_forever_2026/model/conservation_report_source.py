@@ -19,7 +19,7 @@ from .common import (
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.conservation-report-source/v1"
-EDITION = "conservation-saved-plan-report/3"
+EDITION = "conservation-saved-plan-report/4"
 DIRECTORY = "conservation-report-sources"
 
 
@@ -203,6 +203,8 @@ def _optimization_section(retained):
         "current-export": "Baseline modeled export; not an intervention benefit",
         "restoration": "Baseline minus the retained alternative on common valid native support",
         "avoided-conversion": "Retained disturbance alternative minus baseline on common valid native support",
+        "matched-restoration": "Own-family baseline minus treatment on one common footprint across all declared families",
+        "matched-disturbance": "Own-family treatment minus baseline on one common footprint across all declared families",
         "published-method": "Original method/category priority points with their retained prerequisites",
         "source-attribute": "Unchanged numeric source attribute with analyst-declared unit/reference; no inferred connectivity or unit conversion",
     }
@@ -229,7 +231,10 @@ def _optimization_section(retained):
         baseline = source.get("baseline_run_id")
         if baseline:
             references.append("Baseline " + baseline)
-        alternative = criterion.get("scenario_run_id", objective.get("scenario_run_id"))
+        family_id = criterion.get("family_id", objective.get("family_id"))
+        if family_id:
+            references.append("Matched family " + family_id)
+        alternative = criterion.get("scenario_run_id", objective.get("scenario_run_id")) or source.get("alternative_run_id")
         if alternative:
             references.append("Alternative " + alternative)
         method = criterion.get("published_method") or analysis["request"].get("published_method") or {}
@@ -281,21 +286,26 @@ def _optimization_section(retained):
     if compared:
         case_rows = []
         for case in scenario["cases"]:
-            mapping = "; ".join(labels.get(key, key) + ": " + value
-                                for key, value in case["scenario_run_ids"].items()) or "No paired criterion"
+            mappings = [labels.get(key, key) + ": alternative " + value
+                        for key, value in case.get("scenario_run_ids", {}).items()]
+            mappings += [labels.get(key, key) + ": matched family " + value
+                         for key, value in case.get("family_ids", {}).items()]
+            mapping = "; ".join(mappings) or "No paired criterion"
             case_rows.append([case["name"], mapping, case["eligible_count"],
                               units(case["selected_ids"]), case["optimization"]["objective_score"]])
         blocks += [
-            "Native-case comparison changes only the explicitly mapped original alternatives, "
-            "keeping the baseline, selected weights and resource limits fixed. Context and source "
-            "attributes do not acquire an invented native scenario.",
+            "Native-case comparisons use the explicitly mapped original alternatives or matched "
+            "baseline/treatment families at the same selected weights and resource limits. A matched "
+            "family keeps its own baseline; fixed-baseline criteria keep the original study baseline. "
+            "Context and source attributes retain their original meaning.",
             _table(["Retained case", "Criterion / original alternative", "Eligible units", "Selected original units", "Objective score"],
                    case_rows),
             _text(scenario.get("interpretation")),
-            "Each paired criterion retains its own common valid baseline/alternative support. "
-            "Coverage and parameter-profile changes can also affect ranks; a rank difference is "
-            "not automatically an intervention effect. This is separate from the named weight "
-            "comparisons, without a joint case probability or an uncomputed weight-by-case design.",
+            "Fixed-baseline criteria retain their original pairwise support. Matched-family criteria "
+            "use one shared footprint per pollutant across every declared family, with the same "
+            "parameter profile inside each pair. The full family definitions and support areas below "
+            "describe their scientific setting. These case comparisons are separate from named "
+            "decision-weight preferences and do not assign a joint probability.",
         ]
     else:
         blocks.append("No distinct native-case comparison is enabled in this decision. The "
@@ -351,6 +361,64 @@ def _optimization_section(retained):
         ]),
     ]
     return ["Original saved optimization", blocks]
+
+def _matched_family_sections(state, plan):
+    """Explain original matched quantities without recomputing model results."""
+    families = state["selection"]["spec"].get("matched_families", [])
+    if not families:
+        return []
+    support = state.get("matched_family_support") or {}
+    sections = [["Matched native family definitions", [
+        "Each treatment is compared with its own completed baseline under the same retained "
+        "parameter profile and grid. The analyst's original scientific setting identifies the "
+        "family. Each pollutant uses one common footprint across all declared families. Original "
+        "study eligibility rules continue to apply before the explicit decision criteria.",
+        _table(["Family", "Original baseline", "Original treatment", "Scientific setting", "Reference"],
+               [[row["label"] + " [" + row["id"] + "]", row["baseline_run_id"],
+                 row["alternative_run_id"], row["reason"], row.get("reference")]
+                for row in families]),
+    ]]]
+    coverage = []
+    for name, item in support.get("metrics", {}).items():
+        mask = item.get("mask") or {}
+        coverage.append([name, item.get("state"), item.get("unit"),
+                         item.get("grid_valid_area_ha"), item.get("grid_structural_area_ha"),
+                         item.get("grid_covered_area_ha"), item.get("reason"),
+                         ", ".join(item.get("missing_run_ids", [])), mask.get("sha256")])
+    sections.append(["Common coverage across declared model families", [
+        "The following areas describe the complete common grid, before clipping to planning units. "
+        "Code 1 identifies cells valid in every selected run; code 2 identifies structural stream "
+        "omission in every selected run; code 0 excludes other cells, including mixed valid/structural "
+        "support. A pollutant missing in any selected run is unavailable for the family comparison. "
+        "Structural-only support has no modeled mass. Missing and structural areas remain separate.",
+        _table(["Quantity", "Availability", "Physical unit", "Valid grid area (ha)",
+                "Structural grid area (ha)", "Supported grid area (ha)", "Reason",
+                "Runs missing the output", "Original support raster SHA-256"], coverage),
+        "Original support selection: " + _text(support.get("id")),
+    ]])
+    pollutants = plan.get("summary", {}).get("pollutants", {})
+    for family in families:
+        values = []
+        for name, metric in pollutants.items():
+            item = metric.get("matched_families", {}).get(family["id"])
+            if item is None:
+                continue
+            values.append([name, item.get("unit"), item.get("common_baseline"),
+                           item.get("common_alternative"), item.get("reduction"), item.get("delta"),
+                           item.get("common_coverage_fraction"), item.get("common_valid_area_ha"),
+                           item.get("common_structural_stream_area_ha"), item.get("missing_area_ha"),
+                           item.get("comparison_availability"), item.get("comparison_availability_reason")])
+        sections.append(["Selected-union matched quantities: " + family["label"], [
+            "These values are recomputed on the saved portfolio's original reporting union, "
+            "with overlapping units counted once. Reduction is baseline minus treatment; increase "
+            "is treatment minus baseline. Negative effects retain their sign. Model routing outside "
+            "the selected footprint remains part of each complete original model run.",
+            _table(["Quantity", "Unit", "Own baseline", "Treatment", "Reduction", "Increase",
+                    "Coverage fraction", "Valid area (ha)", "Structural area (ha)",
+                    "Missing area (ha)", "Availability", "Reason"], values),
+        ]])
+    return sections
+
 
 def _sections(state, plan, rows, packet, sources, optimization=None):
     spec, summary = state["selection"]["spec"], plan["summary"]
@@ -492,6 +560,7 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
                           "and coverage remain separate from paired values. Model routing beyond the "
                           "selected footprint remains part of the original complete scenario.")
             sections.append(["Original alternative comparison", blocks])
+    sections.extend(_matched_family_sections(state, plan))
     executions = state.get("native_execution", {})
     if executions:
         versions = []
