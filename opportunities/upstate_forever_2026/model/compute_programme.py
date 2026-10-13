@@ -744,12 +744,54 @@ class ComputeProgrammes:
             "interpretation": ("Existing native IDs remain reusable. Only absent model/profile/scenario "
                 "selections are added; unfinished retained calculations are continued under their original IDs.")}
 
-    def _pair_completion_origin(self, key, record=None):
-        path = self._directory(key) / "pair-completion.json"
-        if not path.exists():
-            return None
+    def _pair_completion_request(self, parent, requirement_id):
+        parent, requirement_id = identifier(parent), identifier(requirement_id)
+        path = self._directory(parent) / "pair-completions" / (requirement_id + ".json")
         value = read_json(path)
+        payload = {name: item for name, item in value.items() if name not in ("id", "created_at")}
+        selection = value.get("selection", {})
+        identity = {"parent_programme_id": parent, "selection": selection,
+            "required_selections": [item["selection"] for item in value.get("requirements", [])]}
+        if (value.get("schema") != "upstate.compute-programme-pair-completion-request/v1"
+                or value.get("parent_programme_id") != parent
+                or value.get("workspace_id") != self.workspace.project["id"]
+                or digest(value.get("requirements")) != requirement_id
+                or digest(payload) != value.get("id")
+                or digest(identity) != value.get("preview_id")
+                or selection.get("source_reference") !=
+                    "upstate.programme-pair-completion:" + parent + ":" + requirement_id):
+            raise ValueError("The saved matched-pair request differs from its original selections")
+        return value, describe_file(self.workspace.root, path)
+
+    def _pair_completion_origin(self, key, record=None):
         record = self._load(key) if record is None else record
+        path = self._directory(key) / "pair-completion.json"
+        request = retained_file = None
+        if path.exists():
+            value = read_json(path)
+        else:
+            source = record["selection"].get("source_reference", "")
+            prefix = "upstate.programme-pair-completion:"
+            if not isinstance(source, str) or not source.startswith(prefix):
+                return None
+            parts = source[len(prefix):].split(":")
+            if len(parts) != 2:
+                raise ValueError("The retained pair-completion source reference differs")
+            try:
+                request, retained_file = self._pair_completion_request(*parts)
+            except FileNotFoundError:
+                # Existing pre-request editions may retain a child origin only.
+                return None
+            if request["selection"] != record["selection"]:
+                raise ValueError("The saved continuation request selected another programme")
+            payload = {"schema": "upstate.compute-programme-pair-completion/v1",
+                "programme_id": key, "parent_programme_id": request["parent_programme_id"],
+                "workspace_id": self.workspace.project["id"], "preview_id": request["preview_id"],
+                "selection_sha256": digest(record["selection"]), "additions": request["additions"],
+                "requirements": request["requirements"], "request": retained_file}
+            # Read-only recovery: the complete parent request is already durable.
+            # The creator persists this child view on its next normal continuation.
+            value = {**payload, "id": digest(payload), "created_at": request["created_at"]}
         payload = {name: item for name, item in value.items() if name not in ("id", "created_at")}
         if (value.get("schema") != "upstate.compute-programme-pair-completion/v1"
                 or value.get("programme_id") != key
@@ -762,39 +804,91 @@ class ComputeProgrammes:
             raise ValueError("The retained pair-completion origin differs from this programme")
         identifier(value["parent_programme_id"])
         identifier(value["preview_id"])
+        if value.get("request"):
+            if request is None:
+                request, retained_file = self._pair_completion_request(
+                    value["parent_programme_id"], digest(value["requirements"]))
+            if (value["request"] != retained_file or request["selection"] != record["selection"]
+                    or request["preview_id"] != value["preview_id"]
+                    or request["additions"] != value["additions"]
+                    or request["requirements"] != value["requirements"]):
+                raise ValueError("The child continuation differs from its saved parent request")
         return value
 
     def create_pair_completion(self, key, expected_preview_id=None):
         """Retain a complete derived programme; execute it through normal resume."""
         with held(self._directory(key) / ".programme.lock", blocking=False):
-            preview = self.pair_completion_preview(key)
-            if expected_preview_id is not None and identifier(expected_preview_id) != preview["preview_id"]:
-                raise ValueError("Matched-pair requirements changed; reopen their current continuation preview")
-            if not preview["has_alternatives"]:
-                raise ValueError("Select a retained alternative scenario before preparing matched pairs")
-            if not preview["needed"]:
-                raise ValueError("The programme already has its complete matched pairs; open its paired selections")
-            result = self.create(preview["selection"])
+            self._load(key)
+            state = self._state(key)
+            request = retained_file = None
+            expected = identifier(expected_preview_id) if expected_preview_id is not None else None
+            if expected is not None:
+                previous = state.get("pair_completions", {}).get(expected)
+                if previous:
+                    try:
+                        result = self.status(previous["programme_id"])
+                    except FileNotFoundError:
+                        result = None
+                    if result is not None:
+                        origin = result.get("pair_completion")
+                        if (origin is None or origin["parent_programme_id"] != key
+                                or origin["preview_id"] != expected):
+                            raise ValueError("The retained continuation differs from the requested preview")
+                        return result
+                # A worker can disappear after saving the request but before it
+                # writes either the child or the parent backlink. Recover that
+                # exact request even if another native worker has since finished.
+                for path in sorted((self._directory(key) / "pair-completions").glob("*.json")):
+                    candidate, candidate_file = self._pair_completion_request(key, path.stem)
+                    if candidate["preview_id"] == expected:
+                        request, retained_file = candidate, candidate_file
+                        break
+            if request is None:
+                preview = self.pair_completion_preview(key)
+                if expected is not None and expected != preview["preview_id"]:
+                    raise ValueError("Matched-pair requirements changed; reopen their current continuation preview")
+                if not preview["has_alternatives"]:
+                    raise ValueError("Select a retained alternative scenario before preparing matched pairs")
+                if not preview["needed"]:
+                    raise ValueError("The programme already has its complete matched pairs; open its paired selections")
+                requirements = [{name: item for name, item in requirement.items() if name != "issues"}
+                                for requirement in preview["requirements"]]
+                payload = {"schema": "upstate.compute-programme-pair-completion-request/v1",
+                    "parent_programme_id": key, "workspace_id": self.workspace.project["id"],
+                    "preview_id": preview["preview_id"], "selection": preview["selection"],
+                    "additions": preview["additions"], "requirements": requirements}
+                requirement_id = digest(requirements)
+                request_path = self._directory(key) / "pair-completions" / (requirement_id + ".json")
+                if request_path.exists():
+                    request, retained_file = self._pair_completion_request(key, requirement_id)
+                    if {name: item for name, item in request.items() if name not in ("id", "created_at")} != payload:
+                        raise ValueError("The retained matched-pair request has different selections")
+                else:
+                    request = {**payload, "id": digest(payload), "created_at": now()}
+                    atomic_json(request_path, request, immutable=True)
+                    retained_file = describe_file(self.workspace.root, request_path)
+            # The complete source request is retained before preparing any child.
+            result = self.create(request["selection"])
             child = result["programme_id"]
             payload = {"schema": "upstate.compute-programme-pair-completion/v1",
                 "programme_id": child, "parent_programme_id": key,
-                "workspace_id": self.workspace.project["id"], "preview_id": preview["preview_id"],
-                "selection_sha256": digest(result["selection"]), "additions": preview["additions"],
-                "requirements": [{name: item for name, item in requirement.items() if name != "issues"}
-                                 for requirement in preview["requirements"]]}
+                "workspace_id": self.workspace.project["id"], "preview_id": request["preview_id"],
+                "selection_sha256": digest(result["selection"]), "additions": request["additions"],
+                "requirements": request["requirements"], "request": retained_file}
             origin_path = self._directory(child) / "pair-completion.json"
             if origin_path.exists():
                 origin = self._pair_completion_origin(child)
                 retained = {name: item for name, item in origin.items() if name not in ("id", "created_at")}
-                if retained != payload:
+                expected_origin = payload if "request" in retained else {
+                    name: item for name, item in payload.items() if name != "request"}
+                if retained != expected_origin:
                     raise ValueError("Existing matched-pair continuation has different required native selections")
             else:
-                origin = {**payload, "id": digest(payload), "created_at": now()}
+                origin = {**payload, "id": digest(payload), "created_at": request["created_at"]}
                 atomic_json(origin_path, origin, immutable=True)
-            state = self._state(key)
-            state.setdefault("pair_completions", {})[preview["preview_id"]] = {
+            state.setdefault("pair_completions", {})[request["preview_id"]] = {
                 "programme_id": child, "created_at": origin["created_at"],
-                "added_runs": len(preview["additions"]),
+                "added_runs": len(request["additions"]),
                 "origin": describe_file(self.workspace.root, origin_path)}
             self._write_state(key, state)
             return {**self.status(child), "pair_completion": origin}

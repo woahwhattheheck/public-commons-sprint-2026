@@ -475,7 +475,7 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
             # The established executor reuses completed native runs and also
             # reconciles their programme status/report after an interrupted caller.
             command = [sys.executable, "-B", "-m", "model.compute_programme_cli",
-                       "--workspace", str(ws.root), "execute", programme_id]
+                       "--workspace", str(ws.root), "resume", programme_id]
             command_record = {"argv": command, "cwd": str(application_root),
                               "original_programme_id": receipt["programme_id"],
                               "pending_run_ids_at_start": pending,
