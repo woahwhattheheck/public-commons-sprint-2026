@@ -6,20 +6,29 @@ import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 const opts={},argv=process.argv.slice(2);for(let i=0;i<argv.length;i+=2)opts[argv[i]]=argv[i+1];
 for(const k of ['--cdp','--delivery','--out','--playwright-module'])if(!opts[k])throw Error('Use --cdp EXISTING_ENDPOINT --delivery BUILT_DIRECTORY --out NEW_DIRECTORY --playwright-module EXISTING_ENTRY');
+const pageSource=opts['--page-source']||'origin';if(!['origin','supplied-html'].includes(pageSource))throw Error('Use --page-source origin or supplied-html.');const supplied=pageSource==='supplied-html';
 const req=createRequire(import.meta.url),entry=req.resolve(resolve(opts['--playwright-module']));let dir=dirname(entry),metadata;
 while(true){try{const p=JSON.parse(await readFile(join(dir,'package.json'),'utf8'));if(['playwright','playwright-core'].includes(p.name)){metadata=p;break;}}catch{}const parent=dirname(dir);if(parent===dir)break;dir=parent;}
 const version=/^(\d+)\.(\d+)\./.exec(metadata?.version||'');if(!version||+version[1]<1||(+version[1]===1&&+version[2]<60))throw Error('Use installed Playwright1.60+ for noDefaults.');
 const url=new URL(opts['--cdp']);if(!['http:','https:','ws:','wss:'].includes(url.protocol)||url.username||url.password)throw Error('Use an authorized endpoint without embedded credentials.');
 const mod=await import(pathToFileURL(entry)),chromium=mod.chromium||mod.default?.chromium;
-const out=resolve(opts['--out']),delivery=resolve(opts['--delivery']),hash=b=>createHash('sha256').update(b).digest('hex'),result={schema:'broomdesk.commissioning-browser-receiving.v1',status:'starting',views:[],downloads:[],events:[],errors:[]};
+const out=resolve(opts['--out']),delivery=resolve(opts['--delivery']),hash=b=>createHash('sha256').update(b).digest('hex'),result={schema:'broomdesk.commissioning-browser-receiving.v1',status:'starting',pageSource,views:[],downloads:[],events:[],errors:[]};
 await mkdir(out,{mode:0o700});const save=()=>writeFile(join(out,'receiving.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});let browser,context,page;
 try{
  const built=JSON.parse(await readFile(join(delivery,'build-result.json'),'utf8'));if(!built.validation.full_record_reopen_equal)throw Error('Build the complete original source first.');
  const bodies=new Map();for(const kind of ['sample','paid'])for(const p of ['profiles/'+kind+'/lead-pack.html','desk/'+kind+'/commissioning.html']){const b=await readFile(join(delivery,'customer',p));bodies.set('/'+p,b);await writeFile(join(out,p.replaceAll('/','-')),b,{flag:'wx',mode:0o600});}
  browser=await chromium.connectOverCDP(opts['--cdp'],{noDefaults:true,timeout:30000});context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:1000},timezoneId:'UTC'});
- await context.route('https://broomdesk-receiving.invalid/**',route=>{const b=bodies.get(new URL(route.request().url()).pathname);return b?route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:b}):route.abort();});
+ await context.route(supplied?'**/*':'https://broomdesk-receiving.invalid/**',route=>{if(supplied)return route.abort();const b=bodies.get(new URL(route.request().url()).pathname);return b?route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:b}):route.abort();});
  page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));page.on('dialog',d=>d.accept());
- const go=async p=>{const r=await page.goto('https://broomdesk-receiving.invalid/'+p);if(hash(await r.body())!==hash(bodies.get('/'+p)))throw Error('Original navigation bytes differ.');};
+ const go=async p=>{
+  const body=bodies.get('/'+p);if(!body)throw Error('Select an exact original application document.');
+  if(supplied){
+   const previous=page,viewport=previous.viewportSize();page=await context.newPage();if(viewport)await page.setViewportSize(viewport);page.on('pageerror',e=>result.errors.push(e.message));page.on('dialog',d=>d.accept());await previous.close();
+   await page.setContent(body.toString('utf8'),{waitUntil:'load'});
+   if(page.url()!=='about:blank')throw Error('The supplied original left its permitted blank document.');
+  }else{const response=await page.goto('https://broomdesk-receiving.invalid/'+p);if(hash(await response.body())!==hash(body))throw Error('Original navigation bytes differ.');}
+  result.events.push({kind:'original_document_opened',path:p,bytes:body.length,sha256:hash(body),pageSource});await save();
+ };
  const capture=async name=>{const file=name+'.png';await page.screenshot({path:join(out,file),fullPage:true});const layout=await page.evaluate(()=>({width:innerWidth,documentWidth:document.documentElement.scrollWidth}));if(layout.documentWidth>layout.width+1)throw Error('Page overflow: '+name);result.views.push({file,...layout});await save();};
  const tab=async name=>page.locator('[data-tab="'+name+'"]').click();
  const fill=async(kind,values)=>{const form=page.locator('form[data-form="'+kind+'"]');for(const[k,v]of Object.entries(values)){const field=form.locator('[name="'+k+'"]');if(!await field.count())continue;const tag=await field.evaluate(e=>({tag:e.tagName,type:e.type}));if(tag.tag==='SELECT')await field.selectOption(Array.isArray(v)?v:String(v??''));else await field.fill(v===null?'':tag.type==='datetime-local'&&v?String(v).slice(0,16):String(v??''));}};
@@ -77,7 +86,7 @@ try{
  await tab('Time');await download(page.locator('[data-payroll]').first(),'BroomDesk-approved-time.csv');
  // A fresh owned context receives the entire downloaded file through the app.
  await context.close();context=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844},timezoneId:'UTC'});
- await context.route('https://broomdesk-receiving.invalid/**',route=>{const b=bodies.get(new URL(route.request().url()).pathname);return b?route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:b}):route.abort();});page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));page.on('dialog',d=>d.accept());await go('desk/sample/commissioning.html');await page.locator('#open-working').setInputFiles(workingPath);await page.waitForFunction(()=>Number(document.querySelector('[data-revision]')?.dataset.revision)===27);
+ await context.route(supplied?'**/*':'https://broomdesk-receiving.invalid/**',route=>{if(supplied)return route.abort();const b=bodies.get(new URL(route.request().url()).pathname);return b?route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:b}):route.abort();});page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));page.on('dialog',d=>d.accept());await go('desk/sample/commissioning.html');await page.locator('#open-working').setInputFiles(workingPath);await page.waitForFunction(()=>Number(document.querySelector('[data-revision]')?.dataset.revision)===27);
  await operate(example.operations.at(-1));await tab('Checks');await page.getByText('review after changes',{exact:false}).first().waitFor();await capture('received-phone-later-review-open');
  const laterPath=await download(page.getByRole('button',{name:'Save working file',exact:true}),'later-working.json'),later=JSON.parse(await readFile(laterPath,'utf8'));if(later.revision!==28||Core.canonical(Core.receive(later,seed))!==Core.canonical(later)||Core.isCurrent(later,later.decisions[0]))throw Error('Actual later received edit did not reopen acceptance.');
  result.events.push({kind:'complete_original_commissioning_operated',accepted_revision:27,reopened_revision:28,invalid_edit_corrected_same_record:invalidEntryExercised});if(result.errors.length)throw Error(result.errors.join('\n'));result.status='PASS';
