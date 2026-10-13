@@ -22,7 +22,45 @@ Original gzip source parts, bare Base64/gzip carriers, declared plain Base64 par
 
 Original binary companions supplied in `binary_files[]` enter the same validated file inventory as regular source members. Each path has one complete original body.
 
-Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each component can supply `base_sha256` or `replaces_sha256` to identify the exact file it updates. Reapplying an already installed postimage with that same requested SHA-256 also succeeds. A different intermediate body still requires the declared predecessor.
+Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each changed existing member must identify the actual file it updates with `before_sha256`, `base_sha256`, `replaces_sha256`, nested `before.sha256`, or object `base.sha256`. Declared aliases must agree. A string `base` is retained as its source-ref label. Added members and identical postimages compose directly; an already installed postimage remains idempotent even when its declaration names the earlier predecessor. Source-bank fragments preserve the original before/base declarations in the assembled change inventory. Completed snapshot member metadata remains suitable for reopening as the next base.
+
+
+## Join a changed module into current source
+
+A full carrier records the source it captured. A later-arriving carrier may still contain an older application module. When two selected layers contain different bodies at the same path, the assembler reports the current, incoming and declared predecessor SHA-256 values. Join the intended change into the actual current source, then publish the complete resulting body with the hash of the source used for that join. Keep a complete current snapshot as the first layer when adding selected components.
+
+The actual PR2714 full carrier `F0C8Q6C81U2` contained an older `operator/web/app.mjs` with SHA-256 `96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a`. The [resolved current host](https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/f5e5d676357031429fbec3a7adc65b3589a6308b/opportunities/upstate_forever_2026/operator/web/app.mjs) retains the corrected stage detection, multi-element selectors and water-designation source lineage. Save that original file and produce its explicit source join:
+
+```sh
+python3 -B - /retained/current-app.mjs /owned/resolved-host.json <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+
+body = Path(sys.argv[1]).read_bytes()
+expected = "f64d7b3ab7fd42d99bdc8a4b5c8e609a634e84246b6c36dd1443e5f479c5282e"
+if len(body) != 113843 or hashlib.sha256(body).hexdigest() != expected:
+    raise ValueError("Choose the complete resolved host from the linked immutable source")
+document = {
+    "schema": "commons.source-bank/v1",
+    "source_ref": "f5e5d676357031429fbec3a7adc65b3589a6308b",
+    "files": [{
+        "path": "operator/web/app.mjs",
+        "bytes": len(body), "sha256": expected,
+        "base": "11342de9d7b59d379c7cbe45244b896854b2e1a0",
+        "before_sha256": "96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a",
+        "content": body.decode("utf-8"),
+    }],
+}
+with Path(sys.argv[2]).open("x", encoding="utf-8") as stream:
+    json.dump(document, stream, ensure_ascii=False)
+    stream.write("\n")
+PY
+python3 -B source_tools/application_assembly.py /retained/decoded-F0C8Q6C81U2.json \
+  --overlay /owned/resolved-host.json --edition resolved-current-host \
+  --source-map /owned/resolved-current-host.json
+```
+
+This selected module join preserves every other member from the complete base. Receive other maintained components and their installers through the normal application workflow. Reusing the resolved host overlay against its installed postimage succeeds as an identical replay. A different newer host receives the intended source changes against its own actual beforeimage.
 
 ## Binary companions and installed snapshots
 
