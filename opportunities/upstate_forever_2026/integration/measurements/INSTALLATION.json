@@ -10,7 +10,8 @@
     "atomic_source_commit": "804f98226ddc4677abd7d4603846bc496c25be60",
     "composed_main": "cf3359cf6af632a924a2541f884fb7f93665552f",
     "download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
-    "outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc"
+    "outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
+    "workspace_transport_commit": "cc01c5710da426fd5c4f571fd2d040afd3cea1a3"
   },
   "files": [
     {
@@ -50,13 +51,13 @@
     },
     {
       "path": "MEASUREMENT_COLLECTIONS.md",
-      "bytes": 8893,
-      "sha256": "3c30d46f3b46ac1ae51ee40803bc0ba57022db54699514de45772231451b4a97"
+      "bytes": 10308,
+      "sha256": "32dcaf647941c7149bf8a7ab2dab31a5f3eb6fec51b4a257440d7a5a100f611f"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 8253,
-      "sha256": "654dbcdddc80bbb0ecbb5cb627d58a1b1a1025b8ad9e28022bcfb1c438bb6671"
+      "bytes": 8504,
+      "sha256": "c375d715e00d67828bdbc3430ca621aa781cb8cf3b9ae14eca2bd3a6283bfd59"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
@@ -200,8 +201,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 3544,
-      "sha256": "05c7a3e4e45ae89de3c8a27cd819c337c3ba5fe5e20e9496584844d66051ab80"
+      "bytes": 7437,
+      "sha256": "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f"
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
@@ -270,8 +271,8 @@
     },
     {
       "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 3584,
-      "sha256": "eb87b2fa8832a0245291176cf7a1bc6baad9029f597f5c12864e87ec01567048"
+      "bytes": 7477,
+      "sha256": "e9c156bcf97225c8debda52fa2e1553a0af80e4e237e06350e0bd27613d068b3"
     },
     {
       "path": "operator/web/measured_observations.css",
@@ -360,7 +361,8 @@
     "integration/measurements/INSTALLATION.json": [
       "0cfa8e2c5f333381f69733da963a2a869186fbdd8e19d2d2e892704537261409",
       "4badf415651a1848b74fc05e4e3361eb2e10cd927c9ffca992e0a61b28440041",
-      "5d310c984e18b3bdbaf3689dc3e3b9455450326ffded123db473ef12e32fb7ac"
+      "5d310c984e18b3bdbaf3689dc3e3b9455450326ffded123db473ef12e32fb7ac",
+      "d5d4388a88c3eba472a8c807a1280f2a8c7933e968fde148e3067f838e7b4bf1"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
@@ -442,7 +444,8 @@
     "MEASUREMENT_LARGE_FILES_SOURCE.json": [
       "629788027cd888d6e5aa58b43b7f2704b1d7250841dc3f35af2b34b58dd6b2b1",
       "9f34e3a87fb8b77a76d66a0c5e8a944e4bb65c68fe46013b4c72928d4658a61d",
-      "4fbf3134a643a16d14e160b2af32bdc234e8b6555ee0ef4f72249aed1aeee99b"
+      "4fbf3134a643a16d14e160b2af32bdc234e8b6555ee0ef4f72249aed1aeee99b",
+      "654dbcdddc80bbb0ecbb5cb627d58a1b1a1025b8ad9e28022bcfb1c438bb6671"
     ],
     "install_measurement_large_files.py": [
       "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
