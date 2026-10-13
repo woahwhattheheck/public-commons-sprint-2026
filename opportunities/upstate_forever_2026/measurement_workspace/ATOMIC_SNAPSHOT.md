@@ -64,7 +64,7 @@ workspace and original source files.
 
 Operate the actual binding inspection on the populated receiving workspace and
 confirm the native response revision, total and full source/history fields.
-Before the October13 14:00UTC sprint handoff, the producing worker must LOOK at
+Before presenting the outgoing product, the producing worker must LOOK at
 the resulting desktop and narrow product screens and operate selection, source
 inspection, downloads and reopening, then repair any rendering or control defects.
 The current owner instruction is repository AGENTS.md version2026-10-13.1.

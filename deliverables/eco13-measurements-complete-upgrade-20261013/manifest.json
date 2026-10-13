@@ -1,61 +1,61 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "928f953e274374805467838809b1c9d8be8ca554",
+  "source_commit": "11ca2f61b8207c0309fa85ce8d336661226fb2e7",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MEASUREMENTS-RETURNED-REVIEW-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
   "source_files": 76,
   "installed_files": 74,
-  "source_bytes": 933912,
+  "source_bytes": 948586,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 296187,
-      "sha256": "c686375e1fe851ff70b8997b4956bb9e66252305f477dba250831b7c0e038542",
+      "bytes": 305539,
+      "sha256": "3fefc4c983dbea4a97914a3aedf2794882c91644514861bc35f80345f34df221",
       "members": 22,
-      "source_bytes": 218589
+      "source_bytes": 225944
     },
     {
       "path": "source-02.json",
       "bytes": 277403,
-      "sha256": "bdd7435314d7f755afd6cb493514fdfae784765c774413ab61dc1341de8f33e1",
+      "sha256": "416f545c83e6b3f71ae4e4917c13c7ac5ad73853316f10e35285e7b92f00fee2",
       "members": 16,
       "source_bytes": 205891
     },
     {
       "path": "source-03.json",
-      "bytes": 297371,
-      "sha256": "2495cf9071f269d278c937562e8bb11d7613e03689e227906f59df5408191b06",
+      "bytes": 296076,
+      "sha256": "01ed6770340825e54a6c60c95e9f2963c7b82b220a197c63046d015de6076532",
       "members": 15,
-      "source_bytes": 221007
+      "source_bytes": 220038
     },
     {
       "path": "source-04.json",
-      "bytes": 126910,
-      "sha256": "909d21d4d9ec600c046a75b258c93c763f3baee4c8bce5d9856eed54b52c6012",
+      "bytes": 136100,
+      "sha256": "27aea01074794aeb462fa05027156dcf3e6b1058a0d81884b6e0d86865ffaa62",
       "members": 6,
-      "source_bytes": 94062
+      "source_bytes": 101127
     },
     {
       "path": "source-05.json",
-      "bytes": 262290,
-      "sha256": "479789790642a0c849d595c1d10c54d274d82beac117fcb9817bf8b4354f220c",
+      "bytes": 263927,
+      "sha256": "50af4206d1c94771b4a9f97a66b2828eaf57a51e01ffd874fd9f4483062de697",
       "members": 17,
-      "source_bytes": 194363
+      "source_bytes": 195586
     }
   ],
   "files": [
     {
       "path": "AGENTS.md",
-      "bytes": 7593,
-      "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+      "bytes": 8469,
+      "sha256": "e4800ffe55b6bed027f8ec012501657f5dabadbbc435ac5ce2503e22828a6c78",
       "role": "owner_instruction"
     },
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 4889,
-      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8",
+      "bytes": 5921,
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
       "role": "installed_component"
     },
     {
@@ -78,32 +78,32 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 22348,
-      "sha256": "984be9c2f4613ebe05bf30522c09bd86c21fe612d90ef234cd1647fd9feae78a",
+      "bytes": 23380,
+      "sha256": "276a43506947bff8fb0d5d57f7d0a6852b4b3d21d5a803de88a798455b15d10f",
       "role": "installed_component"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 9348,
-      "sha256": "151f45cc189e766f3b8e47f7f86cd68050ed408f46cf39b5f36e55d2e5f19676",
+      "bytes": 9350,
+      "sha256": "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11",
       "role": "installed_component"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
       "bytes": 10267,
-      "sha256": "6d6b7f77494178b8994a0acadada29d1e65b1f78aa16751feaa95c6f91aba850",
+      "sha256": "6965cdbaa3f2f04395b3abea18c217be0dbde1a4d5d5892b7a46e8f7f7fcb10d",
       "role": "installed_component"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json",
       "bytes": 1723,
-      "sha256": "341fefc51c2f423310a49e3a3fed45f990766700375fe66f15e8252301a97c0e",
+      "sha256": "ff2cd42b579127ac1ce31e9762414fa34dbf84a1a3bd24bd6db96c4229c82076",
       "role": "installed_component"
     },
     {
       "path": "checks/measurement_returned_reviews_operator.py",
-      "bytes": 17623,
-      "sha256": "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f",
+      "bytes": 17796,
+      "sha256": "34b63f77d8c2f617d8c98c9d4063abdeb2a26a4597bc136a00b06637f4cb9593",
       "role": "installed_component"
     },
     {
@@ -138,8 +138,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-collections.json",
-      "bytes": 1761,
-      "sha256": "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d",
+      "bytes": 2251,
+      "sha256": "606d146a2c4583c8fadf59d64e2c03a4b45d0e166efe4a034ffd8db309e7acbf",
       "role": "installed_component"
     },
     {
@@ -157,19 +157,19 @@
     {
       "path": "integration/component_fragments/measurement-returned-reviews.json",
       "bytes": 1002,
-      "sha256": "9a8a059d7c57c0974df2cc5581e7481dd5fa3ed26153b9ee6683da2d711027ae",
+      "sha256": "65c0f064c6e9dfefbca981ff729f151d843ade2db77875943c6ede53c7bdc8cd",
       "role": "installed_component"
     },
     {
       "path": "integration/measurements/INSTALLATION.json",
-      "bytes": 26246,
-      "sha256": "e72aa23ba4c02ead95b75657a693054df24be7b53dabaed5065e5386dd839e15",
+      "bytes": 29831,
+      "sha256": "b0bd67f5367dc9cb26e7d937784cbb8b681707dbe4111c9ed9ac7485836c1bbe",
       "role": "installed_component"
     },
     {
       "path": "measurement_workspace/ATOMIC_SNAPSHOT.md",
-      "bytes": 3586,
-      "sha256": "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e",
+      "bytes": 3580,
+      "sha256": "218fa461e7e7dbb4061c79dd05a9d1ceb91079e6862d583d0514cf0c0e128a4c",
       "role": "installed_component"
     },
     {
@@ -288,8 +288,8 @@
     },
     {
       "path": "measurement_workspace/engine/returned_review_reports.mjs",
-      "bytes": 19382,
-      "sha256": "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40",
+      "bytes": 19394,
+      "sha256": "b66e08538849638a340fd4a2b334e8316e2473909332469b476b278b0cc1b5d3",
       "role": "installed_component"
     },
     {
@@ -342,14 +342,14 @@
     },
     {
       "path": "measurement_workspace/web/chemistry.mjs",
-      "bytes": 35156,
-      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda",
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9",
       "role": "installed_component"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 8945,
-      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
       "role": "installed_component"
     },
     {
@@ -360,20 +360,20 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17979,
-      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b",
       "role": "installed_component"
     },
     {
       "path": "measurement_workspace/web/returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
       "role": "installed_component"
     },
     {
       "path": "measurement_workspace/web/workspace.css",
-      "bytes": 4996,
-      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
+      "bytes": 10857,
+      "sha256": "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
       "role": "installed_component"
     },
     {
@@ -384,8 +384,8 @@
     },
     {
       "path": "model/MEASUREMENTS_PORTABLE.md",
-      "bytes": 9625,
-      "sha256": "7d526a90464720e9b7c36ac8ffea57bad8b33a3c7aa875588a452aa810e2de47",
+      "bytes": 10657,
+      "sha256": "33e7bca612d33142692325e5995ecb1121885ea24f56878341fb45f2392ee39d",
       "role": "installed_component"
     },
     {
@@ -402,20 +402,20 @@
     },
     {
       "path": "operator/MEASURED_CHEMISTRY.md",
-      "bytes": 10523,
-      "sha256": "31fe6da10443f3fd22938d77c1505832063d4661ec2470e896cb33e540209732",
+      "bytes": 10515,
+      "sha256": "bc0be0e63d82023510886feb69dbcd5d74f665718e16b629a0d578488606b6b4",
       "role": "installed_component"
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 13110,
-      "sha256": "fd6c0f23a5e7569ad92890f91b7b4e1cee9d0cf6471dc93a3865c36c5b95260c",
+      "bytes": 13212,
+      "sha256": "795e4e19cce0c4049006cfabdd7ab0b2f9ad4e8d1d0b1500367ae299cc35bade",
       "role": "installed_component"
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 7800,
-      "sha256": "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85",
+      "bytes": 10618,
+      "sha256": "408b9b39254d2f0bad3b177b2f3051ce7e5a89d4cf33c3743ad04ee4a2c97fe3",
       "role": "installed_component"
     },
     {
@@ -432,8 +432,8 @@
     },
     {
       "path": "operator/install_measurements.py",
-      "bytes": 11769,
-      "sha256": "f0614c40895818084ce4964c9d9d5355a067853817be25d5416e15ccc4b3cbf5",
+      "bytes": 12159,
+      "sha256": "76402fc675cc41c04f78156fe1ad93c00a8f7782afdbc7fb7fc17cb08b7197b4",
       "role": "installed_component"
     },
     {
@@ -444,26 +444,26 @@
     },
     {
       "path": "operator/web/measured_chemistry.mjs",
-      "bytes": 35156,
-      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda",
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9",
       "role": "installed_component"
     },
     {
       "path": "operator/web/measured_collections.mjs",
-      "bytes": 8945,
-      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
       "role": "installed_component"
     },
     {
       "path": "operator/web/measured_large_files.mjs",
-      "bytes": 17979,
-      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b",
       "role": "installed_component"
     },
     {
       "path": "operator/web/measured_observations.css",
-      "bytes": 4996,
-      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
+      "bytes": 10857,
+      "sha256": "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
       "role": "installed_component"
     },
     {
@@ -480,8 +480,8 @@
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
       "role": "installed_component"
     },
     {
@@ -548,36 +548,37 @@
     ],
     "guard": "The scoped installer uses the original shared extension-install lock, exact complete member hashes and documented predecessor identities; it preserves unknown newer source."
   },
-  "native_workflow": "Complete original Measurements1.2 streamed source intake and receiving -> consistent reviewed source snapshot and original collections -> explicit native Chemistry binding -> native report and editable receiving -> original returned-review 1.0.2 three-way comparison -> explicit saved decisions -> independent editable incorporation and original source handoff",
+  "native_workflow": "Complete original Measurements1.2 streamed source intake and receiving -> consistent reviewed source snapshot and original collections -> explicit native Chemistry binding -> native report and editable receiving -> original returned-review 1.0.3 three-way comparison -> explicit saved decisions -> independent editable incorporation and original source handoff",
   "owner_instruction": {
     "path": "AGENTS.md",
-    "bytes": 7593,
-    "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
-    "source_path": "AGENTS.md",
+    "bytes": 8469,
+    "sha256": "e4800ffe55b6bed027f8ec012501657f5dabadbbc435ac5ce2503e22828a6c78",
+    "source_path": "opportunities/upstate_forever_2026/AGENTS.md",
     "version": "2026-10-13.1",
-    "source_commit": "18b51a04e66b719a10867e983f98e0a478118147"
+    "source_commit": "11ca2f61b8207c0309fa85ce8d336661226fb2e7"
   },
   "owner_direction": {
     "path": "CURRENT_OWNER_DIRECTION.md",
-    "bytes": 4889,
-    "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8",
-    "version": "2026-10-13.3",
+    "bytes": 5921,
+    "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
+    "version": "2026-10-13.4",
     "source_path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
-    "source_commit": "e7325cdf"
+    "source_commit": "11ca2f61b8207c0309fa85ce8d336661226fb2e7"
   },
   "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
   "original_outer_snapshot_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
-  "previous_source_commit": "0c039477feefe6c1b6195cb505ffb283727e08b1",
+  "previous_source_commit": "928f953e274374805467838809b1c9d8be8ca554",
   "workspace_transport": "Delayed form inputs and response admission remain tied to the original mount workspace and generation; the native operation body and identity are preserved once admitted.",
   "returned_review_source": {
-    "engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
+    "engine_commit": "6503066267af8f8c63734fea9c8d30a6326b2b73",
     "provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
-    "panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
+    "panel_commit": "11ca2f61b8207c0309fa85ce8d336661226fb2e7",
     "original_source_files": 10,
-    "original_source_bytes": 103249,
+    "original_source_bytes": 103261,
     "readme": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
     "receiving_course": "checks/measurement_returned_reviews_operator.py",
     "receiving_source_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409",
-    "database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055"
+    "database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055",
+    "native_receiving_repair": "dc34216f61d6f6de40b553901416a0226e81bfba"
   }
 }

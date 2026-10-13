@@ -6,7 +6,7 @@ The complete original 23-file core was recovered from PR 3713. Its original norm
 
 ## Owner's primary demonstration scope
 
-Canonical owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, retained at source commit `e7325cdf`. The complete brief is included in this source bank as `CURRENT_OWNER_DIRECTION.md`.
+Canonical owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, renewed by Bryce on October 13 at 10:46 a.m. Eastern. The complete brief is included in this source bank as `CURRENT_OWNER_DIRECTION.md`.
 
 The owner's October 13 direction for this Upper Savannah RFP keeps the main demonstration on its actual geographic and source shapes: a 30 m grid, the upstream model domain distinguished from the South Carolina reporting mask and utility focus, clearly identified realistic simulated inputs, and native InVEST NDR/SDR baseline, restoration and matched-control cases. Present annual nitrogen and phosphorus reaching streams in kg/year and sediment in tonnes/year, with differences, maps, reports, editable parameters and source editions, export and cold reopening. Retain the actual elapsed operation history and show the production workshare.
 
@@ -59,7 +59,7 @@ Before calling an outgoing product client-ready, the producing worker must run/o
 
 Repair broken, cramped, clipped, overflowing or unreadable output in the same authorized work. Keep the plain industrial design and original scientific computation. Source review and check commands do not replace actual rendered product use. Carry the owner instruction into every existing receiving handoff and return actual inspected screenshots/files to the producing team.
 
-The existing Ecosystem sprint cutoff remains **October 13, 2026 at 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville). This component adds no watcher, parallel receiving worker or new deadline.
+Bryce's current version 2026-10-13.4 direction supersedes the earlier Eco cutoff. Continue the same unfinished receiving operation from its retained state, preserving completed outputs and active processes. This component adds no watcher, parallel receiving worker or new deadline.
 
 
 ## Complete Measurements1.2 continuity
