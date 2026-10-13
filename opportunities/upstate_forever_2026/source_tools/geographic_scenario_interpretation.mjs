@@ -97,7 +97,9 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
   if (matching?.schema !== "upstate.regional-matched-control-summary/v1")
     fail("Select its complete regional matched-control summary");
   const geo = prepared.geography, summary = prepared.input_summary;
-  if (canonical(summary?.control?.preparation?.summary) !== canonical(matching))
+  const retainedMatching = summary?.control?.schema === "upstate.regional-matched-control-summary/v1"
+    ? summary.control : summary?.control?.preparation?.summary;
+  if (canonical(retainedMatching) !== canonical(matching))
     fail("Matching summary is not the original preparation embedded in this geographic edition");
   if (!geo || !summary || !prepared.id || !prepared.project_id) fail("Incomplete original geographic preparation");
   const modelIds = hucs(geo.model_domain_huc12s, "model-domain HUC12s");
@@ -180,6 +182,35 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
       "source_reduction_aggregation_roundoff_kg_year"];
     return {pollutant, units: "kg/year", ...Object.fromEntries(names.map(name => [name, sum(selected.map(row => row[name]))]))};
   });
+  const reportingHucRows = [];
+  for (const [huc, distribution] of Object.entries(summary.per_huc || {}).sort()) {
+    if (!reportIds.includes(huc)) fail("Per-HUC treatment row is outside selected reporting HUCs");
+    const reportingCells = count(distribution.reporting_cells, "HUC reporting cells");
+    const corridorCells = count(distribution.corridor_cells, "HUC corridor cells");
+    const changedCells = count(distribution.changed_cells, "HUC changed cells");
+    if (changedCells > corridorCells || corridorCells > reportingCells) fail("HUC treatment support is inconsistent");
+    const originalCounts = distribution.original_class_counts || {};
+    if (sum(Object.values(originalCounts).map(value => count(value, "HUC source class count"))) !== changedCells)
+      fail("HUC source class counts do not cover its changed cells");
+    const source = {};
+    for (const pollutant of ["n", "p"]) {
+      source[pollutant] = sum(Object.entries(originalCounts).map(([code, n]) => {
+        const group = byClass.find(item => String(item.from_code) === code);
+        if (!group) { if (n) fail("HUC treatment class is absent from original global matching"); return 0; }
+        return area * n * (coefficient(table.get(Number(code)), pollutant) -
+          coefficient(table.get(Number(group.to_code)), pollutant));
+      }));
+    }
+    reportingHucRows.push({huc12:huc, reporting_cells:reportingCells,
+      corridor_cells:corridorCells, changed_cells:changedCells,
+      reporting_hectares:reportingCells*area, corridor_hectares:corridorCells*area,
+      restoration_changed_hectares:changedCells*area,
+      restoration_original_class_counts:originalCounts,
+      restoration_unweighted_n_source_reduction_kg_year:source.n,
+      restoration_unweighted_p_source_reduction_kg_year:source.p,
+      control_changed_hectares:null,
+      control_allocation:"Matching is global across reporting support; use actual control footprint intersection for this HUC."});
+  }
   const width = number(prepared.selection.corridor_width_m, "corridor per-side buffer distance", true);
   const report = {
     schema: SCHEMA, geographic_preparation_id: prepared.id, project_id: prepared.project_id,
@@ -208,7 +239,9 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
       interpretation: "Utility protection polygons, four original focus HUCs and complete utility upstream HUC groups have separate source identities. Reported source-cell export inside a polygon describes those contributing cells."
     },
     class_source_loading: rows, total_source_loading: totals,
+    reporting_huc_source_loading: reportingHucRows,
     scenario_interpretation: [
+      "Matching preserves class counts across the whole reporting area, not within every HUC or utility footprint. Report actual alternative changed areas and classes within each local footprint before interpreting a local difference as a siting advantage.",
       "Both alternatives convert the same number of cells in each original class to the selected destination class. Their unweighted assumed nutrient-source coefficient reduction is identical.",
       "The class-specific precipitation sums quantify their remaining runoff-proxy source-loading difference. The signed corridor-minus-control quantity is positive when the corridor reduces more assumed source loading.",
       "These source-loading quantities precede modeled delivery. Native export reduction also responds to downslope retention and connectivity; use the original baseline/restoration/control common-finite comparisons for annual stream-delivered loads.",
@@ -240,6 +273,14 @@ export function reportSection(report) {
         "unweighted_source_reduction_each_kg_year", "corridor_proxy_weighted_source_reduction_kg_year",
         "control_proxy_weighted_source_reduction_kg_year", "corridor_minus_control_source_reduction_kg_year"
       ].map(key => f(row[key]))]), widths: [.14,.20,.23,.23,.20]},
+    ...(report.reporting_huc_source_loading.length ? [
+      "Original restoration allocation by selected reporting HUC follows below. The global control can allocate its matched cells differently among HUCs; obtain its local changed hectares from the actual saved footprint.",
+      {kind:"table", columns:["Reporting HUC12", "Reporting ha", "Corridor ha", "Restored ha", "Source N kg/year", "Source P kg/year"],
+       widths:[.20,.15,.15,.14,.18,.18],
+       rows:report.reporting_huc_source_loading.map(row => [row.huc12,
+         ...["reporting_hectares","corridor_hectares","restoration_changed_hectares",
+           "restoration_unweighted_n_source_reduction_kg_year","restoration_unweighted_p_source_reduction_kg_year"].map(key=>f(row[key]))])}
+    ] : []),
     ...report.scenario_interpretation
   ]];
 }
@@ -274,6 +315,11 @@ export async function writeEdition({preparedPath, matchingPath, coefficientPath,
     "geographic_scenario_interpretation.mjs": implementation,
     ...Object.fromEntries(Object.entries(bodies).map(([name, body]) => ["originals/" + name, body]))
   };
+  if (report.reporting_huc_source_loading.length) {
+    const hucRows = report.reporting_huc_source_loading.map(row => ({...row,
+      restoration_original_class_counts:JSON.stringify(row.restoration_original_class_counts)}));
+    files["reporting-huc-source-loading.csv"] = Buffer.from(csv(Object.keys(hucRows[0]),hucRows));
+  }
   const describe = (name, body) => ({path:name, bytes:body.length, sha256:crypto.createHash("sha256").update(body).digest("hex")});
   const inputs = Object.entries(files).map(([name, body]) => describe(name, body));
   const recipe = {schema:"upstate.observed-report/v1", title:"Original geographic scenario: source-loading interpretation",
