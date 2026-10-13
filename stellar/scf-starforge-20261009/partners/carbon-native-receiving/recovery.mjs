@@ -25,10 +25,11 @@ export async function atomicJSON(path,value){
   const parent=await open(dirname(path),constants.O_RDONLY|constants.O_DIRECTORY);
   try{await parent.sync();}finally{await parent.close();}
 }
-export async function nativeProcess(pid=process.pid){
+export async function nativeProcess(pid){
+  const self=pid===undefined;if(self)pid=process.pid;
   let bootId=null,startTicks=null,state=null,procPid=null;
   try{bootId=(await readFile('/proc/sys/kernel/random/boot_id','utf8')).trim();}catch{}
-  try{const stat=await readFile(pid===process.pid?'/proc/self/stat':'/proc/'+pid+'/stat','utf8');
+  try{const stat=await readFile(self?'/proc/self/stat':'/proc/'+pid+'/stat','utf8');
     procPid=Number(stat.slice(0,stat.indexOf(' ')))||null;
     const fields=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/);startTicks=fields[19]||null;state=fields[0]||null;}catch{}
   return {hostname:hostname(),pid,procPid,bootId,startTicks,state};
