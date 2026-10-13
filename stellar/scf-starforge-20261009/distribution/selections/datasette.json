@@ -111,7 +111,9 @@
     "stellar-forge/mcp-paid-agent",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
-    "stellar/scf-starforge-20261009/distribution/python-runtime"
+    "stellar/scf-starforge-20261009/distribution/python-runtime",
+    "products/conapi/supplier-report",
+    "products/ntico/bdnb-territory"
   ],
   "supportFiles": [
     "products/local-dataset/OPERATING.md",

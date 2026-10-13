@@ -1,0 +1,107 @@
+{
+  "id": "conapi_workflow_recover",
+  "namespace": "conapi.commissioning",
+  "description": "Continue the original retained publication attempt with its existing deliveryId and resultSha256.",
+  "vars": {
+    "runtime": {
+      "schema": "stellar-forge.kestra-runtime.v1",
+      "analysisRoot": "/opt/tjlabs/merchant/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
+      "workspace": "/var/lib/conapi/workflow",
+      "configuration": "/etc/conapi/customer-workflow.json",
+      "receiverWorkspace": "/var/lib/conapi/received-results",
+      "correlationMode": "business-properties",
+      "resultDestination": {
+        "destinationName": "conapi.results",
+        "destinationType": "QUEUE"
+      },
+      "nativeHeaderJar": "/opt/conapi/conapi-native-header-producer.jar",
+      "pythonExecutable": "/usr/bin/python3",
+      "javaExecutable": "/usr/bin/java"
+    }
+  },
+  "tasks": [
+    {
+      "id": "prepare",
+      "type": "io.kestra.plugin.scripts.python.Script",
+      "taskRunner": {
+        "type": "io.kestra.plugin.core.runner.Process"
+      },
+      "env": {
+        "CONAPI_ANALYSIS_ROOT": "{{ vars.runtime.analysisRoot }}",
+        "CONAPI_REQUEST_ID": "{{ inputs.requestId }}",
+        "CONAPI_ATTEMPT_ID": "{{ inputs.attemptId }}"
+      },
+      "inputFiles": {
+        "runtime.json": "{{ vars.runtime | toJson }}"
+      },
+      "outputFiles": [
+        "prepared.json",
+        "jms-message.json"
+      ],
+      "script": "import os\nfrom pathlib import Path\nimport sys\nsys.path.insert(0, str(Path(os.environ['CONAPI_ANALYSIS_ROOT']) / 'kestra'))\nfrom flow_driver import main\nraise SystemExit(main([\"recover\"]))\n"
+    },
+    {
+      "id": "publish_result",
+      "type": "io.kestra.plugin.jms.Produce",
+      "connectionFactoryConfig": {
+        "type": "DIRECT",
+        "connectionFactoryClass": "org.apache.activemq.ActiveMQConnectionFactory",
+        "providerJarPaths": [
+          "file:///opt/conapi/jms-libs/activemq-all.jar"
+        ],
+        "username": "{{ secret('CONAPI_JMS_USERNAME') }}",
+        "password": "{{ secret('CONAPI_JMS_PASSWORD') }}",
+        "connectionProperties": {
+          "brokerURL": "{{ secret('CONAPI_JMS_BROKER_URL') }}"
+        },
+        "useFilteredClassLoader": false
+      },
+      "destination": {
+        "destinationName": "conapi.results",
+        "destinationType": "QUEUE"
+      },
+      "serdeType": "JSON",
+      "deliveryMode": 2,
+      "priority": 4,
+      "timeToLive": 0,
+      "from": "{{ outputs.prepare.outputFiles['jms-message.json'] }}"
+    },
+    {
+      "id": "record_publication",
+      "type": "io.kestra.plugin.scripts.python.Script",
+      "taskRunner": {
+        "type": "io.kestra.plugin.core.runner.Process"
+      },
+      "env": {
+        "CONAPI_ANALYSIS_ROOT": "{{ vars.runtime.analysisRoot }}"
+      },
+      "inputFiles": {
+        "runtime.json": "{{ vars.runtime | toJson }}",
+        "prepared.json": "{{ outputs.prepare.outputFiles['prepared.json'] }}",
+        "producer-receipt.json": "{{ outputs.publish_result | toJson }}"
+      },
+      "outputFiles": [
+        "publication.json"
+      ],
+      "script": "import os\nfrom pathlib import Path\nimport sys\nsys.path.insert(0, str(Path(os.environ['CONAPI_ANALYSIS_ROOT']) / 'kestra'))\nfrom flow_driver import main\nraise SystemExit(main([\"record\"]))\n"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "requestId",
+      "type": "STRING"
+    },
+    {
+      "id": "attemptId",
+      "type": "STRING",
+      "description": "The original retained attempt identifier shown in workflow status/history."
+    }
+  ],
+  "outputs": [
+    {
+      "id": "publication",
+      "type": "JSON",
+      "value": "{{ fromJson(read(outputs.record_publication.outputFiles['publication.json'])) }}"
+    }
+  ]
+}

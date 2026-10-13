@@ -197,6 +197,12 @@ class DatasetteOperatorClient:
             query["edition_id"] = edition_id
         return self._json("/api/datasette/rows?" + urlencode(query))
 
+    def bdnb_read(self, action, body=None):
+        if action not in {"bdnb.schema", "bdnb.status", "bdnb.get", "bdnb.rows"} or not isinstance(body if body is not None else {}, dict):
+            raise DatasetteClientError("BDNB_READ_INVALID", "Select an original BDNB read and its complete body.")
+        self.status()
+        return self._json("/api/datasette/bdnb/read", body={"action": action, "body": body or {}})
+
     def nld_status(self, *, project_id=None):
         self.status()
         query = "?" + urlencode({"project_id": project_id}) if project_id else ""

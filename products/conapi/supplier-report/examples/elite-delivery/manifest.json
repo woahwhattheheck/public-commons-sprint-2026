@@ -1,0 +1,61 @@
+{
+  "format": "conapi-supplier-delivery",
+  "version": 1,
+  "requestId": "70CB-CONAPI-ELITE-INITIAL-IMPORT-20261012",
+  "comparisonId": "cmp_5583472f117db47e7da8b9e51fd5a38bd1de51dbc2b3ad0a371cc6859f56f5ca",
+  "revision": 23,
+  "status": "reviewed",
+  "exportedAt": "2026-10-12T21:48:33.437Z",
+  "files": [
+    {
+      "filename": "workspace.json",
+      "bytes": 62210,
+      "sha256": "04df288771367b06ab2fe69ca5b785807d186ddf8cc241ec713dde1163d533fd"
+    },
+    {
+      "filename": "report.json",
+      "bytes": 85203,
+      "sha256": "283710eceb7aff3be459bed3fe10f9cb7e53b52978b9f9ea0638bba1a6981d71"
+    },
+    {
+      "filename": "rules.json",
+      "bytes": 3579,
+      "sha256": "363925086b97abea64c720a00f73b554b4d67a015422e837908e071146176b0a"
+    },
+    {
+      "filename": "baseline-source.csv",
+      "bytes": 85,
+      "sha256": "2c40161604ee99a72224aa31aeb1bf650114300a9b56a9910e01ebe1616af4ea"
+    },
+    {
+      "filename": "candidate-source.csv",
+      "bytes": 3558,
+      "sha256": "6891cc62b1341ee0cdf601a78e9e04b6232f1c26cc1cdeb8f021a5edc1fa5dcb"
+    },
+    {
+      "filename": "changes.csv",
+      "bytes": 28980,
+      "sha256": "3ed970e5bb8af2ec75bd040b5cb4fa976bc7356800c3bc5f12be2e20a482ccd3"
+    },
+    {
+      "filename": "report.html",
+      "bytes": 142887,
+      "sha256": "b0275abb88dc1e70bd97d545535afa0aea9ff478c1cbd582f6bb65359ca31358"
+    },
+    {
+      "filename": "accepted.csv",
+      "bytes": 3868,
+      "sha256": "910c1f4de70c08930a940e34c7e0e279dda25f9c965bfac8a37f3d11687ac13b"
+    },
+    {
+      "filename": "accepted.sql",
+      "bytes": 26812,
+      "sha256": "dd34996262864ec24257dadeb88e6a8c5e1d4be4957ed4602ca59093dc71cda7"
+    },
+    {
+      "filename": "lineage.json",
+      "bytes": 27070,
+      "sha256": "da89a4614d0013f7913d1c0f2dca0b886ae89a4fdc10f2c6b05066e7238c6284"
+    }
+  ]
+}

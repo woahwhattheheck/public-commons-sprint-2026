@@ -1,0 +1,60 @@
+{
+  "id": "conapi_workflow_realtime",
+  "namespace": "conapi.commissioning",
+  "description": "Use the installed original JMS RealtimeTrigger and pass the complete native trigger message into the same retained request operation.",
+  "vars": {
+    "runtime": {
+      "schema": "stellar-forge.kestra-runtime.v1",
+      "analysisRoot": "/opt/tjlabs/merchant/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
+      "workspace": "/var/lib/conapi/workflow",
+      "configuration": "/etc/conapi/customer-workflow.json",
+      "receiverWorkspace": "/var/lib/conapi/received-results",
+      "correlationMode": "business-properties",
+      "resultDestination": {
+        "destinationName": "conapi.results",
+        "destinationType": "QUEUE"
+      },
+      "nativeHeaderJar": "/opt/conapi/conapi-native-header-producer.jar",
+      "pythonExecutable": "/usr/bin/python3",
+      "javaExecutable": "/usr/bin/java"
+    }
+  },
+  "tasks": [
+    {
+      "id": "process_request",
+      "type": "io.kestra.plugin.core.flow.Subflow",
+      "namespace": "conapi.commissioning",
+      "flowId": "conapi_workflow_process",
+      "wait": true,
+      "transmitFailed": true,
+      "inputs": {
+        "message": "{{ trigger | toJson }}"
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "request_trigger",
+      "type": "io.kestra.plugin.jms.RealtimeTrigger",
+      "disabled": true,
+      "connectionFactoryConfig": {
+        "type": "DIRECT",
+        "connectionFactoryClass": "org.apache.activemq.ActiveMQConnectionFactory",
+        "providerJarPaths": [
+          "file:///opt/conapi/jms-libs/activemq-all.jar"
+        ],
+        "username": "{{ secret('CONAPI_JMS_USERNAME') }}",
+        "password": "{{ secret('CONAPI_JMS_PASSWORD') }}",
+        "connectionProperties": {
+          "brokerURL": "{{ secret('CONAPI_JMS_BROKER_URL') }}"
+        },
+        "useFilteredClassLoader": false
+      },
+      "destination": {
+        "destinationName": "conapi.requests",
+        "destinationType": "QUEUE"
+      },
+      "serdeType": "STRING"
+    }
+  ]
+}
