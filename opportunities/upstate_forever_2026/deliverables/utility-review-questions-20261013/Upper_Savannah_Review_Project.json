@@ -1,0 +1,69 @@
+{
+  "schema": "upstate.watershed-review/v1",
+  "source_edition": "4b2efdbd79bce5f9327f7c2a94e46d41bd6a975dcd10c2739b66f284c394365e",
+  "saved_at": "2026-10-13T11:31:18Z",
+  "settings": {
+    "scope": "utility-union",
+    "basis": "absolute",
+    "weights": [
+      1,
+      1,
+      1
+    ],
+    "topK": 5,
+    "evidence": "all",
+    "query": "",
+    "onlyQueued": false
+  },
+  "active_huc12": "030601020507",
+  "notes": {
+    "030601010703": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Locate the original developed, forest and wetland transitions in Upper Six and Twenty and compare absolute versus area-normalized review order.",
+      "notes": "Original 2023–2025 classifications retain 46.89 ha developed-group gross gain, 70.65 ha forest gross loss and 1.26 ha wetland gross loss. In the four-HUC ARJWS upstream view, equal-weight order changes from fourth in absolute hectares to second per 1,000 classified hectares. Its top-two count changes from 6/66 to 45/66 weight choices. Inspect the original transition classes and location before relating the mapped patches to the editable restoration scenario. Retain RS-24163 and its draft ECOLI assessment as the original observed constituent/context.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    },
+    "030601010704": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Map Lower Six and Twenty's developed gain and forest loss against original utility and modeled reporting supports.",
+      "notes": "Original developed-group gross gain is 132.12 ha and forest gross loss is 149.13 ha. It ranks first at equal weights in both ARJWS upstream views, while its top-two counts are 60/66 absolute and 48/66 normalized. Keep developed classes 21–24 inspectable, including vegetated developed open space. Compare the resulting questions with the actual baseline/restoration/control maps on their common support. Retain the RL-01020 draft PH assessment and its own units; the retained local flow-gauge inventory is empty.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    },
+    "030601020502": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Compare Choestoea's per-area forest and developed transitions with Lower Tugaloo's larger whole-HUC totals.",
+      "notes": "Original Choestoea area is 9,940.68 ha, with 97.38 ha forest gross loss, 36.99 ha forest gross gain and 24.39 ha developed gross gain. Under equal weights, its Pioneer-focus rank rises from second in absolute hectares to first after area normalization. Across all 66 normalized weight choices it is first for 31; Lower Tugaloo is first for 35. The narrow equal-weight difference should be visible alongside the editable criteria and original quantities. Retain SV-790's draft BIO assessment as biological context.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    },
+    "030601020507": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Inspect where Lower Tugaloo's substantial forest loss and gain occur despite its small net forest change.",
+      "notes": "Original forest gross loss is 180.09 ha and gross gain is 179.28 ha, leaving net change −0.81 ha. Developed gross gain is 64.44 ha and wetland gross loss is 3.42 ha over 24,155.55 classified ha. It leads both Pioneer focus members in all 66 absolute-hectare weight choices; under normalization the preferred order depends on the weights. Open the original transition map and distinguish this GA/SC whole HUC from the actual South Carolina reporting intersection and utility protection geometry. Keep SV-234's draft PCB fish-tissue assessment in its original constituent field when comparing native N/P/sediment scenarios.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    },
+    "030601020504": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Review Shoal Creek's original Georgia upstream change patches as contributing context for the Pioneer case.",
+      "notes": "Shoal Creek is an original GA upstream HUC in Pioneer's 32-member closure: 33.39 ha developed gross gain, 91.98 ha forest gross loss and 3.60 ha wetland gross loss. It remains in the Pioneer upstream top five for all 66 weight choices in both absolute and normalized views. In the combined 36-HUC normalized view it also remains top five for all 66 choices. Preserve it in upstream model support and show the separate South Carolina reporting mask when reviewing scenario results.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    },
+    "030601020501": {
+      "queued": true,
+      "status": "Desktop review",
+      "reviewer": "TokenJunkieLabs analytical review",
+      "question": "Inspect Eastanollee Creek's original upstream developed and forest transitions alongside the selected Pioneer focus anchors.",
+      "notes": "Eastanollee Creek is an original GA upstream HUC: 51.48 ha developed gross gain, 82.44 ha forest gross loss and 2.52 ha wetland gross loss. It is in Pioneer's upstream top five for 66/66 absolute and 64/66 normalized weight choices. Keep its contributing context separate from the RFP's two Pioneer focus anchors and the South Carolina reporting selection. Locate the source transitions and review their actual flow-path relationship in the prepared geographic case.",
+      "updated_at": "2026-10-13T11:31:18Z"
+    }
+  }
+}
