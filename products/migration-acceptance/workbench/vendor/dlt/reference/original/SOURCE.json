@@ -1,0 +1,21 @@
+{
+  "schema": "dlthub.original-reference-data.v1",
+  "repository": "slingdata-io/sling-cli",
+  "commit": "7641892e24a7023c8012069596698970c7b3e041",
+  "meaning": "Unchanged original input bytes, reused as data only. This programme executes original dlt.",
+  "files": [
+    {
+      "path": "test1.csv",
+      "sourcePath": "tests/files/test1.csv",
+      "bytes": 115474,
+      "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977"
+    },
+    {
+      "path": "test1.upsert.csv",
+      "sourcePath": "tests/files/test1.upsert.csv",
+      "bytes": 1289,
+      "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c"
+    }
+  ],
+  "license": "../../vendor/sling/LICENSE"
+}

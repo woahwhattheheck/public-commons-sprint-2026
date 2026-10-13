@@ -1,0 +1,127 @@
+{
+  "repository": "dlt-hub/dlt",
+  "commit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+  "version": "1.31.0",
+  "files": [
+    {
+      "path": "dlt/pipeline/pipeline.py",
+      "bytes": 104099,
+      "sha256": "63ae6fa0cdea61c12fdcda7e6b7cbaf24295276430494e277a57d20da21396af",
+      "git_blob": "03a705f5e4230a208efd1357f17a7d0baf07d9ce"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 14774,
+      "sha256": "1fab0023430f142a3fbdacf05290fce2d9409302dc545b05ad11c498a405edcb",
+      "git_blob": "0320ba364ccbfe4d1487f23ab9577e7e0be6152f"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/factory.py",
+      "bytes": 9629,
+      "sha256": "a7eafb34e772a449943cd203a5c98ebad13e802337a4fdad5928583330e9b08c",
+      "git_blob": "d6ddc194308e6c0a4ac8a0f896e17623868b7f5c"
+    },
+    {
+      "path": "LICENSE.txt",
+      "bytes": 11348,
+      "sha256": "3bd68ce12f57c10e265b3d19b3251efa5aa40f780f590bc8bb7b1c83f85854ca",
+      "git_blob": "e386e8c8b30d45577906c70e37d1e896a1af197c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 13472,
+      "sha256": "136175c5ffad0b39d70a9ce7b512a601aef62fe3604bcba19f6a81a0988513c9",
+      "git_blob": "84e22acc4613c21cb3e526b2e3a955c293b92b2e"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/duck.py",
+      "bytes": 4172,
+      "sha256": "9605f7a61ead178ae9936ca36111783950c3b1d7a7511fb29c01cc7a2624dc7d",
+      "git_blob": "fe461654c76e1fbe847b6ca02d1f10af5da28cfd"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/configuration.py",
+      "bytes": 20340,
+      "sha256": "e4f40e46f37957d5e6c7c25b6257929d1fd1f9d01cd1cd9537a42ef59b5b87a4",
+      "git_blob": "4a4aaabdce0a0c97ef746062db881deaf80a3807"
+    },
+    {
+      "path": "dlt/pipeline/configuration.py",
+      "bytes": 4171,
+      "sha256": "110fc15da990d0240fa9acd1a81e78352be17e68cd38331cdb615f9bd0f2772b",
+      "git_blob": "9d83b70816be1b824a0edc5352252a8df341dddb"
+    },
+    {
+      "path": "dlt/common/storages/load_storage.py",
+      "bytes": 10534,
+      "sha256": "cfcf659f905ed8ef454cc748acff9b3fbb2cee97552b09de53b0c4ebe33a0d4c",
+      "git_blob": "82ebb06e2c08d583c61fbe8d3acb5ef637e45df7"
+    },
+    {
+      "path": "dlt/common/storages/load_package.py",
+      "bytes": 56420,
+      "sha256": "8246680a94258eb52859714c5d3bc58aef562c2b9f4396dbcb177398628613e5",
+      "git_blob": "e7284d313bf2d1bd533b0d8e149f28881c7e2a0b"
+    },
+    {
+      "path": "dlt/load/load.py",
+      "bytes": 49906,
+      "sha256": "0af18c7e84d8666e3c776e8994ab66459251c1e21df7fae24d90df31d9a9fce0",
+      "git_blob": "2e4e3a4bfa0443b83e687778632ce877d5b1e29c"
+    },
+    {
+      "path": "dlt/__init__.py",
+      "bytes": 2807,
+      "sha256": "04daf8a68674a33293623890f253a20b8c00a4293a80355ba1e37f33d2983d08",
+      "git_blob": "8b524b376b6da17493d87e1bd97615d9e7912ac4"
+    },
+    {
+      "path": "dlt/extract/decorators.py",
+      "bytes": 52994,
+      "sha256": "e636eba3a1f9dfa1af0bd6ffdae057d00984e477aac94c07e730fcaaf15a8459",
+      "git_blob": "ce4ee6e0e113c67e1b244412bceb3d4473860805"
+    },
+    {
+      "path": "dlt/extract/incremental/__init__.py",
+      "bytes": 52993,
+      "sha256": "ab054f9917f36c427d7a5898e295c2a467e009398a4a6338748e8244f9ac1d00",
+      "git_blob": "24648790120bb7fc4bed3168e6c7924bd72a0a3f"
+    },
+    {
+      "path": "dlt/common/pipeline.py",
+      "bytes": 31253,
+      "sha256": "c118f7533727122ec027bb9790229fbf6ba50089f549d2ab38fe25b861bf3982",
+      "git_blob": "a70b8860be31772d088e8f17561584bf343a6d7e"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 1864588,
+      "sha256": "ec26611cedb620e1e7fa5342c39934bb175df16449a868975199e027da8201d4",
+      "git_blob": "c9a7406b68a202d9ec01f2071ae149eb71ebe9de"
+    },
+    {
+      "path": "tests/normalize/cases/github.events.load_page_1_duck.json",
+      "bytes": 1729460,
+      "sha256": "744a7b66ea8b81815238f4346a135122016f419deae634ddec6a42788d45a6a5",
+      "git_blob": "9d047f7ea02636cae4e05164e7e3dffa4a8264f3"
+    },
+    {
+      "path": "dlt/pipeline/__init__.py",
+      "bytes": 20886,
+      "sha256": "38a6e71fc0a33ce88e4b430f9d0105c462133f099d45523051cc451978ae0d51",
+      "git_blob": "03145d0cad629f91948adbaae9c2064b578a241d"
+    },
+    {
+      "path": "dlt/common/schema/schema.py",
+      "bytes": 58810,
+      "sha256": "627a406569c5a0040d2a0d4f9f2d7c6b9db211fae43e0ab4702b5c494b2a3144",
+      "git_blob": "62d792d92166fb054277a681887afddab089626a"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/sql_client.py",
+      "bytes": 35647,
+      "sha256": "607d288af503bab168dc461f2749e070709f15244f000aaf38f7eef2cbe37e3d",
+      "git_blob": "9e5f155575e573519b2a3e40ecc8e5b0214557b5"
+    }
+  ]
+}

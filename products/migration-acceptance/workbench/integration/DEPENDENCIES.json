@@ -1,0 +1,815 @@
+{
+  "schema": "definian.integration-dependencies.v1",
+  "repository": "woahwhattheheck/Commons",
+  "productCommit": "05b94955d047e73130309b56ede5fd6fd1205e94",
+  "productPrefix": "revenue/dlthub_pipeline_workshare_20261013/",
+  "completeProductManifest": {
+    "schema": "dlthub.complete-source-manifest.v1",
+    "operation": "DLTHUB-PIPELINE-MIGRATION-0C7A-20261013",
+    "edition": "integration-6-original-staged-reference",
+    "originalDltCommit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+    "files": [
+      {
+        "path": "LICENSE",
+        "bytes": 1243,
+        "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec"
+      },
+      {
+        "path": "OPERATOR.md",
+        "bytes": 23207,
+        "sha256": "359730efa8efac7dfa23ae581a9a8d68f00b6c65429267c3793700baff62a62e"
+      },
+      {
+        "path": "README.md",
+        "bytes": 4382,
+        "sha256": "15b609db94eb776afbfaca51e691a84f4b90f7cbe3733c9e7b8c619e7477b924"
+      },
+      {
+        "path": "SOURCE_REFERENCES.json",
+        "bytes": 1983,
+        "sha256": "fab0063e5c5f3318548c9af82c3a9a6ba729937606e63b56a4c42b851381e6a1"
+      },
+      {
+        "path": "WORKSHARE.md",
+        "bytes": 5253,
+        "sha256": "2dfd7a8da25a49d52f7ab14cec5f32fda8082e8d20d13325457fc8bd71e8a22f"
+      },
+      {
+        "path": "cli.mjs",
+        "bytes": 9707,
+        "sha256": "9900284ecc43dddc9765e2ce8923ef3a1b7a9ad23825ea9bebd5891d7d29cd35"
+      },
+      {
+        "path": "package.json",
+        "bytes": 216,
+        "sha256": "5e05f8ee260f274859264e600ccb8e38e3bb43c93b1afdeac1e2a009ec724288"
+      },
+      {
+        "path": "pipeline/plan.mjs",
+        "bytes": 11828,
+        "sha256": "c65a2bef19ccb3c96b0778836b51ffdd2b4e4fcc84299d0d6101860f7eed227c"
+      },
+      {
+        "path": "pipeline/runtime.mjs",
+        "bytes": 5867,
+        "sha256": "ed9d59b23d98694bb8c6852d943b6783e2f8830156fabf5bd1afc95f6bbbd2f9"
+      },
+      {
+        "path": "pipeline/server.mjs",
+        "bytes": 10355,
+        "sha256": "ba8c775c58bc0aafa1ee13132ea461d156036b7b00a27ebf88089420f4c48c5f"
+      },
+      {
+        "path": "pipeline/worker.py",
+        "bytes": 24097,
+        "sha256": "c9aafab54cf76068e4346260c49232260256a46056f020fe0a35a016c0fca5d3"
+      },
+      {
+        "path": "pipeline/workspace.mjs",
+        "bytes": 15533,
+        "sha256": "9f5c46f60d1a9e1f763e517a55319461a427cd59dd5965120ea54468eb3677eb"
+      },
+      {
+        "path": "receiving/browser.mjs",
+        "bytes": 50436,
+        "sha256": "24442eb333d6055a45555fe0463273f63fb9d66350a67c77dea9294f43c9e696"
+      },
+      {
+        "path": "receiving/receive.mjs",
+        "bytes": 64646,
+        "sha256": "7e70d8faff29f583d3fce2a26a75305945328a533d788e870161e94b34b9e5dc"
+      },
+      {
+        "path": "receiving/upstream_reference.py",
+        "bytes": 10675,
+        "sha256": "b584391ab0c1d4983982af39dc9b729ba0a4b1044d86cc3eeadc3bfb10085137"
+      },
+      {
+        "path": "reference/original/SOURCE.json",
+        "bytes": 711,
+        "sha256": "51b597e03ae33ee45ce41083113ff8f777f8b6d2981acd1fcb32f1038c191ffe"
+      },
+      {
+        "path": "reference/original/test1.csv",
+        "bytes": 115474,
+        "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977"
+      },
+      {
+        "path": "reference/original/test1.upsert.csv",
+        "bytes": 1289,
+        "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c"
+      },
+      {
+        "path": "reference/prepare.py",
+        "bytes": 6186,
+        "sha256": "c7ff0dbd381b35f2330d0c9bcfb7c1ea210f72fe15d84c3892d23d1a3994557b"
+      },
+      {
+        "path": "reference/programme.json",
+        "bytes": 540,
+        "sha256": "fd0fc6b8ab93d58dbd0b6e9df70f184c90ef71ced452a32a362b813f88c5929f"
+      },
+      {
+        "path": "runtime/OPERATING.md",
+        "bytes": 12205,
+        "sha256": "4aaaf2002daf89d367ed873ee153f0da37d85d59b859bb37cf243d4358dc187a"
+      },
+      {
+        "path": "runtime/inspect.py",
+        "bytes": 3587,
+        "sha256": "38a728ce41141b28ce0fb18c0c3598a512dedf3bc32e441de9ade79a3f901160"
+      },
+      {
+        "path": "runtime/portable.py",
+        "bytes": 13095,
+        "sha256": "5a4ff5afb31a5731f81508ed0985e8319a0a8f2b419398747fcd9113bc962c8a"
+      },
+      {
+        "path": "runtime/runtime.mjs",
+        "bytes": 27303,
+        "sha256": "60708b6b7c1bffc6fee52a5142e161dd338b1a1befb32e8b9631b1ee66743c37"
+      },
+      {
+        "path": "upstream/dlt/LICENSE.txt",
+        "bytes": 11348,
+        "sha256": "3bd68ce12f57c10e265b3d19b3251efa5aa40f780f590bc8bb7b1c83f85854ca"
+      },
+      {
+        "path": "upstream/dlt/README.md",
+        "bytes": 13472,
+        "sha256": "136175c5ffad0b39d70a9ce7b512a601aef62fe3604bcba19f6a81a0988513c9"
+      },
+      {
+        "path": "upstream/dlt/SOURCE.json",
+        "bytes": 4638,
+        "sha256": "09aa85b0ddb9b5cf58dd4e69092f7e2b1a17db5ced280ea83f9ac03799ad6422"
+      },
+      {
+        "path": "upstream/dlt/dlt/__init__.py",
+        "bytes": 2807,
+        "sha256": "04daf8a68674a33293623890f253a20b8c00a4293a80355ba1e37f33d2983d08"
+      },
+      {
+        "path": "upstream/dlt/dlt/common/pipeline.py",
+        "bytes": 31253,
+        "sha256": "c118f7533727122ec027bb9790229fbf6ba50089f549d2ab38fe25b861bf3982"
+      },
+      {
+        "path": "upstream/dlt/dlt/common/schema/schema.py",
+        "bytes": 58810,
+        "sha256": "627a406569c5a0040d2a0d4f9f2d7c6b9db211fae43e0ab4702b5c494b2a3144"
+      },
+      {
+        "path": "upstream/dlt/dlt/common/storages/load_package.py",
+        "bytes": 56420,
+        "sha256": "8246680a94258eb52859714c5d3bc58aef562c2b9f4396dbcb177398628613e5"
+      },
+      {
+        "path": "upstream/dlt/dlt/common/storages/load_storage.py",
+        "bytes": 10534,
+        "sha256": "cfcf659f905ed8ef454cc748acff9b3fbb2cee97552b09de53b0c4ebe33a0d4c"
+      },
+      {
+        "path": "upstream/dlt/dlt/destinations/impl/duckdb/configuration.py",
+        "bytes": 20340,
+        "sha256": "e4f40e46f37957d5e6c7c25b6257929d1fd1f9d01cd1cd9537a42ef59b5b87a4"
+      },
+      {
+        "path": "upstream/dlt/dlt/destinations/impl/duckdb/duck.py",
+        "bytes": 4172,
+        "sha256": "9605f7a61ead178ae9936ca36111783950c3b1d7a7511fb29c01cc7a2624dc7d"
+      },
+      {
+        "path": "upstream/dlt/dlt/destinations/impl/duckdb/factory.py",
+        "bytes": 9629,
+        "sha256": "a7eafb34e772a449943cd203a5c98ebad13e802337a4fdad5928583330e9b08c"
+      },
+      {
+        "path": "upstream/dlt/dlt/destinations/impl/duckdb/sql_client.py",
+        "bytes": 35647,
+        "sha256": "607d288af503bab168dc461f2749e070709f15244f000aaf38f7eef2cbe37e3d"
+      },
+      {
+        "path": "upstream/dlt/dlt/extract/decorators.py",
+        "bytes": 52994,
+        "sha256": "e636eba3a1f9dfa1af0bd6ffdae057d00984e477aac94c07e730fcaaf15a8459"
+      },
+      {
+        "path": "upstream/dlt/dlt/extract/incremental/__init__.py",
+        "bytes": 52993,
+        "sha256": "ab054f9917f36c427d7a5898e295c2a467e009398a4a6338748e8244f9ac1d00"
+      },
+      {
+        "path": "upstream/dlt/dlt/load/load.py",
+        "bytes": 49906,
+        "sha256": "0af18c7e84d8666e3c776e8994ab66459251c1e21df7fae24d90df31d9a9fce0"
+      },
+      {
+        "path": "upstream/dlt/dlt/pipeline/__init__.py",
+        "bytes": 20886,
+        "sha256": "38a6e71fc0a33ce88e4b430f9d0105c462133f099d45523051cc451978ae0d51"
+      },
+      {
+        "path": "upstream/dlt/dlt/pipeline/configuration.py",
+        "bytes": 4171,
+        "sha256": "110fc15da990d0240fa9acd1a81e78352be17e68cd38331cdb615f9bd0f2772b"
+      },
+      {
+        "path": "upstream/dlt/dlt/pipeline/pipeline.py",
+        "bytes": 104099,
+        "sha256": "63ae6fa0cdea61c12fdcda7e6b7cbaf24295276430494e277a57d20da21396af"
+      },
+      {
+        "path": "upstream/dlt/pyproject.toml",
+        "bytes": 14774,
+        "sha256": "1fab0023430f142a3fbdacf05290fce2d9409302dc545b05ad11c498a405edcb"
+      },
+      {
+        "path": "upstream/dlt/tests/normalize/cases/github.events.load_page_1_duck.json",
+        "bytes": 1729460,
+        "sha256": "744a7b66ea8b81815238f4346a135122016f419deae634ddec6a42788d45a6a5"
+      },
+      {
+        "path": "upstream/dlt/uv.lock",
+        "bytes": 1864588,
+        "sha256": "ec26611cedb620e1e7fa5342c39934bb175df16449a868975199e027da8201d4"
+      },
+      {
+        "path": "upstream_contracts/README.md",
+        "bytes": 16486,
+        "sha256": "07ced5317fcc67413b97c93fa86870cf8559a08e7bf9e1cb2000e36675c35eff"
+      },
+      {
+        "path": "upstream_contracts/RECEIVING.md",
+        "bytes": 9149,
+        "sha256": "a544f84be2d02b09fc52ddfcecda6daf977e2a7d4075decb9331317cedd40113"
+      },
+      {
+        "path": "upstream_contracts/STAGED_REFERENCE.md",
+        "bytes": 7765,
+        "sha256": "600f14136cf199b24fac27698ced6818ee000c79d9ebca1f6cd63326f38fc82a"
+      },
+      {
+        "path": "upstream_contracts/run_original_staged_reference.py",
+        "bytes": 30380,
+        "sha256": "aa006c4bf6b987c4445146e5d1cf6ac708a17994818c6c5cd47abd07fe2af51f"
+      },
+      {
+        "path": "upstream_contracts/source_manifest.json",
+        "bytes": 29532,
+        "sha256": "6747ed5dddbb88f6682981c674c1f5cee2275eed6b7ee4f0da8070a00ceee437"
+      },
+      {
+        "path": "upstream_contracts/upstream/LICENSE.txt",
+        "bytes": 11348,
+        "sha256": "3bd68ce12f57c10e265b3d19b3251efa5aa40f780f590bc8bb7b1c83f85854ca"
+      },
+      {
+        "path": "upstream_contracts/upstream/README.md",
+        "bytes": 13472,
+        "sha256": "136175c5ffad0b39d70a9ce7b512a601aef62fe3604bcba19f6a81a0988513c9"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/__init__.py",
+        "bytes": 2807,
+        "sha256": "04daf8a68674a33293623890f253a20b8c00a4293a80355ba1e37f33d2983d08"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/_workspace/_templates/_single_file_templates/fruitshop_pipeline.py",
+        "bytes": 3568,
+        "sha256": "2d18b2df0b82f143794ad49afa6bc62d53bed0b51b33be668f06af5edcdfdb97"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/_workspace/cli/_pipeline_command.py",
+        "bytes": 18151,
+        "sha256": "f3085b96cb7e8128f0d4a156bbb8a440d0e53613ed0cad1fa69963422c2adae2"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/_workspace/cli/_pipeline_command_helpers.py",
+        "bytes": 13660,
+        "sha256": "7a1a385197b2532a99e7366808d448c1875dab682baf8640d37871adac4bdbd2"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/destination/client.py",
+        "bytes": 46851,
+        "sha256": "b3c6073e643132b02e5103121bb857940478ed34b6bf10a83054edb8b6af959b"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/normalizers/json/helpers.py",
+        "bytes": 6524,
+        "sha256": "da460ba078c3292378b1f7f59d5af60ae69a589d9cef3c3f648b996052b16a56"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/normalizers/json/relational.py",
+        "bytes": 19687,
+        "sha256": "bafaa164aa04cbdefd5b3d285d78c1793cfd49b63d2577330588bf007bc32e04"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/pipeline.py",
+        "bytes": 31253,
+        "sha256": "c118f7533727122ec027bb9790229fbf6ba50089f549d2ab38fe25b861bf3982"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/schema/migrations.py",
+        "bytes": 8847,
+        "sha256": "c1f8a88db82d907cfe398c95e42fa5fbef1656e20fd823f96283878ba32e12ed"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/schema/schema.py",
+        "bytes": 58810,
+        "sha256": "627a406569c5a0040d2a0d4f9f2d7c6b9db211fae43e0ab4702b5c494b2a3144"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/schema/typing.py",
+        "bytes": 15007,
+        "sha256": "c30e4486cb9bf5cc14fefdc27e0f7b3bee72cffbcf090bacf8e30143738f529a"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/exceptions.py",
+        "bytes": 5939,
+        "sha256": "f668481e41f907f2a9ee8a7fecc5d374f0500bd8f2e253d177dc6c8d4bc2b700"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/file_storage.py",
+        "bytes": 16385,
+        "sha256": "1cb7d42afdd3851ad704a16216e972c38fe07792b14819b4c439c5acf527c02f"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/load_package.py",
+        "bytes": 56420,
+        "sha256": "8246680a94258eb52859714c5d3bc58aef562c2b9f4396dbcb177398628613e5"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/load_storage.py",
+        "bytes": 10534,
+        "sha256": "cfcf659f905ed8ef454cc748acff9b3fbb2cee97552b09de53b0c4ebe33a0d4c"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/normalize_storage.py",
+        "bytes": 3429,
+        "sha256": "3b24209dbf73869af02ab0a2eb43736a2d3b9970f716f9c9e9a4dc4098e3b8a3"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/common/storages/schema_storage.py",
+        "bytes": 13880,
+        "sha256": "ccc50b68fd5d4676a9c0cc66743f25d2ef0b3fe265c94e7de6008bc6a870c282"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/exceptions.py",
+        "bytes": 6191,
+        "sha256": "d2a128c191f630be9e4c3bdfa40e794f11d3632385b718fba40fc618b03f4c9a"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/impl/duckdb/configuration.py",
+        "bytes": 20340,
+        "sha256": "e4f40e46f37957d5e6c7c25b6257929d1fd1f9d01cd1cd9537a42ef59b5b87a4"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/impl/duckdb/duck.py",
+        "bytes": 4172,
+        "sha256": "9605f7a61ead178ae9936ca36111783950c3b1d7a7511fb29c01cc7a2624dc7d"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/impl/duckdb/exceptions.py",
+        "bytes": 788,
+        "sha256": "25018c509b500b0565b5d60a37deae4c11bc6f2181781f540fa0a31543eb7793"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/impl/duckdb/factory.py",
+        "bytes": 9629,
+        "sha256": "a7eafb34e772a449943cd203a5c98ebad13e802337a4fdad5928583330e9b08c"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/impl/duckdb/sql_client.py",
+        "bytes": 35647,
+        "sha256": "607d288af503bab168dc461f2749e070709f15244f000aaf38f7eef2cbe37e3d"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/insert_job_client.py",
+        "bytes": 5648,
+        "sha256": "4acf22d4a14f024ed90305401bc6ebf8e340c793fec4c0bbfa30424c379e71d6"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/job_client_impl.py",
+        "bytes": 42969,
+        "sha256": "5136f9c0d60ea35826e5717ff0a8db7bb7e57302b70fb037bfbc57c274f8c105"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/job_impl.py",
+        "bytes": 7885,
+        "sha256": "c534ed06721b87e06d5d93e34866a592abd56031dfdae35a85de638f0e8f2740"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/sql_client.py",
+        "bytes": 21494,
+        "sha256": "c2eef5567aa83f2f6bfe38eb6cce21c4ebda12bd62629982841de56f2bc745d7"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/destinations/sql_jobs.py",
+        "bytes": 63556,
+        "sha256": "7b6b2b3a9b54ab097f2c4c4fc02b914a740362253731657746b86b38a5f557ba"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/extract/extract.py",
+        "bytes": 27623,
+        "sha256": "b8625f322d7b1de5c176308872995665a5107395a34831ff30beb4a1e3f057c1"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/extract/incremental/__init__.py",
+        "bytes": 52993,
+        "sha256": "ab054f9917f36c427d7a5898e295c2a467e009398a4a6338748e8244f9ac1d00"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/extract/incremental/transform.py",
+        "bytes": 27254,
+        "sha256": "f2737628d3c58dbed851aff150f4936e206d5c5564d3abfe43ae172d025efac7"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/load/configuration.py",
+        "bytes": 1558,
+        "sha256": "3ab33f1d138aaf2e8867c6de7a7e218d24a5c58a45ad57915948efbece44dde9"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/load/exceptions.py",
+        "bytes": 4538,
+        "sha256": "3113cee9a008814198eb6c65e2dbae75bef58a3f08553fc41e8acd3be33a1570"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/load/load.py",
+        "bytes": 49906,
+        "sha256": "0af18c7e84d8666e3c776e8994ab66459251c1e21df7fae24d90df31d9a9fce0"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/load/utils.py",
+        "bytes": 16772,
+        "sha256": "793b572d3bef65759df50d66d7f606405beea5406885bf19775f5d1439ae50fb"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/normalize/normalize.py",
+        "bytes": 18160,
+        "sha256": "428c938a2eb48d0d87743ed69e38355b7ab87cb4076087cd1d1f7a6dc30d426d"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/__init__.py",
+        "bytes": 20886,
+        "sha256": "38a6e71fc0a33ce88e4b430f9d0105c462133f099d45523051cc451978ae0d51"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/abort.py",
+        "bytes": 7215,
+        "sha256": "3e222b94cac686403ff4522f74488efee33102ee958c7a0f748544c99e3acd54"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/configuration.py",
+        "bytes": 4171,
+        "sha256": "110fc15da990d0240fa9acd1a81e78352be17e68cd38331cdb615f9bd0f2772b"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/drop.py",
+        "bytes": 6556,
+        "sha256": "0cb9a776d6a44832ef92236ead0515e35a97466e19b7225dbf785f27f5847d5a"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/exceptions.py",
+        "bytes": 6393,
+        "sha256": "4bb049fad9b01647a4e3e3738ba92b9b163d9b864610ba1657341e92df208d2b"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/helpers.py",
+        "bytes": 9306,
+        "sha256": "8da12a4eac747cc0e333a40097912e728e37a5902faa3d61fac105bc6adab328"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/pipeline.py",
+        "bytes": 104099,
+        "sha256": "63ae6fa0cdea61c12fdcda7e6b7cbaf24295276430494e277a57d20da21396af"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/state_sync.py",
+        "bytes": 5804,
+        "sha256": "e826ef1c6573af2471c8636faa2e7bd598da4413c5c4fa89f7d5782850507a53"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/pipeline/trace.py",
+        "bytes": 15351,
+        "sha256": "8c373b8b4c7eceb04ba69fc4bcdbf8723ec04ccb3f7511ff0488c4cb9b50c92d"
+      },
+      {
+        "path": "upstream_contracts/upstream/dlt/version.py",
+        "bytes": 1763,
+        "sha256": "906d9dcf898482f77de44f45b281b726e7558c3ed9b5bed0373dfdfded207cea"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/dlt-ecosystem/destinations/duckdb.md",
+        "bytes": 15507,
+        "sha256": "e125d50dc7d41604019506b1013a688cf93b94e934de389ef49ae2231be6ba5c"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/destination-tables.md",
+        "bytes": 19868,
+        "sha256": "1f222349efa5a8feb6cd9af9a2b2f89132ae433332f452e9d8c2502962ae1263"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/incremental-loading.md",
+        "bytes": 6417,
+        "sha256": "fdc71a39c78f8427ad1b47a0078e6a0fe44767ef2cbce29b0c320699f5ce5147"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/incremental/advanced-state.md",
+        "bytes": 5866,
+        "sha256": "9d0bf8297e0d955b2516b51c1614e0a85a77e2058560b086a5f86045413eb33c"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/incremental/cursor.md",
+        "bytes": 33878,
+        "sha256": "62279806cded3e188af52e0ec867a75120d3f410380660cf92b5ea0717548f69"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/merge-loading.md",
+        "bytes": 51833,
+        "sha256": "5b7b6e0a13167cf3ef38147164767763e7d5442c94dd64763d5d51baa0c33ffa"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/pipeline.md",
+        "bytes": 12134,
+        "sha256": "4bee8b3cd296e4101652b2b8f644e7d466139a6de9d360abd8b251c0a226e03a"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/general-usage/schema.md",
+        "bytes": 43541,
+        "sha256": "d5e36e4b04e3c4c383561c640a5d73cbadeaecf0596755e9b31cefeda2d92028"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/reference/command-line-interface.md",
+        "bytes": 26037,
+        "sha256": "0937cfd2b17eee2ddd188e86d7f627e72ff974d64ea6ae4c8cc19862543a3f98"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/running-in-production/running.md",
+        "bytes": 38872,
+        "sha256": "52e5ad6990ae90206743d8ca85736943ca6d42a8e2c10577feda8d04556f2168"
+      },
+      {
+        "path": "upstream_contracts/upstream/docs/website/docs/tutorial/load-data-from-an-api.md",
+        "bytes": 27399,
+        "sha256": "4db6c9b459aaee4bd1a7e956c22af03c557b6e2c7ad10852e85041bbb42a8d20"
+      },
+      {
+        "path": "upstream_contracts/upstream/pyproject.toml",
+        "bytes": 14774,
+        "sha256": "1fab0023430f142a3fbdacf05290fce2d9409302dc545b05ad11c498a405edcb"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/normalize/cases/event.event.many_load_2.json",
+        "bytes": 1323,
+        "sha256": "90ef3530238b5e29fa2246e8293deca05107ec3a89e04d29b25b3398d6cb4175"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/normalize/cases/event.event.user_load_1.json",
+        "bytes": 5902,
+        "sha256": "cf4ce99de166cbee9f75b4c4be4eef98313983ff90864869fca4588a073fafc4"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/normalize/cases/github.issues.load_page_5_duck.json",
+        "bytes": 526313,
+        "sha256": "f1ad05152bc84abe563cf6d342057d91e8dff32e961d737d5ed3c3e9840cc7cd"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/normalize/cases/schemas/event.schema.json",
+        "bytes": 2864,
+        "sha256": "a114b4c1999b93a1efb2eb2d6e425f7fe202b25a45ab1198e939613504fd7ed1"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/.dlt/config.toml",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/__init__.py",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/datetime_key_pipeline.py",
+        "bytes": 2678,
+        "sha256": "ed764c80a3a92c728066c5524260e910708e0ed7700a5b33f7c6b6306b7cef2d"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_extract.py",
+        "bytes": 420,
+        "sha256": "c34cbb1562cf9be3c04b2a4888af9aa393fa95bd917e09af41a62f7433d248d2"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_load.py",
+        "bytes": 129,
+        "sha256": "897360b5216a3192453eb117aadd13914809b10e6a217c9b709caca2bdb5a2c3"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_normalize.py",
+        "bytes": 122,
+        "sha256": "f83729c078082641581e785edd593e16436949ba2e5304e66c64e15d26e2b630"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_pipeline.py",
+        "bytes": 1621,
+        "sha256": "b13980af816f32e6b1ba0793669351d575f22aeaa4ba712f77c9ca286475fa34"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_rev.py",
+        "bytes": 523,
+        "sha256": "7f9242fd8754c553b8c5ed2a4fe8751c7ecd1657a9b6e76a1a364467d89fdf86"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/github_scd2.py",
+        "bytes": 956,
+        "sha256": "ffe384e585d03a770729a2f8b1a4c5961d581abfeb4ec200c71702aafda6daa6"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/legacy_upsert_pipeline.py",
+        "bytes": 2097,
+        "sha256": "a249aba654a7ba89d295f7a169d9573501c12837be138dcea665b995b343b851"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/null_columns_pipeline.py",
+        "bytes": 493,
+        "sha256": "ced9b2c19b7ff1d1b15f3fccc3b17f674fb606ef908f101d12c5182ac6b3d8a1"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/github_pipeline/refresh_normalized_pipeline.py",
+        "bytes": 1318,
+        "sha256": "7d0ef621cdbfde797008c8a6be62e4f8ca23df4c3580db5355da307df31ab3af"
+      },
+      {
+        "path": "upstream_contracts/upstream/tests/pipeline/cases/separate_steps/pipeline_step_loop.py",
+        "bytes": 887,
+        "sha256": "06bf073e65ac9acda5b5dcf4ae6f6b6cc5f9412c3a4a1f311db38cb77563589e"
+      },
+      {
+        "path": "upstream_contracts/upstream/uv.lock",
+        "bytes": 1864588,
+        "sha256": "ec26611cedb620e1e7fa5342c39934bb175df16449a868975199e027da8201d4"
+      },
+      {
+        "path": "vendor/sling/ADAPTATION.json",
+        "bytes": 426,
+        "sha256": "d0de8e227e5ea866bdb154cc5dd08dd265617c4311958653aa2af5159bf683c7"
+      },
+      {
+        "path": "vendor/sling/LICENSE",
+        "bytes": 1243,
+        "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec"
+      },
+      {
+        "path": "vendor/sling/SOURCE.json",
+        "bytes": 524,
+        "sha256": "4788fc180b8525f49ccda091b0622820c4284237ef8a46e5b13bcb6abf2ce4c8"
+      },
+      {
+        "path": "vendor/sling/core/REUSE.json",
+        "bytes": 881,
+        "sha256": "f6d98314fab01df1df181efd004075c447708a062519bea9d7d01a7d4c6bc319"
+      },
+      {
+        "path": "vendor/sling/core/archive.mjs",
+        "bytes": 35011,
+        "sha256": "dd0c8b841c74d4c852315cbac57ba300e36df5640372745c13d99f23371c0659"
+      },
+      {
+        "path": "vendor/sling/core/auth.mjs",
+        "bytes": 2348,
+        "sha256": "c8c2b170621c8245d14b951373d87d4358554b4b56847fd8b3029099097e41eb"
+      },
+      {
+        "path": "vendor/sling/core/common.mjs",
+        "bytes": 6549,
+        "sha256": "bbb6b194e1dcd69d795efbbbda0cd1c8fb90bd563c07e136d8e52785853c9d2f"
+      },
+      {
+        "path": "vendor/sling/core/objects.mjs",
+        "bytes": 12481,
+        "sha256": "20f1fedfd33a6539a05142b10c89c7a80e575de5028c4f2253cc170ae39d4692"
+      },
+      {
+        "path": "vendor/sling/core/store.mjs",
+        "bytes": 9943,
+        "sha256": "9f9ace46e501b184dd476d8e15f7443e7d80686e6e4d9e67dc3931335a1ef125"
+      },
+      {
+        "path": "vendor/sling/core/uploads.mjs",
+        "bytes": 5682,
+        "sha256": "96f2293f35a6ba41c95bdf85f2b4dd27cff9aa360acf711aeb2aa182e319f8ad"
+      },
+      {
+        "path": "vendor/sling/core/workspace.mjs",
+        "bytes": 44290,
+        "sha256": "3682104562b09e52d1425cb2b63344a84a519cb409891af51ed86b5f386cbdbb"
+      },
+      {
+        "path": "vendor/sling/migration/OPERATING.md",
+        "bytes": 16770,
+        "sha256": "04c8b77e7c9b857dd7929ebc83ec43a84f2e87d6397c64a55ab0ab091ba3bce8"
+      },
+      {
+        "path": "vendor/sling/migration/SOURCE_REFERENCES.json",
+        "bytes": 5069,
+        "sha256": "2b5d837de9e7fe3f69bfba97af58668db3538aeba2840c99217fbd9db34b5bcd"
+      },
+      {
+        "path": "vendor/sling/migration/cli.mjs",
+        "bytes": 9478,
+        "sha256": "598e9a351a072a2e602ff7b797edd26baa0177291582fbf3af8030342789b6bf"
+      },
+      {
+        "path": "vendor/sling/migration/common.mjs",
+        "bytes": 4732,
+        "sha256": "6e614bdc3ec439c3646ebf85d72dd61db919d6103564b96e8e1f1cb4950bc69a"
+      },
+      {
+        "path": "vendor/sling/migration/compare.mjs",
+        "bytes": 24245,
+        "sha256": "a2a64dd331a79ba5c840a598c0a1d0b49494f1466d9e87eb96f677fc62014a10"
+      },
+      {
+        "path": "vendor/sling/migration/downstream.mjs",
+        "bytes": 17136,
+        "sha256": "67519c755b0992943d64a7022cf410672e94a717aa1e98435ebb898ddf1c7e0b"
+      },
+      {
+        "path": "vendor/sling/migration/index.mjs",
+        "bytes": 437,
+        "sha256": "9dd45681547260e1a0611cf18dffd6f08a051221b4346a0c8bb9f780c6e96051"
+      },
+      {
+        "path": "vendor/sling/migration/intake.mjs",
+        "bytes": 12429,
+        "sha256": "4d9c2bcd2444dc49f51125dfcc88ab0010946c05654bf1043984520935d448bc"
+      },
+      {
+        "path": "vendor/sling/migration/plan.mjs",
+        "bytes": 19478,
+        "sha256": "b5a65b992553b98bc884b2b77ebc415f23ea3096481d99ee26cbf29df2f0bbe7"
+      },
+      {
+        "path": "vendor/sling/native/runtime.mjs",
+        "bytes": 12074,
+        "sha256": "68984e990a09c7b56b92c56deef27d7364fda16fc4c5f5a968969b0c6d45c741"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/LICENSE",
+        "bytes": 1091,
+        "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/SOURCE.json",
+        "bytes": 1760,
+        "sha256": "73ae9bb25ed2096019a78a00999670ebc418401a262b458cf30bf32a72181549"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/exact-json.mjs",
+        "bytes": 2861,
+        "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/provider.mjs",
+        "bytes": 10426,
+        "sha256": "109bc181030e9b795cb34a1b7c29d636a78c959f9f47c43735ecba60be613cfc"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/schema.mjs",
+        "bytes": 5972,
+        "sha256": "d34b64253374f9d2f3b74975b458758797ae7c9e5acdf5e23c1226c8d6d7dcef"
+      },
+      {
+        "path": "vendor/sling/vendor/stellar-expert/store.mjs",
+        "bytes": 9506,
+        "sha256": "fe12c5dbd3fddfe91b82b6898358375a1d90d3984ad921dfb718d85f71addd38"
+      },
+      {
+        "path": "web/app.mjs",
+        "bytes": 42286,
+        "sha256": "a080e44fd840af409f74bcf21747bfd89adcfe72bac1bf87859438bfd8682604"
+      },
+      {
+        "path": "web/index.html",
+        "bytes": 3149,
+        "sha256": "50c2a959d2ab2c360ac258d89f66f6a9f52ba78ddde60f342dec5f45beff9b49"
+      },
+      {
+        "path": "web/sha256.mjs",
+        "bytes": 18439,
+        "sha256": "a6c62003f40d52c7401838cbf2473539fbb8414647d3aeec51159789b93241ff"
+      },
+      {
+        "path": "web/style.css",
+        "bytes": 9600,
+        "sha256": "416d6d74a3c6e95c0a925de1dc34ef275026f8e986b32026c78729d6a5492189"
+      }
+    ]
+  },
+  "originalSource": {
+    "canvas": "F0C8LNH0561",
+    "bytes": 3490342,
+    "sha256": "239983242c3578f959c559b1bc68c6a69ff0e4d7f55aa2e13df5cf0bbfbf1799"
+  },
+  "sourcePrefix": "revenue/definian_migration_acceptance_20261013/"
+}

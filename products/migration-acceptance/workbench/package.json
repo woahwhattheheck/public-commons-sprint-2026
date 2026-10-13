@@ -1,0 +1,14 @@
+{
+  "name": "definian-migration-acceptance-workshare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "node cli.mjs serve",
+    "receive": "node receiving/receive.mjs"
+  }
+}
