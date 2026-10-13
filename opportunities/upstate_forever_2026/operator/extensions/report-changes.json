@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "report-changes",
   "title": "Scientific report changes",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 57,
   "requires_actions": [
     "source-reports.render"
@@ -22,7 +22,8 @@
     },
     "actions": [
       "report-changes.prepare",
-      "report-changes.export"
+      "report-changes.export",
+      "report-changes.review"
     ],
     "invoke": {
       "handler": "invoke",
@@ -76,6 +77,19 @@
         ],
         "path": "/api/report-changes/rows",
         "operation": "rows",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/report-changes/review-preview",
+        "operation": "review-preview",
         "handler": "read",
         "args": [
           "workspace_key",

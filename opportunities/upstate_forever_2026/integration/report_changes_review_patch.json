@@ -1,0 +1,128 @@
+{
+  "schema": "upstate.guarded-source-joins/v1",
+  "operation": "complete-report-comparison-customer-review",
+  "base_commit": "65b830b57ea42df844ad96b4eaabe77519a9b93e",
+  "files": [
+    {
+      "path": "model/report_changes_review.py",
+      "bytes": 15787,
+      "sha256": "6911a42259a412b8f3bcc4ddbd3eefe69ae9357044a605c6034cf0cb40a500a9",
+      "preimage": null
+    },
+    {
+      "path": "model/customer_review_study_transfer.py",
+      "bytes": 30422,
+      "sha256": "e61572c99f3fb3f47d5f2c741a614cc4c470641eda93b96e260d40bb3b8410d8",
+      "preimage": {
+        "git_blob": "42d4f9d5db635b4a7d188c0bae9d3660e341ce4d",
+        "sha256": "a2a6c2ab407a9f1c48ea61cb0b2f12c2e01034b39633a66b3ab9531f047f4297"
+      }
+    },
+    {
+      "path": "operator/report_changes.py",
+      "bytes": 10461,
+      "sha256": "9ba290a290dff9f34c7a1c6d858df85fef31fb3a0278f3f97e71712ceb9c3fff",
+      "preimage": {
+        "git_blob": "8e67b9c58d39af530435142129310dffdecfea48",
+        "sha256": "2bd79e57e7db78d39fb60b286e80e3ac7dbf7c899d929cbcad4814f3a2d83f8a"
+      }
+    },
+    {
+      "path": "operator/extensions/report-changes.json",
+      "bytes": 3280,
+      "sha256": "593d5fbac9eae2770f5218ca1e7a247db4cf5fc29263b9dfc1f4b50c96c5bb40",
+      "preimage": {
+        "git_blob": "86697ffa7cf1760f68188e76b10767c516d6f4e8",
+        "sha256": "4725053a77764e70ff4954649da01e0f84627fd9e779b84ae92f52dfc99506c3"
+      }
+    },
+    {
+      "path": "integration/component_fragments/scientific-report-changes.json",
+      "bytes": 1484,
+      "sha256": "abce4684cd385f7859f46d5c69b28b3b00975cdca8d157a8c144baed80629a5d",
+      "preimage": {
+        "git_blob": "be7d525d361313514060ab8cb70637534c6988b4",
+        "sha256": "5577cc12e00ac6268a1257bf18df235f72a91c4650279ed46757198a2d5df2c6"
+      }
+    }
+  ],
+  "guarded_joins": {
+    "model/customer_review_study_transfer.py": [
+      {
+        "before": "from . import scientific_report_study_transfer as report_editions\n",
+        "after": "from . import scientific_report_study_transfer as report_editions\nfrom . import report_changes_review as comparison_review\n"
+      },
+      {
+        "before": "def _review_files(closure, review):\n    cache, linked_reports = {}, []",
+        "after": "def _comparison_source(closure, collection_id, entry):\n    \"\"\"Retain the exact complete pair selected as an ordinary review source.\"\"\"\n    if entry.get(\"role\") != comparison_review.ROLE:\n        return None\n    metadata = entry.get(\"metadata\") or {}\n    identity = metadata.get(\"scientific_report_comparison_identity\")\n    declared = comparison_review.source_members(entry, identity)\n    comparison_id = identifier(identity[\"comparison_id\"])\n    source_key = digest(identity)\n    body_name = entry[\"body\"].get(\"view_path\", entry[\"body\"][\"filename\"])\n    prefix = \"report/\" if body_name == \"report/index.html\" else \"\"\n    parts = {}\n    for part in [entry[\"body\"], *entry.get(\"companions\", [])]:\n        name = part.get(\"view_path\", part[\"filename\"])[len(prefix):]\n        parts[name] = part\n        closure.add_file(part[\"object\"], part)\n    copied_record = closure.read(parts[\"comparison.json\"][\"object\"])\n    if (copied_record.get(\"schema\") != comparison_review.report_changes.SCHEMA\n            or copied_record.get(\"state\") != \"complete\"\n            or copied_record.get(\"id\") != comparison_id\n            or digest(copied_record) != identity.get(\"comparison_record_sha256\")\n            or copied_record.get(\"identity\") != identity[\"pair_identity\"]):\n        raise ValueError(\"The review source changed its original completed comparison\")\n    expected = {name: {field: item[field] for field in (\"bytes\", \"sha256\")}\n                for name, item in copied_record[\"files\"].items()}\n    expected[\"comparison.json\"] = {field: parts[\"comparison.json\"][field]\n                                    for field in (\"bytes\", \"sha256\")}\n    if expected != declared:\n        raise ValueError(\"The review source lost the exact complete comparison tree\")\n    base = {\"project_id\": identity[\"project_id\"],\n            \"source_collection_id\": collection_id, \"source_id\": entry[\"id\"],\n            \"comparison_id\": comparison_id,\n            \"left_edition_id\": identity[\"pair_identity\"][\"left\"][\"edition_id\"],\n            \"right_edition_id\": identity[\"pair_identity\"][\"right\"][\"edition_id\"],\n            \"source_identity_sha256\": source_key}\n    if identity[\"project_id\"] != closure.workspace.project[\"id\"]:\n        return {**base, \"external\": True}\n    current = comparison_review.comparison_context(closure.workspace, comparison_id)\n    if current[\"identity\"] != identity:\n        raise ValueError(\"The customer review differs from its saved local comparison\")\n    folder = comparison_review.KIND + \"/\" + source_key + \"/source\"\n    receipt_name = folder + \"/source-receipt.json\"\n    receipt = closure.read(receipt_name)\n    collection = _record(closure, \"sources\", collection_id)\n    if (receipt.get(\"schema\") != comparison_review.SCHEMA\n            or receipt.get(\"source_identity\") != identity\n            or receipt.get(\"source_collection_id\") != collection_id\n            or receipt.get(\"source_id\") != entry[\"id\"]\n            or receipt.get(\"source_collection_sha256\") != digest(collection)\n            or receipt.get(\"directory\") != folder):\n        raise ValueError(\"The original comparison review source receipt changed\")\n    expected_paths = {folder + \"/model-sources.json\",\n                      *(folder + \"/report/\" + name for name in declared)}\n    copies = receipt.get(\"files\")\n    if (not isinstance(copies, list) or len(copies) != len(expected_paths)\n            or any(not isinstance(row, dict) for row in copies)\n            or {row.get(\"path\") for row in copies} != expected_paths):\n        raise ValueError(\"The customer review lost its original comparison capture\")\n    for item in copies:\n        name = item[\"path\"]\n        if name.startswith(folder + \"/report/\"):\n            native = declared[name[len(folder + \"/report/\"):]]\n            if any(item.get(field) != native[field] for field in (\"bytes\", \"sha256\")):\n                raise ValueError(\"The retained review copy differs from the original comparison\")\n        closure.add_file(name, item)\n    manifest = closure.read(folder + \"/model-sources.json\")\n    original = collection[\"original_manifest\"]\n    copied = closure.files[folder + \"/model-sources.json\"]\n    if (manifest.get(\"schema\") != \"upstate.sources/v1\"\n            or any(copied[field] != original[field] for field in (\"bytes\", \"sha256\"))):\n        raise ValueError(\"The comparison review intake changed its original source manifest\")\n    closure.need(comparison_review.report_changes.KIND, comparison_id,\n                 \"Complete scientific report comparison selected for customer review\")\n    return {**base, \"external\": False, \"source_key\": source_key,\n            \"source_directory\": folder, \"source_receipt\": receipt_name}\n\n\ndef _review_files(closure, review):\n    cache, linked_reports, linked_comparisons = {}, [], []"
+      },
+      {
+        "before": "                if linked is not None:\n                    linked_reports.append(linked)\n",
+        "after": "                if linked is not None:\n                    linked_reports.append(linked)\n                comparison = _comparison_source(closure, key, entry)\n                if comparison is not None:\n                    linked_comparisons.append(comparison)\n"
+      },
+      {
+        "before": "    return linked_reports, members\n",
+        "after": "    return linked_reports, linked_comparisons, members\n"
+      },
+      {
+        "before": "    reports, artifacts = _review_files(closure, review)\n",
+        "after": "    reports, comparisons, artifacts = _review_files(closure, review)\n"
+      },
+      {
+        "before": "    # Source capture files are native immutable producer records, not view caches.\n    for report in reports:\n",
+        "after": "    for comparison in comparisons:\n        if not comparison[\"external\"]:\n            locks.add(comparison[\"source_directory\"] + \"/source.lock\")\n    # Source capture files are native immutable producer records, not view caches.\n    for report in [*reports, *comparisons]:\n"
+      },
+      {
+        "before": "    previous = _state(closure).get(key)\n",
+        "after": "    if comparisons:\n        row[\"report_comparisons\"] = sorted(comparisons,\n            key=lambda item: (item[\"source_collection_id\"], item[\"source_id\"]))\n    previous = _state(closure).get(key)\n"
+      },
+      {
+        "before": "        scientific_report_editions=[item[\"scientific_report_edition_id\"] for item in reports if not item[\"external\"]])\n",
+        "after": "        scientific_report_editions=[item[\"scientific_report_edition_id\"] for item in reports if not item[\"external\"]])\n    if comparisons:\n        closure.nodes[(\"reviews\", key)][\"scientific_report_comparisons\"] = [\n            item[\"comparison_id\"] for item in comparisons if not item[\"external\"]]\n"
+      },
+      {
+        "before": "        old_responses = original[\"response_ids\"]\n",
+        "after": "        if current.get(\"report_comparisons\", []) != original.get(\"report_comparisons\", []):\n            raise ValueError(\"The received review lost its original scientific comparison binding.\")\n        old_responses = original[\"response_ids\"]\n"
+      }
+    ],
+    "operator/report_changes.py": [
+      {
+        "before": "from model import report_changes as engine\n",
+        "after": "from model import report_changes as engine\nfrom model import report_changes_review\n"
+      },
+      {
+        "before": "ACTIONS = frozenset({'report-changes.prepare', 'report-changes.export'})",
+        "after": "ACTIONS = frozenset({'report-changes.prepare', 'report-changes.export', 'report-changes.review'})"
+      },
+      {
+        "before": "    def prepare(self, workspace, payload):\n",
+        "after": "    def review_preview(self, workspace, payload):\n        result = report_changes_review.preview_review(\n            self.operator.ws(workspace), identifier(payload.get('comparison_id')),\n            payload.get('review_selection'))\n        return {'workspace_key': workspace, **result}\n\n    def review(self, task):\n        payload = task['payload']\n        return report_changes_review.create_review(\n            self.operator.ws(task['workspace']), identifier(payload.get('comparison_id')),\n            payload.get('review_selection'),\n            expected_operation_id=payload.get('expected_operation_id'),\n            created_at=task['created_at'])\n\n    def prepare(self, workspace, payload):\n"
+      },
+      {
+        "before": "        if operation == 'detail':\n",
+        "after": "        if operation == 'review-preview':\n            return self.review_preview(workspace, payload)\n        if operation == 'detail':\n"
+      },
+      {
+        "before": "        raise self.Fault('REPORT_COMPARISON_ACTION', 'Choose a report comparison task.')",
+        "after": "        if task['action'] == 'report-changes.review':\n            return self.review(task)\n        raise self.Fault('REPORT_COMPARISON_ACTION', 'Choose a report comparison task.')"
+      },
+      {
+        "before": "        result = task.get('result') or {}\n",
+        "after": "        result = task.get('result') or {}\n        if task['action'] == 'report-changes.review':\n            return {**task, '_review': {\n                'kind': 'review', 'review_id': result['review_id'],\n                'comparison_id': result['comparison_id'],\n                'title': result['title'], 'artifact_count': result['artifact_count']}}\n"
+      }
+    ]
+  },
+  "contracts": {
+    "preview": "POST /api/report-changes/review-preview",
+    "action": "report-changes.review",
+    "created_at": "original queued task.created_at",
+    "source_role": "SCIENTIFIC_REPORT_COMPARISON_REVIEW",
+    "receipt": "customer_review_records[].report_comparisons",
+    "new_model": "model/report_changes_review.py"
+  },
+  "validation": {
+    "source_review": "Original complete pair, native S1 authored review, source import and selected-review contracts inspected.",
+    "python_runtime": "Not executed in this authoring seat.",
+    "native_visual": "Awaiting original equipped receiving course; source review is not visual acceptance."
+  }
+}
