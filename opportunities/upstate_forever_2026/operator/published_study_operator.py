@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from model.common import describe_file
 from measurement_workspace.source_observations import builtin_companion
+from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
@@ -43,6 +44,8 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == microbial.BUILTIN_ID:
+            return microbial.builtin_companion(self.builtin.parent.parent)
         if builtin_id != BUILTIN_ID:
             directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
             if directory is None:
@@ -263,6 +266,9 @@ class PublishedStudyProvider:
                             "publication": metadata.get("publication"),
                             "counts": metadata.get("content_counts", {}),
                         })
+                microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
+                if microbial_source:
+                    builtin.append(microbial_source)
                 return {
                     **store.list_studies(),
                     "builtin_studies": builtin,
@@ -293,8 +299,12 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    directory = BUILTIN_DIRECTORIES.get(builtin_id)
-                    if directory is None or not (self.builtin.parent / directory / "study.json").is_file():
+                    if builtin_id == microbial.BUILTIN_ID:
+                        available = microbial.catalog_entry(self.builtin.parent.parent) is not None
+                    else:
+                        directory = BUILTIN_DIRECTORIES.get(builtin_id)
+                        available = directory is not None and (self.builtin.parent / directory / "study.json").is_file()
+                    if not available:
                         self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
                     source, evidence = self._builtin_source(builtin_id)
                 elif isinstance(payload.get("source_json"), str):

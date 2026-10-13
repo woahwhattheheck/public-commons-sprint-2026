@@ -96,6 +96,8 @@ UNIT_DEFINITIONS = {
     "FNU": "Formazin nephelometric units",
     "degC": "Degrees Celsius",
     "uS/cm": "Microsiemens per centimetre",
+    "MPN/100mL": "Most probable number per 100 millilitres; original source spelling",
+    "MPN/100 ml": "Most probable number per 100 millilitres; original source spelling",
 }
 SURFACE_PARAMETERS = {
     "ph": ("ph_min_su", "ph_max_su", "SU"),
@@ -506,7 +508,7 @@ def _dated_context(complete, sites, parameters, observation_context):
         "calendar": complete["wqp_calendar"], "flow_rows": flow,
         "flow_methods": complete["flow_methods"],
         "dates_without_flow_context": [] if generic else sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
-        "selection_notes": ([
+        "selection_notes": (complete["study"].get("observation_selection_notes") or [
             "Station, characteristic, year and month filters select original dated WQP result rows. Original source CSVs remain complete in every study export.",
             "Series keep their own fraction, analytical method, result value type, basis fields and support unit. Calculated source nitrogen remains a distinct characteristic and result type.",
             "Whole-basin point membership is source context; it does not establish location upstream of a gauge within the same unsplit reach.",
@@ -647,7 +649,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
         metadata = series_metadata(records)
         if metadata:
-            support = "Original stream sampling activities"
+            support = metadata.get("source_sample_support", "Original sampling activities")
             basis += " Fraction, method authority and identifier, result value type, original basis fields and effective support unit define separate series."
         series.append({
             **metadata,
