@@ -7,7 +7,8 @@
   "assets": [
     "monitoring.mjs",
     "monitoring-component.mjs",
-    "monitoring.css"
+    "monitoring.css",
+    "monitoring-observed.mjs"
   ],
   "backend": {
     "module": "monitoring_native",
@@ -18,7 +19,9 @@
       "monitoring.campaign.create",
       "monitoring.campaign.revise",
       "monitoring.campaign.event",
-      "monitoring.export"
+      "monitoring.export",
+      "monitoring.context.prepare",
+      "monitoring.context.export"
     ],
     "invoke": {
       "handler": "perform",
