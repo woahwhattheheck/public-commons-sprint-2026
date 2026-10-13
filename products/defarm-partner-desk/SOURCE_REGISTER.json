@@ -19,11 +19,16 @@
       ]
     }
   ],
-  "authored": "core.mjs, server.mjs, app.mjs, index.html, style.css, receive-case.mjs and this application's packaging/guides",
+  "authored": "core.mjs, server.mjs, app.mjs, index.html, style.css, receive-case.mjs and this application's packaging/guides, source-reader.mjs, sha256.mjs, offline-build.mjs, offline-app.mjs, offline-recipient.mjs, recipient.html and OFFLINE_RECIPIENT.md",
   "gateway_contract": {
     "ingest": "Original DefarmClient.ingest(items, {preview}) with unchanged JSON {items} and X-API-Key",
     "verify": "Original DefarmClient.verify(dfid), public aggregator",
     "payload_identity": "Exact JSON.stringify({items}) from the selected original fields/types",
     "return_identity": "Original response text retained before original SDK decoding; no array-position row mapping"
+  },
+  "offline": {
+    "core": "Unchanged original importCase/report and complete package text",
+    "reader": "Shared complete-row source view; separate package-bound recipient review",
+    "gateway": "No network or gateway action in standalone recipient"
   }
 }
