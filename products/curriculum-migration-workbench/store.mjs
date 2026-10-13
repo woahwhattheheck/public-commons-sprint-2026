@@ -38,7 +38,17 @@ function normalizeSnapshot(value){
  const selection={workspace,snapshot:workspace,workspaceId:workspace.id,revision:workspace.revision,snapshotSha256:digest(raw)};
  expectedValue({workspaceId:selection.workspaceId,revision:selection.revision,snapshotSha256:selection.snapshotSha256});return selection;
 }
-async function syncDirectory(path){const f=await open(path,constants.O_RDONLY|constants.O_DIRECTORY);try{await f.sync();}finally{await f.close();}}
+function finishOwnedCleanup(primary, cleanup, message) {
+ if(primary){if(cleanup.length)primary.cleanupErrors=[...(Array.isArray(primary.cleanupErrors)?primary.cleanupErrors:[]),...cleanup];throw primary;}
+ if(cleanup.length===1)throw cleanup[0];
+ if(cleanup.length>1)throw new AggregateError(cleanup,message);
+}
+async function syncDirectory(path){
+ const f=await open(path,constants.O_RDONLY|constants.O_DIRECTORY);let primary=null;const cleanup=[];
+ try{await f.sync();}catch(error){primary=error;}
+ finally{try{await f.close();}catch(error){cleanup.push(error);}}
+ finishOwnedCleanup(primary,cleanup,'Curriculum directory synchronization cleanup failed.');
+}
 async function bytes(path,max=MAX_OBJECT,optional=false){
  let f;try{f=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);}catch(e){if(optional&&e.code==='ENOENT')return null;throw e;}
  try{
@@ -53,13 +63,21 @@ async function jsonFile(path,max=MAX_HEAD,optional=false){const b=await bytes(pa
 async function atomic(path,data,{immutable=false}={}){
  const body=Buffer.isBuffer(data)?data:Buffer.from(data);
  if(immutable){const old=await bytes(path,Math.max(MAX_OBJECT,body.length),true);if(old){need(old.equals(body),'IMMUTABLE_CONFLICT','An immutable retained file differs.',409);return;}}
- const temporary=path+'.pending-'+randomUUID();let f=null,made=false;
+ const temporary=path+'.pending-'+randomUUID();let f=null,made=false,primary=null;const cleanup=[];
  try{
   f=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);made=true;
   await f.writeFile(body);await f.sync();await f.close();f=null;
   // The maintained lifetime lease serializes every writer of these paths.
   await rename(temporary,path);made=false;await syncDirectory(dirname(path));
- }finally{if(f)await f.close();if(made){await unlink(temporary).catch(e=>{if(e.code!=='ENOENT')throw e;});await syncDirectory(dirname(path));}}
+ }catch(error){primary=error;}
+ finally{
+  if(f)try{await f.close();}catch(error){cleanup.push(error);}
+  if(made){
+   try{await unlink(temporary);}catch(error){if(error.code!=='ENOENT')cleanup.push(error);}
+   try{await syncDirectory(dirname(path));}catch(error){cleanup.push(error);}
+  }
+ }
+ finishOwnedCleanup(primary,cleanup,'Curriculum atomic-write cleanup failed.');
 }
 function encoded(value,max=MAX_OBJECT){const raw=Buffer.from(Model.canonical(value));need(raw.length<=max,'CAPACITY','Complete retained JSON exceeds its documented capacity.');return raw;}
 async function writeObject(root,value){const body=encoded(value),sha256=digest(body);await atomic(join(root,'objects',sha256+'.json'),body,{immutable:true});return {sha256,bytes:body.length};}
@@ -121,7 +139,7 @@ export async function createStore(input){
 }
 export async function openStore({directory}){
  const root=absolute(directory);await privateDirectory(root);
- const guard=await operationLease(join(root,'service.lock'));let closed=false,closing=false,poisoned=false,tail=Promise.resolve();
+ const guard=await operationLease(join(root,'service.lock'));let closed=false,closing=false,poisoned=false,tail=Promise.resolve(),closePromise=null;
  try{
   const identity=await jsonFile(join(root,'creation.json'));
   need(identity?.schema===STORE_SCHEMA&&identity.directory===root&&typeof identity.id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(identity.id),'IDENTITY_INVALID','Store creation identity does not match this physical directory.');
@@ -317,7 +335,16 @@ export async function openStore({directory}){
     need(body.length<=MAX_OBJECT,'CAPACITY','Complete output exceeds the selected object capacity.');
     return {branch:branchSummary(row),descriptor:{name:filename,mediaType,bytes:body.length,sha256:digest(body)},bytes:body};
    });},
-   close(){if(closed)return Promise.resolve();if(closing)return tail;closing=true;tail=tail.then(async()=>{closed=true;workspaces.clear();await guard.close();});return tail;}
+   close(){
+    if(closed)return Promise.resolve();
+    if(closePromise)return closePromise;
+    closing=true;
+    // Drain accepted work once; a failed original lease close remains retryable.
+    const attempt=tail.then(async()=>{await guard.close();closed=true;workspaces.clear();});
+    closePromise=attempt;
+    attempt.then(()=>{if(closePromise===attempt)closePromise=null;},()=>{if(closePromise===attempt)closePromise=null;});
+    return attempt;
+   }
   };
   // The unchanged receiver recomputes saved curriculum plans and checks its original structural history.
   for(const row of Object.values(head.branches))await selection(row);
