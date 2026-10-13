@@ -56,6 +56,33 @@ Images, Transfers and Source Builds panes; those consumers continue requesting
 their existing complete results. The selected operation always uses the
 original full `operationStatus`/`GET /api/operation-status` endpoint.
 
+## Restored workspace reads
+
+Each overview or original-operation observation batch now owns one short-lived
+receiving reader. The first required lookup reads and validates the original
+receiving marker and workspace identity; subsequent records in that same batch
+share indexed operation, runtime and managed-home selections. Binding validation
+checks the complete original verified runtime/directory pairs once.
+
+The Runtime list, Operations, Application overview/history/output, and Managed
+home overview use that context. Application groups share it with their original
+member observations where that workflow is installed. Every new refresh creates
+a new reader. A context from another workspace is rejected; no context is saved
+in the workspace, sent over HTTP, or retained as a cross-refresh cache.
+
+Original Application head bytes are still reopened and hashed on every
+classification, so saving a reviewed current-host successor immediately stops it
+matching the archived head. Process identities, kernel leases and RUNNING-state
+rereads remain live. The existing strict write, dispatch, stop, recovery and
+receiving guards always reopen their current marker independently.
+
+The original receiving phase records actual received-history IDs and bindings
+from its current workspace, alongside complete source identities. Continue that
+same phase on the current receiver after a restored workspace is opened. It
+retains the original browser, directory, operation and source selection. Open
+and look at its exact desktop/narrow screens and downloaded original records as
+described below.
+
 ## Source reuse and current observations
 
 Only unchanged original JSON bytes are reused. Each read opens the original

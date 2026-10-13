@@ -16,13 +16,24 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
   const directory = join(outputDirectory, 'operation-history', randomUUID());
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const sourceRoot = fileURLToPath(new URL('../', import.meta.url)), sourceFiles = [];
-  for (const path of ['model.mjs', 'operation-records.mjs', 'operation-observations.mjs',
+  const retainedSources = ['storage.mjs', 'applications-core.mjs', 'managed-workspace.mjs',
+    'model.mjs', 'operation-records.mjs', 'operation-observations.mjs',
     'server.mjs', 'cli.mjs', 'browser-assets.json', 'public/app.mjs', 'public/style.css',
-    'public/operation-history-model.mjs', 'public/operation-history.mjs', 'receiving/OPERATION_HISTORY_RECEIVE.mjs']) {
+    'public/operation-history-model.mjs', 'public/operation-history.mjs', 'receiving/OPERATION_HISTORY_RECEIVE.mjs'];
+  if (typeof model.applicationGroupsState === 'function') retainedSources.push('application-groups.mjs');
+  for (const path of retainedSources) {
     const body = await readFile(join(sourceRoot, path));
     sourceFiles.push({ path, bytes: body.length, sha256: createHash('sha256').update(body).digest('hex') });
   }
   const initial = await model.state({ operationDetail: 'summary' });
+  const received = new Map(initial.operations.filter(item => item.receivedHistory).map(item => [item.id, item]));
+  const receivedHistory = {
+    operations: [...received.keys()],
+    runtimes: initial.runtimes.filter(item => item.receivedHistory || item.receivingId).map(item =>
+      ({ id: item.id, directory: item.directory, originalDirectory: item.originalDirectory,
+        phase: item.phase, receivingId: item.receivingId ?? null, hostBindingRequired: item.hostBindingRequired === true })),
+    receivingIds: [...new Set([...received.values()].map(item => item.receivingId))],
+  };
   const pageResults = [], ids = [], cursors = new Set();
   let cursor = null;
   do {
@@ -31,6 +42,13 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
     for (const item of value.items) {
       check(!Object.hasOwn(item, 'result') && !Object.hasOwn(item, 'commandResult'), 'Summary carries a complete result body.');
       check(!ids.includes(item.id), 'Original operation appeared twice while paging.');
+      if (received.has(item.id)) {
+        const original = received.get(item.id);
+        check(item.receivedHistory === true && item.phase === 'RECEIVED_HISTORY' &&
+          item.originalPhase === original.originalPhase && item.receivingId === original.receivingId &&
+          item.workerActive === false && item.commandActive === false,
+          'Received operation lost its retained original classification during paging.');
+      }
       ids.push(item.id);
     }
     pageResults.push(value); cursor = value.nextCursor;
@@ -151,7 +169,7 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
   }
   const result = { schema: 'stellar-forge.runtime-operation-history-receiving.v1',
     workspaceId: initial.workspaceId, sourceFiles, observedAt: new Date().toISOString(),
-    existingOperationIds: ids, pages: pageResults, apiHistory, selectedOperationId: selected?.id ?? null,
+    receivedHistory, existingOperationIds: ids, pages: pageResults, apiHistory, selectedOperationId: selected?.id ?? null,
     completeOperation: selected, download, errorStateRetained: Boolean(errorState), screenshots,
     renderedInspection: { state: 'AWAITING_OPERATOR_VIEW', instruction:
       'Open and look at these exact screens and the downloaded original file. Check desktop and 390px layout, populated/empty/loading/error states, original recovery/navigation and reopening. Repair visible defects before calling the outgoing product ready.' } };
