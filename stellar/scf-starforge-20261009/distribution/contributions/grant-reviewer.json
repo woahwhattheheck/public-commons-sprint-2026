@@ -28,7 +28,9 @@
     "./grant/companion-editions": "./source/stellar-forge/developer-site/dist/grant-companion-editions.mjs",
     "./grant/companion-returns": "./source/stellar-forge/developer-site/dist/grant-companion-returns.mjs",
     "./grant/catalog-review": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/catalog-review.mjs",
-    "./grant/publication-source": "./source/stellar-forge/developer-site/grant-publication-source.mjs"
+    "./grant/publication-source": "./source/stellar-forge/developer-site/grant-publication-source.mjs",
+    "./grant/review-round/working-copy": "./source/stellar-forge/developer-site/dist/grant-review-working-copy.mjs",
+    "./grant/required-content-review": "./source/stellar-forge/developer-site/dist/grant-requirement-review-core.mjs"
   },
   "commands": {
     "grant-application": "stellar-forge/developer-site/grant.mjs",
@@ -62,6 +64,8 @@
     "stellar-forge/developer-site/GRANT_ISSUER_RECEIVING.mjs",
     "stellar-forge/developer-site/GRANT_OPERATING_PLANS.md",
     "stellar-forge/developer-site/GRANT_CATALOG.md",
-    "stellar-forge/developer-site/GRANT_PUBLIC_READER.md"
+    "stellar-forge/developer-site/GRANT_PUBLIC_READER.md",
+    "stellar-forge/developer-site/GRANT_REQUIRED_CONTENT_REVIEW.md",
+    "stellar-forge/developer-site/GRANT_REVIEW_MEMORY.md"
   ]
 }
