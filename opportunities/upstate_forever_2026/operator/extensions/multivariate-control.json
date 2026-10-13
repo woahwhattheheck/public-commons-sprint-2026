@@ -1,0 +1,120 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "multivariate-control",
+  "title": "Matched controls",
+  "version": "1",
+  "order": 25,
+  "assets": [
+    "multivariate_control.mjs",
+    "multivariate_control_core.mjs",
+    "multivariate_control.css"
+  ],
+  "backend": {
+    "module": "multivariate_control_operator",
+    "factory": {
+      "handler": "MultivariateControlOperator",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "control.prepare",
+      "control.adopt",
+      "control.execute"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control/progress",
+        "operation": "progress",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/multivariate_control.mjs",
+    "factory": "createMultivariateControlWorkbench",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "openItem",
+      "showTask",
+      "openExperiment",
+      "openBackup"
+    ],
+    "styles": [
+      "/web/multivariate_control.css"
+    ],
+    "view": {
+      "id": "multivariate-control",
+      "title": "Matched controls",
+      "after": "geographic-headwaters"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
