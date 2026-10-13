@@ -173,6 +173,12 @@ REPORT_SELECTION_PREVIOUS_SHA256 = {
     "model/CHEMISTRY_REPORT_SOURCE.md": "cf3f23b24fa0c68735ecc10caf028b2f6e4101888df65b0ba358c9e671fe651d",
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "69f6be7b9e30ef6f76ab6bdbf2163ab1e0325fb6a606c84d359e75155236e65b"
 }
+STUDY_EDITION_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "9f9fbee45a3879a75376e2b1f0b0d628adf944724c4b9346b513d2c118126e9e",
+    "model/chemistry_study_transfer.py": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c",
+    "model/CHEMISTRY_STUDY_TRANSFER.md": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "9e10b404582297988923a69ed0adf86c31b1579dc223a620f9d0585d5a6681dd"
+}
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -307,7 +313,8 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name),
                      BANK_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
                      PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
-                     BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name)}):
+                     BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
+                     STUDY_EDITION_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"
