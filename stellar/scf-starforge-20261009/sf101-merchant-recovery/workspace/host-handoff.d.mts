@@ -24,10 +24,18 @@ export interface HostHandoffRestoreInput {
   passphraseEnv: string;
   expectedManifestSha256: string;
 }
-export interface HostHandoffReceivingInput extends HostHandoffRestoreInput { targetFile: string }
+export interface HostHandoffReceivingInput extends HostHandoffRestoreInput {
+  targetFile: string;
+  /** Private original receiving operation; enables resumable staged root publication. */
+  operationDirectory?: string;
+  /** Linux publication helper; default /usr/bin/python3, bound into the review. */
+  python?: string;
+}
 export interface HostHandoffAdoptInput extends HostHandoffReceivingInput {
   expectedReviewSha256: string;
   quiesced: true;
+  /** Applies to the retained adoption operation; publication drains before its lease closes. */
+  signal?: AbortSignal;
 }
 export interface HostHandoffPathObservation {
   path: string;
@@ -83,3 +91,8 @@ export declare function exportHostHandoff(input: {
 export declare function restoreHostHandoff(input: HostHandoffRestoreInput): Promise<HostHandoffResult>;
 export declare function inspectRestoredHostHandoff(input: HostHandoffReceivingInput): Promise<HostHandoffResult>;
 export declare function adoptRestoredHostHandoff(input: HostHandoffAdoptInput): Promise<HostHandoffResult>;
+
+/** Reads recorded status only. Does not authenticate a bundle or inspect current receiving state. */
+export declare function inspectHostHandoffAdoption(input: {
+  operationDirectory: string; expectedReviewSha256: string;
+}): Promise<Record<string, unknown>>;

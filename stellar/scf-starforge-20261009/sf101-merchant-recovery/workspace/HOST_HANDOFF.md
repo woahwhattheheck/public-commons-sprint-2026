@@ -49,7 +49,7 @@ A declared source or backup may not exist yet. Such declarations are preserved w
 
 Existing completed handoffs remain authenticatable and restorable into staging. A legacy plan without the complete path inventory cannot adopt a newer Object or Support configuration whose whole source selection it did not review. Preserve that original archive and prepare a new complete handoff from its original host. Ordinary older host configurations keep their original canonical-path workflow.
 
-New directory roots are still created exclusively; partial or unrelated receiving trees are preserved and rejected. Before reporting adoption, the receiver synchronizes copied file contents, each new nested directory from children to parent, receiving root parents and restored application file modes. Reopening remains read-only and starts no listener, acquisition, payment, comparison or restore request.
+Without a retained receiving operation, new directory roots keep their original exclusive-create behavior. With the reviewed `--operation` selection described below, each new root is completed in private owned staging and published atomically without replacement. Partial or unrelated canonical receiving trees remain preserved and rejected. Before reporting adoption, the receiver synchronizes copied file contents, each new nested directory from children to parent, receiving root parents and restored application file modes. Reopening remains read-only and starts no listener, acquisition, payment, comparison or restore request.
 
 These source changes have source-level and reference-filesystem validation. Installed native execution and actual viewed browser output remain separate observations owned by the original receiving programme.
 
@@ -224,12 +224,15 @@ starforge merchant-recovery-remote workspace handoff review \
   --restore /srv/handoff-review/original-restore \
   --pass-env HOST_HANDOFF_PASSPHRASE \
   --expected-manifest-sha256 ORIGINAL_MANIFEST_SHA256 \
-  --target /srv/handoff-control/receiving.json
+  --target /srv/handoff-control/receiving.json \
+  --operation /srv/handoff-control/original-adoption
 ~~~
 
 The result is HOST_HANDOFF_REVIEW. Review its roots, original identity, exact source edition, retained operation IDs, external file fingerprints and absentOriginalInputs. Each destination is either NEW_CREATE_ONLY_ROOT or EXACT_ORIGINAL_ALREADY_PRESENT. The latter requires an exact complete byte/inventory match.
 
-Retain the returned reviewSha256. Availability is shown separately from the hash so the same selected operation can reconcile a root that completed placement before its caller received the result. The hashed review includes the complete original mapping, bundle and staging paths, target file bytes, original record hashes and receiving external-file hashes.
+Retain the returned reviewSha256. The optional `--operation` directory and publication Python executable are part of that exact review. Use a new private control directory outside every original root, receiving bundle/staging directory, target file, external credential file and original absent input. Its parent must already exist. The default publication executable is `/usr/bin/python3`; select another absolute executable with `--python` on both review and adoption when required. This Linux helper performs descriptor-checked staging copies and atomic no-replace filesystem publication; original snapshot encryption and authentication remain in the same native engine.
+
+Review reports the original operation when it already exists, without advancing it or creating the operation directory. Availability is shown separately from the hash so the same selected operation can reconcile a root that completed placement before its caller received the result. The hashed review includes the complete original mapping, bundle and staging paths, target file bytes, original record hashes and receiving external-file hashes.
 
 ### 5. Adopt and read back the same workspace
 
@@ -241,10 +244,11 @@ starforge merchant-recovery-remote workspace handoff adopt \
   --expected-manifest-sha256 ORIGINAL_MANIFEST_SHA256 \
   --target /srv/handoff-control/receiving.json \
   --expected-review-sha256 ORIGINAL_REVIEW_SHA256 \
+  --operation /srv/handoff-control/original-adoption \
   --quiesced
 ~~~
 
-Adoption reauthenticates the bundle, staging trees and target selection before placement. Missing roots are copied with exclusive creation. Exact existing roots are reused. Original files are not rewritten. Original package files regain their declared 0644/0755 file modes behind private 0700 receiving directories, preserving compatibility with the original package verifier. Workspace and journal files remain private. The original recovery format is not a general permission-preserving system backup.
+Adoption reauthenticates the bundle, staging trees and target selection before placement. With `--operation`, it retains the exact reviewed binding under the original SF98 lease and resumes only that operation's private staging. Each complete root is synchronized and published with Linux `renameat2(RENAME_NOREPLACE)`. Exact existing roots are reused. Original files are not rewritten. Original package files regain their declared 0644/0755 file modes behind private 0700 receiving directories, preserving compatibility with the original package verifier. Workspace and journal files remain private. The original recovery format is not a general permission-preserving system backup.
 
 After placement, the command checks the entire received inventory, original workspace.json bytes, workspace ID, configuration hash and creation time. It opens the same workspace through openRecoveryWorkspace({readOnly:true}) and reads its state without acquiring a workspace writer or launching a provider operation.
 
@@ -259,15 +263,29 @@ node /srv/merchant/app/source/stellar/scf-starforge-20261009/sf101-merchant-reco
 
 Use the original request/operation IDs to read and resume through the existing workspace. Inspect the original request after an uncertain result; completed native operations remain complete and are not replayed by handoff adoption.
 
-## Interruption and conflict behavior
+## Interruption and continuation
 
-Capture continuation belongs to the existing local engine. Cold staging restore belongs to the existing recovery engine. Neither step changes the original operation IDs.
+Capture continuation belongs to the existing local engine. Cold staging restore belongs to the existing recovery engine. Their original IDs and encrypted source remain unchanged.
 
-Receiving placement uses exclusive filesystem copies and derives completion from the authenticated inventory. It has no second transfer journal. A root copied completely before a lost result can be verified and reused on the next identical review/adoption. A root interrupted partway remains preserved and fails the exact-tree check. The command does not fill an unowned partial tree, overwrite it, delete it or call it adopted. Preserve the partial root and resolve its custody through the original receiving owner before reusing that exact destination.
+For a resumable receiving operation, use the same `--operation` directory in both review and adopt. The operation retains its original review and source bindings before copying. Its original SF98 lease covers staging, publication, final application-mode persistence, complete receiving checks, read-only workspace reopening and saved completion. A second active writer cannot enter that operation.
 
-This limitation is deliberate: no checkpoint claims ownership of arbitrary pre-existing bytes. The original encrypted bundle and complete staging restore remain available as the recovery authority.
+Each destination has private owned staging on its own filesystem, so final publication is atomic. An interrupted file resumes only after its existing prefix matches the original authenticated source. The complete original inventory is checked before publication, including directories and every file hash. Source mismatch, an unrelated entry, a symlink, changed directory identity or unaccounted hard link stops the operation without replacing that evidence. The canonical root remains absent until its whole staged tree is ready. An independently created destination wins; this operation cannot overwrite it.
 
-A hash, ID, external binding or path mismatch requires a fresh read of the exact selected input. Do not reset IDs or switch credentials/remote stores to make a retained operation appear compatible.
+Keep the same authenticated bundle, staging restore, target bytes, external receiving files, original review hash and operation directory when repeating adoption. A root published before a lost reply is rechecked against the complete original inventory and reused. The first successful completion result remains retained; later successful same-operation calls do not rewrite its original completion time or saved state.
+
+After an uncertain reply, read the retained operation first:
+
+~~~sh
+starforge merchant-recovery-remote workspace handoff operation \
+  --operation /srv/handoff-control/original-adoption \
+  --expected-review-sha256 ORIGINAL_REVIEW_SHA256
+~~~
+
+This is a read of recorded custody and completion, without native authentication or a new filesystem publication. Its recorded result does not assert that the current receiving application is unchanged or still stopped. That distinction matters after ordinary later work edits the adopted workspace. A repeated `adopt` performs the full current source/tree/absence/native-read-only checks again; it does not overwrite later work to reproduce the earlier result.
+
+The existing invocation without `--operation` remains supported and preserves its original direct exclusive-copy behavior. An interrupted canonical root from that older path has no recorded staging ownership and is never silently adopted by a new operation. Preserve the original partial tree and resolve its custody through its original receiving owner. Completed exact older roots and authenticated archives remain usable.
+
+Keep all original and receiving writers stopped while reviewing and adopting. This continuation does not replay source requests, change a canonical destination, install dependencies or start the service. A changed hash, ID, external binding or path requires an explicit new review, not an edited journal or replacement source.
 
 ## Programmatic API
 
@@ -283,14 +301,14 @@ await restoreHostHandoff({
   bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256
 });
 const inspected = await inspectRestoredHostHandoff({
-  bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256, targetFile
+  bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256, targetFile, operationDirectory
 });
 const adopted = await adoptRestoredHostHandoff({
-  bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256, targetFile,
+  bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256, targetFile, operationDirectory,
   expectedReviewSha256: inspected.reviewSha256, quiesced: true
 });
 ~~~
 
-The type declarations are in host-handoff.d.mts. inspectHostHandoffApplication({sourceDirectory, manifestFile}) also exposes a read-only original source check; its returned manifest is the original full distribution manifest.
+Use `inspectHostHandoffAdoption({operationDirectory, expectedReviewSha256})` for the saved receiving operation only. The type declarations are in host-handoff.d.mts. inspectHostHandoffApplication({sourceDirectory, manifestFile}) also exposes a read-only original source check; its returned manifest is the original full distribution manifest.
 
 All result envelopes use stellar-forge.recovery-workspace-handoff-result.v1. Inputs and results contain no passphrase values. Keep private selections, plans, state, outputs and results under the original authorized custody; only reusable implementation source and this guide belong in a public repository.
