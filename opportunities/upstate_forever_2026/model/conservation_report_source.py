@@ -19,7 +19,7 @@ from .common import (
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.conservation-report-source/v1"
-EDITION = "conservation-saved-plan-report/4"
+EDITION = "conservation-saved-plan-report/5"
 DIRECTORY = "conservation-report-sources"
 
 
@@ -148,6 +148,61 @@ def _retained_optimization(workspace, state, plan):
         raise ValueError("The original optimization and selected portfolio differ")
     return retained
 
+
+
+def _joint_comparison_blocks(analysis, units):
+    """Render retained Cartesian results without rescoring or rerunning a model."""
+    joint = analysis.get("joint_comparison")
+    if joint is None:
+        return []
+    cells = {row["id"]: row for row in joint["cells"]}
+    name = lambda key: cells[key]["case"] + " / " + cells[key]["preference"]
+    blocks = [
+        joint["interpretation"],
+        _table(["Included native cases", "Included preferences", "Evaluated combinations", "New maintained-solver calls"],
+               [[joint["case_count"], joint["preference_count"], joint["cell_count"], joint["new_solver_calls"]]]),
+        _table(["Case / preference", "Normalized weights", "Eligible units", "Selected original units",
+                "Original solver objective", "Solver status", "Original upper bound", "Best known feasible score"],
+               [[name(cell["id"]), cell["weights"], cell["eligible_count"], units(cell["selected_ids"]),
+                 cell["optimization"]["objective_score"], cell["optimization"].get("status"),
+                 cell["optimization"].get("upper_bound"), cell["best_known_feasible_score"]]
+                for cell in joint["cells"]]),
+        joint["regret"],
+        "The original selected portfolio remains selected. These are the distinct portfolios found "
+        "in the declared cells, not an enumeration of every feasible or globally robust portfolio. "
+        "A portfolio unsupported in any cell has no full-grid loss bound; eligible-only values are "
+        "not substituted. Different weight choices define different dimensionless objectives.",
+        _table(["Portfolio", "Original units", "Supported combinations", "Maximum loss lower bound",
+                "Maximum loss upper bound"],
+               [[portfolio["id"] + (" (original selection)" if portfolio["id"] == joint["selected_portfolio_id"] else ""),
+                 units(portfolio["selected_ids"]), str(portfolio["eligible_cells"]) + " / " + str(portfolio["cell_count"]),
+                 portfolio["maximum_regret_lower_bound"], portfolio["maximum_regret_upper_bound"]]
+                for portfolio in joint["portfolios"]]),
+    ]
+    for portfolio in joint["portfolios"]:
+        blocks += [
+            portfolio["id"] + ": " + units(portfolio["selected_ids"]) + ". Found in: "
+            + "; ".join(name(key) for key in portfolio["origin_cells"]),
+            _table(["Case / preference", "Cross-evaluated score", "Loss lower bound", "Loss upper bound",
+                    "Support and original exclusions"],
+                   [[name(value["cell_id"]), value["objective_score"], value["regret_lower_bound"],
+                     value["regret_upper_bound"],
+                     "Complete" if value["eligible"] else "; ".join(
+                         units([item["feature_id"]]) + ": " + "; ".join(item["reasons"])
+                         for item in value["unavailable_units"])]
+                    for value in portfolio["evaluations"]]),
+        ]
+    blocks += [
+        joint["physical_scope"],
+        "The three complete CSVs retain every cell, every cross-evaluated portfolio, and every "
+        "candidate's rank, weighted contributions, selection or exclusion. Original physical "
+        "quantities, units, native run/family definitions and source footprints remain in the "
+        "unchanged analysis and original case sections.",
+        _links([("Every joint cell and solver result", "optimization/joint-cells.csv"),
+                ("Every portfolio across every cell", "optimization/joint-portfolios.csv"),
+                ("Every candidate and original exclusion", "optimization/joint-candidates.csv")]),
+    ]
+    return blocks
 
 def _optimization_section(retained):
     """Explain the retained decision in the original structured report format."""
@@ -360,6 +415,7 @@ def _optimization_section(retained):
             ("Original optimization report", "optimization/index.html"),
         ]),
     ]
+    blocks += _joint_comparison_blocks(analysis, units)
     return ["Original saved optimization", blocks]
 
 def _matched_family_sections(state, plan):
@@ -760,7 +816,9 @@ def prepare(workspace, spec):
         retain("records/candidates.json", state["files"]["candidates"])
         if optimization is not None:
             names = {"analysis": "analysis.json", "candidates": "candidates.csv",
-                     "report": "index.html"}
+                     "report": "index.html", "joint-cells.csv": "joint-cells.csv",
+                     "joint-portfolios.csv": "joint-portfolios.csv",
+                     "joint-candidates.csv": "joint-candidates.csv"}
             for role, item in optimization["state"]["files"].items():
                 retain("optimization/" + names[role], item)
         write("records/study-inspection.json", state)

@@ -16,6 +16,9 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_joint_choices.py",
+    "operator/web/conservation_joint_choices.mjs",
+    "CONSERVATION_JOINT_CHOICES.md",
     "model/conservation_study_transfer.py",
     "source_tools/MATCHED_CONSERVATION_RECEIVING.md",
     "model/conservation_families.py",
@@ -1067,6 +1070,19 @@ def read_packet(path):
         needed.update({"model/conservation_families.py",
                        "model/conservation_study_transfer.py",
                        "source_tools/MATCHED_CONSERVATION_RECEIVING.md"})
+    joint_requested = any(
+        isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None
+        and any(alias.name == "conservation_joint_choices" for alias in node.names)
+        for node in ast.walk(ast.parse(files.get("model/conservation_optimization.py", ""))))
+    joint_ui_requested = "./conservation_joint_choices.mjs" in files.get("operator/web/conservation.mjs", "")
+    if joint_requested or joint_ui_requested:
+        needed.update({"model/conservation_joint_choices.py",
+                       "operator/web/conservation_joint_choices.mjs",
+                       "CONSERVATION_JOINT_CHOICES.md",
+                       "model/conservation_report_source.py",
+                       "model/conservation_study_transfer.py"})
+        if not joint_requested or not joint_ui_requested:
+            raise ValueError("Receive the joint Conservation engine and original operator hooks together.")
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
