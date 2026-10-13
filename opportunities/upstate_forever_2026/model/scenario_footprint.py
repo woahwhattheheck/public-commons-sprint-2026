@@ -99,9 +99,12 @@ def _native_masks(patches, source_loader, crs):
     sources, geometries, result = {}, {}, []
     for patch in patches:
         sid = patch["mask_source_id"]
-        if sid not in sources:
-            sources[sid] = source_loader(sid)
-        path, entry = sources[sid]
+        collection = identifier(patch["source_collection_id"]) if "source_collection_id" in patch else None
+        source_key = (collection, sid)
+        if source_key not in sources:
+            sources[source_key] = (source_loader(sid, collection) if collection is not None
+                                   else source_loader(sid))
+        path, entry = sources[source_key]
         kind = entry.get("kind")
         lineage = {k: copy.deepcopy(entry[k]) for k in
                    ("id", "title", "uri", "vintage", "source_time", "kind",
@@ -110,7 +113,8 @@ def _native_masks(patches, source_loader, crs):
                 "layer": None, "features": None, "polygon_area_m2": None}
         if kind == "vector":
             layer = patch.get("layer") or entry.get("layer")
-            key = digest({"source_id": sid, "layer": layer, "where": patch.get("where")})
+            key = digest({"source_id": sid, "source_collection_id": collection,
+                          "layer": layer, "where": patch.get("where")})
             if key not in geometries:
                 rows, _ = rasters.vector_geometry(path, layer=layer, where=patch.get("where"),
                                                   target_crs=crs)
@@ -487,23 +491,17 @@ def _preview_inputs(workspace, run_id):
     scenario = workspace._get("scenarios", selection["scenario_id"])
     target_codes = validate_destination_codes(profile, scenario)
     baseline = verify_file(workspace.root / "grids" / grid["id"], grid["files"]["NLCD"])
-    sources = {}
-    for patch in scenario.get("patches", []):
-        sid = patch["mask_source_id"]
-        if sid not in sources:
-            path, entry = workspace.source_file(scenario["source_collection_id"], sid)
-            entry = copy.deepcopy(entry)
-            entry["source_collection_id"] = scenario["source_collection_id"]
-            sources[sid] = (path, entry)
+    from .scenario_mask_sources import ScenarioMaskSources
+    sources = ScenarioMaskSources(workspace, scenario)
     _, _, coefficient_source = _coefficient_rows(
         workspace, profile, set(profile["table_summary"]["lucodes"]))
     request = {"schema": "upstate.scenario-footprint-request/v1",
                "compiler_version": VERSION, "compiler_sha256": file_digest(Path(__file__)),
+               "mask_resolver_sha256": file_digest(Path(__file__).with_name("scenario_mask_sources.py")),
                "run_id": run_id, "selection": selection,
                "baseline": grid["files"]["NLCD"],
                "coefficient_body": coefficient_source["body"],
-               "masks": {sid: {"body": entry["body"], "companions": entry.get("companions", [])}
-                         for sid, (_, entry) in sorted(sources.items())}}
+               "masks": sources.request_masks()}
     return (run, selection, grid, profile, scenario, target_codes,
             baseline, sources, request)
 
@@ -715,7 +713,7 @@ def preview_run(workspace, run_id):
             report = apply_scenario(
                 baseline, staged / "scenario_lulc.tif", grid["grid"],
                 scenario.get("patches", []),
-                source_loader=lambda sid: sources[sid],
+                source_loader=sources,
                 allowed_codes=set(profile["table_summary"]["lucodes"]),
                 change_mask=staged / "net-change-mask.tif")
             final_codes = [row["code"] for row in report["final_classes"]]

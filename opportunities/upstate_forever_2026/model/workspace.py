@@ -257,11 +257,8 @@ class Workspace:
     @verified_operation
     def save_scenario(self, value):
         value = scenario_spec(dict(value))
-        collection = identifier(value["source_collection_id"])
-        for patch in value.get("patches", []):
-            _, entry = self.source_file(collection, patch["mask_source_id"])
-            if entry["kind"] not in ("vector", "raster"):
-                raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
+        from .scenario_mask_sources import ScenarioMaskSources
+        ScenarioMaskSources(self, value)
         return self._save("scenarios", value)
 
     @verified_operation

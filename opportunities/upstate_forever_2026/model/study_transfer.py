@@ -570,6 +570,8 @@ class _Closure:
             self._native_stage_descriptors(value.get("stages", {}), prefix)
             from .model_selection import validate_completed_run
             validate_completed_run(value)
+            from .scenario_footprint_study import include_run as include_scenario_footprint
+            include_scenario_footprint(self, key, value)
         elif kind == "grids":
             if (value.get("id") != key or digest({"spec": value["spec"], "grid": value["grid"]}) != key):
                 raise ValueError("The original prepared grid changed its definition.")

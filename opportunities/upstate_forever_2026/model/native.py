@@ -135,9 +135,10 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                             landcover = reuse_prepared_landcover(workspace, key, directory)
                             if landcover is None:
                                 lulc = directory / "scenario_lulc.tif"
+                                from .scenario_mask_sources import ScenarioMaskSources
                                 edits = rasters.make_scenario(
                                     paths["NLCD"], lulc, grid["grid"], scenario["patches"],
-                                    source_loader=lambda sid: workspace.source_file(scenario["source_collection_id"], sid),
+                                    source_loader=ScenarioMaskSources(workspace, scenario),
                                     allowed_codes=set(profile["table_summary"]["lucodes"]))
                                 landcover = {
                                     "completed_at": now(), "edits": edits,
