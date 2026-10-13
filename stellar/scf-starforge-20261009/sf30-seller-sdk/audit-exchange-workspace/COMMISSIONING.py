@@ -536,6 +536,8 @@ def projection_handoff(case, host, browser):
     handoff = case.root / "handoff" / "turnover"
     for name, body in members.items():
         atomic(handoff / safe_name(name), body)
+    with zipfile.ZipFile(io.BytesIO(raw)) as original_archive:
+        atomic(handoff / "manifest.json", original_archive.read("manifest.json"))
     result = {"projectionSha256": sha(raw), "path": str(path), "directory": str(handoff),
               "sourceId": selection["sourceId"], "revisionId": selection["revisionId"],
               "selectionSha256": selection["selectionSha256"],

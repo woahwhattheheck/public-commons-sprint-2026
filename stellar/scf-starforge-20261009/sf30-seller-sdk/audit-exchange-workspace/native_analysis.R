@@ -365,7 +365,9 @@ run <- function() {
         result$plot <- plot$outcome
         if (!stats$outcome$ok || (!is.null(result$prediction) && !result$prediction$ok) ||
             (!is.null(result$savings) && !result$savings$ok) ||
-            (!is.null(result$normalizedSavings) && !result$normalizedSavings$ok))
+            (!is.null(result$performanceFit) && !result$performanceFit$ok) ||
+            (!is.null(result$normalizedSavings) && !result$normalizedSavings$ok) ||
+            !plot$outcome$ok)
           result$status <- "partial"
       }
     }

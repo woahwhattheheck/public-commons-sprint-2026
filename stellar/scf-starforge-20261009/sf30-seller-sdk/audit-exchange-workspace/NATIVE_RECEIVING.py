@@ -222,14 +222,26 @@ def receiving(application, directory, weather, weather_metadata, model_options, 
         with (case / "operation.lock").open("a+b") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if not native_result.exists() or not json.loads(native_result.read_bytes()).get("terminal"):
-                with (case / "native-stdout.log").open("ab", buffering=0) as stdout, \
-                     (case / "native-stderr.log").open("ab", buffering=0) as stderr:
-                    process = subprocess.run([str(executable), "--vanilla", str(case / "native_analysis.R"),
-                                              str(case / "native-request.json")],
-                        stdout=stdout, stderr=stderr, pass_fds=(lock.fileno(), global_lock.fileno()))
-                put_json(case / "native-exit.json", {"code": process.returncode})
+                attempts = case / "native-attempts"
+                attempts.mkdir(mode=0o700, exist_ok=True)
+                index = 1
+                while (attempts / ("%04d" % index)).exists():
+                    index += 1
+                attempt = attempts / ("%04d" % index)
+                attempt.mkdir(mode=0o700)
+                command = [str(executable), "--vanilla", str(case / "native_analysis.R"),
+                           str(case / "native-request.json")]
+                put_json(attempt / "invocation.json", {"argv": command, "inputSha256": input_sha,
+                         "startedAt": time.time(), "leaseInherited": True})
+                with (attempt / "stdout.log").open("ab", buffering=0) as stdout, \
+                     (attempt / "stderr.log").open("ab", buffering=0) as stderr:
+                    process = subprocess.run(command, stdout=stdout, stderr=stderr,
+                        pass_fds=(lock.fileno(), global_lock.fileno()))
+                put_json(attempt / "exit.json", {"code": process.returncode, "finishedAt": time.time()})
+                if native_result.exists():
+                    retain(attempt / "native-result.json", native_result.read_bytes())
                 if process.returncode:
-                    raise RuntimeError("Original eleven-model native run needs its retained continuation")
+                    raise RuntimeError("Original eleven-model native run needs its retained continuation: " + str(attempt))
             result = json.loads(native_result.read_bytes())
             if result["inputSha256"] != input_sha or len(result.get("models", [])) != 11:
                 raise ValueError("The complete original eleven-model catalogue is missing")
