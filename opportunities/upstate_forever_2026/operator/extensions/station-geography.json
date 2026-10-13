@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "station-geography",
   "title": "Station geography",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "order": 44,
   "assets": [
     "station_geography.mjs",
-    "station_geography.css"
+    "station_geography.css",
+    "native_assessment_review.mjs"
   ],
   "backend": {
     "module": "station_geography",
@@ -20,7 +21,8 @@
     "actions": [
       "station.geography.build",
       "station.geography.receive",
-      "station.geography.utility-microbial"
+      "station.geography.utility-microbial",
+      "station.geography.review-selection"
     ],
     "invoke": {
       "handler": "invoke",
