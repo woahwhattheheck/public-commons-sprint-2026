@@ -331,3 +331,37 @@ async function reportSelectionFile(w,input){
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose the original delivery-selection JSON object.');
  f.existing_report_selection=value;f.selection_label=file.name;w.cache();w.render();
 }
+
+
+export async function openRetainedReport(w,payload){
+ active(w);editable(w);
+ const plan=clone(w.plan),turn=w.generation,prior=w.labDispatch,priorSnapshot=clone(prior),workspace=w.workspace;
+ const id=payload?.laboratory_dispatch_id,operation=payload?.laboratory_report_operation;
+ if(!/^[0-9a-f]{64}$/.test(id||'')||!/^[0-9a-f]{64}$/.test(operation||''))
+  throw Error('Choose the original retained laboratory request and report.');
+ const isCurrent=()=>!w.gone&&w.generation===turn&&w.workspace===workspace&&
+  w.host.getState?.()?.workspace_key===workspace&&w.labDispatch===prior&&same(w.labDispatch,priorSnapshot)&&same(w.plan,plan)&&!w.pending;
+ let packageResult,report;
+ try{
+  [packageResult,report]=await Promise.all([
+   w.read('/api/implementation/dispatch-detail',{plan_id:plan.id,dispatch_id:id}),
+   w.read('/api/implementation/dispatch-report-detail',{plan_id:plan.id,operation_id:operation})
+  ]);
+ }catch(error){if(isCurrent())throw error;return false;}
+ if(!isCurrent())return false;
+ if(packageResult?.dispatch_id!==id||packageResult.plan_id!==plan.id||
+    report?.schema!==REPORT||report.state!=='imported'||report.operation_id!==operation||
+    report.dispatch_id!==id||report.plan_id!==plan.id||report.plan?.revision!==plan.revision||
+    report.workspace_key!==workspace||!report.report_source?.delivery_selection||
+    !same(report.delivery_selection,report.report_source.delivery_selection))
+  throw Error('The returned laboratory report differs from its original saved selection.');
+ const selected=state(plan);
+ selected.active_package=clone(packageResult);
+ selected.report_receipts=[clone(report)];
+ selected.reportFlow={dispatch_id:id,stage:'complete',preview:null,existing_report_selection:null,
+  selection_label:'',operation_id:null};
+ w.labDispatch=selected;w.tab='field';
+ w.message='Opened the original laboratory request at revision '+packageResult.revision+
+  ' and its retained results/report selection at revision '+plan.revision+'. No comparison was recalculated.';
+ w.cache();w.render();return true;
+}

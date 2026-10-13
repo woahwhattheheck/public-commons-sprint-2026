@@ -39,6 +39,10 @@ def read(operator, workspace_key, operation, value):
             report["_downloads"] = tickets(report["members"])
         for packet in source["deployments"]:
             packet["_downloads"] = tickets(packet["members"])
+        if source.get("laboratory") is not None:
+            lab = source["laboratory"]
+            lab["_request_downloads"] = tickets(lab["request_members"])
+            lab["_report_downloads"] = tickets(lab["report_members"])
     import gauge_receiving
     gauge_receiving.decorate(operator, workspace_key, result)
     import ensemble_receiving

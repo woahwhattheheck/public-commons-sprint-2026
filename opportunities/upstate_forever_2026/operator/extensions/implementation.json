@@ -436,6 +436,19 @@
       },
       {
         "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/dispatch-report-detail",
+        "operation": "dispatch-report-detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
           "POST"
         ],
         "path": "/api/implementation/dispatch-report",
