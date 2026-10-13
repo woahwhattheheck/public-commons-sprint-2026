@@ -27,13 +27,13 @@ The method requires the current original Workspace, waits for the Economic desk'
 
 ## Production demonstration and inspection
 
-Current authority is `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version **2026-10-13.3**, together with the repository `AGENTS.md` version **2026-10-13.1**. Preserve these actual owner instructions when composing the receiving course.
+Current authority is `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version **2026-10-13.4**, together with the repository `AGENTS.md` and project `AGENTS.md`, both carrying that renewed direction. Preserve these actual owner instructions when composing the receiving course.
 
 For Tim, demonstrate a useful workshare: choose the actual Upper Savannah RFP geography and original 30 m inputs, distinguish the full upstream domain from the South Carolina reporting mask and utility focus, run the explicitly identified realistic simulated baseline/restoration/matched-control inputs with native NDR/SDR, inspect the original differences, revise the selected cost/criteria assumptions, and hand over editable records plus a readable scientific report and complete Study. Preserve the prime team's methods and client direction. Label simulated inputs and original elapsed run history clearly; never describe a simulated case as observed field evidence.
 
 The existing receiving course continues the same actual source operation and recorded completed editions. It must not manufacture ledger costs from the unrelated 88-row WQP case or rerun physical models just to populate a comparison.
 
-Before marking outgoing work ready, the producing worker must open, operate, render and **look at** the actual desktop and narrow product views and all attachments, including loading/error, downloads and reopened editions. Captures alone do not establish that inspection. Preserve the current 2026-10-13 14:00 UTC delivery cutoff and original operation history.
+Before marking outgoing work ready, the producing worker must open, operate, render and **look at** the actual desktop and narrow product views and all attachments, including loading/error, downloads and reopened editions. Captures alone do not establish that inspection. Bryce renewed the existing unfinished Eco work at 14:46 UTC on October 13, superseding the earlier cutoff. Continue the existing operation from its saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Continue the maintained native receiving course
 
