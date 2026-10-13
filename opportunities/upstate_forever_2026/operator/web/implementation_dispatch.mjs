@@ -6,7 +6,7 @@ const REPORT='upstate.implementation-lab-dispatch-report/v1';
 const PACKAGE='upstate.implementation-lab-dispatch/v1';
 const RECONCILIATION='upstate.implementation-lab-dispatch-reconciliation/v1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-const reportSelectionReads=new WeakSet();
+const reportSelectionReads=new WeakMap();
 const button=(action,label,attrs='')=>'<button type="button" data-impl="dispatch-'+action+'" '+attrs+'>'+esc(label)+'</button>';
 const field=(label,body,help='')=>'<label class="iw-field"><span>'+esc(label)+'</span>'+body+(help?'<small>'+esc(help)+'</small>':'')+'</label>';
 const option=(value,label,selected)=>'<option value="'+esc(value)+'" '+(value===selected?'selected':'')+'>'+esc(label)+'</option>';
@@ -306,7 +306,7 @@ async function reportAction(w,action,b){
  editable(w);const f=reportFlow(s);
  if(action==='report-clear-selection'){f.selection_epoch=(f.selection_epoch||0)+1;f.existing_report_selection=null;f.selection_label='';f.preview=null;f.stage='idle';w.cache();w.render();return;}
  if(action==='report-use-current'){
-  const turn=w.generation,epoch=(f.selection_epoch||0)+1;f.selection_epoch=epoch;f.preview=null;f.stage='idle';reportSelectionReads.add(f);w.cache();w.render();
+  const turn=w.generation,epoch=(f.selection_epoch||0)+1;f.selection_epoch=epoch;f.preview=null;f.stage='idle';reportSelectionReads.set(f,epoch);w.cache();w.render();
   const isCurrent=()=>current(w,s,turn)&&s.reportFlow===f&&f.selection_epoch===epoch&&!w.pending&&!busy(s);
   try{
    const module=await import('./implementation_source_reports.mjs');
@@ -315,7 +315,7 @@ async function reportAction(w,action,b){
    if(!isCurrent()||selection===null)return;
    f.existing_report_selection=selection;f.selection_label='Current Report desk selection, in its original source order';w.cache();w.render();
   }catch(error){if(isCurrent())throw error;}
-  finally{reportSelectionReads.delete(f);if(current(w,s,turn)&&s.reportFlow===f)w.render();}return;
+  finally{if(reportSelectionReads.get(f)===epoch)reportSelectionReads.delete(f);if(current(w,s,turn)&&s.reportFlow===f)w.render();}return;
  }
  if(action==='report-use-field'){
   const prior=(w.observationReceipts||[]).filter(x=>x.plan_id===w.plan.id&&x.workspace_key===w.workspace&&x.report_source?.delivery_selection).at(-1);
