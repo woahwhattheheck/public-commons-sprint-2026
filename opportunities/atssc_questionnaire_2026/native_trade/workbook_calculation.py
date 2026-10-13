@@ -20,9 +20,10 @@ from datetime import date,timedelta
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
+from xml.etree import ElementTree as ET
 
 from native_calculation import calculate_original_workbooks
-from workbooks import read_xlsx, cell_parts, range_cells, col_letters
+from workbooks import read_xlsx, cell_parts, range_cells, col_letters, MAIN
 
 
 def digest(data):
@@ -234,6 +235,10 @@ def project_answers(definition,book,source_sha256=None):
                 return None
             result=cell.get("value")
             if result in {None,""}:return result
+            if field_spec.get("source_calculated") and result in field_spec.get("native_empty_markers",[]):
+                issues.append({"field":field["id"],"code":"NATIVE_VALUE_UNAVAILABLE","sheet":source["sheet"],"cell":address,
+                    "original_native_value":result,"reason":"Original numeric formula returned its retained no-data display marker"})
+                return None
             if field_spec.get("kind")=="date" and cell.get("kind")=="n":
                 serial=int(Decimal(result))
                 if not book["date1904"] and serial==60:
@@ -247,17 +252,52 @@ def project_answers(definition,book,source_sha256=None):
             rows = []
             for row in source_rows(source):
                 result = {c["id"]:value(c["source_column"]+str(row),c,c["id"],row) for c in field["columns"]}
-                if any(v not in {None,""} for v in result.values()):rows.append(result)
-            answers[field["id"]] = rows
+                rows.append(result)
+            # Preserve physical positions when a later source row is answered.
+            # Removing an empty middle row would write the next answer back to
+            # a different original country or period on the return journey.
+            answers[field["id"]] = rows if any(v not in {None,""} for row in rows for v in row.values()) else []
         else:answers[field["id"]] = value(source["cell"],field)
     return {"answers":answers,"issues":issues}
 
 def source_rows(source):
     rows=source.get("rows")
     if rows is None:return list(range(int(source["start_row"]),int(source["end_row"])+1))
-    if not isinstance(rows,list) or not rows or rows!=sorted(set(rows)) or any(type(x) is not int or x<int(source["start_row"]) or x>int(source["end_row"]) for x in rows):
-        raise ValueError("Exact original source rows must be ordered, unique and inside the retained row window.")
+    if not isinstance(rows,list) or not rows or any(type(x) is not int or x<int(source.get("start_row",1)) or x>int(source.get("end_row",1048576)) for x in rows) or len(set(rows))!=len(rows):
+        raise ValueError("Exact original source rows must be distinct and inside the retained row window.")
     return rows
+
+def verify_source_successor(original_bytes,successor_bytes):
+    """Validate the published original template while retaining changed answers."""
+    original,successor=read_xlsx(original_bytes),read_xlsx(successor_bytes)
+    if [(s["name"],s["state"]) for s in original["sheets"]]!=[(s["name"],s["state"]) for s in successor["sheets"]]:
+        raise ValueError("The uploaded workbook changed the published original worksheet identity")
+    with zipfile.ZipFile(io.BytesIO(original_bytes)) as a,zipfile.ZipFile(io.BytesIO(successor_bytes)) as b:
+        styles=a.read("xl/styles.xml")
+        if styles!=b.read("xl/styles.xml"):
+            raise ValueError("The uploaded workbook changed original styles or number formats")
+        style_root=ET.fromstring(styles)
+        unlocked=[(item.find(MAIN+"protection") is not None and item.find(MAIN+"protection").get("locked")=="0") for item in style_root.find(MAIN+"cellXfs")]
+        def names(archive):
+            root=ET.fromstring(archive.read("xl/workbook.xml"))
+            return [(dict(x.attrib),x.text or "") for x in root.findall(MAIN+"definedNames/"+MAIN+"definedName")]
+        if names(a)!=names(b) or original["date1904"]!=successor["date1904"]:
+            raise ValueError("The uploaded workbook changed an original named reference or date system")
+    for before,after in zip(original["sheets"],successor["sheets"]):
+        if set(before["cells"])!=set(after["cells"]) or any(before.get(k)!=after.get(k) for k in ("mergedRanges","validations","protection")):
+            raise ValueError("The uploaded workbook changed the published original cell/validation/merge structure")
+        followers=set();array_results=set()
+        for merged in before["mergedRanges"]:followers.update(range_cells(merged)[1:])
+        for address,cell in before["cells"].items():
+            formula=cell["formula"]
+            if formula and formula["attributes"].get("t")=="array":array_results.update(range_cells(formula["attributes"].get("ref",address)))
+        for address,cell in before["cells"].items():
+            formula=cell["formula"]
+            if cell["formula"]!=after["cells"][address]["formula"] or cell["style"]!=after["cells"][address]["style"]:
+                raise ValueError("The uploaded workbook changed an original formula or style")
+            if formula is None and address not in array_results and (not unlocked[int(cell["style"] or 0)] or address in followers):
+                if _cache(cell)!=_cache(after["cells"][address]):raise ValueError("The uploaded workbook changed a locked original label, variable or source-context value")
+    return {"source_sha256":original["sha256"],"successor_sha256":successor["sha256"],"original_template_verified":True}
 
 def source_report_mapping(original,graph,cache_manifest):
     """Retain exact hidden/public report formula bindings and native outcomes."""
@@ -413,6 +453,14 @@ def calculate_workbook(workspace,params):
                 return _validate_files(workspace,json.loads(existing["result"]))
         source_sha=params["workbook_sha256"]
         workspace.workbook(source_sha)
+        definition=params.get("definition")
+        if params.get("respondent_id"):
+            definition=workspace.invoke("get_respondent",{"respondent_id":params["respondent_id"]})["definition"]
+        binding=params.get("source_binding_sha256")
+        if binding:
+            if definition is None or binding not in definition.get("source_workbooks",[]):
+                raise OperationError("WORKBOOK_BINDING","The original source binding is absent from this published questionnaire")
+            verify_source_successor(workspace.get_workbook_bytes(binding),workspace.get_workbook_bytes(source_sha))
         def claim(db):
             db.execute("INSERT INTO calculations VALUES(?,?,?,?,?,'running',?,?,NULL,NULL) ON CONFLICT(id) DO UPDATE SET state='running',updated=excluded.updated,error=NULL",
                 (key,source_sha,request_id,payload_sha,encoded(params),timestamp(),timestamp()))
@@ -425,9 +473,6 @@ def calculate_workbook(workspace,params):
         if retained_input.exists() and retained_input.read_text()!=encoded(params)+"\n":
             raise OperationError("REQUEST_CONFLICT","The retained calculation input differs")
         retained_input.write_text(encoded(params)+"\n")
-        definition=params.get("definition")
-        if params.get("respondent_id"):
-            definition=workspace.invoke("get_respondent",{"respondent_id":params["respondent_id"]})["definition"]
         try:
             result=calculate_retained_workbook(workspace,source_sha,directory,params.get("report_mapping"),definition,params.get("source_binding_sha256"))
             result.update({"calculation_id":key,"state":"complete","respondent_id":params.get("respondent_id")})
@@ -468,6 +513,9 @@ def _answer_record(value,field,book):
         serial=(day-epoch).days+(1 if not book["date1904"] and day>=date(1900,3,1) else 0)
         return {"kind":"n","raw":str(serial),"value":str(serial)}
     if kind=="boolean":return {"kind":"b","raw":"1" if value else "0","value":bool(value)}
+    if kind=="choice" and field.get("choice_native_number"):
+        number=format(Decimal(value),"f")
+        return {"kind":"n","raw":number,"value":number}
     return {"kind":"str","raw":value,"value":value}
 
 def write_response_inputs(original_bytes,definition,answers,source_sha256):
@@ -515,13 +563,23 @@ def calculate_response(workspace,params):
     if not isinstance(answers,dict):raise ValueError("Native response answers must be keyed by original question identifier")
     computed={q["id"] for q in definition["questions"] if q.get("source_calculated")}
     if set(answers)&computed:raise ValueError("Original computed questions are readonly; native values come from the retained engine")
-    input_hash=digest(encoded({"respondent_id":params["respondent_id"],"publication_id":respondent["publication"]["id"],"definition":definition,"answers":answers}).encode())
+    selected_source=params.get("source_binding_sha256")
+    if params.get("workbook_sha256"):
+        if selected_source is None and len(definition.get("source_workbooks",[]))==1:selected_source=definition["source_workbooks"][0]
+        if selected_source not in definition.get("source_workbooks",[]):raise ValueError("Select the original published source for this retained uploaded workbook")
+    input_hash=digest(encoded({"respondent_id":params["respondent_id"],"publication_id":respondent["publication"]["id"],"definition":definition,"answers":answers,
+        "workbook_sha256":params.get("workbook_sha256"),"source_binding_sha256":selected_source}).encode())
     successors=[];values={};issues=[];ids=[]
     for original_sha in definition.get("source_workbooks",[]):
         relevant=[q for q in definition["questions"] if q.get("source",{}).get("workbook_sha256")==original_sha]
         if not relevant:continue
         original=workspace.get_workbook_bytes(original_sha);name=workspace.workbook(original_sha)["name"]
-        answered,input_manifest=write_response_inputs(original,definition,answers,original_sha)
+        selected=original
+        if params.get("workbook_sha256") and original_sha==selected_source:
+            selected=workspace.get_workbook_bytes(params["workbook_sha256"])
+            verify_source_successor(original,selected)
+        answered,input_manifest=write_response_inputs(selected,definition,answers,original_sha)
+        if selected is not original:input_manifest["retained_uploaded_sha256"]=params["workbook_sha256"]
         imported=workspace.invoke("import_workbook",{"name":"response-"+name,"data_base64":base64.b64encode(answered).decode(),"expected_sha256":digest(answered)})
         request={"request_id":"atssc-response-"+input_hash+"-"+original_sha[:12],"workbook_sha256":imported["sha256"],
             "source_binding_sha256":original_sha,"respondent_id":params["respondent_id"]}

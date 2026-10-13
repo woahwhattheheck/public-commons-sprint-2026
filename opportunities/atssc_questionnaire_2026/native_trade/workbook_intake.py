@@ -6,6 +6,7 @@ in the source catalogue. Original native calculated metrics use native tokens.
 """
 from __future__ import annotations
 import csv
+import fcntl
 import hashlib
 import io
 import json
@@ -15,13 +16,17 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from workbooks import read_xlsx,MAIN,cell_parts,col_letters,range_cells
-from workbook_calculation import definition_native_bindings,encoded,timestamp
+from workbook_calculation import definition_native_bindings,encoded,timestamp,digest
 
 ROLES={"c1":"Foreign producers","c2":"Importers and purchasers","c3":"Domestic producers","c4":"Unions","c5":"Certification and attestation"}
 BUILTIN_FORMATS={0:"General",1:"0",2:"0.00",3:"#,##0",4:"#,##0.00",9:"0%",10:"0.00%",14:"mm-dd-yy",15:"d-mmm-yy",16:"d-mmm",17:"mmm-yy",18:"h:mm AM/PM",19:"h:mm:ss AM/PM",20:"h:mm",21:"h:mm:ss",22:"m/d/yy h:mm"}
 
 def _id(sha,sheet,identity):
     return "s_"+sha[:10]+"_"+hashlib.sha256(sheet.encode()).hexdigest()[:8]+"_"+identity.lower().replace(":","_")
+
+def _atomic_file(path,body):
+    pending=path.with_name(path.name+".pending-"+uuid.uuid4().hex)
+    pending.write_bytes(body);pending.replace(path)
 
 def _styles(body):
     with zipfile.ZipFile(io.BytesIO(body)) as archive:
@@ -52,6 +57,23 @@ def _labels(sheet,row):
             candidate=text("B"+str(earlier))
             if candidate and not re.fullmatch(r"Question\s+\d+(?:\s*\([^)]*\))?",candidate,re.I):label=candidate;break
     return label or "Original answer at row "+str(row),text("J"+str(row)) or text("K"+str(row))
+
+def _context(sheet,row):
+    heading=None;prompt="";french=""
+    for earlier in range(row,max(0,row-80),-1):
+        value=sheet["cells"].get("B"+str(earlier),{}).get("value")
+        if isinstance(value,str) and re.match(r"^Question\s+\d+",value.strip(),re.I):
+            heading={"cell":"B"+str(earlier),"text":value.strip()}
+            for line in range(earlier+1,min(row,earlier+6)+1):
+                text=sheet["cells"].get("B"+str(line),{}).get("value")
+                if isinstance(text,str) and len(text.strip())>35 and not re.match(r"^Question\s+\d+",text,re.I):prompt=text.strip();break
+            break
+    if prompt:
+        for address,cell in sheet["cells"].items():
+            r,c=cell_parts(address)
+            if heading and heading["cell"]=="B"+str(r-1) and c>=6 and isinstance(cell["value"],str) and len(cell["value"].strip())>35:
+                french=cell["value"].strip();break
+    return heading,prompt,french
 
 def _validation(sheet,address):
     row,col=cell_parts(address)
@@ -104,7 +126,22 @@ def _type(cell,style,validation,label,book,names,sheet):
                 elif validation.get("operator")=="greaterThanOrEqual":result["minimum"]=a
                 elif validation.get("operator")=="lessThanOrEqual":result["maximum"]=a
             except Exception:pass
+    if choices and not (validation.get("formula1") or "").startswith('"'):
+        try:
+            from decimal import Decimal
+            for value in choices:Decimal(value)
+            result["choice_native_number"]=True
+        except Exception:pass
     return result
+
+def _source_unit(sheet,address):
+    row,column=cell_parts(address)
+    for earlier in range(row-1,max(0,row-5),-1):
+        candidate=col_letters(column)+str(earlier)
+        value=sheet["cells"].get(candidate,{}).get("value")
+        if isinstance(value,str) and value.strip() in {"%","Percent","Percentage","Pourcentage"}:
+            return {"cell":candidate,"text":value.strip()}
+    return None
 
 def compile_definition(workspace,source_sha256,classifications=None):
     body=workspace.get_workbook_bytes(source_sha256);book=read_xlsx(body);styles,names=_styles(body)
@@ -139,12 +176,17 @@ def compile_definition(workspace,source_sha256,classifications=None):
                 "source_kind":"variable-template" if sheet["name"]=="Variables" else "original-hidden-calculation-or-report"})
         for row,entries in sorted(editable.items()):
             entries.sort(key=lambda x:cell_parts(x[0])[1]);label,french=_labels(sheet,row)
+            heading,prompt,context_french=_context(sheet,row)
             def field(address,cell,style,override,marker):
                 value=_type(cell,style,_validation(sheet,address),label,book,names,sheet)
+                unit=_source_unit(sheet,address)
+                if unit and style["number_format"]=="General" and value["kind"]=="text" and cell["value"] in {None,""}:
+                    value.update(kind="number",unit="%",source_type_provenance={"method":"original-unit-header",**unit})
                 value.update({k:v for k,v in override.items() if k in {"kind","choices","minimum","maximum","unit"}})
                 return {**value,"label":override.get("label",label),"disclosure":marker,"required":False}
-            base={"section":sheet["name"],"original_question_text":label,"original_french_text":french,
+            base={"section":sheet["name"],"original_question_text":prompt or label,"original_row_label":label,"original_french_text":context_french or french,
                 "classification_provenance":provenance,"source_workbook_name":name}
+            if heading:base["original_question_heading"]=heading
             if len(entries)==1:
                 address,cell,style,override,marker=entries[0]
                 question={**base,**field(*entries[0]),"id":_id(source_sha256,sheet["name"],address),
@@ -171,15 +213,23 @@ def compile_definition(workspace,source_sha256,classifications=None):
                 metric=(style["number_format"]!="General" or "SUMMARY" in sheet["name"].upper() and row>=16 or "RÉSUMÉ" in sheet["name"].upper() and row>=16)
                 if not metric:continue
                 value=native_sheets[sheet["name"]]["cells"][address]
-                kind="boolean" if value["kind"]=="b" else "number" if value["kind"]=="n" else "text"
+                # Numeric source formats remain numeric when a blank source
+                # uses a display marker (for example IFERROR(...,"-")).
+                # Classifying that original marker as text would discard later
+                # numeric native values from consolidation and numeric totals.
+                numeric_format=style["number_format"]!="General" and bool(re.search(r"[0#]",style["number_format"]))
+                indicator=bool(re.search(r'"X"',cell["formula"].get("text","") or "",re.I))
+                textual=value["kind"] in {"str","s","inlineStr"} and value["value"] not in {None,"","-","–","—"}
+                kind="text" if indicator or textual else "boolean" if value["kind"]=="b" else "number" if value["kind"]=="n" or numeric_format else "text"
                 question={"id":_id(source_sha256,sheet["name"],address),"label":label+" — "+address,"kind":kind,"required":False,
                     "disclosure":disclosure,"section":sheet["name"],"source_calculated":True,"source_number_format":style["number_format"],
                     "original_formula":cell["formula"],"original_french_text":french,"original_native_status":"formula_error" if value["kind"]=="e" else "calculated",
                     "source":{"workbook_sha256":source_sha256,"sheet":sheet["name"],"cell":address}}
                 if kind=="number" and "%" in style["number_format"]:question.update(unit="%",workbook_scale="100")
+                if kind=="number" and value["value"] in {"-","–","—"}:question["native_empty_markers"]=[value["value"]]
                 questions.append(question)
     definition={"title":role+" — original NQ-2023-001 questionnaire","source_workbooks":[source_sha256],"questions":questions,"rules":[],
-        "source_intake":{"schema":"atssc.original-family-definition.v1","source_sha256":source_sha256,"original_name":name,
+        "source_intake":{"schema":"atssc.original-family-definition.v1","compiler_version":3,"source_sha256":source_sha256,"original_name":name,
             "original_sheet_count":book["sheetCount"],"original_cell_count":book["cellCount"],"original_formula_count":book["formulaCount"],
             "source_role":role,"defined_names":names,"hidden_operator_origins":[{"sheet":x["sheet"],"state":x["state"],"source_kind":x["source_kind"]} for x in operator_sources]}}
     joined=definition_native_bindings(definition,source_sha256,graph);by_id={q["id"]:q for q in questions}
@@ -210,17 +260,44 @@ def compile_definition(workspace,source_sha256,classifications=None):
             "classification_required_cell_count":sum(x["classification_provenance"]=="operator-classification-required" for x in catalogue)}}
 
 def import_workbook_definition(workspace,params):
-    cached=workspace._cached_mutation("import_workbook_definition")
-    if cached is not None:return cached
-    source=params["workbook_sha256"];compiled=compile_definition(workspace,source,params.get("classifications"))
-    key=params.get("questionnaire_id")
-    if not key:key=workspace.invoke("create_questionnaire",{"name":compiled["definition"]["title"]})["questionnaire_id"]
-    saved=workspace.invoke("save_definition",{"questionnaire_id":key,"expected_version":params.get("expected_version",0),"definition":compiled["definition"]})
-    directory=workspace.directory/"source-evidence"/"workbook-intakes"/(source+"-v"+str(saved["version"]))
-    directory.mkdir(parents=True,exist_ok=True)
-    for name,value in compiled.items():(directory/(name+".json")).write_text(json.dumps(value,ensure_ascii=False,indent=2)+"\n")
-    result={"questionnaire_id":key,"version":saved["version"],"definition":compiled["definition"],"summary":compiled["summary"],
-        "catalogue_path":(directory/"catalogue.json").relative_to(workspace.directory).as_posix()}
-    return workspace._write("import_workbook_definition",key,{"source_sha256":source,"definition_version":saved["version"]},lambda db:result)
+    # Compilation and normal nested API writes run outside any SQL lock. Each
+    # nested mutation has its own stable identity, so an interrupted HTTP call
+    # resumes its original questionnaire rather than creating another one.
+    source=params["workbook_sha256"]
+    request=getattr(workspace.context,"request",None) or {}
+    operation=digest(("original-intake:"+(request.get("request_id") or str(uuid.uuid4()))).encode())
+    root=workspace.directory/"source-evidence"/"workbook-intakes";root.mkdir(parents=True,exist_ok=True)
+    with (root/"operation.lease").open("a+") as lease:
+        fcntl.flock(lease,fcntl.LOCK_EX)
+        cached=workspace._cached_mutation("import_workbook_definition")
+        if cached is not None:return cached
+        directory=root/source/("operation-"+operation);directory.mkdir(parents=True,exist_ok=True)
+        retained=directory/"request.json"
+        identity=encoded({k:v for k,v in params.items() if k not in {"request_id","_actor"}})+"\n"
+        if retained.exists() and retained.read_text()!=identity:
+            from questionnaire_workspace import OperationError
+            raise OperationError("REQUEST_CONFLICT","The retained original intake request belongs to different inputs")
+        _atomic_file(retained,identity.encode())
+        manifest_path=directory/"compiled-manifest.json"
+        if manifest_path.exists():
+            manifest=json.loads(manifest_path.read_text());compiled={}
+            for item in manifest["files"]:
+                body=(directory/item["path"]).read_bytes()
+                if len(body)!=item["bytes"] or digest(body)!=item["sha256"]:raise ValueError("The retained original intake source differs")
+                compiled[item["name"]]=json.loads(body)
+        else:
+            compiled=compile_definition(workspace,source,params.get("classifications"));files=[]
+            for name,value in compiled.items():
+                body=(json.dumps(value,ensure_ascii=False,indent=2)+"\n").encode()
+                _atomic_file(directory/(name+".json"),body)
+                files.append({"name":name,"path":name+".json","bytes":len(body),"sha256":digest(body)})
+            _atomic_file(manifest_path,(json.dumps({"schema":"atssc.compiled-original-intake.v1","source_sha256":source,"files":files},indent=2)+"\n").encode())
+        key=params.get("questionnaire_id")
+        if not key:key=workspace.invoke("create_questionnaire",{"name":compiled["definition"]["title"],"request_id":"source-intake-create-"+operation})["questionnaire_id"]
+        saved=workspace.invoke("save_definition",{"questionnaire_id":key,"expected_version":params.get("expected_version",0),
+            "definition":compiled["definition"],"request_id":"source-intake-definition-"+operation})
+        result={"questionnaire_id":key,"version":saved["version"],"definition":compiled["definition"],"summary":compiled["summary"],
+            "catalogue_path":(directory/"catalogue.json").relative_to(workspace.directory).as_posix()}
+        return workspace._write("import_workbook_definition",key,{"source_sha256":source,"definition_version":saved["version"]},lambda db:result)
 
 OPERATIONS={"import_workbook_definition":import_workbook_definition}
