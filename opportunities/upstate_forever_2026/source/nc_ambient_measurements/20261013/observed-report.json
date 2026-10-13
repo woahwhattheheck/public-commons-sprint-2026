@@ -183,6 +183,10 @@
               "path": "source/nc_ambient_measurements/20261013/comparison-groups.csv"
             },
             {
+              "title": "Open the complete searchable measurement explorer",
+              "path": "source/nc_ambient_measurements/20261013/measurement-explorer.html"
+            },
+            {
               "title": "All observations with original source-row links",
               "path": "source/nc_ambient_measurements/20261013/observations.csv"
             },
@@ -293,6 +297,8 @@
     ]
   ],
   "source_links": [
+    "source/nc_ambient_measurements/20261013/MEASUREMENT_EXPLORER.md",
+    "source/nc_ambient_measurements/20261013/measurement-explorer.html",
     "source/nc_ambient_measurements/20261013/profile-reconciliation.json",
     "source/nc_ambient_measurements/20261013/README.md",
     "source/nc_ambient_measurements/20261013/provenance.json",

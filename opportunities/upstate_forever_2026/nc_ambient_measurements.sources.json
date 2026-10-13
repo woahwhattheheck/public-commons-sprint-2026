@@ -25,8 +25,8 @@
       "kind": "document",
       "role": "OBSERVED_CONTEXT",
       "path": "source/nc_ambient_measurements/20261013/observed-report.json",
-      "bytes": 14223,
-      "sha256": "5e31185625988db17bccde709a7d659bcb72e4dd66d7d47d8b5a84e24c055bf4",
+      "bytes": 14562,
+      "sha256": "5fa60b12563e668dfb2a9fc153bbb7b335220b34850f188a9663307647adf022",
       "source_format": "JSON",
       "uri": "urn:upstate:nc-ambient-measurements:20261013",
       "vintage": "Original NCDEQ WQP observations captured13October2026",
@@ -39,14 +39,19 @@
       },
       "companions": [
         {
+          "path": "source/nc_ambient_measurements/20261013/MEASUREMENT_EXPLORER.md",
+          "bytes": 7626,
+          "sha256": "f25922e54ddf757bb1cafa36ddbd66fc9363a7f4f9e77512aa6d5485a1a8e726"
+        },
+        {
           "path": "source/nc_ambient_measurements/20261013/NATIVE_OPENING.md",
           "bytes": 10379,
           "sha256": "9e070223cb820105e07fbca0584e7bb89d1906b34cf895ab11bb698afd440303"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/README.md",
-          "bytes": 8187,
-          "sha256": "5caf3715fbd47e048e797be15d8cfd24957f34f57482b806232e55d797927459"
+          "bytes": 8747,
+          "sha256": "ddf1838ca0f3d62abc9db5556c03ab2a070eecf82876e2cdcb433043d1f83ff2"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/comparison-groups.csv",
@@ -57,6 +62,11 @@
           "path": "source/nc_ambient_measurements/20261013/comparison-groups.json",
           "bytes": 108640,
           "sha256": "27052cfbcfd0f01e0762f794f8d433f949023054b9233d1fdb854923bff1f20f"
+        },
+        {
+          "path": "source/nc_ambient_measurements/20261013/create_report_explorer.mjs",
+          "bytes": 28848,
+          "sha256": "4ff6d8e61c6019bf4539d9b843aa50f4ba85f67b7b5eda436e0a7bcc6ccc9395"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/criterion-screens.csv",
@@ -70,8 +80,8 @@
         },
         {
           "path": "source/nc_ambient_measurements/20261013/figure-spec.json",
-          "bytes": 103982,
-          "sha256": "e84dbf5bc42595bb398410894ad0fe9d39bde5508717a29f342f1f96f29c71fc"
+          "bytes": 103983,
+          "sha256": "402dec5e2c3f107323990a489df2e49e9a6b7291cf8a75f9c875af79e49a7cad"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/figures/horsepasture-phosphorus.svg",
@@ -80,8 +90,13 @@
         },
         {
           "path": "source/nc_ambient_measurements/20261013/figures/horsepasture-temperature.svg",
-          "bytes": 28999,
-          "sha256": "483f9b3bab8f2fbca83403aa6d8c001d80704ee598c7d8cd2d5cc66748ecc5b8"
+          "bytes": 29000,
+          "sha256": "e58e2cd78317dc4ead868ac947cc5019aa3b7d28b1fee881a0fd3e8b12575ecd"
+        },
+        {
+          "path": "source/nc_ambient_measurements/20261013/measurement-explorer.html",
+          "bytes": 3071829,
+          "sha256": "1096c32a0d3333bd0ef9e68fe17a1ee79923229d708821b0aeacd2e0ce2995d9"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/microbial-sampling-support.json",
@@ -175,8 +190,8 @@
         },
         {
           "path": "source/nc_ambient_measurements/20261013/present.mjs",
-          "bytes": 18495,
-          "sha256": "0a421206507f6751ebe3e97d1b1dbbb9b58afdcdda5bdcf5032d7c3cceef8d56"
+          "bytes": 18658,
+          "sha256": "d0a550d7ab52465a5b51abff5a9cd6922c36fa05d643cccd748202c73a6a5918"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/profile-reconciliation.json",
@@ -215,13 +230,13 @@
         },
         {
           "path": "source/nc_ambient_measurements/20261013/report.html",
-          "bytes": 68686,
-          "sha256": "988ca9b743761cc3000d511e4a3de761ffa4dbfe1ca400797521fa25baf164ea"
+          "bytes": 68785,
+          "sha256": "64dab093ac36ef712b7690f87bae1ba7cbe0819d04d50f68a4689e86b568e60f"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/reproduce.mjs",
-          "bytes": 3145,
-          "sha256": "3e07fddc80070f5038700d0eeb712ba85ece25c242d2cd6a21626ae953efb7b5"
+          "bytes": 3273,
+          "sha256": "5ac711a0839980ecefe7fcda71cce4ba015202931f142c07e89dd1e816bc4a3b"
         },
         {
           "path": "source/nc_ambient_measurements/20261013/sampling-coverage.csv",
@@ -296,8 +311,8 @@
         },
         {
           "path": "source/nc_ambient_measurements/20261013/README.md",
-          "bytes": 8187,
-          "sha256": "5caf3715fbd47e048e797be15d8cfd24957f34f57482b806232e55d797927459"
+          "bytes": 8747,
+          "sha256": "ddf1838ca0f3d62abc9db5556c03ab2a070eecf82876e2cdcb433043d1f83ff2"
         }
       ]
     }
