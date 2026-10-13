@@ -85,7 +85,7 @@ The programme projects references and stored source values. Calculation of a res
 
 ## Use the completed original projection
 
-The complete revision 2 output is published as `derived/ATSSC_Original_Formula_Groups_and_Dependencies.zip`. Its 39 members include all five families' full formula records, structural groups, source issues, reference tokens, dependency edges, worksheet dependencies and original questionnaire text. C1 also includes the complete prompt and representative-rule boundary. The exact original classifier and source manifest travel with the output.
+The complete revision 2 output is available as [ATSSC_Original_Formula_Groups_and_Dependencies.zip](https://chatgpt.com/api/library/files/libfile_24e125f7933481919868085ff377214b/download), the retained 2,350,227-byte version 1 artifact. `DERIVED_ASSETS.json` records its exact saved identity and the complete member-manifest identities. Its 39 members include all five families' full formula records, structural groups, source issues, reference tokens, dependency edges, worksheet dependencies and original questionnaire text. C1 also includes the complete prompt and representative-rule boundary. The exact original classifier and source manifest travel with the output.
 
 The adjacent `ATSSC_Formula_Dependency_Inventory.json` and `ATSSC_Formula_Source_Manifest.json` preserve all member byte lengths and SHA-256 values. The completed native projection used openpyxl 3.1.5, retained all 7,661 formulas, expanded all 1,345 shared followers, and produced 2,269 direct dependency edges and 11,050 reference-token rows. Their source keys are the original workbook SHA, worksheet and exact cell.
 
