@@ -108,3 +108,15 @@ starforge document-merchant batch --help
 ## Ordered invoice and report bundles
 
 After receiving the original PDFs, use the same Document production browser's Ordered PDF bundle step or `document-merchant assemble` to prepare exact customer order, review the original assembly price, fulfill and receive every volume, and export one complete customer archive. The PDFMint-backed `assemblePdfs` function is enabled explicitly with its own native payment terms. Single-PDF volumes retain their original bytes without a merge purchase. See [ASSEMBLY.md](./ASSEMBLY.md) for complete merchant setup, local/batch source intake, CLI commands, continuation, output units and independent customer receiving.
+
+## Reuse an existing commerce installation
+
+The [commissioning workflow](COMMISSIONING.md) reads a retained original sf66 commerce setup, selects its exact native offer, reuses the existing funded operator and facilitator, and prepares the complete document merchant and customer options. `document-merchant commission` covers source review, resumable setup, inspection and the original service lifetime. The generated Case Desk options connect a saved customer HTML edition directly to the maintained paid PDF receiving and attachment workflow.
+
+### Existing native account profile
+
+The same `commission review` and `commission prepare` commands accept `--account-source FILE` for an existing native operator profile and facilitator policy. This retains the original payer, signer, operator policy and spending ledger while creating the document service and complete customer/Case Desk settings. See [direct account commissioning](COMMISSIONING.md#use-an-existing-operator-account-directly) for the full source contract and operating commands.
+
+The existing **Document merchant** Applications entry also accepts the complete commissioning options JSON. It prepares on first Start and owns the same original managed service/facilitator lifetime through Open, Stop and reopen. See [commissioning in Applications](APPLICATIONS.md#commission-the-existing-account-in-applications).
+
+Existing invoices and reports can enter through **Bundle existing PDFs** in Document production. The browser retains their full PDF bytes and chosen order, prepares the original assembly price, follows existing paid jobs and downloads all final volumes and sources in one complete bundle. The [assembly operating guide](ASSEMBLY.md#existing-pdf-intake-in-the-customer-browser) includes uploads, large local source plans, interruption recovery and installed API use.
