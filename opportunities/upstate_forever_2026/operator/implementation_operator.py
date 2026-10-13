@@ -26,8 +26,9 @@ ACTIONS = frozenset({
     "implementation.plan.save", "implementation.plan.report",
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
+    "implementation.observations.import",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections"})
+READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -37,6 +38,7 @@ WRITE_ROUTES = {
     "attach": "implementation.source.attach",
     "source-import": "implementation.source.import",
     "selection-import": "implementation.selection.import",
+    "observations-import": "implementation.observations.import",
 }
 
 
@@ -226,6 +228,8 @@ class ImplementationOperator:
             return self.list(workspace)
         if operation == "selections":
             return self.selections(workspace)
+        if operation == "observations-preview":
+            return self._observations(workspace, payload, preview=True)
         if operation == "catalog":
             self.operator.ws(workspace)
             path = Path(__file__).resolve().parent / "web" / "implementation_catalog.json"
@@ -433,6 +437,48 @@ class ImplementationOperator:
             source_link=result["source_link"], file_ref=result["file_ref"],
         )
 
+
+    def _observations(self, workspace, value, *, preview=False):
+        """Register an exact saved field revision through the original registry."""
+        from model.implementation_observations import (
+            preview_observation_context, import_observation_context,
+        )
+
+        if not isinstance(value, dict):
+            raise self.Fault("IMPLEMENTATION_OBSERVATIONS", "Choose a saved plan revision.")
+        if any(key in value for key in
+               ("document", "upload_id", "source_document", "field_mapping")):
+            raise self.Fault("IMPLEMENTATION_OBSERVATIONS",
+                             "Use the original saved plan; receive browser edits as a revision first.")
+        plan_id = self._id(value.get("plan_id", value.get("id")))
+        revision = self._integer(value.get("revision"), "revision")
+        document = self.store(workspace).get(plan_id, revision)
+        digest = document_digest(document)
+        supplied = value.get("document_digest")
+        if not preview and (not isinstance(supplied, str) or supplied != digest):
+            raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
+                             "Review the exact saved field revision before registering it.", 409)
+        if preview and supplied is not None and supplied != digest:
+            raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
+                             "The requested field revision differs from the retained document.", 409)
+        ws = self.operator.ws(workspace)
+        if preview:
+            result = preview_observation_context(ws, document)
+        else:
+            operation_id = value.get("observation_operation_id")
+            if not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
+                raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
+                                 "Review the original field source selection before registering it.")
+            result = import_observation_context(ws, document, expected_operation_id=operation_id)
+        if not isinstance(result, dict):
+            raise self.Fault("IMPLEMENTATION_OBSERVATION_RESULT",
+                             "The observation adapter returned an invalid result.")
+        # Operator binding is authored here from the original revision, never
+        # accepted from the browser or an unverified imported source document.
+        return dict(result, workspace_key=workspace, plan_id=plan_id,
+                    revision=revision, document_digest=digest,
+                    status="preview" if preview else "observations_imported")
+
     def _economic_import(self, task):
         """Read the saved authored edition; the browser supplies identities only."""
         import importlib.util
@@ -586,7 +632,7 @@ class ImplementationOperator:
         else:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
-        if (action != "implementation.plan.report"
+        if (action not in ("implementation.plan.report", "implementation.observations.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -625,6 +671,8 @@ class ImplementationOperator:
                 return self._source_import(store, task, plan_id, expected, actor)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
+            if action == "implementation.observations.import":
+                return self._observations(workspace, value)
         except RevisionConflict as error:
             if error.conflict_ref:
                 error.conflict_download = self._ticket(

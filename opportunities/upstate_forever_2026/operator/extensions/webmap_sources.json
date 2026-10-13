@@ -1,0 +1,76 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "webmap-sources",
+  "title": "Original map layers",
+  "version": "1",
+  "order": 55,
+  "assets": [
+    "webmap_sources.mjs",
+    "webmap_sources.css"
+  ],
+  "requires_actions": [],
+  "backend": {
+    "module": "webmap_sources",
+    "factory": {
+      "handler": "WebmapSources",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "webmap.source.admit"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "path": "/api/webmap-sources/catalog",
+        "methods": [
+          "GET"
+        ],
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/webmap_sources.mjs",
+    "factory": "attachWebMapSources",
+    "requires": [
+      "getState",
+      "api",
+      "showTask",
+      "toast",
+      "openExtension"
+    ],
+    "styles": [
+      "/web/webmap_sources.css"
+    ],
+    "view": {
+      "id": "webmap-sources",
+      "title": "Original map layers",
+      "after": "sources"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

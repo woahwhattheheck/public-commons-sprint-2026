@@ -106,7 +106,9 @@
         "package_delivery.py",
         "source_tools/application_assembly.py",
         "source_tools/application_components.py",
-        "source_tools/install_cumulative_application.py"
+        "source_tools/install_cumulative_application.py",
+        "operator/task_requests.py",
+        "operator/study_catalogues.py"
       ]
     },
     "maintained-installers": {
@@ -167,22 +169,25 @@
       ]
     },
     "conservation-design": {
-      "title": "conservation design",
+      "requires": [
+        "core",
+        "conservation"
+      ],
       "paths": [
         "integration/conservation_design_composition.json",
         "model/CONSERVATION_CONSUMERS.md",
         "model/conservation_bindings.py",
+        "model/conservation_scenarios.py",
         "model/conservation_design.py",
         "model/conservation_design_editor.py",
-        "model/conservation_scenarios.py",
         "operator/CONSERVATION_DESIGN.md",
-        "operator/CONSERVATION_DESIGN_BROWSER.md",
         "operator/CONSERVATION_DESIGN_EDITOR.md",
-        "operator/CONSERVATION_DESIGN_RECEIVING.md",
-        "operator/conservation_design.py",
+        "operator/CONSERVATION_DESIGN_BROWSER.md",
         "operator/conservation_design_browser_receiving.py",
+        "operator/conservation_design.py",
         "operator/extensions/conservation-design.json",
         "operator/install_conservation_design.py",
+        "operator/CONSERVATION_DESIGN_RECEIVING.md",
         "operator/web/conservation_design.css",
         "operator/web/conservation_design.mjs",
         "operator/web/conservation_design_editor.mjs",
@@ -210,10 +215,6 @@
         "scenario-design/web/app.js",
         "scenario-design/web/index.html",
         "scenario-design/web/style.css"
-      ],
-      "requires": [
-        "conservation",
-        "core"
       ],
       "source_reference": {
         "repository": "woahwhattheheck/public-commons-sprint-2026",
@@ -652,7 +653,9 @@
     "programme-activity": {
       "title": "programme activity",
       "paths": [
-        "operator/extensions/programme-activity.json"
+        "operator/extensions/programme-activity.json",
+        "operator/programme_activity.py",
+        "model/compute_programme.py"
       ],
       "requires": [
         "core"
@@ -1235,8 +1238,10 @@
       "title": "Native conservation combinations",
       "paths": [
         "docs/native-interactions.md",
+        "model/interaction_dispatch.py",
         "model/native_interactions.py",
         "model/native_interactions_cli.py",
+        "model/native_versions.py",
         "operator/NATIVE_INTERACTIONS.md",
         "operator/extensions/native-interactions.json",
         "operator/install_native_interactions.py",
@@ -1248,63 +1253,79 @@
         "core"
       ],
       "source_reference": {
-        "version": "1.1.0",
-        "payload_bytes": 168539,
-        "payload_sha256": "5a08675e0dd81d6ed3f0ee79c340fa24c028a082d0b4ee152a7091060ba6178a",
-        "receiving_edition": "complete-receiving-families-20261013-2",
+        "version": "1.3.0",
+        "receiving_edition": "native-conservation-combinations-1.3.0",
+        "original_worker_release": {
+          "version": "1.2.0",
+          "page": "https://chatgpt.com/space/page_24e89e79967c81919f3ae0e3bf66602d",
+          "payload_bytes": 192191,
+          "payload_sha256": "bbbf59df8d3e68ebc0d8b44f5b51bbf82f56b36ea52ae2411a72bafecb60ef46"
+        },
+        "maintained_validation": {
+          "pull_request": 3116,
+          "commit": "e6c952746439a55ab27ccf87061d72cebd32fd9c"
+        },
+        "native_version_dependency": {
+          "path": "model/native_versions.py",
+          "pull_request": 3146,
+          "commit": "7043efaef03c3b0081ec1fbc215415dd7ebe2c3b",
+          "owner_source": "https://chatgpt.com/space/page_0a25656202348191af0dceb32b667f90",
+          "policy": "completed_stage_runtime_else_observed_run_else_labeled_requested_legacy"
+        },
         "member_inventory": {
+          "docs/native-interactions.md": {
+            "bytes": 25065,
+            "sha256": "85e4301a8449c3250ab7ee0c604cd2e032b38704d6ecc2cac9ab90d71de446f6",
+            "mode": "100644"
+          },
+          "model/interaction_dispatch.py": {
+            "bytes": 13483,
+            "sha256": "c44509b3b3e7d75adea686cba5f2499d0ca551902c457974ca9cbfe961a1ec69",
+            "mode": "100644"
+          },
           "model/native_interactions.py": {
-            "bytes": 66020,
-            "sha256": "d00e4a8d6fc243ec3ad111c614d236e368cf718aee1a7d9dcb4eb1dd4d6a2516",
-            "git_blob": "4271a7dd5309712c62fdef0fad2f25d2f3323ec8",
+            "bytes": 68473,
+            "sha256": "647dd95139550f5eabea8ee0c756185479e31e7cfc9e8ed1491be62409ee177d",
             "mode": "100644"
           },
           "model/native_interactions_cli.py": {
-            "bytes": 3619,
-            "sha256": "3991e05748aca8ba7354f86b12a210cd07432ebaa68d4772f76ab3e7653de220",
-            "git_blob": "16435c4e6f7edec9a3bbc95d8acd11ec4258c722",
+            "bytes": 4430,
+            "sha256": "8f254521d9da77120b92ef230815cfcb08e707156bbdab8dc03fd8eacc73c94e",
             "mode": "100644"
           },
-          "docs/native-interactions.md": {
-            "bytes": 16905,
-            "sha256": "daf5244caf2b1b2d84e026a57984bc03a342305acf10997b54ab672626eb845c",
-            "git_blob": "c6abd84433bc53d13b4f109a57a0932cd7e8bd0b",
+          "model/native_versions.py": {
+            "bytes": 3770,
+            "sha256": "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2",
+            "mode": "100644"
+          },
+          "operator/NATIVE_INTERACTIONS.md": {
+            "bytes": 10654,
+            "sha256": "6e8aee8898ccbf1e1f98b22a7255c57485b0dab7091bf85bbb2088e032b8a95a",
+            "mode": "100644"
+          },
+          "operator/extensions/native-interactions.json": {
+            "bytes": 2844,
+            "sha256": "5cc51e2e84d80835f67364d60300939be3fb0d3e6f3be005a6cefaebdb458ca8",
+            "mode": "100644"
+          },
+          "operator/install_native_interactions.py": {
+            "bytes": 10690,
+            "sha256": "96c9574bd1e354e42c7dc188391ad0d7a898cdbc1d3b8246251616f1b56fef5f",
             "mode": "100644"
           },
           "operator/native_interactions.py": {
-            "bytes": 16392,
-            "sha256": "2b9c7b044a5098ccc27a5583ce3ed60beca259e2b28c7ff7e3f0d66c960c5964",
-            "git_blob": "682af3447fadd336e87d18bb6d7fec4c319070f5",
-            "mode": "100644"
-          },
-          "operator/web/native-interactions.mjs": {
-            "bytes": 34149,
-            "sha256": "4eef6fb8a8a22b053e11eb92621fa0f25179bb617d393c31a57b24033d2f36b0",
-            "git_blob": "6d278343447473d0420fe89ba2ba9f9e703ceb6e",
+            "bytes": 20897,
+            "sha256": "6079af728c0da3710a5aa669a0d2656a5376db8e84af9654812df8aa4fe7a9b3",
             "mode": "100644"
           },
           "operator/web/native-interactions.css": {
             "bytes": 3801,
             "sha256": "451b120833758c3c11e0bb1f0684dd5cdb4adc5f8bfeef1042cf160ac2ff7ab5",
-            "git_blob": "a1085519eaa8a3de38917270cc0bd64c87db8191",
             "mode": "100644"
           },
-          "operator/extensions/native-interactions.json": {
-            "bytes": 2844,
-            "sha256": "d0a9e3f1486e944c4912ecc84afe578e9c6c2285def9cb3d49284012cec0b5d2",
-            "git_blob": "a52fc3b548e27426cb5ec08b897560348d15d4e0",
-            "mode": "100644"
-          },
-          "operator/install_native_interactions.py": {
-            "bytes": 7851,
-            "sha256": "03c948562c2599bd47f9dc3f5e833b8069b5d1cb3c26836efc479a8b7f35a59f",
-            "git_blob": "b4c04e26162eb1b7c457c36f5d250d93df5f3140",
-            "mode": "100644"
-          },
-          "operator/NATIVE_INTERACTIONS.md": {
-            "bytes": 7396,
-            "sha256": "0e639ba93387f311abd72bdefb186658f0f9411546261e17410f0e978e88fc78",
-            "git_blob": "76f0e1da302c2c1d10c494aa25ca7cbfc3f467a2",
+          "operator/web/native-interactions.mjs": {
+            "bytes": 39576,
+            "sha256": "9cb6c436ed7e0cf6cb39887f894374beab65bc387e0960ec45c1a6f05c427825",
             "mode": "100644"
           }
         }
@@ -1812,8 +1833,8 @@
         "source_tools/review_reconciliation.source.json"
       ],
       "requires": [
-        "conservation",
         "core",
+        "conservation",
         "watershed-context"
       ],
       "source_reference": {
