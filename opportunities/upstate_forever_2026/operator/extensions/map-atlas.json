@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "map-atlas",
   "title": "Map atlas and delivery",
-  "version": "5",
+  "version": "6",
   "order": 90,
   "assets": [
     "map_atlas.mjs",
     "atlas_review_collection.mjs",
     "atlas_review_fields.mjs",
+    "observed_reports.mjs",
     "map_atlas.css"
   ],
   "requires_actions": [
@@ -42,16 +43,50 @@
   "backend": {
     "module": "map_atlas",
     "routes": [
-      {"methods": ["POST"], "path": "/api/map-atlas/reviews", "operation": "reviews",
-       "handler": "read", "args": ["operator", "workspace_key", "operation", "payload", "fault"]},
-      {"methods": ["POST"], "path": "/api/map-atlas/review", "operation": "review",
-       "handler": "read", "args": ["operator", "workspace_key", "operation", "payload", "fault"]},
       {
-        "methods": ["POST"],
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/map-atlas/reviews",
+        "operation": "reviews",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/map-atlas/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
         "path": "/api/map-atlas/compare",
         "operation": "compare",
         "handler": "read",
-        "args": ["operator", "workspace_key", "operation", "payload", "fault"]
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
       },
       {
         "methods": [

@@ -7,14 +7,14 @@ import { resolve, join, relative, basename } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const {values:args}=parseArgs({options:{
- 'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},workspace:{type:'string'},
+ 'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},'restored-selection':{type:'string'},workspace:{type:'string'},
  'context-id':{type:'string'},output:{type:'string'},
  resume:{type:'boolean',default:false},video:{type:'boolean',default:false},
  headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE --opening MONITORING_OPENING.json --receiving RECEIVING.json --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
+ console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE (--opening MONITORING_OPENING.json --receiving RECEIVING.json | --restored-selection SELECTION.json --workspace KEY) --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','monitoring-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -66,24 +66,40 @@ function browserRuntime(){
 }
 async function initializeContinuation(){
  browserRuntime();
- required(args.opening&&args.receiving,'Supply the actual preparation opening and completed original receiving journal.');
  required(!args.resume||args.output,'Resume with the original explicit --output directory.');
- const openingBytes=await readFile(resolve(args.opening)),receivingBytes=await readFile(resolve(args.receiving));
- opening=JSON.parse(openingBytes.toString('utf8'));receiving=JSON.parse(receivingBytes.toString('utf8'));
- required(opening.schema==='upstate.regional-monitoring-opening/v1'&&opening.operator_workspace_key&&opening.project_id,'Choose the native regional Monitoring opening.');
- required(receiving.network_id&&receiving.plan_id&&receiving.campaign_id,'The original receiving journal must name its retained network, plan and campaign.');
- required(receiving.summary?.complete===true,'Complete the original native receiving operation before opening its campaign.');
- required(canonical(receiving.selection)===canonical(opening.selection)&&receiving.summary.original_project?.id===opening.project_id,'The receiving journal belongs to a different original preparation or project.');
- required(!args.workspace||args.workspace===opening.operator_workspace_key,'The explicit workspace differs from the original opening.');
- selection={workspace_key:opening.operator_workspace_key,project_id:opening.project_id,
-  network_id:receiving.network_id,plan_id:receiving.plan_id,campaign_id:receiving.campaign_id,
-  context_id:args['context-id']||null};
- const input={opening_sha256:hash(openingBytes),receiving_sha256:hash(receivingBytes),...selection};
+ let input;
+ if(args['restored-selection']){
+  required(!args.opening&&!args.receiving,'Choose restored native selection or original preparation journals.');
+  required(typeof args.workspace==='string'&&args.workspace.trim(),'Supply the actual receiving operator workspace key.');
+  const selectedBytes=await readFile(resolve(args['restored-selection'])),selected=JSON.parse(selectedBytes.toString('utf8'));
+  required(selected.schema==='upstate.monitoring-browser-selection/v1','Choose a native restored Monitoring browser selection.');
+  for(const key of ['project_id','network_id','plan_id','campaign_id']){
+   required(typeof selected[key]==='string'&&selected[key].trim(),'The restored selection must name its original '+key+'.');
+  }
+  required(selected.context_id==null||(typeof selected.context_id==='string'&&selected.context_id.trim()),'Choose a saved observation context ID or omit context_id.');
+  required(!selected.context_id||!args['context-id']||selected.context_id===args['context-id'],'The requested observation context differs from the restored selection.');
+  selection={workspace_key:args.workspace,project_id:selected.project_id,network_id:selected.network_id,
+   plan_id:selected.plan_id,campaign_id:selected.campaign_id,context_id:selected.context_id||args['context-id']||null};
+  input={mode:'restored-native',restored_selection_sha256:hash(selectedBytes),...selection};
+ }else{
+  required(args.opening&&args.receiving,'Supply the actual opening and completed receiving journal, or --restored-selection with --workspace.');
+  const openingBytes=await readFile(resolve(args.opening)),receivingBytes=await readFile(resolve(args.receiving));
+  opening=JSON.parse(openingBytes.toString('utf8'));receiving=JSON.parse(receivingBytes.toString('utf8'));
+  required(opening.schema==='upstate.regional-monitoring-opening/v1'&&opening.operator_workspace_key&&opening.project_id,'Choose the native regional Monitoring opening.');
+  required(receiving.network_id&&receiving.plan_id&&receiving.campaign_id,'The original receiving journal must name its retained network, plan and campaign.');
+  required(receiving.summary?.complete===true,'Complete the original native receiving operation before opening its campaign.');
+  required(canonical(receiving.selection)===canonical(opening.selection)&&receiving.summary.original_project?.id===opening.project_id,'The receiving journal belongs to a different original preparation or project.');
+  required(!args.workspace||args.workspace===opening.operator_workspace_key,'The explicit workspace differs from the original opening.');
+  selection={workspace_key:opening.operator_workspace_key,project_id:opening.project_id,
+   network_id:receiving.network_id,plan_id:receiving.plan_id,campaign_id:receiving.campaign_id,
+   context_id:args['context-id']||null};
+  input={opening_sha256:hash(openingBytes),receiving_sha256:hash(receivingBytes),...selection};
+ }
  const retained=await readOptional(join(output,'request-state.json')),previous=await readOptional(join(output,'journey.json'));
  if(args.resume){
   required(retained,'This output has no original durable Monitoring request state.');
   requestState=JSON.parse(retained);
-  required(requestState.schema==='upstate.monitoring-browser-requests/v1'&&canonical(requestState.input)===canonical(input),'Resume with the original opening, receiving journal and selected context, or choose a new output directory.');
+  required(requestState.schema==='upstate.monitoring-browser-requests/v1'&&canonical(requestState.input)===canonical(input),'Resume with the exact original input files, workspace and selected context, or choose a new output directory.');
   required(requestState.requests&&typeof requestState.requests==='object'&&!Array.isArray(requestState.requests),'The original queued request state is missing.');
   if(previous){journal=JSON.parse(previous);required(journal.schema==='upstate.monitoring-browser/v1','Choose the original Monitoring journey.');}
   journal.attempts=journal.attempts||[];
@@ -350,20 +366,32 @@ async function main(){
  page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
  await stage('open-original-workspace');
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(selection.workspace_key);await openDesk();
+ const state=await apiGet('/api/state',{workspace:selection.workspace_key,compact:'1'});
+ required(state.workspace_key===selection.workspace_key&&state.data?.project?.id===selection.project_id,'The selected operator workspace belongs to another original scientific project.');
  baseline=await readSelection();
- required(canonical(baseline.network.source_bindings)===canonical(receiving.summary.original_source_bindings),'The network differs from the original receiving source bindings.');
+ if(receiving)required(canonical(baseline.network.source_bindings)===canonical(receiving.summary.original_source_bindings),'The network differs from the original receiving source bindings.');
  const selected=identity(baseline);
  if(requestState.selection)required(canonical(requestState.selection)===canonical(selected),'The original campaign advanced after this browser operation. Continue that retained selection or choose a new output for the new revision.');
  else{requestState.selection=selected;await persistRequests();}
  await stage('open-saved-network');
- const nativeSource=opening.selection?.network;
- required(nativeSource?.domain_collection_id&&nativeSource?.domain_source_id,'The opening omits its retained original domain selection.');
  const catalog=await monitoring('source.catalog');
- for(const [collectionKey,sourceKey]of [['domain_collection_id','domain_source_id'],['station_collection_id','station_source_id']]){
-  if(!nativeSource[sourceKey])continue;
-  const collection=nativeSource[collectionKey]||nativeSource.domain_collection_id;
-  required(catalog.collections.some(c=>c.id===collection&&c.entries.some(e=>e.id===nativeSource[sourceKey])),'The original vector source is missing from this workspace.');
+ if(opening){
+  const nativeSource=opening.selection?.network;
+  required(nativeSource?.domain_collection_id&&nativeSource?.domain_source_id,'The opening omits its retained original domain selection.');
+  for(const [collectionKey,sourceKey]of [['domain_collection_id','domain_source_id'],['station_collection_id','station_source_id']]){
+   if(!nativeSource[sourceKey])continue;
+   const collection=nativeSource[collectionKey]||nativeSource.domain_collection_id;
+   required(catalog.collections.some(c=>c.id===collection&&c.entries.some(e=>e.id===nativeSource[sourceKey])),'The original vector source is missing from this workspace.');
+  }
  }
+ required(baseline.network.source_bindings?.domain,'The native network omits its retained original domain binding.');
+ for(const [kind,binding]of Object.entries(baseline.network.source_bindings)){
+  if(!binding)continue;
+  const collection=catalog.collections.find(c=>c.id===binding.source_collection_id);
+  const entry=collection?.entries.find(e=>e.id===binding.source_id);
+  required(collection&&entry&&collection.id===binding.source_record_id&&entry.sha256===binding.object_sha256,'The original '+kind+' vector source edition differs from the saved network binding.');
+ }
+ if(args['restored-selection'])await record('Bound the received native scientific selection',{...selected,project_id:selection.project_id,source_bindings:baseline.network.source_bindings});
  await chooseNetwork();
  required(await page.locator(desk('#map path')).count()===Object.keys(baseline.network.nodes).length,'The native network map omitted a retained catchment.');
  await page.locator(desk('#map path')).first().focus();

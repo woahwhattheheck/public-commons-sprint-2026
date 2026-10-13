@@ -140,6 +140,15 @@ def _text(value) -> str:
     return str(value)
 
 
+def _group(rows) -> str:
+    """Readable labelled values without changing original values or source units."""
+    return "\n".join(
+        str(label) + ": " + _text(value)
+        for label, value in rows
+        if value is not None and value != "" and value != []
+    )
+
+
 def _table(headers, rows) -> str:
     header = "<tr>" + "".join("<th scope=\"col\">" + html.escape(str(item)) + "</th>"
                               for item in headers) + "</tr>"
@@ -298,18 +307,20 @@ def _briefing_followup(plan):
         context = source.get("source_context", {})
         binding = context.get("report_binding", {})
         slide = context.get("slide", {})
-        rows.append((task["id"], task["title"], task["assignee"], task["status"],
-                     task.get("source_due_date"), source.get("kind"),
-                     binding.get("title"), slide.get("title"), slide.get("id"),
-                     binding.get("report_sha256"), source.get("source_link_id")))
+        rows.append((
+            _group((("Work", task["title"]), ("Task ID", task["id"]))),
+            _group((("Owner", task["assignee"]), ("Status", task["status"]))),
+            task.get("source_due_date"),
+            _group((("Entry kind", source.get("kind")), ("Report", binding.get("title")),
+                    ("Page", slide.get("title")), ("Page ID", slide.get("id")))),
+            binding.get("report_sha256"), source.get("source_link_id")))
     return ("<section><h2>Report review follow-up</h2><p>"
             "These tasks retain their original meeting entry and report page. "
             "Source due dates are deadlines recorded in the notes; they do not set "
             "working durations or move the scientific report's dates. Current task "
             "owners and status include subsequent working-plan edits.</p>" +
-            _table(("Task ID", "Work", "Current owner", "Current status", "Source due date",
-                    "Original entry kind", "Original report", "Report page", "Page ID",
-                    "Original report SHA256", "Original notes source"),
+            _table(("Work", "Current owner and status", "Source due date",
+                    "Original report context", "Original report SHA256", "Original notes source"),
                    rows) +
             _details("Received meetings, preserved local differences and original source identities",
                      history) + "</section>")
@@ -330,13 +341,17 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
                     "are exclusive and move to the next project workday. "
                     "Unknown durations retain unknown finishes.</p>")
     sections.append(_table(
-        ("Task ID", "Task", "Phase", "Assignee", "Status", "Progress (%)",
-         "Duration (workdays)", "Start", "Last work date", "Finish boundary",
-         "Predecessors", "Schedule", "Overdue"),
-        ((row["id"], row["title"], row["phase"], row["assignee"], row["status"],
-          row["progress_pct"], row["duration_days"], row["start"],
-          row["last_work_date"], row["finish_exclusive"], row["depends_on"],
-          row["schedule_state"], row["overdue"]) for row in task_rows),
+        ("Task and phase", "Assignee", "Status and progress", "Working dates",
+         "Duration and predecessors", "Schedule"),
+        ((_group((("Task", row["title"]), ("ID", row["id"]), ("Phase", row["phase"]))),
+          row["assignee"],
+          _group((("Status", row["status"]), ("Progress (%)", row["progress_pct"]))),
+          _group((("Start", row["start"]), ("Last work date", row["last_work_date"]),
+                  ("Finish boundary (exclusive)", row["finish_exclusive"]))),
+          _group((("Duration (workdays)", row["duration_days"]),
+                  ("Predecessors", row["depends_on"]))),
+          _group((("State", row["schedule_state"]), ("Overdue", row["overdue"]))))
+         for row in task_rows),
     ))
     sections.append(_table(
         ("Task ID", "Schedule issue", "Explanation"),
@@ -353,10 +368,10 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
     sections.append("<p>These are separate ledger totals in USD. Commitments and "
                     "actual costs are not added to the budget or to each other.</p>")
     sections.append(_table(
-        ("Line ID", "Task ID", "Kind", "Label", "Amount (USD)", "Date", "Reference"),
-        ((row["id"], row.get("task_id"), row["kind"], row["label"],
-          _money(row["amount_minor"]), row.get("date"), row.get("reference"))
-         for row in plan["budget_lines"]),
+        ("Ledger item", "Task ID", "Kind", "Amount (USD)", "Date", "Reference"),
+        ((_group((("Label", row["label"]), ("Line ID", row["id"]))),
+          row.get("task_id"), row["kind"], _money(row["amount_minor"]),
+          row.get("date"), row.get("reference")) for row in plan["budget_lines"]),
     ))
     sections.append("</section><section><h2>Sites and monitoring plans</h2>")
     sections.append(_table(
@@ -365,9 +380,10 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
           row.get("candidate_id"), row.get("source_ref")) for row in plan["sites"]),
     ))
     sections.append(_table(
-        ("Plan ID", "Title", "Objective", "Site IDs", "Parameters", "Method", "Frequency"),
-        ((row["id"], row["title"], row["objective"], row["site_ids"], row["parameters"],
-          row.get("method_ref"), row.get("frequency")) for row in plan["monitoring_plans"]),
+        ("Monitoring plan", "Objective", "Site IDs", "Parameters", "Method", "Frequency"),
+        ((_group((("Title", row["title"]), ("ID", row["id"]))), row["objective"],
+          row["site_ids"], row["parameters"], row.get("method_ref"), row.get("frequency"))
+         for row in plan["monitoring_plans"]),
     ))
     sections.append(_details("Monitoring notes and original fields", plan["monitoring_plans"]))
     completed = summary["visit_counts"]["complete"]
@@ -379,18 +395,26 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
                     " Overdue visits: " + str(len(summary["overdue_visit_ids"])) +
                     ". Cancelled visits remain in the register.</p>")
     sections.append(_table(
-        ("Visit ID", "Site", "Monitoring plan", "Planned date", "Visited at",
-         "Observer", "Status", "Overdue", "Notes", "Evidence"),
-        ((row["id"], row["site_label"], row.get("monitoring_plan_id"), row.get("planned_date"),
-          row.get("visited_at"), row["observer"], row["status"], row["overdue"],
+        ("Visit and site", "Dates", "Observer", "Status", "Notes", "Evidence"),
+        ((_group((("Visit", row["id"]), ("Site", row["site_label"]),
+                  ("Monitoring plan", row.get("monitoring_plan_id")))),
+          _group((("Planned date", row.get("planned_date")),
+                  ("Visited at", row.get("visited_at")))),
+          row["observer"],
+          _group((("Status", row["status"]), ("Overdue", row["overdue"]))),
           row["notes"], row["evidence_refs"]) for row in visit_rows),
     ))
     sections.append(_table(
-        ("Activity ID", "Visit ID", "Site ID", "Kind", "Sample ID",
-         "Collected at", "Method", "Custody reference", "Notes"),
-        ((row["id"], row["visit_id"], row["site_id"], row["kind"], row.get("sample_id"),
-          row.get("collected_at"), row.get("method"), row.get("custody_ref"), row["notes"])
-         for row in plan["activities"]),
+        ("Activity and sample", "Collection and site", "Method", "Custody and work",
+         "Notes", "Evidence"),
+        ((_group((("Activity", row["id"]), ("Kind", row["kind"]),
+                  ("Sample", row.get("sample_id")))),
+          _group((("Collected at", row.get("collected_at")), ("Visit", row["visit_id"]),
+                  ("Site", row["site_id"]))),
+          row.get("method"),
+          _group((("Custody reference", row.get("custody_ref")),
+                  ("Task", row.get("implementation_task_id")))),
+          row["notes"], row.get("evidence_refs", [])) for row in plan["activities"]),
     ))
     sections.append(_field_forms(plan["activities"]))
     sections.append(_details("Activities, form answers and original fields", plan["activities"]))
@@ -400,15 +424,18 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
                     "retain a null numeric value. Observations are not summed across "
                     "pollutants, converted to loads, or merged with modeled benefits.</p>")
     sections.append(_table(
-        ("Observation ID", "Site", "Sample ID", "Parameter", "Result type",
-         "Value", "Original text", "Unit", "Basis", "Fraction", "Qualifier",
-         "Detection limit", "Quantitation limit", "Method", "QA", "Notes"),
-        ((row["id"], row["site_label"], row.get("sample_id"), row["parameter"],
-          row["result_type"], row["value"], row["original_text"], row["unit"],
-          row.get("basis"), row.get("fraction"), row.get("qualifier"),
-          row.get("detection_limit"), row.get("quantitation_limit"),
-          row.get("method"), row.get("qa_status"), row["notes"])
-         for row in observation_rows),
+        ("Result and sample", "Parameter and definition", "Original result",
+         "Type and original limits", "Quality", "Notes"),
+        ((_group((("Result", row["id"]), ("Site", row["site_label"]),
+                  ("Sample", row.get("sample_id")))),
+          _group((("Parameter", row["parameter"]), ("Basis", row.get("basis")),
+                  ("Fraction", row.get("fraction")), ("Method", row.get("method")))),
+          _group((("Original text", row["original_text"]), ("Numeric value", row["value"]),
+                  ("Unit", row["unit"]))),
+          _group((("Type", row["result_type"]), ("Qualifier", row.get("qualifier")),
+                  ("Detection limit (original unit)", row.get("detection_limit")),
+                  ("Quantitation limit (original unit)", row.get("quantitation_limit")))),
+          row.get("qa_status"), row["notes"]) for row in observation_rows),
     ))
     sections.append(_details("Observation provenance and original fields", plan["observations"]))
     sections.append("</section>")
@@ -453,9 +480,9 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "details{border:1px solid #ccc;padding:10px;margin:10px 0}"
         "summary{font-weight:600;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
         "section{break-inside:auto}footer{border-top:1px solid #aaa;margin-top:28px;padding-top:12px}"
-        "@media print{body{padding:0;font-size:10px}table{font-size:8px}"
+        "@media print{body{padding:0;font-size:10px}table{font-size:10px;table-layout:fixed}"
         ".table-scroll{overflow:visible}details{break-inside:avoid}summary{display:block}"
-        "h2{break-after:avoid}@page{size:landscape;margin:12mm}}"
+        "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}@page{margin:12mm}}"
         "</style></head><body><header><h1>" + title + "</h1><p class=\"meta\">" +
         meta + "</p><p>" + escape(plan["description"]) +
         "</p><p>Start: " + escape(plan["start_date"]) + " · Target: " + target +

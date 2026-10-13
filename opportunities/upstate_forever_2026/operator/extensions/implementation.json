@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "8",
+  "version": "9",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -13,7 +13,9 @@
     "implementation_lab.mjs",
     "implementation_results.mjs",
     "implementation_dispatch.mjs",
-    "implementation_briefing.mjs"
+    "implementation_briefing.mjs",
+    "implementation_evidence.mjs",
+    "implementation_evidence_ui.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -37,7 +39,9 @@
       "implementation.lab.import",
       "implementation.lab.dispatch",
       "implementation.briefing.import",
-      "implementation.lab.dispatch-report"
+      "implementation.lab.dispatch-report",
+      "implementation.evidence.import",
+      "implementation.evidence.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -429,6 +433,45 @@
         ],
         "path": "/api/implementation/dispatch-report",
         "operation": "dispatch-report",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/selection-preview",
+        "operation": "selection-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/evidence-import",
+        "operation": "evidence-import",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/evidence-export",
+        "operation": "evidence-export",
         "handler": "queue",
         "args": [
           "workspace_key",

@@ -12,6 +12,7 @@ import time
 import traceback
 
 from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
+from .native_execution import resource_status
 
 SCHEMA = "upstate.native-worker-request/v1"
 
@@ -105,7 +106,7 @@ def run_request(request_path):
               "run_id": run_id, "task_id": request["task_id"],
               "request_sha256": request["request_sha256"], "started_at": now(),
               "identity": identity, "python": sys.version.split()[0],
-              "workspace": str(workspace_path)}
+              "workspace": str(workspace_path), "resources": resource_status()}
 
     def interrupt(signum, frame):
         raise NativeStop("The operator requested a stop of this calculation")
@@ -121,7 +122,7 @@ def run_request(request_path):
                 atomic_json(directory / "heartbeat.json", {
                     "schema": "upstate.native-heartbeat/v1", "execution_id": execution_id,
                     "at": now(), "elapsed_seconds": time.monotonic() - started,
-                    "identity": identity})
+                    "identity": identity, "resources": resource_status()})
             stop_path = directory / "stop.json"
             if stop_path.exists():
                 try:

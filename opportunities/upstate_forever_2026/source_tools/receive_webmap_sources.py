@@ -79,9 +79,18 @@ def receive(application, workspace, state_directory, timeout=240, *,
             raise AssertionError("The original native reporting-region reader lost counties.")
         if zone_binding["source_collection_id"] != result["source_collection_id"]:
             raise AssertionError("The native region reader used another source collection.")
-        if [row["properties"]["_source_properties"] for row in zones["features"]] != [
-                row["attributes"] for row in source_features]:
-            raise AssertionError("Native reporting region properties differ from the original counties.")
+        for original_feature, derived_feature, region in zip(
+                source_features, geo["features"], zones["features"]):
+            expected = original_feature["attributes"]
+            actual = region["properties"]["_source_properties"]
+            if any(key not in actual or actual[key] != value for key, value in expected.items()):
+                raise AssertionError("Native reporting region properties differ from the original counties.")
+            # Fiona may expose the GeoJSON feature ID as an additional field.
+            # Its value must be the retained original feature identity.
+            additional = set(actual) - set(expected)
+            if additional and (additional != {"id"} or
+                               str(actual["id"]) != str(derived_feature.get("id"))):
+                raise AssertionError("The native reader added an unknown county attribute.")
         declared_companions = []
         for row in admitted_entry.get("companions", []):
             member = (native.root / row["object"]).resolve(strict=True)

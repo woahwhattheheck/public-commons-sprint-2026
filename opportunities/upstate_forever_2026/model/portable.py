@@ -525,6 +525,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     try:
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
             for pattern in ("compute-programmes/*/.programme.lock",

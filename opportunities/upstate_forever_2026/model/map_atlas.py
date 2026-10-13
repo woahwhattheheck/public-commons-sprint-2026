@@ -10,7 +10,7 @@ import textwrap
 from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
 from . import cartography, native_study
 
-ATLAS_VERSION = "native-and-regional-atlas/v5"
+ATLAS_VERSION = "native-and-regional-atlas/v6"
 PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
          "a3": (420 / 25.4, 297 / 25.4)}
 INDEX_ROWS = 14
@@ -195,6 +195,7 @@ def _index_row(page, number, root, options):
             "title": panel["label"], "units": panel["units"],
             "signed": bool(panel.get("signed")), "display_scale": panel.get("scale"),
             "source_raster": Path(panel["path"]).resolve().relative_to(root.resolve()).as_posix(),
+            **({"dataset": panel["dataset"]} if panel.get("dataset") else {}),
         })
     return {
         "page": number, "family": family, "map_key": page["key"],
@@ -217,7 +218,8 @@ def _csv(rows):
     output = io.StringIO(newline="")
     columns = ("atlas_page", "family", "map_key", "scenario_run_id", "title",
                "map_pdf", "panel", "units", "signed", "scale_minimum",
-               "scale_maximum", "scale_method", "source_raster")
+               "scale_maximum", "scale_method", "source_raster",
+               "dataset_id", "delivered_raster", "fgdc_xml", "raster_sha256", "companion_paths")
     writer = csv.DictWriter(output, fieldnames=columns)
     writer.writeheader()
     for row in rows:
@@ -230,9 +232,57 @@ def _csv(rows):
                 "units": panel["units"], "signed": panel["signed"],
                 "scale_minimum": scale.get("minimum"), "scale_maximum": scale.get("maximum"),
                 "scale_method": scale.get("label"), "source_raster": panel["source_raster"],
+                "dataset_id": panel.get("dataset", {}).get("id"),
+                "delivered_raster": panel.get("dataset", {}).get("file", {}).get("path"),
+                "fgdc_xml": panel.get("dataset", {}).get("metadata", {}).get("path"),
+                "raster_sha256": panel.get("dataset", {}).get("file", {}).get("sha256"),
+                "companion_paths": "; ".join(item["path"] for item in
+                    panel.get("dataset", {}).get("companions", [])),
             }
             writer.writerow({key: _csv_value(value) for key, value in values.items()})
     return output.getvalue().encode("utf-8-sig")
+
+
+def _refresh_dataset_index(directory, pages, workspace, options, state, state_path):
+    """Add dataset links to retained figures without rendering their maps again."""
+    atlas = state["atlas"]
+    old_rows = atlas["pages"]
+    if [row["map_key"] for row in old_rows] != [page["key"] for page in pages]:
+        raise ValueError("Retained atlas page order differs from the selected map panels")
+    rows = []
+    for page, old in zip(pages, old_rows):
+        row = _index_row(page, old["page"], workspace.root, options)
+        row["file"] = old["file"]
+        def scientific(value):
+            return {**value, "panels": [
+                {key: item for key, item in panel.items() if key != "dataset"}
+                for panel in value["panels"]]}
+        if scientific(row) != scientific(old):
+            raise ValueError("Retained map semantics differ from the selected atlas edition")
+        rows.append(row)
+    datasets = state.get("gis_datasets")
+    if (rows == old_rows and atlas.get("datasets") == datasets
+            and atlas.get("version") == ATLAS_VERSION):
+        try:
+            verify_file(directory, state["files"]["map_atlas_index"])
+            verify_file(directory, state["files"]["map_atlas_csv"])
+            return atlas
+        except (OSError, ValueError):
+            # A crash may leave either newly written derived index ahead of
+            # its state descriptor. Recreate it from the verified map inputs.
+            pass
+    atlas = {**atlas, "version": ATLAS_VERSION, "pages": rows}
+    if datasets is not None:
+        atlas["datasets"] = datasets
+    index_path = directory / "maps" / "atlas-index.json"
+    csv_path = directory / "maps" / "atlas-index.csv"
+    atomic_json(index_path, atlas)
+    atomic_bytes(csv_path, _csv(rows))
+    state["files"]["map_atlas_index"] = describe_file(directory, index_path)
+    state["files"]["map_atlas_csv"] = describe_file(directory, csv_path)
+    state["atlas"] = atlas
+    atomic_json(state_path, state)
+    return atlas
 
 
 def write(directory, pages, *, workspace, selection, grid, boundary, crs,
@@ -258,13 +308,15 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
     pages.sort(key=lambda page: order[page["family"]])  # preserve selected scenario order
 
     directory = Path(directory)
-    if state.get("atlas", {}).get("version") == ATLAS_VERSION and all(
+    if state.get("atlas", {}).get("version") in (ATLAS_VERSION, "native-and-regional-atlas/v5") and all(
             key in state.get("files", {}) for key in FILE_KEYS):
-        for key in FILE_KEYS:
+        for key in ("map_atlas", "map_atlas_sources"):
             verify_file(directory, state["files"][key])
+        # Derived index/CSV descriptors are reconciled by the refresh below.
+        # Original rendered maps and source context remain strictly verified.
         for page in pages:
             verify_file(directory, state["maps"][page["key"]])
-        return state["atlas"]
+        return _refresh_dataset_index(directory, pages, workspace, options, state, state_path)
 
     import matplotlib
     matplotlib.use("Agg")
@@ -343,6 +395,7 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
             "source_report_id": selection.get("source_report_id"),
             "grid_id": grid["id"], "grid": grid["grid"],
             "file": describe_file(directory, atlas_path), "source_context": source_context,
+            **({"datasets": state["gis_datasets"]} if state.get("gis_datasets") else {}),
         }
         index_path = directory / "maps" / "atlas-index.json"
         csv_path = directory / "maps" / "atlas-index.csv"

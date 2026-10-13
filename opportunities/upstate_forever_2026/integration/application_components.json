@@ -86,7 +86,8 @@
     "observed-original-report-edition",
     "sampling-flow-coverage",
     "annual-nlcd-native-source",
-    "community-report-context"
+    "community-report-context",
+    "delivery-datasets"
   ],
   "components": {
     "core": {
@@ -833,7 +834,8 @@
     "map-atlas": {
       "title": "map atlas",
       "paths": [
-        "operator/extensions/map-atlas.json"
+        "operator/extensions/map-atlas.json",
+        "operator/web/observed_reports.mjs"
       ],
       "requires": [
         "core"
@@ -1726,7 +1728,14 @@
         "source_tools/resume_nhd_originals.py",
         "source_tools/RESUME_NHD_ORIGINALS.md",
         "source_tools/capture_water_sources.py",
-        "source_tools/water_context_geometry.py"
+        "source_tools/water_context_geometry.py",
+        "source/water_context/20261013/domain217_query_bounds/domain217-native3857-bounds.csv",
+        "source/water_context/20261013/domain217_query_bounds/domain217-native3857-bounds.json",
+        "source/water_context/20261013/domain217_query_bounds/sources.json",
+        "source/water_context/20261013/domain217_query_bounds/derive_domain217_bounds.py",
+        "source/water_context/20261013/domain217_query_bounds/README.md",
+        "source_tools/nhd_domain_queries.py",
+        "source_tools/NHD_DOMAIN_QUERIES.md"
       ],
       "requires": [
         "core"
@@ -2542,7 +2551,11 @@
         "operator/implementation_outcomes.py",
         "operator/extensions/implementation-outcomes.json",
         "operator/web/implementation_outcomes.mjs",
-        "model/IMPLEMENTATION_OUTCOMES_METHOD.md"
+        "model/IMPLEMENTATION_OUTCOMES_METHOD.md",
+        "model/implementation_outcome_context.py",
+        "model/IMPLEMENTATION_OUTCOME_CONTEXT.md",
+        "model/observed_context.py",
+        "model/scientific_figures.py"
       ],
       "requires": [
         "core"
@@ -5404,6 +5417,23 @@
         "core",
         "observed-context"
       ]
+    },
+    "delivery-datasets": {
+      "title": "Editable GIS datasets and FGDC metadata for original atlas map panels",
+      "paths": [
+        "model/delivery_datasets.py",
+        "model/delivery.py",
+        "model/map_atlas.py",
+        "model/atlas_browser.py",
+        "operator/web/delivery_inspection.mjs",
+        "operator/DELIVERY_DATASETS.md"
+      ],
+      "requires": [
+        "core",
+        "map-atlas",
+        "delivery-inspection"
+      ],
+      "source_reference": "ES-20261013-DELIVERY-DATASETS: exact retained physical exports, signed comparison rasters and selected priorities in the original atlas index and portable delivery."
     }
   }
 }

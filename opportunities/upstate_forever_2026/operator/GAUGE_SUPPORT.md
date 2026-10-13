@@ -1,6 +1,6 @@
 # Regional gauge and catchment support
 
-Gauge support joins original USGS daily-flow gauges and NLDI upstream whole catchments to a saved regional watershed report. It uses the maintained station-geography engine for original coordinate handling, exact station identities, candidate selection and native polygon membership. The new consumer measures catchment intersections, retains original daily-flow coverage and presents a source-preserving report through the existing operator.
+Gauge support joins original USGS daily-flow gauges and a selected original upstream-support edition to a saved regional watershed report. Supported editions are whole NHDPlusV2 catchments, original indexed-gauge split catchments and coordinate-delineated upstream catchments. It uses the maintained station-geography engine for original coordinate handling, exact station identities, candidate selection and native polygon membership. The new consumer measures catchment intersections, retains original daily-flow coverage and presents a source-preserving report through the existing operator.
 
 ## Open the product
 
@@ -9,7 +9,7 @@ Use the complete maintained application, including the current shared extension 
 1. Open the intended existing Workspace.
 2. Receive the original regional edition and select its saved watershed report.
 3. Import the maintained NLDI source manifest and prepared daily-flow coverage manifest, or run the source intake below.
-4. Open **Gauge support**. Choose the saved report, original HUC12 polygon source and native HUC ID field, original gauge points or an existing station edition, whole catchment source and daily-flow coverage table.
+4. Open **Gauge support**. Choose the saved report, original HUC12 polygon source and native HUC ID field, original gauge points or an existing station edition, original upstream support edition and daily-flow coverage table. The chosen source displays its retained method and request meaning before submission.
 5. Select the reporting HUC12s. Multiple utility polygon sources are optional; each remains a separate scope with its own native identifier field.
 6. Build and retain the report. The original operator queue holds the selection, task and result.
 7. Open a saved result, select a gauge and examine its original basin, point HUC membership, regional HUC intersections and annual coverage.
@@ -136,7 +136,7 @@ Original station geography resolves points against native polygons with the orig
 
 Original polygons are transformed to **EPSG:5070, NAD83 / Conus Albers**, using always_xy. All reported areas are square metres, with interface conversions to square kilometres. Native source vertices, ring ordering, CRS and identities remain in source archives. No buffer, simplification or polygon repair changes source geometry.
 
-For each gauge, retain the original whole-catchment area, its regional intersection, part outside the region, selected reporting intersection, every intersected HUC12 and any utility area. Each HUC relationship reports both the fraction of the catchment and the fraction of the HUC. Boundary-only contact has zero area and remains explicitly labeled.
+For each gauge, retain the original selected-catchment area, its regional intersection, part outside the region, selected reporting intersection, every intersected HUC12 and any utility area. Each HUC relationship reports both the fraction of the catchment and the fraction of the HUC. Boundary-only contact has zero area and remains explicitly labeled.
 
 Regional scope summaries use the **geometric union** of catchments. Nested catchments therefore do not double-count regional area. The catchment-relationships CSV retains pairwise equality, containment, overlap and boundary contact. Network upstream/downstream relations come from the saved regional ToHUC report and are separately recorded in the HUC intersection table.
 
@@ -177,9 +177,9 @@ Open a saved Gauge support edition and choose **Use in scientific report**. The 
 
 Choose **New report selection** to start with this gauge context. Choose an existing saved delivery to retain its original model runs, alternatives, map settings, overlays, contact fields and previously selected original studies; the gauge context is appended to the ordered report-source selection. The new report uses the existing native baseline/alternative requirements and report assembly path.
 
-The report source contains typed sections for gauge/series identities, original point membership, whole-catchment support, annual flow coverage, reporting/upstream/utility scopes, individual HUC intersections and overlapping catchment relationships. It retains the complete original package closure, including native source manifests and companions, all saved analysis/CSV/GeoJSON outputs, the original regional report, station-geography ZIP and gauge-support ZIP.
+The report source contains typed sections for gauge/series identities, original point membership, selected-source catchment support, annual flow coverage, reporting/upstream/utility scopes, individual HUC intersections and overlapping catchment relationships. It retains the complete original package closure, including native source manifests and companions, all saved analysis/CSV/GeoJSON outputs, the original regional report, station-geography ZIP and gauge-support ZIP.
 
-A self-contained map HTML and individual SVG maps use the saved catchment/HUC/gauge output geometries and the same local longitude/latitude display scale as the existing desk. Reporting HUC12s have grey fill, upstream context has white fill, whole catchments have a dark outline and gauges are points. All numeric areas continue to come from the original EPSG:5070 results. Map links and source attachments travel in the normal scientific/client HTML, PDF data package and delivery archive. The typed tables are rendered through the shared report engine.
+A self-contained map HTML and individual SVG maps use the saved catchment/HUC/gauge output geometries and the same local longitude/latitude display scale as the existing desk. Reporting HUC12s have grey fill, upstream context has white fill, selected source catchments have a dark outline and gauges are points. All numeric areas continue to come from the original EPSG:5070 results. Map links and source attachments travel in the normal scientific/client HTML, PDF data package and delivery archive. The typed tables are rendered through the shared report engine.
 
 ### Native source preparation and import
 
@@ -231,3 +231,95 @@ Receiving continuation remains the original regional operation 1791859874 and so
 
 Existing station geography, original JSON inventory intake, original daily observed-water importer and regional source-family ownership remain on their maintained implementations. Install the complete current application before applying this component.
 
+
+## Choose the original support geometry edition
+
+The existing whole-catchment course above remains the default. A completed original
+split-source capture can now enter the same Gauge product through the ordinary
+source importer and the same saved regional report. Each resulting edition pins
+one complete source method; the model validates every selected feature before
+calculating intersections.
+
+| Source kind | Native request meaning | Source identity |
+|---|---|---|
+| `nhdplusv2_upstream_whole_catchments` | `simplified=false`, `splitCatchment=false`; a supplied whole catchment may extend below its gauge within the containing NHDPlus catchment | Original thirteen-gauge whole source |
+| `nhdplusv2_upstream_gauge_split` | Original indexed-gauge basin response with `simplified=false`, `splitCatchment=true` | `nldi-seven-gauge-split-basin-20261013`, emitted only by that completed route |
+| `nhdplusv2_coordinate_delineated_upstream` | Documented USGS process requested upstream at the original gauge coordinate; retained named `drainageBasin` response | `nldi-seven-gauge-split-process-20261013`, emitted only by that completed route |
+
+The coordinate-delineated source retains its own method. Its gauge coordinate is
+matched to the actual saved station point, and its original site, series,
+COMID/reach/measure, request, response and asynchronous job identity stay in the
+source companions. Indexed split and coordinate delineation remain separate
+editions, even when the resulting polygons happen to agree.
+
+The Gauge catalogue reads the retained source-entry metadata for available
+support choices. It does not decode large polygon bodies merely to populate the
+form. Building the selection then checks every original feature's support kind,
+boolean request flags and source method. The original station_id must agree with
+site_no, and daily coverage must match the exact site_no/ts_id pair. The seven
+split-source gauges therefore retain their own seven-station selection; the other
+six coverage pairs stay explicitly unused in that result.
+
+### Receive a completed coordinate-delineated edition
+
+Run the existing original capture through completion first. Its
+`receiving-result.json` / `source-summary.json` supplies the immutable edition's
+actual `model-sources.json` path. Use that returned path as `SPLIT_MANIFEST`.
+Keep the original NLDI location source and daily-flow coverage inputs from the
+existing course.
+
+```sh
+"$PYTHON" -B -m source_tools.receive_gauge_support \
+  --workspace "$WORKSPACE" \
+  --report-id "$REGIONAL_REPORT_ID" \
+  --huc-manifest "$ORIGINAL_DOMAIN_MANIFEST" \
+  --huc-source-id upstate-wbd-upstream-domain-20261012 \
+  --huc-id-field huc12 \
+  --catchment-manifest "$SPLIT_MANIFEST" \
+  --catchment-source-id nldi-seven-gauge-split-process-20261013 \
+  --support-kind nhdplusv2_coordinate_delineated_upstream \
+  --output "$OPERATION/gauge-process-receiving"
+```
+
+Use `--catchment-collection ACTUAL_COLLECTION_ID` instead of
+`--catchment-manifest` when that exact source is already retained in the
+Workspace. These two selectors are mutually exclusive.
+For a completed original indexed-gauge response, choose its actual manifest,
+`nldi-seven-gauge-split-basin-20261013` and
+`nhdplusv2_upstream_gauge_split` together.
+The optional `--support-kind` is an expected method checked against original
+properties; it cannot relabel a different source.
+
+The original receiving identity now records an explicit alternate catchment
+selection. Use its own output directory for a different source choice. Repeating
+the same output and selection resumes the same import/build/archive/reopen
+phases. The default whole-source CLI retains its original argument and receiving
+identity; earlier receipts remain valid.
+
+### Operate, render and reopen the selected edition
+
+1. Import the completed source manifest through the existing source workflow.
+2. Open **Gauge support**, select the actual upstream support edition and review
+   its displayed method. Keep the same saved regional report, original HUC
+   geometry, station geography and desired reporting/utility scopes.
+3. Build the saved support report. Its analysis, station rows, source references,
+   catchment GeoJSON, CSVs, map captions and methods retain the selected kind and
+   original request flags.
+4. Use **Download scientific report** for the existing direct
+   PDF/HTML/Markdown/data/source-ZIP course, or **Use in scientific report** to
+   attach this same typed source to the current delivery.
+5. Export and independently restore the whole Workspace. Reopen the actual saved
+   support ID and direct report. The receiving receipt checks original project,
+   report, station and support identities.
+
+All geometry areas/intersections remain the maintained EPSG:5070 calculations.
+Gauge-point interior, boundary, outside and unresolved results remain visible.
+Nested catchments use their actual geometric union; no method choice changes
+the original coordinates, fills missing flow values or sums overlapping basins
+as independent support. A later split edition creates its own saved result and
+does not rewrite the original whole-source edition.
+
+The report producer's current version is1.1.0. New report packages use that
+version in their immutable identity, while **Open saved report** also resolves
+the previous1.0.0 whole-source report directory. Existing source/report/download
+identities remain usable after installation of this complete successor.
