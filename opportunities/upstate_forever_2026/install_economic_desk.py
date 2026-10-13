@@ -12,6 +12,8 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/economic_receive.py",
+    "operator/ECONOMIC_RECEIVING_PHASES.md",
     "operator/web/economic_received_comparisons.mjs",
     "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
     "docs/ECONOMIC_COMPARISON_PROGRAMME_CONTEXT.md",
