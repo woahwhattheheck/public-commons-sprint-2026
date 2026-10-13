@@ -12,6 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['ui/app.mjs', 'text/javascript; charset=utf-8']],
   ['/dss.mjs', ['ui/dss.mjs', 'text/javascript; charset=utf-8']],
+  ['/watershed.mjs', ['ui/watershed.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WATER_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
@@ -20,11 +21,11 @@ function sameToken(value, expected) {
   const a = Buffer.from(value), b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-async function body(request) {
+async function body(request, limit = 2 * 1024 * 1024) {
   if (!String(request.headers['content-type'] ?? '').startsWith('application/json')) fail('Send a JSON request.');
   let size = 0; const chunks = [];
   for await (const chunk of request) {
-    size += chunk.length; if (size > 2 * 1024 * 1024) fail('The workspace request is too large.', 'WATER_REQUEST_TOO_LARGE', 413);
+    size += chunk.length; if (size > limit) fail('The workspace request is too large.', 'WATER_REQUEST_TOO_LARGE', 413);
     chunks.push(chunk);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
@@ -77,7 +78,7 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
   }
   async function view() {
     return { project: await project.read(), captures: await project.listCaptures(), reviews: await project.listReviews(),
-      editions: await project.listEditions(), dssExports: await project.listDssExports(), runtime: plainRuntime(activeMerchant, activeEditionId),
+      editions: await project.listEditions(), dssExports: await project.listDssExports(), watersheds: await project.listWatersheds(), runtime: plainRuntime(activeMerchant, activeEditionId),
       buyerConfigured: Boolean(buyer), jobs: [...jobs.values()].map(({ promise, ...row }) => row), token };
   }
   function startJob(id, work) {
@@ -107,7 +108,7 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
       }
       if (request.method === 'GET' && path === '/api/workspace') return send(response, 200, await view());
       if (request.method === 'GET' && path === '/api/status')
-        return send(response, 200, { captures: await project.listCaptures(), dssExports: await project.listDssExports(), runtime: plainRuntime(activeMerchant, activeEditionId),
+        return send(response, 200, { captures: await project.listCaptures(), dssExports: await project.listDssExports(), watersheds: await project.listWatersheds(), runtime: plainRuntime(activeMerchant, activeEditionId),
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
       if (request.method === 'GET' && (match = /^\/api\/reviews\/([A-Za-z0-9_-]+)(?:\/(html|json|csv|geojson))?$/.exec(path))) {
         if (!match[2]) return send(response, 200, await project.readReview(match[1]));
@@ -136,13 +137,26 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
         return sendFile(response, await project.dssDownload(match[1], match[2]));
       if (request.method === 'GET' && (match = /^\/api\/dss\/([A-Za-z0-9_-]+)$/.exec(path)))
         return send(response, 200, await project.readDssOperation(match[1]));
+      if (request.method === 'GET' && (match = /^\/api\/watersheds\/([A-Za-z0-9_-]+)\/download\/([a-z]+)$/.exec(path)))
+        return sendFile(response, await project.watershed('download', { id: match[1], kind: match[2], file: url.searchParams.get('file') }));
+      if (request.method === 'GET' && (match = /^\/api\/watersheds\/([A-Za-z0-9_-]+)$/.exec(path)))
+        return send(response, 200, await project.watershed('read', { id: match[1] }));
       if (request.method !== 'POST') fail('Workspace route not found.', 'WATER_ROUTE_NOT_FOUND', 404);
       if (!sameToken(request.headers['x-workspace-token'], token)) fail('Refresh the workspace before making a change.', 'WATER_TOKEN_MISMATCH', 403);
       if (path === '/api/dss/receive') {
         if (!String(request.headers['content-type'] ?? '').startsWith('application/zip')) fail('Choose a complete DSS handover ZIP.');
         return send(response, 200, await project.receiveDssUpload(request));
       }
-      const input = await body(request);
+      const input = await body(request, path.startsWith("/api/watersheds/") ? 128 * 1024 * 1024 : undefined);
+      if ((match = /^\/api\/watersheds\/(capture|inspect|review|preview|execute|handover|receive|working|reopen-working)$/.exec(path))) {
+        const command = match[1];
+        if (['capture','inspect','execute','receive','handover'].includes(command)) {
+          const id = operationId(input.id ?? randomUUID());
+          return send(response, 202, startJob('watershed-' + command + '-' + id, () => project.watershed(command, input)));
+        }
+        return send(response, 200, await project.watershed(command, input));
+      }
+
       if (path === '/api/captures') {
         const id = operationId(input.operationId ?? randomUUID());
         return send(response, 202, startJob(id, progress => project.acquire({ operationId: id, expectedRevision: input.expectedRevision, onProgress: progress })));

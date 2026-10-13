@@ -31,7 +31,7 @@
 <section class="panel"><div class="section-head"><h2>Saved reviews</h2><span id="review-count" class="count">0</span></div><div id="reviews" class="record-list"><p class="empty">Save a review to retain the selected analysis and decision.</p></div></section>
 </aside>
 <div class="content">
-<nav class="tabs" aria-label="Workspace"><button type="button" data-tab="analysis" aria-current="page">Analysis</button><button type="button" data-tab="source">Original source</button><button type="button" data-tab="merchant">Merchant &amp; customer</button><button type="button" data-tab="dss">HEC-DSS handover</button></nav>
+<nav class="tabs" aria-label="Workspace"><button type="button" data-tab="analysis" aria-current="page">Analysis</button><button type="button" data-tab="source">Original source</button><button type="button" data-tab="merchant">Merchant &amp; customer</button><button type="button" data-tab="dss">HEC-DSS handover</button><button type="button" data-tab="watershed">Watershed migration</button></nav>
 <section class="panel tab-panel" id="tab-analysis">
 <div class="section-head"><h2>Observations and change</h2><span id="analysis-status" class="tag">Select a capture</span></div>
 <form id="analysis-form">
@@ -101,6 +101,7 @@
 <p id="dss-receive-status" class="caption" role="status" aria-live="polite"></p>
 </form>
 </section>
+<section class="panel tab-panel" id="tab-watershed" hidden><h2>Watershed migration</h2><div id="watershed-desk"></div></section>
 <section id="saved-review" class="panel" hidden><div class="section-head"><h2>Saved review</h2><span id="saved-review-id" class="tag"></span></div><p id="saved-review-note"></p><div id="review-downloads" class="actions"></div><p class="caption">The review preserves its source capture, selected periods, original quality flags and operator decision.</p></section>
 </div>
 </main><footer>U.S. Geological Survey source data · Original units, dates and quality remain attached to every capture.</footer>
