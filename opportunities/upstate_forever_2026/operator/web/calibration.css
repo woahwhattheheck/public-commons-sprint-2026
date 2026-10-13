@@ -53,3 +53,12 @@
 .calibration-plots{grid-template-columns:repeat(3,1fr)}
 .calibration-scatter{break-inside:avoid}
 }
+
+.calibration-gap-plot{margin:16px 0;overflow:auto}
+.calibration-gap-plot figcaption{font-weight:650;margin:8px 0}
+.calibration-gap-plot svg{display:block;width:100%;min-width:680px;height:auto}
+.calibration-gap-plot text{fill:#444;font:12px system-ui,sans-serif}
+.calibration-gap-plot p{font-size:13px;line-height:1.5;color:#555}
+.calibration-gap-range{stroke:#333;stroke-width:2;fill:none}
+.calibration-gap-zero{stroke:#111;stroke-width:1.2;stroke-dasharray:5 4}
+@media print{.calibration-gap-plot svg{min-width:0}}
