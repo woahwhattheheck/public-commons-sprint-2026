@@ -85,7 +85,7 @@ The complete original LibraryUploadWorkflow now runs in the owning foreground. N
 
 Both older bridge editions, the original name-collision adoption, C998 receipt, and complete 14280 result history remain retained. Existing completed direct-file saves still reopen through their original receipt handler. Any unresolved prior request retains its original identity and requires its actual outcome to be reconciled before another dispatch.
 
-The entry validates selected bridge/runtime bytes and all three helpers before execution. The original 1,258,636-byte embedded producer input remains byte-identical. Current bridge: 25926 bytes / 2c9468f0b5c26e5279aede0af0690fb613e2788c29fd9f689e8f16ee04fdaf5f. Complete public input: 1893021 bytes / c55f97218e600f51e791db7b578e2113c70b6696ead08f9b0bea71976786efc5.
+The entry validates selected bridge/runtime bytes and all three helpers before execution. The original 1,258,636-byte embedded producer input remains byte-identical. Current bridge: 25926 bytes / 2c9468f0b5c26e5279aede0af0690fb613e2788c29fd9f689e8f16ee04fdaf5f. Complete public input: 1909306 bytes / 42848fc09edd62685e4ada2c3154bef60cb4cc4843a2b0ee19172b564357f493.
 
 For each new file the foreground persists its source and original call, then emits LIBRARY_PREPARED_TOOL_REQUEST. The controller permits only the canonical connector_openai_library prepare_uploads and finalize_uploads actions for that bound artifact:
 

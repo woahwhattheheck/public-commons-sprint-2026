@@ -17,6 +17,8 @@ def run_lean_aviary(value):
  for key,pin in (("bridgePredecessorSource",bridge_adoption["previous"]),("bridgeSource",bridge_adoption["selected"])):
   raw=value[key].encode()
   need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The selected save-source adoption bytes differ")
+ raw=value["previousBridgePredecessorSource"].encode("utf-8");pin=value["previousBridgeSourceAdoption"]["previous"]
+ need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The original predecessor source changed")
  prepared_adoption=value["preparedSaveAdoption"]
  need(prepared_adoption.get("schema")=="commons.aviary.private-prepared-save-source-adoption.v1"
       and prepared_adoption.get("operationId")==operation,"The original prepared-save adoption belongs to another operation")
@@ -78,6 +80,7 @@ def run_lean_aviary(value):
   ("lean-runtime",value["runtimeSource"].encode(),".py"),
   ("official-library-save",value["bridgeSource"].encode(),".py"),
   ("official-library-save-predecessor",value["bridgePredecessorSource"].encode(),".py"),
+  ("original-official-library-v2-predecessor",value["previousBridgePredecessorSource"].encode(),".py"),
   ("official-library-name-adoption",(json.dumps(value["bridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
   ("original-library-name-adoption",(json.dumps(value["previousBridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
   ("private-prepared-save-adoption",(json.dumps(value["preparedSaveAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
