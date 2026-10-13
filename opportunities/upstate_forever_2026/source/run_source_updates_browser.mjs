@@ -2,6 +2,7 @@
 /** Operate real retained source editions through the original scientific operator. */
 import { chromium } from 'playwright';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, join, relative, basename } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -11,11 +12,12 @@ const {values:args}=parseArgs({options:{
  'to-collection':{type:'string'},mapping:{type:'string'},title:{type:'string'},
  output:{type:'string'},'run-models':{type:'boolean',default:false},
  transfer:{type:'boolean',default:false},video:{type:'boolean',default:false},
+ 'expect-reuse':{type:'boolean',default:false},
  headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_source_updates_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY --from-collection ORIGINAL_EDITION --to-collection REPLACEMENT_EDITION [--mapping ORIGINAL_ID_MAP.json] [--title "Study source update"] [--run-models] [--transfer] [--output DIRECTORY] [--video] [--browser-channel NAME | --browser-executable PATH]');
+ console.log('node source/run_source_updates_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY --from-collection ORIGINAL_EDITION --to-collection REPLACEMENT_EDITION [--mapping ORIGINAL_ID_MAP.json] [--title "Study source update"] [--run-models] [--expect-reuse] [--transfer] [--output DIRECTORY] [--video] [--browser-channel NAME | --browser-executable PATH]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','source-updates',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -48,6 +50,46 @@ async function record(name,details={}){
 async function shot(name){
  const file=join(output,name+'.png');await page.screenshot({path:file,fullPage:true,animations:'disabled'});
  const bytes=await readFile(file);journal.screenshots.push({path:relative(output,file),bytes:bytes.length,sha256:hash(bytes)});
+}
+async function fileIdentity(path){
+ const digest=createHash('sha256');let bytes=0;
+ for await(const chunk of createReadStream(path)){bytes+=chunk.length;digest.update(chunk);}
+ return {bytes,sha256:digest.digest('hex')};
+}
+function completedReceipts(plan){
+ const state=plan.state||{},runs=state.run_results||{};
+ required(state.state==='complete','The update has not completed its actual successor runs: '+String(state.state));
+ required(Object.keys(runs).length>0,'Select a source update with actual retained native runs for --run-models.');
+ return Object.fromEntries(Object.entries(runs).sort(([a],[b])=>a.localeCompare(b)).map(([id,row])=>{
+  const models=row.model_results||{},artifacts=row.artifacts||{};
+  required(row.state==='complete'&&Object.keys(models).length>0&&Object.keys(artifacts).length>0,
+   'The refreshed run lacks completed model stages or retained outputs: '+id);
+  for(const [model,value] of Object.entries(models)){
+   required(['native','reused'].includes(value.mode),'The model has no actual execution mode: '+id+'/'+model);
+   if(value.mode==='reused')required(value.source_run_id,'The reused model has no retained source run: '+id+'/'+model);
+   if(args['expect-reuse'])required(value.mode==='reused','The selected lineage-only course computed a native stage: '+id+'/'+model);
+  }
+  return [id,{from_run_id:row.from_run_id,to_run_id:row.to_run_id,state:row.state,
+   model_results:models,artifacts,completed_at:row.completed_at,
+   reused_model_count:row.reused_model_count,selected_model_count:row.selected_model_count}];
+ }));
+}
+async function inspectView(name,width){
+ await page.setViewportSize({width,height:width<600?844:1000});
+ await choosePlan(selectedPlan.id);
+ const layout=await page.locator('.source-refresh-desk').evaluate(shell=>{
+  const root=shell.shadowRoot,viewport=document.documentElement.clientWidth;
+  return {viewport_width:viewport,page_scroll_width:document.documentElement.scrollWidth,
+   controls:['plans','prepare-plan','run-plan','report-format','download-report','download-plan','export-study'].map(id=>{
+    const item=root.querySelector('#'+id),box=item.getBoundingClientRect(),style=getComputedStyle(item);
+    return {id,text:(item.tagName==='SELECT'?item.selectedOptions[0]?.textContent:item.textContent)?.trim(),
+     x:box.x,width:box.width,height:box.height,disabled:item.disabled,
+     rendered:box.width>0&&box.height>0&&style.visibility!=='hidden',
+     beyond_viewport:box.left<-.5||box.right>viewport+.5};
+   })};
+ });
+ await shot(name);
+ await record('Inspected populated source update at '+width+' pixels',{plan_id:selectedPlan.id,layout});
 }
 async function readPlan(workspace,id){
  return json(await page.request.get(origin+'/api/source-refresh/plan?'+new URLSearchParams({workspace,id}),{headers:{Authorization:'Bearer '+capability}}),'Retained source update');
@@ -94,7 +136,7 @@ async function choosePlan(id){
 async function saveDownload(locator,name){
  const pending=page.waitForEvent('download');await locator.click();const download=await pending;
  const path=join(output,'exports',name||basename(download.suggestedFilename()));await download.saveAs(path);
- const bytes=await readFile(path);journal.downloads.push({path:relative(output,path),bytes:bytes.length,sha256:hash(bytes)});return{path,bytes};
+ const identity=await fileIdentity(path);journal.downloads.push({path:relative(output,path),...identity});return{path,...identity};
 }
 async function closeDetail(){
  if(await page.locator('#detail-dialog').isVisible())await page.locator('#detail-dialog [data-action="detail-close"]').click();
@@ -106,7 +148,7 @@ async function receivingArchive(){
  // The exact native ticket selects the archive if labels are repeated.
  const exact=page.locator('#detail-body a[download][href="'+ticket.url+'?download=1"]');
  await exact.waitFor();const downloaded=await saveDownload(exact,basename(ticket.filename));
- required(downloaded.bytes.length===ticket.bytes&&hash(downloaded.bytes)===ticket.sha256,'The original downloaded archive differs from its retained ticket.');
+ required(downloaded.bytes===ticket.bytes&&downloaded.sha256===ticket.sha256,'The original downloaded archive differs from its retained ticket.');
  await closeDetail();
  await page.locator('[data-view="journey"]').click();
  await page.locator('.journey-steps [data-action="journey-step"][data-step="reopen"]').click();
@@ -121,10 +163,12 @@ async function receivingArchive(){
  required(canonical(received.preview)===canonical(selectedPlan.preview),'The receiving copy changed the native dependency snapshot.');
  required(canonical(received.state)===canonical(selectedPlan.state),'The receiving copy changed retained source-update progress.');
  await record('Reopened the exact update in the restored original workspace',{workspace_key:key,plan_id:received.id,archive_sha256:ticket.sha256});
- await shot('08-restored-source-update');
+ await inspectView('08-restored-source-update-desktop',1440);
+ await inspectView('09-restored-source-update-phone',390);
 }
 async function main(){
  journal.browser_runtime=browserRuntime();
+ required(!args['expect-reuse']||args['run-models'],'Use --expect-reuse with --run-models on a lineage-only update of completed original runs.');
  await mkdir(join(output,'exports'),{recursive:true});
  for(const key of ['url-file','workspace','from-collection','to-collection'])required(args[key],'Supply --'+key+' from the original operator and retained source editions.');
  required(args['from-collection']!==args['to-collection'],'Select two different original retained source editions.');
@@ -170,15 +214,24 @@ async function main(){
  await choosePlan(planId);await shot('02-prepared-native-cases');
  if(args['run-models']){
   await queue('.source-refresh-desk #run-plan','source.refresh.apply');selectedPlan=await readPlan(currentWorkspace,planId);
+  const receipts=completedReceipts(selectedPlan);
+  await record('Retained actual completed model stages and outputs',{plan_id:planId,run_receipts:receipts});
   await choosePlan(planId);await shot('03-completed-native-source-update');
+  await queue('.source-refresh-desk #prepare-plan','source.refresh.apply');
+  selectedPlan=await readPlan(currentWorkspace,planId);
+  required(canonical(completedReceipts(selectedPlan))===canonical(receipts),'Preparation-only continuation changed completed outputs or model reuse provenance.');
+  await record('Preserved completed model receipts through preparation-only continuation',{plan_id:planId});
  }
+ await inspectView('03-source-update-desktop',1440);
+ await inspectView('03-source-update-phone',390);
  await desk.locator('#report-format').selectOption('html');
  await saveDownload(desk.locator('#download-report'),'source-update-report.html');
  await desk.locator('#report-format').selectOption('csv');
  await saveDownload(desk.locator('#download-report'),'source-update-cases.csv');
  const savedPlan=await saveDownload(desk.locator('#download-plan'),'source-update-plan.json');
- required(JSON.parse(savedPlan.bytes.toString('utf8')).id===planId,'The downloaded plan identifies a different update.');
- await record('Downloaded actual native update plan and reports',{plan_id:planId});
+ required(JSON.parse(await readFile(savedPlan.path,'utf8')).id===planId,'The downloaded plan identifies a different update.');
+ await record('Downloaded actual native update plan and reports from the narrow view',{plan_id:planId,viewport:page.viewportSize()});
+ await page.setViewportSize({width:1440,height:1000});
  await page.locator('[data-view="sources"]').click();await openDesk();desk=page.locator('.source-refresh-desk');
  required(await desk.locator('#plan-title').inputValue()===title,'Leaving the desk lost the unsaved update title.');
  await choosePlan(planId);await shot('04-reopened-source-update');
@@ -189,7 +242,9 @@ async function main(){
   await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();await choosePlan(planId);
   const reopened=await readPlan(args.workspace,planId);
   required(canonical(reopened.selection)===canonical(selectedPlan.selection)&&canonical(reopened.state)===canonical(selectedPlan.state),'Fresh receiving browser changed the retained update.');
-  await record('Opened the native update in a fresh browser',{plan_id:planId});await shot('05-fresh-browser-reopen');
+  await record('Opened the native update in a fresh browser',{plan_id:planId});
+  await inspectView('05-fresh-browser-reopen-desktop',1440);
+  await inspectView('06-fresh-browser-reopen-phone',390);
  }finally{await fresh.close();page=first;currentWorkspace=args.workspace;}
  if(args.transfer)await receivingArchive();
  required(!journal.browser_errors.length,'The browser reported an actual exception: '+journal.browser_errors.join('; '));
