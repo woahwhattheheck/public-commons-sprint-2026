@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "receptor-study-transfer",
-  "source_reference": "ES26 continuation of original ECO-SOURCE12 R8 source-water products",
+  "source_reference": "ES26 continuation of original ECO-SOURCE12 R8/R9 source-water products",
   "extend_components": {
     "receptors": {
       "paths": [
@@ -28,7 +28,12 @@
         "model/receptor_experiments.py",
         "model/receptor_cli.py",
         "model/receptor_execution.py",
-        "model/receptors.py"
+        "model/receptors.py",
+        "model/receptor_report_maps.py",
+        "model/scientific_figures.py",
+        "model/scientific_map_figures.py",
+        "model/spatial_esri.py",
+        "source/capture_upstream_network.py"
       ]
     }
   }

@@ -1,0 +1,83 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "gis-vector-reviews",
+  "title": "Working vector change reviews",
+  "version": "1",
+  "order": 76,
+  "requires_actions": [
+    "gis.project.receive",
+    "gis.project.adopt-sources"
+  ],
+  "assets": [],
+  "backend": {
+    "module": "gis_vector_reviews",
+    "factory": {
+      "handler": "GISVectorReviews",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "gis.vector.review"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-vector-reviews/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-vector-reviews/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "gis_vector_reviews",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Operate and review the complete merchant financial workflow: setup, invoice, payment, refund, bank reconciliation, customer close and receiving.">
+<title>Merchant financial walkthrough — Stellar Forge</title>
+<link rel="stylesheet" href="./grant.css">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#financial-walkthrough">Skip to the walkthrough</a>
+<header class="site-header"><a class="brand" href="./grant.html">Stellar Forge</a><nav aria-label="Financial walkthrough navigation"><a href="./grant.html">Application</a><a href="./grant-companion.html">Product and financing</a><a href="./grant-data/financial-walkthrough.md" download>Download complete guide</a></nav></header>
+<main id="financial-walkthrough" class="shell"><div class="reading-layout"><aside class="contents"><nav aria-label="Walkthrough contents"><ol><li><a href="#choose-the-working-edition-and-account">Choose the working edition and account</a></li><li><a href="#open-the-delivered-customer-billing-case">Open the delivered customer billing case</a></li><li><a href="#1-set-up-the-merchants-installed-workspace">1. Set up the merchant's installed workspace</a></li><li><a href="#2-start-with-the-useful-paid-result">2. Start with the useful paid result</a></li><li><a href="#3-turn-the-accepted-service-into-an-issued-invoice">3. Turn the accepted service into an issued invoice</a></li><li><a href="#4-receive-the-payment-against-the-original-obligation">4. Receive the payment against the original obligation</a></li><li><a href="#5-return-customer-funds-or-move-paid-credit">5. Return customer funds or move paid credit</a></li><li><a href="#6-reconcile-the-bank-period">6. Reconcile the bank period</a></li><li><a href="#6a-receive-the-complete-close-in-the-accountants-private-review">6a. Receive the complete close in the accountant's private review</a></li><li><a href="#7-schedule-and-follow-up-the-remaining-balance">7. Schedule and follow up the remaining balance</a></li><li><a href="#8-close-the-customers-account-and-service-period">8. Close the customer's account and service period</a></li><li><a href="#9-receive-the-accountants-xero-outcome">9. Receive the accountant's Xero outcome</a></li><li><a href="#10-resume-and-hand-over-the-complete-operation">10. Resume and hand over the complete operation</a></li><li><a href="#use-the-same-workflow-from-the-merchant-agent">Use the same workflow from the merchant agent</a></li><li><a href="#present-the-result-and-connect-it-to-the-award">Present the result and connect it to the award</a></li><li><a href="#original-source-and-receiving-programmes">Original source and receiving programmes</a></li></ol></nav></aside><article class="application-prose" aria-label="Complete merchant financial walkthrough">
+<h1 id="merchant-financial-reviewer-walkthrough">Merchant financial reviewer walkthrough</h1>
+<p>Follow one merchant's useful service and original customer records from setup through payment, correction, account close and receiving. The finished handover explains what was sold, what the customer received, which money moved, what remains due and how the next operator continues the same work.</p>
+<p>Use the actual selected merchant, customer, source files and account period throughout. The installed product keeps the original network transfers, commercial valuations, issued documents, bank observations and service activity available together. This guide follows the existing applications and their saved records.</p>
+<h2 id="choose-the-working-edition-and-account">Choose the working edition and account</h2>
+<p>The public financial integration is <a href="https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2583">PR2583, merge 8aed042e</a>. Its 139 changed paths join invoice collection, refunds, customer credit, bank receipts, payment plans, service agreements, customer closing and Xero with the original merchant accounting host. The same release exposes 46 receivables operations through the existing merchant MCP interface.</p>
+<p>The maintained product also includes the complete <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/e57a359966f093f483a1aa5f4c2dac28566b6a5c/products/merchant-bank-statements/README.md">Bank statement reconciliation application</a>, with original statement balances, fees, remittances and account-close editions. Select the complete maintained source that contains the applications needed for the chosen customer task. The package's manifest and saved Runtime review identify that source and its dependencies.</p>
+<div class="table-scroll" role="region" aria-label="Open in the installed product / Work performed / Original state to retain" tabindex="0"><table><thead><tr><th scope="col">Open in the installed product</th><th scope="col">Work performed</th><th scope="col">Original state to retain</th></tr></thead><tbody><tr><th scope="row">Grant purchase reviewer</th><td>Open the existing paid example and read its complete saved result.</td><td>Purchase packet, quote identities, returned bytes and reviewer directory.</td></tr><tr><th scope="row">Merchant accounting</th><td>Review the merchant's original source, native transfer, delivery and reconciliation.</td><td>Accounting workspace, configured outbox, proofs, terms and saved report.</td></tr><tr><th scope="row">Merchant receivables</th><td>Issue the customer's invoice, receive or apply money, credit or refund, and continue collections.</td><td>Customer UUID, invoice and receipt records, dated allocations and original request IDs.</td></tr><tr><th scope="row">Customer payment plans and Xero customer handovers</th><td>Agree collection dates and receive the accountant's original document outcomes.</td><td>Same accounting workspace, schedule editions and Xero package family.</td></tr><tr><th scope="row">Bank statement reconciliation</th><td>Match actual bank movements, fees and existing customer money; retain a period close.</td><td>Original account and statement files, posting coverage and close editions.</td></tr><tr><th scope="row">Bank accountant receiving</th><td>Inspect the retained close and source/customer lineage, compare corrections, retain findings and hand over the whole review.</td><td>Exact original close TARs, private review editions, original edit requests and complete receiving bundle.</td></tr><tr><th scope="row">Customer statements</th><td>Explain prepaid service activity and issue or resume the customer's closing cycle.</td><td>Original merchant connection, capture sources, saved cycle and complete customer packet.</td></tr></tbody></table></div>
+<p>The accounting directory has one writer. Use the companion views of the running service together. To move that directory to another saved Application or a direct command, stop its current owner through the existing lifecycle and reopen the same directory. The customer-closing workbench uses the existing merchant MCP owner.</p>
+<h2 id="open-the-delivered-customer-billing-case">Open the delivered customer billing case</h2>
+<p>The completed <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/eaa169825c48c5ec3cef260672dc8fa52deb5e12/stellar/scf_2026/commercial_milestone_handover_20261012/PORTABLE.md">portable customer handover</a> supplies a concrete starting account. Its version-1 archive retains the full 243-file application, the original native accounting workspace, both saved planning cases, customer working files and the portable opening/repacking commands. The original native and independent receiving operation completed on the desktop and 390-pixel customer billing views.</p>
+<p>Use the delivered <strong>SCF_Customer_Billing_Portable_Complete_20261012.zip</strong> and its included openers. The complete archive is 11,158,060 bytes with SHA-256 <strong>a1579acfd1a1ac9f6c3597fb7ed341d37257a9bcea8a5427a51875d59f6eb834</strong>. On Linux with Python 3.11 or later and Node 22 or later:</p>
+<pre><code class="language-sh">python3 -B open-portable-commercial-handover.py inspect \
+  /absolute/private/SCF_Customer_Billing_Portable_Complete_20261012.zip
+
+python3 -B open-portable-commercial-handover.py open \
+  /absolute/private/SCF_Customer_Billing_Portable_Complete_20261012.zip \
+  --root /absolute/private/customer-billing \
+  --sha256 a1579acfd1a1ac9f6c3597fb7ed341d37257a9bcea8a5427a51875d59f6eb834
+</code></pre>
+<p>The chosen root's parent must exist. Open the private access page printed by the launcher. Choose <strong>Delivery operations → Customer billing</strong>, the retained case and its <strong>Freeform Solutions</strong> schedule. Follow the original invoices, receipt and allocation:</p>
+<div class="table-scroll" role="region" aria-label="Original operated example / Retained outcome" tabindex="0"><table><thead><tr><th scope="col">Original operated example</th><th scope="col">Retained outcome</th></tr></thead><tbody><tr><th scope="row">First USD 4,400 milestone</th><td>Invoice Paid, original USD 4,400 receipt allocation, amount due 0.</td></tr><tr><th scope="row">Later USD 4,400 handover milestone</th><td>Invoice Open, amount due USD 4,400.</td></tr><tr><th scope="row">Planning and accounting receiving</th><td>Both original planning databases and the full account survived repack, independent cold receiving and reopening.</td></tr></tbody></table></div>
+<p>Add <strong>--case receiving</strong> when opening to select the independently received planning case. Repeated opening continues the same private working root, including later edits. After closing its services, the original <strong>repack</strong> command produces the next complete edition from that current account and both planning databases. The linked portable guide includes the full receiving and later-move commands.</p>
+<p>These saved values describe the completed customer operating example and its original account records. The application measures independent adoption and paid Stellar use through its existing customer and purchase registers.</p>
+<h2 id="1-set-up-the-merchants-installed-workspace">1. Set up the merchant's installed workspace</h2>
+<p>Build the selected source through the existing distribution builder. This example selects the complete receivables, quotation, payment-plan and accountant workflow:</p>
+<pre><code class="language-sh">node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/merchant-checkout --ref FULL_COMMIT_SHA \
+  --selection merchant-receivables-xero --out /private/finance-release
+</code></pre>
+<p>Retain the returned archive and SHA-256. Prepare and open it through the original runtime installer:</p>
+<pre><code class="language-sh">node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \
+  --dir /private/finance-runtime \
+  --archive /absolute/returned-package.tgz --sha256 RETURNED_ARCHIVE_SHA256 \
+  --native --feature schema --feature openapi --operator
+
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
+  --dir /private/finance-runtime
+
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect \
+  --dir /private/finance-runtime --load --source
+</code></pre>
+<p>The installer selects the original declared package versions and retains their lock. Its <code>resume</code> operation continues an interrupted preparation. Use the <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/e57a359966f093f483a1aa5f4c2dac28566b6a5c/products/merchant-bank-statements/INSTALLATION.md">bank installation guide</a> when the chosen customer task includes that complete bank application.</p>
+<p>The examples below use the installed <code>starforge</code> command. The installer runs the same command in its retained package layout:</p>
+<pre><code class="language-sh">node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs run \
+  --dir /private/finance-runtime -- receivables help
+</code></pre>
+<p>For a new accounting workspace, select the merchant's actual source outbox, verification directory and accounting terms. Keep the state directory separate from those inputs:</p>
+<pre><code class="language-sh">starforge receivables serve \
+  --directory /private/merchant/accounting \
+  --outbox /private/merchant/source/outbox \
+  --proof-dir /private/merchant/source/proofs \
+  --terms /private/merchant/source/terms.json \
+  --port 8448
+</code></pre>
+<p>For an existing account, retain its saved source configuration and open that same accounting directory. Open the URL printed at startup. In <strong>Settings</strong>, save the issuer's billing identity, document prefixes and payment instructions. In <strong>Customers and statements</strong>, select or create the actual customer, billing address and reference. Reuse that customer's UUID through the invoice, receipt and export.</p>
+<p>To manage the installed application, use the original Runtime workspace:</p>
+<pre><code class="language-sh">starforge runtime-workspace init --workspace /private/finance-operator
+
+starforge runtime-workspace attach \
+  --workspace /private/finance-operator \
+  --runtime /private/finance-runtime --label &quot;Merchant finance&quot;
+
+starforge runtime-workspace serve \
+  --workspace /private/finance-operator --port 8465
+</code></pre>
+<p>In <strong>Applications</strong>, review the installed runtime and original accounting directory, then <strong>Save → Start → Open</strong> the selected merchant application. <strong>Xero customer handovers</strong> serves its original invoice, payment-plan and customer-statement companion routes under that same accounting owner.</p>
+<p><strong>Ready to continue:</strong> the operator can identify the installed source, workspace UUID, actual input paths, issuer and selected customer in the application.</p>
+<h2 id="2-start-with-the-useful-paid-result">2. Start with the useful paid result</h2>
+<p>For the selected merchant's own demonstration, open the customer's recorded purchase in <strong>Buyer results</strong> and the matching original merchant accounting event. Review the exact source/query, agreed population or period, price, network, asset, result and fulfillment together.</p>
+<p>The <strong>grant-reviewer</strong> selection supplies the already operated bundled reference for this opening step. Prepare that selected runtime through the same original builder and installer, with its own release and runtime directories, and attach it to the existing Runtime workspace. Its source command is:</p>
+<pre><code class="language-sh">node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/merchant-checkout --ref FULL_COMMIT_SHA \
+  --selection grant-reviewer --out /private/grant-reviewer-release
+</code></pre>
+<p>Use the returned archive and source hash in the same prepare/install/inspect workflow above. In <strong>Applications</strong>, choose <strong>Grant purchase reviewer</strong> from that attached runtime, review its private workbench directory, then <strong>Save → Connect → Start → Open</strong>. The direct entry is:</p>
+<pre><code class="language-sh">starforge grant-demo workbench \
+  --dir /private/merchant/grant-review --port 0
+</code></pre>
+<p>In <strong>Packet intake</strong>, choose <strong>Review bundled purchase</strong>. Open <strong>Source and query</strong>, then <strong>Receive this packet → Open original Buyer → Buyer results</strong>. Select each original quote and choose <strong>Read complete saved result</strong>.</p>
+<p>The bundled successful HPD result contains 100 rows, 14 columns and 53,468 bytes; its retained truncation flag is true. The original 4,733-byte error result belongs to the earlier indeterminate quote and remains separately readable. A different completed Queens HPD acquisition received its full 144-row task in two paid pages. The <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/0c422d12288849eb38466b4e36e9288e4383d0e8/products/grant-reviewer/OPERATING.md">original reviewer guide</a> supplies the saved-packet and cold-receiving procedure.</p>
+<p>In <strong>Merchant accounting → Sources</strong>, open the chosen merchant's actual outbox, verification files and accounting terms. <strong>Reconcile current sources</strong> retains a complete source snapshot. Open the resulting event, native transfer, full delivery record and customer/order binding.</p>
+<p>Native asset units and merchant-supplied commercial valuation have their own fields. The original transaction fingerprint joins the transfer on its selected network. A saved output, another read of it and a later customer statement continue that same purchase.</p>
+<p><strong>Ready to continue:</strong> the useful output opens completely, and its recorded commercial and native identities are visible in the original purchase and accounting records.</p>
+<h2 id="3-turn-the-accepted-service-into-an-issued-invoice">3. Turn the accepted service into an issued invoice</h2>
+<p>An installation or service obligation begins with the customer's actual accepted scope. In <strong>Merchant support</strong>, open the original quotation and recorded response. Retain the complete quotation and its selected response files.</p>
+<p>In <strong>Invoices and payments</strong>, import those originals, map the accounting customer and choose the intended charge. <strong>IMPLEMENTATION</strong> selects the one-time lines. <strong>RECURRING</strong> selects the original recurring lines with an explicit positive period count and period label. An accepted service-agreement calendar can prepare the original period's draft through the same invoice writer.</p>
+<p>Review the quote edition, customer response, quantities, unit prices, discounts, taxes, commercial currency and decimal precision. The issue date, due date and service period answer different questions and stay explicit. The source review retains the original quote lines, calculations and rounding differences. A manual invoice uses the same complete review with the operator's actual supporting source.</p>
+<p>If this merchant enabled <strong>Customer credit</strong>, inspect the saved policy and current assessment before release. The decision shows the selected draft alongside the customer's current and future obligations, overdue or disputed balances, and available receipts. Record the actual decision and reason. The invoice issue uses that reviewed account and policy basis.</p>
+<p><strong>Save draft → Review → Issue</strong> freezes the numbered invoice with the issuer, customer, dates, payment instructions and exact amounts. Download its original JSON, line CSV, printable HTML and manifest. Later account changes remain visible alongside that issued document.</p>
+<p><strong>Ready to continue:</strong> the invoice has its original number and files, retained source/acceptance, actual dates and a dated amount due.</p>
+<h2 id="4-receive-the-payment-against-the-original-obligation">4. Receive the payment against the original obligation</h2>
+<p>Choose the route the customer actually used. The receipt records received money; an allocation states how much of that receipt applies to an invoice and from which date. The unused portion remains in that customer's account.</p>
+<h3 id="stellar-wallet-collection">Stellar wallet collection</h3>
+<p>In the invoice's <strong>Stellar payment requests</strong>, select the part of the balance to collect. Review the merchant destination, network, asset and issuer, memo, expiry and payer constraint when selected.</p>
+<p><code>invoiceAmount</code> is the commercial value applied to the invoice. <code>stellarAmount</code> is the exact transferred asset amount, at up to seven decimal places. Preserve the agreed <code>valuationNote</code> whenever those units differ.</p>
+<p>Issue the reviewed request and open its original <strong>payment-request.html</strong> and <strong>payment-request.uri</strong>. The customer reviews and signs those terms in their selected wallet. Record the returned transaction hash against that issued request, then choose <strong>Receive</strong>.</p>
+<p>The original verifier checks the network, successful operation, destination, asset, received amount, memo and ledger time. Fee-bump outer and inner hashes remain aliases of the same transfer. Public-network receiving retains the original customer receipt and eligible allocation; the test-network path displays its original <strong>TESTNET_VERIFIED</strong> observation and proof.</p>
+<p>If a payer or invoice reference was entered incorrectly before verification, use the original noted correction in that saved return and inspect the resulting history. The reported transaction stays in its original record. A verified or receipted transfer retains its established financial assignment.</p>
+<h3 id="bank-payment-or-another-recorded-receipt">Bank payment or another recorded receipt</h3>
+<p>Open the original receipt or source payment first. Retain the actual received date, method, reference, currency and amount. Select the invoice and its allocation amount and effective date.</p>
+<p>A bank observation that refers to an already recorded payment matches that receipt. A customer payment spanning several invoices uses explicit allocations; a bank credit spanning several customers uses the original reviewed split-posting flow in <strong>Bank statements</strong>.</p>
+<p>When a completed native accounting event supplies the receipt, select that original report/event and retain its network, transaction, asset and atomic amount alongside the chosen commercial valuation.</p>
+<p><strong>Ready to continue:</strong> the receipt, original source, invoice allocation and remaining customer funds agree at the selected accounting date. The source and invoice remain downloadable.</p>
+<h2 id="5-return-customer-funds-or-move-paid-credit">5. Return customer funds or move paid credit</h2>
+<p>Open <strong>Customer funds</strong> for the same customer and currency. Select the original receipt, the actual reason and the intended refund or credit movement. The preview shows allocated, reserved, refunded and available amounts before and after the proposal.</p>
+<p>A credit note changes the issued charge. Select the original invoice lines and explicit net/tax amounts, review and issue the credit. When an already paid invoice is credited, the original paid allocation may need a dated release before the receipt can fund the refund or another invoice. The desk reviews that release and any remaining replacement allocation as one conserved change.</p>
+<p>For a completed refund, record its actual method, reference and payment date. For a <strong>Stellar wallet</strong> refund, review the merchant paying account, customer destination, network, asset and exact value before issuing the retained wallet request. Reserved customer funds and the later verified payment remain visible in the original request history. The original verified payout or refund-adjustment path can receive a payment that already has native proof.</p>
+<p><strong>Move credit</strong> applies the same retained customer receipt to selected outstanding invoices. Review the target amounts and dates. Any remainder stays available in the account.</p>
+<p>A corrected recorded refund retains the original reversal and linked replacement. The actual payment date and effective accounting correction can differ; inspect both. Saved refund files contain the original receiving record, customer documents and native proof.</p>
+<p><strong>Ready to continue:</strong> the customer account explains the credit, released or replaced allocations, refund or transfer, remaining funds and every original source record.</p>
+<h2 id="6-reconcile-the-bank-period">6. Reconcile the bank period</h2>
+<p>Open the selected original bank account and actual statement period. The receivables <strong>Bank statements</strong> desk and the maintained <strong>Bank statement reconciliation</strong> application use the same payment/source relationships. The installed bank selection opens <strong>/bank-statements/</strong>; its companion invoice, customer and payment-plan views share that original accounting owner. Select <strong>Remittance receiving</strong> at <strong>/receivables/remittances.html</strong> for a customer's complete payment-and-invoice allocation CSV.</p>
+<p>Receive the complete CSV, OFX/QFX or selected MT940 source through its original parser. Review the actual account section, currency, date convention, opening/closing information and parser report. CSV uses an explicit column mapping. MT940 retains its selected envelope, encoding, debit/reversal convention, year window and value-date basis.</p>
+<p>Match each source movement to the existing receipt, refund or other cash record. For new customer money, review the complete split and original invoice allocations. A partial correction preserves the other source portions and the customer's remaining receipt.</p>
+<p>The documented bank workflow can match a 97.00 bank credit to a 100.00 customer receipt plus a separate -3.00 fee in the same currency. The invoice keeps its 100.00 payment allocation. That gross/net relationship remains explicit in the bank posting instead of changing the original customer charge.</p>
+<p>Use the retained account and inclusive period to review its close. Inspect opening balance plus selected posted movements against the actual closing balance, together with outstanding matching and source work. Retain the reviewed close with its transaction/posting CSVs, original statements, readable reconciliation, editable account data and customer exports.</p>
+<p>A later correction reopens the affected close and creates a reviewed successor. Earlier close files remain available. The original bank operation reported a 150.00 close and its corrected 155.00 successor; the <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/e57a359966f093f483a1aa5f4c2dac28566b6a5c/products/merchant-bank-statements/EXAMPLE.md">worked account guide</a> identifies that same example and its original sources.</p>
+<p><strong>Ready to continue:</strong> the reviewer can trace a bank row through exact posting coverage to customer money and a retained account-close edition.</p>
+<h2 id="6a-receive-the-complete-close-in-the-accountants-private-review">6a. Receive the complete close in the accountant's private review</h2>
+<p>The accountant works from the exact retained Bank close and its original statements and customer documents. In <strong>Close statement</strong>, open the retained close and download <strong>account.tar</strong>. The existing Bank command exports the same file:</p>
+<pre><code class="language-sh">starforge bank-statements file --directory /private/merchant/accounting \
+  --kind close --id ORIGINAL_CLOSE_UUID --name account.tar \
+  --out /private/accountant/original-bank-close.tar
+</code></pre>
+<p>Select a runtime that includes the <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/e7da0a7f1aff44d44398498063df2d2d9e97684b/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/ACCOUNTANT_RECEIVING.md">complete accountant receiving application</a>. Its <strong>bank-accountant-receiving</strong> selection carries the whole browser, native command, types, guide and manual operating course through the existing builder and installer. A complete Bank runtime mounts the same application at <strong>/bank-statements/accountant-receiving/</strong>.</p>
+<h3 id="inspect-the-original-close-and-its-financial-sources">Inspect the original close and its financial sources</h3>
+<p>Open <strong>Bank reconciliation → Accountant receiving</strong>, or run the separately installed reader:</p>
+<pre><code class="language-sh">starforge bank-accountant serve --port 8458
+</code></pre>
+<p>Choose <strong>Receive original files</strong> and select the complete Bank close TAR. The reader verifies the exact Bank file manifest, member lengths and digests, original account/period/currency and retained close basis. It also verifies the nested customer archives and original documents. Keep the original files with the review.</p>
+<p>Select the <strong>Original close edition</strong>. In <strong>Transactions</strong>, open <strong>View lineage</strong> on the actual movement being reviewed. Read its statement source and interpretation, exact bank amount, posting parts, matched receipt or refund, allocation history and original customer documents together. A gross customer receipt, net bank credit and separate fee retain their original amounts and units.</p>
+<p>In <strong>Sources and files</strong>, download the unchanged original statement or any retained document needed for the review. In <strong>Customer accounts</strong>, inspect the customer snapshot at the close's retained account date. A later customer account belongs to its own later source edition.</p>
+<h3 id="retain-the-accountants-findings">Retain the accountant's findings</h3>
+<p>Choose <strong>Add review note</strong> on the original close, transaction, posting part, statement source or customer. Enter the actual reviewer, note, status and edition summary. <strong>Open</strong>, <strong>Question</strong>, <strong>Examined</strong> and <strong>Resolved</strong> describe this private accountant review. Each note remains bound to the original archive and record.</p>
+<p>Choose <strong>Retain review edition</strong>. The saved edition contains the complete note set, its reviewer, time, summary and digest. <strong>Review edition</strong> opens earlier retained sets. A live typed draft remains separate until retained; save it before exporting the handover. If another browser window advanced the same desk, choose <strong>Reopen saved review</strong>, inspect the current edition and continue the preserved draft.</p>
+<p>The browser's private store belongs to its current browser profile and address. Export the full review before changing computers, profiles or the server port. The native alternative keeps the same review in an explicit private directory:</p>
+<pre><code class="language-sh">starforge bank-accountant create \
+  --directory /private/accountant/close-review \
+  --name &quot;Selected merchant close review&quot; \
+  --archive /private/accountant/original-bank-close.tar
+
+starforge bank-accountant show --directory /private/accountant/close-review
+
+starforge bank-accountant note \
+  --directory /private/accountant/close-review \
+  --archive ORIGINAL_ARCHIVE_SHA256 --kind TRANSACTION \
+  --id ORIGINAL_TRANSACTION_UUID --status QUESTION \
+  --note-file /private/accountant/source-question.txt \
+  --actor &quot;Accountant name&quot; --summary &quot;Review of selected original movement&quot; \
+  --request ORIGINAL_EDIT_REQUEST_UUID
+</code></pre>
+<p>Use the actual archive digest, transaction identifier, reviewer and request UUID. Retain the same request and unchanged values when recovering an uncertain note write. The native command requires Node.js 22 or newer and the ordinary Linux <code>flock</code> utility.</p>
+<h3 id="compare-the-bank-operators-correction">Compare the Bank operator's correction</h3>
+<p>Send the source-bound question to the responsible Bank operator with the whole review. The operator performs any financial correction in the original accounting workspace, retains the reviewed successor close and returns that close's original account TAR.</p>
+<p>Receive the successor through <strong>Receive original files</strong>, select it and open <strong>Compare closes</strong> against the earlier edition. Both selections must refer to the same original workspace, bank account, source identity and currency. Read the actual period labels, balance changes, changed transactions/postings, receipts/refunds, allocations and source imports. Expand the changed original records and download the complete comparison JSON where needed.</p>
+<p>For the native private review:</p>
+<pre><code class="language-sh">starforge bank-accountant add \
+  --directory /private/accountant/close-review \
+  --archive /private/accountant/corrected-bank-close.tar
+
+starforge bank-accountant compare \
+  --before /private/accountant/original-bank-close.tar \
+  --after /private/accountant/corrected-bank-close.tar \
+  --out /private/accountant/original-to-corrected.json
+</code></pre>
+<p>Record the accountant's actual outcome in the next retained review edition. The original financial correction and the accountant's findings each keep their own complete history.</p>
+<h3 id="deliver-and-independently-reopen-the-complete-review">Deliver and independently reopen the complete review</h3>
+<p>In the browser, retain the current draft and choose <strong>Download complete review</strong>. This TAR contains the full review and every retained note edition, all exact original Bank close TARs and its complete manifest. The nested Bank sources include the original statements and customer documents.</p>
+<p>The native command produces the same portable review and an optional self-contained handover:</p>
+<pre><code class="language-sh">starforge bank-accountant export \
+  --directory /private/accountant/close-review \
+  --out /private/accountant/complete-close-review.tar
+
+starforge bank-accountant prepare \
+  --directory /private/accountant/close-review \
+  --out /private/accountant/complete-close-handover
+</code></pre>
+<p>The handover contains <strong>reader.html</strong>, <strong>review.tar</strong>, full source, operating instructions and a file manifest. The recipient opens reader.html and receives the adjacent review.tar, or uses the included local serve command when their browser restricts file-origin storage. An independent native receiver uses:</p>
+<pre><code class="language-sh">starforge bank-accountant receive \
+  --bundle /private/received/complete-close-review.tar \
+  --directory /private/received/close-review
+
+starforge bank-accountant show --directory /private/received/close-review
+</code></pre>
+<p>The recipient opens the original close, selected note edition, source statement and customer document, then continues the agreed review action. Compatible later reviews advance the same private history. A divergent browser return uses <strong>Receive parallel review</strong>, preserving both full branches; a divergent native return receives into its own private directory.</p>
+<p>Each original close may be at most 128 MB, with up to 24 close archives inside the review's 384 MB complete-export limit. The reader checks the complete projected TAR size before saving an added archive or note edition. Keep the whole exported file for delivery.</p>
+<p><strong>Ready to continue:</strong> the receiving accountant can reopen the original close and financial lineage, compare its actual corrected successor, retain their findings and return a complete independently readable review. The original merchant accounting owner remains responsible for the financial records.</p>
+<h2 id="7-schedule-and-follow-up-the-remaining-balance">7. Schedule and follow up the remaining balance</h2>
+<p>In <strong>Payment plans</strong>, select the issued invoice and actual balance date. Enter the agreed dates and exact installment amounts, or use <strong>Generate installments</strong> and edit its proposed dates.</p>
+<p>Save the draft, inspect the full account basis and activate the reviewed edition. Each edition retains <strong>schedule.html</strong>, <strong>schedule.csv</strong>, <strong>schedule.json</strong> and <strong>manifest.json</strong>. Earlier customer schedules stay readable after a replacement or dated cancellation.</p>
+<p>The collection view separates overdue, due-today, upcoming, after-horizon, unscheduled and credit balances by currency and precision. Effective payments cover the earlier remaining installments; credits reduce later amounts; releases restore their original invoice amount. The schedule distributes the existing obligation across dates.</p>
+<p>Use <strong>Collections</strong> for the invoice's actual owner, follow-up, customer contact, promise and dispute history. <strong>Cash planning</strong> combines the retained remaining invoices, effective schedules and original promises into a reviewed dated scenario. Inspect changed source bases, assumptions and available customer funds before saving it.</p>
+<p><strong>Ready to continue:</strong> the selected schedule and follow-up explain when the original remaining amount is expected, with the actual receipt and issued balance still available.</p>
+<h2 id="8-close-the-customers-account-and-service-period">8. Close the customer's account and service period</h2>
+<h3 id="dated-invoice-account">Dated invoice account</h3>
+<p>Choose the actual as-of date. Review issued invoices, credit notes, received funds, effective allocations/releases, refunds and available credit. Keep each currency and precision separate. A historical view uses its effective dates while later corrections remain in history.</p>
+<p>Download the complete dated customer account, including original issued documents, receipt advice, correction relationships and allocation history. The recipient can trace the selected balance to those files.</p>
+<h3 id="publish-the-account-and-receive-the-customers-original-response">Publish the account and receive the customer's original response</h3>
+<p>Use <strong>Receivables → Customer accounts</strong> on the same running accounting owner. Select <strong>Publish account</strong>, choose the original customer and account date, then <strong>Review complete operation</strong>. Inspect the actual invoices, amounts by currency and complete file count before <strong>Publish reviewed account</strong>.</p>
+<p>Download <strong>Complete customer account</strong>, extract the entire TAR and open <code>customer-account.html</code>. Keep its original <code>documents/</code> directory and filenames together. The customer can inspect the dated account, original invoices and credits, payments and source files. Use <strong>Respond</strong> beside the original invoice to prepare a message, payment promise, dispute or reported-payment reference. Save the entry and select <strong>Download complete response</strong>; its complete JSON is the original return to receive.</p>
+<p>For the retained Freeform Solutions billing example above, choose the actual later invoice from that saved account. Its displayed issued amount, current balance and currency determine the response. Select the actual response and promise dates at operation time. The earlier completed paid/open invoice records remain the example's original baseline while this next customer action is prepared.</p>
+<p>Back in the staff desk, choose <strong>Receive response</strong>, select that original JSON, inspect the matched publication/customer/date/author and receive the reviewed source. Open it and select <strong>Review entry</strong>. Review the original published invoice beside its balance at the chosen effective date, then choose the outcome and record the operator's reason.</p>
+<div class="table-scroll" role="region" aria-label="Staff choice / Result in the existing account" tabindex="0"><table><thead><tr><th scope="col">Staff choice</th><th scope="col">Result in the existing account</th></tr></thead><tbody><tr><th scope="row">Record in the original collection case</th><td>Retain the original inbound contact, promise or dispute through Collections. A new case receives its actual owner, priority and follow-up date.</td></tr><tr><th scope="row">Acknowledge or decline</th><td>Keep the original entry and complete final reason in the received response.</td></tr><tr><th scope="row">Defer</th><td>Keep the reason and leave the entry available for a later decision.</td></tr></tbody></table></div>
+<p>Explicitly acknowledge a changed account before recording. Inspect any closed case, open promise or unresolved dispute and select the applicable reopen, replacement or resolution choice. Current invoice amount and original case constraints remain visible in the full review. Reported payments retain the customer's source and reference for the original receipt/bank/remittance/Stellar matching step.</p>
+<p>Save the reviewed outcome. Open its original case and inspect the linked activity, then download <strong>Complete operator archive</strong>. That archive retains the exact customer response, full staff review, decisions and original account files. Keep it with internal staff records. The separate customer delivery keeps the fixed dated account and offline desk.</p>
+<p><strong>Ready to continue:</strong> the same original account now carries the selected customer's response, its reasoned staff outcome and any original collection event. A saved request can be reconciled after an interrupted reply; a full account backup carries the same source and decision history to the next operator.</p>
+<p>Complete <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03b310b8998f420dfa4cc71647c054f123073954/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/CUSTOMER_ACCOUNT_RESPONSES.md">browser, HTTP and native customer-account guide</a> and <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03b310b8998f420dfa4cc71647c054f123073954/stellar-forge/mcp-merchant-operator/ACCOUNTING_CUSTOMER_RESPONSES.md">remote MCP/typed/durable CLI guide</a> describe the exact fields, files and recovery path.</p>
+<h3 id="prepaid-service-closing">Prepaid service closing</h3>
+<p>In <strong>Customer statements</strong>, use the original running merchant MCP address, accounting alias, named operator and saved closing directory. The installed direct entry is:</p>
+<pre><code class="language-sh">starforge customer-closing \
+  --directory /private/merchant/customer-closes \
+  --url http://127.0.0.1:8787/mcp \
+  --workspace accounting --actor operator --port 4419
+</code></pre>
+<p>The actual merchant connection and access-token environment are retained by the configured application. Open <strong>Customers and service</strong> to inspect the customer's original order assignments and imported service captures.</p>
+<p>In <strong>Compose a cycle</strong>, choose the customer, completed accounting run and original opening/closing captures for each pass. Inspect the capture times and period, review the native statement and prepare the saved cycle. Issue it through the original requests, or resume the saved cycle when an earlier reply was interrupted.</p>
+<p>Open the issued statement's original files and current lifecycle. A correction keeps the selected statement, customer, source and period linked to its replacement. A withdrawal retains its reason and earlier files.</p>
+<p><strong>Download customer delivery</strong> gives the complete available customer packet. The whole-cycle download keeps the operator's full saved work for another receiving engineer. The packet's register shows completed statements and any remaining rows in that same cycle.</p>
+<p><strong>Ready to continue:</strong> the customer has the dated money account and the original service-period explanation, with separate financial and usage records joined by their real identities.</p>
+<h2 id="9-receive-the-accountants-xero-outcome">9. Receive the accountant's Xero outcome</h2>
+<p>In <strong>Xero customer handovers</strong>, use the receiving organisation's actual invoice/credit templates and saved contact, account, tax, currency and date-format mapping. Select the original issued documents and account date, then <strong>Review selected documents → Prepare immutable package</strong>.</p>
+<p>Download the original import files and source package for the accountant's established receiving workflow. Retain document numbers, mapping edition and package identity.</p>
+<p>Receive the complete original Xero <strong>Invoices</strong> or <strong>CreditNotes</strong> JSON response from that organisation. The desk retains its returned document UUIDs, exact numeric tokens, status, validation results and source pointers. A supplied summary CSV uses its explicitly selected mapping and number/sign conventions.</p>
+<p>Open unresolved, rejected, mismatched or conflicting documents with their actual returned reason. Use an eligible linked correction and receive the resulting original outcome. Accepted external identities and all prior returns remain available in the package family.</p>
+<p>The Xero status describes that document handover. The merchant's received and refunded money continues through its original receipts, allocations and native/bank sources.</p>
+<p><strong>Ready to continue:</strong> the accountant's original document identities and exact totals correspond to the issued customer records, and the complete package family opens with its source and correction history.</p>
+<h2 id="10-resume-and-hand-over-the-complete-operation">10. Resume and hand over the complete operation</h2>
+<p>For an interrupted mutation, reopen its saved request before editing the draft. The application retained the workspace, operator, original request ID, body and source revision before sending. Read or reconcile that same operation to obtain its recorded result. A changed current record can then be reviewed as the explicit next revision.</p>
+<p>Prepare the customer's selected account/statement files and the merchant's full operating transfer. The customer packet supplies its readable issued records and history. The full transfer supplies the private accounting journal, configured outbox/proofs/terms, retained exports, original source files and saved continuing work.</p>
+<p>The original accounting backup preserves these together. Stop the accounting owner and external writers, choose a state root containing the actual saved input paths, and use the existing encrypted recovery engine:</p>
+<pre><code class="language-sh">starforge merchant-accounting-workspace backup \
+  --workspace /private/merchant/accounting \
+  --state-root /private/merchant \
+  --out /private/backups/merchant-finance \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE \
+  --quiesced
+
+starforge merchant-accounting-workspace verify-backup \
+  --bundle /private/backups/merchant-finance \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
+</code></pre>
+<p>The receiving engineer uses the complete verified bundle, separately managed passphrase environment and original private paths:</p>
+<pre><code class="language-sh">starforge merchant-accounting-workspace restore \
+  --workspace /private/merchant/accounting \
+  --state-root /private/merchant \
+  --bundle /private/backups/merchant-finance \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE \
+  --quiesced
+</code></pre>
+<p>Reopen the original customer, invoice files, receipt/credit/refund history, bank close, schedule editions, saved customer account publications/responses, service-close cycle and Xero packages. Continue the original reconciliation for activity after the backup point. The existing restore preserves surviving changes for that review and resumes its own interrupted publication.</p>
+<p>For the bundled Buyer example, <strong>Handover → Close Buyer and export packet</strong> drains its original writer and exports the retained purchase. Another operator reviews and receives the complete packet under their own private workbench and reads the same original results.</p>
+<p><strong>Receiving is complete when</strong> the next operator opens the original records and files, understands the selected balances and periods, and completes the agreed next customer action in that restored application.</p>
+<h2 id="use-the-same-workflow-from-the-merchant-agent">Use the same workflow from the merchant agent</h2>
+<p>The original <code>merchant_accounting_receivables_*</code> family supplies 46 operations in the merged public financial edition. The <a href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8aed042e255201c352564753caa3af69b46e82db/stellar-forge/mcp-merchant-operator/ACCOUNTING_RECEIVABLES.md">complete native interface guide</a> lists their real inputs, full previews and file selectors.</p>
+<p>Use the installed merchant runtime that lists <strong>merchant-accounting-receivables</strong> in its source registrations. The original <strong>receivables-agent</strong> contribution and <strong>customer-closing</strong> contribution declare those client/application commands. Select that runtime in Applications or invoke its declared command against the same original merchant owner:</p>
+<pre><code class="language-sh">starforge merchant-accounting-receivables sources \
+  --url &quot;$MERCHANT_MCP_URL&quot; --workspace &quot;$MERCHANT_WORKSPACE&quot; \
+  --token-env MCP_ACCESS_TOKEN
+
+starforge merchant-accounting-receivables status \
+  --url &quot;$MERCHANT_MCP_URL&quot; --workspace &quot;$MERCHANT_WORKSPACE&quot; \
+  --token-env MCP_ACCESS_TOKEN
+</code></pre>
+<p>Its durable <strong>prepare</strong>, <strong>execute</strong> and <strong>reconcile</strong> operations retain the connection, original body and request ID in the selected private operation directory. Invoice issue, wallet creation and financial corrections use the same native previews as their operator workflow. Retained file reads carry the selected original read ID, complete byte count and digest through every chunk.</p>
+<p>An agent completes the customer's useful task through the existing account and file APIs, then returns the full readable customer output. The source-selection registrations identify the actual installed commands and exports.</p>
+<h3 id="publish-receive-and-review-the-same-customer-account">Publish, receive and review the same customer account</h3>
+<p>The maintained remote continuation is <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/pull/1104">PR1104</a>. Use the existing merchant endpoint and workspace alias; the complete account/response workflow joins that same owner. It offers <code>customer-account-preview</code>, <code>customer-account-publish</code>, <code>customer-response-preview</code>, <code>customer-response-receive</code>, <code>customer-response-detail</code>, <code>customer-response-review-preview</code>, <code>customer-response-review</code> and <code>customer-account-list</code>.</p>
+<p>Save the full preview for each of the three writes. The original private selection files retain the chosen publication/customer/date or response/entry/version and actual review choices. For original customer intake, select its saved publication and use the returned file directly:</p>
+<pre><code class="language-sh">starforge merchant-accounting-receivables customer-response-preview \
+  --url &quot;$MERCHANT_MCP_URL&quot; --workspace &quot;$MERCHANT_WORKSPACE&quot; \
+  --token-env MCP_ACCESS_TOKEN \
+  --request /private/account/response-selection.json \
+  --source /private/account/customer-response.json \
+  --out /private/account/response-preview.json
+
+starforge merchant-accounting-receivables prepare \
+  --url &quot;$MERCHANT_MCP_URL&quot; --workspace &quot;$MERCHANT_WORKSPACE&quot; \
+  --token-env MCP_ACCESS_TOKEN \
+  --dir /private/account/receive-operation --action customer-response-receive \
+  --preview /private/account/response-preview.json --actor &quot;$MERCHANT_OPERATOR&quot;
+
+starforge merchant-accounting-receivables execute \
+  --dir /private/account/receive-operation
+</code></pre>
+<p><code>response-selection.json</code> contains the original <code>publicationId</code>. The original file is read as complete UTF-8, up to 1,500,000 bytes, and remains embedded in the saved intake review and request. After an interrupted reply, use <code>reconcile --dir /private/account/receive-operation</code>; a retry executes that same saved operation. A later entry decision follows its own complete review preview and retained request.</p>
+<p>Download the customer package with <code>kind:&quot;receivables-customer-account&quot;</code>, its <code>publicationId</code> and <code>file:&quot;account.tar&quot;</code>. Download staff history with <code>kind:&quot;receivables-customer-response&quot;</code>, its <code>customerResponseId</code> and <code>file:&quot;response.tar&quot;</code>. Both use the original retained-file reader, full byte/hash identity and release lifecycle.</p>
+<p>The <a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03b310b8998f420dfa4cc71647c054f123073954/stellar-forge/mcp-merchant-operator/ACCOUNTING_CUSTOMER_RESPONSES.md">complete guide</a> supplies publication and decision commands, all original input shapes, typed helpers and full recovery instructions. Use the installed source selection that includes this merged continuation when receiving the same workflow into another runtime.</p>
+<h2 id="present-the-result-and-connect-it-to-the-award">Present the result and connect it to the award</h2>
+<p>Start with the useful acquired output. Show the matched merchant source, then the customer's actual invoice and payment. Use its credit/refund and original bank movement to explain the resulting balance. Open the retained customer close and accountant result, then let the receiving operator reopen and continue the same work.</p>
+<div class="table-scroll" role="region" aria-label="Reviewer question / Show in the existing application" tabindex="0"><table><thead><tr><th scope="col">Reviewer question</th><th scope="col">Show in the existing application</th></tr></thead><tbody><tr><th scope="row">What useful task did the buyer buy?</th><td>Exact approved request, selected population/period and complete output.</td></tr><tr><th scope="row">How does Stellar matter?</th><td>Original native authorization/transfer, network/asset/amount and the bound merchant fulfillment.</td></tr><tr><th scope="row">Can the merchant explain the money?</th><td>Issued obligation, actual receipt, effective allocation, refund and exact bank coverage.</td></tr><tr><th scope="row">Can the customer understand the ongoing service?</th><td>Original pass captures, reviewed period statement and complete customer account.</td></tr><tr><th scope="row">Can another operator maintain it?</th><td>Saved source/runtime selection, original request recovery, full transfer and continued customer action.</td></tr><tr><th scope="row">What will the grant add?</th><td>The selected independent installations' remaining source/receiving adaptation, native deployment, monitoring and recovery inside the existing six packages.</td></tr></tbody></table></div>
+<p>The submitted financial explanation is self-contained in the <a href="./grant.html">primary application</a> and <a href="./grant-companion.html#merchant-settlement-customer-billing-and-accountant-receiving">complete financial chapter</a>. The operating guide gives the presenter and receiving engineer the concrete route through those claims.</p>
+<p>The existing proposal remains <strong>$38,000 / 400 prospective hours / 150 days</strong>. T1 adapts the two selected merchants and buyers and their actual source/authority handover. T2 deploys both selected facilitators and the original threat-response/monitoring work. T3 delivers recurring independent mainnet use and full receiving/recovery. The shipped accounting product is the starting foundation.</p>
+<p>The existing development baseline remains <strong>18 team-operated purchases / 411,000 stroops / 0.0411 native XLM</strong>, with fees separate. One original purchase, its invoice collection, later installments, service usage and exported files retain their respective economic identities in the application. Outcome measurement follows the existing distinct approved purchase and complete useful-output definition.</p>
+<h2 id="original-source-and-receiving-programmes">Original source and receiving programmes</h2>
+<div class="table-scroll" role="region" aria-label="Source / Exact scope" tabindex="0"><table><thead><tr><th scope="col">Source</th><th scope="col">Exact scope</th></tr></thead><tbody><tr><th scope="row"><a href="https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/8aed042e255201c352564753caa3af69b46e82db">Public financial release</a></th><td>The merged 139-path integration with 46 receivables MCP actions and complete browser, HTTP, CLI and installed financial joins.</td></tr><tr><th scope="row"><a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/commit/e57a359966f093f483a1aa5f4c2dac28566b6a5c">Maintained bank product</a></th><td>Original bank statements, exact gross/net/fee coverage, remittances, correction, account closes and complete customer/accountant handover.</td></tr><tr><th scope="row"><a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/e7da0a7f1aff44d44398498063df2d2d9e97684b/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/ACCOUNTANT_RECEIVING.md">Complete Bank accountant reader</a></th><td>Merged PR1149 complete archive and financial-lineage reader, corrected-close comparison, private review editions, native CLI, full offline handover and independent receiving. Its original-close operating course uses the existing account TARs.</td></tr><tr><th scope="row"><a href="https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/eaa169825c48c5ec3cef260672dc8fa52deb5e12/stellar/scf_2026/commercial_milestone_handover_20261012/PORTABLE.md">Completed customer billing handover</a></th><td>Complete portable 243-file application and the original account with two planning cases; paid/open invoice states, independent receiving and later repacking through the source-owned opener.</td></tr><tr><th scope="row"><a href="https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/18a23dfbf4031713d0e68918fe6687ff82d638fc">Current financial source capsule</a></th><td>275 source files / 5,105,857 JSON bytes, including the merged financial overlay and unchanged original receiving programmes. Source SHA-256: f8ae4e2075a123dc220d7fe5d8f0b40c536c85165deab5ba58cc48daf9a18cfb.</td></tr><tr><th scope="row">Original PAYMENT_CHECK.mjs</th><td>Git blob 9020c4e40784b676fbc57d0fc1c7c58580be6474, 15,841 bytes; original invoice-wallet programme.</td></tr><tr><th scope="row">Original MCP_RECEIVABLES_CHECK.mjs</th><td>Git blob 568669a6e3de268aa34c4aa17427582585c4fcf9, 26,247 bytes; original merchant-interface programme.</td></tr><tr><th scope="row"><a href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8aed042e255201c352564753caa3af69b46e82db/products/merchant-workspace/FINANCIAL_OPERATIONS.md">Complete financial operations</a></th><td>Full original installed procedures, source directories, dated balances, plan/Xero behavior and encrypted operating recovery.</td></tr></tbody></table></div>
+<p>The original programme identity is <code>SCF-MCP-RECEIVABLES-COLLECTION-2A51-20261012</code>. Its existing receiving operation retains the selected source, original programmes and returned runtime result. The complete installed customer-account operation retains its own package and saved account. Source capsules support those existing operations; the product's original complete builder and runtime installer produce the selected installed application.</p>
+<p>The complete financial chapter retains the original completed invoice, Xero, accepted service-renewal and bank account examples with their selected sources. Follow their original returned account and package when presenting that example.</p>
+<p>Official references: <a href="https://developers.stellar.org/docs/build/agentic-payments/x402/built-on-stellar">Stellar x402</a>, <a href="https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria">SCF submission criteria</a>, and <a href="https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines">Build budget and deliverable guidelines</a>.</p>
+</article></div></main>
+<footer class="site-footer shell"><p>Use the original selected merchant, customer account and saved source throughout this operating procedure. Print this complete guide through the browser's print command.</p></footer>
+</body>
+</html>

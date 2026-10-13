@@ -1,5 +1,8 @@
 // MIT. Attach the complete companion reader to the original application composition.
 export const COMPANION_ROUTES = [
+  ['/grant-companion-editions.mjs',['grant-companion-editions.mjs','text/javascript; charset=utf-8']],
+  ['/grant-companion-reading.mjs',['grant-companion-reading.mjs','text/javascript; charset=utf-8']],
+  ['/grant-companion-returns.mjs',['grant-companion-returns.mjs','text/javascript; charset=utf-8']],
   ['/grant-companion.html',['grant-companion.html','text/html; charset=utf-8']],
   ['/grant-companion.css',['grant-companion.css','text/css; charset=utf-8']],
   ['/grant-companion-core.mjs',['grant-companion-core.mjs','text/javascript; charset=utf-8']],
@@ -42,7 +45,7 @@ export function attachGrantCompanion({templateHtml,sourceIndex}) {
       source_sha256:sourceIndex.product_and_finance.sha256,
       source_bytes:sourceIndex.product_and_finance.bytes,
       assets:COMPANION_ROUTES.map(([path])=>path),
-      behavior:'Complete original companion, chapter navigation and search, full-source downloads, selected or complete printing, and a self-contained offline reader.',
+      behavior:'Complete original companion, retained source editions, chapter comparison and reading notes, reviewed collaborator returns, full workspace downloads, printing and a self-contained offline workspace.',
     }},
   };
 }

@@ -63,5 +63,16 @@
       "Missing host capability hides the transfer control"
     ]
   },
-  "receiving": "Use the same original source-water receiving operation and retained source Workspace. No new native model operation is requested."
+  "receiving": "Use the same original source-water receiving operation and retained source Workspace. No new native model operation is requested.",
+  "original_report_editions": [
+    1,
+    2
+  ],
+  "r9_maps": {
+    "render": false,
+    "original_runtime_retained": true,
+    "source_member_inventory": "figures/source-water-map-members.json",
+    "geometry_reader": "figures/original-geometry-reader.json",
+    "specification": "figures/source-water-map-spec.json"
+  }
 }

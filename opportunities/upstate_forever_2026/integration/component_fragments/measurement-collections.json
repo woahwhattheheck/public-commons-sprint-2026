@@ -1,0 +1,40 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-collections",
+  "source_reference": "Recovered complete OBS12 native measured-data engine with source collections and independent editable study editions, 1.1.0.",
+  "components": {
+    "measurement-collections": {
+      "title": "Complete measured-observation source collections and editable study editions",
+      "paths": [
+        "MEASURED_OBSERVATIONS.md",
+        "MEASUREMENT_COLLECTIONS.md",
+        "measurement_workspace/engine/calibration.mjs",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/engine/collection_zip.mjs",
+        "measurement_workspace/engine/collections.mjs",
+        "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/engine/normalise.mjs",
+        "measurement_workspace/engine/parse.mjs",
+        "measurement_workspace/engine/providers.mjs",
+        "measurement_workspace/engine/workspace.mjs",
+        "measurement_workspace/extension.py",
+        "measurement_workspace/operator.py",
+        "measurement_workspace/web/collections.mjs",
+        "measurement_workspace/web/extension.mjs",
+        "measurement_workspace/web/workspace.css",
+        "measurement_workspace/web/workspace.js",
+        "operator/extensions/measured-observations.json",
+        "operator/web/measured_collections.mjs",
+        "operator/web/measured_observations.css",
+        "operator/web/measured_observations.mjs",
+        "operator/web/measured_observations_extension.mjs"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-collections"
+  ]
+}

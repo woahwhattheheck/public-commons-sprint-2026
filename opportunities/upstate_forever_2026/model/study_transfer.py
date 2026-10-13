@@ -29,6 +29,7 @@ from . import calibration_study_transfer as calibration_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
+from . import conservation_design_study_transfer as design_transfer
 from . import native_process_study_transfer as process_transfer
 from . import receptor_study_transfer as receptor_transfer
 from . import customer_review_study_transfer as customer_review_transfer
@@ -811,6 +812,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             from . import decision_study_transfer as decisions
             decision_database = stack.enter_context(decisions.source_snapshot(
                 workspace, directory=root.parent))
+        design_database = stack.enter_context(design_transfer.source_snapshot(
+            workspace, directory=root.parent))
         closure = _Closure(workspace, normal, decision_database=decision_database).resolve()
         original_plan = closure.plan()
         # Freeze the initially selected conversation cohort once, before its
@@ -861,7 +864,10 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             investigations, investigation_members = _captured_investigations(
                 staged, investigation_snapshot(staged, plan))
             closure.assert_unchanged()
-        snapshot_members = {**decision_members, **investigation_members}
+        design_history, design_members = design_transfer.capture(
+            workspace, staged, closure, database=design_database)
+        closure.assert_unchanged()
+        snapshot_members = {**decision_members, **investigation_members, **design_members}
         additional = {path: value for path, value in snapshot_members.items() if path not in closure.files}
         source_files = plan["files"] + len(additional)
         source_bytes = plan["bytes"] + sum(value["bytes"] for value in additional.values())
@@ -893,6 +899,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         if decision_history is not None:
             identity["decision_history"] = decision_history
             identity["external_decision_dependencies"] = plan["external_decision_dependencies"]
+        if design_history is not None:
+            identity["conservation_design_history"] = design_history
         transfer_id = digest(identity)
         receipt = {
             "schema": RECEIPT_SCHEMA, "id": transfer_id, "identity": identity,
@@ -913,9 +921,11 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             for member in [
                 *(investigations or {}).get("members", []),
                 *(decision_history or {}).get("members", []),
+                *(design_history or {}).get("members", []),
             ]
             if member["path"] in {"intelligence/investigations.sqlite3",
-                                   "robust_decisions/robust_decisions.sqlite3"}
+                                   "robust_decisions/robust_decisions.sqlite3",
+                                   "conservation-design/editor/projects.sqlite"}
         }
         result = portable.backup(
             staged, archive_path, include_intermediates=True, include_deliveries=True,
@@ -979,10 +989,13 @@ def verify_received_studies(workspace):
         if receipt["identity"].get("decision_history") is not None:
             from .decision_study_transfer import verify_received
             decision_history = verify_received(workspace, receipt["identity"]["decision_history"])
+        design_history = design_transfer.verify(
+            workspace, receipt["identity"].get("conservation_design_history"))
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
                        "investigations": history, "decision_history": decision_history,
                        "monitoring_history": monitoring_history,
+                       "conservation_design_history": design_history,
                        "customer_reviews": customer_reviews,
                        "implementation_report_sources": copy.deepcopy(implementation_sources),
                        "scientific_report_editions": len(receipt["identity"].get("scientific_report_editions", []))})

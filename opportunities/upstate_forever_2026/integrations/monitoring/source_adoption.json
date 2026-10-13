@@ -99,8 +99,16 @@
       "source": "model/MONITORING_BUDGET_COMPARISON.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "previous_bytes": 6508,
+      "previous_sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+      "retained_installed_editions": [
+        {
+          "bytes": 6508,
+          "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
@@ -159,8 +167,16 @@
       "source": "model/monitoring_frontier_comparison.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "previous_bytes": 25919,
+      "previous_sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+      "retained_installed_editions": [
+        {
+          "bytes": 25919,
+          "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+        }
+      ]
     },
     {
       "source": "model/monitoring_implementation.py",
@@ -311,8 +327,8 @@
       "source": "model/MONITORING_STUDY_TRANSFER.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 9796,
-      "sha256": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce",
+      "bytes": 12999,
+      "sha256": "4b163903f3e69610cc53150e1064af3bbd375fe7b5dcad8797071310305ff8c7",
       "previous_bytes": 8459,
       "previous_sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
       "retained_installed_editions": [
@@ -324,16 +340,22 @@
           "bytes": 8459,
           "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224"
         }
+      ],
+      "predecessor_sha256": [
+        "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce"
       ]
     },
     {
       "source": "model/monitoring_study_transfer.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_study_transfer.py",
-      "bytes": 27108,
-      "sha256": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
+      "bytes": 30930,
+      "sha256": "f3a9da48bbb9865c60b8aacf846ab20f1da0a664002227a3ea7e484a67bbee51",
       "previous_bytes": 25411,
-      "previous_sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3"
+      "previous_sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3",
+      "predecessor_sha256": [
+        "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9"
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
@@ -442,16 +464,20 @@
       "source": "operator/install_receiving_waters.py",
       "source_role": "current_application_source",
       "path": "operator/install_receiving_waters.py",
-      "previous_bytes": 46109,
-      "previous_sha256": "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71",
+      "previous_bytes": 46653,
+      "previous_sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32",
       "retained_installed_editions": [
         {
           "bytes": 46109,
           "sha256": "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71"
+        },
+        {
+          "bytes": 46653,
+          "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
         }
       ],
-      "bytes": 46653,
-      "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
+      "bytes": 49036,
+      "sha256": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/MONITORING_API.md",
@@ -465,8 +491,16 @@
       "source": "operator/MONITORING_BUDGET_CHOICES.md",
       "source_role": "current_application_source",
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "previous_bytes": 6953,
+      "previous_sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
+      "retained_installed_editions": [
+        {
+          "bytes": 6953,
+          "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+        }
+      ]
     },
     {
       "source": "operator/MONITORING_COMPARISON_REPORT.md",
@@ -560,12 +594,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 24175,
-      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "original_bytes": 23470,
       "original_sha256": "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
-      "previous_bytes": 23901,
-      "previous_sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "previous_bytes": 24175,
+      "previous_sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
       "retained_installed_editions": [
         {
           "bytes": 23690,
@@ -574,6 +608,10 @@
         {
           "bytes": 23901,
           "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
+        },
+        {
+          "bytes": 24175,
+          "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0"
         }
       ]
     },
@@ -588,8 +626,11 @@
       "source": "operator/web/monitoring-frontiers.mjs",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-frontiers.mjs",
-      "bytes": 24139,
-      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+      "bytes": 25764,
+      "sha256": "44907cdc2646358490a6d24130f13864b9c674120c41485fb1d6e430c393f466",
+      "predecessor_sha256": [
+        "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+      ]
     },
     {
       "source": "operator/web/monitoring-observed.mjs",
@@ -798,6 +839,19 @@
         "Compose the maintained native installer inventory and preserve predecessor editions"
       ],
       "preserved": "Original optimizer, calendars, campaign revisions, microbial observed context, fieldwork return, selected study transfer, scientific source bodies and current streamed exports"
+    },
+    {
+      "operation_id": "ECO-ED6E-MONITORING-PACKET-NAVIGATOR-20261013",
+      "export_edition": 2,
+      "source_predecessor": "a6af6c79628098b57050ba04959d62a4c79fb6db",
+      "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+      "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
+      "changes": [
+        "Open the complete exported comparison through an offline index of the original report, plans, observed contexts and retained sources",
+        "Use the same original member descriptors for encoded relative links, byte counts, SHA-256 values and the streamed ZIP",
+        "Retain earlier completed exports in their original paths and receive indexed packets under export edition 2"
+      ],
+      "preserved": "Original comparison IDs, selection recipe, optimizer, numerical rows, source/context records and full editable Workspace receiving"
     }
   ],
   "observational_context": {
@@ -839,7 +893,8 @@
       "monitoring_plans",
       "monitoring_frontiers",
       "monitoring_heads",
-      "monitoring_observed_contexts"
+      "monitoring_observed_contexts",
+      "monitoring_frontier_comparisons"
     ],
     "action": "study.export",
     "receiving_option": {
@@ -854,6 +909,16 @@
         "monitoring_field_returns/<request_id>/field-plan.json"
       ],
       "reviewed_campaign_revision": true
+    },
+    "saved_budget_comparison": {
+      "operation": "ES26-MONITORING-BUDGET-TRANSFER-20261013",
+      "native_inspector": "model.monitoring_frontier_comparison.inspect",
+      "baseline": "Original baseline_plan_id",
+      "observations": "Exact ordered selection.context_ids",
+      "report_context_kind": "monitoring-budget-comparison",
+      "record_inventory": "comparison-records.json",
+      "action": "study.export",
+      "ui_action": "Transfer editable comparison"
     }
   },
   "saved_budget_comparison": {
@@ -862,7 +927,9 @@
     "guide": "model/MONITORING_BUDGET_COMPARISON.md",
     "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
     "component": "integration/component_fragments/monitoring-budget-comparison.json",
-    "receiving": "Original complete Workspace backup/restore and Monitoring verify_workspace"
+    "receiving": "Original complete Workspace backup/restore and Monitoring verify_workspace",
+    "export_edition": 2,
+    "export_entrypoint": "index.html"
   },
   "scientific_report_comparison": {
     "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3593",

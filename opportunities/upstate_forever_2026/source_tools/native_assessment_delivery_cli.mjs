@@ -7,6 +7,7 @@ import {
   composeNativeAssessmentDelivery, nativeDeliveryPath, NATIVE_SOURCE_DIRECTORY,
   STATION_SOURCE_DIRECTORY, ORIGINAL_ASSESSMENT_FILES, ANNUAL_SOURCE_FILES,
 } from "./native_assessment_delivery.mjs";
+import { MICROBIAL_ORIGINAL_FILES } from "./native_assessment_microbiology.mjs";
 
 const HELP = `Usage:
   node source_tools/native_assessment_delivery_cli.mjs --application APP --output NEW_DIRECTORY
@@ -15,6 +16,8 @@ const HELP = `Usage:
 Reads the completed native geography edition and its original station, assessment
 and annual-reference sources from APP. Writes a complete scientific report,
 interactive report, source manifest and portable ZIP into a new directory.
+Add --microbial to include the complete original measured E. coli source edition,
+its observation explorer and all four additional typed sources.
 Optional --workspace imports the completed source manifest through model.cli.
 `;
 
@@ -23,6 +26,7 @@ function argumentsFor(argv) {
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
     if (key === "--help" || key === "-h") return {help:true};
+    if (key === "--microbial") { if (options[key]) throw Error("Supply --microbial once"); options[key]=true; continue; }
     if (!["--application", "--output", "--workspace", "--python"].includes(key))
       throw Error("Unknown option: " + key);
     if (key in options || !argv[i + 1] || argv[i + 1].startsWith("--"))
@@ -108,8 +112,15 @@ async function main() {
     identityCrosswalk: await sourceText(application, "results/assessment-association-review-20261013/inputs/assessment159-native-identity-crosswalk.csv"),
     priorities: await sourceText(application, "results/assessment-association-review-20261013/inputs/source-priority-assessment-domain217.json"),
   };
+  const measured = {};
+  if (options["--microbial"]) {
+    measured.microbialFiles=await sourceEdition(application,NATIVE_SOURCE_DIRECTORY,"microbial-assessment-sources.json");
+    measured.microbialOriginalFiles={};
+    for (const row of MICROBIAL_ORIGINAL_FILES)
+      measured.microbialOriginalFiles[row.path]=await sourceText(application,row.path);
+  }
   const result = composeNativeAssessmentDelivery({
-    nativeFiles, stationSourceFiles, originalAssessmentFiles, annualSourceFiles, assessmentInputs,
+    nativeFiles, stationSourceFiles, originalAssessmentFiles, annualSourceFiles, assessmentInputs,...measured,
   });
   const output = await writeReport(options["--output"], result.files);
   const receipt = {directory:output, source_manifest:join(output,"sources.json"),

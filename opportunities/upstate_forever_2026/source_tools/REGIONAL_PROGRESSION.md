@@ -224,3 +224,25 @@ Completed-browser adoption now checks the exact optional input hash and parsed s
 Commands that omit this option preserve their earlier request documents, browser arguments and input identity. Adding a comparison to an already completed or running course changes the requested work: use a new receiving output for that expanded intent. Do not rewrite an in-flight original request.
 
 The original Monitoring source feature and optional browser continuation are required in the receiving application (PR3521 and PR3561). The standalone direct Monitoring browser remains suitable when only the saved campaign/comparison course is requested; this option is for an already selected complete regional progression.
+
+
+## Complete the Monitoring comparison's scientific report
+
+The existing optional Monitoring browser can now continue from its selected saved comparison into the original scientific report composer. Add:
+
+```sh
+--monitoring-comparison-selection ACTUAL_BUDGET_SELECTION.json \
+--monitoring-comparison-report-title "Regional monitoring budget choices — scientific report"
+```
+
+These flags work with either the existing original opening/receiving input or `--monitoring-restored-selection`. The report title requires the comparison selection. It must contain 1–300 browser characters after surrounding whitespace is removed. An optional `--monitoring-comparison-report-delivery ACTUAL_SAVED_DELIVERY_ID` carries the selected original delivery's ordered scientific study choices into the composer.
+
+This forwards to the same maintained `source/run_monitoring_browser.mjs` using `--comparison-report-title` and optional `--comparison-report-delivery`. The original queue prepares the comparison's source family, previews the ordered source selection, renders or reopens its full scientific edition, and exports the complete report ZIP. The browser downloads every source/report member, then reopens the same source and edition in a fresh browser and through its existing complete Workspace restore. It returns to the original campaign before capturing that archive.
+
+The original direct scientific composer retains Monitoring reports independently of physical model runs. This option adds no model calculation. The complete regional progression still performs its previously selected profile/source/native steps; use the direct maintained Monitoring browser command when only the report and campaign receiving course is needed.
+
+The normalized report title and optional delivery ID enter `progression.json.request.monitoring_comparison_report` only when requested. The child invocation and `journal.input.comparison_report` carry that exact object. Previous commands keep their original request/input shape. Expanded report work gets a new receiving output directory; interrupted report work resumes from the same original command and durable child requests.
+
+Completed-child adoption verifies the exact report option and the original immutable comparison source with `model.monitoring_report_source.inspect(..., verify=True)`. It then reopens the full scientific edition through the original native inspector and confirms that every requested report source remains in the edition's retained ordered-source selection. The existing native task checks still require all captured operations to be complete in the correct Workspace.
+
+Use the merged direct Monitoring-to-scientific-composer join and the maintained report browser continuation together. The browser runtime must be permitted to navigate to the operator's actual local address. Keep this expansion on the same authorized receiving course and preserve any already-running invocation's original intent.

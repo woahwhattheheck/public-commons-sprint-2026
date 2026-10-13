@@ -464,6 +464,36 @@ def operate_locked(args, output):
     process_report = phase("native_process_report",
                            lambda: native_process_report.build(ws, process_selection, render=True))
     save(native_process_report_id=process_report["id"])
+    from source_tools.headwaters_parameter_course import continue_course
+    parameter_course = phase("parameter_course", lambda: continue_course(
+        ws, parameter_plan["ensemble_id"], execute=True,
+        on_progress=lambda value: event("parameter_course_progress", progress=value)))
+    save(parameter_course=parameter_course)
+    if parameter_course.get("state") != "complete":
+        raise ValueError("Continue the original saved parameter course from its actual pending members")
+    atomic_json(output / "parameter-course.json", parameter_course)
+
+    from model.ensemble_study_source import prepare as prepare_study_source
+    from model.ensemble_scientific_source import delivery_selection as attach_study_source
+    study_source = phase("native_study_scientific_source", lambda: prepare_study_source(
+        ws, parameter_plan["ensemble_id"], render=True))
+    if (study_source.get("state") != "complete" or study_source.get("source_state") != "current"
+            or study_source.get("native_state") != "complete"
+            or study_source["workspace_id"] != ws.project["id"]
+            or study_source["ensemble_id"] != parameter_plan["ensemble_id"]):
+        raise ValueError("Retain the complete scientific source of this same native parameter course")
+    scientific_study = {
+        "source_operation_id": study_source["id"], "source": study_source["source"],
+        "ensemble_id": study_source["ensemble_id"],
+        "report_id": study_source["selection"]["report_id"],
+        "summary_signature": study_source["selection"]["summary_signature"],
+        "run_signature": study_source["selection"]["run_signature"],
+        "report_signature": study_source["report"]["signature"],
+        "figure_count": study_source["figure_count"],
+    }
+    save(scientific_study=scientific_study)
+    atomic_json(output / "native-study-scientific-source.json", study_source)
+
     delivery_selection = {
         "delivery_mode": "native_study", "audit_scope": "source-native",
         "native_study": {"title": recipe["title"],
@@ -486,12 +516,33 @@ def operate_locked(args, output):
     }
     delivery_selection = native_process_report.attach(ws, process_report["id"], delivery_selection)
     delivery_selection = attach_to_delivery(ws, campaign["operation_id"], delivery_selection)
+    delivery_selection = attach_study_source(study_source["source"], delivery_selection)
     atomic_json(output / "delivery-selection.json", delivery_selection)
     delivery = phase("mapped_delivery", lambda: ws.build_delivery(delivery_selection))
     if delivery.get("state") != "complete":
         raise ValueError("Finish the mapped delivery before archiving the demonstration")
     save(delivery_id=delivery["id"], delivery_state=delivery["state"])
     atomic_json(output / "mapped-delivery.json", delivery)
+
+    from model import observed_context, scientific_report_editions
+    prepared_report = phase("preview_scientific_report", lambda: scientific_report_editions.preview(ws, {
+        "title": recipe["title"] + ": native processes, field campaign and parameter study",
+        "sources": observed_context.source_choices(delivery_selection),
+        "contact": delivery_selection["contact"],
+    }))
+    atomic_json(output / "scientific-report-preview.json", prepared_report)
+    saved_report = phase("scientific_report_edition",
+                         lambda: scientific_report_editions.render_prepared(ws, prepared_report))
+    report_value, report_directory, report_operation = scientific_report_editions.inspect(
+        ws, saved_report["scientific_report_edition_id"])
+    scientific_report = {
+        "id": report_value["id"], "title": report_value["title"],
+        "sources": observed_context.source_choices(report_value["render_identity"]["selection"]),
+        "source_count": report_value["source_count"], "figure_count": report_value["figure_count"],
+    }
+    save(scientific_report=scientific_report)
+    atomic_json(output / "scientific-report-edition.json", report_value)
+
 
     from source_tools.simulated_headwaters_rehearsal import save_native_review
     spatial_reviews = receipt.setdefault("spatial_review_ids", {})
@@ -508,14 +559,37 @@ def operate_locked(args, output):
         save(spatial_review_id=spatial_reviews[runs[1]["id"]],
              spatial_review_ids=spatial_reviews)
 
-    from source_tools.headwaters_parameter_course import continue_course
-    parameter_course = phase("parameter_course", lambda: continue_course(
-        ws, parameter_plan["ensemble_id"], execute=True,
-        on_progress=lambda value: event("parameter_course_progress", progress=value)))
-    save(parameter_course=parameter_course)
-    if parameter_course.get("state") != "complete":
-        raise ValueError("Continue the original saved parameter course from its actual pending members")
-    atomic_json(output / "parameter-course.json", parameter_course)
+    from model import study_transfer
+    from source_tools.simulated_headwaters_receiving import cold_reopen, restore_selected_study
+    study_selection = {
+        "schema": "upstate.study-selection/v1",
+        "title": recipe["title"] + ": editable scientific report",
+        "roots": [{"kind": "scientific-report-editions", "id": scientific_report["id"]}],
+        "include_related_results": False,
+    }
+    selected_edition = hashlib.sha256(json.dumps({
+        "scientific_report": scientific_report["id"],
+        "scientific_study": scientific_study["source_operation_id"],
+        "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
+        "driver_source_sha256": sha256(Path(__file__)),
+    }, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    selected_archive = output / "selected-study-archives" / (selected_edition + ".zip")
+    selected_archive.parent.mkdir(parents=True, exist_ok=True)
+    selected_transfer = phase("selected_study_archive", lambda: study_transfer.export_study(
+        ws, selected_archive, study_selection,
+        progress=lambda value: event("selected_study_progress", progress=value)))
+    selected_identity = {
+        "transfer_id": selected_transfer["id"], "selection": study_selection,
+        "archive": {name: selected_transfer[name] for name in ("path", "bytes", "sha256")},
+    }
+    save(scientific_study_transfer=selected_identity)
+    atomic_json(output / "selected-study-transfer.json", selected_transfer)
+    selected_restored, selected_manifest = phase("selected_study_restore", lambda: restore_selected_study(
+        selected_archive, selected_transfer, output / "selected-study-reopened" / selected_edition))
+    selected_cold = phase("selected_study_cold_reopen", lambda: cold_reopen(
+        selected_restored, selected_manifest, receipt, output / "selected-study-cold-reopen",
+        selected_study=selected_identity))
+    save(scientific_study_received=selected_restored, scientific_study_cold_receiving=selected_cold)
 
     from model import portable
     archive_selection = {
@@ -525,6 +599,9 @@ def operate_locked(args, output):
         "customer_review": customer_identity,
         "customer_review_source_sha256": sha256(APP / "model" / "simulated_customer_review.py"),
         "ensemble_id": parameter_plan["ensemble_id"],
+        "scientific_study": scientific_study,
+        "scientific_report": scientific_report,
+        "selected_study_transfer_id": selected_transfer["id"],
         "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
     edition_suffix = hashlib.sha256(json.dumps(
@@ -550,6 +627,13 @@ def operate_locked(args, output):
         *["workspace/review-handbacks/" + customer[key] + ".json"
           for key in ("planning_handback_id", "handback_id")],
         "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/headwaters-results.json",
+        "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/latest-scientific-study.json",
+        "workspace/ensemble-study-sources/" + study_source["id"] + "/operation.json",
+        "workspace/sources/" + study_source["source"]["source_collection_id"] + ".json",
+        *["workspace/" + item["path"] for item in study_source["files"].values()],
+        "workspace/scientific-report-editions/" + scientific_report["id"] + "/edition.json",
+        *["workspace/scientific-report-editions/" + scientific_report["id"] + "/" + item["path"]
+          for item in report_value["files"].values()],
 
     ]
 
@@ -647,6 +731,10 @@ def operate_locked(args, output):
              "output": str(output / "customer-review-reopened" / edition_id)},
             {"kind": "parameter_course", "ensemble_id": receipt["ensemble_id"],
              "expected": {"project_id": ws.project["id"]}},
+            {"kind": "native_study_source", "ensemble_id": receipt["ensemble_id"],
+             "source_operation_id": scientific_study["source_operation_id"],
+             "expected": scientific_study},
+            {"kind": "scientific_report", "expected": scientific_report},
             {"kind": "field_campaign", "operation_id": campaign["operation_id"],
              "expected": {"phase": "closeout", "plan_id": campaign["plan_id"],
                           "original_project_id": ws.project["id"],

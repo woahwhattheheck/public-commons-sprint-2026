@@ -65,7 +65,29 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "tree",
       "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements",
-      "commit": "47b9c48bda957598c67d04abc8d5cbbd7ba04933"
+      "commit": "0d0fbd4770a42d949d436b9b81b2959b6d8918ac"
+    },
+    {
+      "id": "givecredit-customer-agent-guide",
+      "label": "Source-owned donor-agent funding, reporting and independent receiving",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/README.md",
+      "editions": [
+        {
+          "commit": "0d0fbd4770a42d949d436b9b81b2959b6d8918ac",
+          "git_blob": "cca729869698ddca1601334b2f94ab7483d5070d",
+          "bytes": 15318
+        }
+      ]
+    },
+    {
+      "id": "givecredit-customer-agent-source",
+      "label": "Complete Carbon customer-agent provider, source retention and original-operation recovery",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "tree",
+      "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces",
+      "commit": "0d0fbd4770a42d949d436b9b81b2959b6d8918ac"
     }
   ]
 }
