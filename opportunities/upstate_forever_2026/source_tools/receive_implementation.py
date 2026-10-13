@@ -1,4 +1,4 @@
-"""Receive the original Greenwood Implementation plan through a complete native Workspace.
+"""Receive an original Implementation plan through a complete native Workspace.
 
 Run from a fixed cumulative application checkout. Reuses the native Implementation,
 report and Project transfers APIs; the original Workspace is required.
@@ -128,8 +128,12 @@ def _capture(transfer, root, state, checkpoint):
     return capture
 
 
-def run(workspace_path, operation, *, as_of="2026-10-13"):
+def run(workspace_path, operation, *, as_of="2026-10-13", plan_id=None, revision=None):
     dt.date.fromisoformat(as_of)
+    original_greenwood = plan_id is None
+    active_plan_id = PLAN_ID if original_greenwood else plan_id
+    if revision is not None and (original_greenwood or isinstance(revision, bool) or not isinstance(revision, int) or revision < 1):
+        raise ValueError("Select a positive revision of an existing native plan")
     workspace_path = Path(workspace_path).expanduser().resolve(strict=True)
     root = Path(operation).expanduser().resolve()
     _separate(root, workspace_path, "Receiving operation and original Workspace")
@@ -137,12 +141,14 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
     root.mkdir(parents=True, exist_ok=True)
     with held(root / ".receiving.lock", blocking=False):
         workspace = Workspace(workspace_path)
-        sources = _original_sources()
+        sources = _original_sources() if original_greenwood else {}
         selection = {
             "schema": SCHEMA, "workspace": str(workspace.root),
-            "project": workspace.project, "plan_id": PLAN_ID, "as_of": as_of,
+            "project": workspace.project, "plan_id": active_plan_id, "as_of": as_of,
             "sources": sources,
         }
+        if not original_greenwood:
+            selection.update(source_kind="existing_native_plan", requested_revision=revision)
         write(root / "selection.json", selection, immutable=True)
         state_path = root / "state.json"
         state = read(state_path) if state_path.exists() else {
@@ -161,39 +167,50 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
         try:
             checkpoint("opening_original_plan")
             store = ImplementationStore(workspace)
-            original = read_document(APPLICATION / sources["plan"]["path"])
-            if original["id"] != PLAN_ID:
-                raise ValueError("The original Greenwood plan identity differs")
-            imported = store.import_document(original, expected_revision=0,
-                                             actor="FIELD12 original-source receiving")
-            checkpoint("imported", import_status=imported["status"],
-                       original_document_digest=imported["source_document_digest"])
+            if original_greenwood:
+                original = read_document(APPLICATION / sources["plan"]["path"])
+                if original["id"] != PLAN_ID:
+                    raise ValueError("The original Greenwood plan identity differs")
+                imported = store.import_document(original, expected_revision=0,
+                                                 actor="FIELD12 original-source receiving")
+                checkpoint("imported", import_status=imported["status"],
+                           original_document_digest=imported["source_document_digest"])
+            else:
+                original = store.get(active_plan_id, state.get("selected_revision",
+                    state.get("original_selected_revision", revision)))
+                checkpoint("original_plan_opened", original_selected_revision=original["revision"],
+                           original_document_digest=document_digest(original))
 
             if "selected_revision" not in state:
                 attached = []
-                for key, label in (
-                    ("parcel", "Original Greenwood County parcel response"),
-                    ("source_interval", "Original Greenwood published-method interval result"),
-                ):
-                    current = store.get(PLAN_ID)
-                    result = store.attach_file(
-                        PLAN_ID, APPLICATION / sources[key]["path"],
-                        expected_revision=current["revision"],
-                        actor="FIELD12 original-source receiving", label=label)
-                    attached.append(result["source_link"])
-                    checkpoint("retaining_originals", attachments=attached)
-                selected = store.get(PLAN_ID)
+                if original_greenwood:
+                    for key, label in (
+                        ("parcel", "Original Greenwood County parcel response"),
+                        ("source_interval", "Original Greenwood published-method interval result"),
+                    ):
+                        current = store.get(active_plan_id)
+                        result = store.attach_file(
+                            active_plan_id, APPLICATION / sources[key]["path"],
+                            expected_revision=current["revision"],
+                            actor="FIELD12 original-source receiving", label=label)
+                        attached.append(result["source_link"])
+                        checkpoint("retaining_originals", attachments=attached)
+                    selected = store.get(active_plan_id)
+                else:
+                    selected = store.get(active_plan_id, original["revision"])
+                    attached = [link for link in selected["source_links"]
+                                if link.get("kind") == "local_file"]
                 checkpoint("selected_revision", selected_revision=selected["revision"],
                            selected_document_digest=document_digest(selected),
                            attachments=attached)
-            selected = store.get(PLAN_ID, state["selected_revision"])
+            selected = store.get(active_plan_id, state["selected_revision"])
             if document_digest(selected) != state["selected_document_digest"]:
                 raise ValueError("The selected original native revision differs")
             # Opening a pre-existing imported plan preserves all actual later work.
             # This course attaches sources; it does not create observations or mark
             # source-review tasks, visits or measurements as completed.
             report = None
-            for retained in store.list_reports(PLAN_ID):
+            for retained in store.list_reports(active_plan_id):
                 if (retained["revision"] == selected["revision"]
                         and retained["as_of"] == as_of):
                     report = retained
@@ -209,19 +226,19 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
                         raise ValueError("The receiving report destination is already occupied")
                     attempts.append(str(attempt))
                     checkpoint("reporting", report_attempts=attempts)
-                    store.report(PLAN_ID, attempt, as_of, revision=selected["revision"])
+                    store.report(active_plan_id, attempt, as_of, revision=selected["revision"])
                 report = store.retain_report(attempt)
             if (report["revision"] != selected["revision"] or report["as_of"] != as_of
                     or report["document_digest"] != document_digest(selected)):
                 raise ValueError("The retained report names another original selection")
             checkpoint("report_retained", report=report)
-            source_history = store.history(PLAN_ID)
+            source_history = store.history(active_plan_id)
 
             transfer = NativeProjectTransfer(workspace, root / "transfer")
             capture = _capture(transfer, root, state, checkpoint)
             snapshot = capture["snapshot"]
             captured_plan = next((row for row in snapshot["archive"]["implementation"]["plans"]
-                                  if row["id"] == PLAN_ID), None)
+                                  if row["id"] == active_plan_id), None)
             if (captured_plan is None or not any(
                     row["id"] == report["id"] for row in captured_plan["reports"])):
                 raise ValueError("The captured Workspace does not contain the selected report")
@@ -231,7 +248,7 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
                                         progress=lambda row: print(json.dumps(row, default=str), flush=True))
             restored = Workspace(received["workspace"])
             restored_store = ImplementationStore(restored)
-            reopened = restored_store.get(PLAN_ID, selected["revision"])
+            reopened = restored_store.get(active_plan_id, selected["revision"])
             if not _same_json(reopened, selected):
                 raise ValueError("Fresh receiving changed the selected original plan revision")
             # Native restore verifies all original archived members. Verify this
@@ -239,11 +256,11 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
             # again through the original public store, allowing subsequent native
             # edits when this same completed receiving operation is reopened.
             summary = verify_implementation(restored.root)
-            restored_report = next((row for row in restored_store.list_reports(PLAN_ID)
+            restored_report = next((row for row in restored_store.list_reports(active_plan_id)
                                     if row["id"] == report["id"]), None)
             if restored_report is None:
                 raise ValueError("Fresh receiving lacks the retained original report")
-            restored_history = restored_store.history(PLAN_ID)
+            restored_history = restored_store.history(active_plan_id)
             selected_history = [{key: value for key, value in row.items()
                                  if key != "revision_ref"} for row in source_history
                                 if row["revision"] <= selected["revision"]]
@@ -259,14 +276,14 @@ def run(workspace_path, operation, *, as_of="2026-10-13"):
             result = {
                 "schema": SCHEMA, "state": "complete", "completed_at": now(),
                 "operation": str(root), "source_workspace": str(workspace.root),
-                "project": restored.project, "plan_id": PLAN_ID,
+                "project": restored.project, "plan_id": active_plan_id,
                 "revision": selected["revision"], "document_digest": document_digest(reopened),
                 "original_sources": sources, "snapshot_id": capture["snapshot_id"],
                 "archive": capture["archive"], "receiving": received,
                 "implementation": summary, "report": restored_report,
                 "report_files": {name: str(Path(restored_report["directory"]) / name)
                                  for name in restored_report["members"]},
-                "open_saved_plan": {"plan_id": PLAN_ID, "revision": selected["revision"]},
+                "open_saved_plan": {"plan_id": active_plan_id, "revision": selected["revision"]},
             }
             write(root / "receiving.json", result)
             checkpoint("complete", result=str(root / "receiving.json"))
@@ -285,9 +302,12 @@ def main(argv=None):
     parser.add_argument("--operation", required=True,
                         help="Owned output directory outside the Workspace and application")
     parser.add_argument("--as-of", default="2026-10-13")
+    parser.add_argument("--plan-id", help="Existing native Implementation plan; omit for the original Greenwood course")
+    parser.add_argument("--revision", type=int, help="Exact saved revision for --plan-id; defaults to the current revision")
     args = parser.parse_args(argv)
     try:
-        result = run(args.workspace, args.operation, as_of=args.as_of)
+        result = run(args.workspace, args.operation, as_of=args.as_of,
+                     plan_id=args.plan_id, revision=args.revision)
     except Exception:
         traceback.print_exc()
         return 1
