@@ -50,14 +50,14 @@ def _case_key(field, index):
     return ("LC" if field == "paired_rows" else "PS") + format(index + 1, "04d")
 
 
-def _percentage(row):
+def _percentage(row, *, reference_label="baseline"):
     value = row["percent_change"]
     if value is not None:
         return _plain(value)
     if not row["common_cells"]:
         return "Undefined: no common valid cells"
     if row["baseline_common"] == 0:
-        return "Undefined: zero common-valid baseline"
+        return "Undefined: zero common-valid " + reference_label
     return "Undefined in original report"
 
 

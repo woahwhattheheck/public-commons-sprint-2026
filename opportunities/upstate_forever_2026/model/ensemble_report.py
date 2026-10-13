@@ -199,17 +199,29 @@ def render_html(report, rows, ranges, sensitivity, release_id):
     selected_models = (report.get("model_scope") or {}).get("selected_models") or report.get("models") or ["ndr", "sdr"]
     body += "<p><strong>Selected models:</strong> " + _h(
         " and ".join("Nutrients" if name == "ndr" else "Sediment" for name in selected_models)) + ".</p>"
-    body += (
-        "<h2>Reading the comparison</h2>"
-        "<p>Land-cover alternatives use a baseline with the same parameter profile and model grid. "
-        "The separate parameter comparison holds the retained baseline land cover fixed and compares "
-        "each varied profile with the first selected reference profile. A negative change means "
-        "lower modeled annual export. The physical change uses only "
-        "cells with valid results in both runs. Each run's total over its own valid reporting-mask cells is "
-        "also available in the detailed table.</p>"
-        "<p>Ranges describe the explicitly selected parameter choices. The report groups "
-        "matching geographic masks together. Identical pair masks do not establish complete reporting-area coverage. It preserves cases with different coverage "
-        "as separate groups. A percentage requires a nonzero baseline on the same cells.</p>")
+    if reference:
+        body += (
+            "<h2>Reading the direct comparison</h2>"
+            "<p>Each alternative uses the explicitly selected reference scenario with the same "
+            "parameter profile and model grid. Signed annual change is alternative minus reference "
+            "on cells valid in both. Negative change means lower modeled export to streams. "
+            "Each run's own-valid total remains separate in the detailed table.</p>"
+            "<p>Ranges describe the selected profiles grouped by identical common-support masks. "
+            "Equal cell counts alone do not establish matching geography, and matching masks do not "
+            "establish complete reporting coverage. A percentage requires nonzero reference mass "
+            "on those same cells. The original baseline edition remains separately retained.</p>")
+    else:
+        body += (
+            "<h2>Reading the comparison</h2>"
+            "<p>Land-cover alternatives use a baseline with the same parameter profile and model grid. "
+            "The separate parameter comparison holds the retained baseline land cover fixed and compares "
+            "each varied profile with the first selected reference profile. A negative change means "
+            "lower modeled annual export. The physical change uses only "
+            "cells with valid results in both runs. Each run's total over its own valid reporting-mask cells is "
+            "also available in the detailed table.</p>"
+            "<p>Ranges describe the explicitly selected parameter choices. The report groups "
+            "matching geographic masks together. Identical pair masks do not establish complete reporting-area coverage. It preserves cases with different coverage "
+            "as separate groups. A percentage requires a nonzero baseline on the same cells.</p>")
     if rows:
         body += "<h2>Direction across the selected parameter choices</h2>"
         body += _table(
@@ -394,7 +406,21 @@ def _build(workspace, report, *, publish_pointer=True):
                            "The original ensemble baseline and earlier baseline reports remain retained. "
                            "The direct contrast is computed by the maintained native pair reducer on its "
                            "actual common valid cells, rather than subtracting separate baseline effects.\n\n"
-                           + methods)
+                           "Nitrogen and phosphorus retain kg/year, and sediment retains t/year. "
+                           "Own-valid totals remain separate from common-valid totals. A zero "
+                           "reference leaves percentage change undefined. Ranges are grouped by "
+                           "alternative, pollutant, annual unit and exact common-support mask.\n\n"
+                           "pairs.csv retains the original native compatibility fields plus explicit "
+                           "reference scenario ID and label. sensitivity.csv is empty because this "
+                           "edition compares scenarios within each original profile. report.json "
+                           "retains the complete selection, original design baseline, run IDs, "
+                           "source records, physical quantities and pair errors. robustness.csv "
+                           "retains descriptive case ranges on matching support.\n\n"
+                           "Use the complete scientific source package for figures, original recipe "
+                           "and coefficient documents. Use the selected scientific Study or full "
+                           "Workspace transfer for editable native inputs, spatial masks, logs and "
+                           "difference rasters. The original design and baseline reports retain "
+                           "their own source identities.\n")
             contents = {
                 "report.html": render_html(report, rows, ranges, sensitivity, release_id),
                 "pairs.csv": _csv(rows, PAIR_FIELDS + (

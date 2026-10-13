@@ -192,7 +192,7 @@ def sections(plan, content, profiles, scenarios, scope):
             table(["Pair", "Unit", "Reference on common cells", "Alternative on common cells",
                    "Alternative minus reference", "Change (%)"],
                   [[source._case_key("paired_rows", index), row["total_units"], row["baseline_common"],
-                    row["alternative_common"], row["delta_common"], source._percentage(row)]
+                    row["alternative_common"], row["delta_common"], source._percentage(row, reference_label="reference")]
                    for index, row in selected]),
             "Nitrogen and phosphorus retain kg/year; sediment retains metric tonnes/year (t/year). "
             "Percent change uses the paired reference mass and is undefined when that mass is zero.",
