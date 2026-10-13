@@ -107,3 +107,8 @@ The rendered workflow covers original inputs, retained comparisons, explicit app
 ## Use this household through MCP
 
 The original local application now exposes a household-bound MCP2025-11-25 Streamable HTTP connection. Open **Assistant connection** in the daily page to name a connection and download its private client configuration. The assistant can read retained history, propose daily/weekly work, continue the original weekly review and export complete artifacts. Human approval remains in the original browser; simulated execution requires that exact approved plan. Full original request/result receipts survive response loss and restart, and remain historical when a household is received. See [MCP.md](MCP.md) for the complete connection, file client, recovery, revoke and receive/reopen workflow. No real device or external service is changed.
+
+
+## Original hourly tariff sources
+
+Open **Hourly tariff sources** from the household week planner to receive an original UTF-8 CSV, inspect mapped dates/hours/units and coverage, save an immutable source, and deliberately apply its exact168 hourly values to a saved week. Existing load constraints, historical weeks and daily fresh approval remain intact. Source CSV/JSON, complete row CSV, readable HTML and household restore preserve the original source and application links. See [TARIFF_SOURCES.md](TARIFF_SOURCES.md) for the complete operator/API/receiving workflow and explicit nominal-clock, 0–10 USD/kWh and source-size limits. The included example is authored solely from GridKind's original DEMO prices.

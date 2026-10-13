@@ -6,9 +6,10 @@ import {DEMO,inputs} from './engine.mjs';
 import {inspectWeek} from './weekly.mjs';
 import {createAssistantAccess} from './assistant-access.mjs';
 import {inspectRequestRecord,resolveReviewInput} from './week-review.mjs';
+import {inspectTariff,tariffWeekPreview} from './tariff-source.mjs';
 
 const FORMAT='gridkind-household/v1';
-const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week','week-request','week-return']);
+const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week','week-request','week-return','tariff','tariff-application']);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const clone=value=>structuredClone(value);
 function stable(value){
@@ -93,6 +94,29 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     requireValue(weeks.length===1,'The saved review outcome is incomplete.',409);
     return {returnRecord,record:record(owner,householdId,weeks[0].id)};
   }
+  function tariffOutcome(owner,householdId,requestId){
+    household(owner,householdId);
+    requireValue(UUID.test(requestId),'Invalid tariff request identity.');
+    const rows=db.prepare("SELECT id FROM records WHERE household_id=? AND json_extract(data_json,'$.kind') IN ('tariff','tariff-application') AND json_extract(data_json,'$.detail.requestId')=?").all(householdId,requestId);
+    requireValue(rows.length<=1,'This tariff request has conflicting outcomes.',409);
+    if(!rows.length)return null;
+    const requestRecord=record(owner,householdId,rows[0].id);
+    if(requestRecord.kind==='tariff')return {requestRecord,record:requestRecord};
+    const children=db.prepare("SELECT id FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')='week' AND json_extract(data_json,'$.parentId')=?").all(householdId,requestRecord.id);
+    requireValue(children.length===1,'The saved tariff application is incomplete.',409);
+    return {requestRecord,record:record(owner,householdId,children[0].id)};
+  }
+  function catalogue(owner,{householdId=visitor(owner).selected_id,kind,offset=0,limit=50}={}){
+    household(owner,householdId);
+    requireValue(['tariff','week'].includes(kind)&&Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=100,'Invalid tariff catalogue page.');
+    const total=Number(db.prepare("SELECT COUNT(*) AS n FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')=?").get(householdId,kind).n);
+    const rows=db.prepare("SELECT data_json,sha256 FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')=? ORDER BY sequence DESC LIMIT ? OFFSET ?").all(householdId,kind,limit,offset);
+    return {householdId,kind,offset,limit,total,hasMore:offset+rows.length<total,records:rows.map(r=>{
+      const data=parsed(r.data_json);requireValue(digest(data)===r.sha256,'Saved catalogue integrity failed.',409);
+      return {...summary(data),sha256:r.sha256,startDate:data.detail?.report?.input?.startDate??null,
+        sourceSha256:data.detail?.edition?.source?.sha256??null,coverage:data.detail?.edition?.summary??null};
+    })};
+  }
   function nextSequence(householdId){return Number(db.prepare('SELECT COALESCE(MAX(sequence),0)+1 AS next FROM records WHERE household_id=?').get(householdId).next);}
   function append(householdId,{kind,scenario,state=null,detail={},name,parentId=null}){
     requireValue(KINDS.has(kind),'Unknown household record type.');
@@ -154,6 +178,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         record:spec=>append(selectedId,spec),
         readRecord:recordId=>record(id,selectedId,recordId),
         reviewOutcome:(requestId,responseId)=>weekReviewOutcome(id,selectedId,requestId,responseId),
+        tariffOutcome:requestId=>tariffOutcome(id,selectedId,requestId),
         setScenario:scenario=>db.prepare('UPDATE households SET scenario_json=? WHERE id=?').run(JSON.stringify(inputs(scenario)),selectedId),
         create:(name,scenario)=>{selectedId=create(id,name,scenario);return selectedId;},
         select:householdId=>{household(id,householdId);selectedId=householdId;db.prepare('UPDATE visitors SET selected_id=? WHERE id=?').run(householdId,id);},
@@ -181,7 +206,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     assistant.inspectRecords(bundle.payload.assistantRequests??[]);
     requireValue(home&&UUID.test(home.id)&&Array.isArray(records)&&records.length>0&&records.length<=5000,'Invalid household history.');
     label(home.name);inputs(home.scenario);
-    const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set();let sequence=0;
+    const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set(),tariffRequests=new Set(),tariffOutcomes=new Map();let sequence=0;
     for(const row of records){
       const {sha256,...data}=row??{};
       requireValue(UUID.test(data.id)&&!ids.has(data.id)&&Number.isSafeInteger(data.sequence)&&data.sequence>sequence&&KINDS.has(data.kind),'Invalid saved record order or identity.');
@@ -195,10 +220,34 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         requireValue(digest(inputs(data.state.scenario))===digest(inputs(data.scenario)),'Saved plan inputs do not match its household record.');
         if(data.state.proposal)requireValue(typeof data.state.proposal.id==='string'&&Number.isSafeInteger(data.state.proposal.revision)&&data.state.proposal.revision>=1,'Invalid saved proposal.');
       }
+      if(data.kind==='tariff'||data.kind==='tariff-application'){
+        requireValue(data.state===null&&UUID.test(data.detail?.requestId)&&/^[a-f0-9]{64}$/.test(data.detail?.requestSha256),'Invalid retained tariff request.');
+        requireValue(!tariffRequests.has(data.detail.requestId),'Duplicate tariff request identity.');tariffRequests.add(data.detail.requestId);
+      }
+      if(data.kind==='tariff'){
+        inspectTariff(data.detail.edition);
+        requireValue(data.parentId===null&&data.detail.requestSha256===digest({action:'save',source:{
+          filename:data.detail.edition.source.filename,title:data.detail.edition.source.title,sourceUrl:data.detail.edition.source.sourceUrl,note:data.detail.edition.source.note,
+          role:data.detail.edition.source.role,unit:data.detail.edition.source.unit,clockBasis:data.detail.edition.source.clockBasis,mapping:data.detail.edition.source.mapping,csv:data.detail.edition.source.csv
+        },previewSha256:data.detail.edition.sha256}),'The tariff request no longer binds its exact source fields.');
+      }
+      if(data.kind==='tariff-application'){
+        const detail=data.detail,tariff=known.get(data.parentId),target=known.get(detail.targetId);
+        requireValue(tariff?.kind==='tariff'&&target?.kind==='week'&&detail.tariffId===tariff.id&&detail.tariffSha256===tariff.sha256&&detail.targetSha256===target.sha256,'Missing original tariff application source.');
+        const preview=tariffWeekPreview(tariff,target);
+        requireValue(preview.complete&&detail.previewSha256===preview.sha256&&digest(detail.selectedRows)===digest(preview.selectedRows),'Tariff application source rows changed.');
+        requireValue(detail.requestSha256===digest({action:'apply',tariffId:tariff.id,targetId:target.id,previewSha256:preview.sha256}),'The tariff application request changed.');
+        tariffOutcomes.set(data.id,{child:null,input:preview.input,binding:{applicationId:data.id,applicationSha256:sha256,tariffId:tariff.id,tariffSha256:tariff.sha256,targetId:target.id,targetSha256:target.sha256}});
+      }
       if(data.kind==='comparison')requireValue(data.detail?.report?.schema==='gridkind-rate-robustness-v1'&&Array.isArray(data.detail.report.alternatives),'Invalid saved tariff comparison.');
       if(data.kind==='week'){
         inspectWeek(data.detail?.report);
         const parent=known.get(data.parentId);
+        if(parent?.kind==='tariff-application'){
+          const outcome=tariffOutcomes.get(parent.id);
+          requireValue(outcome&&!outcome.child&&data.state===null&&digest(data.detail.tariff)===digest(outcome.binding)&&digest(data.detail.report.input)===digest(outcome.input),'Invalid tariff-linked weekly result.');
+          outcome.child=data.id;
+        }else requireValue(data.detail?.tariff===undefined,'A tariff-linked week is missing its original application.');
         if(parent?.kind==='week-return'){
           const outcome=reviewOutcomes.get(parent.id);
           requireValue(outcome&&!outcome.child,'A returned review must have one resulting weekly record.');
@@ -234,8 +283,9 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
       }
       known.set(data.id,row);ids.add(data.id);sequence=data.sequence;
     }
+    requireValue([...tariffOutcomes.values()].every(outcome=>outcome.child),'A tariff application is missing its atomically saved week.');
     requireValue([...reviewOutcomes.values()].every(outcome=>outcome.child),'A returned review is missing its atomically saved weekly result.');
-    return {name:home.name,records:records.length,weekRequests:records.filter(r=>r.kind==='week-request').length,weekReturns:records.filter(r=>r.kind==='week-return').length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
+    return {name:home.name,records:records.length,tariffSources:records.filter(r=>r.kind==='tariff').length,tariffApplications:records.filter(r=>r.kind==='tariff-application').length,weekRequests:records.filter(r=>r.kind==='week-request').length,weekReturns:records.filter(r=>r.kind==='week-return').length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
   }
   function importHousehold(id,expected,bundle,name){
     const preview=inspectImport(bundle);
@@ -250,5 +300,5 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     });
   }
   function close(){if(!closed){db.close();closed=true;}}
-  return {directory:root,assistant,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,exportHousehold,inspectImport,importHousehold,close};
+  return {directory:root,assistant,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,tariffOutcome,catalogue,exportHousehold,inspectImport,importHousehold,close};
 }
