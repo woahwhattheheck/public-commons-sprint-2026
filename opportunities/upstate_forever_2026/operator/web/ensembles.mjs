@@ -773,7 +773,7 @@ export function attachEnsembles(context) {
       escapeHTML(row.title)+'</strong><small>'+escapeHTML(row.id)+'</small></span></label>').join('');
     const history=(value.sources||[]).map(row=>'<tr>'+cell(row.title||short(row.id))+
       cell(row.reference?.reference_title||'')+cell(label(row.state))+
-      cell(row.created_at||'')+'<td>'+(row.available?
+      cell(label(row.native_state))+cell(row.created_at||'')+'<td>'+(row.available?
         contrastButton('contrast-open','Open exact edition',id,row.id):
         '<span>This transfer omits that saved edition</span>')+'</td></tr>');
     const content='<p>Choose the scenario that supplies the reference quantity, then the alternatives to compare with it. '+
@@ -790,7 +790,7 @@ export function attachEnsembles(context) {
       '<p>Unfinished pairs retain their original run IDs and state. Complete those runs through the original design, '+
       'then prepare this same selection again to include their results.</p>'+
       (history.length?'<h3>Saved comparison editions</h3>'+
-        table(['Edition','Reference','State','Prepared',''],history):'')+
+        table(['Edition','Reference','Report preparation','Native pairs','Prepared',''],history):'')+
       '<p>Each saved edition opens its original quantities, source definitions and profile settings. '+
       'The original baseline report remains available in the model study.</p>';
     openForm('Compare two scenarios',value.title,content,'Prepare direct scenario report',async()=>{
@@ -864,8 +864,9 @@ export function attachEnsembles(context) {
       '<p><strong>Reference: '+escapeHTML(reference.reference_title||reference.reference_scenario_id)+'</strong></p>'+
       '<p>Signed annual change = alternative minus reference, on cells valid in both original runs. '+
       'Negative values mean lower modeled export to streams. A zero reference has an undefined percentage change, shown as —.</p>'+
-      '<p>Saved edition '+escapeHTML(source.id)+' · '+escapeHTML(label(source.state))+
-      ' · '+escapeHTML(label(source.source_state))+'</p>'+
+      '<p>Saved edition '+escapeHTML(source.id)+'. Report preparation: '+escapeHTML(label(source.state))+
+      '; native pairs: '+escapeHTML(label(source.native_state))+
+      '; source edition: '+escapeHTML(label(source.source_state))+'.</p>'+
       '<p>Original design baseline: '+escapeHTML(reference.original_baseline_scenario_id)+
       '. Selected comparison reference: '+escapeHTML(reference.reference_scenario_id)+'.</p>'+
       table(['Parameter profile','Alternative','Quantity and unit','Reference on common cells',
