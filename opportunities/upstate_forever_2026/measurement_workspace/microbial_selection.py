@@ -243,7 +243,9 @@ def _originals(workspace, collection):
     manifest_body = _body(workspace, descriptor)
     manifest = _json(manifest_body)
     originals = {"source-manifest.json": manifest_body}
-    declared = {}
+    # The publisher manifest keeps a hash-free self companion to avoid recursion.
+    declared = {"source-manifest.json": {"sha256": RETAINED_MANIFEST_SHA256,
+                                          "bytes": len(manifest_body)}}
     for entry in manifest["entries"]:
         for member in [entry, *entry.get("companions", [])]:
             name = _path(member["path"])
