@@ -110,3 +110,66 @@ def verify(root, item):
     if any(actual[k] != item[k] for k in actual):
         raise ValueError('Retained result changed: ' + item['path'])
     return path
+
+
+def native_provenance(directory, analysis, descriptor):
+    """Read an original runtime report input bound to this exact physical result."""
+    if descriptor is None:
+        return None
+    value = read(verify(directory, descriptor))
+    selected = analysis['selection']
+    if (value.get('schema') != 'upstate.ensemble-native-provenance/v1'
+            or value.get('ensemble_id') != analysis['id']
+            or value.get('selection_sha256') != digest(selected)
+            or value.get('grid') != selected['grid']
+            or value.get('members') != selected['members']
+            or value.get('source_references_sha256') != digest(selected['source_references'])):
+        raise ValueError('Native provenance belongs to another original ensemble selection')
+    sources = selected['source_references']
+    if not isinstance(sources, dict):
+        raise ValueError('Native provenance requires original Workspace source references')
+    models = [name for name, pollutants in (
+        ('ndr', ('nitrogen_export', 'phosphorus_export')),
+        ('sdr', ('sediment_export',)))
+        if set(selected['pollutants']).intersection(pollutants)]
+    cohort, records = value.get('cohort'), value.get('run_records')
+    if not isinstance(cohort, dict) or not isinstance(records, dict):
+        raise ValueError('Retain the original native version cohort and runtime records')
+    by_run = cohort.get('runs')
+    if not isinstance(by_run, dict) or cohort.get('models') != models:
+        raise ValueError('Native provenance differs from the selected output models')
+    versions = cohort.get('versions')
+    bound = sources.get('native_versions', {name: sources.get('invest_version') for name in models})
+    if (not isinstance(versions, dict) or set(versions) != set(models)
+            or versions != bound or any(not isinstance(v, str) or not v for v in versions.values())):
+        raise ValueError('Native provenance differs from the result-producing model versions')
+    expected = {}
+    for member in selected['members']:
+        for side, scenario in (
+                ('baseline', sources['baseline_scenario']['id']),
+                ('alternative', member['scenario_id'])):
+            key = member[side + '_run_id']
+            binding = (sources['grid_id'], member['profile_id'], scenario)
+            if key in expected and expected[key] != binding:
+                raise ValueError('A retained native run has conflicting paired selections')
+            expected[key] = binding
+    if set(records) != set(expected) or set(by_run) != set(expected):
+        raise ValueError('Native provenance does not contain the exact selected run roster')
+    for key, binding in expected.items():
+        record, resolved = records[key], by_run[key]
+        if not isinstance(record, dict) or not isinstance(resolved, dict):
+            raise ValueError('Retain complete original native run provenance')
+        choice = record.get('selection')
+        if (record.get('id') != key or not isinstance(choice, dict)
+                or tuple(choice.get(name) for name in ('grid_id', 'profile_id', 'scenario_id')) != binding
+                or set(resolved) != set(models)):
+            raise ValueError('Native provenance changes an original run binding')
+        stages = record.get('stages')
+        if not isinstance(stages, dict) or set(stages) != set(models):
+            raise ValueError('Retain each selected model stage in native provenance')
+        for model in models:
+            info = resolved[model]
+            if (not isinstance(info, dict) or info.get('model') != model
+                    or info.get('comparison_version') != versions[model]):
+                raise ValueError('Paired native execution versions differ for ' + model.upper())
+    return value

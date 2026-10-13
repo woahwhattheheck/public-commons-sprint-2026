@@ -11,7 +11,7 @@ import shutil
 import stat
 import tempfile
 import zipfile
-from .ensemble_store import canonical, digest, fingerprint, held, read, verify
+from .ensemble_store import canonical, digest, fingerprint, held, read, verify, native_provenance
 
 MANIFEST = 'ensemble-project.json'
 SCHEMA = 'upstate.ensemble-result-project/v1'
@@ -39,6 +39,10 @@ def export_project(directory, destination):
         reports = read(directory / 'reports.json')
         if reports['ensemble_id'] != analysis['id']:
             raise ValueError('Report belongs to another ensemble')
+        provenance = reports.get('native_provenance')
+        if provenance is not None and provenance not in reports['files']:
+            raise ValueError('The original runtime provenance is absent from the report inventory')
+        native_provenance(directory, analysis, provenance)
         members = {}
         for descriptor in list(analysis['artifacts'].values()) + reports['files']:
             path = verify(directory, descriptor)
@@ -148,6 +152,10 @@ def receive_project(source, destination, *, max_bytes=None):
             reports = read(staging / 'reports.json')
             if reports['ensemble_id'] != analysis['id']:
                 raise ValueError('Received report belongs to another analysis')
+            provenance = reports.get('native_provenance')
+            if provenance is not None and provenance not in reports['files']:
+                raise ValueError('The received runtime provenance is absent from its report inventory')
+            native_provenance(staging, analysis, provenance)
             for artifact in list(analysis['artifacts'].values()) + reports['files']:
                 if artifact['path'] not in manifest['members']:
                     raise ValueError('A complete quantitative/report artifact is missing')
