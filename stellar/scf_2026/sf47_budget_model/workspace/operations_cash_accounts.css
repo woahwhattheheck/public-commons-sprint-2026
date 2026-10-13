@@ -1,0 +1,63 @@
+.cash-account-desk{color:#202020;background:#fff;border:1px solid #c8c8c8;padding:20px;margin:16px 0;font:14px/1.5 system-ui,sans-serif;min-width:0}
+.cash-account-desk *{box-sizing:border-box}
+.cash-account-desk h3{font-size:21px;line-height:1.25;margin:0 0 8px}
+.cash-account-desk h4{font-size:17px;line-height:1.35;margin:24px 0 10px}
+.cash-account-desk h5{font-size:15px;line-height:1.4;margin:18px 0 8px}
+.cash-account-desk p{margin:8px 0 12px;max-width:110ch}
+.cash-account-desk small{display:block;color:#575757;font-size:12px;margin-top:4px;overflow-wrap:anywhere}
+.cash-account-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.cash-account-heading h4{margin-top:0}
+.cash-account-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.cash-account-desk button{font:inherit;color:#202020;background:#f4f4f4;border:1px solid #999;border-radius:2px;padding:8px 12px;min-height:38px;cursor:pointer}
+.cash-account-desk button:hover:not(:disabled){background:#e5e5e5;border-color:#555}
+.cash-account-desk button:disabled{opacity:.5;cursor:default}
+.cash-account-desk button:focus-visible,.cash-account-desk input:focus-visible,.cash-account-desk select:focus-visible,.cash-account-desk textarea:focus-visible{outline:2px solid #222;outline-offset:2px}
+.cash-account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.cash-account-fields label{display:flex;flex-direction:column;gap:5px;font-weight:600;min-width:0}
+.cash-account-fields label small{font-weight:400}
+.cash-account-desk input,.cash-account-desk select,.cash-account-desk textarea{font:inherit;min-height:38px;background:#fff;color:#202020;border:1px solid #999;border-radius:2px;padding:8px;min-width:0;max-width:100%;width:100%}
+.cash-account-desk select[multiple]{min-height:100px}
+.cash-account-desk textarea{resize:vertical}
+.cash-account-wide{grid-column:1/-1}
+.cash-account-selection{grid-template-columns:repeat(5,minmax(110px,1fr))}
+.cash-account-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #b8b8b8;margin:20px 0 12px}
+.cash-account-summary>div{padding:14px 16px;border-right:1px solid #d0d0d0}
+.cash-account-summary>div:last-child{border-right:0}
+.cash-account-summary span{display:block;color:#575757;font-size:12px}
+.cash-account-summary strong{display:block;font-size:22px;line-height:1.3;font-weight:650;overflow-wrap:anywhere;margin-top:6px}
+.cash-account-basis{font-size:13px;color:#575757}
+.cash-account-tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid #999;margin:18px 0}
+.cash-account-tabs button{background:#fff;border-radius:0;border:1px solid transparent;border-bottom:0;margin-bottom:-1px}
+.cash-account-tabs button[aria-pressed=true]{border-color:#999;background:#f0f0f0;font-weight:650;border-bottom:1px solid #f0f0f0}
+.cash-account-filter{grid-template-columns:2fr 1fr 1fr 1fr;margin:16px 0}
+.cash-account-filter .cash-account-check{grid-column:1/-1;display:flex;flex-direction:row;align-items:center;font-weight:400}
+.cash-account-check input{min-height:0;width:16px;height:16px;accent-color:#333}
+.cash-account-table{overflow:auto;margin:10px 0 14px;border:1px solid #c8c8c8;max-width:100%}
+.cash-account-table table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
+.cash-account-table th{background:#ededed;font-weight:650}
+.cash-account-table th,.cash-account-table td{padding:10px 12px;border-bottom:1px solid #d8d8d8;vertical-align:top;min-width:90px;overflow-wrap:anywhere;max-width:42ch}
+.cash-account-table tr:last-child td{border-bottom:0}
+.cash-account-table th+th,.cash-account-table td+td{border-left:1px solid #e1e1e1}
+.cash-account-table td p{margin:5px 0;max-width:48ch}
+.cash-account-table button{padding:5px 8px;min-height:32px}
+.cash-account-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:12px 0;gap:10px 16px}
+.cash-account-details>div{padding:8px 0;border-bottom:1px solid #ddd;min-width:0}
+.cash-account-details dt{font-size:12px;color:#575757}
+.cash-account-details dd{margin:4px 0 0;overflow-wrap:anywhere}
+.cash-account-record,.cash-account-editor,.cash-account-review,.cash-account-pending,.cash-account-reconciliation{border:1px solid #aaa;padding:16px;margin:18px 0;background:#fafafa;min-width:0}
+.cash-account-editor{background:#fff;border:2px solid #777}
+.cash-account-pending{border:2px solid #555}
+.cash-account-review{background:#f3f3f3}
+.cash-account-record>.cash-account-heading{margin-bottom:4px}
+.cash-account-record>h5:first-child,.cash-account-editor>h4:first-child,.cash-account-review>h5:first-child,.cash-account-pending>h4:first-child{margin-top:0}
+.cash-account-desk fieldset{border:1px solid #c0c0c0;padding:14px;margin:8px 0;min-width:0}
+.cash-account-desk legend{padding:0 5px;font-weight:650}
+.cash-account-allocation{border-bottom:1px solid #ccc;padding:10px 0 14px;margin-bottom:10px}
+.cash-account-desk details{margin:12px 0;min-width:0}
+.cash-account-desk summary{cursor:pointer;font-weight:600;padding:6px 0}
+.cash-account-desk pre{max-height:420px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;border:1px solid #ccc;padding:12px;font:12px/1.5 ui-monospace,monospace}
+.cash-account-desk [role=alert]{border-left:3px solid #333;padding:8px 12px;background:#eee;font-weight:600}
+.cash-account-desk [role=status]:empty,.cash-account-desk [hidden]{display:none!important}
+@media(max-width:1000px){.cash-account-selection{grid-template-columns:repeat(3,minmax(0,1fr))}.cash-account-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.cash-account-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.cash-account-summary>div{border-bottom:1px solid #d0d0d0}.cash-account-summary>div:nth-child(2n){border-right:0}.cash-account-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.cash-account-desk{padding:12px;margin:10px 0}.cash-account-selection,.cash-account-fields,.cash-account-filter,.cash-account-details{grid-template-columns:minmax(0,1fr)}.cash-account-wide,.cash-account-filter .cash-account-check{grid-column:auto}.cash-account-summary strong{font-size:19px}.cash-account-summary>div{padding:12px}.cash-account-record,.cash-account-editor,.cash-account-review,.cash-account-pending,.cash-account-reconciliation{padding:12px}.cash-account-tabs button{flex:1 1 45%;font-size:13px}.cash-account-table th,.cash-account-table td{padding:8px;max-width:30ch}.cash-account-actions button{max-width:100%;overflow-wrap:anywhere}.cash-account-heading{gap:8px}.cash-account-desk pre{max-height:320px}}
+@media print{.cash-account-desk{border:0;padding:0;color:#000}.cash-account-actions,.cash-account-tabs,.cash-account-selection,.cash-account-filter,.cash-account-editor,.cash-account-pending{display:none}.cash-account-table{overflow:visible}.cash-account-table th,.cash-account-table td{max-width:none}thead{display:table-header-group}tr{break-inside:avoid}}

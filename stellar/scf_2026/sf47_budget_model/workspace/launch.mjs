@@ -3,87 +3,17 @@ import { constants } from 'node:fs';
 import { open, lstat, realpath, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { get } from 'node:http';
+import {validateManagedSourceManifest, MAX_MANAGED_SOURCE_BYTES} from '../../../scf-starforge-20261009/distribution/managed-source.mjs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const GRANT_LAUNCH_SCHEMA = 'stellar-forge.sf47.workspace-launch.v1';
 export const GRANT_SELECTION_SCHEMA = 'stellar-forge.sf47.workspace-selection.v1';
+// Includes both original and executed complete source-hash maps.
+export const GRANT_MAX_LAUNCH_BYTES = 256 * 1024;
 const SOURCE = dirname(fileURLToPath(import.meta.url));
-// The reviewed release includes every original operating module and its mounted UI.
-const BOOT_FILES = [
-    "source_tables.py",
-    "source_workbooks.py",
-    "source-workbooks.mjs",
-    "source-workbook-export.mjs",
-    "WORKBOOK_HANDOVER.md",
-    "../../../scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/reader.py",
-    "source-tables-core.mjs",
-    "source-tables.mjs",
-    "source-tables.css",
-    "source-tables-cli.mjs",
-    "SOURCE_TABLES.md",
-    "../../../../stellar-forge/developer-site/dist/source-table-workspace.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-delimited.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-table-corrections.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-document-tables.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-table-intake.mjs",
-    "../../../../stellar-forge/developer-site/dist/onboarding.mjs",
-    "../../../../stellar-forge/developer-site/dist/offer.mjs",
-    "../../../../stellar-forge/developer-site/dist/grant-plan-core.mjs",
-    "../../../../stellar-forge/developer-site/dist/grant-plan-source.mjs",
-  '../budget.py',
-  'cli.py',
-  'server.py',
-  'model.py',
-  'launcher.mjs',
-  'launch.mjs',
-  'managed_launch.py',
-  'workshare_intake.py',
-  'operations.py',
-  'operations_domain.py',
-  'operations_http.py',
-  'operations_cli.py',
-  'operations_intake.py',
-  'operations_support.py',
-  'operations_buyer.py',
-  'operations_completion.py',
-  'operations_cohort.py','operations_implementation.py',
-  'operations_installations.py',
-  'operations_workflow_source.py',
-  'operations_installation_workflows.py',
-  'operations_installation_workflows.mjs',
-  'operations_workshare_installations.py',
-  'forecast.py',
-  'portfolio.py',
-  'portfolio_schedule.py',
-  'index.html',
-  'app.mjs',
-  'style.css',
-  'operations.mjs',
-  'operations.css',
-  'operations_support.mjs',
-  'operations_buyer.mjs',
-  'operations_buyer.css',
-  'operations_completion.mjs',
-  'operations_completion.css',
-  'operations_cohort.mjs',
-  'operations_cohort.css','operations_implementation.mjs','operations_implementation.css',
-  'operations_installations.mjs',
-  'operations_installations.css',
-  'forecast.mjs',
-  'forecast.css',
-  'portfolio.mjs',
-  'portfolio-working-copies.mjs',
-  'portfolio-working-copy-store.mjs',
-  'portfolio-browser-assets.json',
-  'PORTFOLIO_WORKING_COPIES.md',
-  'PORTFOLIO_WORKING_COPIES_BROWSER.md',
-  'portfolio.css',
-  'support_handoff.mjs','implementation_handoff.mjs',
-  'buyer_handoff.mjs',
-  'agent-client.mjs',
-  'agent-contracts.mjs'
-];
+const SOURCE_MANIFEST = 'managed-source.json';
+const SOURCE_MANIFEST_PATH = 'stellar/scf_2026/sf47_budget_model/workspace/' + SOURCE_MANIFEST;
 const HASH = /^[a-f0-9]{64}$/;
 const TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -116,6 +46,21 @@ async function regular(path, maximum, privateOnly = false) {
     return bytes;
   } finally { await handle.close(); }
 }
+async function managedSource(directory) {
+  const raw = await regular(resolve(directory, SOURCE_MANIFEST), MAX_MANAGED_SOURCE_BYTES);
+  let value;
+  try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(raw)); }
+  catch { throw fail('GRANT_SOURCE_MANIFEST_INVALID'); }
+  const inventory = validateManagedSourceManifest(value, SOURCE_MANIFEST_PATH);
+  const sourceSha256 = Object.create(null);
+  for (const name of inventory.files)
+    sourceSha256[name] = sha(name === SOURCE_MANIFEST ? raw :
+      await regular(resolve(directory, name), 1024 * 1024));
+  // A replaced manifest cannot join a selection assembled from its old members.
+  need(sha(await regular(resolve(directory, SOURCE_MANIFEST), MAX_MANAGED_SOURCE_BYTES)) ===
+    sourceSha256[SOURCE_MANIFEST], 'GRANT_SOURCE_MANIFEST_CHANGED');
+  return {sourceSha256, sourceFiles:inventory.files.map(name => resolve(directory, name))};
+}
 async function privateDirectory(path) {
   const info = await lstat(path);
   need(info.isDirectory() && !info.isSymbolicLink() && !(info.mode & 0o077) &&
@@ -136,16 +81,14 @@ export async function inspectGrantWorkspaceSelection({workspaceDirectory, scenar
   const executable = absolute(pythonExecutable);
   const pythonRealPath = await realpath(executable);
   await access(executable, constants.X_OK);
-  const sourceSha256 = {};
-  for (const name of BOOT_FILES)
-    sourceSha256[name] = sha(await regular(resolve(sourceDirectory, name), 1024 * 1024));
+  const {sourceSha256, sourceFiles} = await managedSource(sourceDirectory);
   const selection = {
     schema:GRANT_SELECTION_SCHEMA, workspaceDirectory:workspace, sourceDirectory,
     scenarioFile:scenario, scenarioSha256:sha(await regular(scenario, 32 * 1024 * 1024)),
     pythonExecutable:executable, pythonRealPath, sourceSha256,
   };
   return {selection, selectionSha256:sha(Buffer.from(canonical(selection))),
-    sourceFiles:BOOT_FILES.map(name => resolve(sourceDirectory, name))};
+    sourceFiles};
 }
 function originUrl(value, port) {
   need(typeof value === 'string' && value.length <= 1024, 'GRANT_STARTUP_URL_INVALID');
@@ -165,7 +108,7 @@ function probe(url, token) {
       const chunks = []; let bytes = 0;
       response.on('data', chunk => {
         bytes += chunk.length;
-        if (bytes > 32768) { request.destroy(fail('GRANT_STARTUP_RESPONSE_TOO_LARGE')); return; }
+        if (bytes > GRANT_MAX_LAUNCH_BYTES) { request.destroy(fail('GRANT_STARTUP_RESPONSE_TOO_LARGE')); return; }
         chunks.push(chunk);
       });
       response.once('error', reject);
@@ -190,15 +133,14 @@ export async function readGrantWorkspaceLaunch({workspaceDirectory, scenarioFile
   need(current.selectionSha256 === selectionSha256, 'GRANT_LAUNCH_SELECTION_CHANGED');
   const executionDirectory = absolute(executionSourceDirectory);
   need(await realpath(executionDirectory) === executionDirectory, 'GRANT_EXECUTED_SOURCE_CHANGED');
-  const execution = {sourceDirectory:executionDirectory, sourceSha256:{}};
-  for (const name of BOOT_FILES)
-    execution.sourceSha256[name] = sha(await regular(resolve(executionDirectory, name), 1024 * 1024));
+  const execution = {sourceDirectory:executionDirectory,
+    sourceSha256:(await managedSource(executionDirectory)).sourceSha256};
   need(canonical(execution.sourceSha256) === canonical(current.selection.sourceSha256),
     'GRANT_EXECUTED_SOURCE_CHANGED');
   const privateLaunch = join(current.selection.workspaceDirectory, 'managed-launch.json');
   await privateDirectory(current.selection.workspaceDirectory);
   let record;
-  try { record = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await regular(privateLaunch, 32768, true))); }
+  try { record = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await regular(privateLaunch, GRANT_MAX_LAUNCH_BYTES, true))); }
   catch (error) { if (error.code) throw error; throw fail('GRANT_PRIVATE_LAUNCH_INVALID'); }
   need(plain(record) && record.schema === GRANT_LAUNCH_SCHEMA && record.state === 'LISTENING' &&
     record.privateLaunch === privateLaunch && record.pid === pid && record.instanceId === instanceId &&

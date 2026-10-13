@@ -1,0 +1,24 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grant-reporting",
+  "description": "Complete native grant period capture, saved customer reporting procedures and original case/Application receiving.",
+  "commands": {
+    "grant-reporting": "products/grant-operations/reporting-cli.mjs"
+  },
+  "commandDescriptions": {
+    "grant-reporting": "Capture a complete native grant report and case, continue its saved operating procedure and receive the original Grant Application"
+  },
+  "exports": {
+    "./grant/reporting": {
+      "types": "./source/products/grant-operations/reporting.d.mts",
+      "import": "./source/products/grant-operations/reporting.mjs"
+    },
+    "./grant/reporting-plan": {
+      "types": "./source/products/grant-operations/reporting-plan.d.mts",
+      "import": "./source/products/grant-operations/reporting-plan.mjs"
+    }
+  },
+  "components": [
+    "products/grant-operations"
+  ]
+}

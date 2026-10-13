@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "ars-air-quality",
+  "title": "ARS: receive, review and deliver a complete air-quality reporting edition",
+  "task": {
+    "name": "Deliver the selected complete air-quality client report and its reusable source package",
+    "purpose": "Help the selected environmental reporting team turn an authorized client network and reporting period into a reviewed, complete client deliverable that the original client and receiving engineer can reopen.",
+    "request": "Continue one selected client network, one authorized CSV/REST intake and the agreed reporting period. Preserve source units, timestamps, timezone and quality flags; let the named air-quality reviewer select preliminary or final status. Produce the complete report and supporting data through the existing reporting/DataView entry, then deliver CSV, JSON, HTML and manifests with original capture, review, report and client-delivery identities. Use the original monthly reporting scope unless the existing case explicitly selects a different useful review or report task.",
+    "completeOutput": "The complete agreed client report, supporting CSV/JSON data and HTML presentation, source and report manifests, original review status and reviewer selection, and retained capture/review/report identities. The named client/receiver can independently reopen the original complete delivery; an approved correction remains linked to the earlier report edition and source.",
+    "repeatTrigger": "The agreed new reporting period is ready, or a correction changes the client's useful report. Where the actual case separately selects a daily air-quality review task, a newly available daily source population and completed reviewer output trigger that task. Reopening, downloading, paging or formatting the same report retains the original purchase.",
+    "pricedUnit": "One merchant-approved complete reporting or review edition for the explicitly selected client network, population and period. Retain the actual provider's per-request charges separately when complete intake needs several paid requests; record how those requests compose the one useful client task."
+  },
+  "source": {
+    "reference": "The selected client's authorized CSV or REST network source and reporting/DataView entry. Maintained intake, review, reporting and receiving guides: products/openaq/README.md and stellar/scf-starforge-20261009/sf30-seller-sdk/openaq/OPERATING.md.",
+    "mode": "MIXED",
+    "population": "All agreed observations and source metadata for the selected client network, instruments/sensors and reporting period, with complete page coverage and explicit inclusive/exclusive time boundaries. Preserve the source's original local-time period and UTC interpretation.",
+    "meaning": "Retain parameter and sensor identity, original value/unit, source timestamp/timezone, quality flag, missingness and correction status. Preserve the distinction between preliminary and final/validated data and the named reviewer decision. Additional provider requests or output formats remain attached to the same complete useful task.",
+    "changePolicy": "The accountable air-quality reviewer selects data status and report release. A late measurement, changed quality flag, source correction or reporting-method change produces a deliberate new linked edition with its reason and previous edition retained. The customer controls client publication and withdrawal through the original application."
+  },
+  "receiving": {
+    "application": "The selected customer's existing air-quality reporting/DataView workflow and the maintained OpenAQ intake, review, report and complete receiving operations. Use the existing merchant dataset-release console when that installed edition has been selected for the original reviewed report.",
+    "acceptanceRule": "Receive the authorized complete source population; preserve unit/time/quality semantics; have the named reviewer select preliminary or final treatment; generate the agreed complete report and CSV/JSON/HTML/manifest delivery; independently reopen the exact original delivery; issue a linked correction when the agreed example requires one; receive source, application and retained state on the actual host with release and support ownership.",
+    "changeAndWithdraw": "The source custodian controls intake rights, the named air-quality reviewer controls validation/status and the customer release operator controls client publication. Keep a staged reviewed dataset/report distinct from activation; use the installed merchant console's original release, stop, rollback and client-delivery operations for that selected release.",
+    "recovery": "Resume the original capture or report operation after interruption. Use retained complete source and report bytes for an independent reopen and preserve original capture, review, report, delivery and acquisition identities. A completed paid acquisition with interrupted delivery resumes the same delivery. Retain correction history and restore the selected original release/state after a host or session interruption.",
+    "maintenance": "Name the client-network/source custodian, air-quality reviewer, reporting/DataView integration owner, merchant release/payment operator and receiving engineer. Record actual source availability, review/report cadence, hosting and retention obligations, access renewal, correction route and agreed support allowance from the original scope."
+  },
+  "steps": [
+    {
+      "title": "Bind the original client reporting scope",
+      "result": "Continue the retained commercial case and Installation. Select one client network, actual source, reporting period and timezone, reviewer/status, receiving application and host. Preserve the original scope, schedule, price and acceptance criteria."
+    },
+    {
+      "title": "Receive the complete authorized source",
+      "result": "Capture the actual CSV/REST population using the maintained intake. Retain every required page, source metadata, original units/times/quality flags, source-use authority and complete source manifest."
+    },
+    {
+      "title": "Review the source and report meaning",
+      "result": "The named air-quality reviewer selects the actual preliminary/final treatment and any missing or corrected-data handling. Retain that decision with the original source and review identity."
+    },
+    {
+      "title": "Produce the complete useful report",
+      "result": "Generate the agreed client report with its complete CSV, JSON, HTML and manifests. Keep population/period, source edition, reviewer/status and original report identity visible to the receiving client."
+    },
+    {
+      "title": "Publish the selected customer delivery",
+      "result": "Use the original reporting/DataView entry. Where the installed merchant console applies, receive the staged reviewed release, select its activation and retain the original release/run/client-delivery record and complete acquired output."
+    },
+    {
+      "title": "Reopen and correct the same report history",
+      "result": "Independently reopen the original complete delivery from retained data and report state. Apply any agreed correction as a linked new edition, explain the change and keep the earlier client delivery available according to the customer's retention terms."
+    },
+    {
+      "title": "Receive the operating installation",
+      "result": "Export the complete original case, application, source and retained state. The receiving engineer opens it on the selected host, recovers the original client output and accepts the named intake, review, release, correction and maintenance responsibilities."
+    }
+  ],
+  "inputs": [
+    "Original complete commercial commissioning source/receiving packet and selected Workshare case/plan; existing Installation identity and current edition when already saved",
+    "The authorized client network and actual CSV/REST access, source-use rights, complete population, reporting period and timezone boundaries",
+    "Original parameters, units, instrument/sensor identity, quality flags and correction semantics; named reviewer and agreed preliminary/final treatment",
+    "The original reporting/DataView integration point, installed intake/reporting application edition, client formats and complete delivery/retention requirements",
+    "Original merchant and independent buyer deployments, exact atomic pricing and aggregate task budget, payment authority and facilitator selections where the report service is paid",
+    "Actual private host, retained capture/review/report/client-delivery state, configuration references and receiving engineer",
+    "Agreed monthly report cadence or explicitly selected daily review scope, source availability, correction/release ownership and actual support allowance"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/openaq/README.md",
+      "blob": "43bf94a320b2fda6c8962181ea158edaaee07fde"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/openaq/OPERATING.md",
+      "blob": "6ca72029ca8901d0c1317eb0e628358d21047320"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/README.md",
+      "blob": "fd8f2c1c60b4a01db50cf6cacce2dfe8325d5a15"
+    }
+  ]
+}

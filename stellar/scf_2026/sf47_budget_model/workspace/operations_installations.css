@@ -57,3 +57,18 @@
 .installation-desk h4{font-size:16px;margin-top:24px}
 @media(max-width:900px){.installation-layout{grid-template-columns:1fr}.installation-layout>aside{border-right:0;border-bottom:1px solid #ccc;padding:0 0 15px}.installation-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.installation-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.installation-heading{display:block}.installation-heading>.installation-actions{margin-top:12px}.installation-fields,.installation-list{grid-template-columns:1fr}.installation-desk fieldset{padding:12px}.installation-wide{grid-column:auto}}
+
+.installation-coordination{scroll-margin-top:20px;border-color:#777}.installation-coordination>p{color:#555;max-width:85ch}.installation-coordination .installation-entry{scroll-margin-top:20px}.installation-coordination summary{font-weight:600}.installation-coordination [data-installation-coordination]:focus-visible{outline:2px solid #222;outline-offset:2px}
+
+.installation-effort{scroll-margin-top:20px}
+.installation-effort>.installation-actions{margin:14px 0}
+.installation-effort>.installation-fields{margin:14px 0}
+.installation-effort .installation-entry h4{margin:0 0 12px}
+.installation-effort small,.installation-effort-report small,.installation-effort-planning small{display:block;margin-top:5px}
+.installation-effort-report{margin:22px 0;border-top:1px solid #aaa;padding-top:4px}
+.installation-effort-source,.installation-effort-inventory{margin:16px 0}
+.installation-effort-source pre{max-height:440px;overflow:auto;padding:12px;border:1px solid #ccc}
+.installation-effort-planning label{display:flex;flex-direction:column;gap:6px;min-width:0;font-weight:600}
+.installation-effort-planning>.installation-actions{margin-top:14px}
+.installation-effort-planning td label>span{font-size:12px}
+.installation-effort-planning select{min-width:180px}

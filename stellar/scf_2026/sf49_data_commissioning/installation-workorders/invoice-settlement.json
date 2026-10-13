@@ -1,0 +1,85 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "invoice-settlement",
+  "title": "Invoice & Settlement: original observations, reviewed attribution and complete customer receiving",
+  "task": {
+    "name": "Receive and operate the customer's original invoice reconciliation programme",
+    "purpose": "Give the named finance or operations reviewer a continuing source-backed invoice workspace: exact invoice and asset terms, complete original observations, individually reasoned attributions, reconciliation editions, reports and an independently received editable application.",
+    "request": "Continue the customer's original commercial Workshare and actual retained invoice programme. Select its original invoice IDs, versions, network and asset definitions, decimal amounts, settlement roles, observation population and review period. Retain complete authorized source files or native captures with their original responses, request history, cursor and coverage. For Horizon deposits, preserve the complete original invoice-instruction register, exact destination and optional sender, memo type and bytes, network, asset code/issuer and original amounts. Review every movement and its native explanations; retain failures, ambiguous mappings, partial/overpayments, missing coverage and earlier decisions. The named reviewer selects individual links and reasons against the original review digest before one native apply. Create the original reconciliation edition and complete report, then export and receive the entire workspace/application independently. An installed customer uses the existing authenticated Merchant provider, original declared aliases and observed workspace UUID; its durable plan/run requests operate the same native application.",
+    "completeOutput": "The complete selected original programme and every saved version; invoice-instruction register; original source bodies, captures and coverage; complete reviewed movements and individually authored decisions; reconciliation and report editions; original mutation request/results; full immutable publication and verified private download; complete native receiving application/workspace and its original source/runtime selections. Deliver the actual selected installed source/archive, configuration references without credentials, continuing-state location, operating/recovery guide and named recipient's reopened result.",
+    "repeatTrigger": "A new authorized source interval or edition, changed invoice/payment instructions, revised programme, new transaction observation, explicit correction or agreed reporting period triggers a deliberate review. Preserve earlier programme/source/decision/report editions. Continue interrupted work from its retained original request, capture, publication or verified download prefix before selecting new work.",
+    "pricedUnit": "If the existing case separately selects a merchant service, use the expressly agreed complete reconciliation/report edition for its stated programme, source population and period as the useful task unit. Keep professional commissioning fees, phase milestones and maintenance terms in their original Workshare. An invoice face value, deposit, settlement balance, grant allocation or source observation is not the price of this service. Only the original authorised Installation selects atomic service price, useful task count, spending budget and payment authority."
+  },
+  "source": {
+    "reference": "Select the actual original invoice programme and version, complete instruction register, original source/capture identities and coverage, private native connection references, current reconciliation context and exact installed source edition. Retain the existing native workspace UUID and configured host input aliases.",
+    "mode": "MIXED",
+    "population": "All original records and response pages in the expressly selected account/network/source interval or complete imported edition, together with the original root/network response, cursor/window and capture-completion state. Retain repeated observations and source errors. A selected subset must retain its original population and selection; an unfinished capture is not complete coverage.",
+    "meaning": "Keep invoice IDs and programme versions, asset code and issuer, network identity, collection versus separately declared settlement roles, exact decimal strings and native integer units. Keep original transaction hash, operation ID, source record, ledger, success, destination and optional sender. G and M accounts stay exact. Preserve memo type and complete original bytes; missing transaction join is not a none memo. A matching amount alone does not establish payer, invoice ownership, settlement finality or accounting acceptance. Reconciliation reports native explanations and remaining issues; the named reviewer owns each explicit attribution and correction.",
+    "changePolicy": "Retain each complete new source or programme edition before comparison. A changed original review digest or native workspace revision requires fresh review; a lost response keeps its original request UUID and immutable body. Earlier links, unlinks and exclusions stay visible and use the existing corrective-decision flow. Changes to account, network, invoice scope, period, source rights, endpoint or commercial terms follow the original case's change process."
+  },
+  "receiving": {
+    "application": "The maintained Invoice & Settlement native workspace, local operator browser and stellar-invoice-settlement CLI; the authenticated invoice-settlement-customer CLI and typed merchant/invoice-settlement client, operations and download exports; the original native full-package receiver. Use the selected installed Linux/Node runtime and flock. Select the original optional EVM dependency graph only when the actual source requires it.",
+    "acceptanceRule": "Read the actual original programme and selected source population with its complete coverage. Inspect the complete Horizon review and each discrepancy; retain only individually authorised native decisions and their original request result. Reopen the resulting reconciliation and complete original report. Export the original full workspace/application publication, verify every listed file and native manifest, release retained readers, and receive it offline into the named independent directory. Reopen the received original programme, source, decisions, reports and paused operation state through its actual CLI/browser. Record the named recipient's actual result against the unchanged commercial phase criteria and original Installation checks.",
+    "changeAndWithdraw": "The customer retains invoice authorship, accounting authority and the decision to use or correct a reconciliation. Source observation, candidate matching and local attribution do not transfer funds or alter the customer's external accounting ledger. Any live payment, signing, refund, provider mutation or external ledger update follows its separately authorised original process. Reconnecting received credentials and continuing paused source/listener work require explicit selection by the original host owner.",
+    "recovery": "Keep the original endpoint/alias/workspace UUID, complete request and entered/result records, capture/delivery state, publication UUID/native manifest and per-file download checkpoints. Reopen a completed local operation offline. For an unknown external capture or listener outcome, read its original native request and operation state before explicitly continuing the same request. Preserve every downloaded file at private mode; the receiver uses its separate hash-bound native staging directory to restore original declared source/runtime modes. Keep that directory through interrupted receiving. Do not create a replacement workspace or new UUID to conceal an unresolved original outcome.",
+    "maintenance": "Name the programme/invoice owner, source-connection owner, financial reviewer, application host operator and independent receiving engineer. Agree source cadence, coverage/window, review allowance, backup/restore, original request retention, report delivery and source/runtime release selection. Preserve the complete private workspace and receiving history separately from replaceable installed source. Keep secrets in the existing authorised configuration and record only its reference in the handover."
+  },
+  "steps": [
+    {
+      "title": "Receive the original commissioning case",
+      "result": "Select the actual customer Workshare, full original source packet, named parties, phase owners, effort, scope, fees, milestone criteria and receiving responsibilities. Keep the existing grant/commercial assignments and all native checks unchanged."
+    },
+    {
+      "title": "Select the existing application and access",
+      "result": "Select the complete immutable installed product and retained native workspace UUID. Bind the original authorised Merchant endpoint and declared alias, or reopen the actual local workspace. Read the native methods before preparing changes; keep credential values outside deliverables."
+    },
+    {
+      "title": "Retain the original invoice and observation inputs",
+      "result": "Receive the complete actual programme and register, original source files or complete native captures, account/network/interval and every original response/cursor. Verify configured host input bytes before import. Preserve errors, prior editions and source coverage."
+    },
+    {
+      "title": "Review and record individual attribution",
+      "result": "Read the full native Horizon review against the original programme/register/source IDs. Inspect every proposed movement and discrepancy. The named reviewer chooses individual mappings and reasons, then applies the exact original selection/review hash under the current revision and one retained request UUID."
+    },
+    {
+      "title": "Deliver the complete reconciliation edition",
+      "result": "Create and reopen the original reconciliation/report edition. Retain balances, exclusions, prior decisions, ambiguity and unresolved findings exactly. Obtain the actual reviewer's recorded decision about use of the report; no external accounting or payment outcome is inferred."
+    },
+    {
+      "title": "Export and download the original publication",
+      "result": "Prepare one original full-workspace export; reconcile any uncertain acknowledgement against its existing publication. Download every original declared member and native manifest with complete length/hash verification and retained prefix recovery, then release each reader."
+    },
+    {
+      "title": "Operate the independent received application",
+      "result": "Receive from the verified private download through separate mode-preserving native staging. Reopen the actual received programme, full source, decision and report history in the original CLI/browser; inspect paused capture/delivery state before any explicit later continuation."
+    },
+    {
+      "title": "Close the original Installation and handover",
+      "result": "Deliver complete application/source, editable workspace, report/publication, retained requests, configuration references and recovery instructions. Record actual named recipient observations in the same Installation, save/reopen the original edition, then export and independently receive the complete operating case."
+    }
+  ],
+  "inputs": [
+    "Complete original customer Workshare and packet, case/plan identities, named parties, phase effort/dependencies, fee/milestone terms and actual acceptance criteria",
+    "Actual invoice programme UUID/version/digest, complete original invoice and asset terms, separately declared collection/settlement roles and exact amounts",
+    "Complete original payment-instruction register with exact source-backed network/account/memo selections and original document references",
+    "All selected source bodies/capture responses, root/network and interval/cursor records, original source IDs, actual coverage/completion and error records",
+    "Named attribution/accounting reviewer; individually selected movement/mapping/reason and original review digest; retained prior decision history",
+    "Selected installed product/source/archive hashes, native workspace UUID, existing endpoint/alias/input/connection references and private credential custody",
+    "Original request/result, publication/native manifest, complete private downloaded files, native staging and independent receiving records",
+    "Actual receiving host/runtime/operator, backups, agreed maintenance and original Installation source/deployment/payment selections"
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar-forge/mcp-merchant-operator/INVOICE_SETTLEMENT_CUSTOMER.md",
+      "blob": "e50c61045e9da50824f99d5cb1e2557c675679c0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/invoice-settlement/HORIZON_INVOICES.md",
+      "blob": "2b4dda51afe1b43be9712483cbe43bcffc4b1ae6"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/invoice-settlement/APPLICATIONS.md",
+      "blob": "4b2d75acbdefa246c6d7dede96e6bbbfe1dbfb42"
+    }
+  ]
+}

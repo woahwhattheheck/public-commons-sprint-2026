@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-source.mjs';
 import { browserAssetDeclarations, createBrowserAssetIndex } from './browser-assets.mjs';
 import { productPackageMetadata } from './product-package.mjs';
+import { validateManagedSourceManifest, MAX_MANAGED_SOURCE_BYTES } from './managed-source.mjs';
 import { distributionPath, contributionDirectory, contributionPaths, composeDistribution } from './specification.mjs';
 import { sourceSelectionDirectory, sourceSelectionPath, validateSourceSelection,
   selectedContributionPaths, requireSourceSelectionMatch } from './source-selection.mjs';
@@ -212,11 +213,29 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const product = productPackageMetadata(spec.product);
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
+  // Managed launch and the immutable package use one explicit source inventory.
+  // Read only selected declarations; no directory scan or application evaluation.
+  const managedPaths = new Set();
+  for (const path of spec.managedSourceManifests ?? []) {
+    const entry = byPath.get(path);
+    if (!entry) throw new TypeError('Missing managed source manifest: ' + path);
+    const bytes = source.readFiles([entry]).get(path);
+    if (bytes.length > MAX_MANAGED_SOURCE_BYTES)
+      throw new RangeError('Managed source manifest exceeds its byte limit: ' + path);
+    const inventory = validateManagedSourceManifest(JSON.parse(
+      new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(bytes)), path);
+    for (const member of inventory.entries) {
+      const original = byPath.get(member.path);
+      if (!original || original.bytes > 1024 * 1024 || original.size > 1024 * 1024)
+        throw new TypeError('Missing or oversized managed source: ' + member.path);
+      managedPaths.add(member.path);
+    }
+  }
   const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
     ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
   const explicitSources = new Set(spec.supportFiles);
-  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths,
+  const explicitRuntime = new Set([...managedPaths, ...spec.supportFiles, ...specificationPaths,
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
     ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
       ...(spec.browserAssets ?? []).flatMap(entry => [entry.server, entry.manifest])] : [])]);
@@ -239,7 +258,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
-  for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
+  for (const path of [...required, ...managedPaths, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   const readSource = path => sources.get(path) ?? source.readFiles([byPath.get(path)]).get(path);
@@ -250,6 +269,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       totalBytes += bytes.length;
       if (bytes.length > MAX_SOURCE_FILE_BYTES)
         throw new RangeError(`Distribution source file exceeds ${MAX_SOURCE_FILE_BYTES} bytes (${bytes.length}): ${path}`);
+      if (managedPaths.has(path) && bytes.length > 1024 * 1024)
+        throw new RangeError('Managed source exceeds its runtime byte limit: ' + path);
       if (totalBytes > MAX_SOURCE_BYTES)
         throw new RangeError(`Distribution source exceeds ${MAX_SOURCE_BYTES} bytes: ${totalBytes}`);
       sources.set(path, bytes);

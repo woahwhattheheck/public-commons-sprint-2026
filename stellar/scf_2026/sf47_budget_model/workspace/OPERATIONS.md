@@ -2,6 +2,10 @@
 
 This desk extends the original SF47 planning workspace. Open **Delivery operations** in the existing browser or use the existing CLI's `operations` command. It uses the same workspace directory, SQLite connection, process lease, private access link and retained request receipts. No additional service or database is needed.
 
+## Work and invoice source intake
+
+Use **Work / invoice intake** to receive complete timesheets and supplier invoice lines from CSV or TSV. Map columns and original counterparties, retain corrections and duplicate decisions, save drafts, and apply the reviewed source in one native transaction. All source rows and applied record links travel with the complete operating case. [Work and invoice intake](WORK_INTAKE.md) covers the browser, CLI, typed client and merchant tools.
+
 ## Working from a saved plan
 
 Open a case from a saved planning revision. The case retains the exact scenario, staffing/payment plan, native calculation, source file identity and saved report. Later forecasts do not rewrite that selected revision. The browser lists every operations case in the workspace, including received cases whose planner history was imported under a new native plan ID. Each case displays its own pinned plan.

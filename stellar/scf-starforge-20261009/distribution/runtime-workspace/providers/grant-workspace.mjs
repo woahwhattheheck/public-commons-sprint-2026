@@ -18,6 +18,6 @@ export default {
     return observeApplicationStartup(request, directory, text => {
       if (!text.startsWith("{\"schema\":\"stellar-forge.sf47.workspace-launch.v1\",")) return null;
       return () => grantStartup(request, text);
-    });
+    }, {lineLimit:256 * 1024});
   },
 };

@@ -300,6 +300,14 @@ def parser():
     target = command("history", "Read the original saved revision history")
     plan_options(target)
     output_option(target)
+    target = command("compare", "Compare two explicit saved plan revisions and export their complete native receiving package")
+    plan_options(target)
+    target.add_argument("--from-revision", type=positive_revision, required=True)
+    target.add_argument("--to-revision", type=positive_revision, required=True)
+    target.add_argument("--to-plan", help="Named alternative plan ID; defaults to the before plan")
+    target.add_argument("--format", choices=("json", "zip", "html", "changes-csv", "impact-csv", "daily-csv"), default="json")
+    target.add_argument("--expected-comparison-sha256", help="Require the exact comparison previously read")
+    target.add_argument("--output", help="New private output file; required for formats other than JSON")
     target = command("import-scenario", "Create a named plan from exact original scenario JSON")
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
@@ -399,6 +407,20 @@ def operate(args):
             return plan[args.part]
         if name == "history":
             return workspace.history(args.plan)
+        if name == "compare":
+            from plan_comparison import compare, export_bundle, render_html, changes_csv, impact_csv, daily_csv
+            if args.format != "json" and not args.output:
+                raise Problem("--output is required for a comparison file export.", 422, "OUTPUT_REQUIRED")
+            selection = (workspace, args.plan, args.from_revision, args.to_revision, args.to_plan,
+                         args.expected_comparison_sha256)
+            report = compare(*selection)
+            if args.format == "json" and not args.output:
+                return report
+            renderers = {"json": json_bytes, "html": render_html, "changes-csv": changes_csv,
+                         "impact-csv": impact_csv, "daily-csv": daily_csv}
+            raw = export_bundle(*selection) if args.format == "zip" else renderers[args.format](report)
+            return {"comparisonSha256": report["comparisonSha256"], "before": report["before"], "after": report["after"],
+                    "output": publish(args.output, raw)}
         if name == "import-scenario":
             return workspace.create(args.name, prepared, read_json(args.planning) if args.planning else {},
                                     args.note, args.request_id, source_name=Path(args.file).name,

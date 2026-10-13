@@ -1,0 +1,20 @@
+.staff-recovery{width:min(36rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;box-sizing:border-box;border:1px solid #666;border-radius:4px;padding:1.5rem;background:#fff;color:#161616;font:15px/1.5 system-ui,sans-serif}
+.staff-recovery::backdrop{background:rgb(0 0 0 / .35)}
+.staff-recovery h2{font-size:1.3rem;margin:0 0 .6rem}
+.staff-recovery p{margin:.75rem 0}
+.staff-recovery dl{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:.35rem .8rem;margin:1rem 0}
+.staff-recovery dt{font-weight:600}
+.staff-recovery dd{margin:0;overflow-wrap:anywhere}
+.staff-recovery label{display:grid;gap:.35rem;margin:1rem 0}
+.staff-recovery input{min-width:0;width:100%;box-sizing:border-box;border:1px solid #777;border-radius:3px;padding:.65rem;font:inherit;color:inherit;background:#fff}
+.staff-recovery input[readonly]{background:#f2f2f2}
+.staff-recovery [hidden]{display:none}
+.staff-recovery-actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.25rem}
+.staff-recovery button{border:1px solid #666;border-radius:3px;padding:.6rem .8rem;font:inherit;background:#f4f4f4;color:#161616;cursor:pointer}
+.staff-recovery button[type=submit]{background:#252525;color:#fff}
+.staff-recovery button:disabled{opacity:.6;cursor:default}
+.staff-recovery a{color:#242424;text-decoration:underline}
+.staff-recovery [role=alert]{padding:.6rem;border-left:3px solid #555;background:#f1f1f1}
+@media(max-width:480px){.staff-recovery{padding:1rem}.staff-recovery dl{grid-template-columns:1fr;gap:.2rem}.staff-recovery dd{margin-bottom:.5rem}.staff-recovery-actions button{width:100%}}
+
+.staff-earlier-desk{margin:0 0 1rem;padding:.85rem 1rem;border:1px solid #b8b8b8;background:#fff;color:#222;border-radius:3px;font:inherit}.staff-earlier-desk summary{font-weight:600;cursor:pointer}.staff-earlier-desk p{max-width:80ch;line-height:1.5}.staff-earlier-desk button{padding:.55rem .75rem;border:1px solid #777;border-radius:3px;background:#f5f5f5;color:#111;font:inherit}.staff-earlier-desk button:disabled{opacity:.55}.staff-earlier-desk .staff-recovery-actions{display:flex;gap:.5rem;flex-wrap:wrap}@media(max-width:600px){.staff-earlier-desk button{width:100%}}

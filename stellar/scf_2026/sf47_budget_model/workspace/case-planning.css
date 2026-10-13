@@ -1,0 +1,10 @@
+.case-planning-route{border:1px solid #b9b9b9;padding:1rem;margin:0 0 1rem;background:#f8f8f8;min-width:0}
+.case-planning-route h2{margin-top:0;font-size:1.1rem}
+.case-planning-route p{overflow-wrap:anywhere}
+.case-planning-route .button-row{display:flex;flex-wrap:wrap;gap:.5rem}
+.case-planning-route button{white-space:normal;text-align:left}
+.case-planning-drafts{width:min(50rem,calc(100% - 2rem));max-height:85vh;overflow:auto;border:1px solid #555;padding:1.25rem}
+.case-planning-drafts::backdrop{background:rgb(0 0 0 / .25)}
+.case-planning-drafts p{overflow-wrap:anywhere}
+.case-planning-drafts button{max-width:100%;white-space:normal;text-align:left}
+@media(max-width:620px){.case-planning-route{padding:.8rem}.case-planning-route .button-row{display:grid;grid-template-columns:1fr}.case-planning-route button{width:100%}}

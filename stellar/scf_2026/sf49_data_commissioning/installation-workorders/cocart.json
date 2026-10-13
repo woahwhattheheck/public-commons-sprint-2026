@@ -1,0 +1,73 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "cocart",
+  "title": "CoCart — one customer cart, checkout and receiving installation",
+  "task": {
+    "name": "Purchase the selected digital product through the existing headless storefront",
+    "purpose": "Let the selected customer's shopper use its headless cart and native Woo checkout, receive the merchant-approved digital purchase, and recover the same order when a response or operator session is interrupted.",
+    "request": "One customer and one simple virtual SKU at quantity one. Use the selected installed CoCart edition and official SDK; retain the guest cart key, native minor-unit values and the original cart mutations. Select the explicit merge or replace checkout mode for the actual edition, continue the resulting Woo checkout/order handoff, and operate the agreed Stellar payment review and fulfilment on that original order.",
+    "completeOutput": "The same native cart, Woo checkout handoff, order and payment/fulfilment result are usable by the shopper and merchant. Deliver the complete CoCart receiving JSON, original mapped product profile, retained operation/source objects, private deployment configuration references and an independently reopened receiving workspace.",
+    "repeatTrigger": "A shopper makes a new useful purchase of the selected SKU; a returning shopper or merchant recovers an existing order by its original identity. Count a recovery against its original purchase.",
+    "pricedUnit": "One merchant-approved checkout/order for the selected virtual SKU at quantity one. Read the current original Woo total/currency and separately approved Stellar atomic amount from the selected merchant mapping."
+  },
+  "source": {
+    "reference": "Selected customer profile and complete installed source; maintained entry: stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/cocart/. Retained integration baseline: Community 4.9.7 and @cocartheadless/sdk 1.2.1; bind the customer's actual edition and source ref in receiving inputs.",
+    "mode": "MIXED",
+    "population": "The selected customer's one SKU and its original guest cart, checkout, order and merchant payment records, together with the selected source/dependency edition and original exported merchant profile.",
+    "meaning": "Keep native currency and minor-unit money, opaque guest cart keys, product identity, checkout mode, order/payment attempt and timestamps intact. The buyer handoff must come from that actual checkout. Retain the selected native edition's merge/replace behavior.",
+    "changePolicy": "The original customer/prime controls storefront releases and rollback. Record a changed edition, SKU, mapping, checkout mode or payment selection in the same original case before running the changed flow; retain prior source/profile and order history."
+  },
+  "receiving": {
+    "application": "Original CoCart customer workspace in Applications, the customer's native Woo/SF104 merchant components and complete installed source. Prepare through the existing /cocart.html setup or cocart/managed.mjs.",
+    "acceptanceRule": "Receive the original profile/source; operate guest-cart changes and exact amounts; choose the actual checkout mode; retain the original checkout handoff; complete the agreed buyer and merchant review/fulfilment; recover an interrupted operation by its original identity; receive the complete workspace on the selected host; have the named engineer reopen and explain support ownership.",
+    "changeAndWithdraw": "The merchant controls product mapping, payment selection, release and withdrawal. The receiving engineer uses the original managed application and records a deliberate local transport rebind while retaining source, cart, order and merchant-state identities.",
+    "recovery": "Inspect the same native operation after an interrupted mutation or payment. Create a reviewed complete export with a stable export ID/current revision, resume its original download, and use inspect-cocart/download-cocart/reopen-cocart. Preserve the actual store database for existing keys/checkouts.",
+    "maintenance": "Retain the customer's license holder, CoCart upstream support contact, storefront release owner, hosting operator, payment reviewer, fulfilment owner and receiving engineer. Record actual care allowance and incident/rollback route from the retained agreement."
+  },
+  "steps": [
+    {
+      "title": "Select the real customer contract",
+      "result": "Retain the original company case/workshare. Bind the one SKU, installed edition, storefront and Woo origin, actual source ref, checkout mode, merchant authority and receiving host."
+    },
+    {
+      "title": "Prepare the complete native installation",
+      "result": "Use the original mapped product's Download saved headless profile, or the complete prior receiving JSON. Run managed.mjs setup with the selected private workspace, SDK entry and connection reference. Adopt through the existing Applications review."
+    },
+    {
+      "title": "Operate the full shopper and merchant task",
+      "result": "Use the selected storefront through the official SDK, deliberate native checkout transfer and its original handoff. Continue the same buyer/merchant payment operation to the agreed order outcome."
+    },
+    {
+      "title": "Resolve interruption and receive the installation",
+      "result": "Inspect the original uncertain operation; retain the same cart/order/payment identities. Export the complete original workspace, resume the same download and independently reopen it with the complete source."
+    },
+    {
+      "title": "Handover and repeat",
+      "result": "Receive source/configuration/support inventory, consolidate the existing acceptance review, and let the selected operator run useful later purchases under the merchant's authority."
+    }
+  ],
+  "inputs": [
+    "Selected customer/prime and accountable acceptance owner",
+    "Original commercial case, source attachments and current Workshare edition",
+    "Actual storefront/Woo origins, installed CoCart/Woo/WordPress/PHP/database versions and frontend source ref",
+    "One simple virtual SKU/product ID at quantity one, native total/currency and original merchant profile",
+    "Merchant and independent buyer deployment IDs from the original SF47 case",
+    "Merchant-approved network, asset, recipient, atomic amount, spending authority and facilitator selections",
+    "Actual private receiving host, source custody, SDK entry, connection reference and receiving engineer",
+    "Original checkout mode, release/rollback owner, payment reviewer, fulfilment owner and agreed maintenance"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/cocart/OPERATING.md",
+      "blob": "09aede1b54266f8b3536ecc44f1a0d3c62bb1254"
+    },
+    {
+      "path": "stellar-forge/developer-site/COCART.md",
+      "blob": "811de8feeb5e884765e18ce4517f68e454af2662"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/cocart/MANAGED.md",
+      "blob": "e58f095f4f0f4b02cd84c224979fd3bbe9310fb9"
+    }
+  ]
+}

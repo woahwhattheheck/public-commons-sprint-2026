@@ -1,0 +1,1703 @@
+{
+  "schema": "stellar-forge.sf47-commercial-economics-result.v1",
+  "kind": "SOURCE_MODEL_PLANNING_ONLY",
+  "asOfDate": "2026-10-13",
+  "source": {
+    "candidateSha256": "79090013305fd4173413e7b2aad3b63c0ec696d1e8323c526eaea2c18d402ece",
+    "cohortEngineGitBlob": "3cf156e25ee3dd4e139bf1b27a65a2c9d781c556"
+  },
+  "assumptions": {
+    "schema": "stellar-forge.sf47-commercial-economics-input.v1",
+    "id": "commercial-units-20261013",
+    "name": "Quoted service care and complete-output planning",
+    "asOfDate": "2026-10-13",
+    "windowStart": "2027-01-04",
+    "billingPeriodDays": 30,
+    "outputCountsPerDay": [
+      1,
+      2,
+      5
+    ],
+    "requestsPerOutput": 4,
+    "monthlyPurchasedCareCents": 60000,
+    "cohortEngineGitBlob": "3cf156e25ee3dd4e139bf1b27a65a2c9d781c556",
+    "outputScope": "A selected chart/report or content-data result, acquired completely through the existing merchant and buyer workflow.",
+    "expectedOutput": "Complete selected result with native schema and source identity, paid outcome where applicable, retained rows/files, and receiving/reopening at the agreed destination.",
+    "sourcePeriod": "Customer-selected source edition; unchanged across retries of the same original output.",
+    "stressCases": [
+      {
+        "id": "base",
+        "extraRequestsPerOutput": 0,
+        "refundEveryOutputs": 0
+      },
+      {
+        "id": "retry-refund",
+        "extraRequestsPerOutput": 1,
+        "refundEveryOutputs": 10
+      }
+    ],
+    "costs": {
+      "providerAndNetworkCostPerAttemptUsd": null,
+      "paymentFeePerOriginalChargeUsd": null,
+      "refundHandlingUsdPerRefundedCharge": null,
+      "activeHoursPerOutput": null,
+      "actualCashLaborRateUsd": null,
+      "otherMonthlyFixedUsd": null
+    },
+    "workshares": [
+      {
+        "id": "cocart-implementation",
+        "label": "Proposed CoCart direct-customer implementation",
+        "currency": "USD",
+        "fee": "7200",
+        "hours": "60",
+        "hourlyCost": "95",
+        "otherCosts": "360",
+        "sourceIds": [],
+        "sourceNote": "Original proposed $7,200/60h/15-business-day implementation and proposed 5% referral. $95/hour planning rate. Other costs here are only the $360 referral; hosting, paid-provider charges and taxes are unestimated, so contribution is before those costs."
+      },
+      {
+        "id": "cocart-monthly-care",
+        "label": "Proposed monthly care, up to five engineering hours",
+        "currency": "USD",
+        "fee": "600",
+        "hours": "5",
+        "hourlyCost": "95",
+        "otherCosts": "0",
+        "sourceIds": [],
+        "sourceNote": "Original proposed $600/month for five care hours; $95/hour planning valuation. No referral is assumed on care without an agreed term. Other cost is zero only for this labor-only sensitivity; hosting, provider charges and taxes remain separately unestimated."
+      }
+    ],
+    "provenance": {
+      "quotedTerms": "Relationship-owner-confirmed October 12 CoCart proposal: $7,200 for 60 hours over 15 business days, 5% of collected initial implementation fees; optional $600/month for up to five care hours. No accepted customer contract or collected revenue asserted.",
+      "valuation": "$95/hour is the unchanged grant planning valuation, not an observed wage or committed contributor cash payment.",
+      "hypotheticalService": "January 4–February 2, 2027 is an arbitrary 30-day billing period; the original 14-day observation rule is unchanged. 1/2/5 outputs per day, four original requests per output, one extra retry per output and each tenth output refunded are explicit stress assumptions, not customer demand, observed failure rates or grant purchasing targets.",
+      "careCost": "The $600 care offer is conditional. Treating it as purchased monthly support is a merchant-side scenario; the separate quoted care workshare is the seller-side scenario. Neither is a booked sale."
+    },
+    "forecast": {
+      "implementationCashCostUsd": null,
+      "careCashCostUsd": null,
+      "implementationStart": "2027-01-04",
+      "implementationFinish": "2027-01-22",
+      "implementationReceipts": [
+        "2027-01-04",
+        "2027-01-25"
+      ],
+      "careStart": "2027-02-01",
+      "careFinish": "2027-02-28",
+      "careReceipt": "2027-02-01"
+    }
+  },
+  "window": {
+    "start": "2027-01-04",
+    "end": "2027-01-17",
+    "days": 14,
+    "billingPeriodEnd": "2027-02-02",
+    "billingPeriodDays": 30
+  },
+  "workshare": {
+    "workshares": [
+      {
+        "id": "cocart-implementation",
+        "label": "Proposed CoCart direct-customer implementation",
+        "currency": "USD",
+        "sourceIds": [],
+        "sourceNote": "Original proposed $7,200/60h/15-business-day implementation and proposed 5% referral. $95/hour planning rate. Other costs here are only the $360 referral; hosting, paid-provider charges and taxes are unestimated, so contribution is before those costs.",
+        "fee": "7200",
+        "hours": "60",
+        "hourlyCost": "95",
+        "otherCosts": "360",
+        "cases": [
+          {
+            "effortIncreasePct": "0",
+            "hours": "60",
+            "laborCost": "5700",
+            "totalCost": "6060",
+            "contribution": "1140",
+            "marginPercent": "15.833333"
+          },
+          {
+            "effortIncreasePct": "20",
+            "hours": "72",
+            "laborCost": "6840",
+            "totalCost": "7200",
+            "contribution": "0",
+            "marginPercent": "0"
+          },
+          {
+            "effortIncreasePct": "25",
+            "hours": "75",
+            "laborCost": "7125",
+            "totalCost": "7485",
+            "contribution": "-285",
+            "marginPercent": "-3.958333"
+          }
+        ],
+        "breakEvenHours": "72"
+      },
+      {
+        "id": "cocart-monthly-care",
+        "label": "Proposed monthly care, up to five engineering hours",
+        "currency": "USD",
+        "sourceIds": [],
+        "sourceNote": "Original proposed $600/month for five care hours; $95/hour planning valuation. No referral is assumed on care without an agreed term. Other cost is zero only for this labor-only sensitivity; hosting, provider charges and taxes remain separately unestimated.",
+        "fee": "600",
+        "hours": "5",
+        "hourlyCost": "95",
+        "otherCosts": "0",
+        "cases": [
+          {
+            "effortIncreasePct": "0",
+            "hours": "5",
+            "laborCost": "475",
+            "totalCost": "475",
+            "contribution": "125",
+            "marginPercent": "20.833333"
+          },
+          {
+            "effortIncreasePct": "20",
+            "hours": "6",
+            "laborCost": "570",
+            "totalCost": "570",
+            "contribution": "30",
+            "marginPercent": "5"
+          },
+          {
+            "effortIncreasePct": "25",
+            "hours": "6.25",
+            "laborCost": "593.75",
+            "totalCost": "593.75",
+            "contribution": "6.25",
+            "marginPercent": "1.041667"
+          }
+        ],
+        "breakEvenHours": "6.315789473684"
+      }
+    ],
+    "findings": [
+      {
+        "code": "SCHEDULES_EMPTY",
+        "severity": "warning",
+        "scope": "plan",
+        "id": null,
+        "message": "Add the customer's useful operations and normal operating calendar."
+      },
+      {
+        "code": "PLANNED_TARGET_SHORTFALL",
+        "severity": "warning",
+        "scope": "target",
+        "id": "external_mainnet_merchant_operators",
+        "message": "external_mainnet_merchant_operators needs 2; the selected normal-use calendar provides 0 planned opportunities."
+      },
+      {
+        "code": "PLANNED_TARGET_SHORTFALL",
+        "severity": "warning",
+        "scope": "target",
+        "id": "external_buyer_operators",
+        "message": "external_buyer_operators needs 2; the selected normal-use calendar provides 0 planned opportunities."
+      },
+      {
+        "code": "PLANNED_TARGET_SHORTFALL",
+        "severity": "warning",
+        "scope": "target",
+        "id": "completed_mainnet_purchases",
+        "message": "completed_mainnet_purchases needs 30; the selected normal-use calendar provides 0 planned opportunities."
+      },
+      {
+        "code": "PLANNED_TARGET_SHORTFALL",
+        "severity": "warning",
+        "scope": "target",
+        "id": "repeat_external_buyer_operators",
+        "message": "repeat_external_buyer_operators needs 2; the selected normal-use calendar provides 0 planned opportunities."
+      }
+    ]
+  },
+  "forecast": {
+    "asOfDate": "2026-10-13",
+    "status": "CASH_COST_INPUTS_REQUIRED",
+    "templateRows": [
+      {
+        "sourceUrl": "",
+        "sourceIds": [],
+        "stage": "QUOTED",
+        "selected": false,
+        "paymentMode": "accrual",
+        "cashIds": [],
+        "invoiceIds": [],
+        "directCashIds": [],
+        "id": "cocart-implementation-planning",
+        "title": "Proposed direct-customer implementation",
+        "caseRef": "Original CoCart October 12 implementation proposal; customer selection and acceptance remain open.",
+        "priceUsd": "7200.00",
+        "totalDeliveryCostUsd": null,
+        "remainingHours": "60",
+        "startDate": "2027-01-04",
+        "endDate": "2027-01-22",
+        "receipts": [
+          {
+            "id": "implementation-start",
+            "label": "Conditional first half",
+            "amountUsd": "3600.00",
+            "date": "2027-01-04"
+          },
+          {
+            "id": "implementation-handover",
+            "label": "Conditional accepted handover",
+            "amountUsd": "3600.00",
+            "date": "2027-01-25"
+          }
+        ],
+        "scope": "Original proposed 60-hour / 15-business-day implementation and 5% referral on collected initial implementation fees.",
+        "note": "Unselected dated planning scenario. These dates are not an agreement or collection. Enter the full actual cash-cost estimate, including any agreed contributor payments, the proposed referral and other cash obligations. The $95 economic planning valuation is not automatically a cash wage."
+      },
+      {
+        "sourceUrl": "",
+        "sourceIds": [],
+        "stage": "QUOTED",
+        "selected": false,
+        "paymentMode": "accrual",
+        "cashIds": [],
+        "invoiceIds": [],
+        "directCashIds": [],
+        "id": "cocart-care-planning",
+        "title": "Proposed optional monthly care",
+        "caseRef": "Original CoCart October 12 optional $600/month care proposal; no accepted care subscription.",
+        "priceUsd": "600.00",
+        "totalDeliveryCostUsd": null,
+        "remainingHours": "5",
+        "startDate": "2027-02-01",
+        "endDate": "2027-02-28",
+        "receipts": [
+          {
+            "id": "care-month",
+            "label": "Conditional full monthly care receipt",
+            "amountUsd": "600.00",
+            "date": "2027-02-01"
+          }
+        ],
+        "scope": "Original optional monthly care for up to five hours; actual support and hosting responsibility require agreement.",
+        "note": "Unselected dated planning scenario. Full monthly receipt is $600; the separate 14/30 service allocation does not change invoice cash timing. Enter actual cash costs. Do not assume the implementation referral applies to care."
+      }
+    ],
+    "readyCommercialRows": [],
+    "missingCashCostRowIds": [
+      "cocart-implementation-planning",
+      "cocart-care-planning"
+    ],
+    "use": "Merge reviewed readyCommercialRows into the current case's existing Forecast input; preserve original package, opening cash, grant timing and peer commercial rows. Re-select dates, source attachments and actual cash costs, then use original forecast-preview and its reviewed save. No native Forecast validation, case save or cash transaction is represented by this caller."
+  },
+  "cases": [
+    {
+      "id": "1-per-day-base-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 1,
+      "outputs": 14,
+      "requests": 56,
+      "originalCharges": 14,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 14,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 30
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 4,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 20,
+            "denominator": 1
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 20,
+          "denominator": 1
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 14,
+          "scheduledRequests": 56,
+          "plannedPaymentRequests": 14,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 14,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 14,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 28,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 14,
+              "supplierCost": 14,
+              "paymentFees": 14,
+              "activeHours": 14,
+              "laborCost": 14
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 14
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "FUNDING_PRICE_UNSPECIFIED": 14,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "1-per-day-base-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 1,
+      "outputs": 14,
+      "requests": 56,
+      "originalCharges": 56,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 56,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 120
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 4
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 5,
+            "denominator": 1
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 5,
+          "denominator": 1
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 14,
+          "scheduledRequests": 56,
+          "plannedPaymentRequests": 56,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 14,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 56,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 70,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 56,
+              "supplierCost": 14,
+              "paymentFees": 56,
+              "activeHours": 14,
+              "laborCost": 14
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 14
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "FUNDING_PRICE_UNSPECIFIED": 56,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "1-per-day-retry-refund-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 1,
+      "outputs": 14,
+      "requests": 70,
+      "originalCharges": 14,
+      "refundedOutputs": 1,
+      "refundedCharges": 1,
+      "retainedChargeEquivalent": 13,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 7,
+            "denominator": 195
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 70,
+            "denominator": 13
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 13
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 280,
+            "denominator": 13
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 280,
+          "denominator": 13
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 14,
+          "scheduledRequests": 70,
+          "plannedPaymentRequests": 14,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 14,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 14,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 28,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 14,
+              "supplierCost": 14,
+              "paymentFees": 14,
+              "activeHours": 14,
+              "laborCost": 14
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 14
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "FUNDING_PRICE_UNSPECIFIED": 14,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "1-per-day-retry-refund-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 1,
+      "outputs": 14,
+      "requests": 70,
+      "originalCharges": 56,
+      "refundedOutputs": 1,
+      "refundedCharges": 4,
+      "retainedChargeEquivalent": 52,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 7,
+            "denominator": 780
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 35,
+            "denominator": 26
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 13
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 7,
+            "denominator": 26
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 70,
+            "denominator": 13
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 70,
+          "denominator": 13
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 14,
+          "scheduledRequests": 70,
+          "plannedPaymentRequests": 56,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 14,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 56,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 70,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 56,
+              "supplierCost": 14,
+              "paymentFees": 56,
+              "activeHours": 14,
+              "laborCost": 14
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 14
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "FUNDING_PRICE_UNSPECIFIED": 56,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "2-per-day-base-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 2,
+      "outputs": 28,
+      "requests": 112,
+      "originalCharges": 28,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 28,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 60
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 4,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 10,
+            "denominator": 1
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 10,
+          "denominator": 1
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 28,
+          "scheduledRequests": 112,
+          "plannedPaymentRequests": 28,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 28,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 28,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 56,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 28,
+              "supplierCost": 28,
+              "paymentFees": 28,
+              "activeHours": 28,
+              "laborCost": 28
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 28
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 14,
+          "FUNDING_PRICE_UNSPECIFIED": 28,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "2-per-day-base-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 2,
+      "outputs": 28,
+      "requests": 112,
+      "originalCharges": 112,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 112,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 240
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 4
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 5,
+            "denominator": 2
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 5,
+          "denominator": 2
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 28,
+          "scheduledRequests": 112,
+          "plannedPaymentRequests": 112,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 28,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 112,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 140,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 112,
+              "supplierCost": 28,
+              "paymentFees": 112,
+              "activeHours": 28,
+              "laborCost": 28
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 28
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 14,
+          "FUNDING_PRICE_UNSPECIFIED": 112,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "2-per-day-retry-refund-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 2,
+      "outputs": 28,
+      "requests": 140,
+      "originalCharges": 28,
+      "refundedOutputs": 2,
+      "refundedCharges": 2,
+      "retainedChargeEquivalent": 26,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 7,
+            "denominator": 390
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 70,
+            "denominator": 13
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 13
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 140,
+            "denominator": 13
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 140,
+          "denominator": 13
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 28,
+          "scheduledRequests": 140,
+          "plannedPaymentRequests": 28,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 28,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 28,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 56,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 28,
+              "supplierCost": 28,
+              "paymentFees": 28,
+              "activeHours": 28,
+              "laborCost": 28
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 28
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 14,
+          "FUNDING_PRICE_UNSPECIFIED": 28,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "2-per-day-retry-refund-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 2,
+      "outputs": 28,
+      "requests": 140,
+      "originalCharges": 112,
+      "refundedOutputs": 2,
+      "refundedCharges": 8,
+      "retainedChargeEquivalent": 104,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 7,
+            "denominator": 1560
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 35,
+            "denominator": 26
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 14,
+            "denominator": 13
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 13
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 7,
+            "denominator": 26
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 35,
+            "denominator": 13
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 35,
+          "denominator": 13
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 28,
+          "scheduledRequests": 140,
+          "plannedPaymentRequests": 112,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 28,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 112,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 140,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 112,
+              "supplierCost": 28,
+              "paymentFees": 112,
+              "activeHours": 28,
+              "laborCost": 28
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 28
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 14,
+          "FUNDING_PRICE_UNSPECIFIED": 112,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "5-per-day-base-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 5,
+      "outputs": 70,
+      "requests": 280,
+      "originalCharges": 70,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 70,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 150
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 4,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 4,
+            "denominator": 1
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 4,
+          "denominator": 1
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 70,
+          "scheduledRequests": 280,
+          "plannedPaymentRequests": 70,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 70,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 70,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 140,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 70,
+              "supplierCost": 70,
+              "paymentFees": 70,
+              "activeHours": 70,
+              "laborCost": 70
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 70
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 56,
+          "FUNDING_PRICE_UNSPECIFIED": 70,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "5-per-day-base-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 5,
+      "outputs": 70,
+      "requests": 280,
+      "originalCharges": 280,
+      "refundedOutputs": 0,
+      "refundedCharges": 0,
+      "retainedChargeEquivalent": 280,
+      "extraRequestsPerOutput": 0,
+      "refundBasis": "Full-price refund of every no outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 600
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 1,
+            "denominator": 4
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 1,
+            "denominator": 1
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 1,
+          "denominator": 1
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 70,
+          "scheduledRequests": 280,
+          "plannedPaymentRequests": 280,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 70,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 280,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 350,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 280,
+              "supplierCost": 70,
+              "paymentFees": 280,
+              "activeHours": 70,
+              "laborCost": 70
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 70
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 56,
+          "FUNDING_PRICE_UNSPECIFIED": 280,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "5-per-day-retry-refund-complete_output",
+      "billingMode": "COMPLETE_OUTPUT",
+      "outputsPerDay": 5,
+      "outputs": 70,
+      "requests": 350,
+      "originalCharges": 70,
+      "refundedOutputs": 7,
+      "refundedCharges": 7,
+      "retainedChargeEquivalent": 63,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 135
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 50,
+            "denominator": 9
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 10,
+            "denominator": 9
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 9
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 10,
+            "denominator": 9
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 40,
+            "denominator": 9
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 40,
+          "denominator": 9
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 70,
+          "scheduledRequests": 350,
+          "plannedPaymentRequests": 70,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 70,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 70,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 140,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 70,
+              "supplierCost": 70,
+              "paymentFees": 70,
+              "activeHours": 70,
+              "laborCost": 70
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 70
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 56,
+          "FUNDING_PRICE_UNSPECIFIED": 70,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    },
+    {
+      "id": "5-per-day-retry-refund-original_request",
+      "billingMode": "ORIGINAL_REQUEST",
+      "outputsPerDay": 5,
+      "outputs": 70,
+      "requests": 350,
+      "originalCharges": 280,
+      "refundedOutputs": 7,
+      "refundedCharges": 28,
+      "retainedChargeEquivalent": 252,
+      "extraRequestsPerOutput": 1,
+      "refundBasis": "Full-price refund of every 10 outputs, including all original request charges for those outputs; original settlements and nonrefundable payment fees are retained.",
+      "pricing": {
+        "status": "INCOMPLETE",
+        "coefficients": {
+          "monthlyFixedUsd": {
+            "numerator": 1,
+            "denominator": 540
+          },
+          "providerAndNetworkUsdPerAttempt": {
+            "numerator": 25,
+            "denominator": 18
+          },
+          "paymentFeeUsdPerOriginalCharge": {
+            "numerator": 10,
+            "denominator": 9
+          },
+          "refundHandlingUsdPerRefundedCharge": {
+            "numerator": 1,
+            "denominator": 9
+          },
+          "cashLaborUsdPerOutput": {
+            "numerator": 5,
+            "denominator": 18
+          },
+          "knownPurchasedCareUsd": {
+            "numerator": 10,
+            "denominator": 9
+          }
+        },
+        "formula": "gross quote per original charge >= knownPurchasedCareUsd + monthlyFixedUsd * other monthly fixed USD + providerAndNetworkUsdPerAttempt * attempt cost + paymentFeeUsdPerOriginalCharge * fee + refundHandlingUsdPerRefundedCharge * refund handling + cashLaborUsdPerOutput * cash labor per output",
+        "scope": "Zero-margin allocation for the explicit planning period. Coefficients are exact rational numbers. Purchased care is a conditional quoted cost to the merchant; the separate care workshare describes its seller's economics. Do not count the same care hours again as per-output support. Taxes, percentage-based charges and any other omitted cost need explicit additional terms; no complete price recommendation is made.",
+        "knownCareFloorOnly": {
+          "numerator": 10,
+          "denominator": 9
+        },
+        "missingInputs": [
+          "providerAndNetworkCostPerAttemptUsd",
+          "paymentFeePerOriginalChargeUsd",
+          "refundHandlingUsdPerRefundedCharge",
+          "activeHoursPerOutput",
+          "actualCashLaborRateUsd",
+          "otherMonthlyFixedUsd"
+        ],
+        "revenue": null,
+        "fullCost": null,
+        "fullBreakEvenQuote": null
+      },
+      "originalModel": {
+        "summary": {
+          "scheduledTasks": 70,
+          "scheduledRequests": 350,
+          "plannedPaymentRequests": 280,
+          "plannedPaidPurchases": 0,
+          "plannedCompleteTasks": 70,
+          "plannedCompletePurchases": 0,
+          "independentPurchaseOpportunities": 0,
+          "allowanceUnits": 0,
+          "independentBuyerOperators": 0,
+          "independentMerchantOperators": 0,
+          "returningBuyerOperators": 0,
+          "sameOperationFacilitatorOperators": 0,
+          "excludedScheduleDates": 0,
+          "completionOutsideWindow": 0,
+          "elapsedScheduledDates": 0,
+          "unpricedPaymentRequests": 280,
+          "unpricedIndependentOpportunities": 0
+        },
+        "currencies": [
+          {
+            "currency": "USD",
+            "records": 350,
+            "knownSubtotals": {
+              "revenue": "0",
+              "supplierCost": "0",
+              "paymentFees": "0",
+              "activeHours": "0",
+              "laborCost": "0"
+            },
+            "unknownRecordCounts": {
+              "revenue": 280,
+              "supplierCost": 70,
+              "paymentFees": 280,
+              "activeHours": 70,
+              "laborCost": 70
+            },
+            "complete": false,
+            "revenue": null,
+            "supplierCost": null,
+            "paymentFees": null,
+            "activeHours": null,
+            "laborCost": null,
+            "totalCost": null,
+            "contribution": null,
+            "marginPercent": null
+          }
+        ],
+        "servicePricingStatusCounts": {
+          "INCOMPLETE": 70
+        },
+        "findingCounts": {
+          "OPERATOR_UNSPECIFIED": 2,
+          "OVERLAPPING_TASK_SLOT": 56,
+          "FUNDING_PRICE_UNSPECIFIED": 280,
+          "PLANNED_TARGET_SHORTFALL": 4
+        }
+      }
+    }
+  ]
+}

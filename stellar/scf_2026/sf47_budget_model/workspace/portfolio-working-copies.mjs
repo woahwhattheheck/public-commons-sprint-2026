@@ -1,4 +1,7 @@
 // MIT. Portable complete working sessions for the original SF47 Portfolio desk.
+import {validateSequenceDesk} from './portfolio-sequence.mjs';
+import {validateEffortDesk} from './portfolio-effort.mjs';
+import {validateAvailabilityDesk} from './portfolio-availability.mjs';
 export const PORTFOLIO_SESSION_SCHEMA='stellar-forge.portfolio-working-session.v1';
 export const PORTFOLIO_COPY_SCHEMA='stellar-forge.portfolio-working-copy.v1';
 export const PORTFOLIO_WORKING_LIMITS=Object.freeze({fileBytes:128*1024*1024,sourceBytes:64*1024*1024,sources:2000,rows:20000});
@@ -90,11 +93,14 @@ export async function validatePortfolioSession(value,{caseId,originCaseId=null,v
  check(value.schema===PORTFOLIO_SESSION_SCHEMA&&typeof caseId==='string'&&value.caseId===caseId,'Receive this working copy in its original operating case.');
  check((value.originCaseId??null)===(originCaseId??null),'Keep the original case lineage with this working copy.');
  check(Number.isSafeInteger(value.caseVersion)&&value.caseVersion>=1,'Retain the observed original case version.');time(value.capturedAt,'capture time');
- const s=value.state;keys(s,['draft','profile','resultProfile','tab','dirty','pending','lastRejected','requestNonce','sourceChoice','savedChoice','baseForecast','sourceTasks','installationCandidates','installationSource','installationChoices','preview','saved','rawFields','resourceDialogs','openDialogKey','attachments','recoveryRaw','copyName','checkpointLabel','historyChoice'],'Portfolio state');
+ const s=value.state;keys(s,['draft','profile','resultProfile','tab','dirty','pending','lastRejected','requestNonce','sourceChoice','savedChoice','baseForecast','sourceTasks','installationCandidates','installationSource','installationChoices','preview','saved','rawFields','resourceDialogs','openDialogKey','attachments','recoveryRaw','copyName','checkpointLabel','historyChoice','availabilityDesk','effortDesk','sequenceDesk'],'Portfolio state');
  check(typeof validateInputs==='function','Use the original Portfolio input validator.');
  const draft=s.draft===null?null:validateInputs(s.draft);
+ if(Object.hasOwn(s,'availabilityDesk'))validateAvailabilityDesk(s.availabilityDesk);
+ if(Object.hasOwn(s,'effortDesk'))validateEffortDesk(s.effortDesk);
+ if(Object.hasOwn(s,'sequenceDesk'))validateSequenceDesk(s.sequenceDesk);
  for(const key of ['profile','resultProfile','requestNonce','sourceChoice','savedChoice','copyName','checkpointLabel','historyChoice'])string(s[key],key,1000);
- check(['inputs','results'].includes(s.tab)&&typeof s.dirty==='boolean','Retain the selected Portfolio view.');
+ check(['inputs','availability','effort','sequence','results'].includes(s.tab)&&typeof s.dirty==='boolean','Retain the selected Portfolio view.');
  check(s.profile==='base'||draft?.alternatives.some(a=>a.id===s.profile),'Retain an existing selected alternative.');
  check(s.resultProfile==='base'||draft?.alternatives.some(a=>a.id===s.resultProfile),'Retain an existing selected result alternative.');
  for(const key of ['sourceTasks','installationCandidates','attachments'])check(Array.isArray(s[key]),'Retain the complete '+key+'.');

@@ -1,0 +1,111 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "curriculum-migration-workbench",
+  "title": "Curriculum migration: actual contracts, complete response comparisons, occurrence plans and independent receiving",
+  "task": {
+    "name": "Commission the curriculum migration workbench and complete customer receiving",
+    "purpose": "Give the engineering and operating teams one maintained application for original API contracts, complete returned outputs, explicit transformations, curriculum occurrence plans, source assets and review decisions. Preserve the same case and all historical source editions through managed browser access, typed clients, customer-agent tools and independent editable receiving.",
+    "request": "Continue the original customer Workshare, commercial plan and Installation. Select the full intended API and curriculum migration population, receive its original contracts and authorized response files, configure the managed application, compare complete original and candidate outputs, record actual engineering decisions, generate the SDK from the selected contract, and independently receive the complete application and workspace. Record actual observed completion in the existing Installation.",
+    "completeOutput": "Complete retained contract editions and source provenance; original/candidate response statuses, headers and bodies; explicit field mappings and keyed-array choices; all comparisons, curriculum occurrence plans and reviewed decisions; immutable SQL/Drizzle/Hasura/introspection assets where supplied; generated client.ts/types.ts/inventory.json; full original source, history, reports and portable workspace; independent receiving branches and recorded operator observations.",
+    "repeatTrigger": "A later source edition, returned response, mapping, case setting, engineering decision or actual bulk export continues the original workspace. Changes make earlier comparisons or plans historical until recalculated against the new selected input. Resume an interrupted command using its exact retained request UUID and body; use a new request for a later operating decision.",
+    "pricedUnit": "Use the existing commercial plan and explicitly agreed scope. Record API adaptation, curriculum mapping, customer implementation, deployment, data acquisition, ongoing service and support as the actual selected work and costs. Preserve existing phase, effort, funding and atomic-unit payment selections. Included public examples establish a source baseline; they do not establish a completed customer migration or a supplier commitment."
+  },
+  "source": {
+    "reference": "Oak National Academy oak-curriculum-api at eabbd67483f37cf6ceb8abb697fc44cb12aca99c, retained by the original complete Commons workbench at 0a79b94fb3fe14008d37e71838822e41dee174cb; customer-selected authorized API responses, bulk exports, metadata and source files; explicit operator mappings, namespaces and decisions.",
+    "mode": "MIXED",
+    "population": "The pinned public baseline contains 32 REST operations, 25 published response examples linked to their API operations, the original bulk JSON Schema, 110 relation-like GraphQL entries with names/descriptions but no field definitions, and exact owaClient view constants. It is not an actual complete bulk dataset. Receive every selected original and candidate response and every intended bulk occurrence without sampling or dropping duplicates. The managed store bounds a complete workspace at 128 MiB, immutable objects and HTTP bodies at 160 MiB, 256 branches and 20,000 retained requests; individual retained asset, response and edition input files are bounded at 128 MiB and the fixed published application source files at 16 MiB. A capacity rejection preserves the previous complete workspace.",
+    "meaning": "Keep published examples, captured HTTP responses and operator files explicitly labeled. Preserve status, headers, full JSON bodies, source descriptions and edition identities. Absent fields, nulls, numbers, numeric strings and ordering remain distinct. Namespaces and exact occurrence pointers are explicit selections. Scope includes the original year, programme, option, board, tier and pathway context where present. Unknown publication states, omitted field metadata and unresolved schema references remain visible. Parsed JSON is retained by the model; retain original raw files and receipts with the customer source evidence when lexical bytes matter.",
+    "changePolicy": "Retain immutable source editions and assets under new IDs when content changes. Keep complete original response versions in saved runs and plans. Field mappings transform a copy of the original body; occurrence mappings select correspondence without erasing changed values. A changed case or schema requires a current comparison or plan before its next decision. Exact request retries return their original result even after later edits; read the current physical branch afterward. Receiving creates a separate branch while preserving the portable workspace identity and original history."
+  },
+  "receiving": {
+    "application": "Use Applications kind, product and CLI curriculum-migration-workbench. The exact 20 original application files remain under products/curriculum-migration-workbench/app/. Settings are workspaceDirectory, optional connectionFile and optional port; the maintained Runtime owns Node 20+ and its original flock-based service lease. CurriculumMigrationClient/createCurriculumMigrationClient and merchant_curriculum_migration_ tools borrow that same service through curriculumMigration/curriculumMigrationConnection. Physical store UUID and canonical directory select the owner; physical branch ID and expected portable workspace ID/revision/SHA select the working edition.",
+    "acceptanceRule": "Open the actual selected managed application, enter the operating engineer and retain complete source responses. Save and compare a selected REST case, inspect every difference and contract result, and record the reviewed decision. Exercise an actual supplied BULK case with explicit namespaces and occurrence mappings when its complete original and candidate data are available. Download all reports, generated SDK files, original source and complete workspace. Receive into an independent physical branch, save a legitimate later edition, reopen it, recover the original branch and confirm earlier receiving does not overwrite the later branch. Open the actual downloaded standalone application in a fresh browser context and receive the full workspace. Inspect normal and 390-pixel layouts and record the actual outcome; source review alone is not a rendered or customer receiving result.",
+    "changeAndWithdraw": "Use customer-authorized source and API access under the named customer owner. The application performs no implicit external data acquisition or deployment. Keep private service tokens in the selected connection file and host-declared source aliases in private agent configuration. Preserve original API code licence and the separate curriculum content terms. Agree source retention, export/transfer, account withdrawal and continuing support ownership in the existing customer case.",
+    "recovery": "Keep the original source selection, service connection, physical store and branch identities, exact command UUID/input and actual first result. Recover uncertain requests before another effect. Keep unsaved form values during a stale-revision conflict; inspect the current branch and explicitly rebase or discard the retained form. Preserve an existing native receiving operation and all completed stages. If bulk input is absent, retain the actual PENDING_INPUT state without generating curriculum rows.",
+    "maintenance": "Receive changed publisher or customer contracts as new source editions, regenerate the API SDK from the selected edition, and inspect diagnostics before deploying consumer changes. Review new response/status/header behavior, unresolved schema assertions and curriculum coverage changes. Retain complete maps, plans, decisions and source assets with every customer handover. Continue original Installation support, operator training and business/funding records."
+  },
+  "steps": [
+    {
+      "title": "Continue the original installation and full migration scope",
+      "result": "Open the existing Workshare, commercial plan and Installation. Preserve phase, effort, funding and payment selections. Agree the complete intended API operations, curriculum population, customer environments, named owners and required outputs from actual source material."
+    },
+    {
+      "title": "Receive and identify the complete contract baseline",
+      "result": "Retain the pinned public contract and all later authorized editions with repository/commit/file provenance. Review the 32 operations, 25 published examples, bulk schema and exact GraphQL name inventory. Mark missing field metadata and omitted error definitions as unresolved source limitations."
+    },
+    {
+      "title": "Receive authorized original and candidate response files",
+      "result": "Retain every selected status, header, request and full response body with captured-http, operator-file or published-example provenance. Preserve original raw-file receipts where needed. Actual BULK inputs and explicit namespaces are supplied by the data owner; absent inputs remain pending."
+    },
+    {
+      "title": "Install the managed store and operating access",
+      "result": "Create or select the real private store, bind the maintained Application and source selection, open its private connection and establish the operating engineer. Configure the typed client and customer agent against the same store UUID, physical directory and branch."
+    },
+    {
+      "title": "Save and review API field migration cases",
+      "result": "Select original and candidate contract editions. Save explicit copy, move, omit or constant mappings with engineering reasons and JSON Pointers. Select keyed-array comparison only for reviewed unordered collections. Run the complete comparison and review status, redirects, exact differences and both schema results."
+    },
+    {
+      "title": "Plan complete curriculum occurrence correspondence",
+      "result": "For actual supplied BULK responses, enter both identifier namespaces. Preserve all unit and lesson occurrences and original order. Review unique identities and explicitly map changed or ambiguous occurrences one-to-one using exact source pointers and reasons."
+    },
+    {
+      "title": "Review publisher reference coverage and complete findings",
+      "result": "Read all original/expected/candidate coverage, unmatched rows, ambiguity groups, exact wire changes, relationship and order changes. Check published lesson payloads and declared unit membership under the retained publisher rules. Keep unknown publication states and unsupported schema assertions visible."
+    },
+    {
+      "title": "Record engineering decisions on exact current results",
+      "result": "Select the current comparison or curriculum plan and record accepted or changes-required with a substantive operator note. Keep all earlier plans, decisions and full historical inputs. Recalculate after a source, mapping or case change before recording a new current decision."
+    },
+    {
+      "title": "Generate the source-derived API SDK and metadata handover",
+      "result": "Generate client.ts, types.ts and inventory.json from the selected retained edition. Inspect diagnostics, 302 handling, raw error bodies and source limitations. Preserve complete SQL, Drizzle, Hasura metadata or full introspection assets as supplied; do not invent tables or relation fields."
+    },
+    {
+      "title": "Operate complete agent reports and request recovery",
+      "result": "Use full branch expectations and original request UUIDs through the authenticated client and agent. Page every selected collection and history result to completion, read every file chunk and verify final bytes/hash. Reconcile an interrupted request against its exact original result and reopen the current branch."
+    },
+    {
+      "title": "Independently receive and continue the complete workspace",
+      "result": "Export the full workspace and original application, receive a new physical branch, save a legitimate following edition and reopen both branches. Verify a repeated original receive preserves the following edit. Open the downloaded standalone application independently and retain actual desktop/narrow observations and exported SDK/source files."
+    },
+    {
+      "title": "Record customer receiving, training and continuing ownership",
+      "result": "Attach complete actual operating results, remaining bulk/provider dependencies and source/receiving outputs to the original Installation. Confirm operator training, explicit review responsibilities, source update cadence, support contacts, complete export/transfer and ownership of any deployment or migration still to perform."
+    }
+  ],
+  "inputs": [
+    "Original customer opportunity, Workshare, complete commercial plan and current Installation, preserving phase/funding/payment/effort selections.",
+    "Exact original workbench source selection and all 20 source files, plus existing native receiving identity/results where already present.",
+    "Original and candidate contract editions with complete source provenance, REST surface, bulk schema and any supplied metadata.",
+    "Complete intended API and curriculum migration population, selected environments and explicit customer/source owner.",
+    "Authorized actual request, status, headers and original/candidate JSON responses; raw file bytes and receipts when required.",
+    "Actual original/candidate BULK export bodies and source descriptions, or an explicit pending-input record until provided.",
+    "Explicit original and candidate identifier namespaces and reviewed occurrence mappings with source pointers and reasons.",
+    "Reviewed field transformations and any keyed-array choices, preserving complete source order and omitted/null distinctions.",
+    "Named operating engineer and actual operation/review timestamps, selected current comparison/plan and decision rationale.",
+    "Actual private store directory/UUID, existing Node 20+/flock Runtime, optional connection file/port and selected physical branches.",
+    "Host-declared complete input-file aliases with byte counts/SHA-256 and private agent storage/configuration for file transfers.",
+    "Complete supplied SQL/Drizzle/Hasura/introspection source assets and the original code/content licence and access terms.",
+    "All comparison, curriculum coverage/plan/review and generated SDK outputs, complete model history and original request receipts.",
+    "Independent receiving destination, full portable workspace and application, actual normal/narrow browser observations, training/support/retention owners."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/curriculum-migration-workbench/app/README.md",
+      "blob": "c7b8d65ba5aaad41e22c5b5bd04ad0dba9801a70"
+    },
+    {
+      "path": "products/curriculum-migration-workbench/app/SDK_GUIDE.md",
+      "blob": "be610b2f9a75203e15447ff5e7899bf7e3963285"
+    },
+    {
+      "path": "products/curriculum-migration-workbench/app/CURRICULUM_MIGRATION.md",
+      "blob": "9ca72f30c7421ea5ff8b76c9abc674112679778c"
+    },
+    {
+      "path": "products/curriculum-migration-workbench/app/CURRICULUM_COVERAGE.md",
+      "blob": "6a6960dade6d9a08f0c6ae756414e3fc17493f11"
+    }
+  ]
+}

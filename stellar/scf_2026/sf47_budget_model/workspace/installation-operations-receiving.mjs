@@ -6,6 +6,7 @@ import {resolve,dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
+import {GRANT_TRANSFER_CHUNK_BYTES} from './agent-contracts.mjs';
 import {MerchantGrantWorkspaces,readGrantWorkspaceConfiguration}
   from '../../../../stellar-forge/mcp-merchant-operator/grant-workspace.mjs';
 
@@ -87,7 +88,7 @@ async function main(){
     const chunks=[];let offset=0,readId;
     do{
       const chunk=await provider.call('merchant_grant_file_read',{workspace:snapshot.workspace,snapshotId:snapshot.id,
-        expectedSha256:snapshot.file.sha256,offset,limit:196608,...(readId?{readId}:{})});
+        expectedSha256:snapshot.file.sha256,offset,limit:GRANT_TRANSFER_CHUNK_BYTES,...(readId?{readId}:{})});
       need(chunk.offset===offset&&chunk.encoding==='base64','Original byte reader returned another position or encoding.');
       const bytes=Buffer.from(chunk.data,'base64');need(bytes.length===chunk.bytesRead,'Original byte page is incomplete.');
       chunks.push(bytes);readId=chunk.readId;offset=chunk.nextOffset;
@@ -286,10 +287,27 @@ async function main(){
   need(cliHistory.editions.length===2&&cliHistory.nextBefore===null,'Original CLI must reopen the full installation history.');
   await exactFile(join(options.work,'delivery','Routescan_Installation_CLI_History.json'),json(cliHistory));
   const cliZip=join(options.work,'delivery','Routescan_Installation_CLI_Export.zip');
-  const cliExport=cli('installation-export',['--case',delivery.receivingCaseId,'--installation',delivery.installationId,
-    '--revision','2','--output',cliZip]);
-  const bytes=await readFile(cliZip);
-  delivery.cli={showSha256:cliShow.sha256,historyEditions:cliHistory.editions.length,export:cliExport};
+  const cliReceipt=join(options.work,'delivery','Routescan_Installation_CLI_Export.json');
+  const retainedFile=join(options.work,'delivery','Routescan_Installation_Received_Edition_2.zip');
+  let bytes=await optional(cliZip),cliExport;
+  const oldReceipt=await optional(cliReceipt);
+  if(bytes){
+    cliExport=oldReceipt?JSON.parse(oldReceipt):{installationId:delivery.installationId,revision:2,
+      output:{path:cliZip,bytes:bytes.length,sha256:sha(bytes)}};
+  }else{
+    need(!oldReceipt,'Original CLI export receipt exists without its complete file.');
+    cliExport=cli('installation-export',['--case',delivery.receivingCaseId,'--installation',delivery.installationId,
+      '--revision','2','--output',cliZip]);
+    bytes=await readFile(cliZip);
+  }
+  const cliSource=runPython(options.python,
+    "import sys,json,io,zipfile,hashlib\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1])\nfrom operations import Operations\n\ndef planning(raw):\n with zipfile.ZipFile(io.BytesIO(raw)) as archive:\n  infos=archive.infolist(); names=[item.filename for item in infos]\n  assert len(names)==len(set(names)) and len(names)<=20 and sum(item.file_size for item in infos)<=32*1024*1024, 'Original planning ZIP bounds differ'\n  manifest=json.loads(archive.read('MANIFEST.json')); rows=manifest['files']\n  assert len(rows)==len(names)-1 and {row['path'] for row in rows}==set(names)-{'MANIFEST.json'}, 'Original planning member set differs'\n  files={}\n  for row in rows:\n   content=archive.read(row['path'])\n   assert len(content)==row['bytes'] and hashlib.sha256(content).hexdigest()==row['sha256'], 'Original planning member identity differs'\n   files[row['path']]=content\n  document=json.loads(files.pop('workspace.json')); document.pop('exportedAt',None)\n  return manifest['schema'],document,files\n\nleft,left_files=Operations._unpack(Path(sys.argv[2]).read_bytes())\nright,right_files=Operations._unpack(Path(sys.argv[3]).read_bytes())\nleft.pop('exportedAt',None); right.pop('exportedAt',None)\nassert left==right, 'CLI original case, source, review or complete history differs'\nassert planning(left_files['planning.zip'])==planning(right_files['planning.zip']), 'CLI original planning source or full revisions differ'\nleft_selection=json.loads(left_files['installation-selection.json']); left_selection.pop('document')\nright_selection=json.loads(right_files['installation-selection.json']); right_selection.pop('document')\nassert left_selection==right_selection, 'CLI selected original edition differs'\nfor name in right_files:\n if name.startswith('sources/'):\n  assert left_files[name]==right_files[name], 'CLI original source bytes differ'\nprint(json.dumps({'completeCase':True,'originalPlanning':True,'selectedEdition':True,'sourceFiles':len(left['sources'])}))",
+    [HERE,cliZip,retainedFile]);
+  need(cliExport.installationId===delivery.installationId&&cliExport.revision===2&&
+    cliExport.output?.path===cliZip&&cliExport.output.bytes===bytes.length&&cliExport.output.sha256===sha(bytes),
+    'Original CLI export identity differs from its complete file.');
+  await exactFile(cliReceipt,json(cliExport));
+  delivery.cli={showSha256:cliShow.sha256,historyEditions:cliHistory.editions.length,export:cliExport,source:cliSource};
   delivery.files.push({name:'Routescan_Installation_CLI_Export.zip',path:cliZip,bytes:bytes.length,sha256:sha(bytes)});
   const openText='# Routescan Installation operating handover\n\n'+
     'Open Routescan_Installation_Edition_2.zip and its installation.html for the full operating instructions. '+
@@ -301,7 +319,7 @@ async function main(){
     'operation-input.json, phase requests and native snapshots preserve the original save and receiving identities.\n\n'+
     'Source query: '+QUERY+'\n\nOperation: '+OPERATION+'\n';
   await exactFile(join(options.work,'delivery','OPEN_Routescan_Installation.md'),Buffer.from(openText));
-  for(const name of ['Routescan_Installation_CLI_Reopen.json','Routescan_Installation_CLI_History.json','OPEN_Routescan_Installation.md']){
+  for(const name of ['Routescan_Installation_CLI_Reopen.json','Routescan_Installation_CLI_History.json','Routescan_Installation_CLI_Export.json','OPEN_Routescan_Installation.md']){
     const path=join(options.work,'delivery',name),raw=await readFile(path);
     delivery.files.push({name,path,bytes:raw.length,sha256:sha(raw)});
   }

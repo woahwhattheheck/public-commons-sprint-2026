@@ -387,14 +387,57 @@ def csv_bytes(headers, records):
     return stream.getvalue().encode("utf-8-sig")
 
 
+def inspect_planning_history(document, raw_source):
+    """Validate complete retained native revisions and exact original source, without a write.
+
+    This is the same history validation used by the original ZIP importer.
+    A receiving proof may select its native document and original source bytes
+    without depending on the export timestamp or creating another plan.
+    """
+    if document.get("schema") != SCHEMA:
+        raise Problem("Unrecognized workspace document.")
+    original = document["plan"]["originalScenario"]
+    checked_model(original)
+    revision_rows = rows(document.get("revisions"), "Saved revisions", maximum=10000)
+    if not revision_rows:
+        raise Problem("Bundle has no saved revisions.")
+    prepared = []
+    for sequence, record in enumerate(revision_rows, 1):
+        if record.get("revision") != sequence:
+            raise Problem("Bundle revisions are not consecutive.")
+        if digest({"scenario": record["scenario"], "planning": record["planning"]}) != record.get("contentSha256"):
+            raise Problem(f"Revision {sequence}: content digest differs.")
+        report(record["scenario"], record["planning"])
+        retained_report = record.get("report")
+        if not isinstance(retained_report, dict) or retained_report.get("schema") != SCHEMA or retained_report.get("scenarioSha256") != digest(record["scenario"]):
+            raise Problem(f"Revision {sequence}: retained report does not match its scenario.")
+        prepared.append((record["scenario"], record["planning"], retained_report, text(record["note"], "Revision note", 4000),
+                         text(record["savedAt"], "Revision time", 100, True)))
+    source = document["plan"]["source"]
+    source_sha = text(source.get("sha256"), "Source digest", 64, True)
+    if not re.fullmatch("[a-f0-9]{64}", source_sha):
+        raise Problem("Invalid source digest.")
+    if hashlib.sha256(raw_source).hexdigest() != source_sha:
+        raise Problem("The original source file differs from its retained source digest.")
+    try:
+        if canonical(json.loads(raw_source)) != canonical(original):
+            raise Problem("The exact original source file differs from its parsed source scenario.")
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise Problem("The original source file is unreadable JSON.") from exc
+    return {"document": document, "original": original, "source": source,
+            "sourceSha256": source_sha, "prepared": prepared}
+
+
 class Workspace:
-    def __init__(self, root, source_path):
+    def __init__(self, root, source_path, *, on_created=None):
         self.root = Path(root).expanduser().resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.lock_handle = None
         self.db = None
         self.mutex = threading.RLock()
         try:
+            if on_created is not None:
+                on_created(self)
             self.lock_handle = open(self.root / "workspace.lock", "a+b")
             try:
                 fcntl.flock(self.lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -439,14 +482,12 @@ class Workspace:
 
     def close(self):
         with self.mutex:
-            try:
-                if self.db is not None:
-                    self.db.close()
-                    self.db = None
-            finally:
-                if self.lock_handle is not None:
-                    self.lock_handle.close()
-                    self.lock_handle = None
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            if self.lock_handle is not None:
+                self.lock_handle.close()
+                self.lock_handle = None
 
     def _transaction(self, request_id, payload, action):
         request_id = short_id(request_id, "Request ID")
@@ -535,7 +576,7 @@ class Workspace:
             scenario, planning, computed = report(merge_scenario(current["scenario"], patch), planning)
             return {"scenario": scenario, "planning": planning, "report": computed}
 
-    def save(self, plan_id, expected_revision, patch, planning, note, request_id):
+    def save(self, plan_id, expected_revision, patch, planning, note, request_id, *, _within_transaction=False):
         note = text(note, "Revision note", 4000, True)
         payload = {"action": "save", "id": plan_id, "expectedRevision": expected_revision,
                    "patch": patch, "planning": planning, "note": note}
@@ -547,6 +588,10 @@ class Workspace:
             if digest({"scenario": scenario, "planning": normalized}) == current["contentSha256"]:
                 return {**current, "unchanged": True}
             return self._append(plan_id, current["currentRevision"] + 1, scenario, normalized, computed, note)
+        if _within_transaction:
+            if not self.db.in_transaction:
+                raise RuntimeError("Native planning commissioning requires the original active workspace transaction.")
+            return action()
         return self._transaction(request_id, payload, action)
 
     def restore(self, plan_id, expected_revision, selected_revision, note, request_id):
@@ -663,37 +708,10 @@ class Workspace:
                 raw_source = archive.read("original-source.json")
         except (zipfile.BadZipFile, json.JSONDecodeError, KeyError, TypeError, RuntimeError) as exc:
             raise Problem("The selected file is not a complete readable SF47 bundle.") from exc
-        if document.get("schema") != SCHEMA:
-            raise Problem("Unrecognized workspace document.")
+        checked = inspect_planning_history(document, raw_source)
+        original, source, source_sha, prepared = (checked[key] for key in
+            ("original", "source", "sourceSha256", "prepared"))
         name = text(name or document["plan"]["name"] + " — imported", "Plan name", 200, True)
-        original = document["plan"]["originalScenario"]
-        checked_model(original)
-        revision_rows = rows(document.get("revisions"), "Saved revisions", maximum=10000)
-        if not revision_rows:
-            raise Problem("Bundle has no saved revisions.")
-        prepared = []
-        for sequence, record in enumerate(revision_rows, 1):
-            if record.get("revision") != sequence:
-                raise Problem("Bundle revisions are not consecutive.")
-            if digest({"scenario": record["scenario"], "planning": record["planning"]}) != record.get("contentSha256"):
-                raise Problem(f"Revision {sequence}: content digest differs.")
-            report(record["scenario"], record["planning"])
-            retained_report = record.get("report")
-            if not isinstance(retained_report, dict) or retained_report.get("schema") != SCHEMA or retained_report.get("scenarioSha256") != digest(record["scenario"]):
-                raise Problem(f"Revision {sequence}: retained report does not match its scenario.")
-            prepared.append((record["scenario"], record["planning"], retained_report, text(record["note"], "Revision note", 4000),
-                             text(record["savedAt"], "Revision time", 100, True)))
-        source = document["plan"]["source"]
-        source_sha = text(source.get("sha256"), "Source digest", 64, True)
-        if not re.fullmatch("[a-f0-9]{64}", source_sha):
-            raise Problem("Invalid source digest.")
-        if hashlib.sha256(raw_source).hexdigest() != source_sha:
-            raise Problem("The original source file differs from its retained source digest.")
-        try:
-            if canonical(json.loads(raw_source)) != canonical(original):
-                raise Problem("The exact original source file differs from its parsed source scenario.")
-        except (UnicodeError, json.JSONDecodeError) as exc:
-            raise Problem("The original source file is unreadable JSON.") from exc
         payload = {"action": "import-bundle", "sha256": hashlib.sha256(raw).hexdigest(), "name": name}
         def action():
             pid = "plan-" + uuid.uuid4().hex

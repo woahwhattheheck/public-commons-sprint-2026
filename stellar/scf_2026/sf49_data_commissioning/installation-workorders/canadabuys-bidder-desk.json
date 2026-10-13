@@ -1,0 +1,89 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "canadabuys-bidder-desk",
+  "title": "CanadaBuys bidder desk: original procurement sources, reviewed decisions and independent customer receiving",
+  "task": {
+    "name": "Receive and operate the customer's complete CanadaBuys bidder decision workspace",
+    "purpose": "Give the named procurement operator a reusable evidence-based process for selecting federal opportunities, reviewing requirements against the company's declared capabilities, retaining a reasoned decision and handing the complete editable case to the customer.",
+    "request": "Continue the original customer Workshare and its actual notice population, source editions, company profile, evidence allowance and review schedule. Retain the complete authorized CanadaBuys source files, retrieval receipts and every imported edition. Read the original notice and amendments, including its submission instructions and the selected review time. Save the customer's own company profile and supplier evidence with their source and review status. Record requirement assessments against exact notice and evidence editions, then obtain the native context SHA and save the operator's bid, no-bid or investigate decision with reasons. Retain any agreed partner workshare in the same case with its original scope, exact integer-cent commercial amounts and milestone criteria. The installed customer CLI or typed client uses the existing authenticated 37-tool CanadaBuys MCP provider, original configured aliases and native workspace UUID. Use its durable plan/run requests for changes, complete revision-bound reads and exact original publication download. Receive the complete native package into the named customer's workspace, reopen its bidder desk, perform an agreed local correction and retain that newer work when the earlier package is received again.",
+    "completeOutput": "The complete selected source editions and retrieval metadata; current and historical notice rows; reviewed company profile, complete supplier evidence, requirement assessments and original decision context; full decision/supplier reports; any original agreed partner workshare; the original native workspace package and its complete publication manifest, downloaded file identities and receiving receipts. Deliver the selected installed source/archive, runtime selection, connection/configuration references without credential values, original command/request history and the full operating guide. The named operator reopens both the delivered decision and their later local correction from the received editable workspace.",
+    "repeatTrigger": "A new authorized notice edition or amendment, source status/closing-time change, company capability or evidence revision, changed mandatory requirement, explicit decision review or agreed reporting period creates a deliberate next review. Keep the previous decision and compare its saved context with the new source/evidence. Continue an interrupted original operation or download using its retained identities.",
+    "pricedUnit": "If the original case separately commissions a merchant service, select one complete reviewed notice decision package for its stated source edition, company profile and evidence scope, or the expressly agreed full reporting batch. Preserve the original professional Workshare fee, phase schedule and support allowance as their own commercial terms. Select atomic unit price, task count and spending authority explicitly in the native Installation; no price or payment is derived from an opportunity's award value, a grant allocation or an example receiving case."
+  },
+  "source": {
+    "reference": "Select the complete original CanadaBuys tender/award source and retrieval receipt, retained notice/amendment editions, official solicitation documents and the customer's reviewed profile/evidence. Pin the actual installed CanadaBuys release, original MCP workspace UUID and configured source/input aliases.",
+    "mode": "MIXED",
+    "population": "Every complete original file and all records in the agreed source edition or batch, plus the exact selected notices and amendments used by each decision. Keep source publication/retrieval times and original row identifiers; retain prior editions and explicit import results. A filtered shortlist describes a selection from the complete retained population.",
+    "meaning": "Preserve notice IDs, source entry IDs, revision and row hashes; original language, dates, time-zone text, closing instructions, status, classification codes and leading zeros; currency and exact amount meaning; organization and supplier identities. Keep tender/award associations as the native model reports them. A blank, unavailable or unreviewed item remains distinct from a reviewed absence or satisfied requirement. Eligibility, source freshness and mandatory requirements remain explicit operator review. Bind each decision to the actual source entry, profile revision, evidence/requirement revisions and native context SHA.",
+    "changePolicy": "Retain a new complete authorized source edition before comparison. Preserve all earlier source, review and decision history. A changed native context requires an explicit operator review; an existing decision is not silently replaced. Customer evidence changes retain their original bytes and reason. A changed feed, endpoint, workspace, population, review allowance or commercial scope follows the original case's change process."
+  },
+  "receiving": {
+    "application": "The maintained CanadaBuys native SQLite workspace and Bidder desk browser, the installed canadabuys and canadabuys-customer commands, and the three typed merchant/canadabuys client/download/operations exports. Bind the actual installed source archive and original authenticated merchant endpoint. Native receiving requires Linux, Node 24 or later with SQLite, and the existing flock utility.",
+    "acceptanceRule": "Read every agreed source edition and the exact selected original notice. Review the customer's profile/evidence and mandatory requirements; retain the original context SHA and reasoned saved decision. Recover a committed bidder command through its original commandId and retain unresolved non-idempotent export until its original publication is explicitly identified. Download every listed publication file with its complete manifest, byte count and SHA256, releasing each retained reader. Receive the original native workspace package offline, open the actual selected decision in the customer's bidder desk, retain a subsequent local correction, close/reopen, and demonstrate that receiving the earlier package preserves that newer work. Retain actual native execution/download/receive evidence and the named operator's result against every unchanged original Workshare acceptance phase.",
+    "changeAndWithdraw": "The customer owns its capability declarations, evidence rights, decision, submission authority and withdrawal. The source publisher owns notice amendments and submission instructions. The operator deliberately chooses new source editions, reviews changed context and records a reasoned decision. This installation records procurement work; any bid submission, solicitation contact, production activation or payment uses its separately authorized original process.",
+    "recovery": "Keep original endpoint/alias/workspace UUID, saved request bytes and commandId, original application/source revision, publication UUID and manifest, and operation/download directories. Read saved progress first. Reopen a completed local result offline; use native idempotency only where the original tool declares it. For an unresolved export, read existing publications and adopt only the observed original publication with its evidence. Resume the verified download prefix under its original manifest and release the actual reader. The native receiver preserves later local revisions and reports conflicting earlier package contents instead of overwriting them.",
+    "maintenance": "Name the source-refresh owner, company-profile/evidence reviewer, decision-maker, merchant endpoint/configuration owner and receiving engineer. Retain the complete private workspace and request/download history outside the installed runtime. Agree refresh cadence, amendment response, evidence/review limits, backup/restore, release selection and support allowance in the original Workshare. Review profile and source-contract changes before using a new installed edition."
+  },
+  "steps": [
+    {
+      "title": "Receive the original commissioning case",
+      "result": "Select the complete original Workshare and packet, phase owners, effort references, fee, milestone triggers, review allowance and acceptance criteria. Identify the actual customer/decision operator, source population and receiving environment. Preserve the original funded/commercial assignments."
+    },
+    {
+      "title": "Install and bind the original application",
+      "result": "Build/select the actual immutable CanadaBuys customer source archive, verify its hash and use the maintained installer. Read the installed tools. Bind the customer's existing endpoint and alias to the observed native workspace UUID, keeping secret values in its existing credential mechanism."
+    },
+    {
+      "title": "Retain the complete procurement source",
+      "result": "Acquire or receive every selected original file and its observed retrieval metadata through the maintained collector/import. Retain complete notice/award populations, original identifiers and successive editions. Read the selected solicitation and amendments before a decision."
+    },
+    {
+      "title": "Review capability and evidence",
+      "result": "Save the actual company's profile and full evidence with its source, rights and review state. Record requirements against exact source/evidence revisions. Read the complete native pages; keep unknown and unreviewed mandatory findings visible."
+    },
+    {
+      "title": "Save the original reviewed decision",
+      "result": "Read the actual native assessment/context SHA. Save the operator's reasoned decision through one retained request and original commandId. Reopen the saved decision and compare later source/evidence changes; preserve the previous decision."
+    },
+    {
+      "title": "Complete the customer's original publications",
+      "result": "Publish the agreed decision/supplier reports and complete workspace package. Reconcile any uncertain export from its original publication evidence, then receive all listed files with complete byte/hash verification. Retain request, manifest, reader-release and download history."
+    },
+    {
+      "title": "Operate the independently received workspace",
+      "result": "Use the original native package receiver offline, open Bidder desk and the actual delivered decision, make the agreed local correction, close/reopen and retain that newer work when the earlier package is received again."
+    },
+    {
+      "title": "Close the original installation and handover",
+      "result": "Deliver complete source, workspace, reports, configuration references and operating/recovery instructions. Record actual named receiving results against the unchanged original phase criteria. Reopen the same saved Installation and export/receive its complete operating case; retain commercial and payment observations in their original records."
+    }
+  ],
+  "inputs": [
+    "Complete original Workshare/receiving packet, original case and plan digests, original phase owners/effort/dependencies, fee/milestone criteria and actual review allowance",
+    "Complete selected CanadaBuys CSVs or retained native source editions, retrieval URLs/receipts/times, source entry and notice IDs, amendments and official solicitation documents",
+    "Actual customer company profile, evidence bytes and permitted-use references, named reviewers and decision/submission authority",
+    "Exact current source/profile/evidence/requirement revisions, selected mandatory assessments and original decision context SHA",
+    "Selected installed source/archive SHA, original native workspace UUID, existing endpoint/workspace/input/delivery aliases and credential environment-variable references",
+    "Original operation requests and command IDs, observed publication IDs/manifests, complete downloaded files and native receive/reopen results",
+    "Named receiving Linux host/operator, original case's recorded deployments, backup/recovery arrangement and agreed maintenance/source refresh cadence",
+    "Original grant/Workshare assignments and phase observations; approved merchant atomic payment terms only when actually selected in that same operating case"
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar-forge/mcp-merchant-operator/CANADABUYS_CUSTOMER.md",
+      "blob": "48ef4482116fcced24be6edfa9e6090d9cff70c5"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/canadabuys/BIDDER_DESK.md",
+      "blob": "9e0d2ecafa3afe5399d29e593e5640ab8bbb4517"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/canadabuys-cli.mjs",
+      "blob": "2781762db481d7d9403c00c959d37256da8e1418"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/canadabuys-operations.mjs",
+      "blob": "72f8eca649bc086c8537fe3064ec1f27cfede1d7"
+    }
+  ]
+}
