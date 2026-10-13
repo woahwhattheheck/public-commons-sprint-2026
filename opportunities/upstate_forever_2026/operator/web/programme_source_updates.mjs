@@ -24,7 +24,7 @@ function mappingDetails(row) {
     'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');
   const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +
     esc(item.reason) + '</small>').join('');
-  const reuse = candidates ? '<p><strong>Original completed candidates</strong><br>' + candidates +
+  const reuse = candidates ? '<p><strong>Original stage candidates</strong><br>' + candidates +
     'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';
   const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';
   return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';
