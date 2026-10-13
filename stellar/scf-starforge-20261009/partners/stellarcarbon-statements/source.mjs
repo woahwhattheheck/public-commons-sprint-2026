@@ -54,28 +54,42 @@ export function windowOf(value = {}) {
 }
 export const inWindow = (value, period) => dayOf(value) >= period.fromDate && dayOf(value) < period.beforeDate;
 
-/** JSON number tokens become exact strings before JSON.parse can round them. */
+/** JSON number tokens become exact strings before JSON.parse can round them.
+ * Quoted strings are copied as whole spans, including multi-megabyte native XDR.
+ */
 export function parseNativeJSON(source) {
   need(typeof source === 'string', 'SOURCE_TEXT_REQUIRED', 'Supply the original JSON text.');
-  let output = '', quoted = false, escaped = false;
+  const parts = [], stack = [], number = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+  let start = 0, previous = '';
   for (let i = 0; i < source.length;) {
     const ch = source[i];
-    if (quoted) {
-      output += ch; i++;
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') quoted = false;
-      continue;
+    if (ch === '"') {
+      let end = i;
+      do {
+        end = source.indexOf('"',end + 1);
+        if (end < 0) { i = source.length; break; }
+        let backslashes = 0;
+        for (let p = end - 1; p >= i && source[p] === '\\'; p--) backslashes++;
+        if (backslashes % 2 === 0) { i = end + 1; break; }
+      } while (true);
+      previous = '"'; continue;
     }
-    if (ch === '"') { quoted = true; output += ch; i++; continue; }
-    if (ch === '-' || /[0-9]/.test(ch)) {
-      const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(source.slice(i));
+    if (ch === '-' || (ch >= '0' && ch <= '9')) {
+      number.lastIndex = i;
+      const match = number.exec(source);
       need(match, 'INVALID_SOURCE_JSON', 'The source contains an invalid number.');
-      output += JSON.stringify(match[0]); i += match[0].length; continue;
+      // An unquoted numeric object key is invalid JSON. Do not repair its syntax
+      // while preserving numeric values; JSON.parse remains the grammar checker.
+      const objectKey = stack.at(-1) === '{' && (previous === '{' || previous === ',');
+      if (!objectKey) { parts.push(source.slice(start,i),'"',match[0],'"'); start = number.lastIndex; }
+      i = number.lastIndex; previous = 'number'; continue;
     }
-    output += ch; i++;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') stack.pop();
+    if (ch !== ' ' && ch !== '\t' && ch !== '\r' && ch !== '\n') previous = ch;
+    i++;
   }
-  try { return JSON.parse(output); }
+  try { return JSON.parse(parts.length ? (parts.push(source.slice(start)),parts.join('')) : source); }
   catch (error) { throw Object.assign(new Error('The original JSON is invalid: ' + error.message), {code:'INVALID_SOURCE_JSON',status:400}); }
 }
 export function integer(value, label = 'source integer') {
