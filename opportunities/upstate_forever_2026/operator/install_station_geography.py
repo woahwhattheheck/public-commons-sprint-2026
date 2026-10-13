@@ -186,6 +186,7 @@ def scientific_report_host(application):
             r"\bfunction\s+attachScientificReportEditions\s*\(",
             r"\bfunction\s+openForSources\s*\(",
             r"\borderedReportSources\s*\(",
+            r"\bSCIENTIFIC_REPORT_SOURCE_SELECTION\s*=\s*[\'\"]replace-v1[\'\"]",
         ),
     }
     checked = []

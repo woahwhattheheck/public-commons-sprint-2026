@@ -194,7 +194,7 @@ export function attachAssessmentContext(host){
   if(mapped){await host.openDelivery(clone(value.delivery_selection));return;}
   const sources=list(value.delivery_selection.observed_context_sources);
   await host.openScientificReport({workspace_key:current,
-   sources:clone(sources.length?sources:[value.source]),title:value.title});
+   sources:clone(sources.length?sources:[value.source]),title:value.title,selection_mode:'replace'});
  }
  function renderParcels(){
   const target=node?.querySelector('[data-ac-parcels]');if(!target)return;
