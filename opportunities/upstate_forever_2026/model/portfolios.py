@@ -23,6 +23,7 @@ from .common import (
     identifier, read_json, verify_file,
 )
 from .model_selection import normalize_selection, run_models
+from . import portfolio_pairing
 
 KIND = "portfolios"
 REPORT_KIND = "portfolio-reports"
@@ -1267,7 +1268,9 @@ def _evaluation(workspace, record, selection):
               "selected_models": list(run_models(run)),
               "ranking_baseline_run_id": baseline["id"],
               "ranking_baseline_models": list(run_models(baseline)),
-              "models_changed": run_models(run) != run_models(baseline)}
+              "models_changed": run_models(run) != run_models(baseline),
+              "native_versions": {"ranking_baseline": portfolio_pairing.native_version(baseline),
+                                  "evaluation": portfolio_pairing.native_version(run)}}
     for artifact in run.get("artifacts", {}).values():
         verify_file(workspace.root / "runs" / run["id"], artifact)
     if comparison_id:
@@ -1281,6 +1284,8 @@ def _evaluation(workspace, record, selection):
             "baseline_run_id": baseline["id"],
             "baseline_selection": deepcopy(baseline["selection"]),
             "baseline_artifacts": deepcopy(baseline.get("artifacts", {})),
+            "native_pair": portfolio_pairing.binding(
+                workspace.inspect_run(record["context"]["baseline_run_id"]), run, baseline),
             "comparison": {
                 "id": comparison["id"], "baseline_run_id": baseline["id"],
                 "direction": comparison["direction"], "alternative": deepcopy(alternative),
@@ -1343,6 +1348,20 @@ def _report_html(record, analysis, evaluation, title):
                 _display(change.get("sum_change")) if change else "Comparison pending",
                 _display(change.get("valid_cells")) if change else "—",
             )) + "</tr>")
+        native_pair = evaluation.get("native_pair", {})
+        version_rows = []
+        for key, label in (("ranking_baseline", "Original ranking baseline"),
+                           ("baseline", "Matched comparison baseline"), ("evaluation", "Portfolio evaluation")):
+            selected_run = native_pair.get(key) or {}
+            for model, version in (selected_run.get("model_versions") or {}).items():
+                version_rows.append("<tr><th>" + esc(label + " · " + model.upper()) + "</th><td class=\"identity\">" +
+                    esc(selected_run.get("id", "")) + "</td><td>" +
+                    esc(version.get("observed_stage_version") or version.get("observed_run_version") or "Unavailable") +
+                    "</td><td>" + esc(version.get("requested_version") or "Unavailable") + "</td><td>" +
+                    esc(version.get("basis") or "unavailable") + "</td></tr>")
+        native_table = ("<h3>Retained native pairing</h3><table><thead><tr><th>Role</th><th>Run</th>"
+                        "<th>Observed engine</th><th>Declared engine</th><th>Comparison basis</th>"
+                        "</tr></thead><tbody>" + "".join(version_rows) + "</tbody></table>") if version_rows else ""
         evaluated = (
             "<section><h2>Native portfolio evaluation</h2><p>Original model run: " +
             esc(evaluation["state"]) + ". Parameter profile: " +
@@ -1354,7 +1373,8 @@ def _report_html(record, analysis, evaluation, title):
             "original comparison's common cells and are alternative minus baseline; negative values "
             "indicate lower modeled export.</p><p class=\"identity\">Baseline " +
             esc(evaluation.get("baseline_run_id", context["baseline_run_id"])) + " · Portfolio run " +
-            esc(evaluation["run_id"]) + "</p><details><summary>Native run and comparison record</summary><pre>" +
+            esc(evaluation["run_id"]) + "</p>" + native_table +
+            "<details><summary>Native run and comparison record</summary><pre>" +
             esc(json.dumps(evaluation, indent=2, ensure_ascii=False, allow_nan=False)) +
             "</pre></details></section>"
         )
@@ -1421,7 +1441,7 @@ def build_report(workspace, selection):
             run = workspace.inspect_run(evaluation["run_id"])
             comparison, _ = _decision_comparison(workspace, record, run, selection)
             evaluation = _evaluation(workspace, record, dict(selection, comparison_id=comparison["id"]))
-    key = digest({"portfolio_id": record["id"], "title": title, "evaluation": evaluation, "version": 1})
+    key = digest({"portfolio_id": record["id"], "title": title, "evaluation": evaluation, "version": 2})
     directory = workspace.root / "portfolio-reports" / key
     with held(workspace.root / ".portfolio-report.lock"):
         for name, filename in (("analysis", "analysis.json"), ("candidate_ranking", "candidate-ranking.csv"),
@@ -1515,19 +1535,10 @@ def _decision_economics(record, run_id, value):
 
 
 def _decision_comparison(workspace, record, run, value):
-    from .common import INVEST_VERSION
     run_missing = value.get("run_missing_baseline", True)
     if not isinstance(run_missing, bool):
         raise ValueError("run_missing_baseline must be true or false")
-    original = workspace.inspect_run(record["context"]["baseline_run_id"])
-    if original["selection"]["grid_id"] != run["selection"]["grid_id"]:
-        raise ValueError("Portfolio economics needs the original reporting/model grid")
-    paired_selection, _ = normalize_selection({
-        **original["selection"], "models": list(run_models(run)),
-    })
-    paired_selection["profile_id"] = run["selection"]["profile_id"]
-    paired_selection["invest_version"] = run["selection"]["invest_version"]
-    paired_id = digest(paired_selection)
+    original = portfolio_pairing.context(workspace, record, run)
     comparison_id = value.get("comparison_id")
     explicit_baseline = value.get("baseline_run_id")
     if comparison_id:
@@ -1544,49 +1555,12 @@ def _decision_comparison(workspace, record, run, value):
             raise ValueError("The decision comparison must contain the selected portfolio evaluation")
         if explicit_baseline and identifier(explicit_baseline) != run_ids[0]:
             raise ValueError("The selected baseline and comparison identify different original runs")
-        baseline_id = identifier(run_ids[0])
+        baseline = workspace.inspect_run(identifier(run_ids[0]))
+        portfolio_pairing.require_pair(original, run, baseline)
     else:
         comparison = None
-        baseline_id = identifier(explicit_baseline) if explicit_baseline else paired_id
-    try:
-        baseline = workspace.inspect_run(baseline_id)
-    except FileNotFoundError as error:
-        if baseline_id != paired_id:
-            raise ValueError("The missing selected baseline differs from the original paired definition") from error
-        if paired_selection["invest_version"] != INVEST_VERSION:
-            raise ValueError("The matching baseline selects native engine " +
-                             str(paired_selection["invest_version"]) +
-                             "; this application selects " + INVEST_VERSION) from error
-        baseline = workspace.prepare_run(paired_selection)
-        if baseline["id"] != paired_id or baseline["selection"] != paired_selection:
-            raise ValueError("The prepared baseline differs from the selected native evaluation context")
-    if baseline["selection"]["scenario_id"] != original["selection"]["scenario_id"]:
-        raise ValueError("Use the portfolio's original baseline definition on the selected evaluation profile")
-    for name in ("grid_id", "profile_id", "invest_version"):
-        if baseline["selection"].get(name) != run["selection"].get(name):
-            raise ValueError("Portfolio economics needs a common baseline/evaluation " + name)
-    if run_models(baseline) != run_models(run):
-        raise ValueError("Portfolio economics needs the same selected native models for baseline and evaluation")
-    if baseline["state"] != "complete":
-        if not run_missing:
-            raise ValueError("The original matching baseline is available in Runs as " +
-                             baseline["id"] + " (state: " + baseline["state"] +
-                             "); execute it or enable run_missing_baseline to finish this decision build")
-        if baseline["selection"]["invest_version"] != INVEST_VERSION:
-            raise ValueError("The matching baseline selects native engine " +
-                             str(baseline["selection"]["invest_version"]) +
-                             "; this application selects " + INVEST_VERSION)
-        # Reuse the ordinary native runner: its run lock and retained stage
-        # files govern resumed prepared, interrupted and failed model runs.
-        try:
-            workspace.run(baseline["id"])
-        except Exception as error:
-            raise ValueError("The original matching baseline run " + baseline["id"] +
-                             " did not complete: " + str(error)) from error
-        baseline = workspace.inspect_run(baseline["id"])
-        if baseline["state"] != "complete":
-            raise ValueError("The original matching baseline run " + baseline["id"] +
-                             " is " + baseline["state"] + "; its native run record retains the progress")
+        baseline = portfolio_pairing.resolve(workspace, record, run,
+                    baseline_run_id=explicit_baseline, execute=run_missing)
     if comparison is None:
         comparison = workspace.compare_runs([baseline["id"], run["id"]])
     else:
@@ -1642,6 +1616,8 @@ def build_decision_report(workspace, selection):
         "baseline_run_id": baseline["id"],
         "baseline_selection": deepcopy(baseline["selection"]),
         "baseline_artifacts": deepcopy(baseline["artifacts"]),
+        "native_pair": portfolio_pairing.binding(
+            workspace.inspect_run(record["context"]["baseline_run_id"]), run, baseline),
         "comparison": {
             "id": comparison["id"], "baseline_run_id": baseline["id"],
             "direction": comparison["direction"], "alternative": deepcopy(alternative),
@@ -1655,10 +1631,11 @@ def build_decision_report(workspace, selection):
         "selected_parcels": record["selection"], "context": record["context"],
         "evaluation_run_id": run_id, "paired_baseline_run_id": baseline["id"],
         "paired_profile_id": baseline["selection"]["profile_id"],
+        "native_pair": deepcopy(evaluation["native_pair"]),
         "economics": deepcopy(economics),
         "cost_assumptions": deepcopy(selection.get("economics")),
     }
-    key = digest({"portfolio": lineage, "decision": decision, "adapter_version": 1})
+    key = digest({"portfolio": lineage, "decision": decision, "adapter_version": 2})
     directory = workspace.root / "portfolio-decision-data" / key
     with held(workspace.root / (".portfolio-decision-" + key + ".lock")):
         for previous in workspace._list(REPORT_KIND):
