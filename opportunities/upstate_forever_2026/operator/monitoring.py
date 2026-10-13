@@ -1,4 +1,4 @@
-"""Compatibility route using the current application model namespace."""
+"""Compatibility route for the original earlier monitoring operator calls."""
 from model.monitoring_actions import invoke
 
 def route_monitoring(workspace, action, params):

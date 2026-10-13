@@ -478,6 +478,7 @@ class Store:
                 if parent.is_symlink():
                     raise MigrationError("SYMLINK", "Object directory must not be a symlink")
                 parent.mkdir(mode=0o700, exist_ok=True)
+                sync_directory(self.root / "objects")
                 destination = parent / actual
                 if destination.exists():
                     regular(destination)
@@ -486,7 +487,7 @@ class Store:
                 else:
                     os.link(temporary, destination)
                     os.chmod(destination, 0o400)
-                    sync_directory(parent)
+                sync_directory(parent)
                 with self.transaction():
                     old = self.conn.execute("SELECT bytes,relative_path FROM files WHERE sha256=?", (actual,)).fetchone()
                     relative = f"objects/{actual[:2]}/{actual}"
@@ -550,15 +551,12 @@ class Store:
     def close(self):
         if self._closed:
             return
-        self._closed = True
         if self.conn is not None:
-            try:
-                self.conn.close()
-            finally:
-                self.conn = None
+            self.conn.close()
+            self.conn = None
         if self._lock_fd is not None:
-            try:
-                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
-            finally:
-                os.close(self._lock_fd)
-                self._lock_fd = None
+            # Closing this retained descriptor releases its original flock.
+            # Keep it available if the close itself has not completed.
+            os.close(self._lock_fd)
+            self._lock_fd = None
+        self._closed = True

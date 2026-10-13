@@ -146,8 +146,8 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring.py",
       "path": "operator/monitoring.py",
-      "bytes": 212,
-      "sha256": "756860261381fafce976f73c4995d0e4d17bd91dc955f0c0ad5fc81d228a9738",
+      "bytes": 217,
+      "sha256": "5a03358a60f0ca0899499ffeb082fea556aca89d83a4b6b2230f5d3f5139d920",
       "original_bytes": 216,
       "original_sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea",
       "retained_installed_editions": [
