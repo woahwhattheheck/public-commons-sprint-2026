@@ -12,6 +12,28 @@ Replicate an agreed data edition, compare every selected typed row, choose the a
 
 The maintained reference imports original CSV into SQLite and replicates separate SQLite snapshots. Other connector pairs need their commissioned execution and complete snapshot/export adapters. Its source-derived expected final population is 1,002 rows; actual operation results belong to the original receiving course.
 
+## Build and install this selected product
+
+From the exact selected public repository checkout, run the maintained builder with Node 24:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo . --ref HEAD --selection replication-workbench \
+  --out /absolute/private/packages/replication-workbench
+```
+
+The builder resolves and records the immutable source commit. Retain its complete returned package archive and manifest. Continue an interrupted build in the same output directory with the same source selection and `--resume`; keep its original source pin.
+
+In a separate customer installation directory, install the actual archive returned by that build, then inspect its source and registrations:
+
+```sh
+npm install --ignore-scripts --offline --omit=optional /absolute/returned-package.tgz
+npx --no-install starforge source
+npx --no-install starforge registrations --source replication-workbench
+```
+
+Replace the illustrative archive path with the actual returned file. The install receives the selected source package. Use the maintained [Runtime installation guide](source/stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md) for its selected optional host features, and the preparation steps below for the original Sling runtime. An existing Installation Runtime Workspace can receive that same complete package through its original package workflow.
+
 ## Open the installed guides
 
 These links resolve from this package's root README.
