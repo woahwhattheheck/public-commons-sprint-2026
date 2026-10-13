@@ -3,6 +3,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {publishExactFile} from '../measurement_workspace/engine/file_product.mjs';
+import {flowStudyFiles} from '../measurement_workspace/engine/flow_bundles.mjs';
 import {previewFlowStudy,flowCSV} from '../measurement_workspace/engine/flow_workspace.mjs';
 import {reconcileFlowEditions} from '../measurement_workspace/engine/flow_editions.mjs';
 import {hash,stable} from '../measurement_workspace/engine/normalise.mjs';
@@ -29,18 +31,18 @@ async function writeOutputs(directory,files){
  const root=path.resolve(directory);await fs.mkdir(root,{recursive:true});const manifest=[];
  for(const [name,text] of Object.entries(files)){
   const target=path.join(root,name),body=Buffer.from(text);
-  try{await fs.writeFile(target,body,{flag:'wx'});}catch(e){if(e.code!=='EEXIST'||hash(await fs.readFile(target))!==hash(body))throw Error('Output already contains a different file: '+target);}
+  await publishExactFile(target,body);
   manifest.push({path:name,bytes:body.length,sha256:hash(body)});
  }
  const record={schema:'upstate.daily-flow-output/v1',files:manifest};
  const target=path.join(root,'manifest.json'),content=json(record);
- try{await fs.writeFile(target,content,{flag:'wx'});}catch(e){if(e.code!=='EEXIST'||await read(target)!==content)throw Error('Output manifest already differs');}
+ await publishExactFile(target,content);
  process.stdout.write(json({output:root,...record}));
 }
 if(command==='build'){
  const input=await inputs(o.input),study=previewFlowStudy(standalone,input),reopened=previewFlowStudy(standalone,study.input);
  if(stable(study)!==stable(reopened))throw Error('Original-source reopening differs');
- await writeOutputs(o.output,{'flow-study.json':json(study),'flow-input.json':json(study.input),'daily-flow.csv':flowCSV(study,'daily'),'flow-periods.csv':flowCSV(study,'periods'),'sample-flow.csv':flowCSV(study,'samples')});
+ await writeOutputs(o.output,flowStudyFiles(study));
 }else if(command==='compare'){
  const before=JSON.parse(await read(o.before)),after=JSON.parse(await read(o.after));
  for(const study of [before,after])if(stable(previewFlowStudy(standalone,study.input))!==stable(study))throw Error('Selected saved flow study differs from its originals');
