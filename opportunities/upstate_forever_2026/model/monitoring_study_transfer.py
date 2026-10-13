@@ -250,6 +250,37 @@ def include_source(closure, collection_id, entry):
     return True
 
 
+def _field_return(closure, event):
+    """Retain the exact saved fieldwork source behind an original returned event."""
+    binding = event.get("values", {}).get("fieldwork_return")
+    if binding is None:
+        return
+    if not isinstance(binding, dict):
+        raise ValueError("The Monitoring event lost its original fieldwork return binding.")
+    key = identifier(binding.get("request_id"))
+    prefix = "monitoring_field_returns/" + key
+    # Reuse original request/plan validation within this single closure, while
+    # validating every event and retaining the first full file identities.
+    cache = getattr(closure, "_monitoring_field_return_cache", None)
+    if cache is None:
+        cache = {}
+        closure._monitoring_field_return_cache = cache
+    if (str(closure.workspace.root), key) not in cache:
+        for name in ("request.json", "field-plan.json"):
+            closure.read(prefix + "/" + name)
+    from .monitoring_field_return import source_binding
+    retained = source_binding(closure.workspace, event, cache=cache)
+    if retained is None or retained["request_id"] != key:
+        raise ValueError("The original fieldwork return resolved to another request.")
+    expected = {name: str(closure.root / prefix / name)
+                for name in ("request.json", "field-plan.json")}
+    if retained["source_files"] != expected:
+        raise ValueError("The original fieldwork return names another source directory.")
+    selection = retained["request"]["selection"]
+    closure.need("monitoring_revisions", selection["expected_revision_id"],
+                 "Campaign revision reviewed for the original fieldwork return")
+
+
 def visit(closure, kind, key, value):
     if kind not in LABELS:
         return False
@@ -302,6 +333,7 @@ def visit(closure, kind, key, value):
     elif kind == "monitoring_events":
         _plan_network(closure, value, reason)
         _bindings(closure, value["source_bindings"], reason)
+        _field_return(closure, value)
         if value.get("expected_revision_id"):
             closure.need("monitoring_revisions", value["expected_revision_id"],
                          "Original field-event campaign revision")
