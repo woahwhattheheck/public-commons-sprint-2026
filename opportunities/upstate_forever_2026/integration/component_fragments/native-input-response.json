@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-input-response",
+  "source_reference": "ECO-NATIVE-38F0/1.0.0/2026-10-13",
+  "components": {
+    "native-input-response": {
+      "paths": [
+        "source_tools/native_input_response.py",
+        "source_tools/native_input_response.html",
+        "source_tools/NATIVE_INPUT_RESPONSE.md",
+        "integration/component_fragments/native-input-response.json"
+      ],
+      "requires": [],
+      "retained_only": []
+    }
+  },
+  "required_components": ["native-input-response"]
+}
