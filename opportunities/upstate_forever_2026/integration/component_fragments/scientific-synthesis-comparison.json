@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-synthesis-comparison",
+  "extend_components": {
+    "scientific-report-editions": {
+      "append_paths": [
+        "operator/web/scientific_synthesis_compare_core.mjs",
+        "operator/web/scientific_synthesis_compare_report.mjs",
+        "operator/web/scientific_synthesis_compare.mjs",
+        "operator/web/scientific_synthesis_compare.css",
+        "operator/SCIENTIFIC_SYNTHESIS_COMPARISON.md",
+        "integration/component_fragments/scientific-synthesis-comparison.json"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ]
+}

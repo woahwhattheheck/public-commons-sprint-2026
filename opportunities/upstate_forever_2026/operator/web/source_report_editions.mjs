@@ -29,7 +29,7 @@ export function attachScientificReportEditions(host) {
   let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;
   const briefingFrames=new Map(),reportFrames=new Map();
   let sourceIntent=0,catalogGeneration=0,catalogRead=null;
-  const synthesis=attachScientificSynthesis({...host,getReportSources:()=>selected.map(choice),compose:value=>openForSources(value)});
+  const synthesis=attachScientificSynthesis({...host,getReportSources:()=>selected.map(choice),compose:value=>openForSources(value),openSource:(source,options)=>inspectSource(source,options)});
   const sourceReader=attachScientificSourceReader({...host,compose:value=>openForSources(value),
     returnToSelection:()=>panel?.querySelector('[data-scientific-report-main]')?.scrollIntoView({block:'start'})});
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
@@ -265,10 +265,10 @@ export function attachScientificReportEditions(host) {
     if(frame.parentNode!==target)target.append(frame);
     frame.hidden=false;
   }
-  async function inspectSource(row){
+  async function inspectSource(row,{isCurrent}={}){
     if(!row)throw Error('Choose an original scientific source to read.');
     const ws=workspace,turn=generation;
-    return sourceReader.open(row,{isCurrent:()=>active&&valid(ws,turn)});
+    return sourceReader.open(row,{isCurrent:()=>active&&valid(ws,turn)&&(typeof isCurrent!=='function'||isCurrent())});
   }
   function briefingHTML(){
     const row=opened.edition;
