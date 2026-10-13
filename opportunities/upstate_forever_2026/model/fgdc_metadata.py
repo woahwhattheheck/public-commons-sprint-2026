@@ -142,6 +142,49 @@ def source_information(lineage, source):
     return node
 
 
+def validate_contact(contact):
+    """Validate writer-supported declared fields without discarding metadata."""
+    if not isinstance(contact, dict):
+        raise ValueError("Metadata contact must be an object when supplied")
+
+    def single(value, field):
+        if value is not None and not isinstance(value, str):
+            raise ValueError("Metadata contact " + field + " must be text when supplied")
+
+    def multiple(value, field):
+        if value is None or isinstance(value, str):
+            return
+        if not isinstance(value, (list, tuple)) or not all(isinstance(item, str) for item in value):
+            raise ValueError("Metadata contact " + field + " must be text or a list of text")
+
+    address_fields = ("address_type", "type", "addrtype", "city", "state",
+                      "state_or_province", "postal_code", "postal", "zip", "country")
+
+    def address(value, field):
+        if isinstance(value, dict):
+            for name in address_fields:
+                single(value.get(name), field + "." + name)
+            for name in ("lines", "address"):
+                multiple(value.get(name), field + "." + name)
+        else:
+            multiple(value, field)
+
+    for name in ("name", "person", "organization", "position", "hours", "instructions"):
+        single(contact.get(name), name)
+    for name in ("phone", "telephone", "voice", "cntvoice", "tdd", "fax", "email", "lines"):
+        multiple(contact.get(name), name)
+    for name in address_fields:
+        single(contact.get(name), name)
+    address(contact.get("address"), "address")
+    addresses = contact.get("addresses")
+    if addresses is not None:
+        if not isinstance(addresses, list):
+            raise ValueError("Metadata contact addresses must be a list")
+        for index, value in enumerate(addresses):
+            address(value, "addresses[" + str(index) + "]")
+    return contact
+
+
 def contact_information(parent, contact):
     """Retain actual contact details and make absent required values explicit."""
     contact = contact if isinstance(contact, dict) else {}
