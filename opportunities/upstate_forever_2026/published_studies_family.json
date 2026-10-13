@@ -1153,8 +1153,8 @@
     },
     {
       "path": "source_tools/receive_original_study.py",
-      "bytes": 38020,
-      "sha256": "f4bf7f3efe91c179be43d358587ca8371046ef497470eccf6d1dbe2df495558f"
+      "bytes": 38465,
+      "sha256": "58910054c623724ebdef3c690386324b59a77b2f0d13470f30453b9b70c0f2b0"
     },
     {
       "path": "source_tools/receive_rl18151_study.py",
