@@ -183,9 +183,14 @@ def apply(root, packet, integration="auto"):
         migrated_app = current(application / "operator/web/app.mjs").decode("utf-8")
         migrated_workspace = current(application / "model/workspace.py").decode("utf-8")
         if ('ACTIONS.add("scenario.analyze")' in migrated_server
-                or 'const scenarioAnalysis=' in migrated_app
-                or '"scenario_analyses":' in migrated_workspace):
+                or 'const scenarioAnalysis=' in migrated_app):
             raise ValueError("Compose the remaining scenario-specific legacy joins with the installed extension host")
+        if '"scenario_analyses":' in migrated_workspace:
+            descriptor = json.loads(current(application / "operator/extensions/scenario-analysis.json"))
+            state = descriptor.get("backend", {}).get("state", {})
+            registry = current(application / "operator/extension_registry.py").decode("utf-8")
+            if state.get("when_missing") is not True or "state_when_missing" not in registry:
+                raise ValueError("Receive the matching conditional scenario state descriptor and extension registry before installing into the native projected Workspace")
     else:
         manifest = application / "operator/extensions/scenario-analysis.json"
         if manifest.exists():
