@@ -470,37 +470,59 @@ export function attachPairedEnsembles(context) {
     detailId=id;
     const s=detail.selection||{},summaries=detail.summary||{},records=detail.reports?.files||[];
     const native=detail.native_context||{},nativeRuns=new Set(native.available_run_ids||[]);
-    const nativeRun=id=>nativeRuns.has(id)?action('native-run',short(id),id):'<code>'+esc(id||'Source reference in retained analysis')+'</code>'; 
+    const sourceCell=(row,side)=>{
+      const id=row[side+'_run_id'];
+      let html=id?(nativeRuns.has(id)?action('native-run',short(id),id):'<code>'+esc(id)+'</code>'):'';
+      for(const [quantity,pair] of Object.entries(row.rasters||{})){
+        const source=pair[side];if(!source)continue;
+        html+='<div><strong>'+esc(names[quantity]||quantity)+'</strong> · '+esc(pair.units||'')+'<br>'+number(source.bytes)+' bytes<br><code>'+esc(source.sha256||'Hash absent from original record')+'</code></div>';
+      }
+      return html||'Original source description retained below';
+    };
+    const sourceDescription=typeof s.input_description==='string'?s.input_description:JSON.stringify(s.input_description??'Source description absent from this edition');
     let html='<article class="pe-result"><h3>'+esc(s.title||short(id))+'</h3><p>'+esc(detail.state)+
-      ' · '+number(s.selected_member_count)+' selected of '+number(s.planned_member_count)+' planned profiles.</p>'+
+      ' · '+number(s.selected_member_count)+' selected of '+number(s.planned_member_count)+' planned members.</p>'+
+      '<p><strong>Purpose:</strong> '+esc(s.purpose||'Purpose absent from this edition')+'</p>'+
+      '<p><strong>Retained input kind:</strong> '+esc(s.input_kind||'Input kind absent from this edition')+'</p>'+
+      '<p><strong>Original source description:</strong> '+esc(sourceDescription)+'</p>'+
       '<p><strong>Positive reduction = baseline − alternative.</strong> '+esc(supportNames[s.support]||s.support)+'.</p>'+
       (detail.error?'<div class="pe-notice" role="alert">'+esc(detail.error.message||JSON.stringify(detail.error))+'</div>':'')+
       '<div class="pe-actions">'+(detail._report_url?'<a href="'+esc(detail._report_url)+'" target="_blank" rel="noopener">Open full quantitative report</a>':'')+
       action('export','Export complete result ZIP',id,detail.state!=='complete')+
       (native.can_resume?action('resume-product','Resume from retained native pairs',id):'')+'</div>';
-    if(!native.can_resume)html+='<p>The result project retains its quantitative outputs and original source references. Open the scientific Workspace backup to continue calculations from its original native runs.</p>'; 
+    if(native.can_resume&&detail.execution_settings){
+      const settings=detail.execution_settings;
+      html+='<p><strong>Retained execution controls:</strong> '+number(settings.memory_mb)+' MiB for tile arrays, '+
+        number(settings.tile_size)+'-pixel requested tile edge and '+number(settings.max_open_datasets)+
+        ' open raster handles. Resume continues the saved tile layout with these controls.</p>';
+    }
+    if(!native.can_resume)html+=s.input_kind==='original Workspace native run artifacts'?
+      '<p>The result project retains its quantitative outputs and original source references. Open the scientific Workspace backup to continue calculations from its original native runs.</p>':
+      '<p>The original raster members and quantitative outputs remain available below. Continue this analysis through its retained source workflow.</p>';
     if(Object.keys(summaries).length){
-      html+=table(['Output','Common / reporting cells','Common coverage','Mean basin reduction','Tested basin range'],Object.entries(summaries).map(([name,summary])=>{
+      html+=table(['Output','Common / reporting cells','Common coverage','Common / reporting area (ha)','Mean reduction on common support','Member range on common support','Improvement threshold'],Object.entries(summaries).map(([name,summary])=>{
         const spread=summary.basin_reduction_distribution_common_support;
         return '<tr><th scope="row">'+esc(names[name]||name)+'</th>'+cell(number(summary.common_cells)+' / '+number(summary.reporting_cells))+
-          cell(summary.common_coverage_fraction===null?'Unavailable':number(100*summary.common_coverage_fraction)+'%')+
+          cell(summary.common_coverage_fraction===null||summary.common_coverage_fraction===undefined?'Unavailable':number(100*summary.common_coverage_fraction)+'%')+
+          cell(number(summary.common_projected_grid_area_ha)+' / '+number(summary.reporting_projected_grid_area_ha))+
           cell(spread?number(spread.mean)+' '+summary.units:'Unavailable')+
-          cell(spread?number(spread.minimum)+' to '+number(spread.maximum)+' '+summary.units:'Unavailable')+'</tr>';
+          cell(spread?number(spread.minimum)+' to '+number(spread.maximum)+' '+summary.units:'Unavailable')+
+          cell(number(s.improvement_thresholds?.[name])+' '+(units[name]||''))+'</tr>';
       }));
-      html+='<p>Basin distributions use whole-basin member totals on the same common cells. Pixel quantiles remain separate quantitative rasters. Improvement fractions use the actual valid-pair denominator for each displayed pixel.</p>';
+      html+='<p>Member distributions sum each paired reduction over the same common cells. These totals cover the full reporting area only when common coverage is 100%. Pixel quantiles remain separate quantitative rasters. Improvement fractions count valid pairs whose baseline − alternative exceeds the retained threshold, using the actual valid-pair denominator at each pixel. Areas shown are projected grid areas.</p>';
       const previews=records.filter(row=>row.path.startsWith('previews/')&&row.path.endsWith('.png'));
       if(previews.length)html+='<div class="pe-previews">'+previews.map(row=>'<figure><img loading="lazy" src="/api/file/paired-ensemble/'+encodeURIComponent(key)+'/'+encodeURIComponent(id)+'/'+pathMember(row.path)+'" alt="'+esc(row.path.replace(/^previews\//,'').replace(/\.png$/,'').replaceAll('_',' '))+'"><figcaption>'+esc(row.path.replace(/^previews\//,'').replace(/\.png$/,'').replaceAll('_',' '))+'</figcaption></figure>').join('')+'</div>';
       html+='<details><summary>Original member totals and valid coverage</summary>'+Object.entries(summaries).map(([name,summary])=>'<h4>'+esc(names[name]||name)+' · '+esc(summary.units)+'</h4>'+
-        table(['Profile','Baseline on common cells','Alternative on common cells','Reduction on common cells','Reduction %','Paired valid cells'],
+        table(['Member / profile','Baseline on common cells','Alternative on common cells','Reduction on common cells','Reduction %','Paired valid cells'],
           (summary.members||[]).map(row=>'<tr><th scope="row" title="'+esc(row.profile_id||row.id)+'">'+esc(profileName(row.profile_id)||short(row.id))+'</th>'+
             [row.baseline_total_common_support,row.alternative_total_common_support,row.reduction_total_common_support,row.reduction_percent_common_support,row.paired_valid_cells].map(amount=>cell(number(amount))).join('')+'</tr>'))).join('')+'</details>';
     } else html+='<p>'+number(detail.tiles_complete||0)+' durable tiles are retained. The result record includes the current execution state.</p>';
     html+='<details><summary>Quantitative raster and report downloads ('+(detail._downloads||[]).length+')</summary><div class="pe-downloads">'+downloads(detail._downloads||[])+'</div></details>'+
-      '<details><summary>Original run pairs and source references</summary>'+
-      table(['Profile','Baseline native run','Alternative native run'],(s.members||[]).map(row=>'<tr>'+
-        '<th scope="row">'+esc(profileName(row.profile_id)||short(row.id))+'</th>'+
-        '<td>'+nativeRun(row.baseline_run_id)+'</td>'+
-        '<td>'+nativeRun(row.alternative_run_id)+'</td></tr>'))+
+      '<details><summary>Original member sources and references</summary>'+
+      table(['Member / profile','Baseline source','Alternative source'],(s.members||[]).map(row=>'<tr>'+
+        '<th scope="row">'+esc(profileName(row.profile_id)||row.id||'Member')+'</th>'+
+        '<td>'+sourceCell(row,'baseline')+'</td>'+
+        '<td>'+sourceCell(row,'alternative')+'</td></tr>'))+
       '<pre>'+esc(JSON.stringify({ensemble_id:id,grid:s.grid,source_references:s.source_references,
         quantiles:s.quantiles,quantile_method:s.quantile_method,improvement_thresholds:s.improvement_thresholds},null,2))+'</pre></details></article>';
     query('[data-pe-detail]').innerHTML=html;
