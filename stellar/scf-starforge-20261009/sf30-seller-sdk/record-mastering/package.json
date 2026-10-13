@@ -1,0 +1,30 @@
+{
+  "name": "@tokenjunkielabs/record-mastering",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Original customer-list reconciliation, explicit field decisions and exact dataset delivery.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./client.d.mts",
+      "import": "./client.mjs"
+    },
+    "./merchant": "./mcp.mjs"
+  },
+  "bin": {
+    "record-mastering": "./cli.mjs"
+  },
+  "files": [
+    "*.mjs",
+    "*.d.mts",
+    "schema.sql",
+    "browser-assets.json",
+    "ui",
+    "example",
+    "README.md",
+    "LICENSE"
+  ]
+}

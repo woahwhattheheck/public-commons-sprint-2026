@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "record-mastering-workspace",
+  "description": "Complete installed record-mastering setup, original Applications lifecycle and retained customer delivery",
+  "commands": {
+    "record-mastering-workspace": "products/record-mastering/cli.mjs"
+  },
+  "commandDescriptions": {
+    "record-mastering-workspace": "Prepare, review, save and operate the original record workspace and merchant connection."
+  },
+  "exports": {
+    "./products/record-mastering": "./source/products/record-mastering/workspace.mjs"
+  },
+  "components": [
+    "products/record-mastering"
+  ]
+}
