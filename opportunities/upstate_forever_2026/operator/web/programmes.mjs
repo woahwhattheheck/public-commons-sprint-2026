@@ -689,29 +689,47 @@ export function attachProgrammes(context) {
   }
 
   function importForm() {
-    let form, selection = null;
+    const requestedWorkspace = workspaceKey();
+    let form, input, selection = null, requestGeneration = 0, pending = false;
+    const isCurrent = (request, file) => request === requestGeneration &&
+      workspaceKey() === requestedWorkspace && input?.isConnected && input.files[0] === file;
     openForm('Import expanded programme selections',
       'Use a saved programme JSON or the expanded case list from the experiment planner. The programme refers to inputs already retained in this workspace.',
       '<div class="programme-form"><label>Programme JSON file<input type="file" name="programme_file" accept=".json,application/json" required></label>' +
       '<div data-programme-import-summary role="status">Choose the complete selection file.</div></div>',
       'Validate and save programme', async () => {
-        if (!selection) throw new Error('Choose a readable programme JSON file.');
-        const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: workspaceKey(), selection}});
+        if (!selection) throw new Error(pending ? 'Wait for the selected programme file to finish validation.' : 'Choose a readable programme JSON file.');
+        const request = requestGeneration, file = input.files[0], selected = selection;
+        if (!isCurrent(request, file)) throw new Error('Reopen the programme import in the intended workspace.');
+        const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection: selected}});
+        if (!isCurrent(request, file)) throw new Error('The selected programme file changed. Review its current preview and save again.');
         return submitAction('compute.programme.save', {selection: preview.selection});
       }, () => {
         form = document.querySelector('#operation-form');
-        form.elements.namedItem('programme_file').addEventListener('change', async event => {
-          selection = null; const summary = form.querySelector('[data-programme-import-summary]');
+        input = form.elements.namedItem('programme_file');
+        input.addEventListener('change', async event => {
+          const request = ++requestGeneration, file = event.target.files[0];
+          const summary = form.querySelector('[data-programme-import-summary]');
+          selection = null; pending = Boolean(file);
+          summary.textContent = file ? 'Reading and checking ' + file.name + '…' : 'Choose the complete selection file.';
+          if (!file) return;
           try {
-            const file = event.target.files[0]; if (!file) return;
             if (file.size > 3 * 1024 * 1024) throw new Error('This JSON exceeds the operator request size. Import its selections in the native CLI.');
-            const value = JSON.parse(await file.text()); selection = value.selection || value;
-            if (!selection || typeof selection !== 'object' || Array.isArray(selection)) throw new Error('The selected file must contain a programme selection object.');
-            const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: workspaceKey(), selection}});
+            const value = JSON.parse(await file.text());
+            if (!isCurrent(request, file)) return;
+            const candidate = value.selection || value;
+            if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) throw new Error('The selected file must contain a programme selection object.');
+            const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection: candidate}});
+            if (!isCurrent(request, file)) return;
             selection = preview.selection;
             summary.textContent = (selection.title || 'Programme') + ': ' + (preview.run_count ?? preview.runs?.length ?? 0) +
               ' named cases on the retained model grid. ' + (preview.unique_run_count ?? preview.run_count ?? preview.runs?.length ?? 0) + ' distinct native selections.';
-          } catch (error) { selection = null; summary.textContent = error.message || String(error); }
+          } catch (error) {
+            if (!isCurrent(request, file)) return;
+            selection = null; summary.textContent = error.message || String(error);
+          } finally {
+            if (isCurrent(request, file)) pending = false;
+          }
         });
       });
   }

@@ -204,6 +204,10 @@ def install_aviary_runtime_selection(n,value,selected):
  main_source=replace_once(main_source,
   '"--python",sys.executable,"--playwright-module",',
   '"--python",AVIARY_RUNTIME_LOGICAL["python"],"--playwright-module",')
+ main_source=replace_once(main_source,
+  'publish(SHARED/"complete-delivery-receipt.json",encoded(final))',
+  'try:publish(SHARED/"complete-delivery-receipt.json",encoded(final))\n'
+  ' except OSError as error:emit("SHARED_FINAL_RECEIPT_PENDING",errorType=type(error).__name__,originalReceipt=str(final_path))')
  # The original frame filename is retained for its exact owned-lock cleanup;
  # the complete selected source and this compiler boundary are recorded below.
  main_source=main_source+"\n"
