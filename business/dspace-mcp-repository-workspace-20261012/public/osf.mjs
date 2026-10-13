@@ -203,7 +203,7 @@ async function restoreDraft(value,{received=false}={}){
   if(C.source)await openSource(C.source.id);
   if(C.comparison)await openComparison(C.comparison.id);
   const form={...value.form};
-  const originalSelections={'source-select':value.source?.id,'map-select':value.mapping?.id,
+  const originalSelections={'source-select':value.source?.id,'mapping-select':value.mapping?.id,
    'native-mapping':value.native?.binding?.mapping_id,'native-review':value.native?.binding?.review_id,'native-plan':value.native?.binding?.id,
    'execution-select':value.execution?.id,'compare-mapping':value.comparison?.mapping_id,'compare-source':value.comparison?.incoming_source_id,
    'comparison-select':value.comparison?.id,'handover-mapping':value.handoverContext};
