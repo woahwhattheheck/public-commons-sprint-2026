@@ -1,0 +1,90 @@
+{
+  "schema": "upstate.programme-native-reuse-patch/v1",
+  "version": "1.0.0",
+  "shared": {
+    "model/compute_programme.py": [
+      {
+        "id": "reuse-candidate-helper",
+        "before": "from .native_execution import process_interrupted, storage_exhausted\n",
+        "after": "from .native_execution import process_interrupted, storage_exhausted\nfrom .programme_reuse import normalize_candidates, candidate_bindings\n"
+      },
+      {
+        "id": "reuse-candidate-selection-fields",
+        "before": "allowed_run = {\"key\", \"title\", \"profile_id\", \"scenario_id\", \"reason\", \"experiment_key\", \"changes\", \"models\", \"source_runs\", \"native_run_id\"}",
+        "after": "allowed_run = {\"key\", \"title\", \"profile_id\", \"scenario_id\", \"reason\", \"experiment_key\", \"changes\", \"models\", \"source_runs\", \"native_run_id\", \"reuse_source_run_ids\"}"
+      },
+      {
+        "id": "reuse-candidate-admission",
+        "before": "            for name in (\"reason\", \"experiment_key\"):\n                if name in row:",
+        "after": "            if \"reuse_source_run_ids\" in row:\n                row[\"reuse_source_run_ids\"] = normalize_candidates(row[\"reuse_source_run_ids\"])\n                if \"source_runs\" in row:\n                    raise ValueError(\"Choose completed source-stage assembly or explicit native reuse candidates\")\n            for name in (\"reason\", \"experiment_key\"):\n                if name in row:"
+      },
+      {
+        "id": "reuse-candidate-bindings",
+        "before": "            changes = {}\n            for model in _models(native.get(\"models\")):",
+        "after": "            if \"reuse_source_run_ids\" in row:\n                assembly[\"reuse_candidates\"] = candidate_bindings(\n                    self.workspace, row[\"reuse_source_run_ids\"], digest(native),\n                    _models(native.get(\"models\")))\n            changes = {}\n            for model in _models(native.get(\"models\")):"
+      },
+      {
+        "id": "reuse-candidate-execution",
+        "before": "                            native = self.workspace.run(binding[\"run_id\"])\n                            reused = bool(native.get(\"reused\"))",
+        "after": "                            if \"reuse_source_run_ids\" in binding:\n                                attempt[\"reuse_source_run_ids\"] = list(binding[\"reuse_source_run_ids\"])\n                                self._write_state(key, state)\n                                native = self.workspace.run(binding[\"run_id\"],\n                                    reuse_source_run_ids=binding[\"reuse_source_run_ids\"])\n                            else:\n                                native = self.workspace.run(binding[\"run_id\"])\n                            reused = bool(native.get(\"reused\"))"
+      },
+      {
+        "id": "reuse-candidate-field-message",
+        "before": "A run selects key, title, profile_id, scenario_id and optional experiment context, native_run_id or completed source stages",
+        "after": "A run selects key, title, profile_id, scenario_id and optional experiment context, native_run_id, completed source stages or native reuse candidates"
+      }
+    ],
+    "model/programme_source_updates.py": [
+      {
+        "id": "successor-reuse-helper",
+        "before": "from . import source_refresh\n",
+        "after": "from . import source_refresh\nfrom .programme_reuse import successor_candidates\n"
+      },
+      {
+        "id": "successor-candidate-lineage",
+        "before": "\"source_grid_id\", \"target_grid_id\", \"models\", \"action\", \"mapping_origin\")",
+        "after": "\"source_grid_id\", \"target_grid_id\", \"models\", \"action\", \"mapping_origin\",\n              \"reuse_source_run_ids\")"
+      },
+      {
+        "id": "successor-candidate-row-defaults",
+        "before": "\"requires_native_rerun\": requires_rerun, \"mapping_origin\": mapping_origin,\n            \"source_ids\"",
+        "after": "\"requires_native_rerun\": requires_rerun, \"mapping_origin\": mapping_origin,\n            \"reuse_source_run_ids\": [], \"reuse_candidates\": [], \"reuse_skipped\": [],\n            \"source_ids\""
+      },
+      {
+        "id": "successor-rebuild-candidates-for-new-selection",
+        "before": "            selected[\"scenario_id\"] = target_selection[\"scenario_id\"]\n            if mapping_origin == \"programme-preparation\":",
+        "after": "            selected[\"scenario_id\"] = target_selection[\"scenario_id\"]\n            if action == \"replace\":\n                selected.pop(\"reuse_source_run_ids\", None)\n            if mapping_origin == \"programme-preparation\":"
+      },
+      {
+        "id": "successor-candidate-admission-preview",
+        "before": "            warnings.extend(programme_preview.get(\"warnings\", []))\n        except (OSError, ValueError, KeyError) as exc:",
+        "after": "            # Only now has the maintained preview resolved every target run ID.\n            # Offer original completed sources to the native matcher, including\n            # donors from a previous completed-stage assembly.\n            original_by_key = {row[\"key\"]: row for row in record[\"runs\"]}\n            selected_by_key = {row[\"key\"]: row for row in selection[\"runs\"]}\n            candidates_changed = False\n            for row in rows:\n                chosen = selected_by_key[row[\"key\"]]\n                if row[\"action\"] == \"replace\":\n                    candidates = successor_candidates(\n                        ws, original_by_key[row[\"key\"]], row[\"target_run_id\"], row[\"models\"])\n                    before_candidates = chosen.get(\"reuse_source_run_ids\")\n                    if candidates[\"run_ids\"]:\n                        chosen[\"reuse_source_run_ids\"] = candidates[\"run_ids\"]\n                    else:\n                        chosen.pop(\"reuse_source_run_ids\", None)\n                    candidates_changed |= before_candidates != chosen.get(\"reuse_source_run_ids\")\n                    row[\"reuse_skipped\"] = candidates[\"skipped\"]\n                row[\"reuse_source_run_ids\"] = list(chosen.get(\"reuse_source_run_ids\", []))\n            if candidates_changed:\n                programme_preview = manager.preview(selection)\n                selection = programme_preview[\"selection\"]\n            final_bindings = {row[\"key\"]: row for row in programme_preview[\"runs\"]}\n            for row in rows:\n                final = final_bindings[row[\"key\"]]\n                if final[\"run_id\"] != row[\"target_run_id\"]:\n                    raise ValueError(\"Native candidate selection changed the target run identity\")\n                row[\"reuse_candidates\"] = deepcopy(final.get(\"reuse_candidates\", []))\n            warnings.extend(programme_preview.get(\"warnings\", []))\n        except (OSError, ValueError, KeyError) as exc:"
+      },
+      {
+        "id": "successor-candidate-restore-verification",
+        "before": "        if row[\"models\"] != _models(old[\"native_selection\"]) or row[\"models\"] != _models(new[\"native_selection\"]):\n            raise ValueError(\"Programme source-update selected model lineage changed\")",
+        "after": "        if row[\"models\"] != _models(old[\"native_selection\"]) or row[\"models\"] != _models(new[\"native_selection\"]):\n            raise ValueError(\"Programme source-update selected model lineage changed\")\n        if row.get(\"reuse_source_run_ids\", []) != new.get(\"reuse_source_run_ids\", []):\n            raise ValueError(\"Programme source-update native reuse candidate lineage changed\")\n        if \"reuse_source_run_ids\" in new:\n            from .programme_reuse import candidate_bindings\n            actual_candidates = candidate_bindings(\n                ws, new[\"reuse_source_run_ids\"], new[\"run_id\"], row[\"models\"])\n            if actual_candidates != new.get(\"reuse_candidates\"):\n                raise ValueError(\"Programme source-update original reuse selections changed\")"
+      }
+    ],
+    "operator/web/programme_source_updates.mjs": [
+      {
+        "id": "native-reuse-preview-work",
+        "before": "  if (row.prepared_on_create) return 'Prepared when saved; continue in Programme';",
+        "after": "  if (rows(row.reuse_source_run_ids).length) return 'Compare original native inputs; reuse matching stages and run changed stages';\n  if (row.prepared_on_create) return 'Prepared when saved; continue in Programme';"
+      },
+      {
+        "id": "native-reuse-preview-details",
+        "before": "  return '<details><summary>Source and dependency details</summary>' + dependencies + sources + '</details>';",
+        "after": "  const candidates = rows(row.reuse_candidates).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');\n  const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    esc(item.reason) + '</small>').join('');\n  const reuse = candidates ? '<p><strong>Original stage candidates</strong><br>' + candidates +\n    'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';\n  const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';\n  return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';"
+      }
+    ],
+    "source_tools/install_cumulative_application.py": [
+      {
+        "id": "programme-native-reuse-cumulative",
+        "before": "    point_source_path = \"operator/install_point_source_context.py\"\n",
+        "after": "    programme_reuse_path = \"operator/install_programme_reuse.py\"\n    if (root / programme_reuse_path).is_file():\n        programme_reuse = module(root, programme_reuse_path)\n        complete(\"Original native reuse for Programme successors\", programme_reuse[\"FILES\"])\n        result = programme_reuse[\"install\"](root, root)\n        records.append({\"component\": \"Original native reuse for Programme successors\", \"result\": result})\n\n    point_source_path = \"operator/install_point_source_context.py\"\n"
+      }
+    ]
+  },
+  "known_additions": {}
+}
