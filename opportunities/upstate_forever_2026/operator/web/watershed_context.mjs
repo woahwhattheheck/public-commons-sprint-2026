@@ -205,6 +205,7 @@ export function createWatershedContextDesk(host) {
   const document = host.document || globalThis.document;
   let root = null, listeners = null, epoch = 0, workspace = null;
   let catalog = null, saved = null, selectedId = '', focusHuc = '';
+  let sourceReview = null, sourceReviewRequest = 0;
   let savedExport = null, selectedExportId = '', selectedHucs = [], selectionRequest = 0, catalogRequest = 0;
   let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0;
   let sourceChoice = 0, networkChoice = '', includeMicrobial = true, includeEvidence = null;
@@ -243,6 +244,8 @@ export function createWatershedContextDesk(host) {
   function resetForWorkspace(key) {
     if (workspace === key) return;
     workspace = key;
+    sourceReview = null;
+    sourceReviewRequest += 1;
     catalog = null;
     saved = null;
     selectedId = '';
@@ -316,6 +319,40 @@ export function createWatershedContextDesk(host) {
         task.action === 'watershed.context.monitoring' ? 'Prepare utility monitoring' : 'Build regional context') +
       ' · ' + esc(human(task.state)) + '</button>').join('') + '</section>';
   }
+  function sourceReviewHtml() {
+    const review = sourceReview?.document;
+    const selected = review?.selection;
+    return '<section class="wc-coverage"><h2>Continue a source explorer review</h2>' +
+      '<p class="wc-note">Download the JSON selection from the original utility source explorer, then choose it here. ' +
+      'The native report checks its original profile, 217-watershed domain, downstream links and selected HUC12s before saving.</p>' +
+      '<button type="button" data-wc-review-choose' + (busy ? ' disabled' : '') + '>Choose source review JSON</button>' +
+      '<input type="file" name="wc-source-review" accept=".json,application/json" hidden>' +
+      (selected ? '<h3>' + esc(selected.receptor_id) + '</h3><p>' +
+        esc(number(list(selected.huc12s).length)) + ' original watersheds · ' + esc(human(selected.kind)) +
+        ' selection · ' + esc(selected.filters?.scope || '') + ' view' +
+        (selected.filters?.state ? ' · state ' + esc(selected.filters.state) : '') +
+        (selected.filters?.search ? ' · search “' + esc(selected.filters.search) + '”' : '') +
+        '. Discussion text travels with this saved source report; prepared prompts keep their own label.</p>' +
+        '<details><summary>Reviewed membership and discussion text</summary><pre>' +
+        esc(pretty({selection:selected, discussion:review.discussion})) + '</pre></details>' +
+        '<button type="button" data-wc-review-export' + (busy || !saved ? ' disabled' : '') +
+        '>Save reviewed selection and reports</button> <button type="button" data-wc-review-clear>Clear review</button>' : '') +
+      (!saved ? '<p class="wc-note">Open or build the original regional report to continue this review.</p>' : '') + '</section>';
+  }
+  async function receiveSourceReview(file) {
+    if (!file || busy) return;
+    const key = workspace, version = epoch, request = ++sourceReviewRequest;
+    if (!key || currentWorkspace() !== key) throw new Error('Choose the receiving project.');
+    if (file.size > 256 * 1024) throw new Error('Choose the source explorer JSON selection, up to 256 KiB.');
+    const text = await file.text(), document = JSON.parse(text);
+    if (!guard(version, key) || currentWorkspace() !== key || request !== sourceReviewRequest) return;
+    if (document?.schema !== 'upstate.watershed-source-review/v1' ||
+        !Array.isArray(document.selection?.huc12s) || !document.selection.huc12s.length)
+      throw new Error('Choose the original source explorer selection JSON.');
+    sourceReview = {text, document};
+    errorText = '';
+    render();
+  }
   function sourceHtml() {
     const choices = list(catalog?.sources);
     if (!choices.length) return '<p class="wc-note">Register the regional source edition in Prepare study inputs to build a watershed report.</p>';
@@ -376,6 +413,8 @@ export function createWatershedContextDesk(host) {
       ' retained in this selection. Additional table filters refine the view; these downloads contain the complete saved selection.</p>' +
       (savedExport.files?.['watershed-selection-brief.html']
         ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
+      (savedExport.source_review ? '<p class="wc-note">This report retains the reviewed explorer selection and discussion text. ' +
+        'USGS source areas and the native report’s NRCS area fields are identified separately; the original review JSON and three exact geographic sources are included in the packet.</p>' : '') +
       watershedEvidenceContextHtml(savedExport.landcover_observation_context) +
       downloadsHtml(savedExport._downloads) + utilityMonitoringHtml() +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
@@ -475,6 +514,7 @@ export function createWatershedContextDesk(host) {
       '<div data-wc-tasks>' + taskHtml() + '</div>' +
       '<section class="wc-report-controls">' + reportSelector() + selectionSelector() +
       '<details' + (report ? '' : ' open') + '><summary>Build from a regional source edition</summary>' + sourceHtml() + '</details></section>' +
+      sourceReviewHtml() +
       (report ? '<section class="wc-metrics" aria-label="Full model domain">' +
         metric(number(all.length), 'Model watersheds') +
         metric(number(sum(all, 'area_km2'), 1), 'Unique watershed area · km²') +
@@ -698,14 +738,15 @@ export function createWatershedContextDesk(host) {
       if (root) await refresh();
     } finally { busy = false; if (root) { const node = root.querySelector('[data-wc-build]'); if (node) node.disabled = false; renderRows(); } }
   }
-  async function exportRows(huc12s, utilityKey = null) {
+  async function exportRows(huc12s, utilityKey = null, sourceReviewText = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
     const key = workspace, version = epoch, reportId = saved.id;
     const choice = evidenceChoice(), include = evidenceIncluded();
     const payload = {report_id:reportId, huc12s:[...huc12s], include_evidence:include,
       ...(include ? {evidence_profile_sha256:choice.sha256} : {}),
-      ...(utilityKey ? {utility_key:utilityKey} : {})};
+      ...(utilityKey ? {utility_key:utilityKey} : {}),
+      ...(sourceReviewText !== null ? {source_review_text:sourceReviewText} : {})};
     busy = true;
     render();
     try {
@@ -721,6 +762,17 @@ export function createWatershedContextDesk(host) {
     const button = event.target.closest('button');
     if (!button || !root?.contains(button)) return;
     try {
+      if (button.hasAttribute('data-wc-review-choose')) {
+        if (!busy) root.querySelector('[name="wc-source-review"]')?.click();
+        return;
+      }
+      if (button.hasAttribute('data-wc-review-clear')) {
+        sourceReviewRequest += 1; sourceReview = null; render(); return;
+      }
+      if (button.hasAttribute('data-wc-review-export')) {
+        if (!sourceReview) throw new Error('Choose the source review JSON.');
+        return await exportRows(sourceReview.document.selection.huc12s, null, sourceReview.text);
+      }
       if (button.hasAttribute('data-wc-monitoring-prepare')) {
         if (busy) return;
         const key = workspace, sourceExport = savedExport?.id, version = epoch;
@@ -808,6 +860,12 @@ export function createWatershedContextDesk(host) {
     const name = event.target.name;
     if (!name?.startsWith('wc-')) return;
     const key = name.slice(3);
+    if (key === 'source-review') {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      receiveSourceReview(file).catch(fail);
+      return;
+    }
     if (key === 'completed-run') {
       const file = event.target.files?.[0];
       event.target.value = '';

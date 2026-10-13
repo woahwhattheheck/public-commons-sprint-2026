@@ -362,6 +362,8 @@ def render_selection_brief(selection):
         ["Watersheds covered by the complete selected-class query", summary["complete_query_huc_count"]],
         ["Cross-state watersheds", summary["cross_state_huc_count"]],
     ]))
+    from .watershed_source_review import brief_lines as review_lines
+    lines.extend(["", *review_lines(selection, _table, _number)])
     lines.extend(["", *_utility_lines(selection)])
     from .utility_observed_context import brief_lines
     lines.extend(["", *brief_lines(selection, _table, _number)])
