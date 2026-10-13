@@ -16,7 +16,7 @@ from model.common import atomic_json, describe_file, digest, file_digest, held, 
 from model import geographic_headwaters as native
 from source_preparation import SourcePreparation
 
-ACTIONS = frozenset({"geography.prepare", "geography.compose", "geography.adopt-programme"})
+ACTIONS = frozenset({"geography.prepare", "geography.compose", "geography.adopt-programme", "geography.open-programme"})
 METHOD = {
     "id": "geographic-headwaters",
     "title": "Upper Savannah geographic model case",
@@ -287,7 +287,7 @@ class GeographyPreparation(SourcePreparation):
         for record in self._records(workspace):
             result = record.get("result") or {}
             if (record.get("project_id") != workspace.project["id"]
-                    or record.get("action") != "geography.adopt-programme"
+                    or record.get("action") not in {"geography.adopt-programme", "geography.open-programme"}
                     or result.get("geographic_id") != case["id"]
                     or not result.get("programme_id")):
                 continue
@@ -298,7 +298,8 @@ class GeographyPreparation(SourcePreparation):
                 "payload": {"case_id": case["id"],
                             "delivery_id": result.get("existing_delivery_id")},
                 "result": {"programme_id": result["programme_id"],
-                           "programme_state": result["programme_state"]},
+                           "programme_state": result["programme_state"],
+                           "operator_opening": result.get("operator_opening")},
                 "_downloads": [self.operator._ticket(workspace_key, path,
                     describe_file(workspace.root, path), "Original Programme operation")]})
         return retained
@@ -374,6 +375,39 @@ class GeographyPreparation(SourcePreparation):
             try:
                 if task["action"] == "geography.compose":
                     result = self._compose(ws, task, root, record)
+                elif task["action"] == "geography.open-programme":
+                    from model import geographic_programme
+                    value = task["payload"]
+                    if (not isinstance(value, dict)
+                            or set(value) != {"case_id", "adoption_task_id", "expected_revision"}):
+                        raise ValueError("Retain the original Programme operation and observed project-view revision")
+                    key = identifier(value["case_id"])
+                    original_path = self._record_path(ws, identifier(value["adoption_task_id"]))
+                    original = read_json(original_path)
+                    adoption = original.get("result") or {}
+                    if (original.get("schema") != "upstate.geography-operation/v1"
+                            or original.get("state") != "complete"
+                            or original.get("project_id") != ws.project["id"]
+                            or original.get("task_id") != value["adoption_task_id"]
+                            or original.get("action") != "geography.adopt-programme"
+                            or adoption.get("geographic_id") != key):
+                        raise ValueError("Choose the completed original geographic Programme operation in this project")
+                    receipt = self._stage(ws, record, "Saving the reviewed geographic project opening",
+                        lambda: geographic_programme.save_operator_opening(
+                            self.operator, task["workspace"], adoption,
+                            expected_revision=value["expected_revision"]))
+                    receipt_path = path.parent / "opening.json"
+                    atomic_json(receipt_path, receipt)
+                    result = {"geographic_id": key, "programme_id": adoption["programme_id"],
+                        "programme_state": adoption["programme_state"],
+                        "existing_delivery_id": adoption.get("existing_delivery_id"),
+                        "adoption_task_id": value["adoption_task_id"], "operator_opening": receipt,
+                        "documents": [describe_file(ws.root, receipt_path, label="Original project opening")],
+                        "summary": {"title": ("Project opening saved" if receipt["selection_applied"]
+                                              else "Current project view preserved"),
+                                    "rows": [["Programme", adoption["programme_id"]],
+                                             ["Opening", receipt["state"]]],
+                                    "details": {"Original operator opening": receipt}}}
                 elif task["action"] == "geography.adopt-programme":
                     from model import geographic_programme
                     value = task["payload"]
