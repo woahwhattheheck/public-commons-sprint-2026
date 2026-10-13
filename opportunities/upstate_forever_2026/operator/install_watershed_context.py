@@ -13,11 +13,13 @@ from datetime import datetime, timezone
 
 FILES = (
     "model/watershed_context.py",
+    "model/watershed_brief.py",
     "source_tools/prepare_watershed_context.py",
     "operator/watershed_context.py",
     "operator/web/watershed_context.mjs",
     "operator/web/watershed_context.css",
     "operator/extensions/watershed-context.json",
+    "operator/receive_watershed_context.py",
     "operator/install_watershed_context.py",
     "operator/WATERSHED_CONTEXT.md",
 )

@@ -151,6 +151,35 @@ async function runFlock(fileDescriptor) {
     }, 5000);
   });
 }
+
+/** Preserve only the original bounded flock receipt in public/private error projections. */
+export function runtimeWorkspaceError(error, fallbackCode = 'RUNTIME_WORKSPACE_ERROR', messageLimit = 2000) {
+  const result = { code: error.code ?? fallbackCode, message: String(error.message ?? error).slice(0, messageLimit) };
+  if (!['RUNTIME_WORKSPACE_OPERATION_RUNNING', 'RUNTIME_WORKSPACE_FLOCK_UNAVAILABLE'].includes(result.code)) return result;
+  try {
+    const attempts = error.flock?.attempts;
+    const nullableText = (value, maximum) => value === null || typeof value === 'string' && value.length <= maximum;
+    const validError = value => value === null || plain(value) &&
+      nullableText(value.code, 128) && (value.errno === null || typeof value.errno === 'string' && value.errno.length <= 128 ||
+        Number.isSafeInteger(value.errno)) && nullableText(value.syscall, 256) && typeof value.message === 'string' &&
+      value.message.length <= 512;
+    const validAttempt = value => plain(value) &&
+      (value.status === null || Number.isSafeInteger(value.status)) && nullableText(value.signal, 64) &&
+      validError(value.error) && typeof value.timedOut === 'boolean' && typeof value.stderr === 'string' &&
+      value.stderr.length <= 1024 && typeof value.stderrTruncated === 'boolean' && Number.isSafeInteger(value.elapsedMs);
+    if (Array.isArray(attempts) && attempts.length >= 1 && attempts.length <= 2 && attempts.every(validAttempt)) {
+      result.flock = { attempts: attempts.map(value => ({
+        status: value.status, signal: value.signal,
+        error: value.error === null ? null : { code: value.error.code, errno: value.error.errno,
+          syscall: value.error.syscall, message: value.error.message },
+        timedOut: value.timedOut, stderr: value.stderr, stderrTruncated: value.stderrTruncated,
+        elapsedMs: value.elapsedMs,
+      })) };
+    }
+  } catch { /* Keep the original error if optional diagnostics cannot be projected. */ }
+  return result;
+}
+
 export async function operationLease(path) {
   const handle = await open(path, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
   try {
@@ -161,7 +190,11 @@ export async function operationLease(path) {
       const result = await runFlock(handle.fd);
       attempts.push(result);
       if (!result.error && result.status === 0) return handle;
-      need(result.status !== 75, 'RUNTIME_WORKSPACE_OPERATION_RUNNING');
+      if (result.status === 75) {
+        throw Object.assign(new Error('RUNTIME_WORKSPACE_OPERATION_RUNNING'), {
+          code: 'RUNTIME_WORKSPACE_OPERATION_RUNNING', status: 400, flock: { attempts },
+        });
+      }
       const transient = result.timedOut || ['EAGAIN', 'EINTR', 'ENOMEM'].includes(result.error?.code);
       if (!transient || attempt === 1) {
         throw Object.assign(new Error('The original native flock process failed: ' + JSON.stringify(attempts)), {

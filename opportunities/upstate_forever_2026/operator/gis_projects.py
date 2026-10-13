@@ -6,7 +6,7 @@ import zipfile
 from model import gis_project as gis
 from model import gis_workspace
 
-ACTIONS = frozenset({'gis.project.export', 'gis.project.receive'})
+ACTIONS = frozenset({'gis.project.export', 'gis.project.receive', 'gis.project.adopt-sources'})
 # Received HTML has an opaque sandbox origin: it cannot read the operator session.
 VIEW_POLICY = ("sandbox allow-scripts allow-downloads; default-src 'none'; "
                "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
@@ -77,6 +77,10 @@ class GISProjects:
         result['exports'] = [self.describe(workspace, 'export', r['id']) for r in result['exports']]
         result['received'] = [self.describe(workspace, 'received', gis.load(p)['id'])
                               for p in sorted((ws.root / 'gis-received').glob('*/receipt.json'))]
+        result['adoptions'] = [gis.load(p) for p in sorted((ws.root / 'gis-source-adoptions').glob('*/adoption.json'))]
+        for record in result['received']:
+            project = gis.load(ws.root / 'gis-received' / record['id'] / 'project' / 'project.json')
+            record['layer_choices'] = [{'id': layer['id'], 'title': layer['title'], 'kind': layer['data']['kind'], 'units': layer['data']['units']} for layer in project['layers']]
         result['grids'] = [{k: row.get(k) for k in ('id', 'state', 'spec', 'grid')}
                            for row in (gis.load(p) for p in sorted((ws.root / 'grids').glob('*/grid.json')))]
         result['comparisons'] = [{k: row.get(k) for k in ('id', 'baseline_run_id', 'direction')}
@@ -91,38 +95,15 @@ class GISProjects:
         ws = self.operator.ws(task['workspace'])
         if task['action'] == 'gis.project.export':
             return gis_workspace.export(ws, task['payload'])
+        if task['action'] == 'gis.project.adopt-sources':
+            return gis_workspace.adopt_sources(ws, task['payload'])
         if task['action'] != 'gis.project.receive':
             raise ValueError('Unsupported GIS operation')
         upload = self.operator.upload(task['payload']['upload_id'])
-        key = gis.fingerprint({'schema': 'upstate.gis-receiving/v1',
-                               'project_id': ws.project['id'], 'archive_sha256': upload['sha256']})
-        parent = ws.root / 'gis-received' / key
-        parent.mkdir(parents=True, exist_ok=True)
-        root = parent / 'project'
-        with gis.locked(parent / '.receiving.lock'):
-            if root.exists():
-                # Recover a complete receive after its response/receipt was lost.
-                result = gis.verify(root)
-                with zipfile.ZipFile(upload['path']) as z:
-                    import json
-                    incoming = json.loads(z.read('inventory.json'))
-                if incoming['fingerprint'] != result['fingerprint']:
-                    raise ValueError('The receiving directory differs from this uploaded edition')
-            else:
-                result = gis.receive(upload['path'], root)
-            target = parent / 'editable-gis.zip'
-            expected = {'path': str(upload['object']), 'bytes': upload['bytes'], 'sha256': upload['sha256']}
-            # The original upload is owned by the Operator, not by the scientific Workspace.
-            gis.copy_checked(self.operator.root, expected, target)
-            value = {'schema': 'upstate.gis-receiving/v1', 'id': key, 'state': 'complete',
-                     'project_id': ws.project['id'], 'title': gis.load(root / 'project.json')['title'],
-                     'result': result, 'archive': gis.record(ws.root, target),
-                     'source_archive_sha256': upload['sha256'], 'upload_id': upload['id']}
-            gis.save(parent / 'receipt.json', value)
-            return value
+        return gis_workspace.receive(ws, upload['path'], source_upload_id=upload['id'])
 
     def decorate_task(self, task):
-        if task['action'] in ACTIONS and task['state'] == 'complete':
+        if task['action'] in {'gis.project.export', 'gis.project.receive'} and task['state'] == 'complete':
             kind = 'export' if task['action'] == 'gis.project.export' else 'received'
             result = self.describe(task['workspace'], kind, task['result']['id'])
             viewer, _ = self.member(task['workspace'], kind, task['result']['id'], 'OPEN_GIS.html')
@@ -171,4 +152,13 @@ def verify_workspace(workspace):
                 raise ValueError('GIS project differs from its recorded receiving/export edition')
             gis.checked(workspace.root, record['archive'])
             rows.append(result)
+    for path in sorted((workspace.root / 'gis-source-adoptions').glob('*/adoption.json')):
+        adoption = gis.load(path)
+        workspace._get('sources', adoption['source_collection_id'])
+        gis.checked(workspace.root, adoption['manifest'])
     return {'schema': 'upstate.gis-workspace-readback/v1', 'projects': rows}
+
+
+def member(operator, workspace_key, kind, project_id, member_path):
+    """Bind the existing inventory-checked member to the shared file transport."""
+    return GISProjects(operator).member(workspace_key, kind, project_id, member_path)

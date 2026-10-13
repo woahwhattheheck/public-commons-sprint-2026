@@ -228,3 +228,35 @@ appears when spatial sources refresh. It reads compact original metadata for the
 catalog and verifies a layer's file when that layer is actually opened. Original
 source selections, full classifications, relationship records and numerical
 summaries remain in their saved plan and analysis records.
+
+
+## Operate the complete browser receiving journey
+
+Use the existing live operator and its original server ready JSON. The native source preparation returns the plan ID; a completed receiving-water analysis can be added when its actual baseline and alternatives are available. The browser command opens every selected original source/contribution pair, every available individual/family priority and physical-change map, saves each view through the original queue, exports and downloads its complete native map ZIP, then closes and opens a fresh browser context to reopen those saved views.
+
+Create a private control JSON using the actual existing paths and IDs:
+
+```json
+{
+  "ready_file": "/actual/operator-ready.json",
+  "output": "/actual/receiving-water-browser",
+  "plan_id": "ACTUAL_64_HEX_PLAN_ID",
+  "analysis_id": "OPTIONAL_ACTUAL_64_HEX_COMPLETED_ANALYSIS_ID",
+  "node_modules": "/actual/installed/node_modules",
+  "chromium": "/actual/installed/chromium",
+  "paper": "letter",
+  "dpi": 220
+}
+```
+
+Omit `analysis_id` for the original utility geography journey. Either a plan or an analysis is required; selecting only an analysis resolves its own saved source plan. The operator ready file selects its original workspace unless `workspace_key` explicitly selects another workspace already registered by that same operator. Omit `node_modules` when the existing runtime sets `CODEX_PRIMARY_RUNTIME_NODE_MODULES` or resolves the installed Playwright package normally; omit `chromium` to use that installation's existing browser. The ready file and capability stay on the native host.
+
+```sh
+node operator/receiving_water_browser.mjs /actual/receiving-browser-control.json
+```
+
+The default case set includes all plan areas, the analysis overview, and every retained baseline/alternative priority and signed pollutant-change artifact. An explicit `subjects` array can select original `{ "id": "...", "kind": "receptor" }` or `{ "id": "...", "kind": "family_union" }` pairs for a specific operating selection. Individual and family areas with the same ID remain separate. Gura and regional source plans retain their own actual geography and native resolution.
+
+The command writes `receiving-water-browser.json`, the actual map ZIPs and native-browser screenshots to the chosen directory. The result identifies the project, source plan, analysis, each target, original queue tasks, saved review/export, exact source bindings and cold-reopened viewport. Resuming the same control selection and application edition reconciles its retained original operation IDs and complete downloads. The operation identity includes the actual installed driver, operator and renderer source hashes, and the command checks that the live server serves those same browser modules. Keep a changed application edition in its own output directory so its exports and screenshots remain distinguishable. Active tasks remain recorded when the observation duration elapses; `task_timeout_seconds` sets that duration. A native exception identifies its original task, stage and message in the same output.
+
+The receiving detail controls retain both subject ID and kind. The spatial workbench refreshes when a source plan or analysis finishes, and saved map titles identify their original statistic and model run. These joins use the existing operator, native spatial renderer, export producer and persisted queue.

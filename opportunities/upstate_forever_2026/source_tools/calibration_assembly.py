@@ -23,7 +23,8 @@ SOURCE_ROOT = "opportunities/upstate_forever_2026"
 SELF_NAME = "source_tools/calibration_assembly.py"
 INSTALLER_NAME = "operator/install_calibration.py"
 REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
-            "model/calibration.py", "model/CALIBRATION.md", "operator/server.py",
+            "model/calibration.py", "model/CALIBRATION.md",
+            "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md", "operator/server.py",
             "operator/calibration.py", "operator/web/app.mjs", "operator/web/index.html",
             "operator/web/calibration.mjs", "operator/web/calibration.css",
             "operator/extensions/calibration.json", "operator/extension_registry.py",

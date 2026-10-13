@@ -9,7 +9,6 @@ import shutil
 import tempfile
 import urllib.parse
 import urllib.request
-import uuid
 import zipfile
 from typing import Any, Iterator
 
@@ -91,27 +90,16 @@ def dataset_hash(path: Path) -> str:
     return digest({p.name: file_hash(p) for p in source_family(path)})
 
 
-def snapshot(source: Path, root: Path) -> tuple[str, list[dict[str, Any]]]:
-    family = source_family(source)
-    before = {p.name: file_hash(p) for p in family}
-    family_key = digest(before)
-    folder = root / "inputs" / family_key
-    folder.mkdir(parents=True, exist_ok=True)
-    inventory = []
-    for src in family:
-        dst = folder / src.name
-        if not dst.exists():
-            temporary = folder / (".copy-" + uuid.uuid4().hex)
-            shutil.copyfile(src, temporary)
-            if file_hash(temporary) != before[src.name]:
-                temporary.unlink()
-                raise ScenarioError(f"Input changed during copy: {src}")
-            os.replace(temporary, dst)
-        if file_hash(dst) != before[src.name]:
-            raise ScenarioError(f"Retained input changed: {dst}")
-        inventory.append({"path": dst.relative_to(root).as_posix(),
-                          "sha256": before[src.name], "bytes": dst.stat().st_size})
-    return (folder / source.name).relative_to(root).as_posix(), inventory
+def snapshot(source: Path, root: Path, *, retention=None) -> tuple[str, list[dict[str, Any]]]:
+    """Receive independent complete dataset files; optionally share one operation cache."""
+    from .retention import RetentionSession
+    session = retention or RetentionSession(root)
+    if session.root != Path(root).resolve():
+        raise ScenarioError("Input retention belongs to another receiving directory")
+    result = session.snapshot(source)
+    if retention is None:
+        session.verify()
+    return result
 
 
 @contextlib.contextmanager

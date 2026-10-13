@@ -27,7 +27,7 @@ from source_tools.designation_rules import (
 CROSSWALK_SCHEMA = "upstate.classified-water-crosswalk/v1"
 PROVENANCE_SCHEMA = "upstate.classified-water-crosswalk-provenance/v1"
 LEGAL_SCHEMA = "upstate.classified-water-legal-associations/v1"
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 CLASS_FIELDS = (
     "class_raw", "class_label", "class_code", "previous_class",
     "site_specific", "rfp_high_quality_candidate", "class_resolution",
@@ -406,6 +406,12 @@ def make_water_designation_choice(result, collection, source_id):
             "title": reference["title"], "uri": reference["url"],
             "edition": edition, "section": "A, B, E and F; named reaches in H",
         },
+        "source_context": {
+            "rule_profile": deepcopy(rules),
+            "source_catalog": deepcopy(result.get("source_catalog", [])),
+            "source_labels": deepcopy(entry.get("source_labels", [])),
+            "interpretation": deepcopy(result.get("interpretation", {})),
+        },
         "notes": [
             "The selected feature_id binds the original layer and typed object ID; "
             "native_attributes retains the original published fields.",
@@ -424,12 +430,14 @@ def prepare_delivery_selection(selection, source_choice):
     """Replace both high-quality-water bindings in the complete current selection."""
     if not isinstance(selection, dict):
         raise ValueError("delivery selection must be the complete selection object")
-    choice = {
-        "source_collection_id": _id(source_choice.get("source_collection_id"), "imported collection id"),
-        "source_id": _id(source_choice.get("source_id"), "imported source id"),
-    }
-    if source_choice.get("layer") is not None:
-        choice["layer"] = source_choice["layer"]
+    if not isinstance(source_choice, dict):
+        raise ValueError("delivery source choice must be an object")
+    choice = deepcopy(source_choice)
+    choice["source_collection_id"] = _id(
+        source_choice.get("source_collection_id"), "imported collection id")
+    choice["source_id"] = _id(source_choice.get("source_id"), "imported source id")
+    if choice.get("layer") is None:
+        choice.pop("layer", None)
     result = deepcopy(selection)
     for section, key in (("overlays", "high_quality_waters"),
                          ("source_roles", "HIGH_QUALITY_WATERS")):
@@ -516,12 +524,16 @@ def main(argv=None):
     )
     response["adapter"] = resources["adapter"]
     delivery_choice = response.get("overlay_choice")
+    saved = None
     if args.save_desk_selection:
         from model.workspace import Workspace
         from model.water_designations import save as save_water_designation
         saved = save_water_designation(
             Workspace(args.workspace), response["water_designation_choice"])
         delivery_choice = saved["delivery_overlay"]
+        response["overlay_choice"] = deepcopy(delivery_choice)
+        response["delivery_selection_patch"] = prepare_delivery_selection(
+            {}, delivery_choice)
         response["water_designation"] = {
             "id": saved["id"], "state": saved["state"],
             "summary": deepcopy(saved["summary"]),
@@ -531,8 +543,16 @@ def main(argv=None):
         response["water_designation_record"] = _save(
             args.output / "water-designation-record.json", saved)
     if delivery_selection is not None:
-        completed_selection = prepare_delivery_selection(
-            delivery_selection, delivery_choice)
+        if saved is not None:
+            from model.water_designations import apply_to_delivery
+            completed_selection = apply_to_delivery(
+                Workspace(args.workspace), saved["id"], delivery_selection)
+            completed_selection = prepare_delivery_selection(
+                completed_selection,
+                completed_selection["overlays"]["high_quality_waters"])
+        else:
+            completed_selection = prepare_delivery_selection(
+                delivery_selection, delivery_choice)
         selected_path = args.output / "delivery-selection.json"
         selected_descriptor = _save(selected_path, completed_selection)
         response["delivery_selection"] = {

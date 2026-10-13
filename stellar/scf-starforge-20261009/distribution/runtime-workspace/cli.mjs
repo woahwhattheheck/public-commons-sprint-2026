@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
 import { readJSON } from './storage.mjs';
-import { fail, json, saveJSON } from './storage.mjs';
+import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
 
 import { inspectProductPlanBundle, readProductPlanDocument } from './source-product-plans.mjs';
 import { saveTextExport } from '../discovery/write-json.mjs';
@@ -297,4 +297,9 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(json(result));
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
-  main().catch(error => { process.stderr.write(json({ error: error.code ?? 'RUNTIME_WORKSPACE_ERROR', message: error.message })); process.exitCode = 1; });
+  main().catch(error => {
+    const diagnostic = runtimeWorkspaceError(error, 'RUNTIME_WORKSPACE_ERROR', Infinity);
+    process.stderr.write(json({ error: diagnostic.code, message: diagnostic.message,
+      ...(diagnostic.flock ? { flock: diagnostic.flock } : {}) }));
+    process.exitCode = 1;
+  });

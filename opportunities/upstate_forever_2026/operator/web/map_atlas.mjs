@@ -310,7 +310,8 @@ export function attachMapAtlas(host) {
    '<h4>Saved map views</h4>'+choices('reviews',data().spatial_reviews||[],draft.spatial_review_ids||[])+
    '<h4>Completed map exports</h4>'+choices('exports',(data().spatial_exports||[]).filter(r=>r.state==='complete'),draft.spatial_export_ids||[])+'</details>'+
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
-   '<p>Seven map families, combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, interpretation report and editable working archive.</p></div>'+
+   '<p>Seven map families, combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown client report and editable working archive.</p>'+
+   (draft.economic_edition_id?'<p>Economic edition '+esc(short(draft.economic_edition_id))+' adds its selected-zone physical response, costs, budget criteria and complete decision package to the client report.</p>':'')+'</div>'+
    sourceSummary(draft)+
    '<div data-atlas-problems></div>';
  }
@@ -336,7 +337,12 @@ export function attachMapAtlas(host) {
  function outputPanel(){
   if(!opened)return '<h2>Saved releases</h2><div data-atlas-catalogue>'+catalogue()+'</div>';
   const atlas=opened.atlas,all=opened._downloads||[],atlasFile=retainedFile(opened.files?.map_atlas);
+  const offlineBrowserFile=retainedFile(opened.files?.map_atlas_browser);
   const sourceReportId=opened.selection?.source_report_id;
+  const reportPDF=retainedFile(opened.files?.report),reportHTML=retainedFile(opened.files?.report_html);
+  const reportMarkdown=retainedFile(opened.files?.report_markdown),reportModel=retainedFile(opened.files?.report_data);
+  const economicPackagePath=opened.economic_decision?.original_edition?.files?.complete_package?.path;
+  const economicPackage=retainedFile(opened.economic_decision?.files?.[economicPackagePath]);
   const indexFile=retainedFile(opened.files?.map_atlas_index),csvFile=retainedFile(opened.files?.map_atlas_csv);
   const sourceContextFile=retainedFile(opened.files?.map_atlas_sources);
   const archive=retainedFile(opened.files?.delivery_archive),rows=atlas?.pages||Object.entries(opened.maps||{}).map(([k,file])=>{
@@ -346,7 +352,10 @@ export function attachMapAtlas(host) {
   return '<div class="atlas-release"><h2>'+esc(titleOf(opened))+'</h2><p>'+esc(opened.state)+' · '+rows.length+' map sheets'+
    (atlas?' · '+atlas.page_count+' atlas pages':'')+'</p><div class="atlas-actions">'+
    (atlasFile?button('preview','Open complete atlas','data-url="'+esc(atlasFile.url)+'"')+downloadLink(atlasFile,'Download atlas PDF'):'')+
-   downloadLink(archive,'Download complete GIS package')+downloadLink(indexFile,'Download JSON index')+
+   downloadLink(archive,'Download complete GIS package')+downloadLink(offlineBrowserFile,'Download offline atlas browser')+
+   downloadLink(reportPDF,'Download client report PDF')+downloadLink(reportHTML,'Download report HTML')+
+   downloadLink(reportMarkdown,'Download report Markdown')+downloadLink(reportModel,'Download editable report model')+
+   downloadLink(economicPackage,'Download economic decision package')+downloadLink(indexFile,'Download JSON index')+
    downloadLink(csvFile,'Download CSV index')+downloadLink(sourceContextFile,'Download source choices')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
    button('clone','Revise this selection')+button('item','Open complete record','data-kind="deliveries" data-id="'+esc(opened.id)+'"')+'</div>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+

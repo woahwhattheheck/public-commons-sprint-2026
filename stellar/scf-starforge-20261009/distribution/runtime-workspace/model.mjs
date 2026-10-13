@@ -10,7 +10,7 @@ import { prepareRuntimeInstall, installRuntime, inspectRuntimeInstall, upgradeRu
 import { runtimeCatalog, resolveRuntimeProfile } from '../runtime-profile.mjs';
 import { plain, now, digest, json, canonical, fail, need, recordId, operationId, absolute,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
-  operationLease, operationRunning, tailFile } from './storage.mjs';
+  operationLease, operationRunning, tailFile, runtimeWorkspaceError } from './storage.mjs';
 
 import { managedOperationFields, initializeManagedWorkspace, managedState, openManagedHome, reviewManagedAdoption,
   managedConfig, normalizeManagedOperation, executeManagedOperation, managedCommandAlive,
@@ -49,7 +49,7 @@ export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
 const recordPath = (root, type, id) => join(root, type, recordId(id) + '.json');
 const jobPath = (root, id) => join(root, 'operations', operationId(id));
-const asError = error => ({ code: error.code ?? 'RUNTIME_WORKSPACE_ERROR', message: String(error.message ?? error).slice(0, 2000) });
+const asError = error => runtimeWorkspaceError(error);
 
 async function context(directory) {
   const root = await privateDirectory(absolute(directory));
@@ -639,6 +639,7 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
       const state = { ...started, phase: 'FAILED', updatedAt: now(), completedAt: now(), error: asError(error) };
       await saveJSON(join(operationDirectory, 'state.json'), state, true);
       process.stderr.write(state.error.code + ': ' + state.error.message + '\n');
+      if (state.error.flock) process.stderr.write(json({ error: state.error.code, flock: state.error.flock }));
       return state;
     }
   } finally { await lease.close(); }
