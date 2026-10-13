@@ -1,0 +1,106 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "annual-landcover-observed-2023-2025",
+  "components": {
+    "annual-landcover-observed-2023-2025": {
+      "title": "Observed annual land cover across the original 217 watersheds",
+      "paths": [
+        "source/annual-nlcd-2023-native-20261013/source/plan.json",
+        "source/annual-nlcd-2023-native-20261013/source/validation.json",
+        "source/annual-nlcd-2023-native-20261013/source/class-area.csv",
+        "source/annual-nlcd-2023-native-20261013/source/style.sld",
+        "source/annual-nlcd-2023-native-20261013/source/source-entry.json",
+        "source/annual-nlcd-2023-native-20261013/source/source-manifest.json",
+        "source/annual-nlcd-2023-native-20261013/receiving.json",
+        "source/annual-nlcd-2023-native-20261013/receive.py",
+        "source/annual-nlcd-2023-native-20261013/README.md",
+        "observations/landcover_2023_2025/annual-2023.json",
+        "observations/landcover_2023_2025/annual-2025.json",
+        "observations/landcover_2023_2025/transitions-2023-2025.json",
+        "observations/landcover_2023_2025/annual-huc12-classes.csv",
+        "observations/landcover_2023_2025/huc12-change-summary.csv",
+        "observations/landcover_2023_2025/huc12-transitions.csv",
+        "observations/landcover_2023_2025/domain-transitions.csv",
+        "observations/landcover_2023_2025/domain-class-change.csv",
+        "observations/landcover_2023_2025/domain-group-transitions.csv",
+        "observations/landcover_2023_2025/analysis-run.json",
+        "observations/landcover_2023_2025/README.md",
+        "observations/landcover_2023_2025/model-sources.json",
+        "source/annual-nlcd-2023-native-20261013/source/land-cover.tif",
+        "integration/component_fragments/annual-landcover-observed-2023-2025.json",
+        "observations/landcover_2023_2025/study-seven-huc-transitions.json"
+      ],
+      "requires": [
+        "original-landcover-analysis"
+      ],
+      "source_manifests": [
+        "source/annual-nlcd-2023-native-20261013/source/source-manifest.json",
+        "observations/landcover_2023_2025/model-sources.json"
+      ]
+    },
+    "annual-landcover-exact-byte-transfer": {
+      "title": "Exact-byte native land-cover relay for connected text receiving",
+      "paths": [
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-001.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-002.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-003.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-004.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-005.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-006.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-007.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-008.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-009.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-010.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-011.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-012.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-013.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-014.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-015.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-016.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-017.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-018.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-019.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-020.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-021.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-022.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-023.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-024.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2025/part-025.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-001.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-002.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-003.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-004.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-005.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-006.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-007.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-008.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-009.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-010.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-011.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-012.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-013.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-014.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-015.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-016.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-017.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-018.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-019.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-020.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-021.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-022.b64",
+        "source/annual-nlcd-binary-transfer-20261013/parts/2023/part-023.b64",
+        "source/annual-nlcd-binary-transfer-20261013/transfer.json",
+        "source/annual-nlcd-binary-transfer-20261013/receive.py",
+        "source/annual-nlcd-binary-transfer-20261013/README.md"
+      ],
+      "requires": [
+        "annual-landcover-observed-2023-2025"
+      ],
+      "source_manifests": []
+    }
+  },
+  "required_components": [
+    "annual-landcover-observed-2023-2025"
+  ],
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3547"
+}
