@@ -8,7 +8,9 @@
       "paths": [
         "source_tools/regional_matched_control.py",
         "source_tools/geographic_matched_control.py",
-        "source_tools/REGIONAL_MATCHED_CONTROL.md"
+        "source_tools/REGIONAL_MATCHED_CONTROL.md",
+        "source_tools/precipitation_matching.py",
+        "source_tools/MATCHED_CONTROL_MATCHING.md"
       ],
       "requires": [
         "core"
