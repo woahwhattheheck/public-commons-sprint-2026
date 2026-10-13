@@ -16,6 +16,7 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "integration/conservation_native_report_composition.json",
     "integration/conservation_native_versions_composition.json",
     "model/CONSERVATION_NATIVE_VERSIONS.md",
     "model/native_versions.py",
@@ -135,7 +136,8 @@ KNOWN_PRIOR = {
         "8849903b808a82b5d96d2bf2a047dba47602d3bfe098c088378384237d258891",
         "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301",
         "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda",
-        "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e"
+        "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e",
+        "86a82e53e7b8e0890ecc26c5777c8d81b800f092b826bbe8af5fcb3430a1c6a9"
     ],
     "operator/web/conservation.mjs": [
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
@@ -146,7 +148,8 @@ KNOWN_PRIOR = {
         "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710",
         "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e",
         "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65",
-        "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f"
+        "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
+        "60da58ce834260465f74dd03f6af420ecfabd8e4ab244e9150abdd506d3177b9"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
@@ -183,7 +186,8 @@ KNOWN_PRIOR = {
         "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
         "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
         "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c",
-        "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d"
+        "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d",
+        "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -319,7 +323,8 @@ KNOWN_PRIOR = {
     "model/conservation_reporting.py": [
         "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9",
         "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f",
-        "65a6bfd15909352a8b1bfd2767e4512554c7633a20e3234c5b5a6b230da3b9c0"
+        "65a6bfd15909352a8b1bfd2767e4512554c7633a20e3234c5b5a6b230da3b9c0",
+        "7fc2db9e618858c7a272e04eec6404b0e8fb48f7c0cafd8ca4a3d3a505301950"
     ],
     "model/CONSERVATION_REPORTS.md": [
         "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6",
@@ -447,6 +452,9 @@ KNOWN_PRIOR = {
     ],
     "source_tools/SOURCE_ACQUISITION_CONTINUATION.md": [
         "8384e6d464f8bb253df82d5abce78294785579f0855e111bd3b4b22b29257416"
+    ],
+    "model/CONSERVATION_NATIVE_VERSIONS.md": [
+        "712dda5ac675e597394d4e9d7b1976b1e2c7ab885e0fa83d1c375a5b79d7c81d"
     ]
 }
 
