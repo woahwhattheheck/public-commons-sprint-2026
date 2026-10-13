@@ -120,6 +120,27 @@ def _native_selection(grid_id, profile_id, scenario_id, models=None):
     return value
 
 
+def _retained_native_run(workspace, run_id, grid_id, profile_id, scenario_id, models):
+    """Adopt the original run identity, including its requested version declaration."""
+    run_id = identifier(run_id)
+    run = workspace.inspect_run(run_id)
+    selected = run.get("selection")
+    if (not isinstance(selected, dict) or selected.get("schema") != "upstate.run-selection/v1"
+            or run.get("id") != run_id or digest(selected) != run_id):
+        raise ValueError("Select an unchanged original native run")
+    for name, expected in (("grid_id", grid_id), ("profile_id", profile_id),
+                           ("scenario_id", scenario_id)):
+        if selected.get(name) != expected:
+            raise ValueError("Retained native run differs in " + name)
+    if _models(selected.get("models")) != models:
+        raise ValueError("Retained native run differs in selected model stages")
+    if not isinstance(selected.get("invest_version"), str) or not selected["invest_version"].strip():
+        raise ValueError("Retain the original native run's requested version declaration")
+    # State, completed stages, actual runtime and cache verification remain with
+    # the existing native runner. Prepared and partial runs keep the same ID.
+    return run
+
+
 def _completed_source_stage(run, model):
     if (run.get("id") != digest(run.get("selection"))
             or run["selection"].get("invest_version") != INVEST_VERSION
@@ -412,6 +433,13 @@ class ComputeProgrammes:
             scenario_spec(_copy(scenario))
             native = _native_selection(grid["id"], profile["id"], scenario["id"], models)
             assembly = {}
+            if "native_run_id" in row:
+                if "source_runs" in row:
+                    raise ValueError("Choose an original native run or completed source-stage assembly")
+                original = _retained_native_run(self.workspace, row["native_run_id"],
+                    grid["id"], profile["id"], scenario["id"], models)
+                native = _copy(original["selection"])
+                assembly = {"execution_method": "retained_native_run"}
             if "source_runs" in row:
                 if models != ["ndr", "sdr"]:
                     raise ValueError("Completed-stage assembly requires a full NDR/SDR target run")
@@ -457,16 +485,20 @@ class ComputeProgrammes:
         if not isinstance(rows, list) or not rows:
             raise ValueError("Select one or more named native runs")
         keys = []
-        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes", "models", "source_runs"}
+        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes", "models", "source_runs", "native_run_id"}
         for row in rows:
             if not isinstance(row, dict) or set(row) - allowed_run:
-                raise ValueError("A run selects key, title, profile_id, scenario_id and optional experiment context or completed source stages")
+                raise ValueError("A run selects key, title, profile_id, scenario_id and optional experiment context, native_run_id or completed source stages")
             keys.append(_name(row.get("key"), "Run key"))
             row["title"] = _text(row.get("title"), "each run title")
             identifier(row.get("profile_id"))
             identifier(row.get("scenario_id"))
             if "models" in row:
                 row["models"] = _models(row["models"])
+            if "native_run_id" in row:
+                row["native_run_id"] = identifier(row["native_run_id"])
+                if "source_runs" in row:
+                    raise ValueError("native_run_id and source_runs are mutually exclusive")
             if "source_runs" in row:
                 sources = row["source_runs"]
                 if not isinstance(sources, dict) or set(sources) != {"ndr", "sdr"}:
@@ -530,9 +562,16 @@ class ComputeProgrammes:
                     atomic_json(directory / "progress.json", self._initial_state(record), immutable=True)
             else:
                 for row in bindings:
-                    run = self.workspace.prepare_run({name: row["native_selection"][name]
-                        for name in ("grid_id", "profile_id", "scenario_id", "models")
-                        if name in row["native_selection"]})
+                    if "native_run_id" in row:
+                        run = _retained_native_run(self.workspace, row["native_run_id"],
+                            grid["id"], row["profile_id"], row["scenario_id"],
+                            _models(row["native_selection"].get("models")))
+                        if run["selection"] != row["native_selection"]:
+                            raise ValueError("Retained native selection changed during programme adoption")
+                    else:
+                        run = self.workspace.prepare_run({name: row["native_selection"][name]
+                            for name in ("grid_id", "profile_id", "scenario_id", "models")
+                            if name in row["native_selection"]})
                     if run["id"] != row["run_id"]:
                         raise ValueError("Native preparation returned a different retained run")
                 from .native_batch import _application_sources
@@ -1192,6 +1231,8 @@ class ComputeProgrammes:
                     row["comparison_reason"] = "A matching " + model.upper() + " baseline output is required for this pollutant change."
                 row["change_basis"] = "alternative minus baseline on the native comparison's common valid cells"
                 rows.append(row)
+        from .programme_interactions import report_context
+        interactions = report_context(self.workspace, key)
         return {"schema": REPORT_SCHEMA, "programme_id": key, "workspace_id": record["workspace_id"],
                 "title": status["title"], "programme_state": status["state"], "counts": status["counts"],
                 "baseline_run": status["baseline_run"], "grid_id": record["selection"]["grid_id"],
@@ -1199,6 +1240,7 @@ class ComputeProgrammes:
                 "engine_sources": record["identity"]["engine_sources"],
                 "execution_sources": status.get("execution_sources"),
                 "rows": rows, "comparisons": status["comparisons"],
+                "interactions": interactions,
                 "comparison_errors": status["comparison_errors"],
                 "ensemble_candidates": status["ensemble_candidates"],
                 "ensemble_candidate_issues": status["ensemble_candidate_issues"],
@@ -1272,13 +1314,17 @@ class ComputeProgrammes:
             lines.extend(["", "## Calculations needed for other matched pairs", ""])
             lines.extend("- " + label(message) for message in dict.fromkeys(
                 issue["message"] for issue in report["ensemble_candidate_issues"]))
+        from .programme_interactions import write_report_files
+        interaction_files, interaction_lines = write_report_files(
+            self.workspace, directory, report.get("interactions", {}))
+        lines.extend(interaction_lines)
         lines.extend(["", "## Interpretation", ""])
         lines.extend(report["interpretation"].values())
         lines.extend(["", "## Source", "", "Application: " + report["source_reference"],
                       "", "Grid: " + report["grid_id"], ""])
         atomic_bytes(directory / "report.md", ("\n".join(lines)).encode("utf-8"), immutable=True)
         files = [describe_file(self.workspace.root, directory / name)
-                 for name in ("report.json", "report.csv", "report.md")] + ensemble_files
+                 for name in ("report.json", "report.csv", "report.md")] + ensemble_files + interaction_files
         state = self._state(key)
         self._write_state(key, state, latest_report={"id": report_id, "files": files,
                                                      "generated_at": report["generated_at"]})
@@ -1376,6 +1422,12 @@ class ComputeProgrammes:
             selected_names = [preview["baseline_run"]] + preview["scenario_runs"]
             by_name = {row["key"]: row for row in record["runs"]}
             self._check_execution(record)
+            from .programme_interactions import receiving_context
+            interaction_context = receiving_context(
+                self.workspace, key, [by_name[name]["run_id"] for name in selected_names])
+            if interaction_context["studies"]:
+                delivery_key = digest({"delivery_selection": preview["selection"],
+                    "interaction_links": [study["link_id"] for study in interaction_context["studies"]]})
             attempt = state["deliveries"].setdefault(delivery_key, {"state": "prepared",
                        "selection": preview["selection"], "created_at": now()})
             attempt.update(state="building", updated_at=now())
@@ -1417,7 +1469,9 @@ class ComputeProgrammes:
                           "runs": {name: by_name[name]["run_id"] for name in outcomes},
                           "comparison_id": comparison["id"], "model_outcomes": outcomes,
                           "delivery_selection": preview["selection"], "delivery_id": result["id"],
-                          "completed_at": result["completed_at"]}
+                          "completed_at": result["completed_at"],
+                          **({"interaction_studies": interaction_context}
+                             if interaction_context["studies"] else {})}
                 target = directory / "deliveries" / delivery_key / "receiving.json"
                 atomic_json(target, output, immutable=True)
                 attempt.update(state="complete", updated_at=now(), delivery_id=result["id"],
@@ -1429,6 +1483,8 @@ class ComputeProgrammes:
                 files = [attempt["receiving"]] + [
                     {**item, "path": "deliveries/" + result["id"] + "/" + item["path"]}
                     for item in result.get("files", {}).values()]
+                files.extend(item for study in interaction_context["studies"] for item in study["files"])
+                files = list({item["path"]: item for item in files}.values())
                 return {**output, "receiving": attempt["receiving"], "delivery": result, "files": files}
             except BaseException as exc:
                 attempt.update(state="failed", updated_at=now(), error=_error(exc))
