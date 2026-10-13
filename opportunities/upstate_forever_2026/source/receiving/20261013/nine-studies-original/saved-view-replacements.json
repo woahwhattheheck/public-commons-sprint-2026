@@ -1,10 +1,86 @@
-[
-  {
-    "old": "let D, study,selected='',source='',query='',stationQuery='',pageNo=0,filtered=[],view=[],drag=null;",
-    "new": "let D, study,selected='',source='',query='',stationQuery='',pageNo=0,filtered=[],view=[],drag=null,reviewRead=0;"
-  },
-  {
-    "old": "$('viewFile').onchange=async()=>{const f=$('viewFile').files[0];if(!f)return;try{if(f.size>1000000)throw Error('Review file exceeds 1 MB');const v=JSON.parse(await f.text()),s=D.studies.find(s=>s.id===v.study_id);if(v.schema!=='upstate.station-review-view/v1'||!s||s.edition_id!==v.edition_id)throw Error('Review file does not match a retained native edition');renderStudy(s.id);selected=s.stations.some(s=>s.station_id===v.selected_station_id)?v.selected_station_id:'';source=[...$('sourceFilter').options].some(o=>o.value===v.source_id)?v.source_id:'';query=typeof v.row_search==='string'?v.row_search:'';stationQuery=typeof v.station_search==='string'?v.station_search:'';$('rowSearch').value=query;$('stationSearch').value=stationQuery;$('sourceFilter').value=source;$('notes').value=typeof v.notes==='string'?v.notes:'';if(Array.isArray(v.map_view)&&v.map_view.length===4&&v.map_view.every(Number.isFinite)&&v.map_view[2]>0&&v.map_view[3]>0)view=v.map_view;renderStations();updateView();renderRecords();signal('Saved review view reopened against the same native edition.');}catch(e){signal('Could not reopen review: '+e.message);}finally{$('viewFile').value='';}};",
-    "new": "$('viewFile').onchange=async()=>{const f=$('viewFile').files[0];if(!f)return;const request=++reviewRead,snapshot=JSON.stringify(review());const ownsReview=()=>request===reviewRead&&snapshot===JSON.stringify(review());try{if(f.size>1000000)throw Error('Review file exceeds 1 MB');const contents=await f.text();if(!ownsReview()){if(request===reviewRead)signal('The review changed while the file was loading. Reopen the file when you are ready to replace the current view.');return;}const v=JSON.parse(contents),s=D.studies.find(s=>s.id===v.study_id);if(v.schema!=='upstate.station-review-view/v1'||!s||s.edition_id!==v.edition_id)throw Error('Review file does not match a retained native edition');renderStudy(s.id);selected=s.stations.some(s=>s.station_id===v.selected_station_id)?v.selected_station_id:'';source=[...$('sourceFilter').options].some(o=>o.value===v.source_id)?v.source_id:'';query=typeof v.row_search==='string'?v.row_search:'';stationQuery=typeof v.station_search==='string'?v.station_search:'';$('rowSearch').value=query;$('stationSearch').value=stationQuery;$('sourceFilter').value=source;$('notes').value=typeof v.notes==='string'?v.notes:'';if(Array.isArray(v.map_view)&&v.map_view.length===4&&v.map_view.every(Number.isFinite)&&v.map_view[2]>0&&v.map_view[3]>0)view=v.map_view;renderStations();updateView();renderRecords();signal('Saved review view reopened against the same native edition.');}catch(e){if(ownsReview())signal('Could not reopen review: '+e.message);}finally{if(request===reviewRead)$('viewFile').value='';}};"
-  }
-]
+{
+  "schema": "upstate.station-review-replacements/v2",
+  "source_html_filename": "Upper_Savannah_Nine_Study_Review_20261013.html",
+  "source_html_sha256": "baec49821d4234f8e241c20c52612d903af4533ab02a9b504d7a05ee772608d3",
+  "output_html_sha256": "42375ba33a06ffd873cfc47943e4927a7105849b316067cd98669b6020a5102e",
+  "repository_base_commit": "6b8a4073cf35000ce95b331b5d70ccd73d28202c",
+  "replacements": [
+    {
+      "purpose": "state and read generation",
+      "old": "let D, study,selected='',source='',query='',stationQuery='',pageNo=0,filtered=[],view=[],drag=null;",
+      "new": "let D, study,selected='',source='',query='',stationQuery='',pageNo=0,filtered=[],view=[],drag=null,lastFitMode=null,reviewRead=0;",
+      "preimage_sha256": "559fff549b5535dca83d82617e8027e01fac3ecd0ba6de11f118ef9eb86543a1",
+      "postimage_sha256": "298774726059cc87ae3b5108f29f14e18dcf99fb0d2579e25c8ce3e30d80728f"
+    },
+    {
+      "purpose": "responsive fit-mode tracking",
+      "old": "function fit(points){if(!points.length)return;let minX=",
+      "new": "function fit(points,mode){if(!points.length)return;lastFitMode=mode||null;let minX=",
+      "preimage_sha256": "9e42cc99317c043654f626c0f2e6a11630433d0856b6cc81c0d96aff623887f5",
+      "postimage_sha256": "88d456fdf51b306e10c9dd021f391ad883b5a5dfd4dd0657037e9cc9b18b3dff"
+    },
+    {
+      "purpose": "fit selected stations",
+      "old": "function fitStations(){const ss=currentStations().filter(s=>s.map_point).map(s=>s.map_point);fit(ss);}",
+      "new": "function fitStations(){const ss=currentStations().filter(s=>s.map_point).map(s=>s.map_point);fit(ss,'stations');}",
+      "preimage_sha256": "6ae369ae484a75669ea687b33d52e6205caf28fa769a68d30d4fbe0d3995526c",
+      "postimage_sha256": "4b7a1a302746fe4c8d8692241baed653e20c9f04c9ccefc470631f10a369b3ae"
+    },
+    {
+      "purpose": "fit full domain",
+      "old": "function domain(){const d=D.map_domain;fit([[d[0],d[1]],[d[0]+d[2],d[1]+d[3]]]);}",
+      "new": "function domain(){const d=D.map_domain;fit([[d[0],d[1]],[d[0]+d[2],d[1]+d[3]]],'domain');}",
+      "preimage_sha256": "5e4988485b58e1305a5c9f0e386a76510d981f3afaf8325ea6fdb425ffc8840c",
+      "postimage_sha256": "51313bcebadcac2ca387d47b78428787828529ae15dab9e05087c9e0b6edc348"
+    },
+    {
+      "purpose": "leave fit mode after zoom",
+      "old": "function zoom(f){const w=Math.max(.05,Math.min(50000,view[2]*f)),",
+      "new": "function zoom(f){lastFitMode=null;const w=Math.max(.05,Math.min(50000,view[2]*f)),",
+      "preimage_sha256": "c05310070c25ae7a67bf0e9833f7d18e1b91aa9f17b4376f46e69d8549ae8c99",
+      "postimage_sha256": "a664fe59ffb7d0524d2c6e09dcf219ebd5642b35989e9f98ee0706ecfed0379f"
+    },
+    {
+      "purpose": "guard saved-view reopen and clear fit mode",
+      "old": "$('viewFile').onchange=async()=>{const f=$('viewFile').files[0];if(!f)return;try{if(f.size>1000000)throw Error('Review file exceeds 1 MB');const v=JSON.parse(await f.text()),s=D.studies.find(s=>s.id===v.study_id);if(v.schema!=='upstate.station-review-view/v1'||!s||s.edition_id!==v.edition_id)throw Error('Review file does not match a retained native edition');renderStudy(s.id);selected=s.stations.some(s=>s.station_id===v.selected_station_id)?v.selected_station_id:'';source=[...$('sourceFilter').options].some(o=>o.value===v.source_id)?v.source_id:'';query=typeof v.row_search==='string'?v.row_search:'';stationQuery=typeof v.station_search==='string'?v.station_search:'';$('rowSearch').value=query;$('stationSearch').value=stationQuery;$('sourceFilter').value=source;$('notes').value=typeof v.notes==='string'?v.notes:'';if(Array.isArray(v.map_view)&&v.map_view.length===4&&v.map_view.every(Number.isFinite)&&v.map_view[2]>0&&v.map_view[3]>0)view=v.map_view;renderStations();updateView();renderRecords();signal('Saved review view reopened against the same native edition.');}catch(e){signal('Could not reopen review: '+e.message);}finally{$('viewFile').value='';}};",
+      "new": "$('viewFile').onchange=async()=>{const f=$('viewFile').files[0];if(!f)return;const request=++reviewRead,snapshot=JSON.stringify(review());const ownsReview=()=>request===reviewRead&&snapshot===JSON.stringify(review());try{if(f.size>1000000)throw Error('Review file exceeds 1 MB');const contents=await f.text();if(!ownsReview()){if(request===reviewRead)signal('The review changed while the file was loading. Reopen the file when you are ready to replace the current view.');return;}const v=JSON.parse(contents),s=D.studies.find(s=>s.id===v.study_id);if(v.schema!=='upstate.station-review-view/v1'||!s||s.edition_id!==v.edition_id)throw Error('Review file does not match a retained native edition');renderStudy(s.id);selected=s.stations.some(s=>s.station_id===v.selected_station_id)?v.selected_station_id:'';source=[...$('sourceFilter').options].some(o=>o.value===v.source_id)?v.source_id:'';query=typeof v.row_search==='string'?v.row_search:'';stationQuery=typeof v.station_search==='string'?v.station_search:'';$('rowSearch').value=query;$('stationSearch').value=stationQuery;$('sourceFilter').value=source;$('notes').value=typeof v.notes==='string'?v.notes:'';if(Array.isArray(v.map_view)&&v.map_view.length===4&&v.map_view.every(Number.isFinite)&&v.map_view[2]>0&&v.map_view[3]>0)view=v.map_view;lastFitMode=null;renderStations();updateView();renderRecords();signal('Saved review view reopened against the same native edition.');}catch(e){if(ownsReview())signal('Could not reopen review: '+e.message);}finally{if(request===reviewRead)$('viewFile').value='';}};",
+      "preimage_sha256": "2847db2fe9bcf9d8620e78c6a36c2e3699502da43775f933ab9a9889b90a8c00",
+      "postimage_sha256": "30a5e797821a1e33334c7c8f900bef30e635cb6b75d3e3a853534c70517551a5"
+    },
+    {
+      "purpose": "leave fit mode after keyboard pan",
+      "old": "if(moves[e.key]){e.preventDefault();view[0]+=moves[e.key][0]*view[2];",
+      "new": "if(moves[e.key]){e.preventDefault();lastFitMode=null;view[0]+=moves[e.key][0]*view[2];",
+      "preimage_sha256": "231d08843becc4925a9f2244ecbd2cc41e6ad77c52020c729051c055c60b8302",
+      "postimage_sha256": "2d8668220c9a6fe76c31737aa338e7d946a0ed6f51799c67fbcbf0a43371a42e"
+    },
+    {
+      "purpose": "leave fit mode after pointer pan",
+      "old": "$('map').onpointermove=e=>{if(!drag)return;view=[drag.view[0]-(e.clientX-drag.x)*drag.view[2]/$('map').clientWidth,",
+      "new": "$('map').onpointermove=e=>{if(!drag)return;lastFitMode=null;view=[drag.view[0]-(e.clientX-drag.x)*drag.view[2]/$('map').clientWidth,",
+      "preimage_sha256": "81e7c593b76ae4a05031a29ef564861e01fa55572af833fc93a27671ffd138ad",
+      "postimage_sha256": "d028b13ef9c4481167f51160dfe907a4c353c87fbdb07d89a49fadaf974a7916"
+    },
+    {
+      "purpose": "refit only while fit mode remains active",
+      "old": "window.addEventListener('resize',()=>renderPoints());",
+      "new": "window.addEventListener('resize',()=>{if(lastFitMode==='stations')fitStations();else if(lastFitMode==='domain')domain();else renderPoints();});",
+      "preimage_sha256": "815ff49474b8be95c617ac9cb93f32aba854ece276dafb0f913395ce0c8a9f1d",
+      "postimage_sha256": "737d9b293f8a8f75554c4655002da680a401b4a19ba7a3aefed7c537386b3ab9"
+    },
+    {
+      "purpose": "scale markers and labels for SVG letterboxing",
+      "old": "const unit=(view[2]||1000)/Math.max($('map').clientWidth,1);",
+      "new": "const unit=Math.max((view[2]||1000)/Math.max($('map').clientWidth,1),(view[3]||1000)/Math.max($('map').clientHeight,1));",
+      "preimage_sha256": "201f6379dd3398874b808e22bdf6e599bcae179db19e6fcb92a58c5c607db46e",
+      "postimage_sha256": "d65db3553a2d460e5c901161c41adf4c8f2244ccfeda35807110f6be09860ff2"
+    },
+    {
+      "purpose": "keep numeric values on one line inside table scroller",
+      "old": ".tablewrap{overflow:auto;contain:inline-size;border:1px solid #d0d0cb;margin-top:12px;max-height:425px}table{border-collapse:collapse;width:100%;font-size:12px}",
+      "new": ".tablewrap{overflow:auto;contain:inline-size;border:1px solid #d0d0cb;margin-top:12px;max-height:425px}table{border-collapse:collapse;width:100%;font-size:12px}.tablewrap table{min-width:1180px}.tablewrap th:nth-child(4),.tablewrap td:nth-child(4){min-width:18ch;white-space:nowrap;font-variant-numeric:tabular-nums}",
+      "preimage_sha256": "b49544f6745f28aefb80777c874ba8d778b499c54fcde384e4e165c4d09c95bd",
+      "postimage_sha256": "3176276b017bdba118fcedbffe7cd18b70f33dccb54a8290043071290a6c64f3"
+    }
+  ]
+}
