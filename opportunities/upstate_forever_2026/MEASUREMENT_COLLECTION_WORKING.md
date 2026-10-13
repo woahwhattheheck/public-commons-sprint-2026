@@ -74,6 +74,15 @@ The receive request is the entire reviewed manifest plus operationId, expectedId
 
 The installed whole-project receiving course opens project.zip in the receiving Measurements workspace. Retain the sender's original source files, source/import identities, full population exports and saved edition bindings while checking the actual receiving workspace.
 
+
+## Returning to an unfinished collection after changing workspace
+
+The installed Measurements host retains each complete collection working copy under its original workspace and signed-in account when that view is detached. Returning to the same selection restores its unfinished mapping text, small original files, inspection, complete pending request and history. A large original remains in the native intake; reselect the same local file if more bytes are needed, and the existing prefix check verifies it.
+
+This also preserves work after a browser quota failure or a competing-tab save. The restored view keeps its original saved-copy revision; it never adopts a newer tab's revision as permission to overwrite that tab. Download the retained working file and the other tab's copy, reload the selected saved copy, then explicitly open the complete file you choose. The host's close warning includes detached copies that still need saving. Downloading the complete working file remains the durable way to carry this unfinished browser state across a full browser close or another machine.
+
+During receiving, operate the actual selection change: retain a full unfinished mapping and pending original request, select another workspace, return, and check the original body before resuming. Existing scientific inputs, native import identities and completed editions stay selected.
+
 ## Current owner direction and delivery operation
 
 Continue the existing Eco/Upper Savannah application, original operators and current scientific/native owners. The original whole-application installer composes this source into the current cumulative application; the existing authenticated browser and native process remain selected. Existing inline collection routes, old study editions and the original large-file panel remain available.

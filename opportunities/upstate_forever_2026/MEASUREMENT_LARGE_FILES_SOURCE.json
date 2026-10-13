@@ -16,8 +16,8 @@
     },
     {
       "path": "MEASUREMENT_COLLECTION_WORKING.md",
-      "bytes": 16329,
-      "sha256": "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d",
+      "bytes": 17713,
+      "sha256": "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d",
       "role": "addition"
     },
     {
@@ -202,20 +202,20 @@
     },
     {
       "path": "measurement_workspace/web/collection_working.mjs",
-      "bytes": 9213,
-      "sha256": "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c",
+      "bytes": 10343,
+      "sha256": "e1e04cc67cf29f6a0567015c18cec58e0cdf82a1fd9b4bdb69e6d11eac877ad8",
       "role": "addition"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 32497,
-      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4",
+      "bytes": 33724,
+      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274",
       "role": "native"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 11569,
-      "sha256": "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306",
+      "bytes": 12138,
+      "sha256": "e3d4b8ae2741300c6780b522ffc8bd6bb57912543c8662b519b5e51f79c7302c",
       "role": "patch"
     },
     {
