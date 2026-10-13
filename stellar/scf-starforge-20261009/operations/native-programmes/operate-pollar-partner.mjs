@@ -297,9 +297,35 @@ for(const option of ['configuration-file','customer-plan-file','operator-plan-fi
 }
 const originalMethods=imports.operator?.POLLAR_PARTNER_METHODS??[];
 function methodFor(name){const result=originalMethods.find(item=>item.name===name);need(result,'The original operator does not declare this method.',{method:name});return result;}
+function requestSemanticIdentity(request){
+ const args={...request.args};delete args.expectedRevision;
+ return digest(Buffer.from(canonical({directory:request.directory,method:request.method,args})));
+}
+async function originalRevisionSelection(label,original){
+ const directory=target('requests/'+label+'.json.revision-attempts');
+ if(!await exists(directory))return {request:original,attempt:0};
+ const names=(await fs.readdir(directory)).filter(name=>/^[0-9]{8}\.json$/.test(name)).sort();
+ let request=original,attempt=0;
+ const semanticSha256=requestSemanticIdentity(original);
+ for(const name of names){
+  const retained=await readJSON(path.join(directory,name));
+  need(retained.schema==='stellar-forge.pollar-native.request-revision.v1'&&retained.attempt===attempt+1&&
+   Number(name.slice(0,8))===retained.attempt&&retained.rejection?.code==='REVISION_CONFLICT'&&
+   retained.semanticSha256===semanticSha256&&retained.previousExpectedRevision===request.args.expectedRevision&&
+   retained.request?.args?.requestId===original.args.requestId&&requestSemanticIdentity(retained.request)===semanticSha256&&
+   Number.isSafeInteger(retained.request.args.expectedRevision)&&retained.request.args.expectedRevision>=0,
+   'The original explicitly rejected revision history differs.',{label,path:name});
+  request=retained.request;attempt=retained.attempt;
+ }
+ return {request,attempt};
+}
 async function pinnedRequest(label,method,args,{selected=operator,directory:dir=workspaceDirectory}={}){
  const file=target('requests/'+label+'.json');
- if(await exists(file)){const result=await readJSON(file);need(result.method===method&&result.directory===dir,'The original request selection changed.',{label,method});return result;}
+ if(await exists(file)){
+  const original=await readJSON(file);
+  need(original.method===method&&original.directory===dir,'The original request selection changed.',{label,method});
+  return (await originalRevisionSelection(label,original)).request;
+ }
  const entry=methodFor(method),input=typeof args==='function'?await args():args??{},current=entry.mutates?await selected.describe():null;
  const value={directory:dir,method,args:{...input}};
  if(entry.mutates){
@@ -307,11 +333,37 @@ async function pinnedRequest(label,method,args,{selected=operator,directory:dir=
   if(entry.required.includes('expectedRevision'))value.args.expectedRevision??=current.revision;
  }
  await exact(file,json(value));
- return value;
+ return readJSON(file);
+}
+async function refreshRejectedRevision(label,request,rejection,{selected=operator}={}){
+ need(rejection?.code==='REVISION_CONFLICT'&&methodFor(request.method).mutates&&
+  methodFor(request.method).required.includes('expectedRevision'),'Only an explicit original revision rejection can select a newer precondition.');
+ const original=await readJSON(target('requests/'+label+'.json'));
+ const selection=await originalRevisionSelection(label,original);
+ need(canonical(selection.request)===canonical(request),'The selected original request revision changed during dispatch.');
+ const current=await selected.describe();
+ need(Number.isSafeInteger(current.revision)&&current.revision>=0&&
+  (!state.workspaceId||current.workspaceId===state.workspaceId),'The refreshed revision belongs to another original workspace.');
+ if(current.revision===request.args.expectedRevision)throw rejection;
+ const next={...request,args:{...request.args,expectedRevision:current.revision}};
+ const retained={schema:'stellar-forge.pollar-native.request-revision.v1',attempt:selection.attempt+1,
+  semanticSha256:requestSemanticIdentity(original),previousExpectedRevision:request.args.expectedRevision,
+  rejection:await safeError(rejection),rejectedAt:new Date().toISOString(),
+  revisionObservation:{workspaceId:current.workspaceId,revision:current.revision,head:current.head??null},request:next};
+ await exact(target('requests/'+label+'.json.revision-attempts/'+String(retained.attempt).padStart(8,'0')+'.json'),json(retained));
+ return next;
 }
 async function invokeOriginal(label,method,args,{selected=operator,directory:dir=workspaceDirectory,ephemeral}={}){
- const request=await pinnedRequest(label,method,args,{selected,directory:dir});
- const result=await selected.invoke({method:request.method,args:request.args,...(ephemeral?{ephemeral}:{})});
+ let request=await pinnedRequest(label,method,args,{selected,directory:dir}),result;
+ for(let attempt=0;;attempt++){
+  try{result=await selected.invoke({method:request.method,args:request.args,...(ephemeral?{ephemeral}:{})});break;}
+  catch(error){
+   // The native workspace rejects this CAS before accepting the operation.
+   // Lost responses and every other failure preserve the prior wire selection.
+   if(error?.code!=='REVISION_CONFLICT'||attempt>=4||!methodFor(method).required.includes('expectedRevision'))throw error;
+   request=await refreshRejectedRevision(label,request,error,{selected});
+  }
+ }
  // A provider may return a one-use value. Its native implementation marks this
  // separately; only the explicit private owner result receives that value.
  const retained={...result};delete retained.ephemeral;
