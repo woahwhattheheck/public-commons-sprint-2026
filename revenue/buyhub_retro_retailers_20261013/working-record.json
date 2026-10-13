@@ -1,0 +1,953 @@
+{
+  "version": "dealscout.lead-working-record.v1",
+  "pack": {
+    "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+    "revision": 1,
+    "document": {
+      "customer": {
+        "name": "BuyHub",
+        "company_domain": "buyhub.app",
+        "contact_url": "mailto:contact@buyhub.app",
+        "case_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+        "prospect_id": ""
+      },
+      "brief": {
+        "title": "UK retro-game retailers — stock-sourcing prospect profiles",
+        "description": "Eight distinct UK retailer records: one free example, five additional paid profiles and two reserves. Every selected retailer publishes retro-game buying or trade activity and a business contact. Match any sourcing trial to its own platform, region, condition and delivered-cost requirements.",
+        "geography": "United Kingdom",
+        "skills": [
+          "retro games",
+          "console collection buying",
+          "stock sourcing",
+          "marketplace search"
+        ],
+        "lead_kind": "company_fit",
+        "quantity": 5,
+        "currency": "USD",
+        "price_minor": 2000,
+        "max_age_days": 0,
+        "excluded_domains": [],
+        "excluded_sources": [],
+        "exclusions": "Hidden Chest/RetroGear and Geeky Blinders/Super Games World are each one company. Reserves remain outside the paid selection."
+      },
+      "operator_note": "Original case https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791916757214049. Sole BuyHub preparation/sender:379A work_scanner. Current reduced-volume owner direction applies. No retailer contact or actual buyer delivery event."
+    },
+    "sha256": "c0368d226cda2001b6aecf07d68cb800c981651323836b13dc87f1b128afdb92",
+    "updated_at": "2026-10-13T18:47:56.885Z",
+    "history": []
+  },
+  "leads": [
+    {
+      "id": "buyhub-8bitbeyond",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "8Bit Beyond",
+        "company_domain": "8bitbeyond.com",
+        "company_url": "https://www.8bitbeyond.com/",
+        "buyer_key": "",
+        "person": "Buying team",
+        "source_url": "https://www.8bitbeyond.com/pages/games-trade-in",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Purchases vintage games and consoles through photo-led valuation. Its trade page distinguishes tested and untested hardware, original boxes/manuals, disc wear and cartridge save batteries.",
+        "fit": "BuyHub saved terms and listing filters could support a retailer-selected console category while staff retain condition, completeness and delivered cost. Existing sourcing software and interest are unknown.",
+        "contact_url": "mailto:info@8bitbeyond.com",
+        "contact_instructions": "Published general business email; ask for the buying team. Contact page also lists 07850 856585.",
+        "geography": "Cardiff, Wales, United Kingdom",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Your trade-in guide keeps boxed completeness, working condition and save batteries separate when valuing stock. Would your buying team consider comparing actual listings for one platform you already buy, using BuyHub saved searches with region and condition kept visible?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Agree one platform and actual purchase limits. Separate PAL and other releases, original/replacement packaging, working/untested units and shipping costs. Staff still verify every listing; published marketplace alternatives do not establish the shop’s own buying tools.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: paid. Complete source records: 8bit-trade, 8bit-contact"
+      },
+      "sha256": "4d11b022dfe1ce6b5074f9dcdb8bb1d1bc8b4abe70d632ceaa67b46ae4f7e504",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-geeky-blinders",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Geeky Blinders",
+        "company_domain": "geeky-blinders.co.uk",
+        "company_url": "https://www.geeky-blinders.co.uk/",
+        "buyer_key": "",
+        "person": "Shop buying team",
+        "source_url": "https://www.geeky-blinders.co.uk/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Independent shop explicitly buys, sells and trades retro and modern games/consoles. Its stocked platforms include Mega Drive, PlayStation, SNES, Nintendo 64 and Game Boy.",
+        "fit": "One currently accepted platform could be compared through BuyHub saved searches with separate boxed/loose and region/condition terms. Existing collection and trade activity supplies the business fit.",
+        "contact_url": "mailto:geeky-blinders@outlook.com",
+        "contact_instructions": "Published shop email. Opening times can vary with collections/events; current site directs visitors to its Facebook notice.",
+        "geography": "Havant, Hampshire, United Kingdom",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "You buy and trade across Mega Drive, PlayStation, SNES and Game Boy alongside the Havant shop. Would a BuyHub comparison for one platform you are actively buying be useful, with separate saved terms for boxed and loose copies and your own region and delivered-price limits?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Confirm currently wanted stock, countries and acceptable faults. Catalogue listings are not an active replenishment request. Super Games World in the same site footer is an alias of this one profile; current software, budget and interest are unknown.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: paid. Complete source records: geeky-home, geeky-contact"
+      },
+      "sha256": "e7a4a81f61534e1eeb3aebdc404f6368a4864ed87c62da3af2e2d58fdb20269b",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-spacebridge",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "The Spacebridge",
+        "company_domain": "thespacebridge.co.uk",
+        "company_url": "https://www.thespacebridge.co.uk/",
+        "buyer_key": "",
+        "person": "Shop buying team",
+        "source_url": "https://www.thespacebridge.co.uk/wanted",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Buys Nintendo/Sega consoles and games from individual items to entire collections. Named wanted formats include NES, SNES, N64, GameCube, Game Boy, Saturn and Dreamcast; travels nationwide for larger or rarer collections.",
+        "fit": "A reviewed BuyHub watchlist could support one wanted console family, keeping seller location and collection/delivery cost visible alongside its existing collection-buying service.",
+        "contact_url": "mailto:contact@thespacebridge.co.uk",
+        "contact_instructions": "Published shop email and 07494 006888. Current shop:66 Station Road, New Milton BH25 6LE.",
+        "geography": "New Milton, Hampshire, United Kingdom",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Your wanted list includes Nintendo and Sega collections, and you travel for larger or rarer lots. Would a BuyHub saved-search trial for one console family help your team compare actual collection listings by country, contents and total collection or delivery cost?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Keep the trial on the explicitly wanted video-game range; the shop also buys toys. Agree region, testing, missing-accessory and travel limits. Import policy and available buying budget have not been established.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: paid. Complete source records: spacebridge-wanted, spacebridge-home"
+      },
+      "sha256": "0601b87972f31b565978bde57df2cc2b8ddaa47df6e83bad0d6fae16204defdd",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-flashback-retro",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Flashback Retro",
+        "company_domain": "flashbackretro.co.uk",
+        "company_url": "https://flashbackretro.co.uk/",
+        "buyer_key": "",
+        "person": "Shop buying team",
+        "source_url": "https://flashbackretro.co.uk/contact-flashback-retro-rotherham/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Its public contact page advertises buying individual retro games through complete collections. The shop offers Nintendo, Sega and PlayStation games, consoles and accessories.",
+        "fit": "BuyHub could compare one staff-selected stock category across supported marketplaces with location, platform and described condition kept separate.",
+        "contact_url": "mailto:info@flashbackretro.co.uk",
+        "contact_instructions": "Published shop email and WhatsApp07542899495. Indexed contact source gives Unit13 Steelbox Works, Canklow Meadows Industrial Estate, Rotherham; no owner name inferred.",
+        "geography": "Rotherham, South Yorkshire, United Kingdom",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Your Rotherham shop buys individual retro games and whole collections. Would your buying team consider a BuyHub saved-search comparison for one platform you currently source, with region, condition and total delivered cost recorded before reviewing listings?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Official indexed contact/shop text supports this record; direct fetches timed out. Re-open the public contact page before outreach. Confirm accepted formats and PAL/import requirements; current sourcing software, purchase need and budget are unknown.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: paid. Complete source records: flashback-contact, flashback-shop"
+      },
+      "sha256": "4683e89167772f53c7e6d8c0c433813f3c3c4acd29243fd0de905c822518ca11",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-gamers-attic",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Gamers Attic",
+        "company_domain": "gamersattic.co.uk",
+        "company_url": "https://gamersattic.co.uk/",
+        "buyer_key": "",
+        "person": "Trade enquiries team",
+        "source_url": "https://gamersattic.co.uk/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "The official indexed homepage advertises buying/selling, a sell-to-us route and public trade enquiries. It describes two brothers continuing their father’s interest in games.",
+        "fit": "Reserve for a single-category sourcing comparison after current locality, buying range and preferred countries are reconfirmed.",
+        "contact_url": "mailto:info@gamersattic.co.uk",
+        "contact_instructions": "Official homepage explicitly invites questions and trade enquiries at info@gamersattic.co.uk.",
+        "geography": "United Kingdom",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Your site invites trade enquiries and games for sale. Would a comparison of current marketplace listings for one platform your team already buys be useful, with condition, region and delivered cost retained?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Reserve: exact locality and current accepted formats need reconfirmation. Email is supported by official indexed text; direct retrieval was unavailable. No names or catalogue availability inferred.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: reserve. Complete source records: gamers-home"
+      },
+      "sha256": "d579ac9f99d842393e254f9ac913153007cca33ff24f53b913628d5292548aed",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-retroelectro",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "RetroElectro",
+        "company_domain": "retroelectro.co.uk",
+        "company_url": "https://retroelectro.co.uk/",
+        "buyer_key": "",
+        "person": "Jason and Jools",
+        "source_url": "https://retroelectro.co.uk/sell-my-video-games-consoles/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Small independent collection buyer/reseller started by Jason and Jools. Buys older Nintendo/Sega/PlayStation games and hardware plus vintage computers; photo/known-fault valuation also covers unusual Japanese hardware.",
+        "fit": "BuyHub could support comparison of actual collection listings for one agreed hardware family while retaining its existing condition, rarity, demand and processing-work considerations.",
+        "contact_url": "tel:+447590387918",
+        "contact_instructions": "Published phone07590 387918. Same page carries a protected email link under source recovery; no address guessed.",
+        "geography": "United Kingdom; nationwide collection buying",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Jason and Jools, your gaming page covers older consoles, vintage computers and unusual Japanese hardware. Would a BuyHub comparison for one collection category you buy be useful, with seller country, known faults, included parts and total delivered cost kept visible?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Reserve until the actual published email is recovered or buyer selects the phone route. Confirm models, region, power, testing/repair tolerance and total collection costs; current software and interest are unknown.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: reserve. Complete source records: retroelectro-buy, retroelectro-about, retroelectro-contact"
+      },
+      "sha256": "a534d297912e0224c3a678feaa2d00511080f0de7573e2fb363ffdb92e94d203",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-hidden-chest-retrogear",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Hidden Chest Gaming / RetroGear",
+        "company_domain": "hiddenchest.co.uk",
+        "company_url": "https://www.hiddenchest.co.uk/",
+        "buyer_key": "",
+        "person": "Ant Harper",
+        "source_url": "https://www.hiddenchest.co.uk/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Hidden Chest describes itself as an independent shop, names Ant Harper as its console/computer specialist, and advertises refurbished Sinclair hardware. RetroGear explicitly states that it is part of Hidden Chest and buys old consoles, computers, games, peripherals and whole collections.",
+        "fit": "A focused BuyHub sourcing trial could use separate saved searches and radars for a retailer-selected UK console or 8-bit-computer category. It could bring candidate listings into one review list while Ant retains physical condition, parts, modification, seller and purchase decisions. This is a hypothesis; the retailer's current marketplace use and software are unknown.",
+        "contact_url": "mailto:ant@hiddenchest.co.uk",
+        "contact_instructions": "Co-manager; old-computer and console specialist. RetroGear invites collection sellers to request a quote by email. Current Hidden Chest contact information provides Ant's named business address plus the general shop mailbox hiddenchestgaming@gmail.com.",
+        "geography": "The Central Market Hall, High Street, Cradley Heath, B64 5HA, UK",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Ant, Hidden Chest's refurbished Sinclair range and RetroGear's collection-buying service caught my eye. Would a saved-search trial for one console or computer category you already buy be useful? BuyHub could surface candidate listings for your review, keeping model, region, condition and delivered cost separate.",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Ask which hardware families and countries the shop currently sources, whether PAL/UK units and imports need separate searches, what modifications or faults are acceptable, and whether peripherals, manuals or original packaging are required. Agree buyer-entered purchase and delivered-cost limits, then inspect actual listings; no sourcing budget, margin, active marketplace account or buying intent has been verified. Current Hidden Chest contact page gives Cradley Heath; RetroGear's Brierley Hill location and online sales text are older. Treat the two brands as one prospect, not two leads. RetroGear is browse-only and must not be described as a current online checkout.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: sample. Complete source records: hiddenchest-current, retrogear-buying"
+      },
+      "sha256": "c4a0bda298a020f8bc1e17390cd19b755187be5faf6b1ed226606c7ed67a53d3",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "buyhub-retro-world-derby",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Retro World",
+        "company_domain": "retroworlds.uk",
+        "company_url": "https://retroworlds.uk/trade",
+        "buyer_key": "",
+        "person": "Shop buying team",
+        "source_url": "https://retroworlds.uk/trade",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "The Derby shop buys, sells and trades retro games and consoles, offers collection for larger lots, and describes cleaning/testing controllers. Its catalogue separately labels a PAL Super Mario Kart set and a Japanese-import Sega Saturn bundle. Both example listings were marked out of stock when read.",
+        "fit": "A BuyHub trial could keep UK/PAL software searches separate from explicitly selected Japanese hardware, using saved terms, country filters and auction alerts. Staff would review complete-box condition, authenticity, included accessories and landed cost before deciding. The two catalogue examples demonstrate distinct product categories; their stock status is not evidence of a restocking request.",
+        "contact_url": "mailto:derbyretroworld@aol.com",
+        "contact_instructions": "Public buying, selling and trade enquiries. The published trade route accepts email enquiries and advertises a collection service for larger groups of items. No appointment, active purchasing request or account relationship is assumed.",
+        "geography": "20 Osmaston Road, Derby, DE1 2HR, UK",
+        "budget": "No software or sourcing budget published.",
+        "opening_message": "Your PAL SNES and Japanese Saturn catalogue entries show why region and completeness need to stay visible when sourcing retro stock. Would your buying team consider a BuyHub trial for one category you already purchase, with separate saved searches and a review of actual listings?",
+        "source_status": "open",
+        "status_note": "Public buying/trade activity checked on 13 October 2026. Confirm the shop's currently accepted formats, whether it wants UK-only sourcing or imports, boxed/manual requirements, testing standard and acceptable repairs/modifications. Its Japanese Saturn page specifies a step-down converter for UK use; retain that as an item-specific requirement and verify every proposed console separately. Ask the retailer to set purchase limits and shipping/import assumptions. No current sourcing software, margin, budget or buying intent is known. The first-party site presents one local Derby shop and identifies Retro World as its owner; legal ownership and wider group structure have not been independently established.",
+        "tags": [
+          "UK",
+          "retro-game-retailer",
+          "published-buying",
+          "prepared-prospect"
+        ],
+        "operator_note": "Selection: paid. Complete source records: retroworld-trade, retroworld-pal, retroworld-import, retroworld-ownership"
+      },
+      "sha256": "62dd17c2ea17c9b70b2b460fd13a59e52564ca4ac7b944c32b49b68e2c441526",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    }
+  ],
+  "editions": [
+    {
+      "version": "dealscout.lead-pack.v1",
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:sample-01",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "kind": "sample",
+      "prepared_at": "2026-10-13T18:47:56.885Z",
+      "brief": {
+        "customer": {
+          "name": "BuyHub",
+          "company_domain": "buyhub.app",
+          "contact_url": "mailto:contact@buyhub.app",
+          "case_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "prospect_id": ""
+        },
+        "brief": {
+          "title": "UK retro-game retailers — stock-sourcing prospect profiles",
+          "description": "Eight distinct UK retailer records: one free example, five additional paid profiles and two reserves. Every selected retailer publishes retro-game buying or trade activity and a business contact. Match any sourcing trial to its own platform, region, condition and delivered-cost requirements.",
+          "geography": "United Kingdom",
+          "skills": [
+            "retro games",
+            "console collection buying",
+            "stock sourcing",
+            "marketplace search"
+          ],
+          "lead_kind": "company_fit",
+          "quantity": 5,
+          "currency": "USD",
+          "price_minor": 2000,
+          "max_age_days": 0,
+          "excluded_domains": [],
+          "excluded_sources": [],
+          "exclusions": "Hidden Chest/RetroGear and Geeky Blinders/Super Games World are each one company. Reserves remain outside the paid selection."
+        },
+        "operator_note": "Original case https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791916757214049. Sole BuyHub preparation/sender:379A work_scanner. Current reduced-volume owner direction applies. No retailer contact or actual buyer delivery event."
+      },
+      "brief_revision": 1,
+      "leads": [
+        {
+          "id": "buyhub-hidden-chest-retrogear",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Hidden Chest Gaming / RetroGear",
+            "company_domain": "hiddenchest.co.uk",
+            "company_url": "https://www.hiddenchest.co.uk/",
+            "buyer_key": "",
+            "person": "Ant Harper",
+            "source_url": "https://www.hiddenchest.co.uk/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Hidden Chest describes itself as an independent shop, names Ant Harper as its console/computer specialist, and advertises refurbished Sinclair hardware. RetroGear explicitly states that it is part of Hidden Chest and buys old consoles, computers, games, peripherals and whole collections.",
+            "fit": "A focused BuyHub sourcing trial could use separate saved searches and radars for a retailer-selected UK console or 8-bit-computer category. It could bring candidate listings into one review list while Ant retains physical condition, parts, modification, seller and purchase decisions. This is a hypothesis; the retailer's current marketplace use and software are unknown.",
+            "contact_url": "mailto:ant@hiddenchest.co.uk",
+            "contact_instructions": "Co-manager; old-computer and console specialist. RetroGear invites collection sellers to request a quote by email. Current Hidden Chest contact information provides Ant's named business address plus the general shop mailbox hiddenchestgaming@gmail.com.",
+            "geography": "The Central Market Hall, High Street, Cradley Heath, B64 5HA, UK",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "Ant, Hidden Chest's refurbished Sinclair range and RetroGear's collection-buying service caught my eye. Would a saved-search trial for one console or computer category you already buy be useful? BuyHub could surface candidate listings for your review, keeping model, region, condition and delivered cost separate.",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Ask which hardware families and countries the shop currently sources, whether PAL/UK units and imports need separate searches, what modifications or faults are acceptable, and whether peripherals, manuals or original packaging are required. Agree buyer-entered purchase and delivered-cost limits, then inspect actual listings; no sourcing budget, margin, active marketplace account or buying intent has been verified. Current Hidden Chest contact page gives Cradley Heath; RetroGear's Brierley Hill location and online sales text are older. Treat the two brands as one prospect, not two leads. RetroGear is browse-only and must not be described as a current online checkout.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: sample. Complete source records: hiddenchest-current, retrogear-buying"
+          },
+          "sha256": "c4a0bda298a020f8bc1e17390cd19b755187be5faf6b1ed226606c7ed67a53d3",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        }
+      ],
+      "replaces": "",
+      "replacements": [],
+      "currency": "USD",
+      "price_minor": 0,
+      "sha256": "24410648cb9a5ed572832b8bbca6aac5bdb6a72a4196217da902d9c4543630f6"
+    },
+    {
+      "version": "dealscout.lead-pack.v1",
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:paid-01",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "kind": "paid",
+      "prepared_at": "2026-10-13T18:47:56.885Z",
+      "brief": {
+        "customer": {
+          "name": "BuyHub",
+          "company_domain": "buyhub.app",
+          "contact_url": "mailto:contact@buyhub.app",
+          "case_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "prospect_id": ""
+        },
+        "brief": {
+          "title": "UK retro-game retailers — stock-sourcing prospect profiles",
+          "description": "Eight distinct UK retailer records: one free example, five additional paid profiles and two reserves. Every selected retailer publishes retro-game buying or trade activity and a business contact. Match any sourcing trial to its own platform, region, condition and delivered-cost requirements.",
+          "geography": "United Kingdom",
+          "skills": [
+            "retro games",
+            "console collection buying",
+            "stock sourcing",
+            "marketplace search"
+          ],
+          "lead_kind": "company_fit",
+          "quantity": 5,
+          "currency": "USD",
+          "price_minor": 2000,
+          "max_age_days": 0,
+          "excluded_domains": [],
+          "excluded_sources": [],
+          "exclusions": "Hidden Chest/RetroGear and Geeky Blinders/Super Games World are each one company. Reserves remain outside the paid selection."
+        },
+        "operator_note": "Original case https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791916757214049. Sole BuyHub preparation/sender:379A work_scanner. Current reduced-volume owner direction applies. No retailer contact or actual buyer delivery event."
+      },
+      "brief_revision": 1,
+      "leads": [
+        {
+          "id": "buyhub-8bitbeyond",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "8Bit Beyond",
+            "company_domain": "8bitbeyond.com",
+            "company_url": "https://www.8bitbeyond.com/",
+            "buyer_key": "",
+            "person": "Buying team",
+            "source_url": "https://www.8bitbeyond.com/pages/games-trade-in",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Purchases vintage games and consoles through photo-led valuation. Its trade page distinguishes tested and untested hardware, original boxes/manuals, disc wear and cartridge save batteries.",
+            "fit": "BuyHub saved terms and listing filters could support a retailer-selected console category while staff retain condition, completeness and delivered cost. Existing sourcing software and interest are unknown.",
+            "contact_url": "mailto:info@8bitbeyond.com",
+            "contact_instructions": "Published general business email; ask for the buying team. Contact page also lists 07850 856585.",
+            "geography": "Cardiff, Wales, United Kingdom",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "Your trade-in guide keeps boxed completeness, working condition and save batteries separate when valuing stock. Would your buying team consider comparing actual listings for one platform you already buy, using BuyHub saved searches with region and condition kept visible?",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Agree one platform and actual purchase limits. Separate PAL and other releases, original/replacement packaging, working/untested units and shipping costs. Staff still verify every listing; published marketplace alternatives do not establish the shop’s own buying tools.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: paid. Complete source records: 8bit-trade, 8bit-contact"
+          },
+          "sha256": "4d11b022dfe1ce6b5074f9dcdb8bb1d1bc8b4abe70d632ceaa67b46ae4f7e504",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        },
+        {
+          "id": "buyhub-geeky-blinders",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Geeky Blinders",
+            "company_domain": "geeky-blinders.co.uk",
+            "company_url": "https://www.geeky-blinders.co.uk/",
+            "buyer_key": "",
+            "person": "Shop buying team",
+            "source_url": "https://www.geeky-blinders.co.uk/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Independent shop explicitly buys, sells and trades retro and modern games/consoles. Its stocked platforms include Mega Drive, PlayStation, SNES, Nintendo 64 and Game Boy.",
+            "fit": "One currently accepted platform could be compared through BuyHub saved searches with separate boxed/loose and region/condition terms. Existing collection and trade activity supplies the business fit.",
+            "contact_url": "mailto:geeky-blinders@outlook.com",
+            "contact_instructions": "Published shop email. Opening times can vary with collections/events; current site directs visitors to its Facebook notice.",
+            "geography": "Havant, Hampshire, United Kingdom",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "You buy and trade across Mega Drive, PlayStation, SNES and Game Boy alongside the Havant shop. Would a BuyHub comparison for one platform you are actively buying be useful, with separate saved terms for boxed and loose copies and your own region and delivered-price limits?",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Confirm currently wanted stock, countries and acceptable faults. Catalogue listings are not an active replenishment request. Super Games World in the same site footer is an alias of this one profile; current software, budget and interest are unknown.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: paid. Complete source records: geeky-home, geeky-contact"
+          },
+          "sha256": "e7a4a81f61534e1eeb3aebdc404f6368a4864ed87c62da3af2e2d58fdb20269b",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        },
+        {
+          "id": "buyhub-spacebridge",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "The Spacebridge",
+            "company_domain": "thespacebridge.co.uk",
+            "company_url": "https://www.thespacebridge.co.uk/",
+            "buyer_key": "",
+            "person": "Shop buying team",
+            "source_url": "https://www.thespacebridge.co.uk/wanted",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Buys Nintendo/Sega consoles and games from individual items to entire collections. Named wanted formats include NES, SNES, N64, GameCube, Game Boy, Saturn and Dreamcast; travels nationwide for larger or rarer collections.",
+            "fit": "A reviewed BuyHub watchlist could support one wanted console family, keeping seller location and collection/delivery cost visible alongside its existing collection-buying service.",
+            "contact_url": "mailto:contact@thespacebridge.co.uk",
+            "contact_instructions": "Published shop email and 07494 006888. Current shop:66 Station Road, New Milton BH25 6LE.",
+            "geography": "New Milton, Hampshire, United Kingdom",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "Your wanted list includes Nintendo and Sega collections, and you travel for larger or rarer lots. Would a BuyHub saved-search trial for one console family help your team compare actual collection listings by country, contents and total collection or delivery cost?",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Keep the trial on the explicitly wanted video-game range; the shop also buys toys. Agree region, testing, missing-accessory and travel limits. Import policy and available buying budget have not been established.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: paid. Complete source records: spacebridge-wanted, spacebridge-home"
+          },
+          "sha256": "0601b87972f31b565978bde57df2cc2b8ddaa47df6e83bad0d6fae16204defdd",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        },
+        {
+          "id": "buyhub-flashback-retro",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Flashback Retro",
+            "company_domain": "flashbackretro.co.uk",
+            "company_url": "https://flashbackretro.co.uk/",
+            "buyer_key": "",
+            "person": "Shop buying team",
+            "source_url": "https://flashbackretro.co.uk/contact-flashback-retro-rotherham/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Its public contact page advertises buying individual retro games through complete collections. The shop offers Nintendo, Sega and PlayStation games, consoles and accessories.",
+            "fit": "BuyHub could compare one staff-selected stock category across supported marketplaces with location, platform and described condition kept separate.",
+            "contact_url": "mailto:info@flashbackretro.co.uk",
+            "contact_instructions": "Published shop email and WhatsApp07542899495. Indexed contact source gives Unit13 Steelbox Works, Canklow Meadows Industrial Estate, Rotherham; no owner name inferred.",
+            "geography": "Rotherham, South Yorkshire, United Kingdom",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "Your Rotherham shop buys individual retro games and whole collections. Would your buying team consider a BuyHub saved-search comparison for one platform you currently source, with region, condition and total delivered cost recorded before reviewing listings?",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Official indexed contact/shop text supports this record; direct fetches timed out. Re-open the public contact page before outreach. Confirm accepted formats and PAL/import requirements; current sourcing software, purchase need and budget are unknown.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: paid. Complete source records: flashback-contact, flashback-shop"
+          },
+          "sha256": "4683e89167772f53c7e6d8c0c433813f3c3c4acd29243fd0de905c822518ca11",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        },
+        {
+          "id": "buyhub-retro-world-derby",
+          "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Retro World",
+            "company_domain": "retroworlds.uk",
+            "company_url": "https://retroworlds.uk/trade",
+            "buyer_key": "",
+            "person": "Shop buying team",
+            "source_url": "https://retroworlds.uk/trade",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "The Derby shop buys, sells and trades retro games and consoles, offers collection for larger lots, and describes cleaning/testing controllers. Its catalogue separately labels a PAL Super Mario Kart set and a Japanese-import Sega Saturn bundle. Both example listings were marked out of stock when read.",
+            "fit": "A BuyHub trial could keep UK/PAL software searches separate from explicitly selected Japanese hardware, using saved terms, country filters and auction alerts. Staff would review complete-box condition, authenticity, included accessories and landed cost before deciding. The two catalogue examples demonstrate distinct product categories; their stock status is not evidence of a restocking request.",
+            "contact_url": "mailto:derbyretroworld@aol.com",
+            "contact_instructions": "Public buying, selling and trade enquiries. The published trade route accepts email enquiries and advertises a collection service for larger groups of items. No appointment, active purchasing request or account relationship is assumed.",
+            "geography": "20 Osmaston Road, Derby, DE1 2HR, UK",
+            "budget": "No software or sourcing budget published.",
+            "opening_message": "Your PAL SNES and Japanese Saturn catalogue entries show why region and completeness need to stay visible when sourcing retro stock. Would your buying team consider a BuyHub trial for one category you already purchase, with separate saved searches and a review of actual listings?",
+            "source_status": "open",
+            "status_note": "Public buying/trade activity checked on 13 October 2026. Confirm the shop's currently accepted formats, whether it wants UK-only sourcing or imports, boxed/manual requirements, testing standard and acceptable repairs/modifications. Its Japanese Saturn page specifies a step-down converter for UK use; retain that as an item-specific requirement and verify every proposed console separately. Ask the retailer to set purchase limits and shipping/import assumptions. No current sourcing software, margin, budget or buying intent is known. The first-party site presents one local Derby shop and identifies Retro World as its owner; legal ownership and wider group structure have not been independently established.",
+            "tags": [
+              "UK",
+              "retro-game-retailer",
+              "published-buying",
+              "prepared-prospect"
+            ],
+            "operator_note": "Selection: paid. Complete source records: retroworld-trade, retroworld-pal, retroworld-import, retroworld-ownership"
+          },
+          "sha256": "62dd17c2ea17c9b70b2b460fd13a59e52564ca4ac7b944c32b49b68e2c441526",
+          "updated_at": "2026-10-13T18:47:56.885Z",
+          "history": []
+        }
+      ],
+      "replaces": "",
+      "replacements": [],
+      "currency": "USD",
+      "price_minor": 2000,
+      "sha256": "da67bd7279d0825850d3e44d25ddfd9588783390ddc293afc5152ab30ee2d7e6"
+    }
+  ],
+  "withdrawals": [],
+  "deliveries": [],
+  "customer_files": [
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-README.txt",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "README.txt",
+        "title": "BuyHub profile instructions",
+        "description": "BuyHub profile instructions",
+        "type": "text/plain",
+        "lead_ids": [],
+        "source_url": "",
+        "content_base64": "QlVZSFVCIOKAlCBVSyBSRVRSTy1HQU1FIFJFVEFJTEVSIFBST0ZJTEVTClByZXBhcmVkIGJ5IFRva2VuIEp1bmtpZSBMYWJzIMK3IDEzIE9jdG9iZXIgMjAyNgoKVGhlIGZyZWUgcGFja2FnZSBjb250YWlucyBIaWRkZW4gQ2hlc3QgR2FtaW5nIC8gUmV0cm9HZWFyLiBUaGUgc2VwYXJhdGUgVVMkMjAgcGFja2FnZSBjb250YWlucyBmaXZlIGFkZGl0aW9uYWwgcmV0YWlsZXJzLCBlYWNoIHdpdGggYSBwdWJsaXNoZWQgYnVzaW5lc3MgY29udGFjdCwgYnV5aW5nIGNvbnRleHQsIHRhaWxvcmVkIG9wZW5pbmcgYW5kIG9yaWdpbmFsIHNvdXJjZXMuIEVhY2ggWklQIGluY2x1ZGVzIHRoZSBjb21wbGV0ZSBIVE1MLCBlZGl0YWJsZSBDU1YsIE1hcmtkb3duLCBKU09OIGFuZCB0aGlzIGd1aWRlLgoKVXNlIHByb2ZpbGVzLmh0bWwgaW4gYSBicm93c2VyIHRvIHJlYWQgdGhlIGNvbXBsZXRlIHByb2ZpbGVzOyBwcm9maWxlcy5jc3YgY2FuIGJlIGVkaXRlZCBpbiBhIHNwcmVhZHNoZWV0LiBLZWVwIFBBTC9pbXBvcnQgcmVnaW9uLCBtb2RlbCwgd29ya2luZy91bnRlc3RlZCBjb25kaXRpb24sIG9yaWdpbmFsIHBhY2thZ2luZyBhbmQgdG90YWwgZGVsaXZlcmVkIGNvc3Qgc2VwYXJhdGUgd2hlbiBkaXNjdXNzaW5nIGEgdHJpYWwuIEFncmVlIGFjdHVhbCBwdXJjaGFzZSBjb25zdHJhaW50cyB3aXRoIHRoZSByZXRhaWxlciBiZWZvcmUgc2VhcmNoaW5nLiBUaGVpciBleGlzdGluZyB0b29scyBhbmQgaW50ZXJlc3QgYXJlIGZvciB0aGUgY29udmVyc2F0aW9uIHRvIGVzdGFibGlzaC4KClRoZSBwcm9maWxlcyBpZGVudGlmeSBwdWJsaWNseSBldmlkZW5jZWQgYnVzaW5lc3MgZml0LiBTb3VyY2UgcmV2aWV3IGRhdGU6MTMgT2N0b2JlciAyMDI2LiBTdG9jayBleGFtcGxlcyBkZXNjcmliZSBjYXRlZ29yaWVzOyB0aGV5IGRvIG5vdCBlc3RhYmxpc2ggYW4gYWN0aXZlIHJlc3RvY2tpbmcgcmVxdWVzdC4gQ3VycmVudCBCdXlIdWIgYWNjb3VudCBsaW1pdHMgYW5kIG1hcmtldHBsYWNlIGF2YWlsYWJpbGl0eSBnb3Zlcm4gYW55IHRyaWFsLgoKT25lIGNvcnJlY3Rpb24gb3IgcmVwbGFjZW1lbnQgaXMgaW5jbHVkZWQgd2l0aGluIHNldmVuIGRheXMgZm9yIGFuIGV4aXN0aW5nIGN1c3RvbWVyLCBkdXBsaWNhdGUsIGRlYWQgcHVibGlzaGVkIGNvbnRhY3Qgb3IgY2xlYXIgbWlzbWF0Y2guIFJlcGx5IHRvIHRoZSBvcmlnaW5hbCBUb2tlbiBKdW5raWUgTGFicyBjb252ZXJzYXRpb24gd2l0aCB0aGUgYWZmZWN0ZWQgY29tcGFueSBhbmQgcmVhc29uLgoKUHJlcGFyZWQgYnkgVG9rZW4gSnVua2llIExhYnMuCg==",
+        "bytes": 1300,
+        "sha256": "fad227e81de04538b9e755186341cf48f0a9890ef9ddee328517d0c9064371ff"
+      },
+      "sha256": "6935151c987c486891513bce5e00b9872d2915e9547b837d7f12faf395719a13",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.html",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample/profiles.html",
+        "title": "Free retailer example — HTML",
+        "description": "Free retailer example — HTML",
+        "type": "text/html",
+        "lead_ids": [
+          "buyhub-hidden-chest-retrogear"
+        ],
+        "source_url": "",
+        "content_base64": "PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZW4iPjxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLGluaXRpYWwtc2NhbGU9MSI+PHRpdGxlPkJ1eUh1YiDigJQgZnJlZSByZXRhaWxlciBleGFtcGxlPC90aXRsZT48c3R5bGU+OnJvb3R7Y29sb3Itc2NoZW1lOmxpZ2h0fSp7Ym94LXNpemluZzpib3JkZXItYm94fWJvZHl7bWFyZ2luOjA7YmFja2dyb3VuZDojZjVmNWY0O2NvbG9yOiMyMDIwMjA7Zm9udDoxNnB4LzEuNTUgc3lzdGVtLXVpLC1hcHBsZS1zeXN0ZW0sQmxpbmtNYWNTeXN0ZW1Gb250LCJTZWdvZSBVSSIsc2Fucy1zZXJpZn1tYWlue21heC13aWR0aDo5NjBweDttYXJnaW46YXV0bztwYWRkaW5nOjMwcHggMjRweH1oZWFkZXJ7Ym9yZGVyLWJvdHRvbToycHggc29saWQgIzIyMjtwYWRkaW5nLWJvdHRvbToyNHB4O21hcmdpbi1ib3R0b206MjRweH1oMXtmb250LXNpemU6Y2xhbXAoMjdweCw1dncsMzhweCk7bGluZS1oZWlnaHQ6MS4xODttYXJnaW46MTBweCAwIDE2cHh9aDJ7Zm9udC1zaXplOjI1cHg7bGluZS1oZWlnaHQ6MS4yNTttYXJnaW46OHB4IDB9LmV5ZWJyb3d7Zm9udC1zaXplOjEzcHg7bGV0dGVyLXNwYWNpbmc6LjA2ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOiM1NTV9cCxkZCxsaSxibG9ja3F1b3Rle292ZXJmbG93LXdyYXA6YW55d2hlcmV9cHttYXJnaW46OHB4IDAgMTRweH1he2NvbG9yOiMyMjI7dGV4dC11bmRlcmxpbmUtb2Zmc2V0OjNweDtvdmVyZmxvdy13cmFwOmFueXdoZXJlfWFydGljbGV7YmFja2dyb3VuZDp3aGl0ZTtib3JkZXI6MXB4IHNvbGlkICNiYmI7bWFyZ2luOjI0cHggMDtwYWRkaW5nOjI2cHg7YnJlYWstaW5zaWRlOmF2b2lkfWR0e2ZvbnQtd2VpZ2h0OjY1MDttYXJnaW46MjBweCAwIDZweH1kZHttYXJnaW46MH1ibG9ja3F1b3Rle21hcmdpbjowO2JvcmRlci1sZWZ0OjNweCBzb2xpZCAjODg4O2JhY2tncm91bmQ6I2Y0ZjRmMztwYWRkaW5nOjE2cHh9bGl7bWFyZ2luOjEycHggMH11bHtwYWRkaW5nLWxlZnQ6MjJweH0udGVybXN7Ym9yZGVyOjFweCBzb2xpZCAjYmJiO2JhY2tncm91bmQ6I2ZmZjtwYWRkaW5nOjIwcHh9Zm9vdGVye2JvcmRlci10b3A6MXB4IHNvbGlkICNiYmI7bWFyZ2luLXRvcDoyOHB4O3BhZGRpbmctdG9wOjE2cHg7Zm9udC1zaXplOjE0cHg7Y29sb3I6IzU1NX1AbWVkaWEobWF4LXdpZHRoOjUyMHB4KXttYWlue3BhZGRpbmc6MjJweCAxNnB4fWFydGljbGV7cGFkZGluZzoyMHB4IDE2cHh9aDJ7Zm9udC1zaXplOjIzcHh9fUBtZWRpYSBwcmludHtib2R5e2JhY2tncm91bmQ6d2hpdGV9bWFpbnttYXgtd2lkdGg6bm9uZTtwYWRkaW5nOjB9YXJ0aWNsZXtwYWRkaW5nOjE4cHh9fTwvc3R5bGU+PC9oZWFkPjxib2R5PjxtYWluPjxoZWFkZXI+PHAgY2xhc3M9ImV5ZWJyb3ciPlByZXBhcmVkIGZvciBCdXlIdWIgwrcgMTMgT2N0b2JlciAyMDI2PC9wPjxoMT5BIFVLIHJldHJvIHJldGFpbGVyIHRvIGFwcHJvYWNoPC9oMT48cD5BIGZyZWUgcmVzZWFyY2hlZCBleGFtcGxlIHdpdGggYSBuYW1lZCBidXNpbmVzcyBjb250YWN0LCBwdWJsaXNoZWQgc3RvY2stYnV5aW5nIGFjdGl2aXR5IGFuZCBhIHRhaWxvcmVkIHNvdXJjaW5nIGNvbnZlcnNhdGlvbi48L3A+PHA+RWFjaCBzZWxlY3RlZCBidXNpbmVzcyBwdWJsaXNoZXMgYnV5aW5nIG9yIHRyYWRpbmcgYWN0aXZpdHkgZm9yIHJldHJvIGdhbWVzLCBjb25zb2xlcyBvciBjb21wdXRlcnMuIFRoZSBzdWdnZXN0ZWQgY29udmVyc2F0aW9ucyBidWlsZCBvbiB0aGF0IGV4aXN0aW5nIHdvcmsuPC9wPjwvaGVhZGVyPjxzZWN0aW9uIGNsYXNzPSJ0ZXJtcyI+PHN0cm9uZz5UaGUgY29tcGxldGUgb2ZmZXI8L3N0cm9uZz48cD5GaXZlIGFkZGl0aW9uYWwgcHJvZmlsZXMgb2YgdGhlIHNhbWUgZGVwdGggYXJlIHByZXBhcmVkIGZvciBVUyQyMCB0b3RhbC4gT25lIGNvcnJlY3Rpb24gb3IgcmVwbGFjZW1lbnQgaXMgaW5jbHVkZWQgd2l0aGluIHNldmVuIGRheXMgZm9yIGFuIGV4aXN0aW5nIGN1c3RvbWVyLCBkdXBsaWNhdGUsIGRlYWQgcHVibGlzaGVkIGNvbnRhY3Qgb3IgY2xlYXIgbWlzbWF0Y2guPC9wPjwvc2VjdGlvbj48YXJ0aWNsZSBpZD0icmV0YWlsZXItMSI+PHAgY2xhc3M9ImV5ZWJyb3ciPlJldGFpbGVyIDE8L3A+PGgyPkhpZGRlbiBDaGVzdCBHYW1pbmcgLyBSZXRyb0dlYXI8L2gyPjxwPlRoZSBDZW50cmFsIE1hcmtldCBIYWxsLCBIaWdoIFN0cmVldCwgQ3JhZGxleSBIZWF0aCwgQjY0IDVIQSwgVUs8L3A+PHA+PGEgaHJlZj0iaHR0cHM6Ly93d3cuaGlkZGVuY2hlc3QuY28udWsvIj5odHRwczovL3d3dy5oaWRkZW5jaGVzdC5jby51ay88L2E+PC9wPjxkbD48ZHQ+UHVibGlzaGVkIGJ1c2luZXNzIGNvbnRhY3Q8L2R0PjxkZD48YSBocmVmPSJtYWlsdG86YW50QGhpZGRlbmNoZXN0LmNvLnVrIj5hbnRAaGlkZGVuY2hlc3QuY28udWs8L2E+PHA+QW50IEhhcnBlcjwvcD48cD5Dby1tYW5hZ2VyOyBvbGQtY29tcHV0ZXIgYW5kIGNvbnNvbGUgc3BlY2lhbGlzdC4gUmV0cm9HZWFyIGludml0ZXMgY29sbGVjdGlvbiBzZWxsZXJzIHRvIHJlcXVlc3QgYSBxdW90ZSBieSBlbWFpbC4gQ3VycmVudCBIaWRkZW4gQ2hlc3QgY29udGFjdCBpbmZvcm1hdGlvbiBwcm92aWRlcyBBbnQmIzM5O3MgbmFtZWQgYnVzaW5lc3MgYWRkcmVzcyBwbHVzIHRoZSBnZW5lcmFsIHNob3AgbWFpbGJveCBoaWRkZW5jaGVzdGdhbWluZ0BnbWFpbC5jb20uPC9wPjwvZGQ+PGR0PlB1Ymxpc2hlZCBidXlpbmcgYWN0aXZpdHk8L2R0PjxkZD48cD5IaWRkZW4gQ2hlc3QgZGVzY3JpYmVzIGl0c2VsZiBhcyBhbiBpbmRlcGVuZGVudCBzaG9wLCBuYW1lcyBBbnQgSGFycGVyIGFzIGl0cyBjb25zb2xlL2NvbXB1dGVyIHNwZWNpYWxpc3QsIGFuZCBhZHZlcnRpc2VzIHJlZnVyYmlzaGVkIFNpbmNsYWlyIGhhcmR3YXJlLiBSZXRyb0dlYXIgZXhwbGljaXRseSBzdGF0ZXMgdGhhdCBpdCBpcyBwYXJ0IG9mIEhpZGRlbiBDaGVzdCBhbmQgYnV5cyBvbGQgY29uc29sZXMsIGNvbXB1dGVycywgZ2FtZXMsIHBlcmlwaGVyYWxzIGFuZCB3aG9sZSBjb2xsZWN0aW9ucy48L3A+PC9kZD48ZHQ+QnV5SHViIGNvbnZlcnNhdGlvbiBmaXQ8L2R0PjxkZD48cD5BIGZvY3VzZWQgQnV5SHViIHNvdXJjaW5nIHRyaWFsIGNvdWxkIHVzZSBzZXBhcmF0ZSBzYXZlZCBzZWFyY2hlcyBhbmQgcmFkYXJzIGZvciBhIHJldGFpbGVyLXNlbGVjdGVkIFVLIGNvbnNvbGUgb3IgOC1iaXQtY29tcHV0ZXIgY2F0ZWdvcnkuIEl0IGNvdWxkIGJyaW5nIGNhbmRpZGF0ZSBsaXN0aW5ncyBpbnRvIG9uZSByZXZpZXcgbGlzdCB3aGlsZSBBbnQgcmV0YWlucyBwaHlzaWNhbCBjb25kaXRpb24sIHBhcnRzLCBtb2RpZmljYXRpb24sIHNlbGxlciBhbmQgcHVyY2hhc2UgZGVjaXNpb25zLiBUaGlzIGlzIGEgaHlwb3RoZXNpczsgdGhlIHJldGFpbGVyJiMzOTtzIGN1cnJlbnQgbWFya2V0cGxhY2UgdXNlIGFuZCBzb2Z0d2FyZSBhcmUgdW5rbm93bi48L3A+PC9kZD48ZHQ+U3VnZ2VzdGVkIG9wZW5pbmc8L2R0PjxkZD48YmxvY2txdW90ZT5BbnQsIEhpZGRlbiBDaGVzdCYjMzk7cyByZWZ1cmJpc2hlZCBTaW5jbGFpciByYW5nZSBhbmQgUmV0cm9HZWFyJiMzOTtzIGNvbGxlY3Rpb24tYnV5aW5nIHNlcnZpY2UgY2F1Z2h0IG15IGV5ZS4gV291bGQgYSBzYXZlZC1zZWFyY2ggdHJpYWwgZm9yIG9uZSBjb25zb2xlIG9yIGNvbXB1dGVyIGNhdGVnb3J5IHlvdSBhbHJlYWR5IGJ1eSBiZSB1c2VmdWw/IEJ1eUh1YiBjb3VsZCBzdXJmYWNlIGNhbmRpZGF0ZSBsaXN0aW5ncyBmb3IgeW91ciByZXZpZXcsIGtlZXBpbmcgbW9kZWwsIHJlZ2lvbiwgY29uZGl0aW9uIGFuZCBkZWxpdmVyZWQgY29zdCBzZXBhcmF0ZS48L2Jsb2NrcXVvdGU+PC9kZD48ZHQ+VHJpYWwgZGV0YWlscyB0byBhZ3JlZTwvZHQ+PGRkPjxwPkFzayB3aGljaCBoYXJkd2FyZSBmYW1pbGllcyBhbmQgY291bnRyaWVzIHRoZSBzaG9wIGN1cnJlbnRseSBzb3VyY2VzLCB3aGV0aGVyIFBBTC9VSyB1bml0cyBhbmQgaW1wb3J0cyBuZWVkIHNlcGFyYXRlIHNlYXJjaGVzLCB3aGF0IG1vZGlmaWNhdGlvbnMgb3IgZmF1bHRzIGFyZSBhY2NlcHRhYmxlLCBhbmQgd2hldGhlciBwZXJpcGhlcmFscywgbWFudWFscyBvciBvcmlnaW5hbCBwYWNrYWdpbmcgYXJlIHJlcXVpcmVkLiBBZ3JlZSBidXllci1lbnRlcmVkIHB1cmNoYXNlIGFuZCBkZWxpdmVyZWQtY29zdCBsaW1pdHMsIHRoZW4gaW5zcGVjdCBhY3R1YWwgbGlzdGluZ3M7IG5vIHNvdXJjaW5nIGJ1ZGdldCwgbWFyZ2luLCBhY3RpdmUgbWFya2V0cGxhY2UgYWNjb3VudCBvciBidXlpbmcgaW50ZW50IGhhcyBiZWVuIHZlcmlmaWVkLiBDdXJyZW50IEhpZGRlbiBDaGVzdCBjb250YWN0IHBhZ2UgZ2l2ZXMgQ3JhZGxleSBIZWF0aDsgUmV0cm9HZWFyJiMzOTtzIEJyaWVybGV5IEhpbGwgbG9jYXRpb24gYW5kIG9ubGluZSBzYWxlcyB0ZXh0IGFyZSBvbGRlci4gVHJlYXQgdGhlIHR3byBicmFuZHMgYXMgb25lIHByb3NwZWN0LCBub3QgdHdvIGxlYWRzLiBSZXRyb0dlYXIgaXMgYnJvd3NlLW9ubHkgYW5kIG11c3Qgbm90IGJlIGRlc2NyaWJlZCBhcyBhIGN1cnJlbnQgb25saW5lIGNoZWNrb3V0LjwvcD48L2RkPjxkdD5PcmlnaW5hbCBzb3VyY2VzPC9kdD48ZGQ+PHVsPjxsaT48YSBocmVmPSJodHRwczovL3d3dy5oaWRkZW5jaGVzdC5jby51ay8iPmh0dHBzOi8vd3d3LmhpZGRlbmNoZXN0LmNvLnVrLzwvYT48cD5JbmRlcGVuZGVudCBzaG9wLCBuYW1lZCBjb25zb2xlIHNwZWNpYWxpc3QvY29udGFjdCwgY3VycmVudCBhZGRyZXNzIGFuZCBoYXJkd2FyZSByYW5nZS48L3A+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9yZXRyb2dlYXIuY28udWsvIj5odHRwczovL3JldHJvZ2Vhci5jby51ay88L2E+PHA+SGlkZGVuIENoZXN0IGFmZmlsaWF0aW9uLCBleHBsaWNpdCBjb2xsZWN0aW9uIGJ1eWluZywgYnJvd3NlLW9ubHkgc2l0ZSBhbmQgb2xkZXIgbG9jYXRpb24gY29weS48L3A+PC9saT48L3VsPjwvZGQ+PC9kbD48L2FydGljbGU+PGZvb3Rlcj48cD5QcmVwYXJlZCBieSBUb2tlbiBKdW5raWUgTGFicy4gU291cmNlcyByZXZpZXdlZCBvbiAxMyBPY3RvYmVyIDIwMjYuIEFncmVlIHRoZSByZXRhaWxlcuKAmXMgb3duIHBsYXRmb3JtLCByZWdpb24sIGNvbmRpdGlvbiBhbmQgdG90YWwtY29zdCBjcml0ZXJpYSBiZWZvcmUgYSBwcm9kdWN0IHRyaWFsLjwvcD48L2Zvb3Rlcj48L21haW4+PC9ib2R5PjwvaHRtbD4=",
+        "bytes": 5255,
+        "sha256": "5f4519646cb3772e8455073de2f6dd469fa424b972173efd10bd4e1ed9647677"
+      },
+      "sha256": "dee1ff99aadcfd85d61374b2b8290060b661b059018014067bb8d98907a5d918",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.csv",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample/profiles.csv",
+        "title": "Free retailer example — CSV",
+        "description": "Free retailer example — CSV",
+        "type": "text/csv",
+        "lead_ids": [
+          "buyhub-hidden-chest-retrogear"
+        ],
+        "source_url": "",
+        "content_base64": "IkNvbXBhbnkiLCJXZWJzaXRlIiwiTG9jYXRpb24iLCJQdWJsaXNoZWQgY29udGFjdCIsIkNvbnRhY3Qgcm9sZSIsIkNvbnRhY3QgaW5zdHJ1Y3Rpb25zIiwiUHVibGlzaGVkIGJ1eWluZyBhY3Rpdml0eSIsIkJ1eUh1YiBjb252ZXJzYXRpb24gZml0IiwiU3VnZ2VzdGVkIG9wZW5pbmciLCJUcmlhbCBkZXRhaWxzIHRvIGFncmVlIiwiT3JpZ2luYWwgc291cmNlIFVSTHMiLCJTb3VyY2VzIGNoZWNrZWQiDQoiSGlkZGVuIENoZXN0IEdhbWluZyAvIFJldHJvR2VhciIsImh0dHBzOi8vd3d3LmhpZGRlbmNoZXN0LmNvLnVrLyIsIlRoZSBDZW50cmFsIE1hcmtldCBIYWxsLCBIaWdoIFN0cmVldCwgQ3JhZGxleSBIZWF0aCwgQjY0IDVIQSwgVUsiLCJhbnRAaGlkZGVuY2hlc3QuY28udWsiLCJBbnQgSGFycGVyIiwiQ28tbWFuYWdlcjsgb2xkLWNvbXB1dGVyIGFuZCBjb25zb2xlIHNwZWNpYWxpc3QuIFJldHJvR2VhciBpbnZpdGVzIGNvbGxlY3Rpb24gc2VsbGVycyB0byByZXF1ZXN0IGEgcXVvdGUgYnkgZW1haWwuIEN1cnJlbnQgSGlkZGVuIENoZXN0IGNvbnRhY3QgaW5mb3JtYXRpb24gcHJvdmlkZXMgQW50J3MgbmFtZWQgYnVzaW5lc3MgYWRkcmVzcyBwbHVzIHRoZSBnZW5lcmFsIHNob3AgbWFpbGJveCBoaWRkZW5jaGVzdGdhbWluZ0BnbWFpbC5jb20uIiwiSGlkZGVuIENoZXN0IGRlc2NyaWJlcyBpdHNlbGYgYXMgYW4gaW5kZXBlbmRlbnQgc2hvcCwgbmFtZXMgQW50IEhhcnBlciBhcyBpdHMgY29uc29sZS9jb21wdXRlciBzcGVjaWFsaXN0LCBhbmQgYWR2ZXJ0aXNlcyByZWZ1cmJpc2hlZCBTaW5jbGFpciBoYXJkd2FyZS4gUmV0cm9HZWFyIGV4cGxpY2l0bHkgc3RhdGVzIHRoYXQgaXQgaXMgcGFydCBvZiBIaWRkZW4gQ2hlc3QgYW5kIGJ1eXMgb2xkIGNvbnNvbGVzLCBjb21wdXRlcnMsIGdhbWVzLCBwZXJpcGhlcmFscyBhbmQgd2hvbGUgY29sbGVjdGlvbnMuIiwiQSBmb2N1c2VkIEJ1eUh1YiBzb3VyY2luZyB0cmlhbCBjb3VsZCB1c2Ugc2VwYXJhdGUgc2F2ZWQgc2VhcmNoZXMgYW5kIHJhZGFycyBmb3IgYSByZXRhaWxlci1zZWxlY3RlZCBVSyBjb25zb2xlIG9yIDgtYml0LWNvbXB1dGVyIGNhdGVnb3J5LiBJdCBjb3VsZCBicmluZyBjYW5kaWRhdGUgbGlzdGluZ3MgaW50byBvbmUgcmV2aWV3IGxpc3Qgd2hpbGUgQW50IHJldGFpbnMgcGh5c2ljYWwgY29uZGl0aW9uLCBwYXJ0cywgbW9kaWZpY2F0aW9uLCBzZWxsZXIgYW5kIHB1cmNoYXNlIGRlY2lzaW9ucy4gVGhpcyBpcyBhIGh5cG90aGVzaXM7IHRoZSByZXRhaWxlcidzIGN1cnJlbnQgbWFya2V0cGxhY2UgdXNlIGFuZCBzb2Z0d2FyZSBhcmUgdW5rbm93bi4iLCJBbnQsIEhpZGRlbiBDaGVzdCdzIHJlZnVyYmlzaGVkIFNpbmNsYWlyIHJhbmdlIGFuZCBSZXRyb0dlYXIncyBjb2xsZWN0aW9uLWJ1eWluZyBzZXJ2aWNlIGNhdWdodCBteSBleWUuIFdvdWxkIGEgc2F2ZWQtc2VhcmNoIHRyaWFsIGZvciBvbmUgY29uc29sZSBvciBjb21wdXRlciBjYXRlZ29yeSB5b3UgYWxyZWFkeSBidXkgYmUgdXNlZnVsPyBCdXlIdWIgY291bGQgc3VyZmFjZSBjYW5kaWRhdGUgbGlzdGluZ3MgZm9yIHlvdXIgcmV2aWV3LCBrZWVwaW5nIG1vZGVsLCByZWdpb24sIGNvbmRpdGlvbiBhbmQgZGVsaXZlcmVkIGNvc3Qgc2VwYXJhdGUuIiwiQXNrIHdoaWNoIGhhcmR3YXJlIGZhbWlsaWVzIGFuZCBjb3VudHJpZXMgdGhlIHNob3AgY3VycmVudGx5IHNvdXJjZXMsIHdoZXRoZXIgUEFML1VLIHVuaXRzIGFuZCBpbXBvcnRzIG5lZWQgc2VwYXJhdGUgc2VhcmNoZXMsIHdoYXQgbW9kaWZpY2F0aW9ucyBvciBmYXVsdHMgYXJlIGFjY2VwdGFibGUsIGFuZCB3aGV0aGVyIHBlcmlwaGVyYWxzLCBtYW51YWxzIG9yIG9yaWdpbmFsIHBhY2thZ2luZyBhcmUgcmVxdWlyZWQuIEFncmVlIGJ1eWVyLWVudGVyZWQgcHVyY2hhc2UgYW5kIGRlbGl2ZXJlZC1jb3N0IGxpbWl0cywgdGhlbiBpbnNwZWN0IGFjdHVhbCBsaXN0aW5nczsgbm8gc291cmNpbmcgYnVkZ2V0LCBtYXJnaW4sIGFjdGl2ZSBtYXJrZXRwbGFjZSBhY2NvdW50IG9yIGJ1eWluZyBpbnRlbnQgaGFzIGJlZW4gdmVyaWZpZWQuIEN1cnJlbnQgSGlkZGVuIENoZXN0IGNvbnRhY3QgcGFnZSBnaXZlcyBDcmFkbGV5IEhlYXRoOyBSZXRyb0dlYXIncyBCcmllcmxleSBIaWxsIGxvY2F0aW9uIGFuZCBvbmxpbmUgc2FsZXMgdGV4dCBhcmUgb2xkZXIuIFRyZWF0IHRoZSB0d28gYnJhbmRzIGFzIG9uZSBwcm9zcGVjdCwgbm90IHR3byBsZWFkcy4gUmV0cm9HZWFyIGlzIGJyb3dzZS1vbmx5IGFuZCBtdXN0IG5vdCBiZSBkZXNjcmliZWQgYXMgYSBjdXJyZW50IG9ubGluZSBjaGVja291dC4iLCJodHRwczovL3d3dy5oaWRkZW5jaGVzdC5jby51ay8gfCBodHRwczovL3JldHJvZ2Vhci5jby51ay8iLCIxMyBPY3RvYmVyIDIwMjYiDQo=",
+        "bytes": 2393,
+        "sha256": "c622fae3e5cd5e6c879a3b1853d2470b98015f499e1470826dff775bf6319be2"
+      },
+      "sha256": "1ed96afea38820a4d943aef8f4b660223e309a96284cefb580c283dc913c5d00",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.md",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample/profiles.md",
+        "title": "Free retailer example — MD",
+        "description": "Free retailer example — MD",
+        "type": "text/markdown",
+        "lead_ids": [
+          "buyhub-hidden-chest-retrogear"
+        ],
+        "source_url": "",
+        "content_base64": "IyBCdXlIdWIg4oCUIGZyZWUgVUsgcmV0YWlsZXIgZXhhbXBsZQoKUHJlcGFyZWQgYnkgVG9rZW4gSnVua2llIExhYnMgwrcgMTMgT2N0b2JlciAyMDI2CgojIyBIaWRkZW4gQ2hlc3QgR2FtaW5nIC8gUmV0cm9HZWFyCgpUaGUgQ2VudHJhbCBNYXJrZXQgSGFsbCwgSGlnaCBTdHJlZXQsIENyYWRsZXkgSGVhdGgsIEI2NCA1SEEsIFVLCgpXZWJzaXRlOiBodHRwczovL3d3dy5oaWRkZW5jaGVzdC5jby51ay8KCioqUHVibGlzaGVkIGNvbnRhY3Q6KiogQW50IEhhcnBlciDigJQgYW50QGhpZGRlbmNoZXN0LmNvLnVrCgpDby1tYW5hZ2VyOyBvbGQtY29tcHV0ZXIgYW5kIGNvbnNvbGUgc3BlY2lhbGlzdC4gUmV0cm9HZWFyIGludml0ZXMgY29sbGVjdGlvbiBzZWxsZXJzIHRvIHJlcXVlc3QgYSBxdW90ZSBieSBlbWFpbC4gQ3VycmVudCBIaWRkZW4gQ2hlc3QgY29udGFjdCBpbmZvcm1hdGlvbiBwcm92aWRlcyBBbnQncyBuYW1lZCBidXNpbmVzcyBhZGRyZXNzIHBsdXMgdGhlIGdlbmVyYWwgc2hvcCBtYWlsYm94IGhpZGRlbmNoZXN0Z2FtaW5nQGdtYWlsLmNvbS4KCioqQnV5aW5nIGFjdGl2aXR5KioKCkhpZGRlbiBDaGVzdCBkZXNjcmliZXMgaXRzZWxmIGFzIGFuIGluZGVwZW5kZW50IHNob3AsIG5hbWVzIEFudCBIYXJwZXIgYXMgaXRzIGNvbnNvbGUvY29tcHV0ZXIgc3BlY2lhbGlzdCwgYW5kIGFkdmVydGlzZXMgcmVmdXJiaXNoZWQgU2luY2xhaXIgaGFyZHdhcmUuIFJldHJvR2VhciBleHBsaWNpdGx5IHN0YXRlcyB0aGF0IGl0IGlzIHBhcnQgb2YgSGlkZGVuIENoZXN0IGFuZCBidXlzIG9sZCBjb25zb2xlcywgY29tcHV0ZXJzLCBnYW1lcywgcGVyaXBoZXJhbHMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLgoKKipCdXlIdWIgY29udmVyc2F0aW9uIGZpdCoqCgpBIGZvY3VzZWQgQnV5SHViIHNvdXJjaW5nIHRyaWFsIGNvdWxkIHVzZSBzZXBhcmF0ZSBzYXZlZCBzZWFyY2hlcyBhbmQgcmFkYXJzIGZvciBhIHJldGFpbGVyLXNlbGVjdGVkIFVLIGNvbnNvbGUgb3IgOC1iaXQtY29tcHV0ZXIgY2F0ZWdvcnkuIEl0IGNvdWxkIGJyaW5nIGNhbmRpZGF0ZSBsaXN0aW5ncyBpbnRvIG9uZSByZXZpZXcgbGlzdCB3aGlsZSBBbnQgcmV0YWlucyBwaHlzaWNhbCBjb25kaXRpb24sIHBhcnRzLCBtb2RpZmljYXRpb24sIHNlbGxlciBhbmQgcHVyY2hhc2UgZGVjaXNpb25zLiBUaGlzIGlzIGEgaHlwb3RoZXNpczsgdGhlIHJldGFpbGVyJ3MgY3VycmVudCBtYXJrZXRwbGFjZSB1c2UgYW5kIHNvZnR3YXJlIGFyZSB1bmtub3duLgoKKipTdWdnZXN0ZWQgb3BlbmluZyoqCgpBbnQsIEhpZGRlbiBDaGVzdCdzIHJlZnVyYmlzaGVkIFNpbmNsYWlyIHJhbmdlIGFuZCBSZXRyb0dlYXIncyBjb2xsZWN0aW9uLWJ1eWluZyBzZXJ2aWNlIGNhdWdodCBteSBleWUuIFdvdWxkIGEgc2F2ZWQtc2VhcmNoIHRyaWFsIGZvciBvbmUgY29uc29sZSBvciBjb21wdXRlciBjYXRlZ29yeSB5b3UgYWxyZWFkeSBidXkgYmUgdXNlZnVsPyBCdXlIdWIgY291bGQgc3VyZmFjZSBjYW5kaWRhdGUgbGlzdGluZ3MgZm9yIHlvdXIgcmV2aWV3LCBrZWVwaW5nIG1vZGVsLCByZWdpb24sIGNvbmRpdGlvbiBhbmQgZGVsaXZlcmVkIGNvc3Qgc2VwYXJhdGUuCgoqKlRyaWFsIGRldGFpbHMgdG8gYWdyZWUqKgoKQXNrIHdoaWNoIGhhcmR3YXJlIGZhbWlsaWVzIGFuZCBjb3VudHJpZXMgdGhlIHNob3AgY3VycmVudGx5IHNvdXJjZXMsIHdoZXRoZXIgUEFML1VLIHVuaXRzIGFuZCBpbXBvcnRzIG5lZWQgc2VwYXJhdGUgc2VhcmNoZXMsIHdoYXQgbW9kaWZpY2F0aW9ucyBvciBmYXVsdHMgYXJlIGFjY2VwdGFibGUsIGFuZCB3aGV0aGVyIHBlcmlwaGVyYWxzLCBtYW51YWxzIG9yIG9yaWdpbmFsIHBhY2thZ2luZyBhcmUgcmVxdWlyZWQuIEFncmVlIGJ1eWVyLWVudGVyZWQgcHVyY2hhc2UgYW5kIGRlbGl2ZXJlZC1jb3N0IGxpbWl0cywgdGhlbiBpbnNwZWN0IGFjdHVhbCBsaXN0aW5nczsgbm8gc291cmNpbmcgYnVkZ2V0LCBtYXJnaW4sIGFjdGl2ZSBtYXJrZXRwbGFjZSBhY2NvdW50IG9yIGJ1eWluZyBpbnRlbnQgaGFzIGJlZW4gdmVyaWZpZWQuIEN1cnJlbnQgSGlkZGVuIENoZXN0IGNvbnRhY3QgcGFnZSBnaXZlcyBDcmFkbGV5IEhlYXRoOyBSZXRyb0dlYXIncyBCcmllcmxleSBIaWxsIGxvY2F0aW9uIGFuZCBvbmxpbmUgc2FsZXMgdGV4dCBhcmUgb2xkZXIuIFRyZWF0IHRoZSB0d28gYnJhbmRzIGFzIG9uZSBwcm9zcGVjdCwgbm90IHR3byBsZWFkcy4gUmV0cm9HZWFyIGlzIGJyb3dzZS1vbmx5IGFuZCBtdXN0IG5vdCBiZSBkZXNjcmliZWQgYXMgYSBjdXJyZW50IG9ubGluZSBjaGVja291dC4KCioqT3JpZ2luYWwgc291cmNlcyoqCgotIGh0dHBzOi8vd3d3LmhpZGRlbmNoZXN0LmNvLnVrLyDigJQgSW5kZXBlbmRlbnQgc2hvcCwgbmFtZWQgY29uc29sZSBzcGVjaWFsaXN0L2NvbnRhY3QsIGN1cnJlbnQgYWRkcmVzcyBhbmQgaGFyZHdhcmUgcmFuZ2UuCi0gaHR0cHM6Ly9yZXRyb2dlYXIuY28udWsvIOKAlCBIaWRkZW4gQ2hlc3QgYWZmaWxpYXRpb24sIGV4cGxpY2l0IGNvbGxlY3Rpb24gYnV5aW5nLCBicm93c2Utb25seSBzaXRlIGFuZCBvbGRlciBsb2NhdGlvbiBjb3B5LgoKRml2ZSBhZGRpdGlvbmFsIHByb2ZpbGVzIGNvc3QgVVMkMjAgdG90YWwuIE9uZSBjb3JyZWN0aW9uIG9yIHJlcGxhY2VtZW50IHdpdGhpbiBzZXZlbiBkYXlzIGNvdmVycyBhbiBleGlzdGluZyBjdXN0b21lciwgZHVwbGljYXRlLCBkZWFkIHB1Ymxpc2hlZCBjb250YWN0IG9yIGNsZWFyIG1pc21hdGNoLgo=",
+        "bytes": 2750,
+        "sha256": "00c31cdb7a7137f36ca9f6c9c339d863af4fc0e14fbc5d4dfa4aa42bc2970978"
+      },
+      "sha256": "60a73599128939332c0060d75042d4010ae16937c380390a3b4c69bba2c361a9",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.json",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample/profiles.json",
+        "title": "Free retailer example — JSON",
+        "description": "Free retailer example — JSON",
+        "type": "application/json",
+        "lead_ids": [
+          "buyhub-hidden-chest-retrogear"
+        ],
+        "source_url": "",
+        "content_base64": "ewogICJ2ZXJzaW9uIjogImRlYWxzY291dC5sZWFkLXBhY2sudjEiLAogICJ0aXRsZSI6ICJGcmVlIGxlYWQgc2FtcGxlIiwKICAiY3VzdG9tZXIiOiAiQnV5SHViIiwKICAicHJlcGFyZWRfYXQiOiAiMjAyNi0xMC0xM1QxODo0Nzo1Ni44ODVaIiwKICAiZGVsaXZlcnlfdHlwZSI6ICJzYW1wbGUiLAogICJjcml0ZXJpYSI6ICJFaWdodCBkaXN0aW5jdCBVSyByZXRhaWxlciByZWNvcmRzOiBvbmUgZnJlZSBleGFtcGxlLCBmaXZlIGFkZGl0aW9uYWwgcGFpZCBwcm9maWxlcyBhbmQgdHdvIHJlc2VydmVzLiBFdmVyeSBzZWxlY3RlZCByZXRhaWxlciBwdWJsaXNoZXMgcmV0cm8tZ2FtZSBidXlpbmcgb3IgdHJhZGUgYWN0aXZpdHkgYW5kIGEgYnVzaW5lc3MgY29udGFjdC4gTWF0Y2ggYW55IHNvdXJjaW5nIHRyaWFsIHRvIGl0cyBvd24gcGxhdGZvcm0sIHJlZ2lvbiwgY29uZGl0aW9uIGFuZCBkZWxpdmVyZWQtY29zdCByZXF1aXJlbWVudHMuIiwKICAiZ2VvZ3JhcGh5IjogIlVuaXRlZCBLaW5nZG9tIiwKICAic2tpbGxzIjogWwogICAgInJldHJvIGdhbWVzIiwKICAgICJjb25zb2xlIGNvbGxlY3Rpb24gYnV5aW5nIiwKICAgICJzdG9jayBzb3VyY2luZyIsCiAgICAibWFya2V0cGxhY2Ugc2VhcmNoIgogIF0sCiAgInF1YW50aXR5IjogMSwKICAiY3VycmVuY3kiOiAiVVNEIiwKICAicHJpY2VfbWlub3IiOiAwLAogICJsZWFkcyI6IFsKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICJIaWRkZW4gQ2hlc3QgR2FtaW5nIC8gUmV0cm9HZWFyIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vd3d3LmhpZGRlbmNoZXN0LmNvLnVrLyIsCiAgICAgICJwZXJzb24iOiAiQW50IEhhcnBlciIsCiAgICAgICJidXNpbmVzc19uZWVkIjogIkhpZGRlbiBDaGVzdCBkZXNjcmliZXMgaXRzZWxmIGFzIGFuIGluZGVwZW5kZW50IHNob3AsIG5hbWVzIEFudCBIYXJwZXIgYXMgaXRzIGNvbnNvbGUvY29tcHV0ZXIgc3BlY2lhbGlzdCwgYW5kIGFkdmVydGlzZXMgcmVmdXJiaXNoZWQgU2luY2xhaXIgaGFyZHdhcmUuIFJldHJvR2VhciBleHBsaWNpdGx5IHN0YXRlcyB0aGF0IGl0IGlzIHBhcnQgb2YgSGlkZGVuIENoZXN0IGFuZCBidXlzIG9sZCBjb25zb2xlcywgY29tcHV0ZXJzLCBnYW1lcywgcGVyaXBoZXJhbHMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLiIsCiAgICAgICJzb3VyY2VfdXJsIjogImh0dHBzOi8vd3d3LmhpZGRlbmNoZXN0LmNvLnVrLyIsCiAgICAgICJvcmlnaW5hbF9yZXF1ZXN0X2RhdGUiOiAiIiwKICAgICAgImxhc3RfYnV5ZXJfdXBkYXRlIjogIiIsCiAgICAgICJzb3VyY2VfY2hlY2tlZF9hdCI6ICIyMDI2LTEwLTEzIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzphbnRAaGlkZGVuY2hlc3QuY28udWsiLAogICAgICAiY29udGFjdF9pbnN0cnVjdGlvbnMiOiAiQ28tbWFuYWdlcjsgb2xkLWNvbXB1dGVyIGFuZCBjb25zb2xlIHNwZWNpYWxpc3QuIFJldHJvR2VhciBpbnZpdGVzIGNvbGxlY3Rpb24gc2VsbGVycyB0byByZXF1ZXN0IGEgcXVvdGUgYnkgZW1haWwuIEN1cnJlbnQgSGlkZGVuIENoZXN0IGNvbnRhY3QgaW5mb3JtYXRpb24gcHJvdmlkZXMgQW50J3MgbmFtZWQgYnVzaW5lc3MgYWRkcmVzcyBwbHVzIHRoZSBnZW5lcmFsIHNob3AgbWFpbGJveCBoaWRkZW5jaGVzdGdhbWluZ0BnbWFpbC5jb20uIiwKICAgICAgImdlb2dyYXBoeSI6ICJUaGUgQ2VudHJhbCBNYXJrZXQgSGFsbCwgSGlnaCBTdHJlZXQsIENyYWRsZXkgSGVhdGgsIEI2NCA1SEEsIFVLIiwKICAgICAgInB1Ymxpc2hlZF9idWRnZXQiOiAiTm8gc29mdHdhcmUgb3Igc291cmNpbmcgYnVkZ2V0IHB1Ymxpc2hlZC4iLAogICAgICAid2h5X2l0X2ZpdHMiOiAiQSBmb2N1c2VkIEJ1eUh1YiBzb3VyY2luZyB0cmlhbCBjb3VsZCB1c2Ugc2VwYXJhdGUgc2F2ZWQgc2VhcmNoZXMgYW5kIHJhZGFycyBmb3IgYSByZXRhaWxlci1zZWxlY3RlZCBVSyBjb25zb2xlIG9yIDgtYml0LWNvbXB1dGVyIGNhdGVnb3J5LiBJdCBjb3VsZCBicmluZyBjYW5kaWRhdGUgbGlzdGluZ3MgaW50byBvbmUgcmV2aWV3IGxpc3Qgd2hpbGUgQW50IHJldGFpbnMgcGh5c2ljYWwgY29uZGl0aW9uLCBwYXJ0cywgbW9kaWZpY2F0aW9uLCBzZWxsZXIgYW5kIHB1cmNoYXNlIGRlY2lzaW9ucy4gVGhpcyBpcyBhIGh5cG90aGVzaXM7IHRoZSByZXRhaWxlcidzIGN1cnJlbnQgbWFya2V0cGxhY2UgdXNlIGFuZCBzb2Z0d2FyZSBhcmUgdW5rbm93bi4iLAogICAgICAib3BlbmluZ19tZXNzYWdlIjogIkFudCwgSGlkZGVuIENoZXN0J3MgcmVmdXJiaXNoZWQgU2luY2xhaXIgcmFuZ2UgYW5kIFJldHJvR2VhcidzIGNvbGxlY3Rpb24tYnV5aW5nIHNlcnZpY2UgY2F1Z2h0IG15IGV5ZS4gV291bGQgYSBzYXZlZC1zZWFyY2ggdHJpYWwgZm9yIG9uZSBjb25zb2xlIG9yIGNvbXB1dGVyIGNhdGVnb3J5IHlvdSBhbHJlYWR5IGJ1eSBiZSB1c2VmdWw/IEJ1eUh1YiBjb3VsZCBzdXJmYWNlIGNhbmRpZGF0ZSBsaXN0aW5ncyBmb3IgeW91ciByZXZpZXcsIGtlZXBpbmcgbW9kZWwsIHJlZ2lvbiwgY29uZGl0aW9uIGFuZCBkZWxpdmVyZWQgY29zdCBzZXBhcmF0ZS4iLAogICAgICAic291cmNlX3N0YXR1cyI6ICJvcGVuIiwKICAgICAgInN0YXR1c19ub3RlIjogIlB1YmxpYyBidXlpbmcvdHJhZGUgYWN0aXZpdHkgY2hlY2tlZCBvbiAxMyBPY3RvYmVyIDIwMjYuIEFzayB3aGljaCBoYXJkd2FyZSBmYW1pbGllcyBhbmQgY291bnRyaWVzIHRoZSBzaG9wIGN1cnJlbnRseSBzb3VyY2VzLCB3aGV0aGVyIFBBTC9VSyB1bml0cyBhbmQgaW1wb3J0cyBuZWVkIHNlcGFyYXRlIHNlYXJjaGVzLCB3aGF0IG1vZGlmaWNhdGlvbnMgb3IgZmF1bHRzIGFyZSBhY2NlcHRhYmxlLCBhbmQgd2hldGhlciBwZXJpcGhlcmFscywgbWFudWFscyBvciBvcmlnaW5hbCBwYWNrYWdpbmcgYXJlIHJlcXVpcmVkLiBBZ3JlZSBidXllci1lbnRlcmVkIHB1cmNoYXNlIGFuZCBkZWxpdmVyZWQtY29zdCBsaW1pdHMsIHRoZW4gaW5zcGVjdCBhY3R1YWwgbGlzdGluZ3M7IG5vIHNvdXJjaW5nIGJ1ZGdldCwgbWFyZ2luLCBhY3RpdmUgbWFya2V0cGxhY2UgYWNjb3VudCBvciBidXlpbmcgaW50ZW50IGhhcyBiZWVuIHZlcmlmaWVkLiBDdXJyZW50IEhpZGRlbiBDaGVzdCBjb250YWN0IHBhZ2UgZ2l2ZXMgQ3JhZGxleSBIZWF0aDsgUmV0cm9HZWFyJ3MgQnJpZXJsZXkgSGlsbCBsb2NhdGlvbiBhbmQgb25saW5lIHNhbGVzIHRleHQgYXJlIG9sZGVyLiBUcmVhdCB0aGUgdHdvIGJyYW5kcyBhcyBvbmUgcHJvc3BlY3QsIG5vdCB0d28gbGVhZHMuIFJldHJvR2VhciBpcyBicm93c2Utb25seSBhbmQgbXVzdCBub3QgYmUgZGVzY3JpYmVkIGFzIGEgY3VycmVudCBvbmxpbmUgY2hlY2tvdXQuIgogICAgfQogIF0KfQo=",
+        "bytes": 3419,
+        "sha256": "2cc94074b4566045ed5b071ea577c50202c1218c2a629386aacb18d93ab1e4e8"
+      },
+      "sha256": "817203bb00a5695edc6d1414d5ec60530e6b11eaee0a56a5a3a5df4ccafaac63",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.html",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid/profiles.html",
+        "title": "Five retailer profiles — HTML",
+        "description": "Five retailer profiles — HTML",
+        "type": "text/html",
+        "lead_ids": [
+          "buyhub-8bitbeyond",
+          "buyhub-geeky-blinders",
+          "buyhub-spacebridge",
+          "buyhub-flashback-retro",
+          "buyhub-retro-world-derby"
+        ],
+        "source_url": "",
+        "content_base64": "PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZW4iPjxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLGluaXRpYWwtc2NhbGU9MSI+PHRpdGxlPkJ1eUh1YiDigJQgZml2ZSByZXRhaWxlciBwcm9maWxlczwvdGl0bGU+PHN0eWxlPjpyb290e2NvbG9yLXNjaGVtZTpsaWdodH0qe2JveC1zaXppbmc6Ym9yZGVyLWJveH1ib2R5e21hcmdpbjowO2JhY2tncm91bmQ6I2Y1ZjVmNDtjb2xvcjojMjAyMDIwO2ZvbnQ6MTZweC8xLjU1IHN5c3RlbS11aSwtYXBwbGUtc3lzdGVtLEJsaW5rTWFjU3lzdGVtRm9udCwiU2Vnb2UgVUkiLHNhbnMtc2VyaWZ9bWFpbnttYXgtd2lkdGg6OTYwcHg7bWFyZ2luOmF1dG87cGFkZGluZzozMHB4IDI0cHh9aGVhZGVye2JvcmRlci1ib3R0b206MnB4IHNvbGlkICMyMjI7cGFkZGluZy1ib3R0b206MjRweDttYXJnaW4tYm90dG9tOjI0cHh9aDF7Zm9udC1zaXplOmNsYW1wKDI3cHgsNXZ3LDM4cHgpO2xpbmUtaGVpZ2h0OjEuMTg7bWFyZ2luOjEwcHggMCAxNnB4fWgye2ZvbnQtc2l6ZToyNXB4O2xpbmUtaGVpZ2h0OjEuMjU7bWFyZ2luOjhweCAwfS5leWVicm93e2ZvbnQtc2l6ZToxM3B4O2xldHRlci1zcGFjaW5nOi4wNmVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjojNTU1fXAsZGQsbGksYmxvY2txdW90ZXtvdmVyZmxvdy13cmFwOmFueXdoZXJlfXB7bWFyZ2luOjhweCAwIDE0cHh9YXtjb2xvcjojMjIyO3RleHQtdW5kZXJsaW5lLW9mZnNldDozcHg7b3ZlcmZsb3ctd3JhcDphbnl3aGVyZX1hcnRpY2xle2JhY2tncm91bmQ6d2hpdGU7Ym9yZGVyOjFweCBzb2xpZCAjYmJiO21hcmdpbjoyNHB4IDA7cGFkZGluZzoyNnB4O2JyZWFrLWluc2lkZTphdm9pZH1kdHtmb250LXdlaWdodDo2NTA7bWFyZ2luOjIwcHggMCA2cHh9ZGR7bWFyZ2luOjB9YmxvY2txdW90ZXttYXJnaW46MDtib3JkZXItbGVmdDozcHggc29saWQgIzg4ODtiYWNrZ3JvdW5kOiNmNGY0ZjM7cGFkZGluZzoxNnB4fWxpe21hcmdpbjoxMnB4IDB9dWx7cGFkZGluZy1sZWZ0OjIycHh9LnRlcm1ze2JvcmRlcjoxcHggc29saWQgI2JiYjtiYWNrZ3JvdW5kOiNmZmY7cGFkZGluZzoyMHB4fWZvb3Rlcntib3JkZXItdG9wOjFweCBzb2xpZCAjYmJiO21hcmdpbi10b3A6MjhweDtwYWRkaW5nLXRvcDoxNnB4O2ZvbnQtc2l6ZToxNHB4O2NvbG9yOiM1NTV9QG1lZGlhKG1heC13aWR0aDo1MjBweCl7bWFpbntwYWRkaW5nOjIycHggMTZweH1hcnRpY2xle3BhZGRpbmc6MjBweCAxNnB4fWgye2ZvbnQtc2l6ZToyM3B4fX1AbWVkaWEgcHJpbnR7Ym9keXtiYWNrZ3JvdW5kOndoaXRlfW1haW57bWF4LXdpZHRoOm5vbmU7cGFkZGluZzowfWFydGljbGV7cGFkZGluZzoxOHB4fX08L3N0eWxlPjwvaGVhZD48Ym9keT48bWFpbj48aGVhZGVyPjxwIGNsYXNzPSJleWVicm93Ij5QcmVwYXJlZCBmb3IgQnV5SHViIMK3IDEzIE9jdG9iZXIgMjAyNjwvcD48aDE+Rml2ZSBhZGRpdGlvbmFsIFVLIHJldHJvIHJldGFpbGVyczwvaDE+PHA+Rml2ZSBkaXN0aW5jdCByZXRhaWxlciBwcm9maWxlcyBwcmVwYXJlZCBhcyBhIFVTJDIwIGZsYXQtZmVlIHBhY2thZ2UsIHdpdGggZWRpdGFibGUgY3VzdG9tZXIgZmlsZXMgYW5kIG9yaWdpbmFsIHNvdXJjZSBsaW5rcy48L3A+PHA+RWFjaCBzZWxlY3RlZCBidXNpbmVzcyBwdWJsaXNoZXMgYnV5aW5nIG9yIHRyYWRpbmcgYWN0aXZpdHkgZm9yIHJldHJvIGdhbWVzLCBjb25zb2xlcyBvciBjb21wdXRlcnMuIFRoZSBzdWdnZXN0ZWQgY29udmVyc2F0aW9ucyBidWlsZCBvbiB0aGF0IGV4aXN0aW5nIHdvcmsuPC9wPjwvaGVhZGVyPjxzZWN0aW9uIGNsYXNzPSJ0ZXJtcyI+PHN0cm9uZz5QYWNrYWdlIHRlcm1zPC9zdHJvbmc+PHA+VGhlc2UgZml2ZSBwcm9maWxlcyBhcmUgYWRkaXRpb25hbCB0byB0aGUgZnJlZSBIaWRkZW4gQ2hlc3QgLyBSZXRyb0dlYXIgZXhhbXBsZS4gT25lIGNvcnJlY3Rpb24gb3IgcmVwbGFjZW1lbnQgaXMgaW5jbHVkZWQgd2l0aGluIHNldmVuIGRheXMgZm9yIGFuIGV4aXN0aW5nIGN1c3RvbWVyLCBkdXBsaWNhdGUsIGRlYWQgcHVibGlzaGVkIGNvbnRhY3Qgb3IgY2xlYXIgbWlzbWF0Y2guPC9wPjwvc2VjdGlvbj48YXJ0aWNsZSBpZD0icmV0YWlsZXItMSI+PHAgY2xhc3M9ImV5ZWJyb3ciPlJldGFpbGVyIDE8L3A+PGgyPjhCaXQgQmV5b25kPC9oMj48cD5DYXJkaWZmLCBXYWxlcywgVW5pdGVkIEtpbmdkb208L3A+PHA+PGEgaHJlZj0iaHR0cHM6Ly93d3cuOGJpdGJleW9uZC5jb20vIj5odHRwczovL3d3dy44Yml0YmV5b25kLmNvbS88L2E+PC9wPjxkbD48ZHQ+UHVibGlzaGVkIGJ1c2luZXNzIGNvbnRhY3Q8L2R0PjxkZD48YSBocmVmPSJtYWlsdG86aW5mb0A4Yml0YmV5b25kLmNvbSI+aW5mb0A4Yml0YmV5b25kLmNvbTwvYT48cD5CdXlpbmcgdGVhbTwvcD48cD5QdWJsaXNoZWQgZ2VuZXJhbCBidXNpbmVzcyBlbWFpbDsgYXNrIGZvciB0aGUgYnV5aW5nIHRlYW0uIENvbnRhY3QgcGFnZSBhbHNvIGxpc3RzIDA3ODUwIDg1NjU4NS48L3A+PC9kZD48ZHQ+UHVibGlzaGVkIGJ1eWluZyBhY3Rpdml0eTwvZHQ+PGRkPjxwPlB1cmNoYXNlcyB2aW50YWdlIGdhbWVzIGFuZCBjb25zb2xlcyB0aHJvdWdoIHBob3RvLWxlZCB2YWx1YXRpb24uIEl0cyB0cmFkZSBwYWdlIGRpc3Rpbmd1aXNoZXMgdGVzdGVkIGFuZCB1bnRlc3RlZCBoYXJkd2FyZSwgb3JpZ2luYWwgYm94ZXMvbWFudWFscywgZGlzYyB3ZWFyIGFuZCBjYXJ0cmlkZ2Ugc2F2ZSBiYXR0ZXJpZXMuPC9wPjwvZGQ+PGR0PkJ1eUh1YiBjb252ZXJzYXRpb24gZml0PC9kdD48ZGQ+PHA+QnV5SHViIHNhdmVkIHRlcm1zIGFuZCBsaXN0aW5nIGZpbHRlcnMgY291bGQgc3VwcG9ydCBhIHJldGFpbGVyLXNlbGVjdGVkIGNvbnNvbGUgY2F0ZWdvcnkgd2hpbGUgc3RhZmYgcmV0YWluIGNvbmRpdGlvbiwgY29tcGxldGVuZXNzIGFuZCBkZWxpdmVyZWQgY29zdC4gRXhpc3Rpbmcgc291cmNpbmcgc29mdHdhcmUgYW5kIGludGVyZXN0IGFyZSB1bmtub3duLjwvcD48L2RkPjxkdD5TdWdnZXN0ZWQgb3BlbmluZzwvZHQ+PGRkPjxibG9ja3F1b3RlPllvdXIgdHJhZGUtaW4gZ3VpZGUga2VlcHMgYm94ZWQgY29tcGxldGVuZXNzLCB3b3JraW5nIGNvbmRpdGlvbiBhbmQgc2F2ZSBiYXR0ZXJpZXMgc2VwYXJhdGUgd2hlbiB2YWx1aW5nIHN0b2NrLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGNvbXBhcmluZyBhY3R1YWwgbGlzdGluZ3MgZm9yIG9uZSBwbGF0Zm9ybSB5b3UgYWxyZWFkeSBidXksIHVzaW5nIEJ1eUh1YiBzYXZlZCBzZWFyY2hlcyB3aXRoIHJlZ2lvbiBhbmQgY29uZGl0aW9uIGtlcHQgdmlzaWJsZT88L2Jsb2NrcXVvdGU+PC9kZD48ZHQ+VHJpYWwgZGV0YWlscyB0byBhZ3JlZTwvZHQ+PGRkPjxwPkFncmVlIG9uZSBwbGF0Zm9ybSBhbmQgYWN0dWFsIHB1cmNoYXNlIGxpbWl0cy4gU2VwYXJhdGUgUEFMIGFuZCBvdGhlciByZWxlYXNlcywgb3JpZ2luYWwvcmVwbGFjZW1lbnQgcGFja2FnaW5nLCB3b3JraW5nL3VudGVzdGVkIHVuaXRzIGFuZCBzaGlwcGluZyBjb3N0cy4gU3RhZmYgc3RpbGwgdmVyaWZ5IGV2ZXJ5IGxpc3Rpbmc7IHB1Ymxpc2hlZCBtYXJrZXRwbGFjZSBhbHRlcm5hdGl2ZXMgZG8gbm90IGVzdGFibGlzaCB0aGUgc2hvcOKAmXMgb3duIGJ1eWluZyB0b29scy48L3A+PC9kZD48ZHQ+T3JpZ2luYWwgc291cmNlczwvZHQ+PGRkPjx1bD48bGk+PGEgaHJlZj0iaHR0cHM6Ly93d3cuOGJpdGJleW9uZC5jb20vcGFnZXMvZ2FtZXMtdHJhZGUtaW4iPmh0dHBzOi8vd3d3LjhiaXRiZXlvbmQuY29tL3BhZ2VzL2dhbWVzLXRyYWRlLWluPC9hPjxwPkJ1eXMgdmludGFnZSBnYW1lcy9jb25zb2xlcyBieSBwaG90byB2YWx1YXRpb247IGRpc3Rpbmd1aXNoZXMgd29ya2luZyBjb25kaXRpb24sIGNvbXBsZXRlbmVzcywgb3JpZ2luYWwgYm94ZXMvbWFudWFscyBhbmQgY2FydHJpZGdlIHNhdmUgYmF0dGVyaWVzLjwvcD48L2xpPjxsaT48YSBocmVmPSJodHRwczovL3d3dy44Yml0YmV5b25kLmNvbS9wYWdlcy9jb250YWN0LXVzIj5odHRwczovL3d3dy44Yml0YmV5b25kLmNvbS9wYWdlcy9jb250YWN0LXVzPC9hPjxwPlB1Ymxpc2hlZCBpbmZvQDhiaXRiZXlvbmQuY29tLCB0ZWxlcGhvbmUgYW5kIENhcmRpZmYgYWRkcmVzcy48L3A+PC9saT48L3VsPjwvZGQ+PC9kbD48L2FydGljbGU+PGFydGljbGUgaWQ9InJldGFpbGVyLTIiPjxwIGNsYXNzPSJleWVicm93Ij5SZXRhaWxlciAyPC9wPjxoMj5HZWVreSBCbGluZGVyczwvaDI+PHA+SGF2YW50LCBIYW1wc2hpcmUsIFVuaXRlZCBLaW5nZG9tPC9wPjxwPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrLyI+aHR0cHM6Ly93d3cuZ2Vla3ktYmxpbmRlcnMuY28udWsvPC9hPjwvcD48ZGw+PGR0PlB1Ymxpc2hlZCBidXNpbmVzcyBjb250YWN0PC9kdD48ZGQ+PGEgaHJlZj0ibWFpbHRvOmdlZWt5LWJsaW5kZXJzQG91dGxvb2suY29tIj5nZWVreS1ibGluZGVyc0BvdXRsb29rLmNvbTwvYT48cD5TaG9wIGJ1eWluZyB0ZWFtPC9wPjxwPlB1Ymxpc2hlZCBzaG9wIGVtYWlsLiBPcGVuaW5nIHRpbWVzIGNhbiB2YXJ5IHdpdGggY29sbGVjdGlvbnMvZXZlbnRzOyBjdXJyZW50IHNpdGUgZGlyZWN0cyB2aXNpdG9ycyB0byBpdHMgRmFjZWJvb2sgbm90aWNlLjwvcD48L2RkPjxkdD5QdWJsaXNoZWQgYnV5aW5nIGFjdGl2aXR5PC9kdD48ZGQ+PHA+SW5kZXBlbmRlbnQgc2hvcCBleHBsaWNpdGx5IGJ1eXMsIHNlbGxzIGFuZCB0cmFkZXMgcmV0cm8gYW5kIG1vZGVybiBnYW1lcy9jb25zb2xlcy4gSXRzIHN0b2NrZWQgcGxhdGZvcm1zIGluY2x1ZGUgTWVnYSBEcml2ZSwgUGxheVN0YXRpb24sIFNORVMsIE5pbnRlbmRvIDY0IGFuZCBHYW1lIEJveS48L3A+PC9kZD48ZHQ+QnV5SHViIGNvbnZlcnNhdGlvbiBmaXQ8L2R0PjxkZD48cD5PbmUgY3VycmVudGx5IGFjY2VwdGVkIHBsYXRmb3JtIGNvdWxkIGJlIGNvbXBhcmVkIHRocm91Z2ggQnV5SHViIHNhdmVkIHNlYXJjaGVzIHdpdGggc2VwYXJhdGUgYm94ZWQvbG9vc2UgYW5kIHJlZ2lvbi9jb25kaXRpb24gdGVybXMuIEV4aXN0aW5nIGNvbGxlY3Rpb24gYW5kIHRyYWRlIGFjdGl2aXR5IHN1cHBsaWVzIHRoZSBidXNpbmVzcyBmaXQuPC9wPjwvZGQ+PGR0PlN1Z2dlc3RlZCBvcGVuaW5nPC9kdD48ZGQ+PGJsb2NrcXVvdGU+WW91IGJ1eSBhbmQgdHJhZGUgYWNyb3NzIE1lZ2EgRHJpdmUsIFBsYXlTdGF0aW9uLCBTTkVTIGFuZCBHYW1lIEJveSBhbG9uZ3NpZGUgdGhlIEhhdmFudCBzaG9wLiBXb3VsZCBhIEJ1eUh1YiBjb21wYXJpc29uIGZvciBvbmUgcGxhdGZvcm0geW91IGFyZSBhY3RpdmVseSBidXlpbmcgYmUgdXNlZnVsLCB3aXRoIHNlcGFyYXRlIHNhdmVkIHRlcm1zIGZvciBib3hlZCBhbmQgbG9vc2UgY29waWVzIGFuZCB5b3VyIG93biByZWdpb24gYW5kIGRlbGl2ZXJlZC1wcmljZSBsaW1pdHM/PC9ibG9ja3F1b3RlPjwvZGQ+PGR0PlRyaWFsIGRldGFpbHMgdG8gYWdyZWU8L2R0PjxkZD48cD5Db25maXJtIGN1cnJlbnRseSB3YW50ZWQgc3RvY2ssIGNvdW50cmllcyBhbmQgYWNjZXB0YWJsZSBmYXVsdHMuIENhdGFsb2d1ZSBsaXN0aW5ncyBhcmUgbm90IGFuIGFjdGl2ZSByZXBsZW5pc2htZW50IHJlcXVlc3QuIFN1cGVyIEdhbWVzIFdvcmxkIGluIHRoZSBzYW1lIHNpdGUgZm9vdGVyIGlzIGFuIGFsaWFzIG9mIHRoaXMgb25lIHByb2ZpbGU7IGN1cnJlbnQgc29mdHdhcmUsIGJ1ZGdldCBhbmQgaW50ZXJlc3QgYXJlIHVua25vd24uPC9wPjwvZGQ+PGR0Pk9yaWdpbmFsIHNvdXJjZXM8L2R0PjxkZD48dWw+PGxpPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrLyI+aHR0cHM6Ly93d3cuZ2Vla3ktYmxpbmRlcnMuY28udWsvPC9hPjxwPkluZGVwZW5kZW50IHNob3AsIGJ1eWluZy9zZWxsaW5nL3RyYWRpbmcgcmV0cm8vbW9kZXJuIGdhbWVzIGFuZCBjb25zb2xlczsgbmFtZWQgc3RvY2tlZCBmb3JtYXRzIGFuZCBTdXBlciBHYW1lcyBXb3JsZCBmb290ZXIgYWxpYXMuPC9wPjwvbGk+PGxpPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrL2NvbnRhY3QtdXMiPmh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrL2NvbnRhY3QtdXM8L2E+PHA+Q3VycmVudCBIYXZhbnQgYWRkcmVzcyBhbmQgZ2Vla3ktYmxpbmRlcnNAb3V0bG9vay5jb20uPC9wPjwvbGk+PC91bD48L2RkPjwvZGw+PC9hcnRpY2xlPjxhcnRpY2xlIGlkPSJyZXRhaWxlci0zIj48cCBjbGFzcz0iZXllYnJvdyI+UmV0YWlsZXIgMzwvcD48aDI+VGhlIFNwYWNlYnJpZGdlPC9oMj48cD5OZXcgTWlsdG9uLCBIYW1wc2hpcmUsIFVuaXRlZCBLaW5nZG9tPC9wPjxwPjxhIGhyZWY9Imh0dHBzOi8vd3d3LnRoZXNwYWNlYnJpZGdlLmNvLnVrLyI+aHR0cHM6Ly93d3cudGhlc3BhY2VicmlkZ2UuY28udWsvPC9hPjwvcD48ZGw+PGR0PlB1Ymxpc2hlZCBidXNpbmVzcyBjb250YWN0PC9kdD48ZGQ+PGEgaHJlZj0ibWFpbHRvOmNvbnRhY3RAdGhlc3BhY2VicmlkZ2UuY28udWsiPmNvbnRhY3RAdGhlc3BhY2VicmlkZ2UuY28udWs8L2E+PHA+U2hvcCBidXlpbmcgdGVhbTwvcD48cD5QdWJsaXNoZWQgc2hvcCBlbWFpbCBhbmQgMDc0OTQgMDA2ODg4LiBDdXJyZW50IHNob3A6NjYgU3RhdGlvbiBSb2FkLCBOZXcgTWlsdG9uIEJIMjUgNkxFLjwvcD48L2RkPjxkdD5QdWJsaXNoZWQgYnV5aW5nIGFjdGl2aXR5PC9kdD48ZGQ+PHA+QnV5cyBOaW50ZW5kby9TZWdhIGNvbnNvbGVzIGFuZCBnYW1lcyBmcm9tIGluZGl2aWR1YWwgaXRlbXMgdG8gZW50aXJlIGNvbGxlY3Rpb25zLiBOYW1lZCB3YW50ZWQgZm9ybWF0cyBpbmNsdWRlIE5FUywgU05FUywgTjY0LCBHYW1lQ3ViZSwgR2FtZSBCb3ksIFNhdHVybiBhbmQgRHJlYW1jYXN0OyB0cmF2ZWxzIG5hdGlvbndpZGUgZm9yIGxhcmdlciBvciByYXJlciBjb2xsZWN0aW9ucy48L3A+PC9kZD48ZHQ+QnV5SHViIGNvbnZlcnNhdGlvbiBmaXQ8L2R0PjxkZD48cD5BIHJldmlld2VkIEJ1eUh1YiB3YXRjaGxpc3QgY291bGQgc3VwcG9ydCBvbmUgd2FudGVkIGNvbnNvbGUgZmFtaWx5LCBrZWVwaW5nIHNlbGxlciBsb2NhdGlvbiBhbmQgY29sbGVjdGlvbi9kZWxpdmVyeSBjb3N0IHZpc2libGUgYWxvbmdzaWRlIGl0cyBleGlzdGluZyBjb2xsZWN0aW9uLWJ1eWluZyBzZXJ2aWNlLjwvcD48L2RkPjxkdD5TdWdnZXN0ZWQgb3BlbmluZzwvZHQ+PGRkPjxibG9ja3F1b3RlPllvdXIgd2FudGVkIGxpc3QgaW5jbHVkZXMgTmludGVuZG8gYW5kIFNlZ2EgY29sbGVjdGlvbnMsIGFuZCB5b3UgdHJhdmVsIGZvciBsYXJnZXIgb3IgcmFyZXIgbG90cy4gV291bGQgYSBCdXlIdWIgc2F2ZWQtc2VhcmNoIHRyaWFsIGZvciBvbmUgY29uc29sZSBmYW1pbHkgaGVscCB5b3VyIHRlYW0gY29tcGFyZSBhY3R1YWwgY29sbGVjdGlvbiBsaXN0aW5ncyBieSBjb3VudHJ5LCBjb250ZW50cyBhbmQgdG90YWwgY29sbGVjdGlvbiBvciBkZWxpdmVyeSBjb3N0PzwvYmxvY2txdW90ZT48L2RkPjxkdD5UcmlhbCBkZXRhaWxzIHRvIGFncmVlPC9kdD48ZGQ+PHA+S2VlcCB0aGUgdHJpYWwgb24gdGhlIGV4cGxpY2l0bHkgd2FudGVkIHZpZGVvLWdhbWUgcmFuZ2U7IHRoZSBzaG9wIGFsc28gYnV5cyB0b3lzLiBBZ3JlZSByZWdpb24sIHRlc3RpbmcsIG1pc3NpbmctYWNjZXNzb3J5IGFuZCB0cmF2ZWwgbGltaXRzLiBJbXBvcnQgcG9saWN5IGFuZCBhdmFpbGFibGUgYnV5aW5nIGJ1ZGdldCBoYXZlIG5vdCBiZWVuIGVzdGFibGlzaGVkLjwvcD48L2RkPjxkdD5PcmlnaW5hbCBzb3VyY2VzPC9kdD48ZGQ+PHVsPjxsaT48YSBocmVmPSJodHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay93YW50ZWQiPmh0dHBzOi8vd3d3LnRoZXNwYWNlYnJpZGdlLmNvLnVrL3dhbnRlZDwvYT48cD5FeHBsaWNpdCBOaW50ZW5kby9TZWdhIGJ1eWluZywgaW5kaXZpZHVhbCBpdGVtcyBhbmQgd2hvbGUgY29sbGVjdGlvbnMsIG5hdGlvbndpZGUgdHJhdmVsIGZvciBsYXJnZXIvcmFyZXIgY29sbGVjdGlvbnM7IHB1YmxpYyBlbWFpbCwgcGhvbmUgYW5kIE5ldyBNaWx0b24gYWRkcmVzcy48L3A+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly93d3cudGhlc3BhY2VicmlkZ2UuY28udWsvIj5odHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay88L2E+PHA+Q3VycmVudCBvcGVuIE5ldyBNaWx0b24gc2hvcCBhbmQgcHVibGljIGNvbnRhY3QuPC9wPjwvbGk+PC91bD48L2RkPjwvZGw+PC9hcnRpY2xlPjxhcnRpY2xlIGlkPSJyZXRhaWxlci00Ij48cCBjbGFzcz0iZXllYnJvdyI+UmV0YWlsZXIgNDwvcD48aDI+Rmxhc2hiYWNrIFJldHJvPC9oMj48cD5Sb3RoZXJoYW0sIFNvdXRoIFlvcmtzaGlyZSwgVW5pdGVkIEtpbmdkb208L3A+PHA+PGEgaHJlZj0iaHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay8iPmh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvPC9hPjwvcD48ZGw+PGR0PlB1Ymxpc2hlZCBidXNpbmVzcyBjb250YWN0PC9kdD48ZGQ+PGEgaHJlZj0ibWFpbHRvOmluZm9AZmxhc2hiYWNrcmV0cm8uY28udWsiPmluZm9AZmxhc2hiYWNrcmV0cm8uY28udWs8L2E+PHA+U2hvcCBidXlpbmcgdGVhbTwvcD48cD5QdWJsaXNoZWQgc2hvcCBlbWFpbCBhbmQgV2hhdHNBcHAwNzU0Mjg5OTQ5NS4gSW5kZXhlZCBjb250YWN0IHNvdXJjZSBnaXZlcyBVbml0MTMgU3RlZWxib3ggV29ya3MsIENhbmtsb3cgTWVhZG93cyBJbmR1c3RyaWFsIEVzdGF0ZSwgUm90aGVyaGFtOyBubyBvd25lciBuYW1lIGluZmVycmVkLjwvcD48L2RkPjxkdD5QdWJsaXNoZWQgYnV5aW5nIGFjdGl2aXR5PC9kdD48ZGQ+PHA+SXRzIHB1YmxpYyBjb250YWN0IHBhZ2UgYWR2ZXJ0aXNlcyBidXlpbmcgaW5kaXZpZHVhbCByZXRybyBnYW1lcyB0aHJvdWdoIGNvbXBsZXRlIGNvbGxlY3Rpb25zLiBUaGUgc2hvcCBvZmZlcnMgTmludGVuZG8sIFNlZ2EgYW5kIFBsYXlTdGF0aW9uIGdhbWVzLCBjb25zb2xlcyBhbmQgYWNjZXNzb3JpZXMuPC9wPjwvZGQ+PGR0PkJ1eUh1YiBjb252ZXJzYXRpb24gZml0PC9kdD48ZGQ+PHA+QnV5SHViIGNvdWxkIGNvbXBhcmUgb25lIHN0YWZmLXNlbGVjdGVkIHN0b2NrIGNhdGVnb3J5IGFjcm9zcyBzdXBwb3J0ZWQgbWFya2V0cGxhY2VzIHdpdGggbG9jYXRpb24sIHBsYXRmb3JtIGFuZCBkZXNjcmliZWQgY29uZGl0aW9uIGtlcHQgc2VwYXJhdGUuPC9wPjwvZGQ+PGR0PlN1Z2dlc3RlZCBvcGVuaW5nPC9kdD48ZGQ+PGJsb2NrcXVvdGU+WW91ciBSb3RoZXJoYW0gc2hvcCBidXlzIGluZGl2aWR1YWwgcmV0cm8gZ2FtZXMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGEgQnV5SHViIHNhdmVkLXNlYXJjaCBjb21wYXJpc29uIGZvciBvbmUgcGxhdGZvcm0geW91IGN1cnJlbnRseSBzb3VyY2UsIHdpdGggcmVnaW9uLCBjb25kaXRpb24gYW5kIHRvdGFsIGRlbGl2ZXJlZCBjb3N0IHJlY29yZGVkIGJlZm9yZSByZXZpZXdpbmcgbGlzdGluZ3M/PC9ibG9ja3F1b3RlPjwvZGQ+PGR0PlRyaWFsIGRldGFpbHMgdG8gYWdyZWU8L2R0PjxkZD48cD5PZmZpY2lhbCBpbmRleGVkIGNvbnRhY3Qvc2hvcCB0ZXh0IHN1cHBvcnRzIHRoaXMgcmVjb3JkOyBkaXJlY3QgZmV0Y2hlcyB0aW1lZCBvdXQuIFJlLW9wZW4gdGhlIHB1YmxpYyBjb250YWN0IHBhZ2UgYmVmb3JlIG91dHJlYWNoLiBDb25maXJtIGFjY2VwdGVkIGZvcm1hdHMgYW5kIFBBTC9pbXBvcnQgcmVxdWlyZW1lbnRzOyBjdXJyZW50IHNvdXJjaW5nIHNvZnR3YXJlLCBwdXJjaGFzZSBuZWVkIGFuZCBidWRnZXQgYXJlIHVua25vd24uPC9wPjwvZGQ+PGR0Pk9yaWdpbmFsIHNvdXJjZXM8L2R0PjxkZD48dWw+PGxpPjxhIGhyZWY9Imh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvY29udGFjdC1mbGFzaGJhY2stcmV0cm8tcm90aGVyaGFtLyI+aHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay9jb250YWN0LWZsYXNoYmFjay1yZXRyby1yb3RoZXJoYW0vPC9hPjxwPlByaW1hcnkgaW5kZXhlZCBjb250YWN0IHBhZ2U6IGluZGl2aWR1YWwgZ2FtZXMgdGhyb3VnaCBjb21wbGV0ZSBjb2xsZWN0aW9ucywgaW5mb0BmbGFzaGJhY2tyZXRyby5jby51aywwNzU0Mjg5OTQ5NSBhbmQgUm90aGVyaGFtIGFkZHJlc3MuIERpcmVjdCBmZXRjaCB0aW1lZCBvdXQuPC9wPjwvbGk+PGxpPjxhIGhyZWY9Imh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvc2hvcC8iPmh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvc2hvcC88L2E+PHA+Q3VycmVudCBwcmltYXJ5IGluZGV4ZWQgc2hvcDogTmludGVuZG8vU2VnYS9QbGF5U3RhdGlvbiBnYW1lcywgY29uc29sZXMgYW5kIGFjY2Vzc29yaWVzLjwvcD48L2xpPjwvdWw+PC9kZD48L2RsPjwvYXJ0aWNsZT48YXJ0aWNsZSBpZD0icmV0YWlsZXItNSI+PHAgY2xhc3M9ImV5ZWJyb3ciPlJldGFpbGVyIDU8L3A+PGgyPlJldHJvIFdvcmxkPC9oMj48cD4yMCBPc21hc3RvbiBSb2FkLCBEZXJieSwgREUxIDJIUiwgVUs8L3A+PHA+PGEgaHJlZj0iaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay90cmFkZSI+aHR0cHM6Ly9yZXRyb3dvcmxkcy51ay90cmFkZTwvYT48L3A+PGRsPjxkdD5QdWJsaXNoZWQgYnVzaW5lc3MgY29udGFjdDwvZHQ+PGRkPjxhIGhyZWY9Im1haWx0bzpkZXJieXJldHJvd29ybGRAYW9sLmNvbSI+ZGVyYnlyZXRyb3dvcmxkQGFvbC5jb208L2E+PHA+U2hvcCBidXlpbmcgdGVhbTwvcD48cD5QdWJsaWMgYnV5aW5nLCBzZWxsaW5nIGFuZCB0cmFkZSBlbnF1aXJpZXMuIFRoZSBwdWJsaXNoZWQgdHJhZGUgcm91dGUgYWNjZXB0cyBlbWFpbCBlbnF1aXJpZXMgYW5kIGFkdmVydGlzZXMgYSBjb2xsZWN0aW9uIHNlcnZpY2UgZm9yIGxhcmdlciBncm91cHMgb2YgaXRlbXMuIE5vIGFwcG9pbnRtZW50LCBhY3RpdmUgcHVyY2hhc2luZyByZXF1ZXN0IG9yIGFjY291bnQgcmVsYXRpb25zaGlwIGlzIGFzc3VtZWQuPC9wPjwvZGQ+PGR0PlB1Ymxpc2hlZCBidXlpbmcgYWN0aXZpdHk8L2R0PjxkZD48cD5UaGUgRGVyYnkgc2hvcCBidXlzLCBzZWxscyBhbmQgdHJhZGVzIHJldHJvIGdhbWVzIGFuZCBjb25zb2xlcywgb2ZmZXJzIGNvbGxlY3Rpb24gZm9yIGxhcmdlciBsb3RzLCBhbmQgZGVzY3JpYmVzIGNsZWFuaW5nL3Rlc3RpbmcgY29udHJvbGxlcnMuIEl0cyBjYXRhbG9ndWUgc2VwYXJhdGVseSBsYWJlbHMgYSBQQUwgU3VwZXIgTWFyaW8gS2FydCBzZXQgYW5kIGEgSmFwYW5lc2UtaW1wb3J0IFNlZ2EgU2F0dXJuIGJ1bmRsZS4gQm90aCBleGFtcGxlIGxpc3RpbmdzIHdlcmUgbWFya2VkIG91dCBvZiBzdG9jayB3aGVuIHJlYWQuPC9wPjwvZGQ+PGR0PkJ1eUh1YiBjb252ZXJzYXRpb24gZml0PC9kdD48ZGQ+PHA+QSBCdXlIdWIgdHJpYWwgY291bGQga2VlcCBVSy9QQUwgc29mdHdhcmUgc2VhcmNoZXMgc2VwYXJhdGUgZnJvbSBleHBsaWNpdGx5IHNlbGVjdGVkIEphcGFuZXNlIGhhcmR3YXJlLCB1c2luZyBzYXZlZCB0ZXJtcywgY291bnRyeSBmaWx0ZXJzIGFuZCBhdWN0aW9uIGFsZXJ0cy4gU3RhZmYgd291bGQgcmV2aWV3IGNvbXBsZXRlLWJveCBjb25kaXRpb24sIGF1dGhlbnRpY2l0eSwgaW5jbHVkZWQgYWNjZXNzb3JpZXMgYW5kIGxhbmRlZCBjb3N0IGJlZm9yZSBkZWNpZGluZy4gVGhlIHR3byBjYXRhbG9ndWUgZXhhbXBsZXMgZGVtb25zdHJhdGUgZGlzdGluY3QgcHJvZHVjdCBjYXRlZ29yaWVzOyB0aGVpciBzdG9jayBzdGF0dXMgaXMgbm90IGV2aWRlbmNlIG9mIGEgcmVzdG9ja2luZyByZXF1ZXN0LjwvcD48L2RkPjxkdD5TdWdnZXN0ZWQgb3BlbmluZzwvZHQ+PGRkPjxibG9ja3F1b3RlPllvdXIgUEFMIFNORVMgYW5kIEphcGFuZXNlIFNhdHVybiBjYXRhbG9ndWUgZW50cmllcyBzaG93IHdoeSByZWdpb24gYW5kIGNvbXBsZXRlbmVzcyBuZWVkIHRvIHN0YXkgdmlzaWJsZSB3aGVuIHNvdXJjaW5nIHJldHJvIHN0b2NrLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGEgQnV5SHViIHRyaWFsIGZvciBvbmUgY2F0ZWdvcnkgeW91IGFscmVhZHkgcHVyY2hhc2UsIHdpdGggc2VwYXJhdGUgc2F2ZWQgc2VhcmNoZXMgYW5kIGEgcmV2aWV3IG9mIGFjdHVhbCBsaXN0aW5ncz88L2Jsb2NrcXVvdGU+PC9kZD48ZHQ+VHJpYWwgZGV0YWlscyB0byBhZ3JlZTwvZHQ+PGRkPjxwPkNvbmZpcm0gdGhlIHNob3AmIzM5O3MgY3VycmVudGx5IGFjY2VwdGVkIGZvcm1hdHMsIHdoZXRoZXIgaXQgd2FudHMgVUstb25seSBzb3VyY2luZyBvciBpbXBvcnRzLCBib3hlZC9tYW51YWwgcmVxdWlyZW1lbnRzLCB0ZXN0aW5nIHN0YW5kYXJkIGFuZCBhY2NlcHRhYmxlIHJlcGFpcnMvbW9kaWZpY2F0aW9ucy4gSXRzIEphcGFuZXNlIFNhdHVybiBwYWdlIHNwZWNpZmllcyBhIHN0ZXAtZG93biBjb252ZXJ0ZXIgZm9yIFVLIHVzZTsgcmV0YWluIHRoYXQgYXMgYW4gaXRlbS1zcGVjaWZpYyByZXF1aXJlbWVudCBhbmQgdmVyaWZ5IGV2ZXJ5IHByb3Bvc2VkIGNvbnNvbGUgc2VwYXJhdGVseS4gQXNrIHRoZSByZXRhaWxlciB0byBzZXQgcHVyY2hhc2UgbGltaXRzIGFuZCBzaGlwcGluZy9pbXBvcnQgYXNzdW1wdGlvbnMuIE5vIGN1cnJlbnQgc291cmNpbmcgc29mdHdhcmUsIG1hcmdpbiwgYnVkZ2V0IG9yIGJ1eWluZyBpbnRlbnQgaXMga25vd24uIFRoZSBmaXJzdC1wYXJ0eSBzaXRlIHByZXNlbnRzIG9uZSBsb2NhbCBEZXJieSBzaG9wIGFuZCBpZGVudGlmaWVzIFJldHJvIFdvcmxkIGFzIGl0cyBvd25lcjsgbGVnYWwgb3duZXJzaGlwIGFuZCB3aWRlciBncm91cCBzdHJ1Y3R1cmUgaGF2ZSBub3QgYmVlbiBpbmRlcGVuZGVudGx5IGVzdGFibGlzaGVkLjwvcD48L2RkPjxkdD5PcmlnaW5hbCBzb3VyY2VzPC9kdD48ZGQ+PHVsPjxsaT48YSBocmVmPSJodHRwczovL3JldHJvd29ybGRzLnVrL3RyYWRlIj5odHRwczovL3JldHJvd29ybGRzLnVrL3RyYWRlPC9hPjxwPkJ1eWluZy90cmFkaW5nIHdvcmtmbG93LCBjb2xsZWN0aW9uLCB0ZXN0ZWQgY29udHJvbGxlcnMsIHNob3AgYWRkcmVzcyBhbmQgcHVibGlzaGVkIGJ1c2luZXNzIGNvbnRhY3QuPC9wPjwvbGk+PGxpPjxhIGhyZWY9Imh0dHBzOi8vcmV0cm93b3JsZHMudWsvc3VwZXItbWFyaW8ta2FydC1wYWwtdmVyc2lvbi1mb3Itc3VwZXItbmludGVuZG8iPmh0dHBzOi8vcmV0cm93b3JsZHMudWsvc3VwZXItbWFyaW8ta2FydC1wYWwtdmVyc2lvbi1mb3Itc3VwZXItbmludGVuZG88L2E+PHA+UEFMIGFuZCBib3hlZCBjb21wb3NpdGlvbiwgb2JzZXJ2ZWQgb3V0LW9mLXN0b2NrIHN0YXR1cy48L3A+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9ib3hlZC1zZWdhLXNhdHVybi1jb25zb2xlLWxlLWRlcmJ5LXN0YWxsaW9uLWphcGFuLWltcG9ydCI+aHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9ib3hlZC1zZWdhLXNhdHVybi1jb25zb2xlLWxlLWRlcmJ5LXN0YWxsaW9uLWphcGFuLWltcG9ydDwvYT48cD5KYXBhbmVzZSBpbXBvcnQsIGJ1bmRsZSBjb250ZW50cywgaXRlbS1zcGVjaWZpYyBwb3dlciByZXF1aXJlbWVudCwgb2JzZXJ2ZWQgb3V0LW9mLXN0b2NrIHN0YXR1cy48L3A+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9wcml2YWN5LXBvbGljeSI+aHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9wcml2YWN5LXBvbGljeTwvYT48cD5TaXRlIGlkZW50aWZpZXMgUmV0cm8gV29ybGQgYXMgb3duZXI7IGl0cyB0ZXh0IHNwZWxscyB0aGUgZG9tYWluIGRpZmZlcmVudGx5LCBzbyBjdXJyZW50IGNvbnRhY3QvdHJhZGUgc291cmNlIGdvdmVybnMgY2Fub25pY2FsIHJldHJvd29ybGRzLnVrLjwvcD48L2xpPjwvdWw+PC9kZD48L2RsPjwvYXJ0aWNsZT48Zm9vdGVyPjxwPlByZXBhcmVkIGJ5IFRva2VuIEp1bmtpZSBMYWJzLiBTb3VyY2VzIHJldmlld2VkIG9uIDEzIE9jdG9iZXIgMjAyNi4gQWdyZWUgdGhlIHJldGFpbGVy4oCZcyBvd24gcGxhdGZvcm0sIHJlZ2lvbiwgY29uZGl0aW9uIGFuZCB0b3RhbC1jb3N0IGNyaXRlcmlhIGJlZm9yZSBhIHByb2R1Y3QgdHJpYWwuPC9wPjwvZm9vdGVyPjwvbWFpbj48L2JvZHk+PC9odG1sPg==",
+        "bytes": 14011,
+        "sha256": "cba623de7fd30f556e0b05861ec3843eee1621eadac8aa4ff78b98adc600cb84"
+      },
+      "sha256": "2c2b2cd09e393c87a74a9613fe3d27b0173bc7a031da454e58c3adfd979dbf6b",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.csv",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid/profiles.csv",
+        "title": "Five retailer profiles — CSV",
+        "description": "Five retailer profiles — CSV",
+        "type": "text/csv",
+        "lead_ids": [
+          "buyhub-8bitbeyond",
+          "buyhub-geeky-blinders",
+          "buyhub-spacebridge",
+          "buyhub-flashback-retro",
+          "buyhub-retro-world-derby"
+        ],
+        "source_url": "",
+        "content_base64": "IkNvbXBhbnkiLCJXZWJzaXRlIiwiTG9jYXRpb24iLCJQdWJsaXNoZWQgY29udGFjdCIsIkNvbnRhY3Qgcm9sZSIsIkNvbnRhY3QgaW5zdHJ1Y3Rpb25zIiwiUHVibGlzaGVkIGJ1eWluZyBhY3Rpdml0eSIsIkJ1eUh1YiBjb252ZXJzYXRpb24gZml0IiwiU3VnZ2VzdGVkIG9wZW5pbmciLCJUcmlhbCBkZXRhaWxzIHRvIGFncmVlIiwiT3JpZ2luYWwgc291cmNlIFVSTHMiLCJTb3VyY2VzIGNoZWNrZWQiDQoiOEJpdCBCZXlvbmQiLCJodHRwczovL3d3dy44Yml0YmV5b25kLmNvbS8iLCJDYXJkaWZmLCBXYWxlcywgVW5pdGVkIEtpbmdkb20iLCJpbmZvQDhiaXRiZXlvbmQuY29tIiwiQnV5aW5nIHRlYW0iLCJQdWJsaXNoZWQgZ2VuZXJhbCBidXNpbmVzcyBlbWFpbDsgYXNrIGZvciB0aGUgYnV5aW5nIHRlYW0uIENvbnRhY3QgcGFnZSBhbHNvIGxpc3RzIDA3ODUwIDg1NjU4NS4iLCJQdXJjaGFzZXMgdmludGFnZSBnYW1lcyBhbmQgY29uc29sZXMgdGhyb3VnaCBwaG90by1sZWQgdmFsdWF0aW9uLiBJdHMgdHJhZGUgcGFnZSBkaXN0aW5ndWlzaGVzIHRlc3RlZCBhbmQgdW50ZXN0ZWQgaGFyZHdhcmUsIG9yaWdpbmFsIGJveGVzL21hbnVhbHMsIGRpc2Mgd2VhciBhbmQgY2FydHJpZGdlIHNhdmUgYmF0dGVyaWVzLiIsIkJ1eUh1YiBzYXZlZCB0ZXJtcyBhbmQgbGlzdGluZyBmaWx0ZXJzIGNvdWxkIHN1cHBvcnQgYSByZXRhaWxlci1zZWxlY3RlZCBjb25zb2xlIGNhdGVnb3J5IHdoaWxlIHN0YWZmIHJldGFpbiBjb25kaXRpb24sIGNvbXBsZXRlbmVzcyBhbmQgZGVsaXZlcmVkIGNvc3QuIEV4aXN0aW5nIHNvdXJjaW5nIHNvZnR3YXJlIGFuZCBpbnRlcmVzdCBhcmUgdW5rbm93bi4iLCJZb3VyIHRyYWRlLWluIGd1aWRlIGtlZXBzIGJveGVkIGNvbXBsZXRlbmVzcywgd29ya2luZyBjb25kaXRpb24gYW5kIHNhdmUgYmF0dGVyaWVzIHNlcGFyYXRlIHdoZW4gdmFsdWluZyBzdG9jay4gV291bGQgeW91ciBidXlpbmcgdGVhbSBjb25zaWRlciBjb21wYXJpbmcgYWN0dWFsIGxpc3RpbmdzIGZvciBvbmUgcGxhdGZvcm0geW91IGFscmVhZHkgYnV5LCB1c2luZyBCdXlIdWIgc2F2ZWQgc2VhcmNoZXMgd2l0aCByZWdpb24gYW5kIGNvbmRpdGlvbiBrZXB0IHZpc2libGU/IiwiQWdyZWUgb25lIHBsYXRmb3JtIGFuZCBhY3R1YWwgcHVyY2hhc2UgbGltaXRzLiBTZXBhcmF0ZSBQQUwgYW5kIG90aGVyIHJlbGVhc2VzLCBvcmlnaW5hbC9yZXBsYWNlbWVudCBwYWNrYWdpbmcsIHdvcmtpbmcvdW50ZXN0ZWQgdW5pdHMgYW5kIHNoaXBwaW5nIGNvc3RzLiBTdGFmZiBzdGlsbCB2ZXJpZnkgZXZlcnkgbGlzdGluZzsgcHVibGlzaGVkIG1hcmtldHBsYWNlIGFsdGVybmF0aXZlcyBkbyBub3QgZXN0YWJsaXNoIHRoZSBzaG9w4oCZcyBvd24gYnV5aW5nIHRvb2xzLiIsImh0dHBzOi8vd3d3LjhiaXRiZXlvbmQuY29tL3BhZ2VzL2dhbWVzLXRyYWRlLWluIHwgaHR0cHM6Ly93d3cuOGJpdGJleW9uZC5jb20vcGFnZXMvY29udGFjdC11cyIsIjEzIE9jdG9iZXIgMjAyNiINCiJHZWVreSBCbGluZGVycyIsImh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrLyIsIkhhdmFudCwgSGFtcHNoaXJlLCBVbml0ZWQgS2luZ2RvbSIsImdlZWt5LWJsaW5kZXJzQG91dGxvb2suY29tIiwiU2hvcCBidXlpbmcgdGVhbSIsIlB1Ymxpc2hlZCBzaG9wIGVtYWlsLiBPcGVuaW5nIHRpbWVzIGNhbiB2YXJ5IHdpdGggY29sbGVjdGlvbnMvZXZlbnRzOyBjdXJyZW50IHNpdGUgZGlyZWN0cyB2aXNpdG9ycyB0byBpdHMgRmFjZWJvb2sgbm90aWNlLiIsIkluZGVwZW5kZW50IHNob3AgZXhwbGljaXRseSBidXlzLCBzZWxscyBhbmQgdHJhZGVzIHJldHJvIGFuZCBtb2Rlcm4gZ2FtZXMvY29uc29sZXMuIEl0cyBzdG9ja2VkIHBsYXRmb3JtcyBpbmNsdWRlIE1lZ2EgRHJpdmUsIFBsYXlTdGF0aW9uLCBTTkVTLCBOaW50ZW5kbyA2NCBhbmQgR2FtZSBCb3kuIiwiT25lIGN1cnJlbnRseSBhY2NlcHRlZCBwbGF0Zm9ybSBjb3VsZCBiZSBjb21wYXJlZCB0aHJvdWdoIEJ1eUh1YiBzYXZlZCBzZWFyY2hlcyB3aXRoIHNlcGFyYXRlIGJveGVkL2xvb3NlIGFuZCByZWdpb24vY29uZGl0aW9uIHRlcm1zLiBFeGlzdGluZyBjb2xsZWN0aW9uIGFuZCB0cmFkZSBhY3Rpdml0eSBzdXBwbGllcyB0aGUgYnVzaW5lc3MgZml0LiIsIllvdSBidXkgYW5kIHRyYWRlIGFjcm9zcyBNZWdhIERyaXZlLCBQbGF5U3RhdGlvbiwgU05FUyBhbmQgR2FtZSBCb3kgYWxvbmdzaWRlIHRoZSBIYXZhbnQgc2hvcC4gV291bGQgYSBCdXlIdWIgY29tcGFyaXNvbiBmb3Igb25lIHBsYXRmb3JtIHlvdSBhcmUgYWN0aXZlbHkgYnV5aW5nIGJlIHVzZWZ1bCwgd2l0aCBzZXBhcmF0ZSBzYXZlZCB0ZXJtcyBmb3IgYm94ZWQgYW5kIGxvb3NlIGNvcGllcyBhbmQgeW91ciBvd24gcmVnaW9uIGFuZCBkZWxpdmVyZWQtcHJpY2UgbGltaXRzPyIsIkNvbmZpcm0gY3VycmVudGx5IHdhbnRlZCBzdG9jaywgY291bnRyaWVzIGFuZCBhY2NlcHRhYmxlIGZhdWx0cy4gQ2F0YWxvZ3VlIGxpc3RpbmdzIGFyZSBub3QgYW4gYWN0aXZlIHJlcGxlbmlzaG1lbnQgcmVxdWVzdC4gU3VwZXIgR2FtZXMgV29ybGQgaW4gdGhlIHNhbWUgc2l0ZSBmb290ZXIgaXMgYW4gYWxpYXMgb2YgdGhpcyBvbmUgcHJvZmlsZTsgY3VycmVudCBzb2Z0d2FyZSwgYnVkZ2V0IGFuZCBpbnRlcmVzdCBhcmUgdW5rbm93bi4iLCJodHRwczovL3d3dy5nZWVreS1ibGluZGVycy5jby51ay8gfCBodHRwczovL3d3dy5nZWVreS1ibGluZGVycy5jby51ay9jb250YWN0LXVzIiwiMTMgT2N0b2JlciAyMDI2Ig0KIlRoZSBTcGFjZWJyaWRnZSIsImh0dHBzOi8vd3d3LnRoZXNwYWNlYnJpZGdlLmNvLnVrLyIsIk5ldyBNaWx0b24sIEhhbXBzaGlyZSwgVW5pdGVkIEtpbmdkb20iLCJjb250YWN0QHRoZXNwYWNlYnJpZGdlLmNvLnVrIiwiU2hvcCBidXlpbmcgdGVhbSIsIlB1Ymxpc2hlZCBzaG9wIGVtYWlsIGFuZCAwNzQ5NCAwMDY4ODguIEN1cnJlbnQgc2hvcDo2NiBTdGF0aW9uIFJvYWQsIE5ldyBNaWx0b24gQkgyNSA2TEUuIiwiQnV5cyBOaW50ZW5kby9TZWdhIGNvbnNvbGVzIGFuZCBnYW1lcyBmcm9tIGluZGl2aWR1YWwgaXRlbXMgdG8gZW50aXJlIGNvbGxlY3Rpb25zLiBOYW1lZCB3YW50ZWQgZm9ybWF0cyBpbmNsdWRlIE5FUywgU05FUywgTjY0LCBHYW1lQ3ViZSwgR2FtZSBCb3ksIFNhdHVybiBhbmQgRHJlYW1jYXN0OyB0cmF2ZWxzIG5hdGlvbndpZGUgZm9yIGxhcmdlciBvciByYXJlciBjb2xsZWN0aW9ucy4iLCJBIHJldmlld2VkIEJ1eUh1YiB3YXRjaGxpc3QgY291bGQgc3VwcG9ydCBvbmUgd2FudGVkIGNvbnNvbGUgZmFtaWx5LCBrZWVwaW5nIHNlbGxlciBsb2NhdGlvbiBhbmQgY29sbGVjdGlvbi9kZWxpdmVyeSBjb3N0IHZpc2libGUgYWxvbmdzaWRlIGl0cyBleGlzdGluZyBjb2xsZWN0aW9uLWJ1eWluZyBzZXJ2aWNlLiIsIllvdXIgd2FudGVkIGxpc3QgaW5jbHVkZXMgTmludGVuZG8gYW5kIFNlZ2EgY29sbGVjdGlvbnMsIGFuZCB5b3UgdHJhdmVsIGZvciBsYXJnZXIgb3IgcmFyZXIgbG90cy4gV291bGQgYSBCdXlIdWIgc2F2ZWQtc2VhcmNoIHRyaWFsIGZvciBvbmUgY29uc29sZSBmYW1pbHkgaGVscCB5b3VyIHRlYW0gY29tcGFyZSBhY3R1YWwgY29sbGVjdGlvbiBsaXN0aW5ncyBieSBjb3VudHJ5LCBjb250ZW50cyBhbmQgdG90YWwgY29sbGVjdGlvbiBvciBkZWxpdmVyeSBjb3N0PyIsIktlZXAgdGhlIHRyaWFsIG9uIHRoZSBleHBsaWNpdGx5IHdhbnRlZCB2aWRlby1nYW1lIHJhbmdlOyB0aGUgc2hvcCBhbHNvIGJ1eXMgdG95cy4gQWdyZWUgcmVnaW9uLCB0ZXN0aW5nLCBtaXNzaW5nLWFjY2Vzc29yeSBhbmQgdHJhdmVsIGxpbWl0cy4gSW1wb3J0IHBvbGljeSBhbmQgYXZhaWxhYmxlIGJ1eWluZyBidWRnZXQgaGF2ZSBub3QgYmVlbiBlc3RhYmxpc2hlZC4iLCJodHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay93YW50ZWQgfCBodHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay8iLCIxMyBPY3RvYmVyIDIwMjYiDQoiRmxhc2hiYWNrIFJldHJvIiwiaHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay8iLCJSb3RoZXJoYW0sIFNvdXRoIFlvcmtzaGlyZSwgVW5pdGVkIEtpbmdkb20iLCJpbmZvQGZsYXNoYmFja3JldHJvLmNvLnVrIiwiU2hvcCBidXlpbmcgdGVhbSIsIlB1Ymxpc2hlZCBzaG9wIGVtYWlsIGFuZCBXaGF0c0FwcDA3NTQyODk5NDk1LiBJbmRleGVkIGNvbnRhY3Qgc291cmNlIGdpdmVzIFVuaXQxMyBTdGVlbGJveCBXb3JrcywgQ2Fua2xvdyBNZWFkb3dzIEluZHVzdHJpYWwgRXN0YXRlLCBSb3RoZXJoYW07IG5vIG93bmVyIG5hbWUgaW5mZXJyZWQuIiwiSXRzIHB1YmxpYyBjb250YWN0IHBhZ2UgYWR2ZXJ0aXNlcyBidXlpbmcgaW5kaXZpZHVhbCByZXRybyBnYW1lcyB0aHJvdWdoIGNvbXBsZXRlIGNvbGxlY3Rpb25zLiBUaGUgc2hvcCBvZmZlcnMgTmludGVuZG8sIFNlZ2EgYW5kIFBsYXlTdGF0aW9uIGdhbWVzLCBjb25zb2xlcyBhbmQgYWNjZXNzb3JpZXMuIiwiQnV5SHViIGNvdWxkIGNvbXBhcmUgb25lIHN0YWZmLXNlbGVjdGVkIHN0b2NrIGNhdGVnb3J5IGFjcm9zcyBzdXBwb3J0ZWQgbWFya2V0cGxhY2VzIHdpdGggbG9jYXRpb24sIHBsYXRmb3JtIGFuZCBkZXNjcmliZWQgY29uZGl0aW9uIGtlcHQgc2VwYXJhdGUuIiwiWW91ciBSb3RoZXJoYW0gc2hvcCBidXlzIGluZGl2aWR1YWwgcmV0cm8gZ2FtZXMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGEgQnV5SHViIHNhdmVkLXNlYXJjaCBjb21wYXJpc29uIGZvciBvbmUgcGxhdGZvcm0geW91IGN1cnJlbnRseSBzb3VyY2UsIHdpdGggcmVnaW9uLCBjb25kaXRpb24gYW5kIHRvdGFsIGRlbGl2ZXJlZCBjb3N0IHJlY29yZGVkIGJlZm9yZSByZXZpZXdpbmcgbGlzdGluZ3M/IiwiT2ZmaWNpYWwgaW5kZXhlZCBjb250YWN0L3Nob3AgdGV4dCBzdXBwb3J0cyB0aGlzIHJlY29yZDsgZGlyZWN0IGZldGNoZXMgdGltZWQgb3V0LiBSZS1vcGVuIHRoZSBwdWJsaWMgY29udGFjdCBwYWdlIGJlZm9yZSBvdXRyZWFjaC4gQ29uZmlybSBhY2NlcHRlZCBmb3JtYXRzIGFuZCBQQUwvaW1wb3J0IHJlcXVpcmVtZW50czsgY3VycmVudCBzb3VyY2luZyBzb2Z0d2FyZSwgcHVyY2hhc2UgbmVlZCBhbmQgYnVkZ2V0IGFyZSB1bmtub3duLiIsImh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvY29udGFjdC1mbGFzaGJhY2stcmV0cm8tcm90aGVyaGFtLyB8IGh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvc2hvcC8iLCIxMyBPY3RvYmVyIDIwMjYiDQoiUmV0cm8gV29ybGQiLCJodHRwczovL3JldHJvd29ybGRzLnVrL3RyYWRlIiwiMjAgT3NtYXN0b24gUm9hZCwgRGVyYnksIERFMSAySFIsIFVLIiwiZGVyYnlyZXRyb3dvcmxkQGFvbC5jb20iLCJTaG9wIGJ1eWluZyB0ZWFtIiwiUHVibGljIGJ1eWluZywgc2VsbGluZyBhbmQgdHJhZGUgZW5xdWlyaWVzLiBUaGUgcHVibGlzaGVkIHRyYWRlIHJvdXRlIGFjY2VwdHMgZW1haWwgZW5xdWlyaWVzIGFuZCBhZHZlcnRpc2VzIGEgY29sbGVjdGlvbiBzZXJ2aWNlIGZvciBsYXJnZXIgZ3JvdXBzIG9mIGl0ZW1zLiBObyBhcHBvaW50bWVudCwgYWN0aXZlIHB1cmNoYXNpbmcgcmVxdWVzdCBvciBhY2NvdW50IHJlbGF0aW9uc2hpcCBpcyBhc3N1bWVkLiIsIlRoZSBEZXJieSBzaG9wIGJ1eXMsIHNlbGxzIGFuZCB0cmFkZXMgcmV0cm8gZ2FtZXMgYW5kIGNvbnNvbGVzLCBvZmZlcnMgY29sbGVjdGlvbiBmb3IgbGFyZ2VyIGxvdHMsIGFuZCBkZXNjcmliZXMgY2xlYW5pbmcvdGVzdGluZyBjb250cm9sbGVycy4gSXRzIGNhdGFsb2d1ZSBzZXBhcmF0ZWx5IGxhYmVscyBhIFBBTCBTdXBlciBNYXJpbyBLYXJ0IHNldCBhbmQgYSBKYXBhbmVzZS1pbXBvcnQgU2VnYSBTYXR1cm4gYnVuZGxlLiBCb3RoIGV4YW1wbGUgbGlzdGluZ3Mgd2VyZSBtYXJrZWQgb3V0IG9mIHN0b2NrIHdoZW4gcmVhZC4iLCJBIEJ1eUh1YiB0cmlhbCBjb3VsZCBrZWVwIFVLL1BBTCBzb2Z0d2FyZSBzZWFyY2hlcyBzZXBhcmF0ZSBmcm9tIGV4cGxpY2l0bHkgc2VsZWN0ZWQgSmFwYW5lc2UgaGFyZHdhcmUsIHVzaW5nIHNhdmVkIHRlcm1zLCBjb3VudHJ5IGZpbHRlcnMgYW5kIGF1Y3Rpb24gYWxlcnRzLiBTdGFmZiB3b3VsZCByZXZpZXcgY29tcGxldGUtYm94IGNvbmRpdGlvbiwgYXV0aGVudGljaXR5LCBpbmNsdWRlZCBhY2Nlc3NvcmllcyBhbmQgbGFuZGVkIGNvc3QgYmVmb3JlIGRlY2lkaW5nLiBUaGUgdHdvIGNhdGFsb2d1ZSBleGFtcGxlcyBkZW1vbnN0cmF0ZSBkaXN0aW5jdCBwcm9kdWN0IGNhdGVnb3JpZXM7IHRoZWlyIHN0b2NrIHN0YXR1cyBpcyBub3QgZXZpZGVuY2Ugb2YgYSByZXN0b2NraW5nIHJlcXVlc3QuIiwiWW91ciBQQUwgU05FUyBhbmQgSmFwYW5lc2UgU2F0dXJuIGNhdGFsb2d1ZSBlbnRyaWVzIHNob3cgd2h5IHJlZ2lvbiBhbmQgY29tcGxldGVuZXNzIG5lZWQgdG8gc3RheSB2aXNpYmxlIHdoZW4gc291cmNpbmcgcmV0cm8gc3RvY2suIFdvdWxkIHlvdXIgYnV5aW5nIHRlYW0gY29uc2lkZXIgYSBCdXlIdWIgdHJpYWwgZm9yIG9uZSBjYXRlZ29yeSB5b3UgYWxyZWFkeSBwdXJjaGFzZSwgd2l0aCBzZXBhcmF0ZSBzYXZlZCBzZWFyY2hlcyBhbmQgYSByZXZpZXcgb2YgYWN0dWFsIGxpc3RpbmdzPyIsIkNvbmZpcm0gdGhlIHNob3AncyBjdXJyZW50bHkgYWNjZXB0ZWQgZm9ybWF0cywgd2hldGhlciBpdCB3YW50cyBVSy1vbmx5IHNvdXJjaW5nIG9yIGltcG9ydHMsIGJveGVkL21hbnVhbCByZXF1aXJlbWVudHMsIHRlc3Rpbmcgc3RhbmRhcmQgYW5kIGFjY2VwdGFibGUgcmVwYWlycy9tb2RpZmljYXRpb25zLiBJdHMgSmFwYW5lc2UgU2F0dXJuIHBhZ2Ugc3BlY2lmaWVzIGEgc3RlcC1kb3duIGNvbnZlcnRlciBmb3IgVUsgdXNlOyByZXRhaW4gdGhhdCBhcyBhbiBpdGVtLXNwZWNpZmljIHJlcXVpcmVtZW50IGFuZCB2ZXJpZnkgZXZlcnkgcHJvcG9zZWQgY29uc29sZSBzZXBhcmF0ZWx5LiBBc2sgdGhlIHJldGFpbGVyIHRvIHNldCBwdXJjaGFzZSBsaW1pdHMgYW5kIHNoaXBwaW5nL2ltcG9ydCBhc3N1bXB0aW9ucy4gTm8gY3VycmVudCBzb3VyY2luZyBzb2Z0d2FyZSwgbWFyZ2luLCBidWRnZXQgb3IgYnV5aW5nIGludGVudCBpcyBrbm93bi4gVGhlIGZpcnN0LXBhcnR5IHNpdGUgcHJlc2VudHMgb25lIGxvY2FsIERlcmJ5IHNob3AgYW5kIGlkZW50aWZpZXMgUmV0cm8gV29ybGQgYXMgaXRzIG93bmVyOyBsZWdhbCBvd25lcnNoaXAgYW5kIHdpZGVyIGdyb3VwIHN0cnVjdHVyZSBoYXZlIG5vdCBiZWVuIGluZGVwZW5kZW50bHkgZXN0YWJsaXNoZWQuIiwiaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay90cmFkZSB8IGh0dHBzOi8vcmV0cm93b3JsZHMudWsvc3VwZXItbWFyaW8ta2FydC1wYWwtdmVyc2lvbi1mb3Itc3VwZXItbmludGVuZG8gfCBodHRwczovL3JldHJvd29ybGRzLnVrL2JveGVkLXNlZ2Etc2F0dXJuLWNvbnNvbGUtbGUtZGVyYnktc3RhbGxpb24tamFwYW4taW1wb3J0IHwgaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9wcml2YWN5LXBvbGljeSIsIjEzIE9jdG9iZXIgMjAyNiINCg==",
+        "bytes": 7522,
+        "sha256": "405aceeb28dc687ee748c53f003f2be511931e5bbc4089a8049a265808ef2372"
+      },
+      "sha256": "482e899833ea9b4e2042ebcbe8aad5fe6bdc11162027c99fd6726843036dd317",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.md",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid/profiles.md",
+        "title": "Five retailer profiles — MD",
+        "description": "Five retailer profiles — MD",
+        "type": "text/markdown",
+        "lead_ids": [
+          "buyhub-8bitbeyond",
+          "buyhub-geeky-blinders",
+          "buyhub-spacebridge",
+          "buyhub-flashback-retro",
+          "buyhub-retro-world-derby"
+        ],
+        "source_url": "",
+        "content_base64": "IyBCdXlIdWIg4oCUIGZpdmUgYWRkaXRpb25hbCBVSyByZXRhaWxlciBwcm9maWxlcwoKUHJlcGFyZWQgYnkgVG9rZW4gSnVua2llIExhYnMgwrcgMTMgT2N0b2JlciAyMDI2CgojIyA4Qml0IEJleW9uZAoKQ2FyZGlmZiwgV2FsZXMsIFVuaXRlZCBLaW5nZG9tCgpXZWJzaXRlOiBodHRwczovL3d3dy44Yml0YmV5b25kLmNvbS8KCioqUHVibGlzaGVkIGNvbnRhY3Q6KiogQnV5aW5nIHRlYW0g4oCUIGluZm9AOGJpdGJleW9uZC5jb20KClB1Ymxpc2hlZCBnZW5lcmFsIGJ1c2luZXNzIGVtYWlsOyBhc2sgZm9yIHRoZSBidXlpbmcgdGVhbS4gQ29udGFjdCBwYWdlIGFsc28gbGlzdHMgMDc4NTAgODU2NTg1LgoKKipCdXlpbmcgYWN0aXZpdHkqKgoKUHVyY2hhc2VzIHZpbnRhZ2UgZ2FtZXMgYW5kIGNvbnNvbGVzIHRocm91Z2ggcGhvdG8tbGVkIHZhbHVhdGlvbi4gSXRzIHRyYWRlIHBhZ2UgZGlzdGluZ3Vpc2hlcyB0ZXN0ZWQgYW5kIHVudGVzdGVkIGhhcmR3YXJlLCBvcmlnaW5hbCBib3hlcy9tYW51YWxzLCBkaXNjIHdlYXIgYW5kIGNhcnRyaWRnZSBzYXZlIGJhdHRlcmllcy4KCioqQnV5SHViIGNvbnZlcnNhdGlvbiBmaXQqKgoKQnV5SHViIHNhdmVkIHRlcm1zIGFuZCBsaXN0aW5nIGZpbHRlcnMgY291bGQgc3VwcG9ydCBhIHJldGFpbGVyLXNlbGVjdGVkIGNvbnNvbGUgY2F0ZWdvcnkgd2hpbGUgc3RhZmYgcmV0YWluIGNvbmRpdGlvbiwgY29tcGxldGVuZXNzIGFuZCBkZWxpdmVyZWQgY29zdC4gRXhpc3Rpbmcgc291cmNpbmcgc29mdHdhcmUgYW5kIGludGVyZXN0IGFyZSB1bmtub3duLgoKKipTdWdnZXN0ZWQgb3BlbmluZyoqCgpZb3VyIHRyYWRlLWluIGd1aWRlIGtlZXBzIGJveGVkIGNvbXBsZXRlbmVzcywgd29ya2luZyBjb25kaXRpb24gYW5kIHNhdmUgYmF0dGVyaWVzIHNlcGFyYXRlIHdoZW4gdmFsdWluZyBzdG9jay4gV291bGQgeW91ciBidXlpbmcgdGVhbSBjb25zaWRlciBjb21wYXJpbmcgYWN0dWFsIGxpc3RpbmdzIGZvciBvbmUgcGxhdGZvcm0geW91IGFscmVhZHkgYnV5LCB1c2luZyBCdXlIdWIgc2F2ZWQgc2VhcmNoZXMgd2l0aCByZWdpb24gYW5kIGNvbmRpdGlvbiBrZXB0IHZpc2libGU/CgoqKlRyaWFsIGRldGFpbHMgdG8gYWdyZWUqKgoKQWdyZWUgb25lIHBsYXRmb3JtIGFuZCBhY3R1YWwgcHVyY2hhc2UgbGltaXRzLiBTZXBhcmF0ZSBQQUwgYW5kIG90aGVyIHJlbGVhc2VzLCBvcmlnaW5hbC9yZXBsYWNlbWVudCBwYWNrYWdpbmcsIHdvcmtpbmcvdW50ZXN0ZWQgdW5pdHMgYW5kIHNoaXBwaW5nIGNvc3RzLiBTdGFmZiBzdGlsbCB2ZXJpZnkgZXZlcnkgbGlzdGluZzsgcHVibGlzaGVkIG1hcmtldHBsYWNlIGFsdGVybmF0aXZlcyBkbyBub3QgZXN0YWJsaXNoIHRoZSBzaG9w4oCZcyBvd24gYnV5aW5nIHRvb2xzLgoKKipPcmlnaW5hbCBzb3VyY2VzKioKCi0gaHR0cHM6Ly93d3cuOGJpdGJleW9uZC5jb20vcGFnZXMvZ2FtZXMtdHJhZGUtaW4g4oCUIEJ1eXMgdmludGFnZSBnYW1lcy9jb25zb2xlcyBieSBwaG90byB2YWx1YXRpb247IGRpc3Rpbmd1aXNoZXMgd29ya2luZyBjb25kaXRpb24sIGNvbXBsZXRlbmVzcywgb3JpZ2luYWwgYm94ZXMvbWFudWFscyBhbmQgY2FydHJpZGdlIHNhdmUgYmF0dGVyaWVzLgotIGh0dHBzOi8vd3d3LjhiaXRiZXlvbmQuY29tL3BhZ2VzL2NvbnRhY3QtdXMg4oCUIFB1Ymxpc2hlZCBpbmZvQDhiaXRiZXlvbmQuY29tLCB0ZWxlcGhvbmUgYW5kIENhcmRpZmYgYWRkcmVzcy4KCiMjIEdlZWt5IEJsaW5kZXJzCgpIYXZhbnQsIEhhbXBzaGlyZSwgVW5pdGVkIEtpbmdkb20KCldlYnNpdGU6IGh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrLwoKKipQdWJsaXNoZWQgY29udGFjdDoqKiBTaG9wIGJ1eWluZyB0ZWFtIOKAlCBnZWVreS1ibGluZGVyc0BvdXRsb29rLmNvbQoKUHVibGlzaGVkIHNob3AgZW1haWwuIE9wZW5pbmcgdGltZXMgY2FuIHZhcnkgd2l0aCBjb2xsZWN0aW9ucy9ldmVudHM7IGN1cnJlbnQgc2l0ZSBkaXJlY3RzIHZpc2l0b3JzIHRvIGl0cyBGYWNlYm9vayBub3RpY2UuCgoqKkJ1eWluZyBhY3Rpdml0eSoqCgpJbmRlcGVuZGVudCBzaG9wIGV4cGxpY2l0bHkgYnV5cywgc2VsbHMgYW5kIHRyYWRlcyByZXRybyBhbmQgbW9kZXJuIGdhbWVzL2NvbnNvbGVzLiBJdHMgc3RvY2tlZCBwbGF0Zm9ybXMgaW5jbHVkZSBNZWdhIERyaXZlLCBQbGF5U3RhdGlvbiwgU05FUywgTmludGVuZG8gNjQgYW5kIEdhbWUgQm95LgoKKipCdXlIdWIgY29udmVyc2F0aW9uIGZpdCoqCgpPbmUgY3VycmVudGx5IGFjY2VwdGVkIHBsYXRmb3JtIGNvdWxkIGJlIGNvbXBhcmVkIHRocm91Z2ggQnV5SHViIHNhdmVkIHNlYXJjaGVzIHdpdGggc2VwYXJhdGUgYm94ZWQvbG9vc2UgYW5kIHJlZ2lvbi9jb25kaXRpb24gdGVybXMuIEV4aXN0aW5nIGNvbGxlY3Rpb24gYW5kIHRyYWRlIGFjdGl2aXR5IHN1cHBsaWVzIHRoZSBidXNpbmVzcyBmaXQuCgoqKlN1Z2dlc3RlZCBvcGVuaW5nKioKCllvdSBidXkgYW5kIHRyYWRlIGFjcm9zcyBNZWdhIERyaXZlLCBQbGF5U3RhdGlvbiwgU05FUyBhbmQgR2FtZSBCb3kgYWxvbmdzaWRlIHRoZSBIYXZhbnQgc2hvcC4gV291bGQgYSBCdXlIdWIgY29tcGFyaXNvbiBmb3Igb25lIHBsYXRmb3JtIHlvdSBhcmUgYWN0aXZlbHkgYnV5aW5nIGJlIHVzZWZ1bCwgd2l0aCBzZXBhcmF0ZSBzYXZlZCB0ZXJtcyBmb3IgYm94ZWQgYW5kIGxvb3NlIGNvcGllcyBhbmQgeW91ciBvd24gcmVnaW9uIGFuZCBkZWxpdmVyZWQtcHJpY2UgbGltaXRzPwoKKipUcmlhbCBkZXRhaWxzIHRvIGFncmVlKioKCkNvbmZpcm0gY3VycmVudGx5IHdhbnRlZCBzdG9jaywgY291bnRyaWVzIGFuZCBhY2NlcHRhYmxlIGZhdWx0cy4gQ2F0YWxvZ3VlIGxpc3RpbmdzIGFyZSBub3QgYW4gYWN0aXZlIHJlcGxlbmlzaG1lbnQgcmVxdWVzdC4gU3VwZXIgR2FtZXMgV29ybGQgaW4gdGhlIHNhbWUgc2l0ZSBmb290ZXIgaXMgYW4gYWxpYXMgb2YgdGhpcyBvbmUgcHJvZmlsZTsgY3VycmVudCBzb2Z0d2FyZSwgYnVkZ2V0IGFuZCBpbnRlcmVzdCBhcmUgdW5rbm93bi4KCioqT3JpZ2luYWwgc291cmNlcyoqCgotIGh0dHBzOi8vd3d3LmdlZWt5LWJsaW5kZXJzLmNvLnVrLyDigJQgSW5kZXBlbmRlbnQgc2hvcCwgYnV5aW5nL3NlbGxpbmcvdHJhZGluZyByZXRyby9tb2Rlcm4gZ2FtZXMgYW5kIGNvbnNvbGVzOyBuYW1lZCBzdG9ja2VkIGZvcm1hdHMgYW5kIFN1cGVyIEdhbWVzIFdvcmxkIGZvb3RlciBhbGlhcy4KLSBodHRwczovL3d3dy5nZWVreS1ibGluZGVycy5jby51ay9jb250YWN0LXVzIOKAlCBDdXJyZW50IEhhdmFudCBhZGRyZXNzIGFuZCBnZWVreS1ibGluZGVyc0BvdXRsb29rLmNvbS4KCiMjIFRoZSBTcGFjZWJyaWRnZQoKTmV3IE1pbHRvbiwgSGFtcHNoaXJlLCBVbml0ZWQgS2luZ2RvbQoKV2Vic2l0ZTogaHR0cHM6Ly93d3cudGhlc3BhY2VicmlkZ2UuY28udWsvCgoqKlB1Ymxpc2hlZCBjb250YWN0OioqIFNob3AgYnV5aW5nIHRlYW0g4oCUIGNvbnRhY3RAdGhlc3BhY2VicmlkZ2UuY28udWsKClB1Ymxpc2hlZCBzaG9wIGVtYWlsIGFuZCAwNzQ5NCAwMDY4ODguIEN1cnJlbnQgc2hvcDo2NiBTdGF0aW9uIFJvYWQsIE5ldyBNaWx0b24gQkgyNSA2TEUuCgoqKkJ1eWluZyBhY3Rpdml0eSoqCgpCdXlzIE5pbnRlbmRvL1NlZ2EgY29uc29sZXMgYW5kIGdhbWVzIGZyb20gaW5kaXZpZHVhbCBpdGVtcyB0byBlbnRpcmUgY29sbGVjdGlvbnMuIE5hbWVkIHdhbnRlZCBmb3JtYXRzIGluY2x1ZGUgTkVTLCBTTkVTLCBONjQsIEdhbWVDdWJlLCBHYW1lIEJveSwgU2F0dXJuIGFuZCBEcmVhbWNhc3Q7IHRyYXZlbHMgbmF0aW9ud2lkZSBmb3IgbGFyZ2VyIG9yIHJhcmVyIGNvbGxlY3Rpb25zLgoKKipCdXlIdWIgY29udmVyc2F0aW9uIGZpdCoqCgpBIHJldmlld2VkIEJ1eUh1YiB3YXRjaGxpc3QgY291bGQgc3VwcG9ydCBvbmUgd2FudGVkIGNvbnNvbGUgZmFtaWx5LCBrZWVwaW5nIHNlbGxlciBsb2NhdGlvbiBhbmQgY29sbGVjdGlvbi9kZWxpdmVyeSBjb3N0IHZpc2libGUgYWxvbmdzaWRlIGl0cyBleGlzdGluZyBjb2xsZWN0aW9uLWJ1eWluZyBzZXJ2aWNlLgoKKipTdWdnZXN0ZWQgb3BlbmluZyoqCgpZb3VyIHdhbnRlZCBsaXN0IGluY2x1ZGVzIE5pbnRlbmRvIGFuZCBTZWdhIGNvbGxlY3Rpb25zLCBhbmQgeW91IHRyYXZlbCBmb3IgbGFyZ2VyIG9yIHJhcmVyIGxvdHMuIFdvdWxkIGEgQnV5SHViIHNhdmVkLXNlYXJjaCB0cmlhbCBmb3Igb25lIGNvbnNvbGUgZmFtaWx5IGhlbHAgeW91ciB0ZWFtIGNvbXBhcmUgYWN0dWFsIGNvbGxlY3Rpb24gbGlzdGluZ3MgYnkgY291bnRyeSwgY29udGVudHMgYW5kIHRvdGFsIGNvbGxlY3Rpb24gb3IgZGVsaXZlcnkgY29zdD8KCioqVHJpYWwgZGV0YWlscyB0byBhZ3JlZSoqCgpLZWVwIHRoZSB0cmlhbCBvbiB0aGUgZXhwbGljaXRseSB3YW50ZWQgdmlkZW8tZ2FtZSByYW5nZTsgdGhlIHNob3AgYWxzbyBidXlzIHRveXMuIEFncmVlIHJlZ2lvbiwgdGVzdGluZywgbWlzc2luZy1hY2Nlc3NvcnkgYW5kIHRyYXZlbCBsaW1pdHMuIEltcG9ydCBwb2xpY3kgYW5kIGF2YWlsYWJsZSBidXlpbmcgYnVkZ2V0IGhhdmUgbm90IGJlZW4gZXN0YWJsaXNoZWQuCgoqKk9yaWdpbmFsIHNvdXJjZXMqKgoKLSBodHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay93YW50ZWQg4oCUIEV4cGxpY2l0IE5pbnRlbmRvL1NlZ2EgYnV5aW5nLCBpbmRpdmlkdWFsIGl0ZW1zIGFuZCB3aG9sZSBjb2xsZWN0aW9ucywgbmF0aW9ud2lkZSB0cmF2ZWwgZm9yIGxhcmdlci9yYXJlciBjb2xsZWN0aW9uczsgcHVibGljIGVtYWlsLCBwaG9uZSBhbmQgTmV3IE1pbHRvbiBhZGRyZXNzLgotIGh0dHBzOi8vd3d3LnRoZXNwYWNlYnJpZGdlLmNvLnVrLyDigJQgQ3VycmVudCBvcGVuIE5ldyBNaWx0b24gc2hvcCBhbmQgcHVibGljIGNvbnRhY3QuCgojIyBGbGFzaGJhY2sgUmV0cm8KClJvdGhlcmhhbSwgU291dGggWW9ya3NoaXJlLCBVbml0ZWQgS2luZ2RvbQoKV2Vic2l0ZTogaHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay8KCioqUHVibGlzaGVkIGNvbnRhY3Q6KiogU2hvcCBidXlpbmcgdGVhbSDigJQgaW5mb0BmbGFzaGJhY2tyZXRyby5jby51awoKUHVibGlzaGVkIHNob3AgZW1haWwgYW5kIFdoYXRzQXBwMDc1NDI4OTk0OTUuIEluZGV4ZWQgY29udGFjdCBzb3VyY2UgZ2l2ZXMgVW5pdDEzIFN0ZWVsYm94IFdvcmtzLCBDYW5rbG93IE1lYWRvd3MgSW5kdXN0cmlhbCBFc3RhdGUsIFJvdGhlcmhhbTsgbm8gb3duZXIgbmFtZSBpbmZlcnJlZC4KCioqQnV5aW5nIGFjdGl2aXR5KioKCkl0cyBwdWJsaWMgY29udGFjdCBwYWdlIGFkdmVydGlzZXMgYnV5aW5nIGluZGl2aWR1YWwgcmV0cm8gZ2FtZXMgdGhyb3VnaCBjb21wbGV0ZSBjb2xsZWN0aW9ucy4gVGhlIHNob3Agb2ZmZXJzIE5pbnRlbmRvLCBTZWdhIGFuZCBQbGF5U3RhdGlvbiBnYW1lcywgY29uc29sZXMgYW5kIGFjY2Vzc29yaWVzLgoKKipCdXlIdWIgY29udmVyc2F0aW9uIGZpdCoqCgpCdXlIdWIgY291bGQgY29tcGFyZSBvbmUgc3RhZmYtc2VsZWN0ZWQgc3RvY2sgY2F0ZWdvcnkgYWNyb3NzIHN1cHBvcnRlZCBtYXJrZXRwbGFjZXMgd2l0aCBsb2NhdGlvbiwgcGxhdGZvcm0gYW5kIGRlc2NyaWJlZCBjb25kaXRpb24ga2VwdCBzZXBhcmF0ZS4KCioqU3VnZ2VzdGVkIG9wZW5pbmcqKgoKWW91ciBSb3RoZXJoYW0gc2hvcCBidXlzIGluZGl2aWR1YWwgcmV0cm8gZ2FtZXMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGEgQnV5SHViIHNhdmVkLXNlYXJjaCBjb21wYXJpc29uIGZvciBvbmUgcGxhdGZvcm0geW91IGN1cnJlbnRseSBzb3VyY2UsIHdpdGggcmVnaW9uLCBjb25kaXRpb24gYW5kIHRvdGFsIGRlbGl2ZXJlZCBjb3N0IHJlY29yZGVkIGJlZm9yZSByZXZpZXdpbmcgbGlzdGluZ3M/CgoqKlRyaWFsIGRldGFpbHMgdG8gYWdyZWUqKgoKT2ZmaWNpYWwgaW5kZXhlZCBjb250YWN0L3Nob3AgdGV4dCBzdXBwb3J0cyB0aGlzIHJlY29yZDsgZGlyZWN0IGZldGNoZXMgdGltZWQgb3V0LiBSZS1vcGVuIHRoZSBwdWJsaWMgY29udGFjdCBwYWdlIGJlZm9yZSBvdXRyZWFjaC4gQ29uZmlybSBhY2NlcHRlZCBmb3JtYXRzIGFuZCBQQUwvaW1wb3J0IHJlcXVpcmVtZW50czsgY3VycmVudCBzb3VyY2luZyBzb2Z0d2FyZSwgcHVyY2hhc2UgbmVlZCBhbmQgYnVkZ2V0IGFyZSB1bmtub3duLgoKKipPcmlnaW5hbCBzb3VyY2VzKioKCi0gaHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay9jb250YWN0LWZsYXNoYmFjay1yZXRyby1yb3RoZXJoYW0vIOKAlCBQcmltYXJ5IGluZGV4ZWQgY29udGFjdCBwYWdlOiBpbmRpdmlkdWFsIGdhbWVzIHRocm91Z2ggY29tcGxldGUgY29sbGVjdGlvbnMsIGluZm9AZmxhc2hiYWNrcmV0cm8uY28udWssMDc1NDI4OTk0OTUgYW5kIFJvdGhlcmhhbSBhZGRyZXNzLiBEaXJlY3QgZmV0Y2ggdGltZWQgb3V0LgotIGh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvc2hvcC8g4oCUIEN1cnJlbnQgcHJpbWFyeSBpbmRleGVkIHNob3A6IE5pbnRlbmRvL1NlZ2EvUGxheVN0YXRpb24gZ2FtZXMsIGNvbnNvbGVzIGFuZCBhY2Nlc3Nvcmllcy4KCiMjIFJldHJvIFdvcmxkCgoyMCBPc21hc3RvbiBSb2FkLCBEZXJieSwgREUxIDJIUiwgVUsKCldlYnNpdGU6IGh0dHBzOi8vcmV0cm93b3JsZHMudWsvdHJhZGUKCioqUHVibGlzaGVkIGNvbnRhY3Q6KiogU2hvcCBidXlpbmcgdGVhbSDigJQgZGVyYnlyZXRyb3dvcmxkQGFvbC5jb20KClB1YmxpYyBidXlpbmcsIHNlbGxpbmcgYW5kIHRyYWRlIGVucXVpcmllcy4gVGhlIHB1Ymxpc2hlZCB0cmFkZSByb3V0ZSBhY2NlcHRzIGVtYWlsIGVucXVpcmllcyBhbmQgYWR2ZXJ0aXNlcyBhIGNvbGxlY3Rpb24gc2VydmljZSBmb3IgbGFyZ2VyIGdyb3VwcyBvZiBpdGVtcy4gTm8gYXBwb2ludG1lbnQsIGFjdGl2ZSBwdXJjaGFzaW5nIHJlcXVlc3Qgb3IgYWNjb3VudCByZWxhdGlvbnNoaXAgaXMgYXNzdW1lZC4KCioqQnV5aW5nIGFjdGl2aXR5KioKClRoZSBEZXJieSBzaG9wIGJ1eXMsIHNlbGxzIGFuZCB0cmFkZXMgcmV0cm8gZ2FtZXMgYW5kIGNvbnNvbGVzLCBvZmZlcnMgY29sbGVjdGlvbiBmb3IgbGFyZ2VyIGxvdHMsIGFuZCBkZXNjcmliZXMgY2xlYW5pbmcvdGVzdGluZyBjb250cm9sbGVycy4gSXRzIGNhdGFsb2d1ZSBzZXBhcmF0ZWx5IGxhYmVscyBhIFBBTCBTdXBlciBNYXJpbyBLYXJ0IHNldCBhbmQgYSBKYXBhbmVzZS1pbXBvcnQgU2VnYSBTYXR1cm4gYnVuZGxlLiBCb3RoIGV4YW1wbGUgbGlzdGluZ3Mgd2VyZSBtYXJrZWQgb3V0IG9mIHN0b2NrIHdoZW4gcmVhZC4KCioqQnV5SHViIGNvbnZlcnNhdGlvbiBmaXQqKgoKQSBCdXlIdWIgdHJpYWwgY291bGQga2VlcCBVSy9QQUwgc29mdHdhcmUgc2VhcmNoZXMgc2VwYXJhdGUgZnJvbSBleHBsaWNpdGx5IHNlbGVjdGVkIEphcGFuZXNlIGhhcmR3YXJlLCB1c2luZyBzYXZlZCB0ZXJtcywgY291bnRyeSBmaWx0ZXJzIGFuZCBhdWN0aW9uIGFsZXJ0cy4gU3RhZmYgd291bGQgcmV2aWV3IGNvbXBsZXRlLWJveCBjb25kaXRpb24sIGF1dGhlbnRpY2l0eSwgaW5jbHVkZWQgYWNjZXNzb3JpZXMgYW5kIGxhbmRlZCBjb3N0IGJlZm9yZSBkZWNpZGluZy4gVGhlIHR3byBjYXRhbG9ndWUgZXhhbXBsZXMgZGVtb25zdHJhdGUgZGlzdGluY3QgcHJvZHVjdCBjYXRlZ29yaWVzOyB0aGVpciBzdG9jayBzdGF0dXMgaXMgbm90IGV2aWRlbmNlIG9mIGEgcmVzdG9ja2luZyByZXF1ZXN0LgoKKipTdWdnZXN0ZWQgb3BlbmluZyoqCgpZb3VyIFBBTCBTTkVTIGFuZCBKYXBhbmVzZSBTYXR1cm4gY2F0YWxvZ3VlIGVudHJpZXMgc2hvdyB3aHkgcmVnaW9uIGFuZCBjb21wbGV0ZW5lc3MgbmVlZCB0byBzdGF5IHZpc2libGUgd2hlbiBzb3VyY2luZyByZXRybyBzdG9jay4gV291bGQgeW91ciBidXlpbmcgdGVhbSBjb25zaWRlciBhIEJ1eUh1YiB0cmlhbCBmb3Igb25lIGNhdGVnb3J5IHlvdSBhbHJlYWR5IHB1cmNoYXNlLCB3aXRoIHNlcGFyYXRlIHNhdmVkIHNlYXJjaGVzIGFuZCBhIHJldmlldyBvZiBhY3R1YWwgbGlzdGluZ3M/CgoqKlRyaWFsIGRldGFpbHMgdG8gYWdyZWUqKgoKQ29uZmlybSB0aGUgc2hvcCdzIGN1cnJlbnRseSBhY2NlcHRlZCBmb3JtYXRzLCB3aGV0aGVyIGl0IHdhbnRzIFVLLW9ubHkgc291cmNpbmcgb3IgaW1wb3J0cywgYm94ZWQvbWFudWFsIHJlcXVpcmVtZW50cywgdGVzdGluZyBzdGFuZGFyZCBhbmQgYWNjZXB0YWJsZSByZXBhaXJzL21vZGlmaWNhdGlvbnMuIEl0cyBKYXBhbmVzZSBTYXR1cm4gcGFnZSBzcGVjaWZpZXMgYSBzdGVwLWRvd24gY29udmVydGVyIGZvciBVSyB1c2U7IHJldGFpbiB0aGF0IGFzIGFuIGl0ZW0tc3BlY2lmaWMgcmVxdWlyZW1lbnQgYW5kIHZlcmlmeSBldmVyeSBwcm9wb3NlZCBjb25zb2xlIHNlcGFyYXRlbHkuIEFzayB0aGUgcmV0YWlsZXIgdG8gc2V0IHB1cmNoYXNlIGxpbWl0cyBhbmQgc2hpcHBpbmcvaW1wb3J0IGFzc3VtcHRpb25zLiBObyBjdXJyZW50IHNvdXJjaW5nIHNvZnR3YXJlLCBtYXJnaW4sIGJ1ZGdldCBvciBidXlpbmcgaW50ZW50IGlzIGtub3duLiBUaGUgZmlyc3QtcGFydHkgc2l0ZSBwcmVzZW50cyBvbmUgbG9jYWwgRGVyYnkgc2hvcCBhbmQgaWRlbnRpZmllcyBSZXRybyBXb3JsZCBhcyBpdHMgb3duZXI7IGxlZ2FsIG93bmVyc2hpcCBhbmQgd2lkZXIgZ3JvdXAgc3RydWN0dXJlIGhhdmUgbm90IGJlZW4gaW5kZXBlbmRlbnRseSBlc3RhYmxpc2hlZC4KCioqT3JpZ2luYWwgc291cmNlcyoqCgotIGh0dHBzOi8vcmV0cm93b3JsZHMudWsvdHJhZGUg4oCUIEJ1eWluZy90cmFkaW5nIHdvcmtmbG93LCBjb2xsZWN0aW9uLCB0ZXN0ZWQgY29udHJvbGxlcnMsIHNob3AgYWRkcmVzcyBhbmQgcHVibGlzaGVkIGJ1c2luZXNzIGNvbnRhY3QuCi0gaHR0cHM6Ly9yZXRyb3dvcmxkcy51ay9zdXBlci1tYXJpby1rYXJ0LXBhbC12ZXJzaW9uLWZvci1zdXBlci1uaW50ZW5kbyDigJQgUEFMIGFuZCBib3hlZCBjb21wb3NpdGlvbiwgb2JzZXJ2ZWQgb3V0LW9mLXN0b2NrIHN0YXR1cy4KLSBodHRwczovL3JldHJvd29ybGRzLnVrL2JveGVkLXNlZ2Etc2F0dXJuLWNvbnNvbGUtbGUtZGVyYnktc3RhbGxpb24tamFwYW4taW1wb3J0IOKAlCBKYXBhbmVzZSBpbXBvcnQsIGJ1bmRsZSBjb250ZW50cywgaXRlbS1zcGVjaWZpYyBwb3dlciByZXF1aXJlbWVudCwgb2JzZXJ2ZWQgb3V0LW9mLXN0b2NrIHN0YXR1cy4KLSBodHRwczovL3JldHJvd29ybGRzLnVrL3ByaXZhY3ktcG9saWN5IOKAlCBTaXRlIGlkZW50aWZpZXMgUmV0cm8gV29ybGQgYXMgb3duZXI7IGl0cyB0ZXh0IHNwZWxscyB0aGUgZG9tYWluIGRpZmZlcmVudGx5LCBzbyBjdXJyZW50IGNvbnRhY3QvdHJhZGUgc291cmNlIGdvdmVybnMgY2Fub25pY2FsIHJldHJvd29ybGRzLnVrLgoKRml2ZSBhZGRpdGlvbmFsIHByb2ZpbGVzIGNvc3QgVVMkMjAgdG90YWwuIE9uZSBjb3JyZWN0aW9uIG9yIHJlcGxhY2VtZW50IHdpdGhpbiBzZXZlbiBkYXlzIGNvdmVycyBhbiBleGlzdGluZyBjdXN0b21lciwgZHVwbGljYXRlLCBkZWFkIHB1Ymxpc2hlZCBjb250YWN0IG9yIGNsZWFyIG1pc21hdGNoLgo=",
+        "bytes": 9539,
+        "sha256": "635a73486c88a4c5072a3df4c8d704024db9fce82c654812781eaf5a83052a49"
+      },
+      "sha256": "849d523a5be8b348ff1d08920f25b5463f865b267d03624e65506872d4a3bf1c",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    },
+    {
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.json",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid/profiles.json",
+        "title": "Five retailer profiles — JSON",
+        "description": "Five retailer profiles — JSON",
+        "type": "application/json",
+        "lead_ids": [
+          "buyhub-8bitbeyond",
+          "buyhub-geeky-blinders",
+          "buyhub-spacebridge",
+          "buyhub-flashback-retro",
+          "buyhub-retro-world-derby"
+        ],
+        "source_url": "",
+        "content_base64": "ewogICJ2ZXJzaW9uIjogImRlYWxzY291dC5sZWFkLXBhY2sudjEiLAogICJ0aXRsZSI6ICJVSyByZXRyby1nYW1lIHJldGFpbGVycyDigJQgc3RvY2stc291cmNpbmcgcHJvc3BlY3QgcHJvZmlsZXMiLAogICJjdXN0b21lciI6ICJCdXlIdWIiLAogICJwcmVwYXJlZF9hdCI6ICIyMDI2LTEwLTEzVDE4OjQ3OjU2Ljg4NVoiLAogICJkZWxpdmVyeV90eXBlIjogInBhaWQiLAogICJjcml0ZXJpYSI6ICJFaWdodCBkaXN0aW5jdCBVSyByZXRhaWxlciByZWNvcmRzOiBvbmUgZnJlZSBleGFtcGxlLCBmaXZlIGFkZGl0aW9uYWwgcGFpZCBwcm9maWxlcyBhbmQgdHdvIHJlc2VydmVzLiBFdmVyeSBzZWxlY3RlZCByZXRhaWxlciBwdWJsaXNoZXMgcmV0cm8tZ2FtZSBidXlpbmcgb3IgdHJhZGUgYWN0aXZpdHkgYW5kIGEgYnVzaW5lc3MgY29udGFjdC4gTWF0Y2ggYW55IHNvdXJjaW5nIHRyaWFsIHRvIGl0cyBvd24gcGxhdGZvcm0sIHJlZ2lvbiwgY29uZGl0aW9uIGFuZCBkZWxpdmVyZWQtY29zdCByZXF1aXJlbWVudHMuIiwKICAiZ2VvZ3JhcGh5IjogIlVuaXRlZCBLaW5nZG9tIiwKICAic2tpbGxzIjogWwogICAgInJldHJvIGdhbWVzIiwKICAgICJjb25zb2xlIGNvbGxlY3Rpb24gYnV5aW5nIiwKICAgICJzdG9jayBzb3VyY2luZyIsCiAgICAibWFya2V0cGxhY2Ugc2VhcmNoIgogIF0sCiAgInF1YW50aXR5IjogNSwKICAiY3VycmVuY3kiOiAiVVNEIiwKICAicHJpY2VfbWlub3IiOiAyMDAwLAogICJsZWFkcyI6IFsKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICI4Qml0IEJleW9uZCIsCiAgICAgICJjb21wYW55X3VybCI6ICJodHRwczovL3d3dy44Yml0YmV5b25kLmNvbS8iLAogICAgICAicGVyc29uIjogIkJ1eWluZyB0ZWFtIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiUHVyY2hhc2VzIHZpbnRhZ2UgZ2FtZXMgYW5kIGNvbnNvbGVzIHRocm91Z2ggcGhvdG8tbGVkIHZhbHVhdGlvbi4gSXRzIHRyYWRlIHBhZ2UgZGlzdGluZ3Vpc2hlcyB0ZXN0ZWQgYW5kIHVudGVzdGVkIGhhcmR3YXJlLCBvcmlnaW5hbCBib3hlcy9tYW51YWxzLCBkaXNjIHdlYXIgYW5kIGNhcnRyaWRnZSBzYXZlIGJhdHRlcmllcy4iLAogICAgICAic291cmNlX3VybCI6ICJodHRwczovL3d3dy44Yml0YmV5b25kLmNvbS9wYWdlcy9nYW1lcy10cmFkZS1pbiIsCiAgICAgICJvcmlnaW5hbF9yZXF1ZXN0X2RhdGUiOiAiIiwKICAgICAgImxhc3RfYnV5ZXJfdXBkYXRlIjogIiIsCiAgICAgICJzb3VyY2VfY2hlY2tlZF9hdCI6ICIyMDI2LTEwLTEzIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzppbmZvQDhiaXRiZXlvbmQuY29tIiwKICAgICAgImNvbnRhY3RfaW5zdHJ1Y3Rpb25zIjogIlB1Ymxpc2hlZCBnZW5lcmFsIGJ1c2luZXNzIGVtYWlsOyBhc2sgZm9yIHRoZSBidXlpbmcgdGVhbS4gQ29udGFjdCBwYWdlIGFsc28gbGlzdHMgMDc4NTAgODU2NTg1LiIsCiAgICAgICJnZW9ncmFwaHkiOiAiQ2FyZGlmZiwgV2FsZXMsIFVuaXRlZCBLaW5nZG9tIiwKICAgICAgInB1Ymxpc2hlZF9idWRnZXQiOiAiTm8gc29mdHdhcmUgb3Igc291cmNpbmcgYnVkZ2V0IHB1Ymxpc2hlZC4iLAogICAgICAid2h5X2l0X2ZpdHMiOiAiQnV5SHViIHNhdmVkIHRlcm1zIGFuZCBsaXN0aW5nIGZpbHRlcnMgY291bGQgc3VwcG9ydCBhIHJldGFpbGVyLXNlbGVjdGVkIGNvbnNvbGUgY2F0ZWdvcnkgd2hpbGUgc3RhZmYgcmV0YWluIGNvbmRpdGlvbiwgY29tcGxldGVuZXNzIGFuZCBkZWxpdmVyZWQgY29zdC4gRXhpc3Rpbmcgc291cmNpbmcgc29mdHdhcmUgYW5kIGludGVyZXN0IGFyZSB1bmtub3duLiIsCiAgICAgICJvcGVuaW5nX21lc3NhZ2UiOiAiWW91ciB0cmFkZS1pbiBndWlkZSBrZWVwcyBib3hlZCBjb21wbGV0ZW5lc3MsIHdvcmtpbmcgY29uZGl0aW9uIGFuZCBzYXZlIGJhdHRlcmllcyBzZXBhcmF0ZSB3aGVuIHZhbHVpbmcgc3RvY2suIFdvdWxkIHlvdXIgYnV5aW5nIHRlYW0gY29uc2lkZXIgY29tcGFyaW5nIGFjdHVhbCBsaXN0aW5ncyBmb3Igb25lIHBsYXRmb3JtIHlvdSBhbHJlYWR5IGJ1eSwgdXNpbmcgQnV5SHViIHNhdmVkIHNlYXJjaGVzIHdpdGggcmVnaW9uIGFuZCBjb25kaXRpb24ga2VwdCB2aXNpYmxlPyIsCiAgICAgICJzb3VyY2Vfc3RhdHVzIjogIm9wZW4iLAogICAgICAic3RhdHVzX25vdGUiOiAiUHVibGljIGJ1eWluZy90cmFkZSBhY3Rpdml0eSBjaGVja2VkIG9uIDEzIE9jdG9iZXIgMjAyNi4gQWdyZWUgb25lIHBsYXRmb3JtIGFuZCBhY3R1YWwgcHVyY2hhc2UgbGltaXRzLiBTZXBhcmF0ZSBQQUwgYW5kIG90aGVyIHJlbGVhc2VzLCBvcmlnaW5hbC9yZXBsYWNlbWVudCBwYWNrYWdpbmcsIHdvcmtpbmcvdW50ZXN0ZWQgdW5pdHMgYW5kIHNoaXBwaW5nIGNvc3RzLiBTdGFmZiBzdGlsbCB2ZXJpZnkgZXZlcnkgbGlzdGluZzsgcHVibGlzaGVkIG1hcmtldHBsYWNlIGFsdGVybmF0aXZlcyBkbyBub3QgZXN0YWJsaXNoIHRoZSBzaG9w4oCZcyBvd24gYnV5aW5nIHRvb2xzLiIKICAgIH0sCiAgICB7CiAgICAgICJvcmdhbml6YXRpb24iOiAiR2Vla3kgQmxpbmRlcnMiLAogICAgICAiY29tcGFueV91cmwiOiAiaHR0cHM6Ly93d3cuZ2Vla3ktYmxpbmRlcnMuY28udWsvIiwKICAgICAgInBlcnNvbiI6ICJTaG9wIGJ1eWluZyB0ZWFtIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiSW5kZXBlbmRlbnQgc2hvcCBleHBsaWNpdGx5IGJ1eXMsIHNlbGxzIGFuZCB0cmFkZXMgcmV0cm8gYW5kIG1vZGVybiBnYW1lcy9jb25zb2xlcy4gSXRzIHN0b2NrZWQgcGxhdGZvcm1zIGluY2x1ZGUgTWVnYSBEcml2ZSwgUGxheVN0YXRpb24sIFNORVMsIE5pbnRlbmRvIDY0IGFuZCBHYW1lIEJveS4iLAogICAgICAic291cmNlX3VybCI6ICJodHRwczovL3d3dy5nZWVreS1ibGluZGVycy5jby51ay8iLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xMyIsCiAgICAgICJzaWduYWxfdHlwZSI6ICJjb21wYW55X2ZpdCIsCiAgICAgICJkZWFkbGluZSI6ICIiLAogICAgICAiY29udGFjdF9yb3V0ZSI6ICJtYWlsdG86Z2Vla3ktYmxpbmRlcnNAb3V0bG9vay5jb20iLAogICAgICAiY29udGFjdF9pbnN0cnVjdGlvbnMiOiAiUHVibGlzaGVkIHNob3AgZW1haWwuIE9wZW5pbmcgdGltZXMgY2FuIHZhcnkgd2l0aCBjb2xsZWN0aW9ucy9ldmVudHM7IGN1cnJlbnQgc2l0ZSBkaXJlY3RzIHZpc2l0b3JzIHRvIGl0cyBGYWNlYm9vayBub3RpY2UuIiwKICAgICAgImdlb2dyYXBoeSI6ICJIYXZhbnQsIEhhbXBzaGlyZSwgVW5pdGVkIEtpbmdkb20iLAogICAgICAicHVibGlzaGVkX2J1ZGdldCI6ICJObyBzb2Z0d2FyZSBvciBzb3VyY2luZyBidWRnZXQgcHVibGlzaGVkLiIsCiAgICAgICJ3aHlfaXRfZml0cyI6ICJPbmUgY3VycmVudGx5IGFjY2VwdGVkIHBsYXRmb3JtIGNvdWxkIGJlIGNvbXBhcmVkIHRocm91Z2ggQnV5SHViIHNhdmVkIHNlYXJjaGVzIHdpdGggc2VwYXJhdGUgYm94ZWQvbG9vc2UgYW5kIHJlZ2lvbi9jb25kaXRpb24gdGVybXMuIEV4aXN0aW5nIGNvbGxlY3Rpb24gYW5kIHRyYWRlIGFjdGl2aXR5IHN1cHBsaWVzIHRoZSBidXNpbmVzcyBmaXQuIiwKICAgICAgIm9wZW5pbmdfbWVzc2FnZSI6ICJZb3UgYnV5IGFuZCB0cmFkZSBhY3Jvc3MgTWVnYSBEcml2ZSwgUGxheVN0YXRpb24sIFNORVMgYW5kIEdhbWUgQm95IGFsb25nc2lkZSB0aGUgSGF2YW50IHNob3AuIFdvdWxkIGEgQnV5SHViIGNvbXBhcmlzb24gZm9yIG9uZSBwbGF0Zm9ybSB5b3UgYXJlIGFjdGl2ZWx5IGJ1eWluZyBiZSB1c2VmdWwsIHdpdGggc2VwYXJhdGUgc2F2ZWQgdGVybXMgZm9yIGJveGVkIGFuZCBsb29zZSBjb3BpZXMgYW5kIHlvdXIgb3duIHJlZ2lvbiBhbmQgZGVsaXZlcmVkLXByaWNlIGxpbWl0cz8iLAogICAgICAic291cmNlX3N0YXR1cyI6ICJvcGVuIiwKICAgICAgInN0YXR1c19ub3RlIjogIlB1YmxpYyBidXlpbmcvdHJhZGUgYWN0aXZpdHkgY2hlY2tlZCBvbiAxMyBPY3RvYmVyIDIwMjYuIENvbmZpcm0gY3VycmVudGx5IHdhbnRlZCBzdG9jaywgY291bnRyaWVzIGFuZCBhY2NlcHRhYmxlIGZhdWx0cy4gQ2F0YWxvZ3VlIGxpc3RpbmdzIGFyZSBub3QgYW4gYWN0aXZlIHJlcGxlbmlzaG1lbnQgcmVxdWVzdC4gU3VwZXIgR2FtZXMgV29ybGQgaW4gdGhlIHNhbWUgc2l0ZSBmb290ZXIgaXMgYW4gYWxpYXMgb2YgdGhpcyBvbmUgcHJvZmlsZTsgY3VycmVudCBzb2Z0d2FyZSwgYnVkZ2V0IGFuZCBpbnRlcmVzdCBhcmUgdW5rbm93bi4iCiAgICB9LAogICAgewogICAgICAib3JnYW5pemF0aW9uIjogIlRoZSBTcGFjZWJyaWRnZSIsCiAgICAgICJjb21wYW55X3VybCI6ICJodHRwczovL3d3dy50aGVzcGFjZWJyaWRnZS5jby51ay8iLAogICAgICAicGVyc29uIjogIlNob3AgYnV5aW5nIHRlYW0iLAogICAgICAiYnVzaW5lc3NfbmVlZCI6ICJCdXlzIE5pbnRlbmRvL1NlZ2EgY29uc29sZXMgYW5kIGdhbWVzIGZyb20gaW5kaXZpZHVhbCBpdGVtcyB0byBlbnRpcmUgY29sbGVjdGlvbnMuIE5hbWVkIHdhbnRlZCBmb3JtYXRzIGluY2x1ZGUgTkVTLCBTTkVTLCBONjQsIEdhbWVDdWJlLCBHYW1lIEJveSwgU2F0dXJuIGFuZCBEcmVhbWNhc3Q7IHRyYXZlbHMgbmF0aW9ud2lkZSBmb3IgbGFyZ2VyIG9yIHJhcmVyIGNvbGxlY3Rpb25zLiIsCiAgICAgICJzb3VyY2VfdXJsIjogImh0dHBzOi8vd3d3LnRoZXNwYWNlYnJpZGdlLmNvLnVrL3dhbnRlZCIsCiAgICAgICJvcmlnaW5hbF9yZXF1ZXN0X2RhdGUiOiAiIiwKICAgICAgImxhc3RfYnV5ZXJfdXBkYXRlIjogIiIsCiAgICAgICJzb3VyY2VfY2hlY2tlZF9hdCI6ICIyMDI2LTEwLTEzIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzpjb250YWN0QHRoZXNwYWNlYnJpZGdlLmNvLnVrIiwKICAgICAgImNvbnRhY3RfaW5zdHJ1Y3Rpb25zIjogIlB1Ymxpc2hlZCBzaG9wIGVtYWlsIGFuZCAwNzQ5NCAwMDY4ODguIEN1cnJlbnQgc2hvcDo2NiBTdGF0aW9uIFJvYWQsIE5ldyBNaWx0b24gQkgyNSA2TEUuIiwKICAgICAgImdlb2dyYXBoeSI6ICJOZXcgTWlsdG9uLCBIYW1wc2hpcmUsIFVuaXRlZCBLaW5nZG9tIiwKICAgICAgInB1Ymxpc2hlZF9idWRnZXQiOiAiTm8gc29mdHdhcmUgb3Igc291cmNpbmcgYnVkZ2V0IHB1Ymxpc2hlZC4iLAogICAgICAid2h5X2l0X2ZpdHMiOiAiQSByZXZpZXdlZCBCdXlIdWIgd2F0Y2hsaXN0IGNvdWxkIHN1cHBvcnQgb25lIHdhbnRlZCBjb25zb2xlIGZhbWlseSwga2VlcGluZyBzZWxsZXIgbG9jYXRpb24gYW5kIGNvbGxlY3Rpb24vZGVsaXZlcnkgY29zdCB2aXNpYmxlIGFsb25nc2lkZSBpdHMgZXhpc3RpbmcgY29sbGVjdGlvbi1idXlpbmcgc2VydmljZS4iLAogICAgICAib3BlbmluZ19tZXNzYWdlIjogIllvdXIgd2FudGVkIGxpc3QgaW5jbHVkZXMgTmludGVuZG8gYW5kIFNlZ2EgY29sbGVjdGlvbnMsIGFuZCB5b3UgdHJhdmVsIGZvciBsYXJnZXIgb3IgcmFyZXIgbG90cy4gV291bGQgYSBCdXlIdWIgc2F2ZWQtc2VhcmNoIHRyaWFsIGZvciBvbmUgY29uc29sZSBmYW1pbHkgaGVscCB5b3VyIHRlYW0gY29tcGFyZSBhY3R1YWwgY29sbGVjdGlvbiBsaXN0aW5ncyBieSBjb3VudHJ5LCBjb250ZW50cyBhbmQgdG90YWwgY29sbGVjdGlvbiBvciBkZWxpdmVyeSBjb3N0PyIsCiAgICAgICJzb3VyY2Vfc3RhdHVzIjogIm9wZW4iLAogICAgICAic3RhdHVzX25vdGUiOiAiUHVibGljIGJ1eWluZy90cmFkZSBhY3Rpdml0eSBjaGVja2VkIG9uIDEzIE9jdG9iZXIgMjAyNi4gS2VlcCB0aGUgdHJpYWwgb24gdGhlIGV4cGxpY2l0bHkgd2FudGVkIHZpZGVvLWdhbWUgcmFuZ2U7IHRoZSBzaG9wIGFsc28gYnV5cyB0b3lzLiBBZ3JlZSByZWdpb24sIHRlc3RpbmcsIG1pc3NpbmctYWNjZXNzb3J5IGFuZCB0cmF2ZWwgbGltaXRzLiBJbXBvcnQgcG9saWN5IGFuZCBhdmFpbGFibGUgYnV5aW5nIGJ1ZGdldCBoYXZlIG5vdCBiZWVuIGVzdGFibGlzaGVkLiIKICAgIH0sCiAgICB7CiAgICAgICJvcmdhbml6YXRpb24iOiAiRmxhc2hiYWNrIFJldHJvIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vZmxhc2hiYWNrcmV0cm8uY28udWsvIiwKICAgICAgInBlcnNvbiI6ICJTaG9wIGJ1eWluZyB0ZWFtIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiSXRzIHB1YmxpYyBjb250YWN0IHBhZ2UgYWR2ZXJ0aXNlcyBidXlpbmcgaW5kaXZpZHVhbCByZXRybyBnYW1lcyB0aHJvdWdoIGNvbXBsZXRlIGNvbGxlY3Rpb25zLiBUaGUgc2hvcCBvZmZlcnMgTmludGVuZG8sIFNlZ2EgYW5kIFBsYXlTdGF0aW9uIGdhbWVzLCBjb25zb2xlcyBhbmQgYWNjZXNzb3JpZXMuIiwKICAgICAgInNvdXJjZV91cmwiOiAiaHR0cHM6Ly9mbGFzaGJhY2tyZXRyby5jby51ay9jb250YWN0LWZsYXNoYmFjay1yZXRyby1yb3RoZXJoYW0vIiwKICAgICAgIm9yaWdpbmFsX3JlcXVlc3RfZGF0ZSI6ICIiLAogICAgICAibGFzdF9idXllcl91cGRhdGUiOiAiIiwKICAgICAgInNvdXJjZV9jaGVja2VkX2F0IjogIjIwMjYtMTAtMTMiLAogICAgICAic2lnbmFsX3R5cGUiOiAiY29tcGFueV9maXQiLAogICAgICAiZGVhZGxpbmUiOiAiIiwKICAgICAgImNvbnRhY3Rfcm91dGUiOiAibWFpbHRvOmluZm9AZmxhc2hiYWNrcmV0cm8uY28udWsiLAogICAgICAiY29udGFjdF9pbnN0cnVjdGlvbnMiOiAiUHVibGlzaGVkIHNob3AgZW1haWwgYW5kIFdoYXRzQXBwMDc1NDI4OTk0OTUuIEluZGV4ZWQgY29udGFjdCBzb3VyY2UgZ2l2ZXMgVW5pdDEzIFN0ZWVsYm94IFdvcmtzLCBDYW5rbG93IE1lYWRvd3MgSW5kdXN0cmlhbCBFc3RhdGUsIFJvdGhlcmhhbTsgbm8gb3duZXIgbmFtZSBpbmZlcnJlZC4iLAogICAgICAiZ2VvZ3JhcGh5IjogIlJvdGhlcmhhbSwgU291dGggWW9ya3NoaXJlLCBVbml0ZWQgS2luZ2RvbSIsCiAgICAgICJwdWJsaXNoZWRfYnVkZ2V0IjogIk5vIHNvZnR3YXJlIG9yIHNvdXJjaW5nIGJ1ZGdldCBwdWJsaXNoZWQuIiwKICAgICAgIndoeV9pdF9maXRzIjogIkJ1eUh1YiBjb3VsZCBjb21wYXJlIG9uZSBzdGFmZi1zZWxlY3RlZCBzdG9jayBjYXRlZ29yeSBhY3Jvc3Mgc3VwcG9ydGVkIG1hcmtldHBsYWNlcyB3aXRoIGxvY2F0aW9uLCBwbGF0Zm9ybSBhbmQgZGVzY3JpYmVkIGNvbmRpdGlvbiBrZXB0IHNlcGFyYXRlLiIsCiAgICAgICJvcGVuaW5nX21lc3NhZ2UiOiAiWW91ciBSb3RoZXJoYW0gc2hvcCBidXlzIGluZGl2aWR1YWwgcmV0cm8gZ2FtZXMgYW5kIHdob2xlIGNvbGxlY3Rpb25zLiBXb3VsZCB5b3VyIGJ1eWluZyB0ZWFtIGNvbnNpZGVyIGEgQnV5SHViIHNhdmVkLXNlYXJjaCBjb21wYXJpc29uIGZvciBvbmUgcGxhdGZvcm0geW91IGN1cnJlbnRseSBzb3VyY2UsIHdpdGggcmVnaW9uLCBjb25kaXRpb24gYW5kIHRvdGFsIGRlbGl2ZXJlZCBjb3N0IHJlY29yZGVkIGJlZm9yZSByZXZpZXdpbmcgbGlzdGluZ3M/IiwKICAgICAgInNvdXJjZV9zdGF0dXMiOiAib3BlbiIsCiAgICAgICJzdGF0dXNfbm90ZSI6ICJQdWJsaWMgYnV5aW5nL3RyYWRlIGFjdGl2aXR5IGNoZWNrZWQgb24gMTMgT2N0b2JlciAyMDI2LiBPZmZpY2lhbCBpbmRleGVkIGNvbnRhY3Qvc2hvcCB0ZXh0IHN1cHBvcnRzIHRoaXMgcmVjb3JkOyBkaXJlY3QgZmV0Y2hlcyB0aW1lZCBvdXQuIFJlLW9wZW4gdGhlIHB1YmxpYyBjb250YWN0IHBhZ2UgYmVmb3JlIG91dHJlYWNoLiBDb25maXJtIGFjY2VwdGVkIGZvcm1hdHMgYW5kIFBBTC9pbXBvcnQgcmVxdWlyZW1lbnRzOyBjdXJyZW50IHNvdXJjaW5nIHNvZnR3YXJlLCBwdXJjaGFzZSBuZWVkIGFuZCBidWRnZXQgYXJlIHVua25vd24uIgogICAgfSwKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICJSZXRybyBXb3JsZCIsCiAgICAgICJjb21wYW55X3VybCI6ICJodHRwczovL3JldHJvd29ybGRzLnVrL3RyYWRlIiwKICAgICAgInBlcnNvbiI6ICJTaG9wIGJ1eWluZyB0ZWFtIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiVGhlIERlcmJ5IHNob3AgYnV5cywgc2VsbHMgYW5kIHRyYWRlcyByZXRybyBnYW1lcyBhbmQgY29uc29sZXMsIG9mZmVycyBjb2xsZWN0aW9uIGZvciBsYXJnZXIgbG90cywgYW5kIGRlc2NyaWJlcyBjbGVhbmluZy90ZXN0aW5nIGNvbnRyb2xsZXJzLiBJdHMgY2F0YWxvZ3VlIHNlcGFyYXRlbHkgbGFiZWxzIGEgUEFMIFN1cGVyIE1hcmlvIEthcnQgc2V0IGFuZCBhIEphcGFuZXNlLWltcG9ydCBTZWdhIFNhdHVybiBidW5kbGUuIEJvdGggZXhhbXBsZSBsaXN0aW5ncyB3ZXJlIG1hcmtlZCBvdXQgb2Ygc3RvY2sgd2hlbiByZWFkLiIsCiAgICAgICJzb3VyY2VfdXJsIjogImh0dHBzOi8vcmV0cm93b3JsZHMudWsvdHJhZGUiLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xMyIsCiAgICAgICJzaWduYWxfdHlwZSI6ICJjb21wYW55X2ZpdCIsCiAgICAgICJkZWFkbGluZSI6ICIiLAogICAgICAiY29udGFjdF9yb3V0ZSI6ICJtYWlsdG86ZGVyYnlyZXRyb3dvcmxkQGFvbC5jb20iLAogICAgICAiY29udGFjdF9pbnN0cnVjdGlvbnMiOiAiUHVibGljIGJ1eWluZywgc2VsbGluZyBhbmQgdHJhZGUgZW5xdWlyaWVzLiBUaGUgcHVibGlzaGVkIHRyYWRlIHJvdXRlIGFjY2VwdHMgZW1haWwgZW5xdWlyaWVzIGFuZCBhZHZlcnRpc2VzIGEgY29sbGVjdGlvbiBzZXJ2aWNlIGZvciBsYXJnZXIgZ3JvdXBzIG9mIGl0ZW1zLiBObyBhcHBvaW50bWVudCwgYWN0aXZlIHB1cmNoYXNpbmcgcmVxdWVzdCBvciBhY2NvdW50IHJlbGF0aW9uc2hpcCBpcyBhc3N1bWVkLiIsCiAgICAgICJnZW9ncmFwaHkiOiAiMjAgT3NtYXN0b24gUm9hZCwgRGVyYnksIERFMSAySFIsIFVLIiwKICAgICAgInB1Ymxpc2hlZF9idWRnZXQiOiAiTm8gc29mdHdhcmUgb3Igc291cmNpbmcgYnVkZ2V0IHB1Ymxpc2hlZC4iLAogICAgICAid2h5X2l0X2ZpdHMiOiAiQSBCdXlIdWIgdHJpYWwgY291bGQga2VlcCBVSy9QQUwgc29mdHdhcmUgc2VhcmNoZXMgc2VwYXJhdGUgZnJvbSBleHBsaWNpdGx5IHNlbGVjdGVkIEphcGFuZXNlIGhhcmR3YXJlLCB1c2luZyBzYXZlZCB0ZXJtcywgY291bnRyeSBmaWx0ZXJzIGFuZCBhdWN0aW9uIGFsZXJ0cy4gU3RhZmYgd291bGQgcmV2aWV3IGNvbXBsZXRlLWJveCBjb25kaXRpb24sIGF1dGhlbnRpY2l0eSwgaW5jbHVkZWQgYWNjZXNzb3JpZXMgYW5kIGxhbmRlZCBjb3N0IGJlZm9yZSBkZWNpZGluZy4gVGhlIHR3byBjYXRhbG9ndWUgZXhhbXBsZXMgZGVtb25zdHJhdGUgZGlzdGluY3QgcHJvZHVjdCBjYXRlZ29yaWVzOyB0aGVpciBzdG9jayBzdGF0dXMgaXMgbm90IGV2aWRlbmNlIG9mIGEgcmVzdG9ja2luZyByZXF1ZXN0LiIsCiAgICAgICJvcGVuaW5nX21lc3NhZ2UiOiAiWW91ciBQQUwgU05FUyBhbmQgSmFwYW5lc2UgU2F0dXJuIGNhdGFsb2d1ZSBlbnRyaWVzIHNob3cgd2h5IHJlZ2lvbiBhbmQgY29tcGxldGVuZXNzIG5lZWQgdG8gc3RheSB2aXNpYmxlIHdoZW4gc291cmNpbmcgcmV0cm8gc3RvY2suIFdvdWxkIHlvdXIgYnV5aW5nIHRlYW0gY29uc2lkZXIgYSBCdXlIdWIgdHJpYWwgZm9yIG9uZSBjYXRlZ29yeSB5b3UgYWxyZWFkeSBwdXJjaGFzZSwgd2l0aCBzZXBhcmF0ZSBzYXZlZCBzZWFyY2hlcyBhbmQgYSByZXZpZXcgb2YgYWN0dWFsIGxpc3RpbmdzPyIsCiAgICAgICJzb3VyY2Vfc3RhdHVzIjogIm9wZW4iLAogICAgICAic3RhdHVzX25vdGUiOiAiUHVibGljIGJ1eWluZy90cmFkZSBhY3Rpdml0eSBjaGVja2VkIG9uIDEzIE9jdG9iZXIgMjAyNi4gQ29uZmlybSB0aGUgc2hvcCdzIGN1cnJlbnRseSBhY2NlcHRlZCBmb3JtYXRzLCB3aGV0aGVyIGl0IHdhbnRzIFVLLW9ubHkgc291cmNpbmcgb3IgaW1wb3J0cywgYm94ZWQvbWFudWFsIHJlcXVpcmVtZW50cywgdGVzdGluZyBzdGFuZGFyZCBhbmQgYWNjZXB0YWJsZSByZXBhaXJzL21vZGlmaWNhdGlvbnMuIEl0cyBKYXBhbmVzZSBTYXR1cm4gcGFnZSBzcGVjaWZpZXMgYSBzdGVwLWRvd24gY29udmVydGVyIGZvciBVSyB1c2U7IHJldGFpbiB0aGF0IGFzIGFuIGl0ZW0tc3BlY2lmaWMgcmVxdWlyZW1lbnQgYW5kIHZlcmlmeSBldmVyeSBwcm9wb3NlZCBjb25zb2xlIHNlcGFyYXRlbHkuIEFzayB0aGUgcmV0YWlsZXIgdG8gc2V0IHB1cmNoYXNlIGxpbWl0cyBhbmQgc2hpcHBpbmcvaW1wb3J0IGFzc3VtcHRpb25zLiBObyBjdXJyZW50IHNvdXJjaW5nIHNvZnR3YXJlLCBtYXJnaW4sIGJ1ZGdldCBvciBidXlpbmcgaW50ZW50IGlzIGtub3duLiBUaGUgZmlyc3QtcGFydHkgc2l0ZSBwcmVzZW50cyBvbmUgbG9jYWwgRGVyYnkgc2hvcCBhbmQgaWRlbnRpZmllcyBSZXRybyBXb3JsZCBhcyBpdHMgb3duZXI7IGxlZ2FsIG93bmVyc2hpcCBhbmQgd2lkZXIgZ3JvdXAgc3RydWN0dXJlIGhhdmUgbm90IGJlZW4gaW5kZXBlbmRlbnRseSBlc3RhYmxpc2hlZC4iCiAgICB9CiAgXQp9Cg==",
+        "bytes": 10564,
+        "sha256": "e93a3ecb29050b9672adee1ed8d2f4f2e4f82c561ef4df52528010eb2dd0ec07"
+      },
+      "sha256": "5d7d17b20c1643a825e9c6cf8c4d5fc8aa9952f391cb237ef39bc43022778da3",
+      "updated_at": "2026-10-13T18:47:56.885Z",
+      "history": []
+    }
+  ],
+  "customer_packages": [
+    {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:sample-package-01",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "edition_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:sample-01",
+      "edition_sha256": "24410648cb9a5ed572832b8bbca6aac5bdb6a72a4196217da902d9c4543630f6",
+      "title": "BuyHub — free UK retailer example",
+      "instructions": "BUYHUB — UK RETRO-GAME RETAILER PROFILES\nPrepared by Token Junkie Labs · 13 October 2026\n\nThe free package contains Hidden Chest Gaming / RetroGear. The separate US$20 package contains five additional retailers, each with a published business contact, buying context, tailored opening and original sources. Each ZIP includes the complete HTML, editable CSV, Markdown, JSON and this guide.\n\nUse profiles.html in a browser to read the complete profiles; profiles.csv can be edited in a spreadsheet. Keep PAL/import region, model, working/untested condition, original packaging and total delivered cost separate when discussing a trial. Agree actual purchase constraints with the retailer before searching. Their existing tools and interest are for the conversation to establish.\n\nThe profiles identify publicly evidenced business fit. Source review date:13 October 2026. Stock examples describe categories; they do not establish an active restocking request. Current BuyHub account limits and marketplace availability govern any trial.\n\nOne correction or replacement is included within seven days for an existing customer, duplicate, dead published contact or clear mismatch. Reply to the original Token Junkie Labs conversation with the affected company and reason.\n\nPrepared by Token Junkie Labs.",
+      "prepared_at": "2026-10-13T18:47:56.885Z",
+      "files": [
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-README.txt",
+          "revision": 1,
+          "sha256": "6935151c987c486891513bce5e00b9872d2915e9547b837d7f12faf395719a13"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.html",
+          "revision": 1,
+          "sha256": "dee1ff99aadcfd85d61374b2b8290060b661b059018014067bb8d98907a5d918"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.csv",
+          "revision": 1,
+          "sha256": "1ed96afea38820a4d943aef8f4b660223e309a96284cefb580c283dc913c5d00"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.md",
+          "revision": 1,
+          "sha256": "60a73599128939332c0060d75042d4010ae16937c380390a3b4c69bba2c361a9"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-sample-profiles.json",
+          "revision": 1,
+          "sha256": "817203bb00a5695edc6d1414d5ec60530e6b11eaee0a56a5a3a5df4ccafaac63"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "353e189673c5704f60785dc6dbe3d4f26d5bf462b43583d0c18fce1ec6cd88b6"
+    },
+    {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:paid-package-01",
+      "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+      "edition_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:paid-01",
+      "edition_sha256": "da67bd7279d0825850d3e44d25ddfd9588783390ddc293afc5152ab30ee2d7e6",
+      "title": "BuyHub — five additional UK retailer profiles",
+      "instructions": "BUYHUB — UK RETRO-GAME RETAILER PROFILES\nPrepared by Token Junkie Labs · 13 October 2026\n\nThe free package contains Hidden Chest Gaming / RetroGear. The separate US$20 package contains five additional retailers, each with a published business contact, buying context, tailored opening and original sources. Each ZIP includes the complete HTML, editable CSV, Markdown, JSON and this guide.\n\nUse profiles.html in a browser to read the complete profiles; profiles.csv can be edited in a spreadsheet. Keep PAL/import region, model, working/untested condition, original packaging and total delivered cost separate when discussing a trial. Agree actual purchase constraints with the retailer before searching. Their existing tools and interest are for the conversation to establish.\n\nThe profiles identify publicly evidenced business fit. Source review date:13 October 2026. Stock examples describe categories; they do not establish an active restocking request. Current BuyHub account limits and marketplace availability govern any trial.\n\nOne correction or replacement is included within seven days for an existing customer, duplicate, dead published contact or clear mismatch. Reply to the original Token Junkie Labs conversation with the affected company and reason.\n\nPrepared by Token Junkie Labs.",
+      "prepared_at": "2026-10-13T18:47:56.885Z",
+      "files": [
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-README.txt",
+          "revision": 1,
+          "sha256": "6935151c987c486891513bce5e00b9872d2915e9547b837d7f12faf395719a13"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.html",
+          "revision": 1,
+          "sha256": "2c2b2cd09e393c87a74a9613fe3d27b0173bc7a031da454e58c3adfd979dbf6b"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.csv",
+          "revision": 1,
+          "sha256": "482e899833ea9b4e2042ebcbe8aad5fe6bdc11162027c99fd6726843036dd317"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.md",
+          "revision": 1,
+          "sha256": "849d523a5be8b348ff1d08920f25b5463f865b267d03624e65506872d4a3bf1c"
+        },
+        {
+          "id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013:file:customer-paid-profiles.json",
+          "revision": 1,
+          "sha256": "5d7d17b20c1643a825e9c6cf8c4d5fc8aa9952f391cb237ef39bc43022778da3"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "1b3ab1f02c3166039c28bb2924b67b6011cab8df606a7070b36478fd2ca212ee"
+    }
+  ],
+  "sha256": "429131ce34e58113cad712143c28c828153dc599012204aad97a448f0810557f"
+}
