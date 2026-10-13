@@ -770,6 +770,9 @@ export async function exportHostHandoff({ planFile, bundleDirectory, operationDi
   await privateDirectory(dirname(operationDirectory));
   if (!await exists(operationDirectory)) await mkdir(operationDirectory, { mode: 0o700 });
   await privateDirectory(operationDirectory);
+  // Persist this original operation name even when resuming a prior mkdir.
+  await syncDirectory(operationDirectory);
+  await syncDirectory(dirname(operationDirectory));
   const lease = await acquireDeliveryLease(operationDirectory, { purpose: 'drain' });
   try {
     // Re-read after the original capture lease; a second writer cannot replace

@@ -78,35 +78,35 @@ export async function main(argv = process.argv.slice(2), { output = process.stdo
   const parsed = parseHostHandoffArguments(argv);
   if (parsed.help) { output.write(HELP); return { help: true }; }
   const { command, selectionFile, ...input } = parsed;
-  let result;
-  if (command === 'plan') result = await prepareHostHandoffPlan({
-    ...input, selection: await readJson(selectionFile, 256 * 1024)
-  });
-  else if (command === 'export') result = await exportHostHandoff(input);
-  else if (command === 'restore') result = await restoreHostHandoff(input);
-  else if (command === 'review') result = await inspectRestoredHostHandoff(input);
-  else if (command === 'operation') result = await inspectHostHandoffAdoption(input);
-  else result = await adoptRestoredHostHandoff({ ...input, ...(input.operationDirectory && signal ? { signal } : {}) });
-  output.write(JSON.stringify(result, null, 2) + '\n');
-  return result;
-}
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const argv = process.argv.slice(2);
-  let controller = null;
-  // Only the additive receiving operation owns a drainable publication child.
-  // Preserve the original signal behavior of all older handoff commands.
-  try {
-    const selected = parseHostHandoffArguments(argv);
-    if (selected.command === 'adopt' && selected.operationDirectory) controller = new AbortController();
-  } catch { /* main reports the original argument error below. */ }
+  // Own cancellation at the shared command entry, including workspace delegation.
+  // A supplied signal keeps its original caller; older commands keep their behavior.
+  const controller = command === 'adopt' && input.operationDirectory && signal === undefined
+    ? new AbortController() : null;
+  const selectedSignal = signal ?? controller?.signal;
   const stop = () => controller.abort(Object.assign(new Error('The original adoption was interrupted; read its saved operation before continuing.'),
     { code: 'HOST_HANDOFF_ADOPTION_INTERRUPTED' }));
   if (controller) { process.on('SIGINT', stop); process.on('SIGTERM', stop); }
-  main(argv, { ...(controller ? { signal: controller.signal } : {}) }).catch(issue => {
+  try {
+    let result;
+    if (command === 'plan') result = await prepareHostHandoffPlan({
+      ...input, selection: await readJson(selectionFile, 256 * 1024)
+    });
+    else if (command === 'export') result = await exportHostHandoff(input);
+    else if (command === 'restore') result = await restoreHostHandoff(input);
+    else if (command === 'review') result = await inspectRestoredHostHandoff(input);
+    else if (command === 'operation') result = await inspectHostHandoffAdoption(input);
+    else result = await adoptRestoredHostHandoff({ ...input,
+      ...(input.operationDirectory && selectedSignal ? { signal: selectedSignal } : {}) });
+    output.write(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  } finally {
+    if (controller) { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
+  }
+}
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(issue => {
     process.stderr.write(JSON.stringify({ error: { code: issue.code ?? 'HOST_HANDOFF_FAILED',
       message: issue.message } }) + '\n');
     process.exitCode = 1;
-  }).finally(() => {
-    if (controller) { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
   });
 }
