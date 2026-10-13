@@ -163,3 +163,11 @@ For the existing command-line handover, use the commands in Project continuity's
 
 
 The origin requirement follows the browser's documented sandbox behavior: [Chrome's sandbox cookie explanation](https://privacysandbox.google.com/blog/sandbox-allow-same-site-none-cookies) and the [HTML iframe sandbox specification](https://html.spec.whatwg.org/multipage/iframe-embed-object.html#attr-iframe-sandbox). These are the existing session cookies; no capability token is placed in a report URL.
+
+## Producing versions and native output quantities
+
+Newly prepared reviews retain the exact calibration native-execution snapshot in **Native model versions and output quantities**, with a complete `tables/native-execution.csv`. The table records each candidate run and pollutant, actual producing-stage or observed-run version, explicitly labeled requested-version fallback, raster and annual-load units, area reduction, original versioned documentation, stage reuse and completion, and export/stream/argument hashes. Source inventories retain the original native records beside this readable presentation.
+
+The snapshot comes from the completed calibration report, with its original plan as the retained fallback. Preparing a review never infers a producing version from the currently installed executable. Historical reports without this snapshot remain readable; their review explicitly identifies the available original native records.
+
+The presentation edition `native-execution-v1` participates in a newly prepared review's immutable selection. An existing review keeps its original identity, files and transfer inventory. Prepare a new review from a newly completed calibration to include the current physical-output comparison contract. Normalization tables show the numeric scale and its recorded basis separately.

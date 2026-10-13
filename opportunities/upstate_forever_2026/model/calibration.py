@@ -13,8 +13,8 @@ import math
 from pathlib import Path
 import sys
 
-from .common import (INVEST_VERSION, atomic_json, digest, finite, held,
-                     identifier, now, read_json)
+from .common import (atomic_json, digest, finite, held, identifier, now, read_json)
+from . import calibration_execution, observation_support
 from .observations import NATIVE
 from .workspace import Workspace
 
@@ -132,8 +132,6 @@ def _candidates(workspace, selection):
         if run.get("state") != "complete":
             raise ValueError("Complete original candidate run " + run_id + " before evaluating parameters")
         chosen = run["selection"]
-        if chosen.get("invest_version") != INVEST_VERSION:
-            raise ValueError("Calibration candidates must use the retained InVEST " + INVEST_VERSION)
         scenario = workspace._get("scenarios", chosen["scenario_id"])
         if scenario.get("kind") != "baseline" or scenario.get("patches"):
             raise ValueError("Annual-load parameter evaluation requires original baseline land cover")
@@ -147,7 +145,7 @@ def _candidates(workspace, selection):
             "profile_references": profile.get("references"),
             "table_summary": profile.get("table_summary"),
             "parameters": {model: profile.get(model) for model in scope["selected_models"]},
-            **scope,
+            **scope, **calibration_execution.candidate(workspace, run),
         })
     if len({(c["grid_id"], c["scenario_id"]) for c in candidates}) != 1:
         raise ValueError("Every candidate must use the same original grid and baseline scenario")
@@ -166,9 +164,14 @@ def catalog(workspace):
         if scenario.get("kind") != "baseline" or scenario.get("patches"):
             continue
         profile = workspace._get("profiles", selection["profile_id"])
+        try:
+            execution = calibration_execution.candidate(workspace, run)
+        except (ValueError, KeyError, OSError) as error:
+            execution = {"execution_issues": [str(error)]}
         groups[(selection["grid_id"], selection["scenario_id"])].append({
             "id": run["id"], "run_id": run["id"], "profile_id": profile["id"], "title": profile["title"],
-            "model_period": profile.get("model_period"), **_run_models(run),
+            "model_period": profile.get("model_period"), **_run_models(run), **execution,
+            "calibration_eligible": not execution.get("execution_issues"),
         })
     return {
         "schema": "upstate.calibration-catalog/v1", "workspace_id": workspace.project["id"],
@@ -422,10 +425,14 @@ def _basis(workspace, selection):
     eligible, exclusions = [], []
     for key in selected_ids:
         row = by_id[key]
-        if row.get("admitted") and row.get("parameter") in NATIVE:
+        support_issues = observation_support.comparison_issues(row, observed["metadata"])
+        if row.get("admitted") and row.get("parameter") in NATIVE and not support_issues:
             eligible.append(row)
         else:
-            exclusions.append({"observation_record_id": key, "issues": row.get("issues", [])})
+            exclusions.append({"observation_record_id": key,
+                               "issues": list(row.get("issues", [])) + support_issues,
+                               "measurement_support": observation_support.measurement_support(row, observed["metadata"]),
+                               "species": observation_support.source_species(row, observed["metadata"])})
     if not eligible:
         raise ValueError("The selected source has no admitted annual N/P/sediment reference loads")
     common_parameters = set.intersection(*(set(candidate["available_parameters"]) for candidate in candidates))
@@ -451,6 +458,7 @@ def _basis(workspace, selection):
             exclusions.append({"observation_record_id": row["id"], "parameter": row["parameter"],
                                "available_for_all_candidates": row["parameter"] in common_parameters,
                                "issues": ["Pollutant is outside the selected positive-weight objectives"]})
+    execution = calibration_execution.cohort(workspace, candidates, objective)
     grid = workspace.get_grid(candidates[0]["grid_id"])
     spatial = _source_groups(workspace, selection, rows, grid)
     all_groups = {group["id"] for group in spatial["groups"]}
@@ -471,6 +479,7 @@ def _basis(workspace, selection):
         group["partition"] = "calibration" if group["id"] in calibration else "validation"
     return {
         "selection": selection, "candidates": candidates, "units": units,
+        "native_execution": execution,
         "candidate_count": len(candidates),
         "distinct_profile_count": len({candidate["profile_id"] for candidate in candidates}),
         "common_parameters": [parameter for parameter in PARAMETERS if parameter in common_parameters],
@@ -503,15 +512,17 @@ def prepare(workspace, selection):
     })
 
 
-def _matching_comparison(item, plan, run_id):
+def _matching_comparison(item, plan, run_id, *, checkpoint_matches=False):
     candidate = next((value for value in plan["candidates"] if value["run_id"] == run_id), None)
     selected = candidate.get("selected_models") if candidate else None
-    if selected and selected != ["ndr", "sdr"]:
+    if selected:
         if item.get("model_scope", {}).get("selected_models") != selected:
             return False
     return (item.get("run_id") == run_id
             and item.get("observation_id") == plan["selection"]["observation_id"]
-            and item.get("comparison_version") == 3
+            and calibration_execution.matching_outputs(
+                item, candidate or {}, plan["selection"]["objective"],
+                checkpoint_matches=checkpoint_matches)
             and digest(item.get("catchment_selection")) == digest(plan["selection"]["catchments"])
             and item.get("catchment_source", {}).get("sha256")
                 == plan["spatial_groups"]["source"]["sha256"])
@@ -567,6 +578,7 @@ def _predictions(plan, comparison):
                 "structural_stream_omission_cells":
                     selected[0]["spatial_coverage"].get("structural_stream_omission_cells"),
                 "unexpected_missing_cells": selected[0]["spatial_coverage"].get("unexpected_missing_cells"),
+                "native_stream_source": selected[0]["spatial_coverage"].get("native_stream_source"),
             },
         }
     return predictions
@@ -727,6 +739,7 @@ def inspect(workspace, plan_id):
     if state.get("result_id"):
         workspace._get(RESULT_KIND, state["result_id"])
     return {**state, "id": plan_id, "selection": plan["selection"],
+            "native_execution": plan.get("native_execution"),
             "workspace_id": workspace.project["id"]}
 
 
@@ -757,8 +770,19 @@ def analyze(workspace, plan_id):
             # Enrich an in-memory copy from retained native runs. Saved version-1
             # plans and their content-addressed identities remain unchanged.
             plan = {**plan, "candidates": [dict(candidate) for candidate in plan["candidates"]]}
+            execution = calibration_execution.cohort(
+                workspace, plan["candidates"], plan["selection"]["objective"], verify=True)
+            if (plan.get("native_execution") and
+                    plan["native_execution"]["fingerprint"] != execution["fingerprint"]):
+                raise ValueError("The producing execution differs from the saved calibration plan")
+            if (state.get("execution_fingerprint") and
+                    state["execution_fingerprint"] != execution["fingerprint"]):
+                raise ValueError("The producing execution differs from this retained analysis checkpoint")
+            plan["native_execution"] = execution
+            state["execution_fingerprint"] = execution["fingerprint"]
             state.setdefault("created_at", now())
             state.setdefault("comparison_ids", {})
+            state.setdefault("comparison_execution_fingerprints", {})
             _progress(progress_path, state, state="running", phase="original_comparisons")
             existing = workspace._list("observation-comparisons")
             predictions, scores, failures, comparison_ids = {}, {}, [], {}
@@ -774,16 +798,27 @@ def analyze(workspace, plan_id):
                     if missing:
                         raise ValueError("The saved objective requires absent selected-model outputs: "
                                          + ", ".join(sorted(missing)))
+                    comparison = None
                     if state["comparison_ids"].get(run_id):
-                        comparison = workspace._get("observation-comparisons", state["comparison_ids"][run_id])
-                        if not _matching_comparison(comparison, plan, run_id):
-                            raise ValueError("Retained comparison differs from the frozen calibration selection")
-                    else:
+                        retained = workspace._get("observation-comparisons", state["comparison_ids"][run_id])
+                        checkpoint_matches = (state["comparison_execution_fingerprints"].get(run_id)
+                                              == candidate["execution_fingerprint"])
+                        if _matching_comparison(retained, plan, run_id, checkpoint_matches=checkpoint_matches):
+                            comparison = retained
+                        else:
+                            # Preserve the original comparison record; replace only its stale
+                            # checkpoint link with a current source-compatible comparison.
+                            state["comparison_ids"].pop(run_id, None)
+                            state["comparison_execution_fingerprints"].pop(run_id, None)
+                    if comparison is None:
                         matches = [item for item in existing if _matching_comparison(item, plan, run_id)]
                         comparison = (sorted(matches, key=lambda item: item["id"])[0] if matches
                                       else workspace.compare_observations(
                                           run_id, plan["selection"]["observation_id"], plan["selection"]["catchments"]))
+                        if not _matching_comparison(comparison, plan, run_id, checkpoint_matches=True):
+                            raise ValueError("Current annual comparison changed its source, native files or supported semantics")
                         state["comparison_ids"][run_id] = comparison["id"]
+                        state["comparison_execution_fingerprints"][run_id] = candidate["execution_fingerprint"]
                         _progress(progress_path, state)
                     prediction = _predictions(plan, comparison)
                     score = _score(plan, prediction, plan["selection"]["calibration_group_ids"], plan["normalization"])
@@ -833,6 +868,7 @@ def analyze(workspace, plan_id):
                 "predicted_parameters": [parameter for parameter in PARAMETERS if parameter in plan["selection"]["objective"]],
                 "common_parameters": ([parameter for parameter in PARAMETERS if parameter in common_outputs]
                                       if common_outputs is not None else plan.get("common_parameters")),
+                "native_execution": execution,
                 "selected_models": winner.get("selected_models") if winner else None,
                 "selected_model_scope": winner.get("model_scope") if winner else None,
                 "title": plan["selection"]["title"], "state": "complete" if winner else "no_eligible_candidates",
