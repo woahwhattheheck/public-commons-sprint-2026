@@ -21,7 +21,7 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import shutil
 import stat
@@ -110,13 +110,49 @@ def document(path, *, with_source=False, raw_bytes=None):
     raise ValueError("Save the complete original JSON tool body or receiving Canvas: " + label)
 
 
-def target(root, name):
-    if not isinstance(name, str) or re.search(r"[\\:\x00-\x1f\x7f]", name):
-        raise ValueError("Source member needs an original relative POSIX path")
-    relative = PurePosixPath(name)
-    if relative.is_absolute() or not relative.parts or any(part in (".", "..", "") for part in name.split("/")):
+def _source_parts(name):
+    """Use one portable spelling for original files on every receiving host."""
+    if not isinstance(name, str) or re.search(r'[\\:<>"|?*\x00-\x1f\x7f]', name):
+        raise ValueError("Source member needs an original relative portable POSIX path")
+    parts = name.split("/")
+    if not parts or any(part in (".", "..", "") for part in parts):
         raise ValueError("Unsafe source member path: " + name)
-    path = root.joinpath(*relative.parts)
+    for part in parts:
+        stem = part.split(".", 1)[0].rstrip(" ").upper()
+        if (part.endswith((" ", ".")) or stem in ("CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$")
+                or re.fullmatch(r"(?:COM|LPT)[1-9\u00b9\u00b2\u00b3]", stem)):
+            raise ValueError("Source member has a Windows device or aliased spelling: " + name)
+    return tuple(parts)
+
+
+def _source_names(names):
+    """Reject aliases of files AND their parent directories before any publish."""
+    selected = {}
+    for name in names:
+        parts = _source_parts(name)
+        for index in range(1, len(parts) + 1):
+            original = "/".join(parts[:index])
+            kind = "file" if index == len(parts) else "directory"
+            key = original.casefold()
+            previous = selected.get(key)
+            if previous is not None:
+                if previous != (original, kind) or kind == "file":
+                    raise ValueError("Repeated, aliased or file/directory source path: " + name)
+            else:
+                selected[key] = (original, kind)
+
+
+def _is_reparse(path):
+    try:
+        info = Path(path).lstat()
+    except FileNotFoundError:
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & 0x400)
+
+
+def target(root, name):
+    parts = _source_parts(name)
+    path = root.joinpath(*parts)
     if not path.resolve().is_relative_to(root.resolve()):
         raise ValueError("Keep source members inside the receiving directory")
     return path
@@ -124,8 +160,8 @@ def target(root, name):
 
 def retain(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+    if path.exists() or _is_reparse(path):
+        if _is_reparse(path) or not path.is_file() or path.read_bytes() != data:
             raise ValueError("Preserving a different existing file: " + str(path))
         return
     descriptor, temporary = tempfile.mkstemp(prefix="." + path.name + "-", dir=path.parent)
@@ -184,6 +220,7 @@ def source_inventory(source):
         bank_bytes += len(data)
     if "source_bytes" in source and bank_bytes != source["source_bytes"]:
         raise ValueError("Original source bank byte count differs")
+    _source_names(name for name, _, _ in rows)
     return rows
 
 def receive(manifest_path, parts_root, output):
@@ -191,17 +228,11 @@ def receive(manifest_path, parts_root, output):
     if manifest.get("schema") != "commons.source-bank-transfer/v1":
         raise ValueError("Select the complete source transfer manifest")
     output = Path(output).absolute()
-    if output.is_symlink():
-        raise ValueError("Use an ordinary owned receiving directory")
-    output.mkdir(parents=True, exist_ok=True)
-    for name in ("source", "banks"):
-        root = output / name
-        if root.is_symlink() or (root.exists() and not root.is_dir()):
-            raise ValueError("Use an ordinary receiving subdirectory: " + str(root))
-    banks, members, combined = [], [], {}
+    banks, members, combined, originals, bank_names = [], [], {}, [], set()
     for bank in manifest["banks"]:
-        if not re.fullmatch(r"[a-z0-9-]+", bank["name"]):
-            raise ValueError("Invalid source bank name")
+        if not re.fullmatch(r"[a-z0-9-]+", bank["name"]) or bank["name"] in bank_names:
+            raise ValueError("Invalid or repeated source bank name")
+        bank_names.add(bank["name"])
         stream = bytearray()
         for index, part in enumerate(bank["parts"]):
             if part["index"] != index or part["offset"] != len(stream):
@@ -237,29 +268,26 @@ def receive(manifest_path, parts_root, output):
             members.append(metadata)
         banks.append({"name": bank["name"], "bytes": len(original),
                       "sha256": sha(original), "files": len(source["files"])})
-        retain(output / "banks" / (bank["name"] + ".json"), original)
+        originals.append((target(output / "banks", bank["name"] + ".json"), original))
     if len(combined) != manifest["file_count"] or sum(map(len, combined.values())) != manifest["source_bytes"]:
         raise ValueError("Complete source inventory differs from the transfer manifest")
-    for name in combined:
-        parts = name.split("/")
-        for index in range(1, len(parts)):
-            if "/".join(parts[:index]) in combined:
-                raise ValueError("Source file is also a directory: " + name)
-    # Validate all overlapping existing source files before any source publish.
-    for name, data in combined.items():
-        path = target(output / "source", name)
-        if path.exists() or path.is_symlink():
-            if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
-                raise ValueError("Preserving a different existing source file: " + name)
-    for name, data in combined.items():
-        retain(target(output / "source", name), data)
+    _source_names(combined)
     result = {"schema": "commons.source-bank-receiving/v1", "state": "complete",
               "operation_id": manifest["operation_id"], "directory": str(output),
               "source": str(output / "source"), "file_count": len(combined),
               "source_bytes": sum(map(len, combined.values())), "banks": banks,
               "files": sorted(members, key=lambda item: item["path"])}
-    retain(output / "receiving.json",
-           (json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8"))
+    pending = [(target(output / "source", name), data) for name, data in combined.items()]
+    pending.extend(originals)
+    pending.append((output / "receiving.json",
+                    (json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")))
+    # Validate the whole transfer, retained banks and receiving record before
+    # writing anything. The existing non-overwriting per-file resume stays intact.
+    for path, data in pending:
+        _check_receiving_path(output, path, data)
+    for path, data in pending:
+        _check_receiving_path(output, path, data)
+        retain(path, data)
     return result
 
 
@@ -323,19 +351,25 @@ def _bank_bytes(value, source_text):
 
 
 def _check_receiving_path(output, path, data):
-    # The existing receiver keeps differing files. Also reject directory
-    # symlinks before publishing a direct complete bank, including aliases
-    # which happen to resolve back inside the selected destination.
+    # Validate the existing path spelling as well as the selected bank. A
+    # differently cased directory is not an interchangeable original edition.
     for directory in (output, *output.parents):
-        if directory.is_symlink() or directory.exists() and not directory.is_dir():
+        if _is_reparse(directory) or directory.exists() and not directory.is_dir():
             raise ValueError("Use an ordinary owned receiving directory: " + str(directory))
     for directory in path.parents:
         if directory == output:
             break
-        if directory.is_symlink() or directory.exists() and not directory.is_dir():
+        if _is_reparse(directory) or directory.exists() and not directory.is_dir():
             raise ValueError("Source parent is not an ordinary directory: " + str(directory))
-    if path.exists() or path.is_symlink():
-        if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+    current = output
+    for part in path.relative_to(output).parts:
+        if current.is_dir():
+            for existing in current.iterdir():
+                if existing.name.casefold() == part.casefold() and existing.name != part:
+                    raise ValueError("Preserving an aliased existing path: " + str(existing))
+        current = current / part
+    if path.exists() or _is_reparse(path):
+        if _is_reparse(path) or not path.is_file() or path.read_bytes() != data:
             raise ValueError("Preserving a different existing file: " + str(path))
 
 
@@ -372,10 +406,7 @@ def receive_bank(bank_path, output, *, operation_id=None, expected_bytes=None, e
         for key, actual in (("file_count", len(combined)), ("source_bytes", total)):
             if key in value and (type(value[key]) is not int or value[key] != actual):
                 raise ValueError("Complete bank envelope inventory differs: " + key)
-    for name in combined:
-        parts = name.split("/")
-        if any("/".join(parts[:index]) in combined for index in range(1, len(parts))):
-            raise ValueError("Source file is also a directory: " + name)
+    _source_names(combined)
     result = {"schema": "commons.source-bank-receiving/v1", "state": "complete",
               "operation_id": operation_id, "directory": str(output), "source": str(output / "source"),
               "file_count": len(combined), "source_bytes": total,
@@ -700,10 +731,7 @@ def _carrier_inventory(source):
         normalized[-1].pop("content", None)
         normalized[-1]["encoding"] = "base64"
         modes[name] = mode
-    for name in seen.values():
-        for parent in PurePosixPath(name).parents:
-            if str(parent) != "." and str(parent).casefold() in seen:
-                raise ValueError("A source file is also a parent directory: " + name)
+    _source_names(seen.values())
     for field, actual in (("file_count", len(normalized)), ("source_file_count", len(normalized)),
                           ("source_bytes", source_bytes)):
         if field in source and (type(source[field]) is not int or source[field] != actual):
@@ -721,11 +749,135 @@ def _carrier_inventory(source):
     return bank, inventory, modes, compiled
 
 
+# Standalone equivalents of the received model/windows_fs.py file semantics.
+# The bootstrap must run before an application exists. Keep native ChangeTime,
+# no-reparse handles and write-through publication aligned with that platform.
+_WINDOWS_API = None
+
+
+def _windows_api():
+    global _WINDOWS_API
+    if _WINDOWS_API is None:
+        from ctypes import wintypes
+
+        class AttributeTag(ctypes.Structure):
+            _fields_ = [("FileAttributes", wintypes.DWORD), ("ReparseTag", wintypes.DWORD)]
+
+        class BasicInfo(ctypes.Structure):
+            _fields_ = [("CreationTime", ctypes.c_longlong), ("LastAccessTime", ctypes.c_longlong),
+                        ("LastWriteTime", ctypes.c_longlong), ("ChangeTime", ctypes.c_longlong),
+                        ("FileAttributes", wintypes.DWORD)]
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                      ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        kernel.CreateFileW.restype = wintypes.HANDLE
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel.CloseHandle.restype = wintypes.BOOL
+        kernel.GetFileInformationByHandleEx.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                                       ctypes.c_void_p, wintypes.DWORD]
+        kernel.GetFileInformationByHandleEx.restype = wintypes.BOOL
+        kernel.MoveFileExW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
+        kernel.MoveFileExW.restype = wintypes.BOOL
+        _WINDOWS_API = (kernel, AttributeTag, BasicInfo)
+    return _WINDOWS_API
+
+
+def _windows_failure(path=None):
+    code = ctypes.get_last_error()
+    if code in (2, 3):
+        return FileNotFoundError(errno.ENOENT, ctypes.FormatError(code), str(path))
+    if code in (80, 183):
+        return FileExistsError(errno.EEXIST, ctypes.FormatError(code), str(path))
+    if code in (32, 33):
+        return BlockingIOError(errno.EAGAIN, ctypes.FormatError(code), str(path))
+    return ctypes.WinError(code)
+
+
+def _windows_handle(path, *, directory=False):
+    kernel, AttributeTag, _ = _windows_api()
+    handle = kernel.CreateFileW(str(Path(path).absolute()), 0 if directory else 0x80000000,
+                               7, None, 3, 0x00200000 | 0x02000000, None)
+    if handle == ctypes.c_void_p(-1).value:
+        raise _windows_failure(path)
+    try:
+        info = AttributeTag()
+        if not kernel.GetFileInformationByHandleEx(handle, 9, ctypes.byref(info), ctypes.sizeof(info)):
+            raise _windows_failure(path)
+        if info.FileAttributes & 0x400:
+            raise OSError(errno.ELOOP, "Source path is a reparse point", str(path))
+        if bool(info.FileAttributes & 0x10) != directory:
+            raise ValueError("Source path has the wrong file/directory kind: " + str(path))
+        return handle
+    except BaseException:
+        kernel.CloseHandle(handle)
+        raise
+
+
+def _carrier_open(path):
+    if os.name != "nt":
+        return os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                       | getattr(os, "O_NONBLOCK", 0))
+    import msvcrt
+    handle = _windows_handle(path)
+    try:
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY | os.O_NOINHERIT)
+        handle = None
+        return descriptor
+    finally:
+        if handle is not None:
+            _windows_api()[0].CloseHandle(handle)
+
+
+def _carrier_fd_state(descriptor):
+    value = os.fstat(descriptor)
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError("Choose a retained regular source carrier")
+    change_time = value.st_ctime_ns
+    if os.name == "nt":
+        import msvcrt
+        from ctypes import wintypes
+        kernel, _, BasicInfo = _windows_api()
+        info = BasicInfo()
+        handle = wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
+        if not kernel.GetFileInformationByHandleEx(handle, 0, ctypes.byref(info), ctypes.sizeof(info)):
+            raise _windows_failure()
+        change_time = info.ChangeTime * 100 - 11644473600000000000
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, change_time)
+
+
+def _carrier_path_state(path):
+    if os.name == "nt":
+        descriptor = _carrier_open(path)
+        try:
+            return _carrier_fd_state(descriptor)
+        finally:
+            os.close(descriptor)
+    value = Path(path).lstat()
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError("Choose a retained regular source carrier")
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
+def _carrier_sync_directory(path):
+    if os.name == "nt":
+        # Windows validates the directory; it has no unprivileged POSIX fsync.
+        handle = _windows_handle(path, directory=True)
+        _windows_api()[0].CloseHandle(handle)
+        return False
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    return True
+
+
 def _carrier_plain_path(path):
     path = Path(path).absolute()
     for part in [path, *path.parents]:
-        if part.is_symlink():
-            raise ValueError("Carrier staging must not use a symlink: " + str(part))
+        if _is_reparse(part):
+            raise ValueError("Carrier staging must not use a symlink or reparse point: " + str(part))
     return path
 
 
@@ -745,21 +897,18 @@ def _carrier_roots(output, application, workspace):
 
 def _carrier_original(path):
     path = _carrier_plain_path(path)
-    initial = path.lstat()
-    if not stat.S_ISREG(initial.st_mode):
-        raise ValueError("Choose a retained regular source carrier")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    initial = _carrier_path_state(path)
+    if initial[2] > CARRIER_LIMIT:
+        raise ValueError("Choose a retained regular source carrier within the receiving limit")
+    descriptor = _carrier_open(path)
     with os.fdopen(descriptor, "rb") as stream:
-        before = os.fstat(stream.fileno())
-        if not stat.S_ISREG(before.st_mode) or before.st_size > CARRIER_LIMIT:
+        before = _carrier_fd_state(stream.fileno())
+        if before[2] > CARRIER_LIMIT:
             raise ValueError("Choose a retained regular source carrier within the receiving limit")
         body = stream.read(CARRIER_LIMIT + 1)
-        after = os.fstat(stream.fileno())
-    signature = lambda value: (value.st_dev, value.st_ino, value.st_size,
-                               value.st_mtime_ns, value.st_ctime_ns)
-    if (len(body) > CARRIER_LIMIT or signature(initial) != signature(before)
-            or signature(before) != signature(after)
-            or signature(after) != signature(_carrier_plain_path(path).lstat())):
+        after = _carrier_fd_state(stream.fileno())
+    if (len(body) > CARRIER_LIMIT or initial != before or before != after
+            or after != _carrier_path_state(_carrier_plain_path(path))):
         raise ValueError("Original source carrier changed during reading")
     return body
 
@@ -771,15 +920,19 @@ def _carrier_verify(root, expected, modes):
     found = set()
     for parent, directories, files in os.walk(root, followlinks=False):
         for name in directories:
-            if (Path(parent) / name).is_symlink():
-                raise ValueError("A source staging directory became a symlink")
+            if _is_reparse(Path(parent) / name):
+                raise ValueError("A source staging directory became a symlink or reparse point")
         for name in files:
             path = Path(parent) / name
             relative = path.relative_to(root).as_posix()
             if relative not in expected or _carrier_original(path) != expected[relative]:
                 raise ValueError("Source staging differs from the original bank: " + relative)
             wanted = modes.get(relative, "100644")
-            if stat.S_IMODE(path.stat().st_mode) != (0o755 if wanted == "100755" else 0o644):
+            actual_mode = path.stat().st_mode
+            if os.name == "nt":
+                if not actual_mode & stat.S_IWRITE:
+                    raise ValueError("Received Windows source file became read-only: " + relative)
+            elif stat.S_IMODE(actual_mode) != (0o755 if wanted == "100755" else 0o644):
                 raise ValueError("Original source file mode differs: " + relative)
             found.add(relative)
     if found != set(expected):
@@ -787,6 +940,13 @@ def _carrier_verify(root, expected, modes):
 
 
 def _carrier_publish_directory(pending, output):
+    if os.name == "nt":
+        # Same-volume, write-through move with NO REPLACE_EXISTING/COPY_ALLOWED.
+        # A concurrent receiver keeps its destination; our owned pending tree
+        # remains disposable. Do not substitute the platform replacement API.
+        if not _windows_api()[0].MoveFileExW(str(pending.absolute()), str(output.absolute()), 8):
+            raise _windows_failure(output)
+        return
     # Same Linux no-replace operation used by application_assembly.py.
     libc = ctypes.CDLL(None, use_errno=True)
     rename = getattr(libc, "renameat2", None)
@@ -842,21 +1002,16 @@ def receive_carrier(carrier_path, output, *, application, workspace, expected_sh
         for name, data in expected.items():
             path = target(pending, name)
             retain(path, data)
-            path.chmod(0o755 if expected_modes.get(name) == "100755" else 0o644)
+            path.chmod(0o666 if os.name == "nt" else
+                       (0o755 if expected_modes.get(name) == "100755" else 0o644))
         _carrier_verify(pending, expected, expected_modes)
         for directory, _, _ in os.walk(pending, topdown=False):
-            descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-            try:
-                os.fsync(descriptor)
-            finally:
-                os.close(descriptor)
+            _carrier_sync_directory(directory)
+        _carrier_plain_path(output)
         _carrier_publish_directory(pending, output)
         pending = None
-        descriptor = os.open(output.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        _carrier_sync_directory(output.parent)
+        _carrier_verify(output, expected, expected_modes)
     finally:
         if pending is not None:
             shutil.rmtree(pending)
