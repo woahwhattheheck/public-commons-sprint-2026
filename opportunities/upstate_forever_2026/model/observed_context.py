@@ -160,6 +160,7 @@ def _concentration_support(source):
         "selection": {
             "site_ids": sorted(sites), "parameters": sorted(CONCENTRATIONS),
             "strata": ["surface"], "sampling_period": study.get("grab_sampling", {}),
+            "source_member_prefix": prefix,
         },
         "input_members": {
             actual[name]: {"bytes": members[actual[name]]["bytes"],
