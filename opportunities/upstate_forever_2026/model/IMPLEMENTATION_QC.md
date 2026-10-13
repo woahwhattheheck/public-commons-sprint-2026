@@ -141,3 +141,107 @@ The family is additive: model/implementation_qc.py, operator/implementation_qc.p
 The current Implementation controller publisher composes a narrow Field records launch. Import openImplementationQC and detachImplementationQC from ./implementation_qc.mjs, call openImplementationQC(this) from the sample-qc button, and close its editor before a destructive parent render, plan switch or detach. The helper uses the exact nativePlan and preserves unsaved parent drafts. It introduces no competing plan editor or observation registry.
 
 The component manifest identifies this complete source family for the maintained cumulative source selection. The shared application publisher retains its current complete controller, lab/results, source evidence and outcome-review changes when joining the launch. Restart the original operator after the new descriptor is installed, then reopen the existing saved plan.
+
+
+## Carry a saved QC review into decisions and field follow-up
+
+Open an exact saved review and choose **Review decisions and follow-up**. This opens that report's original duplicate, replicate and blank groups beside the latest saved Implementation plan. The heading displays three separate revisions: the original scientific review, the current field plan, and the revision targeted by the current action draft.
+
+The original report remains the scientific reference. A later correction to a measurement appears as a source change with both complete original and current records. A removed observation remains visible as missing. The reviewer can decide how the original QC result applies to a particular use and retain the work required to resolve it.
+
+### Record decisions with a specific use
+
+Enter the reviewer and review date. Search all groups by original identifiers, result context, retained decisions or assigned tasks. The table pages through the entire original report. **Full original group and history** downloads the complete selected group, all its retained decision events, linked tasks and source changes.
+
+Choose **Review group** and enter:
+
+| Field | What the reviewer records |
+| --- | --- |
+| Decision | Unresolved, use as reviewed, restricted use, exclude from selected use, or follow-up required |
+| Scientific / reporting use scope | The specific analysis, comparison, map, report or other use being reviewed |
+| Decision reason | The method, observation or project context supporting this decision |
+| Action state | Open or closed |
+| Closeout note | The explanation and evidence supporting closure |
+
+For example, a duplicate that exceeds an entered criterion might need a documented restriction for one reported comparison and a task to obtain the original laboratory review. A descriptive QC result can also need follow-up when its sampling relationship requires clarification. The choice belongs to the recorded reviewer and applies to the stated use.
+
+The decision is separate from the original group's numerical outcome, qualifier, laboratory QA and result text. Retained events identify the original report, group, scientific revision, original group digest and preceding event.
+
+### Connect the decision to actual fieldwork
+
+Select existing tasks from the current plan. Each task keeps its original identity, phase, assignee and status. Alternatively, create one additional task with a title, assignee, phase, duration if known, earliest start date if applicable, and notes. Its default phase is **Quality follow-up**. A saved action batch creates that task inside the normal Implementation plan, with its original task fields and revision history.
+
+Use the original plan's task controls to edit progress, dependencies and completion. Closing a QC reviewer action retains the linked tasks' actual statuses; outstanding tasks remain visible in the retained warnings and report. A reviewer can therefore close a documented use decision while longer-running field work continues, with that distinction available to the next operator.
+
+Select evidence from the plan's original source links. The report retains their full descriptors and snapshots. To add new supporting material, retain it through the original field plan and refresh this view. The refresh shows current tasks and source changes while keeping the action draft's previous target revision explicit.
+
+Choose **Add this decision to the draft**. Repeat for all groups that need review. This prepares one batch of decisions and new tasks. The draft table displays every staged group, its use, reason and follow-up. A group can be removed from the draft without changing its existing native history.
+
+### Review, save and reopen the complete action batch
+
+**Preview complete action review** validates the entire selection against the current saved plan. It displays all proposed decision events, created tasks, source changes and the original batch receipt. Download the complete preview when another reviewer needs to inspect it.
+
+If the native plan has advanced, the editor retains the earlier expected revision. Inspect the current source changes, tasks and evidence, then choose **Use current saved plan revision** to update the draft explicitly. Saving still checks that revision atomically, so a concurrent field edit returns a conflict for reconciliation.
+
+**Save decisions and follow-up tasks** queues the original implementation.qc.actions.save operation. Its selection and operation identity are retained before dispatch. **Recover original submit** reuses those same values after a lost response. **Refresh original task** and **Resume original task** continue the existing native operation. The operation index is keyed to the original plan, so the pending task remains recoverable when a successful save has advanced the plan revision.
+
+The successful batch is retained as native plan history and a complete report edition. **Open updated field plan** returns directly to the latest native task tab. When the parent plan contains an unsaved draft, retain and reconcile those edits before reopening the updated native plan. The reviewer can reopen it from **Saved follow-through editions**, inspect its complete decisions and tasks, register it with the scientific report selector, or download the **Complete follow-through ZIP**. The package carries the original QC report members, saved field plan and revision, decision history, task and evidence snapshots, report files and retained attachments.
+
+The native Workspace archive carries the editable plan and these report editions through the existing receiving workflow. After receiving on another machine, open the saved plan, its original QC report and the selected follow-through edition. A ZIP export uses the receiving operator's normal output path when a sender-local archive is unavailable.
+
+### Retain browser drafts and independent selections
+
+Each saved QC report has its own follow-through draft, containing staged decisions and the unfinished group editor. **Back to sample review** and **Close and retain draft** preserve it. The parent QC selection stays available independently.
+
+**Export action selection JSON** retains the whole batch in an ordinary file. **Open action selection JSON** validates the file against this exact plan, original QC report and target revision before replacing the current draft. A selection for a different report remains separate. Files with an older target revision can be reviewed and updated in their original context before use.
+
+The browser displays the original plan's unsaved-edit notice when applicable. Native follow-through works from the saved plan; retain and reconcile an unsaved parent draft before saving it over a newer native revision.
+
+### Follow-through API and native commands
+
+Read-only routes:
+
+| Method and path | Parameters or body |
+| --- | --- |
+| GET /api/implementation-qc/actions | workspace, plan_id, report_id |
+| GET /api/implementation-qc/actions-inspect | workspace, plan_id, report_id, action_report_id |
+| POST /api/implementation-qc/actions-validate | workspace and selection; validate independent drafts against their exact original saved revision |
+| POST /api/implementation-qc/actions-preview | workspace and selection; preview changes against the current saved revision |
+
+The context returns the original review and groups, flattened immutable decision history, complete current tasks and source links, source changes, current native revision, and the plan's saved follow-through report editions. The preview returns a complete preview object with the normalized selection, base and proposed committed revisions, receipt, events and proposed tasks.
+
+Queued native actions:
+
+| Action | Payload |
+| --- | --- |
+| implementation.qc.actions.save | selection |
+| implementation.qc.actions.source | plan_id, action_report_id |
+| implementation.qc.actions.export | plan_id, action_report_id |
+
+The selection schema is upstate.implementation-qc-actions-selection/v1. Its fields are plan_id, report_id, expected_revision, actor, as_of and decisions. Each decision contains group_id, decision, use_scope, reason, state, task_ids, evidence_refs and closure_note. Optional create_task carries title, assignee, phase, duration_days, start_not_before and notes. Use actual retained task and source-link IDs from the context response.
+
+~~~sh
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  context --plan-id ACTUAL_PLAN_ID --report-id ORIGINAL_QC_REPORT_ID
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  validate-selection --selection /absolute/actual-qc-action-selection.json
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  preview --selection /absolute/actual-qc-action-selection.json
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  save --selection /absolute/actual-qc-action-selection.json
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  inspect --plan-id ACTUAL_PLAN_ID --action-report-id RETURNED_ACTION_REPORT_ID
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  source --plan-id ACTUAL_PLAN_ID --action-report-id RETURNED_ACTION_REPORT_ID
+
+python -B -m model.implementation_qc_actions --workspace /absolute/original-workspace \
+  export --plan-id ACTUAL_PLAN_ID --action-report-id RETURNED_ACTION_REPORT_ID \
+  --output /absolute/separate-output/qc-follow-through.zip
+~~~
+
+The additive model module is model/implementation_qc_actions.py. The existing QC provider, extension descriptor, complete family manifest, browser editor and this guide compose the feature. The existing shared Implementation controller still supplies the same Sample quality control entry point.

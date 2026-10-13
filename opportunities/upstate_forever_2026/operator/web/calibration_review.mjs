@@ -46,7 +46,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
       'Prepare its registered scientific source, then use the existing ordered report picker. Original tables, equal-axis figures, map files and the complete dossier ZIP travel with the client report and editable workspace.',
       '<div class="section-body"><div class="page-actions">'+button('source','Prepare report source',packet.review.id,!sources.length)+'</div></div>'+
       (sources.length?table(['Registered source','Figures','Companions',''],sources.map(row=>
-        '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.source_collection_id))+' · '+esc(row.source_id)+'</small></td>'+
+        '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.source_collection_id))+' · '+esc(row.source_id)+'</small><small>'+esc(row.edition||'Retained original edition')+'</small></td>'+
         '<td>'+esc(row.figure_count)+'</td><td>'+esc(row.companion_count)+'</td><td>'+
         button('source-delivery','Open complete delivery',row.id,true)+
         button('source-edition','Open source edition',row.source_collection_id)+'</td></tr>')):

@@ -23,12 +23,14 @@ SOURCE_ROOT = "opportunities/upstate_forever_2026"
 SELF_NAME = "source_tools/calibration_assembly.py"
 INSTALLER_NAME = "operator/install_calibration.py"
 REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
-            "model/calibration.py", "model/CALIBRATION.md",
+            "model/calibration_execution.py", "model/calibration.py", "model/CALIBRATION.md",
             "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
             "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
             "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
             "model/calibration_report_source.py", "model/CALIBRATION_REPORT_SOURCE.md",
             "model/scientific_figures.py", "model/observed_context.py",
+            "model/native_versions.py", "model/model_selection.py",
+            "model/observation_support.py", "model/observation_diagnostics.py",
             "model/spatial.py", "operator/server.py",
             "operator/calibration.py", "operator/web/app.mjs", "operator/web/index.html",
             "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
@@ -190,6 +192,8 @@ def _extension_changes(assembly, installer, current, additions):
     recorded = json.loads(manifest).get("installed", {}) if manifest else {}
     owned = set(REQUIRED) - {"model/workspace.py", "model/observations.py", "model/common.py", "model/spatial.py",
                              "model/scientific_figures.py", "model/observed_context.py",
+                             "model/native_versions.py", "model/model_selection.py",
+                             "model/observation_support.py", "model/observation_diagnostics.py",
                              "operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
                              "operator/extension_registry.py", "operator/web/extension_host.mjs",
                              "install_extensions.py"}

@@ -16,6 +16,7 @@ SOURCE_DIRECTORY = "source/ecoli_temporal_analysis/20261013"
 SOURCE_MANIFEST = "microbial_temporal_observed_report.sources.json"
 CONTEXT_PREFIX = "application-context/microbial"
 REPORT_SOURCE = SOURCE_DIRECTORY + "/index.html"
+FIGURE_GALLERY_SOURCE = SOURCE_DIRECTORY + "/publication-figures.html"
 RECIPE_SOURCE = SOURCE_DIRECTORY + "/observed-report.json"
 REPORT_PATH = CONTEXT_PREFIX + "/" + REPORT_SOURCE
 BOUND_RECIPE_PATH = CONTEXT_PREFIX + "/published-study-observed-report.json"
@@ -250,7 +251,8 @@ def load_companion(application=None):
 
     The files keys are relative to the Published studies source directory.
     report_entry is the unchanged HTML document; recipe_entry is the
-    separately derived observed-report JSON. Each carries the full companion
+    separately derived observed-report JSON. An original figure gallery, when
+    supplied, is a third explicit document. Each carries the full companion
     closure. The caller includes both in its normal model-sources.json;
     PublishedStudyStore retains that root manifest as additional context, which
     anchors the returned application-context/microbial/ view paths.
@@ -289,9 +291,33 @@ def load_companion(application=None):
         "sha256": _sha(files[REPORT_PATH]),
         "companions": [item for item in descriptors if item["path"] != REPORT_PATH],
     })
+    # A generic document registration has no companions. Register the original
+    # gallery explicitly so its relative vector/source downloads also work when
+    # that single document is opened or exported from the source catalogue.
+    gallery = None
+    gallery_path = None
+    if FIGURE_GALLERY_SOURCE in originals:
+        gallery_path = CONTEXT_PREFIX + "/" + FIGURE_GALLERY_SOURCE
+        gallery = {
+            **{key: recipe_entry[key] for key in ("uri", "vintage")},
+            "id": "utility-microbial-scientific-figure-gallery",
+            "kind": "document",
+            "title": "Original microbial scientific figures and vector downloads",
+            "path": gallery_path,
+            "bytes": len(files[gallery_path]),
+            "sha256": _sha(files[gallery_path]),
+            "metadata": {
+                "source_scope": "Complete original microbial temporal, calendar and flow figures",
+                "original_recipe_sha256": provenance["original_recipe"]["sha256"],
+                "scientific_figures": len(recipe.get("figures", [])),
+            },
+            "companions": [item for item in descriptors if item["path"] != gallery_path],
+        }
     return {
         "files": files,
         "report_path": REPORT_PATH,
+        "gallery_path": gallery_path,
+        "gallery_entry": gallery,
         "report_entry": html,
         "recipe_entry": native,
         "source_paths": sorted(originals),

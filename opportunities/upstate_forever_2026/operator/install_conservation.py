@@ -193,7 +193,8 @@ KNOWN_PRIOR = {
         "edae3aa44e2eef6ae09e0388772552aad492ec6daa1a9b28ba5bab1aef06ae41",
         "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3",
         "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7",
-        "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c"
+        "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c",
+        "27c1f0189ff1cdefdba33052a18d3e09725fb4dd63fd8fc070fbd145f72b580a"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
