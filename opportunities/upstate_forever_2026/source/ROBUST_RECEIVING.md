@@ -1,5 +1,70 @@
 # Receive Decision studies into the existing scientific operator
 
+## Required inspection of the outgoing product
+
+Owner-controlled receiving instruction. Source: original project message `1791883899.376109`, expanding repository `AGENTS.md` version `2026-10-13.1`. Apply this rule to the exact original receiving operation described below. Source review and scripted receiving status do not establish rendered readiness.
+
+TJLabs owner rule: actual rendered-product inspection
+Revision: `rendered-product-inspection-20261013-all-attachments-v1`.
+Applies to all current and future peers and providers, in local and cloud sessions.
+
+Before calling a client/prospect-facing app, website, dashboard, demo, report,
+presentation or export ready, the producing peer must actually open, run or
+render the exact outgoing version, LOOK at the rendered screen or its real
+screenshots, and operate the important user controls. Check the actual
+screenshare width and narrow/mobile width where relevant, populated, empty,
+loading and error states, downloads/exports and reopening. Capturing screenshots
+without viewing them is insufficient. Fix ugly, broken, unstyled, cramped,
+clipped, overflowing or unreadable output within the authorized work before
+presenting it. Code review, DOM counts, HTTP 200, unit checks or another peer's
+approval do not replace seeing the actual product.
+
+ALL ATTACHMENTS count. Literally open, view, play and use the final delivered
+HTML, PDF, report, slides, spreadsheet, map, image, video, audio, archive and
+project as its recipient would. For archives, extract and open the actual
+contained deliverables and working project. Tests, checklists and screenshots
+merely captured are not substitutes. Use available high-quality generative media
+models and natural voice generation/TTS for videos; avoid robotic default
+voices. Watch and listen to the final export for pronunciation, pacing, timing
+and audio alignment. Keep building and fixing; inspection is not review/test
+performance theatre.
+
+For the Ecosystem product use plain industrial design: readable tables, clear
+hierarchy, consistent typography and spacing, restrained controls, useful labels
+and responsive layouts. No decorative template slop. Keep the real workflows,
+data and computation. Reviews must lead directly to repairs and must not replace
+hard implementation/integration or become endless rechecking. The existing
+focused-validation policy remains; do not run broad suites or build a separate
+verification product. Prior empty-Workspace screenshots are not acceptance of a
+completed scientific Workspace.
+
+PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled
+policy/instruction surface the provider and workers actually read: global and
+project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions,
+Commons source mirrors, cloud repository instruction copies, and current build
+and receiving guides. Every delegating peer includes this complete rule in child
+assignments, including its all-attachments and final-media clarification. Return
+exact changed paths, source/version and readback. A Slack ACK alone is not
+propagation. Preserve all existing owner controls and do not alter historical
+evidence or third-party/vendor policies. No forced restarts, new watchers or
+revival of owner-stopped work.
+
+Continue the same Ecosystem Sprint Integration assembled product and its original
+scientific, run, browser and receiver owners. Continue native source, runtime and
+archive joins rather than diverting everyone to cosmetic review. Preserve the
+October 13, 2026 fleet cutoff at 10:00 a.m. Eastern (EDT), 14:00 UTC. This project
+cutoff does not expire the standing inspection rule or change other projects'
+owner-directed schedules.
+
+The machine canonical policy is maintained by Root at
+`C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`.
+This portable copy carries Bryce's instruction to the actual provider hooks and
+receiving guides; it does not claim to update another host merely by being
+published. Bryce's placement instruction is: "that rule goes in every policy
+file the agents read not just a slack ping" and "and not just local sessions or
+ones from this provider".
+
+
 This installs the complete native Decision studies desk into the current
 application: the original OPT12 solver and receiver, queue-backed study
 revisions and calculations, retained report/project/selection downloads,
