@@ -7,6 +7,15 @@ publications, respondents, reports, calculation jobs and operating register.
 Their identifiers and versions remain the authority when the project is edited
 and exported again.
 
+For the saved reporting example, open **Reports** for the original-source trade
+reporting questionnaire and choose **Trade questionnaire response report**,
+report `2eaf4700-3f14-4ff0-8e09-5e5b787c9cf1`. Its six accepted source-bound
+responses use the final saved template version 5. The six current original
+family report examples and their complete paired downloads are indexed at
+`workspace/source-evidence/whole-family-programme/delivered-report-index.json`.
+That index distinguishes the current customer examples from retained earlier
+report editions.
+
 ## First opening
 
 The delivered offline document wheels support Linux x86_64, Python 3.12 and
@@ -26,6 +35,12 @@ Open the local URL printed by the server. Read `workspace/operator-key.txt`
 locally and enter that code into the operator login. Stop the server with
 Ctrl-C. Start it with the same command to reopen the same project. Each opening
 prints its current local address. The server retains the existing access code.
+
+Use the **Language / Langue** selector to switch English or French at any time.
+The application retains the authenticated user's preference. Display wording
+and translated choice labels remain separate from the original workbook
+strings and saved answer values. Operators can edit and save a successor
+French wording edition for the selected saved definition.
 
 The installer verifies every delivered wheel before installing without a
 network request. For another supported Python version or platform, install

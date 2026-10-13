@@ -15,11 +15,30 @@ def main():
     parser.add_argument("--publication")
     parser.add_argument("--trade-source")
     parser.add_argument("--run-id")
+    parser.add_argument("--resume",action="store_true",help="Continue the original retained browser run after its saved respondent submission")
     args=parser.parse_args()
     workspace_path=Path(args.workspace).resolve()
     if not (workspace_path/"questionnaires.sqlite3").is_file():
         raise ValueError("Open the original saved commissioning workspace")
-    root=Path(args.output).resolve();root.mkdir(parents=True,exist_ok=False,mode=0o700)
+    root=Path(args.output).resolve()
+    prior=None
+    if args.resume:
+        prior=json.loads((root/"BROWSER_RECEIVING_RESULT.json").read_text())
+        browser=json.loads((root/"browser"/"BROWSER_RESULT.json").read_text())
+        if prior["original_workspace"]!=str(workspace_path) or not any(x["name"]=="original_respondent_saved_progress_reopen_and_submission" for x in browser["phases"]):
+            raise ValueError("Resume the original saved run after its retained respondent submission")
+        if prior.get("status")=="PASS":
+            for retained in prior["outputs"]:
+                actual=identity(Path(retained["path"]))
+                if actual["bytes"]!=retained["bytes"] or actual["sha256"]!=retained["sha256"]:
+                    raise ValueError("The completed original browser output changed")
+            print(json.dumps({"complete":True,"status":"PASS","result":str(root/"BROWSER_RECEIVING_RESULT.json"),
+                              "workspace_id":prior["workspace_id"],"revision":prior["revision"],"replayed":True}),flush=True)
+            return prior
+        attempt=1
+        while (root/("BROWSER_RECEIVING_ATTEMPT_"+str(attempt)+".json")).exists():attempt+=1
+        (root/("BROWSER_RECEIVING_ATTEMPT_"+str(attempt)+".json")).write_text(json.dumps(prior,ensure_ascii=False,indent=2)+"\n")
+    else:root.mkdir(parents=True,exist_ok=False,mode=0o700)
     workspace=Workspace(workspace_path)
     original=workspace.outreach.op_status({})
     publication=args.publication
@@ -37,7 +56,7 @@ def main():
     sources=[s["id"] for s in original["sources"] if s["kind"]=="TRADE" and s["current"]]
     trade_source=args.trade_source or (sources[0] if len(sources)==1 else None)
     if not trade_source:raise ValueError("Select the retained original commissioning trade edition explicitly")
-    run_id=args.run_id or str(uuid.uuid4())
+    run_id=(prior["run_id"] if prior else args.run_id or str(uuid.uuid4()))
     result={"schema":"commons.atssc.respondent-browser-receiving.v1","operation":"ATSSC-QUESTIONNAIRE-WORKSHARE-9FCD-20261012",
             "run_id":run_id,"started_at":stamp(),"workspace_id":original["workspace_id"],"initial_revision":original["revision"],
             "original_workspace":str(workspace_path),"outputs":[]}
@@ -50,7 +69,7 @@ def main():
         server,stderr,opening=start_server(workspace_path,env,root)
         config={"baseUrl":opening["url"],"operatorKey":Path(opening["operator_key_file"]).read_text().strip(),
                 "outputDirectory":str(root/"browser"),"publicationId":publication,"tradeSourceId":trade_source,
-                "runId":run_id,"chrome_path":str(Path(args.chrome).resolve()),"playwright_module":args.playwright}
+                "runId":run_id,"resume":args.resume,"chrome_path":str(Path(args.chrome).resolve()),"playwright_module":args.playwright}
         config_path=root/"browser-input.json";config_path.write_text(json.dumps(config));os.chmod(config_path,0o600)
         print(json.dumps({"ready":True,"url":opening["url"],"workspace_id":original["workspace_id"],"run_id":run_id}),flush=True)
         run=subprocess.run(["node",str(Path(__file__).with_suffix(".mjs")),str(config_path)],
