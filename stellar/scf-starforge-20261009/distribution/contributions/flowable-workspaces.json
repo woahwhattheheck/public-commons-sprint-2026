@@ -37,7 +37,8 @@
     "./seller/flowable/workspace/event-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-intake.mjs",
     "./seller/flowable/workspace/history-analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-analysis.mjs",
     "./seller/flowable/workspace/history-report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-report.mjs",
-    "./seller/flowable/workspace/history-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-delivery.mjs"
+    "./seller/flowable/workspace/history-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-delivery.mjs",
+    "./seller/flowable/workspace/history-xes": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -100,7 +101,9 @@
     "products/flowable-merchant/EVENT_INTAKE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/history/authored-reference.json",
     "products/flowable-merchant/HISTORY_ANALYSIS.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-source-contract.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-source-contract.json",
+    "products/flowable-merchant/HISTORY_XES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes-source-contract.json"
   ],
   "browserAssets": [
     {

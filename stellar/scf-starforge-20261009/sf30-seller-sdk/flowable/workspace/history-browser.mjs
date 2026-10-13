@@ -37,6 +37,24 @@ export function installFlowableHistory({api,historyAPI,write,busy,button,node,ke
    const delivery=await write('exportWorkspace',{label:r.title+' complete native source'});await reload();await openRecord(delivery.kind,delivery.id);
   }));
   resultBox.append(toolbar);
+  const xesBox=node('section'),xesView=node('select',null,{'aria-label':'XES event view'}),xesOutput=node('div');
+  for(const [id,label]of [['activities','Activity start/end observations'],['tasks','Task start/end observations']])xesView.append(node('option',label,{value:id}));
+  xesBox.append(node('h3','Process-mining event export'),node('p','Choose one observed event view. Unknown endings remain unknown; no assignment or completion event is invented.'),xesView,
+   button('Prepare XES and source mapping',()=>busy('Prepare original history XES',async()=>{
+    const selected=xesView.value,epoch=generation,original=result;
+    xesOutput.replaceChildren(node('p','Preparing the selected original timestamps…'));
+    let exportResult;try{exportResult=await historyAPI('xes',{bundleText:value.bundleText,collection:selected});}catch(error){if(epoch===generation&&result===original&&xesView.value===selected)xesOutput.replaceChildren(node('p',error.message));throw error;}
+    if(epoch!==generation||result!==original||xesView.value!==selected)return;
+    const c=exportResult.manifest.counts;
+    xesOutput.replaceChildren(keyValues([['Original traces',c.traces],['Observed timestamps',c.events],['Source rows',c.sourceRows],['Empty traces',c.emptyTraces],['XES SHA-256',exportResult.manifest.file.sha256]]),
+     node('p','Download the XES, its mapping inventory and the complete history source bundle together. In a mining tool select the native element and observed boundary classifier; observed-end is not complete.'),
+     button('Download '+selected+' XES',()=>download(exportResult.manifest.file.filename,exportResult.xml,'application/xml')),
+     button('Download XES mapping and row inventory',()=>download('history-'+selected+'.xes-source.json',exportResult.manifestText)),
+     button('Download complete source bundle',()=>download('workflow-history.history.json',value.bundleText)));
+   })),xesOutput);
+  xesView.addEventListener('change',()=>xesOutput.replaceChildren(node('p','Prepare the current event view.')));
+  resultBox.append(xesBox);
+
   const groups=(title,rows)=>{resultBox.append(node('h3',title),table(['Definition / activity','Observed','Completed','Open','Terminated','Unknown ended','Median completed','p90 completed','Oldest open','Repeated processes'],
    rows.map(g=>[(g.key?g.key+' · ':'')+g.processDefinitionId,g.observed,g.completed,g.open,g.terminated,g.endedCompletionUnknown,hours(g.completedDuration.medianMillis),hours(g.completedDuration.p90Millis),hours(g.openAge.maximumMillis),g.processesWithRepeatedOccurrences])));};
   groups('Process durations and open age',r.processGroups);groups('Task observations',r.taskGroups);resultBox.append(node('h3','Activity occurrences — ended, completion unknown'),table(['Activity / definition','Observed','Ended','Open','Median ended','p90 ended','Oldest open','Repeated processes'],
