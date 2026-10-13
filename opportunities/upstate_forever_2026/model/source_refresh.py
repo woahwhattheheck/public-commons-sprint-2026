@@ -541,6 +541,9 @@ def _apply_dependencies(workspace: Any, plan: Mapping[str, Any], state: Dict[str
             "from_run_id": original_id, "to_run_id": saved["id"],
             "requires_native_rerun": impacts[original_id]["requires_native_rerun"],
             "state": saved.get("state", "prepared")}
+        if saved.get("state") == "complete":
+            state["run_results"][original_id].update(
+                _completed_run_receipt(workspace, saved["id"], "complete"))
         state["run_ids"] = sorted(set(state["mappings"]["runs"].values()))
         _checkpoint(workspace, state)
 
@@ -790,34 +793,69 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
         return result
 
 
+def _completed_run_receipt(workspace: Any, target_id: str, previous_state: str) -> Dict[str, Any]:
+    """Describe actual native stages and exports after the original run completes."""
+    from .model_selection import run_models
+    current = workspace.inspect_run(target_id)
+    if current.get("state") != "complete":
+        raise RuntimeError("Refreshed native run has not completed; retained state is " +
+                           str(current.get("state")))
+    models = {}
+    for model in run_models(current):
+        stage = current["stages"][model]
+        reused = stage.get("reused_from")
+        models[model] = {
+            "mode": "reused" if isinstance(reused, Mapping) else "native",
+            "source_run_id": reused.get("run_id") if isinstance(reused, Mapping) else None,
+            "stage_completed_at": stage.get("completed_at"),
+            "input_signature_id": (stage.get("input_signature") or {}).get("id"),
+        }
+    reused_count = sum(row["mode"] == "reused" for row in models.values())
+    execution = ("already_complete" if previous_state == "complete" else
+                 "reused" if reused_count == len(models) else
+                 "mixed" if reused_count else "complete")
+    return {"state": "complete", "execution": execution, "model_results": models,
+            "reused_model_count": reused_count, "selected_model_count": len(models),
+            "artifacts": deepcopy(current["artifacts"]),
+            "completed_at": current.get("completed_at")}
+
+
 def _execute_and_compare(workspace: Any, plan: Mapping[str, Any], state: Dict[str, Any]) -> None:
     _checkpoint(workspace, state, "native")
-    impacts = {row["id"]: row for row in plan["preview"]["affected"]["runs"]}
-    executed = set()
+    from .native_execution import process_interrupted, storage_exhausted
+    completed = {}
     for original_id, target_id in sorted(state["mappings"]["runs"].items()):
-        if not impacts[original_id]["requires_native_rerun"]:
-            state["run_results"][original_id]["execution"] = "lineage_only"
-            continue
         try:
             current = workspace.inspect_run(target_id)
-            if current.get("state") != "complete" and target_id not in executed:
-                state["run_results"][original_id]["execution"] = "running"
+            previous_state = current.get("state", "prepared")
+            if target_id not in completed:
+                original = workspace.inspect_run(original_id)
+                candidates = ([original_id] if original.get("state") == "complete"
+                              and original_id != target_id else [])
+                state["run_results"][original_id].update(
+                    execution="running", reuse_source_run_ids=candidates)
                 _checkpoint(workspace, state)
-                executed.add(target_id)
-                workspace.run(target_id)
-                current = workspace.inspect_run(target_id)
-            if current.get("state") != "complete":
-                raise RuntimeError("Native run has not completed; retained state is " +
-                                   str(current.get("state")))
-            state["run_results"][original_id].update({"state": "complete", "execution": "complete"})
+                # Every explicitly requested successor must become an ordinary
+                # completed run. Reuse eligibility belongs to the maintained
+                # native input matcher, not to manifest metadata classifications.
+                workspace.run(target_id, reuse_source_run_ids=candidates)
+                completed[target_id] = _completed_run_receipt(workspace, target_id, previous_state)
+            state["run_results"][original_id].update(deepcopy(completed[target_id]))
         except Exception as exc:
-            state["run_results"][original_id].update({"state": "failed", "execution": "failed"})
+            interrupted = process_interrupted(exc)
+            state["run_results"][original_id].update({
+                "state": "interrupted" if interrupted else "failed",
+                "execution": "interrupted" if interrupted else "failed",
+            })
             _error(state, "native", exc, from_run_id=original_id, to_run_id=target_id)
+            _checkpoint(workspace, state)
+            # A confirmed native process interruption or full disk stops this
+            # original coordinator; completed independent branches stay saved.
+            if interrupted or storage_exhausted(exc):
+                raise
         _checkpoint(workspace, state)
     _checkpoint(workspace, state, "comparisons")
     for original_id, target_id in sorted(state["mappings"]["runs"].items()):
-        if not impacts[original_id]["requires_native_rerun"]:
-            continue
         row = {"from_run_id": original_id, "to_run_id": target_id}
         # A retained older delta remains an immutable Workspace object. Only
         # the current eligible result belongs in the active source-plan report.
@@ -851,10 +889,12 @@ def _execute_and_compare(workspace: Any, plan: Mapping[str, Any], state: Dict[st
 def apply_plan(workspace: Any, plan_id: str, run_models: bool = False) -> Dict[str, Any]:
     """Resume an immutable plan, preserving every original source and model object.
 
-    Checkpoints follow every saved dependency and run. Native execution is
-    requested only by run_models=True and applies to physically affected runs.
-    A failure in one native branch does not prevent independent branches running.
-    Comparison eligibility and failures are explicit per original run.
+    Checkpoints follow every saved dependency and run. run_models=True completes
+    every prepared successor through the original native execution and reuse API.
+    Per-model input equality determines reuse; metadata classifications describe
+    source impact and never stand in for completed outputs. Independent failures
+    remain visible; confirmed process interruption or storage exhaustion stops
+    further work. Comparisons retain actual eligibility per original run.
     """
     if not isinstance(run_models, bool):
         raise ValueError("run_models must be a boolean")
@@ -874,7 +914,7 @@ def apply_plan(workspace: Any, plan_id: str, run_models: bool = False) -> Dict[s
             _apply_dependencies(workspace, plan, state)
             if run_models:
                 _execute_and_compare(workspace, plan, state)
-            native_complete = all(not row["requires_native_rerun"] or row.get("state") == "complete"
+            native_complete = all(row.get("state") == "complete"
                                   for row in state["run_results"].values())
             state["state"] = ("failed" if state["errors"] else
                               "complete" if state["native_execution_requested"] and native_complete
@@ -883,8 +923,9 @@ def apply_plan(workspace: Any, plan_id: str, run_models: bool = False) -> Dict[s
             _checkpoint(workspace, state, "done")
             return deepcopy(state)
         except Exception as exc:
+            from .native_execution import process_interrupted
             _error(state, state.get("phase", "apply"), exc)
-            state["state"] = "failed"
+            state["state"] = "interrupted" if process_interrupted(exc) else "failed"
             _checkpoint(workspace, state)
             raise
 

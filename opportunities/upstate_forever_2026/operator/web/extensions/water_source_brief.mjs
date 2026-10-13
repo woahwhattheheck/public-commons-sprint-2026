@@ -1,11 +1,13 @@
 /** Portable source-cohort briefing for the existing Water source review desk. */
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const text = value => value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
 const show = value => value == null ? '—' : typeof value === 'boolean' ? value ? 'Yes' : 'No' : text(value);
 const count = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('en-US', {maximumFractionDigits:3}) : '—';
 const legalKey = row => JSON.stringify([row.edition?.id, row.id]);
+const jurisdiction = row => row.jurisdiction || (row.edition?.classification_system ? row.edition.jurisdiction : 'SC');
+const system = row => row.classification_system || row.edition?.classification_system || 'SC-R61-69';
 const nativeKey = row => JSON.stringify([row.collection_id, row.source_id, row.feature_id]);
 const sourceKey = row => JSON.stringify([row.collection_id, row.source_id, row.sha256 || row.expected_source_sha256]);
 const relation = value => ({
@@ -99,16 +101,18 @@ export function prepareWaterSourceBrief({snapshot, records, filter = {}, nativeC
       legal_rows:legal.length, literal_names:new Set(legal.map(row => row.waterbody_name)).size,
       priority_rows:legal.filter(row => row.rfp_high_quality_candidate === true).length,
       no_discharge_zone_rows:legal.filter(row => row.no_discharge_zone === true).length,
-      legal_classes:totals(legal,'class_raw'), legal_association_states:totals(legal,'association_status'),
+      legal_jurisdictions:totals(legal,jurisdiction), native_jurisdictions:totals(native,jurisdiction),
+      legal_classes:totals(legal,row=>jurisdiction(row)+' · '+row.class_raw), legal_association_states:totals(legal,'association_status'),
       native_features:native.length, native_blank_names:native.filter(row => row.name_blank).length,
       native_blank_counties:native.filter(row => row.county_blank).length,
-      native_classes:totals(native,'class_raw'), native_linework_types:totals(native,'hydro_type_raw'),
+      native_classes:totals(native,row=>jurisdiction(row)+' · '+row.class_raw), native_linework_types:totals(native,'hydro_type_raw'),
       native_geographic_states:totals(native,'geographic_status')
     },
     interpretation:[
       'The legal register and captured-feature filters are two explicitly selected source cohorts. Their row counts are independent.',
       'Named aliases and split legal reaches keep their original record identities and complete descriptions.',
-      'Current/proposed legal edition, publisher data status, native class and geometry association remain separate attributes.',
+      'Legal edition status, publisher data status, native class and geometry association remain separate attributes.',
+      'Class labels, compound components and priority predicates retain their own state jurisdiction and classification system. Identically spelled classes across states are not treated as equivalent.',
       'Candidate and partial associations keep their original qualifications. A shared name or HUC does not establish coextensive legal reach geometry.',
       'Publisher HUC12 attributes and positive measured WBD HUC12 intersections retain separate meanings.',
       'The complete crosswalk coverage table describes its original full geographic scope, not a new calculation for the filtered cohort. Its independent region/class rows are not summed.',
@@ -151,7 +155,13 @@ function legalCards(rows, prefix='reach') {
     return '<article class="reach" id="'+prefix+'-'+index+'"><h3>'+esc(row.waterbody_name)+'</h3>'+
       '<p class="identity">'+esc(edition.id)+' · '+esc(row.id)+'</p>'+
       '<p class="description">'+esc(row.reach_description)+'</p>'+
-      descriptionList([['Original class',row.class_raw],['Current class code',row.class_code],
+      descriptionList([['Jurisdiction',jurisdiction(row)],['Classification system',system(row)],
+        ['Original class',row.class_raw],['Complete source class',row.class_code],
+        ['Original components',(row.class_components||[]).join(', ')],['Primary class',row.primary_class],
+        ['Supplemental classes',(row.supplemental_classes||[]).join(', ')],
+        ['Special source markers',(row.special_markers||[]).join(', ')],
+        ['Original source index',row.original_index],['Reach effective date',row.effective_date],
+        ['Classification role',row.classification_role],
         ['Previous class',row.previous_class],['County codes',(row.county_codes||[]).join(', ')],
         ['Site-specific criteria',row.site_specific],['No-discharge-zone flag',row.no_discharge_zone],
         ['RFP priority-class row',row.rfp_high_quality_candidate],['Legal edition status',edition.status],
@@ -223,10 +233,11 @@ export function renderWaterSourceBrief(prepared) {
       countTable('Measured geographic relationship',summary.native_geographic_states.map(row=>({...row,label:relation(row.label)})))+'</div>'+
       '<p>The complete native inventory is in the CSV and JSON downloads. Open the appendix to read or include all selected rows in print.</p>'+
       '<details class="native-appendix"><summary>Complete native-feature appendix ('+count(native.length)+' rows)</summary>'+
-      table(['Source entry / original feature','Native identifier','Name','County codes','Native class','Publisher type','Publisher status','Geographic relationship','Publisher HUC12','Positive WBD HUC12','Legal association'],
-        native.map(row=>[row.source_id+' / '+row.feature_id,row.id_field+' = '+text(row.object_id),
+      table(['Source entry / original feature','Native identifier','Jurisdiction / system','Name','County codes','Native class','Components / markers','Original index / effective date','Publisher type','Publisher status','Geographic relationship','Publisher HUC12','Positive WBD HUC12','Legal association'],
+        native.map(row=>[row.source_id+' / '+row.feature_id,row.id_field+' = '+text(row.object_id),jurisdiction(row)+' / '+system(row),
           row.name_blank?'Blank native name':row.waterbody_name,(row.county_codes||[]).join(', '),row.class_raw,
-          row.hydro_type_raw,row.data_status,relation(row.geographic_status),row.publisher_huc12,
+          (row.class_components||[]).join('; ')+' / '+(row.special_markers||[]).join(' '),
+          text(row.original_index)+' / '+text(row.effective_date??row.native_effective_date),row.hydro_type_raw,row.data_status,relation(row.geographic_status),row.publisher_huc12,
           (row.positive_huc12||[]).join(', '),(row.association_relations||[]).map(relation).join('; ')]))+'</details>'+
       (value.native_associated_legal_records.length?'<details><summary>Complete original legal context associated with the native cohort</summary>'+
        '<p>These are the crosswalk’s original association records. Its edition may differ from a separately selected legal register.</p>'+
@@ -237,7 +248,8 @@ export function renderWaterSourceBrief(prepared) {
       sourceCard(value.crosswalk_source,'Selected geographic crosswalk')+
       value.native_sources.map(source=>sourceCard(source,'Selected original captured layer')).join('')+
       '<h3>Original legal editions</h3>'+value.editions.map(edition=>'<article><h4>'+esc(edition.regulation)+' · '+esc(edition.status)+'</h4>'+
-        descriptionList([['Edition ID',edition.id],['State publication',edition.state_publication_date],
+        descriptionList([['Edition ID',edition.id],['Jurisdiction',edition.jurisdiction||'South Carolina'],
+          ['Classification system',edition.classification_system||'SC-R61-69'],['State publication',edition.state_publication_date],
           ['CWA effective date',edition.cwa_effective_date],['Source checked',edition.checked_at]])+
         '<p>'+href(edition.source_url,'Original regulation')+' · '+href(edition.effective_source_url,'Edition effective-date source')+'</p></article>').join('')+
       '<details><summary>Complete portable source-cohort record</summary><pre>'+esc(jsonText(value))+'</pre></details>'+

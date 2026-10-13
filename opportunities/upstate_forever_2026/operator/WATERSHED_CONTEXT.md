@@ -583,3 +583,37 @@ The completed export record exposes `landcover_observation_context`; its
 saved display. The complete selected profiles, location rows and source bindings
 remain in `selected-watersheds.json` and the original file inventory. The
 existing download tickets and project archive carry those same members.
+
+## Inspect the rendered outgoing watershed product
+
+Bryce's standing instruction applies to every local or cloud producer and
+receiving peer: before describing a client-facing desk, demo, report or export as
+ready, open the exact outgoing version, look at its actual rendered screen or
+screenshots, and operate the important controls. Source review, HTTP responses,
+DOM counts and automated checks do not establish its visual usability. Carry
+this instruction into delegated receiving work and the current owner-controlled
+guides and instruction files those peers actually read.
+
+Use the populated original project for the final Regional watersheds inspection.
+At the intended screenshare width and a narrow/mobile width, view the source
+choice, watershed table, filters, detail, utility selection, task progress and
+saved export. Inspect the optional-source-empty and actual loading/error displays
+when those states occur in the receiving course. Exercise the evidence checkbox,
+selection/export controls, download links and reopening of the saved selection.
+The selected and contributing-union summaries must remain clearly distinguished;
+group labels, hectares, source periods and saved source identity must be readable.
+
+Open the outgoing HTML brief and the HTML briefing extracted from the downloaded
+packet. View any supplied PDF at normal reading scale. Inspect the actual restored
+project and its saved downloads as well as the producing project. Fix clipping,
+overflow, unreadable tables, broken links, cramped controls or confusing labels
+in the maintained implementation before presenting the product.
+
+Keep the industrial software design: clear hierarchy, readable tables, consistent
+type and spacing, restrained controls and responsive layouts. Record the actual
+version, original project/export identity, viewed widths and material repairs in
+the existing receiving handoff. Keep this inspection within the real product
+course; create no separate validation application or broad test suite.
+
+Instruction source: [Bryce's rendered-product direction, relayed to the Ecosystem
+owners](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449).

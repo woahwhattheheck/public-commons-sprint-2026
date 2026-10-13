@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.classified-water-mapping/v1",
+  "layers": {
+    "nc-savannah-classified-water": {
+      "jurisdiction": "NC",
+      "classification_system": "NC-15A-NCAC-02B",
+      "status": "source-published",
+      "vintage": "NC DEQ source-published Savannah classification; captured2026-10-13; native data last edited 2026-03-18T13:37:32.625Z",
+      "class_field": "BIMS_Class",
+      "name_field": "BIMS_Name",
+      "description_field": "BIMS_Descr",
+      "native_index_field": "BIMS_INDEX",
+      "effective_date_field": "BIMS_Date",
+      "data_status": "publisher-native",
+      "source_cohort_predicate": "Name='Savannah'"
+    }
+  }
+}
