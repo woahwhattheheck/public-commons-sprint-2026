@@ -15,7 +15,10 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any
-from engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle
+if __package__:
+    from .engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle
+else:
+    from engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle
 
 BRIDGE_SCHEMA = 'eco.scenario-design.native-plan/v1'
 
