@@ -193,8 +193,8 @@ class Workspace:
         collection = identifier(value["source_collection_id"])
         for patch in value.get("patches", []):
             _, entry = self.source_file(collection, patch["mask_source_id"])
-            if entry["kind"] != "vector":
-                raise ValueError("Scenario masks must be retained polygon sources")
+            if entry["kind"] not in ("vector", "raster"):
+                raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
         return self._save("scenarios", value)
 
     def prepare_grid(self, spec):
@@ -348,9 +348,9 @@ class Workspace:
         validate_completed_run(value)
         return value
 
-    def run(self, key):
+    def run(self, key, *, reuse_source_run_ids=None):
         from .native import execute_run
-        return execute_run(self, identifier(key))
+        return execute_run(self, identifier(key), reuse_source_run_ids=reuse_source_run_ids)
 
     def combine_runs(self, selection, source_runs, *, execute=True):
         from .run_assembly import combine_runs

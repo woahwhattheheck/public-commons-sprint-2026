@@ -304,7 +304,7 @@ def build(workspace, selection):
                 if name not in overlay_choices:
                     raise ValueError("Select the actual " + name.replace("_", " ") + " source overlay")
             overlays = {name: _overlay(workspace, overlay_choices[name], crs, reporting, label=label)
-                        for name, label in (("drinking_water", "Source-water catchments"),
+                        for name, label in (("drinking_water", "Drinking-water source areas"),
                                             ("high_quality_waters", "Designated high-quality waters"))}
             if "protected_lands" in overlay_choices:
                 overlays["protected_lands"] = _overlay(workspace, overlay_choices["protected_lands"],
