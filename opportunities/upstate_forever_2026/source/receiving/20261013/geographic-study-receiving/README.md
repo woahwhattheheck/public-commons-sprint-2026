@@ -4,9 +4,9 @@ This delivery contains the complete authored Geographic producer and receiving f
 
 ## Current source
 
-The source bank contains **21 files / 470,500 original source bytes**. It includes merged PR4342 receiving, PR4363 producer, PR4410 ensemble lineage, PR4412 current-operation/archive identity correction, both original handover helpers, the explicit paired portable dependency, the maintained installer's complete receiving integration, and the full current owner direction.
+The source bank contains **21 files / 477,375 original source bytes**. It includes merged PR4342 receiving, PR4363 producer, PR4410 ensemble lineage, PR4412 current-operation/archive identity correction, PR4432 exact adopted Programme capture, both original handover helpers, the explicit paired portable dependency, the maintained installer's complete receiving integration, and the full current owner direction.
 
-- [Complete source bank](geographic-study-receiving.source.json): 517437 bytes; SHA256 `252af26c4eaf5413ddc3e44779b8d09ac60352b89d2b63c5cb90dc2a1293f36c`.
+- [Complete source bank](geographic-study-receiving.source.json): 526120 bytes; SHA256 `8ee358090f1de144a00ada90e988aa003c82eb94ba3e407587eb3f7f3aba07df`.
 - [Exact member identities and predecessor guards](manifest.json).
 - [Complete native-family receiving instructions and owner brief](RECEIVING.md).
 
@@ -18,7 +18,7 @@ The predecessor delivery at `b937d37a7bf13f036f96e1cb4c8b60baa13768b1` remains i
 
 WAT's existing RegionalNativeInstaller V2 publisher composes this source into its complete current application at the existing native source boundary. The included `source/install_robust_workbench.py` is `5db35edad21387637d9472d243f50536d59e824a` (92,888 bytes). It accepts all seven receiving/helper paths, checks their actual dependency closure and registration before replacement, and preserves existing Programme, allocation, Study and Geographic validation.
 
-Both `source_tools/geographic_headwaters_handover.py` and `source_tools/simulated_headwaters_handover.py` are complete in this bank. The receiving provider uses their original editable-choices transport. The corrected producer is `41971bb595b93130dfa2212841892bdc50dbd832`; its paired archive helper is retained at `model/paired_ensemble/ensemble_portable.py`. Ensemble transfer is `183aaf612c5151ff2752cbada3ec6b8a62253577`, guarded against the independently retained original `9999c0287cf5b787ddedbb9f426eb9e3d3555457`.
+Both `source_tools/geographic_headwaters_handover.py` and `source_tools/simulated_headwaters_handover.py` are complete in this bank. The receiving provider uses their original editable-choices transport. The current producer is `466d174a09e94f191386eb1c3a9303ba0de26b90` (PR4432, preserving the paired/archive correction); its paired archive helper is retained at `model/paired_ensemble/ensemble_portable.py`. Ensemble transfer is `183aaf612c5151ff2752cbada3ec6b8a62253577`, guarded against the independently retained original `9999c0287cf5b787ddedbb9f426eb9e3d3555457`.
 
 From the owner's complete current source directory, use the maintained installer with the already verified current layers followed by this bank:
 
@@ -32,6 +32,10 @@ From the owner's complete current source directory, use the maintained installer
 Use the actual current installer above, not an older receiver-local copy. Each earlier layer must carry its real predecessor identities. When current bodies are already identical, the installer reuses them. A changed predecessor produces a concrete conflict before replacement. Keep active computation on its admitted source until the native owner closes that source boundary.
 
 For standalone application delivery, follow the complete selected-family route in RECEIVING.md. Export `geographic-study-receiving` from the complete application, retain its original declarations, compose the family against the actual receiver, and use `source_tools/install_cumulative_application.py` into a new destination. The family requires `geographic-operator` and `study-transfer`; source manifests, native modules, browser imports and extension assets travel through that existing dependency graph. This authored integration bank contains the feature and direct helpers; the full family export supplies the existing runtime and scientific input closure.
+
+## Current shared-source composition
+
+The five receiving shared bodies preserve their exact merged PR4342 postimages and predecessor hashes. Any newer Geographic workbench, provider, allocation or preview body is preserved by the guard and composed by WAT's existing publisher. The PR4432 producer declaration includes `model/compute_programme.py`, `model/receptor_study_transfer.py` and `model/geographic_programme.py`; retain their complete current bodies through the selected family and WAT's application runtime. The complete bank freezes this coherent authored edition while allowing the native publisher to retain independently advanced current UI.
 
 ## Actual receiving course
 

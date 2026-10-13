@@ -3,12 +3,12 @@
   "operation": "ECO-S1-GEOGRAPHIC-EDITABLE-STUDY-RECEIVING-20261013",
   "source_file": "geographic-study-receiving.source.json",
   "source_identity": {
-    "bytes": 517437,
-    "sha256": "252af26c4eaf5413ddc3e44779b8d09ac60352b89d2b63c5cb90dc2a1293f36c",
-    "git_blob": "9146bd43f67f94d66dd789b9d21db5b988bb3835"
+    "bytes": 526120,
+    "sha256": "8ee358090f1de144a00ada90e988aa003c82eb94ba3e407587eb3f7f3aba07df",
+    "git_blob": "8a78df2abc5d21fdd4c3e2607256a5b726bdb61b"
   },
   "source_files": 21,
-  "source_bytes": 470500,
+  "source_bytes": 477375,
   "source_references": [
     {
       "pull_request": 4342,
@@ -36,6 +36,11 @@
       "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
       "predecessor_git_blob": "c007883c8971f299f8740bf8484046b762cb3eeb",
       "scope": "Original installer publisher's seven optional receiving paths and complete conditional dependency check."
+    },
+    {
+      "pull_request": 4432,
+      "merge_commit": "47ce07eebcae0839a5820b9cdc5ddacac93ba25f",
+      "scope": "Current Geographic selected Study preserves the exact adopted three-run Programme and its original typed visitor; retains4412 paired/archive correction."
     }
   ],
   "files": [
@@ -117,26 +122,29 @@
     {
       "path": "integration/component_fragments/geographic-study-transfer.json",
       "encoding": "utf-8",
-      "bytes": 1289,
-      "sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
-      "git_blob": "463acd73d416153949de3b8ac27b9645d23c254b",
-      "base_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506"
+      "bytes": 1412,
+      "sha256": "ef988a5bc74b69216438622e82b1ff841aa66daaa26e7a4536eba7db0ca48afa",
+      "git_blob": "31a5bc78a8d850c14d98a93e1a99af993554418b",
+      "base_sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
+      "before_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506"
     },
     {
       "path": "model/GEOGRAPHIC_STUDY_TRANSFER.md",
       "encoding": "utf-8",
-      "bytes": 17162,
-      "sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
-      "git_blob": "e11987cbc599cd8d746cd254a96f1961f4860304",
-      "base_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9"
+      "bytes": 19973,
+      "sha256": "9ec79985436985ce398be2b519e2f472b60c5956aa32e3a7acdfd70e806563a5",
+      "git_blob": "f7ac603458296155feca1b990a87c8eedc5619da",
+      "base_sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
+      "before_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9"
     },
     {
       "path": "model/geographic_study_transfer.py",
       "encoding": "utf-8",
-      "bytes": 49304,
-      "sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
-      "git_blob": "41971bb595b93130dfa2212841892bdc50dbd832",
-      "base_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31"
+      "bytes": 53245,
+      "sha256": "be65dd50d0b64f269628c399428b7b32bb80bc0b779e6c353871614660ff3f1b",
+      "git_blob": "466d174a09e94f191386eb1c3a9303ba0de26b90",
+      "base_sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
+      "before_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31"
     },
     {
       "path": "model/scientific_report_study_transfer.py",
@@ -225,7 +233,8 @@
         "source_tools/simulated_headwaters_handover.py"
       ],
       "contract": "The maintained installer now accepts and verifies the complete receiving integration. Invoke this source version against WAT's complete composed current application and explicit guarded layers; retain both geographic handover helpers. Existing identical postimages are reused. Any differing receiver body must match a declared predecessor, or be composed by its current owner before installation. Existing unrelated components remain required by their original validators."
-    }
+    },
+    "shared_current_source": "Shared receiving UI/provider bodies retain exact PR4342 identity and predecessor guards. The current WAT publisher composes any later Geographic opening, source preview or allocation successors, preserving them when their receiver bytes differ. The complete native family retains model/compute_programme.py, model/receptor_study_transfer.py and model/geographic_programme.py through the producer fragment and existing WAT runtime."
   },
   "receiving_bindings": [
     {
@@ -260,21 +269,24 @@
     },
     {
       "path": "integration/component_fragments/geographic-study-transfer.json",
-      "base_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506",
-      "post_sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
-      "post_git_blob": "463acd73d416153949de3b8ac27b9645d23c254b"
+      "base_sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
+      "before_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506",
+      "post_sha256": "ef988a5bc74b69216438622e82b1ff841aa66daaa26e7a4536eba7db0ca48afa",
+      "post_git_blob": "31a5bc78a8d850c14d98a93e1a99af993554418b"
     },
     {
       "path": "model/GEOGRAPHIC_STUDY_TRANSFER.md",
-      "base_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9",
-      "post_sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
-      "post_git_blob": "e11987cbc599cd8d746cd254a96f1961f4860304"
+      "base_sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
+      "before_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9",
+      "post_sha256": "9ec79985436985ce398be2b519e2f472b60c5956aa32e3a7acdfd70e806563a5",
+      "post_git_blob": "f7ac603458296155feca1b990a87c8eedc5619da"
     },
     {
       "path": "model/geographic_study_transfer.py",
-      "base_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31",
-      "post_sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
-      "post_git_blob": "41971bb595b93130dfa2212841892bdc50dbd832"
+      "base_sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
+      "before_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31",
+      "post_sha256": "be65dd50d0b64f269628c399428b7b32bb80bc0b779e6c353871614660ff3f1b",
+      "post_git_blob": "466d174a09e94f191386eb1c3a9303ba0de26b90"
     },
     {
       "path": "model/scientific_report_study_transfer.py",
@@ -310,9 +322,14 @@
     },
     "installer": "5db35edad21387637d9472d243f50536d59e824a",
     "publisher": "Existing WAT RegionalNativeInstaller V2 owner",
-    "native_boundary": "Original regional reference trio completed at 13:15:26 UTC; the actual installation/receiving owner governs its next quiet source boundary."
+    "native_boundary": "Original regional reference trio completed at 13:15:26 UTC; the actual installation/receiving owner governs its next quiet source boundary.",
+    "selected_programme": {
+      "pull_request": 4432,
+      "merge_commit": "47ce07eebcae0839a5820b9cdc5ddacac93ba25f",
+      "producer": "466d174a09e94f191386eb1c3a9303ba0de26b90"
+    }
   },
-  "predecessor_delivery_commit": "b937d37a7bf13f036f96e1cb4c8b60baa13768b1",
+  "predecessor_delivery_commit": "c6c2aed70594fb2ccc89db7b17ae7cd024cfcb5f",
   "superseded_unpublished_installer": "c4f95f9e4ccc2d21c12fdc0d4d29492789c14e20",
   "validation": "All21 complete source bodies verified independently against exact UTF-8 bytes, SHA256 and native Git blob identities. Root and source peers reviewed the current paired/archive producer, native receiving API/browser handoff, complete maintained installer dependency checks and complete original source declarations. Actual outgoing browser/attachment acceptance belongs to the existing native receiving course."
 }
