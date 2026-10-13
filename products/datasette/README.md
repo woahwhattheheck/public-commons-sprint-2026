@@ -66,3 +66,26 @@ Datasette source capture and edition review feed the original SF30 dataset publi
 - [WRI geothermal table](https://datasette.io/global-power-plants/global-power-plants?primary_fuel=Geothermal)
 - [Original merchant Datasette guide](../../stellar-forge/mcp-merchant-operator/DATASETTE_WORKSPACES.md)
 - [Runtime Source Build guide](../../stellar/scf-starforge-20261009/distribution/runtime-workspace/SOURCE_BUILDS.md)
+
+## Provider input and report workspaces
+
+The selected Datasette release also contains the complete **Datasette source
+workflow** application. Its **Provider sources** desk opens the original Shopify
+Payments, Xero contacts and Odoo target workflows beside the saved business
+requests. Receive an actual whole input file, pause and reselect it after a
+restart, then continue its retained preparation, reconciliation, native report
+and complete project handover.
+
+Use [installed Applications and source workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/INSTALLATION.md#managed-source-workflow)
+for the existing Python/Analysis installation and private provider descriptor.
+The [provider operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/PROVIDER_WORKFLOWS.md)
+covers full file transfer, original account scopes, saved requests and receiving.
+The complete supplier-review and BDNB-territory sources travel with this selected
+package so its installed source checks and native workflows can reopen together.
+
+Before presenting a produced customer result as ready, the original receiving
+owner runs that exact installed application, views its rendered desktop and
+narrow screens, operates the populated/empty/loading/error paths and key
+controls, and opens the actual full downloads and restored workspace. Source
+integration and pure-module behavior results are retained separately from that
+actual rendered receiving record.
