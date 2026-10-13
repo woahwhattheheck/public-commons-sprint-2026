@@ -34,9 +34,10 @@ class Programmes:
             raise self.Fault("PROGRAMME_REQUIRED", "Choose a saved run programme.")
         return key
 
-    def catalogue(self, workspace):
+    def catalogue(self, workspace, *, include_completed_sources=False):
         from model.programme_experiments import catalog
-        return {**self._manager(workspace).catalog(), **catalog(self.operator.ws(workspace))}
+        return {**self._manager(workspace).catalog(include_completed_sources=include_completed_sources),
+                **catalog(self.operator.ws(workspace))}
 
     def _decorate(self, workspace, result):
         result = json.loads(json.dumps(result))
@@ -53,7 +54,8 @@ class Programmes:
     def read(self, workspace, operation, payload):
         manager = self._manager(workspace)
         if operation == "catalog":
-            return {"workspace_key": workspace, **self.catalogue(workspace)}
+            include_sources = payload.get("include_sources") in (True, 1, "1", "true")
+            return {"workspace_key": workspace, **self.catalogue(workspace, include_completed_sources=include_sources)}
         key = self._id(payload)
         if operation == "detail":
             return {"workspace_key": workspace, **self._decorate(workspace, manager.status(key))}
