@@ -75,6 +75,7 @@ class PairCheckpoint:
         self.resumed_windows = 0
         self.total_windows = 0
         self.next_window = 0
+        self.adopted_from = None
 
     def begin(self, empty, total_windows):
         if type(total_windows) is not int or total_windows < 1:
@@ -84,6 +85,8 @@ class PairCheckpoint:
         if self.path.exists():
             try:
                 saved = read_json(self.path)
+                if not isinstance(saved, dict):
+                    raise ValueError("The paired checkpoint must be an object")
                 if (saved.get("schema") != CHECKPOINT_SCHEMA or saved.get("id") != self.key
                         or saved.get("selection") != self.selection
                         or saved.get("total_windows") != total_windows
@@ -93,6 +96,7 @@ class PairCheckpoint:
                     raise ValueError("The paired checkpoint differs from its original inputs")
                 values = _totals(saved["totals"], self.owner.area_ids)
                 self.next_window = self.resumed_windows = saved["next_window"]
+                self.adopted_from = deepcopy(saved.get("adopted_from"))
             except (OSError, ValueError, KeyError, TypeError):
                 _quarantine(self.path)
         self.owner.observe(self, "aggregating")
@@ -107,6 +111,7 @@ class PairCheckpoint:
                 "schema": CHECKPOINT_SCHEMA, "id": self.key, "selection": self.selection,
                 "next_window": next_window, "total_windows": self.total_windows,
                 "totals": values, "totals_sha256": digest(values), "updated_at": now(),
+                **({"adopted_from": self.adopted_from} if self.adopted_from else {}),
             })
             self.last_saved = instant
         self.owner.observe(self, "aggregating")
@@ -116,6 +121,7 @@ class PairCheckpoint:
             "case_id": self.case_id, "run_id": self.run_id, "pollutant": self.pollutant,
             "pair_id": self.key, "reused": reused, "resumed_windows": self.resumed_windows,
             "windows": self.total_windows,
+            **({"adopted_from": deepcopy(self.adopted_from)} if self.adopted_from else {}),
             "elapsed_seconds": max(0.0, time.monotonic() - self.started),
         }
 
@@ -124,7 +130,7 @@ class PairResults:
     """Manage the current study's source-bound completed and partial pair records."""
 
     def __init__(self, directory, *, workspace_id, experiment_id, engine_path,
-                 areas, total_pairs, progress=None):
+                 areas, total_pairs, progress=None, compatible_implementations=()):
         import numpy
         import rasterio
         import shapely
@@ -159,6 +165,20 @@ class PairResults:
         self.directory = self.root / "paired-results" / self.context_id
         self.directory.mkdir(parents=True, exist_ok=True)
         atomic_json(self.directory / "context.json", context, immutable=True)
+        self.compatible_contexts = []
+        for implementation in compatible_implementations:
+            previous = {**context, "implementation": dict(implementation)}
+            previous_id = digest(previous)
+            previous_directory = self.root / "paired-results" / previous_id
+            original = previous_directory / "context.json"
+            if previous_id == self.context_id or not original.is_file():
+                continue
+            try:
+                if read_json(original) != previous:
+                    continue
+            except (OSError, ValueError, TypeError):
+                continue
+            self.compatible_contexts.append((previous_id, previous_directory))
         self.total_pairs = total_pairs
         self.observations = []
         self.current = None
@@ -176,6 +196,7 @@ class PairResults:
             "reused_pairs": sum(row["reused"] for row in self.observations),
             "computed_pairs": sum(not row["reused"] for row in self.observations),
             "resumed_pairs": sum(bool(row["resumed_windows"]) for row in self.observations),
+            "adopted_pairs": sum(bool(row.get("adopted_from")) for row in self.observations),
             "elapsed_seconds": max(0.0, time.monotonic() - self.started),
             "active_case_id": checkpoint.case_id if checkpoint else None,
             "active_run_id": checkpoint.run_id if checkpoint else None,
@@ -193,15 +214,68 @@ class PairResults:
         self.last_notified = instant
         return value
 
+    def _adopt(self, key, selection, checkpoint):
+        """Rebind a verified unchanged-method predecessor without touching it."""
+        destination = self.directory / (key + ".json")
+        if destination.exists() or checkpoint.path.exists():
+            return
+        for context_id, directory in self.compatible_contexts:
+            previous_selection = {**selection, "context_id": context_id}
+            previous_key = digest(previous_selection)
+            for suffix, schema in ((".json", PAIR_SCHEMA), (".partial.json", CHECKPOINT_SCHEMA)):
+                original = directory / (previous_key + suffix)
+                if not original.is_file():
+                    continue
+                try:
+                    # Bind validation and provenance to the same bytes read once.
+                    original_body = original.read_bytes()
+                    import json
+                    saved = json.loads(original_body)
+                    if (not isinstance(saved, dict) or saved.get("schema") != schema
+                            or saved.get("id") != previous_key
+                            or saved.get("selection") != previous_selection):
+                        raise ValueError("The predecessor pair differs from its source binding")
+                    if schema == PAIR_SCHEMA:
+                        values = saved["values"]
+                        if (saved.get("values_sha256") != digest(values)
+                                or not isinstance(values, dict) or set(values) != set(self.area_ids)
+                                or type(saved.get("windows")) is not int or saved["windows"] < 1):
+                            raise ValueError("The predecessor paired result is incomplete")
+                    else:
+                        if (type(saved.get("total_windows")) is not int or saved["total_windows"] < 1
+                                or type(saved.get("next_window")) is not int
+                                or not 0 <= saved["next_window"] <= saved["total_windows"]
+                                or saved.get("totals_sha256") != digest(saved.get("totals"))):
+                            raise ValueError("The predecessor paired checkpoint is incomplete")
+                        _totals(saved["totals"], self.area_ids)
+                except (OSError, ValueError, KeyError, TypeError):
+                    # The original remains available; current calculation recovers
+                    # this pair through its ordinary source-bound cache path.
+                    continue
+                provenance = {
+                    "context_id": context_id, "pair_id": previous_key,
+                    "path": original.relative_to(self.root).as_posix(),
+                    "bytes": len(original_body), "sha256": hashlib.sha256(original_body).hexdigest(),
+                    "method": "exact-known-source-and-unchanged-numerical-functions",
+                    "previous_adoption": saved.get("adopted_from"),
+                }
+                target = destination if schema == PAIR_SCHEMA else checkpoint.path
+                atomic_json(target, {**saved, "id": key, "selection": selection,
+                                     "adopted_from": provenance}, immutable=True)
+                return
+
     def evaluate(self, *, case_id, run_id, pollutant, baseline, alternative, calculate):
         selection = {"context_id": self.context_id, "pollutant": pollutant,
                      "baseline": _body(baseline), "alternative": _body(alternative)}
         key = digest(selection)
         checkpoint = PairCheckpoint(self, key, selection, case_id, run_id, pollutant)
+        self._adopt(key, selection, checkpoint)
         path = self.directory / (key + ".json")
         if path.exists():
             try:
                 saved = read_json(path)
+                if not isinstance(saved, dict):
+                    raise ValueError("The retained paired result must be an object")
                 values = saved["values"]
                 if (saved.get("schema") != PAIR_SCHEMA or saved.get("id") != key
                         or saved.get("selection") != selection
@@ -213,6 +287,7 @@ class PairResults:
                 _quarantine(path)
             else:
                 checkpoint.total_windows = checkpoint.next_window = saved["windows"]
+                checkpoint.adopted_from = deepcopy(saved.get("adopted_from"))
                 self.observations.append(checkpoint.observation(reused=True))
                 self.observe(checkpoint, "reused")
                 return deepcopy(values)
@@ -222,6 +297,7 @@ class PairResults:
                 "schema": PAIR_SCHEMA, "id": key, "selection": selection,
                 "values": values, "values_sha256": digest(values),
                 "windows": checkpoint.total_windows, "completed_at": now(),
+                **({"adopted_from": checkpoint.adopted_from} if checkpoint.adopted_from else {}),
             }, immutable=True)
             checkpoint.path.unlink(missing_ok=True)
             self.observations.append(checkpoint.observation())

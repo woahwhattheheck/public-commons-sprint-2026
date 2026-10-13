@@ -7,6 +7,8 @@ It performs no model calculation and creates no replacement native job queue.
 from __future__ import annotations
 
 from contextlib import closing, contextmanager
+from contextvars import ContextVar
+from copy import deepcopy
 from dataclasses import dataclass
 import errno
 import fcntl
@@ -21,7 +23,7 @@ import threading
 import uuid
 from typing import Callable, Iterable
 
-from model.common import digest as native_digest, file_digest, identifier
+from model.common import digest as native_digest, file_digest, identifier, read_json
 from .adapters import CallbackGateway, StoreBackedRepository
 from .common import IntelligenceError, digest, dumps, now, public_metadata
 from .engine import Engine
@@ -295,10 +297,80 @@ class UpstateRepository(StoreBackedRepository):
     """Read the original workspace; materialize named CAS views only on selection."""
     def __init__(self, owner):
         self.owner = owner
+        self._scope = ContextVar("upstate_investigation_read_scope", default=None)
         super().__init__(owner._records, owner._artifacts,
                          lambda tenant: owner.operator.ws(tenant).root)
 
+
+    @contextmanager
+    def read_scope(self, tenant):
+        """One synchronous read snapshot; never retained across queued mutations."""
+        ws = self.owner.operator.ws(tenant)
+        identity = (tenant, str(ws.root.resolve()), native_digest(ws.project))
+        current = self._scope.get()
+        if current is not None and current["identity"] == identity:
+            yield self
+            return
+        token = self._scope.set({"identity": identity, "memo": {}})
+        try:
+            yield self
+        finally:
+            self._scope.reset(token)
+
+    def _memo(self, tenant, group, key, loader, *, detached=True):
+        scope = self._scope.get()
+        if scope is None or scope["identity"][0] != tenant:
+            return loader()
+        bucket = scope["memo"].setdefault(group, {})
+        if key not in bucket:
+            bucket[key] = deepcopy(loader())
+        return deepcopy(bucket[key]) if detached else bucket[key]
+
+    def _records(self, tenant, kind):
+        with self.read_scope(tenant):
+            return self._memo(
+                tenant, "validated_records", kind,
+                lambda: super(UpstateRepository, self)._records(tenant, kind),
+            )
+
+    def row(self, tenant, kind, object_id):
+        with self.read_scope(tenant):
+            if kind != "job":
+                index = self._memo(
+                    tenant, "record_indexes", kind,
+                    lambda: {row["id"]: row for row in self._records(tenant, kind)},
+                    detached=False,
+                )
+                if not isinstance(object_id, str) or object_id not in index:
+                    raise IntelligenceError("Registered object not found for tenant.", 404)
+                return deepcopy(index[object_id])
+
+            def selected():
+                ws = self.owner.operator.ws(tenant)
+                if not isinstance(object_id, str) or not re.fullmatch(r"[0-9a-f]{64}", object_id):
+                    raise IntelligenceError("Registered object not found for tenant.", 404)
+                path = ws.root / "runs" / object_id / "run.json"
+                if not path.is_file():
+                    raise IntelligenceError("Registered object not found for tenant.", 404)
+                rows = list(self.owner._jobs(tenant, ws, job_ids=(object_id,)))
+                if len(rows) != 1 or rows[0].get("id") != object_id or rows[0].get("tenant_id") != tenant:
+                    raise IntelligenceError("The original run registry changed identity.", 409)
+                return rows[0]
+
+            return self._memo(tenant, "selected_jobs", object_id, selected)
+
+    def _artifact_rows(self, tenant, job_id):
+        with self.read_scope(tenant):
+            return self._memo(
+                tenant, "validated_artifacts", job_id,
+                lambda: super(UpstateRepository, self)._artifact_rows(tenant, job_id),
+            )
+
     def inventory(self, tenant):
+        with self.read_scope(tenant):
+            return self._inventory(tenant)
+
+    def _inventory(self, tenant):
         self.owner.operator.ws(tenant)
         result = {"tenant_id": tenant, "counts": {}}
         for kind, table in (("dataset", "datasets"), ("job", "jobs"),
@@ -308,6 +380,10 @@ class UpstateRepository(StoreBackedRepository):
         return result
 
     def path(self, tenant, ref):
+        with self.read_scope(tenant):
+            return self._path(tenant, ref)
+
+    def _path(self, tenant, ref):
         self.owner.operator.ws(tenant)
         if ref.get("kind") == "dataset":
             row = self.row(tenant, "dataset", str(ref.get("id", "")))
@@ -329,6 +405,10 @@ class UpstateRepository(StoreBackedRepository):
         return path, public_metadata(row.get("metadata") or {})
 
     def artifacts(self, tenant, job_id):
+        with self.read_scope(tenant):
+            return self._artifacts(tenant, job_id)
+
+    def _artifacts(self, tenant, job_id):
         """Complete manifest inventory; selected analysis verifies actual file hashes.
 
         Opening a run should enumerate its whole declared output registry without
@@ -452,8 +532,58 @@ class UpstateInvestigations:
         self.operator.ws(workspace_key)
         return self.experiments.page(workspace_key, experiment_id, offset=offset, limit=limit)
 
+
+    def _native_rows(self, tenant, ws, family):
+        """Enumerate just one original registry, retaining its native validation."""
+        def read():
+            if family in {"sources", "observations", "observation_comparisons"}:
+                folder = family.replace("_", "-")
+                return ws.sources() if family == "sources" else ws._list(folder)
+            filename = {"grids": "grid.json", "comparisons": "comparison.json"}[family]
+            records = []
+            for path in sorted((ws.root / family).glob("*/" + filename)):
+                key = identifier(path.parent.name)
+                _inside(ws.root, path, existing=True)
+                if callable(getattr(ws, "retained_item", None)):
+                    record = ws.retained_item(family, key)
+                else:
+                    record = read_json(path)
+                    if record.get("id") != key:
+                        raise IntelligenceError("The original native registry changed identity.", 409)
+                records.append(record)
+            return records
+        return self.repository._memo(tenant, "native_registries", family, read)
+
+    def _native_item(self, tenant, ws, family, key):
+        key = identifier(key)
+        def read():
+            if family in {"profiles", "scenarios"}:
+                return ws._get(family, key)
+            path = ws.root / family / key / "grid.json"
+            if not path.is_file():
+                return None
+            _inside(ws.root, path, existing=True)
+            if callable(getattr(ws, "retained_item", None)):
+                return ws.retained_item(family, key)
+            value = read_json(path)
+            if value.get("id") != key:
+                raise IntelligenceError("The original native registry changed identity.", 409)
+            return value
+        return self.repository._memo(tenant, "native_items", (family, key), read)
+
+    def _native_run(self, tenant, ws, key):
+        key = identifier(key)
+        def read():
+            _inside(ws.root, ws.root / "runs" / key / "run.json", existing=True)
+            value = ws.inspect_run(key)
+            if value.get("id") != key:
+                raise IntelligenceError("The original run registry changed identity.", 409)
+            return value
+        return self.repository._memo(tenant, "native_runs", key, read)
+
     def _source_rows(self, tenant, ws):
-        for collection in ws.sources():
+        for collection in self._native_rows(tenant, ws, "sources"):
+            collection_sha = native_digest(collection)
             collection_id = identifier(collection["id"])
             for entry in collection.get("entries", []):
                 source_id = entry["id"]
@@ -481,12 +611,12 @@ class UpstateInvestigations:
                             "native_kind": "retained_source", "source_binding": binding,
                             "collection": {k: v for k, v in collection.items() if k != "entries"},
                             "source": entry, "selected_member": body,
-                            "source_record_sha256": native_digest(collection),
+                            "source_record_sha256": collection_sha,
                         },
                     }
 
     def _observation_rows(self, tenant, ws):
-        for record in ws._list("observations"):
+        for record in self._native_rows(tenant, ws, "observations"):
             key = identifier(record["id"])
             body = record["original"]
             size, sha = _identity(body)
@@ -507,9 +637,9 @@ class UpstateInvestigations:
             }
 
     def _derived_rows(self, tenant, ws):
-        overview = ws.overview()
         for family in ("grids", "comparisons", "observation_comparisons"):
-            for record in overview.get(family, []):
+            for record in self._native_rows(tenant, ws, family):
+                record_sha = native_digest(record)
                 key = identifier(record["id"])
                 if family == "grids":
                     root = ws.root / "grids" / key
@@ -532,7 +662,7 @@ class UpstateInvestigations:
                             "path": str(path), "bytes": body["bytes"], "sha256": body["sha256"],
                             "metadata": {
                                 "native_kind": family, "native_id": key, "native_selection": record.get("selection", record.get("spec")),
-                                "source_record_sha256": native_digest(record), "file": body,
+                                "source_record_sha256": record_sha, "file": body,
                                 "registry_locations": [list(trail)],
                             },
                         }
@@ -540,17 +670,26 @@ class UpstateInvestigations:
                         prior["metadata"]["registry_locations"].append(list(trail))
                 yield from selected.values()
 
-    def _jobs(self, tenant, ws):
-        tasks = self.operator.task_list(tenant)
+    def _jobs(self, tenant, ws, *, job_ids=None):
+        tasks = self.repository._memo(tenant, "native_tasks", "all",
+                                      lambda: self.operator.task_list(tenant))
         active = {}
         for task in tasks:
             if task.get("action") == "run.start" and task.get("state") in {"queued", "running"}:
                 active.setdefault(task.get("payload", {}).get("run_id"), []).append(task)
-        overview = ws.overview()
-        grids = {row["id"]: row for row in overview.get("grids", [])}
-        for summary in overview.get("runs", []):
-            run = ws.inspect_run(summary["id"])
+        if job_ids is None:
+            job_ids = [identifier(path.parent.name)
+                       for path in sorted((ws.root / "runs").glob("*/run.json"))]
+        profiles, scenarios, grids = {}, {}, {}
+        for key in job_ids:
+            run = self._native_run(tenant, ws, key)
             selection = run["selection"]
+            for family, cache, selected in (
+                    ("profiles", profiles, selection["profile_id"]),
+                    ("scenarios", scenarios, selection["scenario_id"]),
+                    ("grids", grids, selection["grid_id"])):
+                if selected not in cache:
+                    cache[selected] = self._native_item(tenant, ws, family, selected)
             related = active.get(run["id"], [])
             status = run.get("state", "prepared")
             if related and status not in {"complete", "completed", "succeeded"}:
@@ -561,15 +700,22 @@ class UpstateInvestigations:
                 "metadata": {
                     "native_kind": "native_model_run", "native_state": run.get("state"),
                     "native_record": run, "source_record_sha256": native_digest(run),
-                    "profile": ws._get("profiles", selection["profile_id"]),
-                    "scenario": ws._get("scenarios", selection["scenario_id"]),
-                    "grid": grids.get(selection["grid_id"]),
+                    "profile": deepcopy(profiles[selection["profile_id"]]),
+                    "scenario": deepcopy(scenarios[selection["scenario_id"]]),
+                    "grid": deepcopy(grids.get(selection["grid_id"])),
                     "active_tasks": [{k: task.get(k) for k in
                                       ("id", "operation_id", "action", "state", "request_sha256")} for task in related],
                 },
             }
 
     def _records(self, tenant, kind):
+        with self.repository.read_scope(tenant):
+            return self.repository._memo(
+                tenant, "original_records", kind,
+                lambda: list(self._record_rows(tenant, kind)),
+            )
+
+    def _record_rows(self, tenant, kind):
         ws = self.operator.ws(tenant)
         if kind == "dataset":
             yield from self._source_rows(tenant, ws)
@@ -592,17 +738,16 @@ class UpstateInvestigations:
         elif kind == "job":
             yield from self._jobs(tenant, ws)
         elif kind == "aoi":
-            for collection in ws.sources():
+            for collection in self._native_rows(tenant, ws, "sources"):
+                collection_sha = native_digest(collection)
                 for entry in collection.get("entries", []):
                     if entry.get("kind") == "vector":
                         key = {"collection_id": collection["id"], "source_id": entry["id"]}
                         yield {"id": _dataset_id("aoi", key), "tenant_id": tenant,
                                "title": entry.get("title", entry["id"]),
                                "metadata": {"source_binding": key, "native_source": entry,
-                                            "source_record_sha256": native_digest(collection)}}
+                                            "source_record_sha256": collection_sha}}
         elif kind == "ensemble":
-            for row in ws.overview().get("ensembles", []):
-                yield {**_copy(row), "tenant_id": tenant}
             for method in self.actions.values():
                 if method.kind == "ensemble" and method.catalog is not None:
                     yield from method.catalog(tenant, ws)
@@ -611,7 +756,7 @@ class UpstateInvestigations:
 
     def _artifacts(self, tenant, job_id):
         ws = self.operator.ws(tenant)
-        run = ws.inspect_run(identifier(job_id))
+        run = self._native_run(tenant, ws, job_id)
         root = ws.root / "runs" / run["id"]
         selected = {}
         for trail, body in _registered(run):

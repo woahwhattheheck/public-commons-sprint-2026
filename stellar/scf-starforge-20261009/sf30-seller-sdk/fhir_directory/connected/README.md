@@ -253,3 +253,11 @@ The same provider exposes directory_correction_worksheet_prepare/export/import/r
 Use receiveHumanServicesDirectoryWorksheet with either the full intake profile or its saved importId. Host input aliases must exist before connection startup. The error details preserve the same original intake for recovery. iterateHumanServicesDirectoryWorksheet checks every contiguous native page; downloadHumanServicesDirectoryWorksheetFile receives complete original JSONL when a row exceeds4MiB. The portable package helper retains the native export and every byte.
 
 [Complete worksheet guide](../CORRECTION_WORKSHEETS.md) lists all exact actions, limits, CLI/HTTP paths and typed semantics. [The full client course](../CORRECTION_WORKSHEET_CLIENTS.md) operates the actual offline editor, private operator, Merchant reopening and independently restored customer workspace.
+
+## Three-way worksheet reconciliation
+
+The exact native catalogue adds `directory_correction_worksheet_reconciliation_prepare`, `review`, `export`, `catalogue`, `rows` and `file` under the same full prefix. The typed client provides `prepareDirectoryWorksheetReconciliation`, `reviewDirectoryWorksheetReconciliation`, `getDirectoryWorksheetReconciliationRecord`, `directoryWorksheetReconciliationRows`, `directoryWorksheetReconciliationFile` and `exportDirectoryWorksheetReconciliation`.
+
+Prepare takes a selected current edition and one original/current binding for every original worksheet row. Review takes a choice for every comparison; full-row resolutions use exactly one declared JSON or physical CSV variant. Original lexical strings remain unchanged. Pages bind immutable records, counts, contiguous next offsets and4MiB budgets. Complete comparison/decision files remain downloadable up to256MiB. File helpers verify native descriptor bytes/hash against the runtime-declared payload, then use the original complete receiver.
+
+All three native action inputs retain the scoped32MiB limit. For large inputs use the existing declared host `input_apply` route; inline Merchant requests keep their smaller transport envelope. See [WORKSHEET_RECONCILIATION.md](../WORKSHEET_RECONCILIATION.md) and the [complete client receiving guide](../CORRECTION_WORKSHEET_RECONCILIATION_CLIENTS.md).

@@ -1,0 +1,30 @@
+{
+  "schema": "upstate.observed-flow-seasonality/v1",
+  "gauge_count": 29,
+  "calendar_year_periods": 174,
+  "calendar_month_periods": 2088,
+  "calendar_season_periods": 696,
+  "daily_source_records": 59701,
+  "numeric_daily_records": 59700,
+  "nonnumeric_daily_records": 1,
+  "complete_numeric_years": 149,
+  "fully_approved_complete_years": 144,
+  "estimated_numeric_days": 1166,
+  "provisional_numeric_days": 149,
+  "original_daily_source_count": 56,
+  "complete_numeric_months": 1936,
+  "complete_numeric_seasons": 629,
+  "methods": {
+    "daily_volume": "Original decimal daily mean discharge summed exactly before multiplication by 0.028316846592 m3/ft3 and 86400 nominal seconds/day.",
+    "completeness": "Complete period volume requires every selected calendar date to contain a numeric original value. Observed-period volume retains only known days and is never annualized.",
+    "flags": "A and e may coexist. Approved, provisional, estimated and revised flags are separate preserved source attributes; record flags include nonnumeric observations.",
+    "seasons": "Winter is January, February and December of the same calendar year. Spring is March–May, summer June–August, autumn September–November. These disjoint month groups partition each complete calendar year.",
+    "fractions": "Annual fractions require a complete numeric calendar year and positive annual volume. Monthly/seasonal profile means weight each eligible complete year equally; separately retained fully approved profiles use only years with A on every numeric day.",
+    "duration": "Qp is the R-7 observed daily quantile at 1-p/100. Thus Q5 is P95 and Q95 is P05. Curves describe retained numeric days; incomplete years are explicitly labelled.",
+    "thresholds": "High-flow tail includes days at or above the observed P95; low-flow tail includes days at or below P10. Ties may make those day fractions exceed 5% or 10%. Full dated original positions are retained.",
+    "comparison": "Each selected-year comparison uses other complete calendar periods at the same gauge, independently of annual completeness, with separate complete-numeric and fully-approved reference choices. Mean ratios compare daily mean discharge; volume ratios also retain actual calendar length, including leap February. Annual-volume fraction comparisons use a separate complete-annual-year cohort. Missing target/reference support returns null.",
+    "scope": "Gauge discharge is hydrologic context. It is not a nutrient/sediment load or model calibration fit. Gauge volumes are not summed across stations; upstream/downstream catchments and regulated or diverted flows retain their own identities."
+  },
+  "complete_seasons_with_incomplete_year": 33,
+  "complete_months_with_incomplete_year": 148
+}

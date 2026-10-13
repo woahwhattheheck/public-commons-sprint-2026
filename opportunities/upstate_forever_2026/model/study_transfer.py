@@ -22,22 +22,24 @@ import zipfile
 
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
-from . import portable
+from . import portable, study_delivery_transfer as delivery_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions")
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
-                   "observation-comparisons")
+                   "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
     "experiment-diagnostics": "manifest.json", "comparisons": "comparison.json",
+    **delivery_transfer.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
     "experiments": ".experiment.lock", "experiment-diagnostics": ".diagnostics.lock",
     "comparisons": ".comparison.lock",
+    **delivery_transfer.LOCKS,
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
@@ -46,6 +48,7 @@ LABELS = {
     "sources": "Source collections", "grids": "Prepared grids",
     "observations": "Observation editions", "observation-comparisons": "Observation comparisons",
     "comparisons": "Native comparisons",
+    **delivery_transfer.LABELS,
 }
 
 
@@ -135,6 +138,7 @@ class _Closure:
         self.related_issues = []
         self.decision_database = decision_database
         self.decision_records = {}
+        self.delivery_records = {}
         self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
@@ -162,7 +166,11 @@ class _Closure:
         if _identity(path) != before:
             raise ValueError("Scientific record changed during selection: " + relative)
         value = json.loads(raw)
-        self.files[relative]["sha256"] = hashlib.sha256(raw).hexdigest()
+        actual = hashlib.sha256(raw).hexdigest()
+        expected = self.files[relative].get("sha256")
+        if expected is not None and expected != actual:
+            raise ValueError("The retained scientific record differs from its source hash: " + relative)
+        self.files[relative]["sha256"] = actual
         return value
 
     def _tree_members(self, prefix):
@@ -284,6 +292,10 @@ class _Closure:
         selection, baseline = plan["selection"], plan["baseline"]
         self.need("runs", baseline["run_id"], "Experiment reference")
         self._native_selection(baseline, "Experiment reference")
+        # Adopted producing-stage runs exist before any generated case is materialized.
+        # Their actual immutable run selections remain the receiving authority.
+        for run_id in selection.get("source_run_ids", []):
+            self.need("runs", run_id, "Explicit adopted original experiment source")
         for profile_id in selection.get("profile_ids", []):
             self.need("profiles", profile_id, "Explicit experiment profile")
         for scenario_id in selection.get("scenario_ids", []):
@@ -386,7 +398,9 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if kind in IMMUTABLE_KINDS:
+        if delivery_transfer.visit(self, kind, key, value):
+            pass
+        elif kind in IMMUTABLE_KINDS:
             self._immutable(kind, key, value, reason)
         elif kind == "runs":
             if value.get("id") != key or digest(value["selection"]) != key:
@@ -460,9 +474,17 @@ class _Closure:
         while self.pending:
             self._visit(*self.pending.popleft())
         if self.selection["include_related_results"]:
-            self._related()
-            while self.pending:
-                self._visit(*self.pending.popleft())
+            # A completed release can name another retained report/source cohort.
+            # Resolve its typed descendants before discovering their saved comparisons.
+            while True:
+                count = len(self.nodes)
+                self._related()
+                delivery_transfer.related(self)
+                while self.pending:
+                    self._visit(*self.pending.popleft())
+                if len(self.nodes) == count:
+                    break
+            self.related_issues = list({canonical(row): row for row in self.related_issues}.values())
         self.assert_unchanged()
         return self
 
@@ -517,6 +539,7 @@ class _Closure:
             "planned_cases": sum(row.get("planned_cases", 0) for row in nodes),
             "related_result_issues": self.related_issues,
             "external_decision_dependencies": self.external_decision_dependencies,
+            "completed_deliveries": delivery_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
                                  "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
@@ -763,6 +786,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             "planned_cases": plan["planned_cases"],
             "related_result_issues": plan["related_result_issues"],
         }
+        if closure.delivery_records:
+            identity["completed_deliveries"] = delivery_transfer.receipt(closure)
         if dependencies:
             identity["investigation_dependencies"] = dependencies
         if investigations is not None:
@@ -829,6 +854,7 @@ def verify_received_studies(workspace):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"]).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
+        delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):

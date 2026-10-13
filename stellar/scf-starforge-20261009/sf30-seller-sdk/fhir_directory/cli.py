@@ -53,8 +53,8 @@ def main(argv=None):
     c=command("correction-worksheet-receive");c.add_argument("--import-id",required=True);c.add_argument("--file",required=True)
     c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
     c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
-    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return","correction","correction-worksheet"],required=True);c.add_argument("--id",required=True)
-    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews"])
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return","correction","correction-worksheet","correction-worksheet-reconciliation"],required=True);c.add_argument("--id",required=True)
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews","correctionWorksheetReconciliations","correctionWorksheetReconciliationReviews"])
     c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
     c.add_argument("--severity");c.add_argument("--code");c.add_argument("--finding-source");c.add_argument("--finding-record")
     c.add_argument("--rule");c.add_argument("--target-group");c.add_argument("--source-id");c.add_argument("--record-id");c.add_argument("--outcome");c.add_argument("--candidate")
@@ -64,8 +64,8 @@ def main(argv=None):
     c=command("conformance-finding");c.add_argument("--assessment",required=True);c.add_argument("--finding",required=True)
     c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
     c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
-    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return","correction","correction-worksheet"])
-    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews"])
+    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return","correction","correction-worksheet","correction-worksheet-reconciliation"])
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews","correctionWorksheetReconciliations","correctionWorksheetReconciliationReviews"])
     c.add_argument("--id");c.add_argument("--record");c.add_argument("--member");c.add_argument("--out",required=True)
     for name in ["receive-workspace","receive-handoff"]:command(name).add_argument("--file",required=True)
     args=p.parse_args(argv)
@@ -104,7 +104,10 @@ def main(argv=None):
             kind="acquisitions"if args.kind=="operations"else args.kind
             result=ws.directory_operation(args.id)if kind=="acquisitions"and args.id else ws.directory_record(kind,args.id)if args.id else ws.directory_records(kind,args.offset,args.limit,args.query)
         elif name=="rows":
-            if args.kind=="correction-worksheet":
+            if args.kind=="correction-worksheet-reconciliation":
+                if not args.collection:p.error("Reconciliation rows require their exact --collection")
+                result=ws.directory_correction_worksheet_reconciliation_rows(args.collection,args.id,args.offset,args.limit,row_key=args.row_key,state=args.state)
+            elif args.kind=="correction-worksheet":
                 if not args.collection:p.error("Worksheet rows require their exact --collection")
                 result=ws.directory_correction_worksheet_rows(args.collection,args.id,args.offset,args.limit,row_key=args.row_key,state=args.state)
             elif args.kind=="correction":
@@ -132,7 +135,10 @@ def main(argv=None):
             if args.kind=="workspace":result=ws.export_workspace(args.out)
             elif args.kind=="handoff":result=ws.export_directory_handoff(args.id,args.out)
             else:
-                if args.kind=="correction-worksheet":
+                if args.kind=="correction-worksheet-reconciliation":
+                    if not args.collection:p.error("Reconciliation files require their exact --collection")
+                    path,d=ws.directory_correction_worksheet_reconciliation_file(args.collection,args.id,args.member or("comparison"if args.collection=="correctionWorksheetReconciliations"else"decisions"))
+                elif args.kind=="correction-worksheet":
                     if not args.collection:p.error("Worksheet files require their exact --collection")
                     path,d=ws.directory_correction_worksheet_file(args.collection,args.id,args.member or "input")
                 elif args.kind=="correction":

@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import re
+import math
 import zipfile
 import xml.etree.ElementTree as ET
 import xml.parsers.expat as expat
@@ -448,6 +449,58 @@ def file_result(name, raw, metadata=None, mime=EXCEL_MIME):
             "data_base64": base64.b64encode(raw).decode("ascii"), "metadata": metadata}
 
 
+def present_source_register(raw, tables):
+    """Keep the maintained writer's records readable and preserve typed metadata."""
+    namespace = "{"+S+"}"
+    ET.register_namespace("", S)
+    styles = ('<styleSheet xmlns="'+S+'"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts>'
+        '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE5E5E5"/><bgColor indexed="64"/></patternFill></fill></fills>'
+        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        '<cellXfs count="4"><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+        '<xf numFmtId="49" fontId="1" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>'
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf></cellXfs>'
+        '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>').encode()
+    with zipfile.ZipFile(io.BytesIO(raw)) as source:
+        members={name:source.read(name) for name in source.namelist()}
+    widths = {
+        'Extraction':[38,110],
+        'Question mapping':[42,96,14,36,28,12,22,16,42,18,18,18,14,14],
+        'Source cells':[42,96,18,16,36,36,36,28,12,20,12,42,42,18,72,42,16,18,42,14,18,18,14,36],
+        'Validation':[42,20,18,16,34,90,28,12,20],
+    }
+    for index,(name,table) in enumerate(tables.items(),1):
+        path='xl/worksheets/sheet'+str(index)+'.xml';sheet=ET.fromstring(members[path])
+        columns=ET.Element(namespace+'cols')
+        for position,width in enumerate(widths[name],1):
+            ET.SubElement(columns,namespace+'col',min=str(position),max=str(position),width=str(width),customWidth='1')
+        data=sheet.find(namespace+'sheetData');sheet.insert(list(sheet).index(data),columns)
+        view=sheet.find(namespace+'sheetViews/'+namespace+'sheetView');view.set('showGridLines','0')
+        pane=view.find(namespace+'pane')
+        if name!='Extraction':pane.set('xSplit','1');pane.set('topLeftCell','B2');pane.set('activePane','bottomRight')
+        values=[table['headers'],*table['rows']]
+        for row,value_row in zip(data,values):
+            lines=max([1,*[sum(max(1,math.ceil(len(part)/max(1,widths[name][column]-3))) for part in (canonical(value) if isinstance(value,(dict,list)) else '' if value is None else str(value)).split('\n')) for column,value in enumerate(value_row)]])
+            row.set('ht',str(max(26 if row.get('r')=='1' else 20,lines*13+6)));row.set('customHeight','1')
+            for cell,value in zip(row,value_row):
+                cell.set('s','1' if row.get('r')=='1' else '0')
+                if row.get('r')!='1' and type(value) in {int,bool}:
+                    for child in list(cell):cell.remove(child)
+                    cell.set('t','b' if type(value) is bool else 'n');cell.set('s','3' if type(value) is bool else '2')
+                    ET.SubElement(cell,namespace+'v').text=('1' if value else '0') if type(value) is bool else str(value)
+        members[path]=ET.tostring(sheet,encoding='utf-8',xml_declaration=True)
+    members['xl/styles.xml']=styles
+    content=members['[Content_Types].xml'].decode().replace('</Types>','<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>')
+    members['[Content_Types].xml']=content.encode()
+    relations=members['xl/_rels/workbook.xml.rels'].decode().replace('</Relationships>','<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
+    members['xl/_rels/workbook.xml.rels']=relations.encode()
+    output=io.BytesIO()
+    with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as target:
+        for name,body in sorted(members.items()):
+            info=zipfile.ZipInfo(name,(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;target.writestr(info,body)
+    return output.getvalue()
+
+
 class WorkbookExchange:
     """Operation implementation bound to the maintained extension router."""
 
@@ -489,16 +542,19 @@ class WorkbookExchange:
         return file_result(name, raw, {"source_url": source_url, "edition": "retained_original"})
 
     def _exchange_definition(self, p):
+        def display(definition):
+            project = getattr(self.workspace, "_display_definition", None)
+            return project(definition) if callable(project) else definition
         if p.get("respondent_id"):
             record = self.op_get_respondent({"respondent_id": p["respondent_id"]})
-            return record["definition"], record["publication"]
+            return record.get("display_definition") or display(record["definition"]), record["publication"]
         if p.get("publication_id"):
             with self.connection() as db:
                 publication, definition = self._definition(db, p["publication_id"])
-            return definition, publication
+            return display(definition), publication
         record = self.op_get_definition({"questionnaire_id": p["questionnaire_id"],
                                          **({"version": p["version"]} if p.get("version") is not None else {})})
-        return record["definition"], {"questionnaire_id": record["questionnaire_id"], "definition_version": record["version"]}
+        return display(record["definition"]), {"questionnaire_id": record["questionnaire_id"], "definition_version": record["version"]}
 
     def op_exchange_mapping(self, p):
         from questionnaire_workspace import is_calculated, table_rows
@@ -510,6 +566,9 @@ class WorkbookExchange:
                    "disclosure": question.get("disclosure", "protected"), "binding": binding,
                    "calculated": is_calculated(question), "source_readonly": bool(question.get("source_readonly")),
                    "workbook_scale": question.get("workbook_scale", "1")}
+            for key in ("unit", "original_question_text", "original_row_label", "section", "original_question_heading", "original_french_text", "original_row_french_label", "original_context", "original_period_context", "original_answer_option", "original_choice_labels", "original_choice_french_labels"):
+                if key in question:
+                    row[key] = question[key]
             if binding and question["kind"] == "table":
                 row["columns"] = [{"id": c["id"], "label": c["label"], "kind": c["kind"],
                                    "source_column": c.get("source_column"),
@@ -558,8 +617,11 @@ class WorkbookExchange:
         sheets = {s["name"]: s for s in book["sheets"]}
         native_book = self.workbook(p["sha256"])
         native_sheets = {s["name"]: s for s in native_book["sheets"]}
-        answers, computed, records, issues, source_rows = {}, {}, [], [], {}
+        answers, computed, records, issues, formula_issues, source_rows = {}, {}, [], [], [], {}
         blocked = set()
+
+        def source_issues(question, findings):
+            (formula_issues if is_calculated(question) else issues).extend(findings)
 
         def record_cell(question, column, address, number=None):
             binding = question["source"]
@@ -583,9 +645,9 @@ class WorkbookExchange:
             elif state["formula"] is not None and (not state["cached"]["present"] or state["cached"]["kind"] == "error"):
                 error = "SOURCE_FORMULA_CACHE"
             if error:
-                issues.append({"field": question["id"], "column": record["column_id"], "source_row": number,
+                source_issues(question, [{"field": question["id"], "column": record["column_id"], "source_row": number,
                                "code": error, "message": "Review this source cell in the original calculation workflow",
-                               "source": record["source"], "cell": state})
+                               "source": record["source"], "cell": state}])
                 blocked.add((sheet_name, address))
                 # This is only the in-memory projection. The retained workbook bytes
                 # and the complete original semantic record above remain unchanged.
@@ -610,9 +672,12 @@ class WorkbookExchange:
             target = computed if question.get("source_calculated") else answers
             if question["kind"] != "table":
                 projection = project_answers({"questions": [question]}, native_book, template)
-                issues.extend(projection["issues"])
+                source_issues(question, projection["issues"])
                 if not question.get("source_calculated") or (
-                    p.get("formula_values") == "cached" and (binding["sheet"], binding["cell"]) not in blocked
+                    p.get("formula_values") == "cached" and (
+                        (binding["sheet"], binding["cell"]) not in blocked or
+                        sheets.get(binding["sheet"], {}).get("cells", {}).get(binding["cell"], {}).get("cached", {}).get("present")
+                    )
                 ):
                     target.update(projection["answers"])
                 continue
@@ -620,7 +685,7 @@ class WorkbookExchange:
             for number in table_rows(binding):
                 one = {**question, "source": {**binding, "start_row": number, "end_row": number, "rows": [number]}}
                 projection = project_answers({"questions": [one]}, native_book, template)
-                issues.extend(projection["issues"])
+                source_issues(question, projection["issues"])
                 projected = projection["answers"].get(question["id"], [])
                 position = None
                 if projected or binding.get("rows"):
@@ -647,7 +712,7 @@ class WorkbookExchange:
             current = respondent["draft"] or (respondent["revisions"][-1] if respondent["revisions"] else None)
             if current is not None:
                 answers = {**current["answers"], **answers}
-        validation = validate_answers(definition, answers, computed_values=computed,
+        validation = validate_answers(definition, answers, computed_values=computed, formula_issues=formula_issues,
                                       source_values=self.source_values(definition))
         validation["issues"].extend(issues)
         validation["valid"] = not validation["issues"]
@@ -655,6 +720,7 @@ class WorkbookExchange:
                 "respondent_id": p.get("respondent_id"), "workbook_sha256": p["sha256"],
                 "template_sha256": template, "name": name, "source_url": source_url,
                 "answers": answers, "computed_values": computed, "validation": validation, "cells": records,
+                "source_issues": issues + formula_issues,
                 "source_rows": source_rows, "mapping": self.op_exchange_mapping(p)}
 
     def op_exchange_export(self, p, _operation_name="exchange_export"):
@@ -697,7 +763,8 @@ class WorkbookExchange:
                 ["Questionnaire", mapping["title"]],
                 ["Publication", extraction["publication"]],
                 ["Source cell count", len(extraction["cells"])],
-                ["Validation issue count", len(extraction["validation"]["issues"])],
+                ["Answer validation issue count", len(extraction["validation"]["issues"])],
+                ["Original formula review issue count", len(extraction["validation"]["formula_issues"])],
             ]},
             "Question mapping": {"headers": ["Question ID", "Label", "Kind", "Original workbook", "Worksheet", "Cell",
                 "Physical rows", "Column ID", "Column label", "Source column", "Workbook scale", "Source readonly",
@@ -708,7 +775,7 @@ class WorkbookExchange:
                 "Cache present", "Cache kind", "Cache raw value", "Cell style", "Workbook scale", "Source readonly",
                 "Calculated", "Cell identity"], "rows": []},
             "Validation": {"headers": ["Question ID", "Rule", "Column", "Physical row", "Code", "Message",
-                "Worksheet", "Cell"], "rows": []},
+                "Worksheet", "Cell", "Issue kind"], "rows": []},
         }
         for question in mapping["questions"]:
             binding = question.get("binding") or {}
@@ -733,14 +800,16 @@ class WorkbookExchange:
                 cached.get("present"), cached.get("kind"), cached.get("raw"), cell.get("attributes", {}).get("s"),
                 record["workbook_scale"], record["source_readonly"], record["calculated"], cell["identity"],
             ])
-        for issue in extraction["validation"]["issues"]:
+        findings = [(issue, "answer") for issue in extraction["validation"]["issues"]]
+        findings.extend((issue, "original_formula") for issue in extraction["validation"]["formula_issues"])
+        for issue, issue_kind in findings:
             source = issue.get("source", {})
             tables["Validation"]["rows"].append([
                 issue.get("field"), issue.get("rule"), issue.get("column"), issue.get("source_row", issue.get("row")),
-                issue.get("code"), issue.get("message"), source.get("sheet", issue.get("sheet")),
-                source.get("cell", issue.get("cell")),
+                issue.get("code"), issue.get("message", issue.get("reason")), source.get("sheet", issue.get("sheet")),
+                source.get("cell", issue.get("cell")), issue_kind,
             ])
-        workbook = make_xlsx(tables)
+        workbook = present_source_register(make_xlsx(tables), tables)
         document = (json.dumps(extraction, ensure_ascii=False, indent=2)+"\n").encode()
         manifest = {"schema": "atssc.internal-source-extraction.v1",
                     "workbook_sha256": extraction["workbook_sha256"], "template_sha256": extraction["template_sha256"],

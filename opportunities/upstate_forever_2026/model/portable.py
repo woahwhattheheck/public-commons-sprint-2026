@@ -19,6 +19,8 @@ FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
     "observed_hydrology_context.report.json",
     "observed_hydrology_context.sources.json",
+    "observed_flow_seasonality.report.json",
+    "observed_flow_seasonality.sources.json",
     "calibration_station_geography.sources.json",
     "eighteenmile_scientific_figures.sources.json",
     "eighteenmile_routine_nutrient_flow.sources.json",

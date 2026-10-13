@@ -1,5 +1,6 @@
 // ES-SUPERVISION-20261012
 import {attachNativeJobs} from './jobs.mjs';
+import {attachWorkspaceFinder} from './workspace_finder.mjs';
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
@@ -117,6 +118,21 @@ const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle
  setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
  beginDetailRequest:()=>++itemRequest,isDetailRequest:request=>request===itemRequest&&detailDialog.open});
 const nativeJobs=attachNativeJobs({api,endpoint,detail,refresh,getWorkspace:()=>workspace,getDetailContext:()=>detailContext,openItem,toast,getState:()=>state});
+function finderDestination(open){
+ itemRequest++;detailContext=null;deliveryInspection.detach();
+ if(detailDialog.open)detailDialog.close();
+ return open();
+}
+const workspaceFinder=attachWorkspaceFinder({
+ getState:()=>state,getWorkspace:()=>workspace,
+ getDesks:()=>$$('.sidebar [data-view]').filter(node=>viewLabels[node.dataset.view]||extensions.hasView(node.dataset.view))
+  .map(node=>({id:node.dataset.view,title:node.textContent.trim()})),
+ navigate:next=>finderDestination(()=>navigate(next)),
+ openItem:(kind,id)=>finderDestination(()=>openItem(kind,id)),
+ showTask:id=>finderDestination(()=>showTask(id)),
+ taskLabel:action=>actionLabels[action]||human(action),
+ canOpen:()=>!formDialog.open,reportError:error=>toast(error.message||String(error))
+});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -145,6 +161,7 @@ async function refresh({force=false}={}){
     }
     renderTasks();
     extensions.update(state);
+    workspaceFinder.update(state);
     const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
@@ -411,8 +428,8 @@ function downloadObservationComparison(){
 }
 
 async function showTask(id,focus=true){
-  const requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace)return;
-  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace)return;
+  const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace||request!==itemRequest)return;
+  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest)return;
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
@@ -1099,6 +1116,7 @@ async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ workspaceFinder.reset();
  sourceReports.reset();
  rehearsal.detach();
  extensions.detach();

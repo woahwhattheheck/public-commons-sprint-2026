@@ -126,3 +126,37 @@ Selecting the same composed field report again unwraps its retained original con
 - The existing FIELD12 provider owns authenticated preview/import actions and the durable task queue.
 - The existing FIELD12 browser owns save/preview/confirm/result navigation.
 - The existing Observed water quality desk, source picker, scientific formatter, delivery collector and portable Workspace retain their established contracts.
+
+
+## Review results and actual measurement support
+
+The field planner's results section supports search across original result/sample identifiers and text, exact site/parameter/result-type/QA/source/unit filters, original-local collection date filters, and consistent paging. The export actions retain every matching row across all pages. Blank QA and unit values remain distinct selectable values. Inspecting a result shows its current edited values beside the original CSV cells, original collection activity and source records. The source inspector and full matching JSON retain original IDs.
+
+The native Observed report now describes the support of the selected saved revision in four sections: exact measurement definitions and numeric support; declared campaign coverage and sample follow-up; original collection calendar and metadata availability; and original detection, quantitation and source-labelled limit records. Numeric ranges use numeric results in the exact original site/parameter/unit/basis/fraction/laboratory-method/collection-method/QA/qualifier stratum. Censored, text and missing results have separate counts.
+
+Campaign coverage joins original results through visits explicitly linked to the campaign. Its site/parameter pairs come from the saved declaration. Collection dates use each original timestamp's local calendar, while first/last observations are ordered by the actual instant. A saved frequency description is retained as text. Original QA codes and reporting-limit labels remain unchanged.
+
+Complete downloadable companions accompany the source and native report:
+
+- `quality/summary.json`
+- `quality/comparison-strata.csv`
+- `quality/definition-variants.csv`
+- `quality/campaign-coverage.csv`
+- `quality/sample-followup.csv`
+- `quality/sampling-calendar.csv`
+- `quality/source-limits.csv`
+- `quality/metadata-availability.csv`
+
+These files retain the original observation identifiers and source pointers. The rendered tables show a manageable first set of records; the companions include all rows. The observation source edition is `field-observations-20261013-v2-quality`. Original earlier derived editions remain available. The Eighteenmile receiving command includes this observation edition in its operation identity, reconnects the same original laboratory-applied revision, and writes a separate derived receiving result for the new edition.
+
+See [Results review](IMPLEMENTATION_RESULTS_REVIEW.md) for the editor and [Laboratory results](IMPLEMENTATION_LAB_RESULTS.md) for original CSV intake.
+
+### Initialize the original observed workspace
+
+The original source case can run before a modeled workspace archive is received. Use the explicit creation option to initialize a dedicated native workspace, then import the original Eighteenmile samples, laboratory results and observed report sources:
+
+```text
+python source_tools/receive_wqp_field_results.py --workspace ACTUAL_DEDICATED_OBSERVED_WORKSPACE --create-workspace
+```
+
+Its default workspace title is `Eighteenmile original field observations`; `--workspace-title` accepts an explicit alternative. Repeating the command retains the same workspace identity and reconnects the original applied laboratory revision and current observation edition. Without `--create-workspace`, select an already existing workspace.

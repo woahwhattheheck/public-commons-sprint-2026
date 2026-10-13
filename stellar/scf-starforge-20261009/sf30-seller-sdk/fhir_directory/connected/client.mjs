@@ -704,3 +704,121 @@ export async function downloadHumanServicesDirectoryWorksheet({
   exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
  return {prepared,prepareResult,result,receipt,payload};
 }
+
+
+const reconciliationSchemas=Object.freeze({
+ correctionWorksheetReconciliations:'stellar-forge.directory-worksheet-reconciliation.v1',
+ correctionWorksheetReconciliationReviews:'stellar-forge.directory-worksheet-reconciliation-review.v1'
+});
+async function reconciliationAction({client,workspace,input,requestOptions},action,collection){
+ checked(workspace,ALIAS,'workspace');
+ need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+ const key='correction_worksheet_reconciliation_'+action;
+ const result=retained(await client.call('directory_'+key,{workspace,[key]:input},requestOptions));
+ need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_REJECTED',
+  'Read the entire retained native response and resume this exact input.',{exportId:result.exportId,action});
+ const record=await readHumanServicesDirectoryValue({workspace,result,client});
+ checked(record.id,SHA,'immutable reconciliation record');
+ need(record.schema===reconciliationSchemas[collection]&&record.workspaceId===result.workspaceId,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_CHANGED');
+ if(action==='prepare')need(record.returnId===input.returnId&&record.currentEditionId===input.currentEditionId,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_CHANGED');
+ if(action==='review')need(record.reconciliationId===input.reconciliationId&&
+  ['plan-prepared','no-edits-selected'].includes(record.outcome)&&
+  (record.outcome==='plan-prepared'?new RegExp(SHA).test(record.planId):record.planId===null),
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_CHANGED');
+ return {record,result};
+}
+/** Freeze every explicit original/current row binding and its typed three-way comparison. */
+export async function prepareDirectoryWorksheetReconciliation(options={}){
+ return reconciliationAction(options,'prepare','correctionWorksheetReconciliations');
+}
+/** Retain every explicit decision and prepare one current-edition plan; never preview or accept it here. */
+export async function reviewDirectoryWorksheetReconciliation(options={}){
+ return reconciliationAction(options,'review','correctionWorksheetReconciliationReviews');
+}
+export async function getDirectoryWorksheetReconciliationRecord({client,workspace,collection,recordId,requestOptions}={}){
+ checked(workspace,ALIAS,'workspace');checked(recordId,SHA,'reconciliation record');
+ need(client&&typeof client.call==='function'&&Object.hasOwn(reconciliationSchemas,collection),
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_SELECTION');
+ const result=retained(await client.call('directory_record',{workspace,collection,recordId},requestOptions));
+ need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_READ_REJECTED');
+ const record=await readHumanServicesDirectoryValue({workspace,result,client});
+ need(record.id===recordId&&record.schema===reconciliationSchemas[collection]&&record.workspaceId===result.workspaceId,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_CHANGED');
+ return {record,result};
+}
+/** Page every complete comparison/decision in native order; use the full file if one row exceeds4MiB. */
+export async function* directoryWorksheetReconciliationRows({
+ client,workspace,collection,recordId,limit=100,rowKey,state,requestOptions
+}={}){
+ checked(workspace,ALIAS,'workspace');checked(recordId,SHA,'reconciliation record');
+ need(client&&typeof client.call==='function'&&Object.hasOwn(reconciliationSchemas,collection)&&
+  Number.isSafeInteger(limit)&&limit>=1&&limit<=250,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_SELECTION');
+ let offset=0,total;
+ while(true){
+  const result=retained(await client.call('directory_correction_worksheet_reconciliation_rows',
+   {workspace,collection,recordId,offset,limit,...(rowKey===undefined?{}:{rowKey}),...(state===undefined?{}:{state})},requestOptions));
+  need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_PAGE_REJECTED',
+   'Receive the complete comparison or decisions file when a native row exceeds the page budget.',
+   {collection,recordId,offset,exportId:result.exportId});
+  const page=await readHumanServicesDirectoryValue({workspace,result,client});
+  need(page.kind===collection&&page.recordId===recordId&&page.offset===offset&&page.limit===limit&&
+   Number.isSafeInteger(page.total)&&page.total>=0&&(total===undefined||total===page.total)&&
+   Array.isArray(page.rows)&&page.rows.length<=limit&&page.byteBudget===4194304&&
+   Number.isSafeInteger(page.bytes)&&page.bytes>=0&&page.bytes<=page.byteBudget,
+   'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_PAGE_CHANGED');
+  total=page.total;const next=offset+page.rows.length;
+  need(next<=total&&(page.nextOffset===null?next===total:page.rows.length>0&&page.nextOffset===next&&next<total),
+   'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_PAGE_CHANGED');
+  yield {result,page};if(page.nextOffset===null)return;offset=page.nextOffset;
+ }
+}
+/** Receive full input/rows/comparison/decisions bound to the immutable native descriptor, up to256MiB. */
+export async function directoryWorksheetReconciliationFile({
+ client,workspace,collection,recordId,fileKind,requestOptions,...downloadOptions
+}={}){
+ const {record,result:recordResult}=await getDirectoryWorksheetReconciliationRecord({client,workspace,collection,recordId,requestOptions});
+ const allowed=collection==='correctionWorksheetReconciliations'?['input','rows','comparison']:['input','decisions'];
+ need(allowed.includes(fileKind)&&record.files?.[fileKind],
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_SELECTION');
+ const expected=record.files[fileKind];
+ need(Number.isSafeInteger(expected.bytes)&&expected.bytes>=0&&expected.bytes<=268435456&&new RegExp(SHA).test(expected.sha256),
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_CHANGED');
+ const result=retained(await client.call('directory_correction_worksheet_reconciliation_file',
+  {workspace,collection,recordId,fileKind},requestOptions));
+ need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_REJECTED');
+ const inspected=await inspectHumanServicesDirectoryExport({workspace,client,exportId:result.exportId}),
+  payload=inspected.manifest.source?.payloadFile??'original-response.json',
+  descriptor=inspected.manifest.files.find(file=>file.name===payload);
+ need(inspected.manifestSha256===result.manifestSha256&&descriptor&&descriptor.bytes===expected.bytes&&descriptor.sha256===expected.sha256,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_CHANGED');
+ const receipt=await downloadHumanServicesDirectoryExport({...downloadOptions,workspace,client,
+  exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
+ return {record,recordResult,result,receipt,payload,descriptor};
+}
+/** Export and receive the complete reconciliation and optional review without making a new decision. */
+export async function exportDirectoryWorksheetReconciliation({
+ client,workspace,input,requestOptions,...downloadOptions
+}={}){
+ checked(workspace,ALIAS,'workspace');
+ need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+ const prepareResult=retained(await client.call('directory_correction_worksheet_reconciliation_export',
+  {workspace,correction_worksheet_reconciliation_export:input},requestOptions));
+ need(prepareResult.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_EXPORT_REJECTED');
+ const prepared=await readHumanServicesDirectoryValue({workspace,result:prepareResult,client});
+ checked(prepared.id,SHA,'reconciliation export');
+ need(prepared.kind==='correction-worksheet-reconciliation'&&prepared.recordId===input.reconciliationId&&
+  (prepared.reviewId??null)===(input.reviewId??null)&&prepared.file,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_EXPORT_CHANGED');
+ const result=retained(await client.call('directory_export_file',{workspace,exportId:prepared.id},requestOptions));
+ need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_REJECTED');
+ const inspected=await inspectHumanServicesDirectoryExport({workspace,client,exportId:result.exportId}),
+  payload=inspected.manifest.source?.payloadFile??'original-response.json',
+  descriptor=inspected.manifest.files.find(file=>file.name===payload);
+ need(inspected.manifestSha256===result.manifestSha256&&descriptor&&descriptor.bytes===prepared.file.bytes&&descriptor.sha256===prepared.file.sha256,
+  'HUMAN_SERVICES_DIRECTORY_RECONCILIATION_FILE_CHANGED');
+ const receipt=await downloadHumanServicesDirectoryExport({...downloadOptions,workspace,client,
+  exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
+ return {prepared,prepareResult,result,receipt,payload};
+}
