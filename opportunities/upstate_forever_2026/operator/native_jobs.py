@@ -14,7 +14,8 @@ import time
 from model.common import (atomic_json, digest, file_digest, held, identifier,
                           now, read_json, verify_file)
 from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
-from model.native_execution import storage_exhausted
+from model.native_execution import (process_failure, record_process_interruption,
+                                    resource_status, storage_exhausted)
 
 APPLICATION = Path(__file__).resolve().parents[1]
 
@@ -63,7 +64,7 @@ class NativeJobs:
 
     @staticmethod
     def supports(task):
-        return (task.get("action") in {"run.start", "compute.programme.run"}
+        return (task.get("action") in {"run.start", "compute.programme.run", "parameter-study.run"}
                 or (task.get("action") == "compute.programme.pair-completion"
                     and task.get("payload", {}).get("run") is True))
 
@@ -71,6 +72,15 @@ class NativeJobs:
         ws = self.operator.ws(task["workspace"])
         if task.get("action") == "run.start":
             run_id = identifier(task["payload"].get("run_id"))
+        elif task.get("action") == "parameter-study.run":
+            from parameter_study_jobs import bound_task, select_task
+            if "_native_study_context" not in task:
+                task.update(select_task(task, ws))
+            context = task["_native_study_context"]
+            checked = bound_task(task, ws, context["study_id"], context["run_id"])
+            if checked["_native_study_context"] != context:
+                raise NativeJobError("PARAMETER_STUDY_SELECTION", "The original study case binding changed.")
+            run_id = context["run_id"]
         else:
             from programme_jobs import bound_task, select_task
             if "_native_context" not in task:
@@ -92,9 +102,10 @@ class NativeJobs:
                 request = _read(path)
                 if not request:
                     continue
-                context = task.get("_native_context")
+                context = task.get("_native_study_context") or task.get("_native_context")
+                context_field = "study_context" if task.get("_native_study_context") else "programme_context"
                 if context:
-                    if request.get("programme_context") != context:
+                    if request.get(context_field) != context:
                         continue
                 elif request.get("task_id") != task["id"]:
                     continue
@@ -173,6 +184,11 @@ class NativeJobs:
             request["task_action"] = task["action"]
             for name in ("model/compute_programme.py", "operator/programme_jobs.py"):
                 source[name] = file_digest(APPLICATION / name)
+        if task.get("_native_study_context"):
+            request["study_context"] = task["_native_study_context"]
+            request["task_action"] = task["action"]
+            for name in ("model/parameter_studies.py", "operator/parameter_study_jobs.py"):
+                source[name] = file_digest(APPLICATION / name)
         request["execution_id"] = digest(request)
         request["request_sha256"] = digest(request)
         directory = ws.root / "runs" / run["id"] / "supervision" / request["execution_id"]
@@ -182,16 +198,18 @@ class NativeJobs:
         environment["PYTHONUNBUFFERED"] = "1"
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         process = None
+        resources_before = resource_status()
         with (directory / "process.log").open("ab", buffering=0) as output:
             process = subprocess.Popen(
                 [sys.executable, "-B", "-m", "model.native_worker",
                  "--request", str(directory / "request.json")],
                 cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
-                stdout=output, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True)
+                stdout=output, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True,
+                pass_fds=tuple(task.get("_native_custody_fds", ())))
         identity = process_identity(process.pid)
         launch = {"schema": "upstate.native-launch/v1", "execution_id": request["execution_id"],
                   "request_sha256": request["request_sha256"], "started_at": now(),
-                  "identity": identity, "pid": process.pid}
+                  "identity": identity, "pid": process.pid, "resources": resources_before}
         atomic_json(directory / "launch.json", launch, immutable=True)
         execution = {"directory": directory, "request": request, "identity": identity,
                      "worker": launch, "run": run, "workspace": ws}
@@ -254,6 +272,10 @@ class NativeJobs:
     def create_pair_completion(self, task, manager, key, *, expected_preview_id=None):
         from programme_jobs import create_pair_completion
         return create_pair_completion(self, task, manager, key, expected_preview_id=expected_preview_id)
+
+    def execute_parameter_study(self, task, workspace, key):
+        from parameter_study_jobs import execute_study
+        return execute_study(self, task, workspace, key)
 
     def execute_programme(self, task, manager, key, *, only_runs=None):
         from programme_jobs import execute_programme
@@ -361,22 +383,45 @@ class NativeJobs:
                     "Calculation stopped. Its retained completed stages remain available when you resume.")
                     if cancelled else NativeJobError("NATIVE_PROCESS_EXIT", message, 500))
                 recording_errors = []
+                signal_failure = None
+                if not cancelled:
+                    current = execution["workspace"].inspect_run(request["run_id"])
+                    launch = _read(directory / "launch.json") or {}
+                    signal_failure = process_failure(
+                        returncode, run_id=request["run_id"],
+                        process={"pid": (execution.get("identity") or {}).get("pid", launch.get("pid")),
+                                 "execution_id": request["execution_id"],
+                                 "request_sha256": request["request_sha256"],
+                                 "task_id": request["task_id"],
+                                 "process_directory": str(directory)},
+                        before=worker.get("resources") or launch.get("resources"),
+                        after=resource_status(), native_state=current,
+                        missing_result=not failure and not alive)
+                    if signal_failure is not None:
+                        error.native_failure = signal_failure
+                        error.args = (signal_failure["message"],)
                 try:
                     # Keep the original cause before any same-filesystem writes.
                     if not cancelled:
                         try:
                             native_failure = execution["workspace"].inspect_run(request["run_id"]).get("error")
-                            if isinstance(native_failure, dict):
+                            if isinstance(native_failure, dict) and signal_failure is None:
                                 error.native_failure = native_failure
                         except OSError as recording_error:
                             recording_errors.append(recording_error)
                     try:
-                        self._mark_interrupted(execution, message)
+                        if signal_failure is not None:
+                            record_process_interruption(
+                                execution["workspace"], request["run_id"], signal_failure,
+                                pid=signal_failure["process"]["pid"])
+                        else:
+                            self._mark_interrupted(execution, message)
                     except OSError as recording_error:
                         recording_errors.append(recording_error)
                     try:
                         self._record_exit(execution, "cancelled" if cancelled else "failed",
-                                          returncode=returncode, error={"message": message})
+                                          returncode=returncode,
+                                          error=signal_failure or {"message": message})
                     except OSError as recording_error:
                         recording_errors.append(recording_error)
                 finally:
@@ -464,6 +509,8 @@ class NativeJobs:
                  "storage_free_bytes": shutil.disk_usage(ws.root).free}
         if task.get("_native_context"):
             value["programme_context"] = task["_native_context"]
+        if task.get("_native_study_context"):
+            value["study_context"] = task["_native_study_context"]
         if not execution:
             with self.lock:
                 value["stop_requested"] = task["id"] in self.pending_stops
