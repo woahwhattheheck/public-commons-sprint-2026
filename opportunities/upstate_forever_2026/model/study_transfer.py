@@ -200,7 +200,8 @@ class _Closure:
                  geographic_native_studies=None, climate_forcing_studies=None,
                  management_case_studies=None, climate_management_records=None,
                  joint_parameter_lineage=True, calibration_studies=None,
-                 source_disturbance_studies=None, profile_workbook_returns=None):
+                 source_disturbance_studies=None, profile_workbook_returns=None,
+                 client_source_previews=True, client_source_preview_keys=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -243,6 +244,10 @@ class _Closure:
         self.management_case_records = {}
         self.source_disturbance_selection = copy.deepcopy(source_disturbance_studies)
         self.profile_workbook_return_selection = copy.deepcopy(profile_workbook_returns)
+        self.client_source_previews_enabled = client_source_previews
+        self.client_source_preview_keys = (None if client_source_preview_keys is None
+                                          else frozenset(client_source_preview_keys))
+        self.client_source_preview_records = {}
 
     def add_file(self, relative, expected=None):
         path = _member(self.root, relative)
@@ -387,6 +392,50 @@ class _Closure:
         for field, kind in (("grid_id", "grids"), ("profile_id", "profiles"), ("scenario_id", "scenarios")):
             self.need(kind, selection[field], reason, required=required)
 
+    def _client_source_preview(self, collection_id, entry):
+        """Keep an older saved table's exact native inspection in new studies."""
+        client = entry.get("client_source")
+        token = (collection_id, entry.get("id"))
+        if (not self.client_source_previews_enabled
+                or (self.client_source_preview_keys is not None
+                    and token not in self.client_source_preview_keys)
+                or entry.get("kind") != "table" or not isinstance(client, dict)
+                or entry.get("field_projection") or client.get("inspection") is not None):
+            return
+        from .client_source_inspection_report import retained_table_preview
+        key = identifier(client.get("inspection_id"))
+        relative = "client-source-intake/" + key + "/operation.json"
+        record = self.read(relative)
+        if (record.get("schema") != "upstate.client-source-operation/v1"
+                or record.get("id") != key or record.get("project_id") != self.workspace.project["id"]
+                or record.get("action") != "client-source.inspect" or record.get("state") != "complete"
+                or not record.get("files")
+                or any(record.get(field) for field in
+                       ("selection_file", "manifest_file", "source_collection_id", "source_ids"))):
+            raise ValueError("Retain the completed original inspection, without another commit record.")
+        for original in record["files"]:
+            if ("inspection" in original) == ("error" in original):
+                raise ValueError("The original inspection lost a complete file outcome.")
+            self._body(original["original"])
+        retained_table_preview(self.workspace, entry)
+        if _identity(_member(self.root, relative)) != self.files[relative]["identity"]:
+            raise ValueError("The saved source inspection changed during selection.")
+        descriptor = self.files[relative]
+        binding = {"source_collection_id": collection_id, "source_id": entry["id"],
+                   "inspection_id": key, "inspection_sha256": digest(record),
+                   "source_sha256": client["source_sha256"],
+                   "selection_sha256": digest(client["selection"]),
+                   "record": {"path": relative, "bytes": descriptor["bytes"],
+                              "sha256": descriptor["sha256"]}}
+        previous = self.client_source_preview_records.get(token)
+        if previous is not None and previous != binding:
+            raise ValueError("A selected source changed its original worksheet inspection.")
+        self.client_source_preview_records[token] = binding
+
+    def _client_source_preview_receipt(self):
+        return [copy.deepcopy(value) for unused, value in
+                sorted(self.client_source_preview_records.items())]
+
     def _immutable(self, kind, key, value, reason):
         if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
             raise ValueError("The retained " + kind + " record changed: " + key)
@@ -397,6 +446,7 @@ class _Closure:
                 for companion in entry.get("companions", []):
                     self._body(companion)
                 report_transfer.include(self, key, entry)
+                self._client_source_preview(key, entry)
         elif kind in {"profiles", "scenarios"}:
             self.need("sources", value["source_collection_id"], reason)
             self._source_refs(value, reason)
@@ -754,6 +804,7 @@ class _Closure:
             "management_working_comparisons": management_working_comparison_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
+            "client_source_previews": self._client_source_preview_receipt(),
             "scientific_report_editions": report_editions.receipt(self),
             "paired_ensembles": paired_transfer.receipt(self),
             "report_comparisons": report_changes_transfer.receipt(self),
@@ -1067,6 +1118,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["profile_workbook_returns"] = workbook_return_transfer.receipt(closure)
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
+        if closure.client_source_preview_records:
+            identity["client_source_previews"] = closure._client_source_preview_receipt()
         if closure.customer_review_records:
             identity["customer_reviews"] = customer_review_transfer.receipt(closure)
         if closure.scientific_report_records:
@@ -1158,6 +1211,9 @@ def verify_received_studies(workspace, *, joint_only=False):
                            profile_workbook_returns=receipt["identity"].get("profile_workbook_returns", []),
                            joint_parameter_lineage="joint_parameter_studies" in receipt["identity"],
                            report_lineage="scientific_report_sources" in receipt["identity"],
+                           client_source_previews="client_source_previews" in receipt["identity"],
+                           client_source_preview_keys={(row["source_collection_id"], row["source_id"])
+                                                       for row in receipt["identity"].get("client_source_previews", [])},
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
                            implementation_source_keys={(row["source_collection_id"], row["source_id"])
@@ -1181,6 +1237,8 @@ def verify_received_studies(workspace, *, joint_only=False):
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
+        if closure._client_source_preview_receipt() != receipt["identity"].get("client_source_previews", []):
+            raise ValueError("The received Study changed an original saved worksheet inspection.")
         report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
         paired_transfer.verify_receipt(closure, receipt["identity"].get("paired_ensembles", []))
         report_changes_transfer.verify_receipt(closure, receipt["identity"].get("report_comparisons", []))

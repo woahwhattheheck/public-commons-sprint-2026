@@ -55,3 +55,11 @@ Open RECEIVING_DIRECTORY/START_HERE.html. It links the actual readable report, o
 The source package is restored through the original workspace.restore API. The receiver then opens source-info on that newly registered project and compares the original worksheet data and choices. A fresh Python process runs the transported application's own receiving command against the received Workspace, checks the original source bytes and retained preview, and verifies that the donor intake directory was unnecessary.
 
 Use the delivered workbench to open its source card, readable report and downloaded workbook. The native/API output supplies the working files and original identities for that actual recipient use.
+
+## Older saved original tables
+
+New selected Study exports also retain the exact completed inspection record required by an older saved original table that predates embedded native previews. This applies to unprojected client-source tables, including CONTEXT and MEASUREMENTS worksheets. The immutable source collection, reviewed selection and original file remain unchanged. The matching `client-source-intake/<inspection-id>/operation.json` and its complete original-file object dependencies are included. Shared original objects are retained once through the existing closure. Upload staging, queue state and unrelated intake operations are not required.
+
+The Study identity records that original inspection's canonical and byte hashes, source identity and selection identity. Receiving validates its original project, complete inspection, file and part positions, original filename/hash, columns and reading choices through the maintained source preview reader. Older Study receipts retain their original dependency rules. New embedded-preview sources continue to travel without any donor intake directory.
+
+For an existing older saved source, use its original collection as the `sources` root through the maintained Study export action. Keep the original source operation and collection; a new inspection or replacement save is unnecessary. The existing Windows saved-source course can first read source-info, export the selected original source collection, restore that archive on the existing operator, and read the same collection/source again.
