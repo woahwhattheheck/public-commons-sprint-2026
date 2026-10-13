@@ -28,7 +28,7 @@ export function attachPairedEnsembles(context) {
   let listeners=null, reads=null, timer=null, pollBusy=null;
   let catalogRevision=0, submitRevision=0, uploadRevision=0, pollRevision=0;
   let pairRows=[], choices=new Map(), imported=null, selectedTask=null;
-  let productSignature='', taskSignature='', pendingOpen=null, detailRequest=0;
+  let productSignature='', taskSignature='', pendingOpen=null, detailRequest=0, transferRequest=0;
   let lastRequest=null, lastSelection=null, savedDraft=null, pollingTask=null, detailId=null;
   let viewSave=Promise.resolve();
   const query = selector => root?.querySelector(selector);
@@ -94,7 +94,7 @@ export function attachPairedEnsembles(context) {
   }
   function detach() {
     captureDraft();
-    epoch++;version++;catalogRevision++;submitRevision++;uploadRevision++;pollRevision++;
+    epoch++;version++;catalogRevision++;submitRevision++;uploadRevision++;pollRevision++;transferRequest++;
     listeners?.abort();reads?.abort();
     clearTimeout(timer);timer=null;pollingTask=null;pollBusy=null;
     root=null;workspace=null;catalog=null;detailId=null;
@@ -459,11 +459,26 @@ export function attachPairedEnsembles(context) {
     query('[data-pe-products]').innerHTML=rows.length?table(['Analysis','State','Selected profiles','Physical outputs',''],rows.map(row=>'<tr>'+
       '<th scope="row">'+esc(row.title)+'<small><code>'+short(row.id)+'</code></small></th>'+cell(row.state)+cell(row.members)+
       cell((row.pollutants||[]).map(name=>names[name]||name).join(', '))+
-      '<td>'+action('product','Open result',row.id)+action('export','Export result ZIP',row.id,row.state!=='complete')+'</td></tr>')):
+      '<td>'+action('product','Open result',row.id)+action('study-transfer','Transfer editable analysis',row.id)+action('export','Export result ZIP',row.id,row.state!=='complete')+'</td></tr>')):
       '<p>Completed analyses retain their quantitative maps and reports here.</p>';
   }
 
+  async function transferProduct(id) {
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an original saved paired raster analysis.');
+    if(typeof context.openDesk!=='function')throw Error('Open the maintained Study transfer desk.');
+    const token=epoch,key=workspace,request=++transferRequest;
+    const detail=await api(url('/api/paired-ensemble/inspect',{ensemble_id:id},key),{signal:reads.signal});
+    if(!current(token,key)||request!==transferRequest)return;
+    if(detail.id!==id||detail.schema!=='upstate.paired-raster-ensemble/v1'||!detail.selection)
+      throw Error('The saved paired analysis differs from the selected original record.');
+    return context.openDesk('study-transfer','openForStudies',{
+      workspace_key:key,roots:[{kind:'ensemble-products',id:detail.id,
+        title:detail.selection.title||'Paired raster analysis',state:detail.state}]
+    });
+  }
+
   async function openProduct(id,{save=true}={}) {
+    transferRequest++;
     const token=epoch,key=workspace,request=++detailRequest;
     const detail=await api(url('/api/paired-ensemble/inspect',{ensemble_id:id},key),{signal:reads.signal});
     if(!current(token,key)||request!==detailRequest)return;
@@ -488,6 +503,7 @@ export function attachPairedEnsembles(context) {
       '<p><strong>Positive reduction = baseline − alternative.</strong> '+esc(supportNames[s.support]||s.support)+'.</p>'+
       (detail.error?'<div class="pe-notice" role="alert">'+esc(detail.error.message||JSON.stringify(detail.error))+'</div>':'')+
       '<div class="pe-actions">'+(detail._report_url?'<a href="'+esc(detail._report_url)+'" target="_blank" rel="noopener">Open full quantitative report</a>':'')+
+      action('study-transfer','Transfer editable analysis',id)+
       action('export','Export complete result ZIP',id,detail.state!=='complete')+
       (native.can_resume?action('resume-product','Resume from retained native pairs',id):'')+'</div>';
     if(native.can_resume&&detail.execution_settings){
@@ -580,6 +596,7 @@ export function attachPairedEnsembles(context) {
       else if(operation==='product')await openProduct(id);
       else if(operation==='resume-product')await resumeProduct(id);
       else if(operation==='export')await submit('paired_ensemble.export',{ensemble_id:id});
+      else if(operation==='study-transfer')await transferProduct(id);
       else if(operation==='receive')await receive();
       else if(operation==='pause')await pauseTask(id);
       else if(operation==='resume')await resumeTask(id);
@@ -624,6 +641,11 @@ export function attachPairedEnsembles(context) {
       return openOrQueue({kind:'selection',selection:selected});
     },
     openEdition: id => openOrQueue({kind:'product',id}),
+    openForStudy: selection => {
+      if(selection?.workspace_key!==getState()?.workspace_key||!/^[0-9a-f]{64}$/.test(selection?.id||''))
+        throw Error('Open this saved paired analysis in its original workspace.');
+      return openOrQueue({kind:'product',id:selection.id});
+    },
     fromDesign: value => openOrQueue({kind:'design',...value}),
     create: value => openOrQueue({kind:'selection',selection:value.selection||value}),
     open: id => openOrQueue({kind:'product',id})
