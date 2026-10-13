@@ -211,6 +211,7 @@ controls and downloads. Reopen the archived working project itself.
 | Allocation | Original result/intent, report recipe, complete native inventory and exact imported source |
 | Interpretation | Original document and input member identities, optional original in-Workspace context; donor executable paths are not followed |
 | Parameter continuation | Original ensemble plan, current state/operations, course and immutable history, paired controls/products, reports and joint archives |
+| Saved reference GIS/history | Captured handover identity, original preparation/ordered trio/joint comparison, complete original GIS export and source-choice/history trees |
 
 The resolver recognizes the exact original document producer URI, role, recipe
 and source inventory. A table that happens to use the interpretation URI is not
@@ -329,6 +330,18 @@ remain historical and never replace the recipient's selection. CLI-only
 studies without operator history remain valid. See the complete
 [operator continuity guide](../docs/GEOGRAPHIC_OPERATOR_TRANSFER.md).
 
+
+## Retain the saved reference GIS and execution history
+
+A new selected Study of the exact native reference trio also captures any already-saved Geographic GIS handover belonging to that original preparation. Keep **Include related results** enabled. The captured `geographic-gis-handovers` context names the exact complete record by ID, bytes and SHA; its original project, preparation, ordered run trio and joint comparison must agree with the selected case.
+
+The transfer retains the original reference context, source choices, native execution-history directory and complete GIS export tree, including its editable QGIS project, offline source/table/map desk and GIS archive. It follows the handover's original selected sources and native dependencies. It does not re-export GIS, run a comparison, perform receiving or start a model. Only the context selected in the original capture belongs to this portable edition.
+
+After restoring the archive with the existing command above, use the original **Saved geographic studies**, GIS and native history controls to open those same saved records. Open the offline GIS desk, editable project, complete GIS ZIP and history index as their recipient would. Scientific source choices, units and original elapsed/reuse history remain inspectable. Preserve the difference between the upstream modeling domain, reporting support and utility/intake footprints.
+
+Previously sealed Study archives retain their original scope. An explicit empty context list remains empty, and a captured list never grows when the recipient later receives or adopts another GIS export. Select a new archive destination from the original completed Workspace to include a newly saved handover. A preparation without a saved matching GIS handover continues through the ordinary Study flow.
+
+See the [regional reference GIS guide](../source_tools/GEOGRAPHIC_REFERENCE_GIS.md) for the original prepare, full-Workspace handover and copied-application receiving sequence. The selected-Study extension reuses those retained products and preserves the existing Programme/operator-session continuation.
 
 ## Complete current owner direction
 
