@@ -1,29 +1,32 @@
-# Nine Study reader: preserve current work during Reopen view
+# Nine Study reader: responsive map, readable values and safe Reopen
 
-This is a narrowly guarded repair for the actual completed `Upper_Savannah_Nine_Study_Review_20261013.html` retained as `libfile_15558dd7231081918054f037544f2dc3`. The original 363-member archive is `libfile_870ff8a6d0ec81919c6c1ee8b31fc8e2`, 132,963,053 bytes, SHA-256 `e845f21e67a27ebca3ac7cdffe522f67fd00cbc37b8171956fef2cbbc036366c`. Its nine native study archives and scientific records are preserved.
+This source update applies to the exact completed `Upper_Savannah_Nine_Study_Review_20261013.html` retained as `libfile_15558dd7231081918054f037544f2dc3`. Its original standalone SHA-256 is `baec49821d4234f8e241c20c52612d903af4533ab02a9b504d7a05ee772608d3`. The preserved 363-member archive is `libfile_870ff8a6d0ec81919c6c1ee8b31fc8e2`, 132,963,053 bytes, SHA-256 `e845f21e67a27ebca3ac7cdffe522f67fd00cbc37b8171956fef2cbbc036366c`. The nine native study archives and scientific records remain unchanged.
 
-## Corrected behavior
+## Reader changes
 
-The original Reopen view handler awaited `file.text()` and then replaced the study, notes, map extent and filters unconditionally. Executing that exact handler with a delayed file read reproduced loss of a later study selection and a newer note. The replacement binds each read to its request number and the complete original review state. A later edit or study/filter/map selection is retained, with a clear instruction to reopen the file when the reader is ready to replace the current view. A newer file selection supersedes older reads. An obsolete failed read cannot replace the current status or clear the newer file input.
+The repaired Reopen flow binds each asynchronous file read to its request number and the complete review state at the start of the read. If notes, study, filters, station selection or map extent change while it loads, the later work stays in place. A newer selected file supersedes earlier reads, and stale failures cannot change the status or clear the newer file input. Reopening an unchanged view continues to restore its selected retained edition and saved notes and filters.
 
-The unchanged-state path still reopens the selected retained edition and its original notes and filters. This repairs source behavior; it is not a claim that the repaired outgoing HTML has been rendered or visually accepted.
+Fit stations and Full domain now retain their fit mode through viewport resize and recompute the same selected extent for the new map proportions. Manual zoom, keyboard or pointer pan, and saved-view Reopen leave fit mode, preserving the chosen map extent across later resizes. Marker circles and labels use the limiting SVG dimension so their visible size stays legible when the SVG letterboxes at desktop or phone aspect ratios.
 
-## Apply to the actual retained HTML
+The Value column uses tabular numerals, a minimum width of 18 characters and no wrapping. Its full original text remains in the same cell, and the existing table wrapper provides horizontal scrolling at narrow widths. Exports and embedded study data are unchanged.
 
-Use the existing native course, retaining its original reader and archive:
+## Apply to the retained standalone reader
+
+Run the existing native receiving helper with the exact source hash and write a distinct output file:
 
 ```sh
 python -B repair_nine_study_review.py \
   --input ORIGINAL/Upper_Savannah_Nine_Study_Review_20261013.html \
-  --output OUTPUT/Upper_Savannah_Nine_Study_Review_20261013-saved-view-repaired.html
+  --output OUTPUT/Upper_Savannah_Nine_Study_Review_20261013-responsive-saved-view-repaired.html \
+  --expected-sha256 baec49821d4234f8e241c20c52612d903af4533ab02a9b504d7a05ee772608d3
 ```
 
-An optional `--expected-sha256` binds the input to the actual original file hash. Both complete original code fragments must match exactly; a different or partially changed reader is rejected. The embedded gzip observation payload is compared before and after, and remains byte-identical. The script writes the distinct repaired HTML and a JSON receipt with original/output/data hashes; it refuses to replace a different existing output. No source or data acquisition, native study rebuild, model run, or archive replacement is involved.
+The adjacent `saved-view-replacements.json` contains each complete old/new text pair and its exact UTF-8 preimage and postimage SHA-256. The helper verifies the pinned source HTML, every pair hash, the final reader hash and the embedded gzip payload. It accepts only the exact original or exact completed repair and refuses to replace a different output. It writes a separate reader and a JSON receipt. It does not rebuild native studies or modify the original archive.
 
-If the native viewer generator is available in the original 363-member ZIP, apply the same two exact replacements from `saved-view-replacements.json` to its HTML template, preserving every other character. Its pathname was not exposed through the readable archive surface; this repair therefore works directly on the verified original outgoing reader without guessing a generator location.
+The generator pathname inside the original archive remains unavailable from the readable archive surface; this source update therefore repairs the verified standalone HTML directly.
 
-## Native acceptance and original operation
+## Focused receiving evidence
 
-Open the actual repaired artifact on desktop and at 390 px. Reopen an unchanged saved view; inspect its original study/edition, source filter, notes and map. Delay a saved-view read and edit notes or select another study; the current work must remain. Select a newer saved file before an older read finishes; only the newer file may apply. Operate station/map selection, inspect original location and row detail, and export/reopen the complete selected-row and review files. Inspect the actual outgoing attachments; preserve original data and historical archive.
+The exact repaired standalone was opened in fresh headless Chrome contexts. Normal saved-view reopen preserved its UTF-8 notes and manual extent. A delayed file read did not replace newer notes, source and row filters or selected study; of two overlapping reads, the newer file won after the older read finished last. The manual viewBox stayed identical through desktop-to-390-to-desktop resizing, while a selected station marker remained 12 CSS px across all three sizes.
 
-This follows complete `CURRENT_OWNER_DIRECTION.md` v2026-10-13.3: immediate priority remains the actual Upper Savannah 30 m native simulated baseline/riparian/matched-control course; full upstream domain, SC reporting mask and four utility anchors remain distinct; actual NDR/SDR annual stream-delivered nitrogen/phosphorus kg/year and sediment tonnes/year retain their native support and units. Editable inputs/results and cold reopening, actual desktop/390 px control/export/reopen inspection, original-source ownership, and the 14:00 UTC cutoff remain in force. This reader correction adds no new native job and does not claim a model result or visual acceptance.
+The selected 29-gauge table kept full numeric values on one line; at 390 px its horizontal scroll remained inside the table wrapper, and the Complete original record control opened the full source record. Desktop and phone captures were opened and inspected. The final standalone HTML is `42375ba33a06ffd873cfc47943e4927a7105849b316067cd98669b6020a5102e` (`8596212` bytes); its embedded study payload is byte-identical to the pinned original.
