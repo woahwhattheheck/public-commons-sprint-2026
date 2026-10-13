@@ -27,7 +27,25 @@ def main():
     path = root / "operator" / "web" / "app.mjs"
     original = path.read_text(encoding="utf-8")
     updated = original
-    edits = json.loads((root / "source" / "observed-report-20261013" / "operator-edits.json").read_text())["edits"]
+    multi_markers = (
+        "from './observed_reports.mjs'",
+        "observedReports=mountObservedReports(",
+        "observedReports.selection()",
+        "observed_context_sources:observedReportSources",
+    )
+    ordered_picker = any(marker in original for marker in multi_markers)
+    if ordered_picker:
+        missing = [marker for marker in multi_markers if original.count(marker) != 1]
+        module = root / "operator" / "web" / "observed_reports.mjs"
+        server = root / "operator" / "server.py"
+        if (missing or not module.is_file() or not server.is_file()
+                or "observed_reports.mjs" not in server.read_text(encoding="utf-8")):
+            raise ValueError("Receive the complete maintained ordered-report picker, module and static registration")
+        # This is the maintained successor of the three legacy picker anchors.
+        # Preserve its current source instead of applying the older single-report UI.
+        edits = []
+    else:
+        edits = json.loads((root / "source" / "observed-report-20261013" / "operator-edits.json").read_text())["edits"]
     for edit in edits:
         if edit["path"] != "operator/web/app.mjs":
             raise ValueError("Unexpected picker target")
@@ -51,6 +69,7 @@ def main():
             temporary = Path(pending.name)
         os.replace(temporary, path)
     result = {"picker": str(path), "changed": updated != original,
+              "picker_mode": "ordered_reports" if ordered_picker else "single_report",
               "report_manifest": str(manifest_path)}
     if args.workspace:
         sys.path.insert(0, str(root))
