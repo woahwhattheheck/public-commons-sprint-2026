@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "source-disturbance",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791922149410619",
+  "components": {
+    "source-disturbance": {
+      "title": "Source-selected land-change and protection studies with original native scenarios and editable receiving",
+      "paths": [
+        "integration/component_fragments/source-disturbance.json",
+        "model/source_disturbance.py",
+        "model/source_disturbance_report.py",
+        "model/SOURCE_DISTURBANCE_OPERATOR.md",
+        "operator/source_disturbance.py",
+        "operator/extensions/source-disturbance.json",
+        "operator/web/source_disturbance.mjs",
+        "operator/web/source_disturbance_storage.mjs",
+        "operator/web/source_disturbance.css",
+        "source_tools/receive_source_disturbance.py",
+        "model/portable.py",
+        "model/source_disturbance_study_transfer.py",
+        "model/study_transfer.py"
+      ],
+      "requires": [
+        "core",
+        "project-transfer",
+        "study-transfer",
+        "scenario-footprint"
+      ],
+      "import_roots": [
+        "operator"
+      ]
+    }
+  },
+  "required_components": [
+    "source-disturbance"
+  ]
+}
