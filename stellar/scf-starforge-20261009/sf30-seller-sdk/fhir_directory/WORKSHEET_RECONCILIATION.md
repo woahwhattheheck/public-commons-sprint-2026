@@ -35,7 +35,7 @@ For complete-row resolution, the editor starts with the **current row's represen
 
 ## Working-copy and interrupted request recovery
 
-**Save working copy** downloads the complete authoring input: original/current bindings, reasons, decisions, unfinished row editor text, selected records and the exact pending request. Session storage preserves the same working copy while the page is open.
+**Save working copy** downloads the complete authoring input: original/current bindings, reasons, decisions, unfinished row editor text, selected records and the exact pending request. Session storage preserves the same working copy while the page is open. Unfinished return and current-edition selector text is preserved as a draft. The separately retained opened record IDs restore the actual review basis, so reloading while an ID is only partly typed keeps both the entered text and the previously opened rows.
 
 If reopening a saved copy fails, its original text remains protected. **Retry original working copy** uses those exact bytes again. **Download original working copy** preserves them for portable recovery. A validated replacement requires an explicit restore action; a failed read never overwrites the saved draft with empty defaults.
 
