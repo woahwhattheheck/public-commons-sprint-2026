@@ -6,6 +6,9 @@ const itemID = /^[0-9a-f]{64}$/;
 const deskID = /^[a-z][a-z0-9-]*$/;
 const pageSize = 25;
 const recentLimit = 12;
+const sourceID = value => typeof value === 'string' && value.length > 0 && value.length <= 1024 && !/[\u0000-\u001f\u007f]/.test(value);
+const sourceKey = (collection, id) => 'source:' + collection + ':' + encodeURIComponent(id);
+const extendedKinds = Object.freeze({'source-entry': 'Imported source files', 'scientific-report': 'Scientific Reports'});
 const kinds = Object.freeze({
   sources: 'Source editions', profiles: 'Parameter profiles', scenarios: 'Land-cover scenarios',
   grids: 'Model grids', runs: 'Native model runs', observations: 'Observed water quality',
@@ -85,6 +88,30 @@ export function buildWorkspaceFinderIndex(snapshot, desks, taskLabel = value => 
         references: linkedReferences(record), destination: {kind, id: record.id}});
     }
   }
+  for (const collection of Array.isArray(snapshot.data.sources) ? snapshot.data.sources : []) {
+    if (!collection || !itemID.test(collection.id || '')) continue;
+    for (const source of Array.isArray(collection.entries) ? collection.entries : []) {
+      if (!source || !sourceID(source.id)) continue;
+      add({key: sourceKey(collection.id, source.id), type: 'source-entry', id: source.id,
+        title: titleOf(source) || source.id, label: extendedKinds['source-entry'],
+        state: scalar(source.state || collection.state), date: scalar(collection.updated_at || collection.created_at),
+        references: [collection.id, titleOf(collection) || '', ...references(source),
+          ...['role', 'vintage', 'units', 'uri'].map(name => scalar(source[name]))],
+        destination: {source_collection_id: collection.id, source_id: source.id}});
+    }
+  }
+  for (const report of Array.isArray(snapshot.data.scientific_report_editions) ? snapshot.data.scientific_report_editions : []) {
+    if (!report || !itemID.test(report.id || '')) continue;
+    const sources = Array.isArray(report.sources) ? report.sources : [];
+    add({key: 'report:' + report.id, type: 'scientific-report', id: report.id,
+      title: titleOf(report) || 'Scientific Report · ' + report.id.slice(0, 12),
+      label: extendedKinds['scientific-report'], state: scalar(report.state),
+      date: scalar(report.updated_at || report.created_at),
+      references: [scalar(report.operation_id), ...references(report),
+        ...sources.flatMap(source => typeof source === 'string' ? [source] : source && typeof source === 'object' ?
+          [scalar(source.id), scalar(source.source_id), scalar(source.source_collection_id), titleOf(source) || ''] : [])],
+      destination: {id: report.id}});
+  }
   for (const task of Array.isArray(snapshot.tasks) ? snapshot.tasks : []) {
     if (!task || !itemID.test(task.id || '') || task.workspace !== workspace) continue;
     add({key: 'task:' + task.id, type: 'task', id: task.id,
@@ -124,9 +151,13 @@ export function searchWorkspaceFinder(index, {query = '', type = '', state = '',
 
 export function attachWorkspaceFinder({
   getState, getWorkspace, getDesks, navigate, openItem, showTask,
+  openSource, openScientificReport, searchStudies, openStudy,
   taskLabel = value => value, canOpen = () => true, reportError = () => {}
 }) {
   const prefix = 'workspace-finder';
+  const hasStudies = typeof searchStudies === 'function' && typeof openStudy === 'function';
+  let studyAbort = null, studyTimer = null, studyGeneration = 0, routeGeneration = 0;
+  let studyRows = [], studyResponse = null, studySignature = '', studyOffset = 0, studyLoading = false;
   let destroyed = false, busy = false, workspace = null, snapshot = null, index = [], byKey = new Map();
   let recent = [], matches = [], shown = [], page = 0, activeKey = '', previousFocus = null;
   let restoreFocus = true, debounce = null, focusTimer = null, cachedState = null, cachedDesks = '', stateChoices = '';
@@ -157,16 +188,26 @@ export function attachWorkspaceFinder({
     'aria-controls="' + prefix + '-results" aria-describedby="' + prefix + '-help" data-finder-query></label>' +
     '<div class="finder-filters"><label><span>Type</span><select data-finder-type><option value="">All types</option>' +
     '<option value="desk">Workspace desks</option><option value="task">Operations</option>' +
-    Object.entries(kinds).map(([key, label]) => '<option value="' + key + '">' + label + '</option>').join('') +
-    '</select></label><label><span>State</span><select data-finder-state><option value="">All states</option></select></label></div>' +
+    Object.entries({...kinds, ...extendedKinds}).map(([key, label]) => '<option value="' + key + '">' + label + '</option>').join('') +
+    (hasStudies ? '<option value="saved-studies">Saved Studies</option>' : '') +
+    '</select></label><label><span>Record state</span><select data-finder-state><option value="">All states</option></select></label></div>' +
     '<p id="' + prefix + '-help" class="note">Arrow keys select a result. Enter opens it. Escape closes Find. ' +
-    'Results use the current retained workspace catalogue.</p>' +
+    'Workspace records use the current retained catalogue. Tab moves to saved Studies and their page controls.</p>' +
     '<p class="finder-count" role="status" aria-live="polite" data-finder-count></p>' +
     '<p class="notice error" role="alert" data-finder-error hidden></p>' +
     '<div id="' + prefix + '-results" class="finder-results" role="listbox" aria-label="Matching workspace destinations"></div>' +
-    '<p class="empty" data-finder-empty hidden>No matching destination. Try an original ID, a shorter name or different filters.</p>' +
+    '<p class="empty" data-finder-empty hidden>No matching workspace record. Try an original ID, a shorter name or different filters.</p>' +
+    '<section class="finder-studies" data-finder-studies hidden aria-labelledby="' + prefix + '-studies-title">' +
+    '<h3 id="' + prefix + '-studies-title">Saved Studies</h3>' +
+    '<p class="note">Saved Studies use the original catalogue’s name and ID search. Record state applies to the workspace records above.</p>' +
+    '<p role="status" aria-live="polite" data-finder-study-status></p>' +
+    '<p class="notice error" role="alert" data-finder-study-error hidden></p>' +
+    '<button type="button" data-finder-study-retry hidden>Retry saved Studies</button>' +
+    '<div class="finder-study-results" data-finder-study-results></div>' +
+    '<div class="finder-paging"><button type="button" data-finder-study-previous>Previous Studies</button>' +
+    '<span data-finder-study-page></span><button type="button" data-finder-study-next>Next Studies</button></div></section>' +
     '</div><footer class="dialog-footer"><button type="button" data-finder-clear-recent>Clear recent destinations</button>' +
-    '<div class="finder-paging"><button type="button" data-finder-previous>Previous</button>' +
+    '<div class="finder-paging" data-finder-record-paging><button type="button" data-finder-previous>Previous</button>' +
     '<span data-finder-page></span><button type="button" data-finder-next>Next</button></div></footer>';
   document.body.append(dialog);
   const q = selector => dialog.querySelector(selector);
@@ -179,7 +220,8 @@ export function attachWorkspaceFinder({
       const value = JSON.parse(localStorage.getItem(storageKey(key)) || '[]');
       if (!Array.isArray(value)) return [];
       return value.filter(row => row && typeof row.key === 'string' &&
-        /^(desk:[a-z][a-z0-9-]*|task:[0-9a-f]{64}|item:[a-z_-]+:[0-9a-f]{64})$/.test(row.key) &&
+        row.key.length <= 4096 &&
+        /^(desk:[a-z][a-z0-9-]*|task:[0-9a-f]{64}|item:[a-z_-]+:[0-9a-f]{64}|report:[0-9a-f]{64}|source:[0-9a-f]{64}:.+)$/.test(row.key) &&
         Number.isFinite(row.opened_at)).slice(0, recentLimit);
     } catch { return []; }
   }
@@ -197,7 +239,9 @@ export function attachWorkspaceFinder({
     if (!snapshot || snapshot.workspace_key !== workspace) return false;
     const desks = getDesks(), signature = JSON.stringify(desks);
     if (cachedState === snapshot && cachedDesks === signature) return true;
-    index = buildWorkspaceFinderIndex(snapshot, desks, taskLabel);
+    index = buildWorkspaceFinderIndex(snapshot, desks, taskLabel).filter(row =>
+      (row.type !== 'source-entry' || typeof openSource === 'function') &&
+      (row.type !== 'scientific-report' || typeof openScientificReport === 'function'));
     byKey = new Map(index.map(row => [row.key, row]));
     cachedState = snapshot; cachedDesks = signature;
     const selectedState = stateField.value;
@@ -253,12 +297,130 @@ export function attachWorkspaceFinder({
     q('[data-finder-next]').disabled = page + 1 >= pages;
     q('[data-finder-empty]').hidden = matches.length > 0;
     q('[data-finder-clear-recent]').disabled = recent.length === 0;
+    const studiesOnly = typeField.value === 'saved-studies';
+    list.hidden = studiesOnly;
+    q('[data-finder-count]').hidden = studiesOnly;
+    q('[data-finder-empty]').hidden = studiesOnly || matches.length > 0;
+    q('[data-finder-record-paging]').hidden = studiesOnly;
+    stateField.disabled = studiesOnly;
+    scheduleStudies();
     if (focusedKey) {
       const retained = [...list.querySelectorAll('[data-finder-key]')].find(node => node.dataset.finderKey === focusedKey);
       (retained || input).focus();
     }
   }
+
+  function stopStudies() {
+    studyGeneration += 1;
+    clearTimeout(studyTimer); studyTimer = null;
+    studyAbort?.abort(); studyAbort = null;
+    studyLoading = false; studySignature = '';
+  }
+  function invalidateStudies() {
+    stopStudies(); studyOffset = 0; studyRows = []; studyResponse = null;
+    q('[data-finder-study-results]').replaceChildren();
+    q('[data-finder-study-error]').hidden = true;
+    q('[data-finder-study-retry]').hidden = true;
+    q('[data-finder-study-status]').textContent = '';
+    q('[data-finder-study-page]').textContent = '';
+    q('[data-finder-study-previous]').disabled = true;
+    q('[data-finder-study-next]').disabled = true;
+  }
+  function scheduleStudies(delay = 180) {
+    const visible = hasStudies && (!typeField.value || typeField.value === 'saved-studies');
+    q('[data-finder-studies]').hidden = !visible;
+    if (!visible || !dialog.open || destroyed) {
+      if (studyAbort || studyTimer) stopStudies();
+      return;
+    }
+    const signature = JSON.stringify([workspace, input.value, studyOffset]);
+    if (signature === studySignature) return;
+    stopStudies();
+    studySignature = signature;
+    const generation = studyGeneration, target = workspace, query = input.value, offset = studyOffset;
+    const isCurrent = () => !destroyed && dialog.open && generation === studyGeneration &&
+      workspace === target && getWorkspace() === target &&
+      input.value === query && (!typeField.value || typeField.value === 'saved-studies');
+    studyLoading = true; studyRows = []; studyResponse = null;
+    q('[data-finder-study-results]').replaceChildren();
+    q('[data-finder-study-status]').textContent = 'Searching saved Studies…';
+    q('[data-finder-study-error]').hidden = true;
+    q('[data-finder-study-retry]').hidden = true;
+    q('[data-finder-study-previous]').disabled = true;
+    q('[data-finder-study-next]').disabled = true;
+    q('[data-finder-study-page]').textContent = '';
+    studyTimer = setTimeout(async () => {
+      studyTimer = null;
+      if (!isCurrent()) return;
+      const controller = new AbortController(); studyAbort = controller;
+      try {
+        const response = await searchStudies({workspace_key: target, query, kind: '', offset, limit: pageSize,
+          signal: controller.signal, isCurrent});
+        if (!isCurrent()) return;
+        if (!response || response.schema !== 'upstate.study-catalog/v1' || response.workspace_key !== target ||
+            !Array.isArray(response.items) || !Number.isSafeInteger(response.total) || response.total < 0 ||
+            response.offset !== offset || response.limit !== pageSize ||
+            response.items.length > pageSize || response.items.length + offset > response.total ||
+            !(response.next_offset === null || (Number.isSafeInteger(response.next_offset) &&
+              response.next_offset === offset + pageSize && response.next_offset < response.total))) {
+          throw Error('The original Study catalogue returned an invalid page.');
+        }
+        const keys = new Set();
+        for (const row of response.items) {
+          if (!row || !/^[a-z][a-z0-9_-]*$/.test(row.kind || '') ||
+              !(row.kind === 'robust-decisions' ? /^study_[0-9a-f]{32}$/.test(row.id || '') : itemID.test(row.id || ''))) throw Error('The original Study catalogue returned an invalid identity.');
+          const key = row.kind + ':' + row.id;
+          if (keys.has(key)) throw Error('The original Study catalogue repeated a destination.');
+          keys.add(key);
+        }
+        studyRows = response.items; studyResponse = response;
+        q('[data-finder-study-results]').innerHTML = studyRows.map((row, index) =>
+          '<button type="button" data-finder-study="' + index + '"><span class="finder-result-title">' +
+          escapeHTML(titleOf(row) || row.kind.replaceAll('-', ' ') + ' · ' + row.id.slice(0, 12)) +
+          '</span><span class="finder-result-meta">' + escapeHTML(row.kind.replaceAll('-', ' ')) +
+          (row.state ? ' · ' + escapeHTML(String(row.state).replaceAll('_', ' ')) : '') +
+          '</span><span class="finder-result-id">' + escapeHTML(row.id) + '</span>' +
+          (row.error ? '<span class="finder-result-meta">' + escapeHTML(scalar(row.error?.message) || scalar(row.error)) + '</span>' : '') +
+          '</button>').join('');
+        q('[data-finder-study-status]').textContent = response.total + ' matching saved Studies' +
+          (studyRows.length ? ' · showing ' + (offset + 1) + '–' + (offset + studyRows.length) : '');
+        q('[data-finder-study-page]').textContent = 'Page ' + (Math.floor(offset / pageSize) + 1) +
+          ' of ' + Math.max(1, Math.ceil(response.total / pageSize));
+        q('[data-finder-study-previous]').disabled = offset === 0;
+        q('[data-finder-study-next]').disabled = response.next_offset === null;
+      } catch (error) {
+        if (!isCurrent() || error?.name === 'AbortError') return;
+        q('[data-finder-study-status]').textContent = 'Saved Studies could not be loaded.';
+        q('[data-finder-study-error]').textContent = error.message || String(error);
+        q('[data-finder-study-error]').hidden = false;
+        q('[data-finder-study-retry]').hidden = false;
+        // A page can disappear when a Study is removed; Previous remains available.
+        q('[data-finder-study-previous]').disabled = offset === 0;
+        studyResponse = {next_offset: null};
+      } finally {
+        if (isCurrent()) { studyLoading = false; studyAbort = null; }
+      }
+    }, delay);
+  }
+  async function followStudy(row) {
+    if (busy || !dialog.open || studyLoading || !studyRows.includes(row)) return;
+    const target = workspace;
+    busy = true; close(false);
+    const intent = ++routeGeneration;
+    const isCurrent = () => !destroyed && routeGeneration === intent && workspace === target && getWorkspace() === target;
+    try {
+      if (!isCurrent()) return;
+      await openStudy({workspace_key: target, kind: row.kind, id: row.id, isCurrent});
+    } catch (error) {
+      if (isCurrent()) {
+        busy = false; open();
+        errorBox.textContent = error.message || String(error); errorBox.hidden = false;
+      }
+    } finally { if (intent === routeGeneration) busy = false; }
+  }
+
   function close(restore = true) {
+    stopStudies();
     clearTimeout(debounce); debounce = null;
     restoreFocus = restore;
     if (dialog.open) dialog.close();
@@ -267,11 +429,14 @@ export function attachWorkspaceFinder({
   }
   function reset() {
     clearTimeout(focusTimer); focusTimer = null;
+    routeGeneration += 1; busy = false;
     close(false); workspace = null; snapshot = null; cachedState = null; cachedDesks = ''; stateChoices = '';
     index = []; byKey.clear(); matches = []; shown = []; recent = []; page = 0; activeKey = '';
     input.value = ''; typeField.value = ''; stateField.innerHTML = '<option value="">All states</option>';
     list.replaceChildren(); input.removeAttribute('aria-activedescendant');
     previousFocus = null; errorBox.hidden = true;
+    studyRows = []; studyResponse = null; studySignature = ''; studyOffset = 0;
+    q('[data-finder-study-results]').replaceChildren();
   }
   function open() {
     if (destroyed || busy) return;
@@ -296,18 +461,22 @@ export function attachWorkspaceFinder({
     const row = byKey.get(key), target = workspace;
     if (!row) { errorBox.textContent = 'That destination is no longer in the current workspace catalogue.'; errorBox.hidden = false; draw(); return; }
     busy = true; close(false);
+    const intent = ++routeGeneration;
+    const isCurrent = () => !destroyed && intent === routeGeneration && workspace === target && getWorkspace() === target;
     try {
-      if (getWorkspace() !== target) return;
+      if (!isCurrent()) return;
       if (row.type === 'desk') await navigate(row.destination.view);
       else if (row.type === 'task') await showTask(row.destination.task);
+      else if (row.type === 'source-entry') await openSource({...row.destination, workspace_key: target, isCurrent});
+      else if (row.type === 'scientific-report') await openScientificReport({...row.destination, workspace_key: target, isCurrent});
       else await openItem(row.destination.kind, row.destination.id);
-      if (getWorkspace() === target) saveRecent(row, target);
+      if (isCurrent()) saveRecent(row, target);
     } catch (error) {
-      if (getWorkspace() === target && !destroyed) {
+      if (isCurrent()) {
         busy = false; open();
         errorBox.textContent = error.message || String(error); errorBox.hidden = false;
       }
-    } finally { busy = false; }
+    } finally { if (intent === routeGeneration) busy = false; }
   }
   function move(offset) {
     clearTimeout(debounce); debounce = null; draw();
@@ -322,6 +491,7 @@ export function attachWorkspaceFinder({
     input.focus();
   }
   function filterChanged() {
+    invalidateStudies();
     page = 0; activeKey = ''; errorBox.hidden = true; draw({preserve: false});
   }
   function keyboard(event) {
@@ -349,6 +519,24 @@ export function attachWorkspaceFinder({
       if (!destroyed && !dialog.open && target?.isConnected) target.focus();
     }, 0);
   }
+  q('[data-finder-study-retry]').addEventListener('click', () => {
+    if (studyLoading) return;
+    studySignature = ''; scheduleStudies(0);
+  });
+  q('[data-finder-study-previous]').addEventListener('click', () => {
+    if (studyLoading || !studyResponse || studyOffset <= 0) return;
+    studyOffset = Math.max(0, studyOffset - pageSize); studySignature = ''; scheduleStudies(0);
+  });
+  q('[data-finder-study-next]').addEventListener('click', () => {
+    if (studyLoading || !studyResponse || studyResponse.next_offset === null) return;
+    studyOffset = studyResponse.next_offset; studySignature = ''; scheduleStudies(0);
+  });
+  q('[data-finder-study-results]').addEventListener('click', event => {
+    const node = event.target.closest('[data-finder-study]');
+    if (!node || !q('[data-finder-study-results]').contains(node)) return;
+    const row = studyRows[Number(node.dataset.finderStudy)];
+    if (row) void followStudy(row);
+  });
   button.addEventListener('click', open);
   q('[data-finder-close]').addEventListener('click', () => close());
   q('[data-finder-previous]').addEventListener('click', () => changePage(-1));
@@ -358,6 +546,7 @@ export function attachWorkspaceFinder({
     draw();
   });
   input.addEventListener('input', () => {
+    invalidateStudies();
     page = 0; activeKey = ''; errorBox.hidden = true;
     clearTimeout(debounce); debounce = setTimeout(() => { debounce = null; filterChanged(); }, 80);
   });
@@ -384,7 +573,7 @@ export function attachWorkspaceFinder({
     },
     destroy() {
       if (destroyed) return;
-      destroyed = true; close(false); clearTimeout(focusTimer);
+      destroyed = true; routeGeneration += 1; close(false); clearTimeout(focusTimer);
       document.removeEventListener('keydown', keyboard);
       button.remove(); dialog.remove(); style.remove();
       index = []; byKey.clear();

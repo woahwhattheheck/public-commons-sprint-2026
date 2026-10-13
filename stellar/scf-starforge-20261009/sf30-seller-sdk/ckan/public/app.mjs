@@ -1,4 +1,9 @@
 // MIT. Plain local operator interface; all content is inserted as text.
+import { renderDcatMigration } from './migration.mjs';
+import { renderDcatSemantic } from './dcat-semantic.mjs';
+import { renderRemotePublication } from './remote-publication.mjs';
+import { renderCapturePlans } from './capture-plans.mjs';
+import { parseDcatJsonText } from './dcat-json.mjs';
 const $ = selector => document.querySelector(selector);
 let token = location.hash.slice(1);
 if (token) { sessionStorage.setItem('ckan-project-token', token); history.replaceState(null, '', '/'); }
@@ -89,7 +94,8 @@ async function api(path, data) {
   const response = await fetch('/api/' + path, { method: data === undefined ? 'GET' : 'POST',
     headers: { authorization: 'Bearer ' + token, ...(data === undefined ? {} : { 'content-type': 'application/json' }) },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
-  const value = await response.json();
+  const responseText = await response.text(), value = JSON.parse(responseText);
+  if (path === 'status' && value.dcat) value.dcat = parseDcatJsonText(responseText).dcat;
   if (!response.ok) throw new Error((value.error ?? response.status) + ': ' + (value.message ?? 'Request failed.'));
   return value;
 }
@@ -105,7 +111,9 @@ function operation() {
       element('div', { class: 'muted' }, current.error?.message ?? current.error ?? 'Read the retained project item to continue.'))));
 }
 async function refresh(render = true) {
+  const firstLoad = !state;
   state = await api('status');
+  if (firstLoad && state.sourceKind === 'dcat-us') tab = 'migration';
   $('#project').replaceChildren(element('div', {}, state.catalogOrigin), element('div', {}, state.directory));
   operation();
   if (render) await renderView();
@@ -169,6 +177,36 @@ async function renderView() {
   if (tab === 'refreshes') await renderRefreshes(generation);
   if (tab === 'merchant') renderMerchant();
   if (tab === 'workspace') await renderWorkspace(generation);
+  if (tab === 'capture-plans') await renderCapturePlans({
+    view, state, token, protect, download,
+    current: () => generation === renderGeneration && tab === 'capture-plans',
+    acceptOperation: result => { lastOperation = result.operationId; },
+    refresh: () => refresh(), render: () => renderView(),
+    openEdition: async id => { selectedEdition = id; tab = 'editions'; await renderView(); },
+    openRefresh: async id => { selectedRefresh = id; refreshOffset = 0; refreshOffsets = []; tab = 'refreshes'; await renderView(); },
+    openWorkspace: async () => { tab = 'workspace'; await renderView(); },
+  });
+  if (tab === 'remote') await renderRemotePublication({
+    view, state, token, api, protect, download,
+    current: () => generation === renderGeneration && tab === 'remote',
+    acceptOperation: result => { lastOperation = result.operationId; },
+    refresh: () => refresh(), render: () => renderView(),
+    openWorkspace: async () => { tab = 'workspace'; await renderView(); },
+  });
+  if (tab === 'semantic') await renderDcatSemantic({
+    view, state, token, api, protect, download,
+    current: () => generation === renderGeneration && tab === 'semantic',
+    acceptOperation: result => { lastOperation = result.operationId; },
+    refresh: () => refresh(), render: () => renderView(),
+    openWorkspace: async () => { tab = 'workspace'; await renderView(); },
+  });
+  if (tab === 'migration') await renderDcatMigration({
+    view, state, token, api, protect, download,
+    current: () => generation === renderGeneration && tab === 'migration',
+    acceptOperation: result => { lastOperation = result.operationId; },
+    refresh: () => refresh(), render: () => renderView(),
+    openWorkspace: async () => { tab = 'workspace'; await renderView(); },
+  });
 }
 function renderCatalogue() {
   const search = async (query, start = 0) => {
@@ -379,19 +417,36 @@ protect(() => refresh());
 async function renderWorkspace(generation) {
   const records = await api('workspace/archives');
   if (generation !== renderGeneration) return;
+  const dcat = state.dcat;
+  const hasDcat = state.sourceKind === 'dcat-us' ||
+    ['catalogs', 'reviews', 'releases', 'sources', 'acquisitions'].some(key => (dcat?.[key]?.length ?? 0) > 0);
+  const counts = { editions: state.editions.length, selections: state.sources.length,
+    publications: state.publications.length, reviewed_refreshes: (state.refreshes ?? []).length,
+    merchant_packages: state.exports.length, buyer_requests: state.buyerRequests.length,
+    remote_targets: state.remote?.targets?.length ?? 0, remote_publications: state.remote?.releases?.length ?? 0 };
+  if (hasDcat) Object.assign(counts, {
+    dcat_sources: dcat?.sources?.length ?? 0,
+    dcat_acquisitions: dcat?.acquisitions?.length ?? 0,
+    dcat_catalogues: dcat?.catalogs?.length ?? 0,
+    dcat_reviews: dcat?.reviews?.length ?? 0,
+    dcat_releases: dcat?.releases?.length ?? 0,
+    active_dcat_release: dcat?.activeReleaseId ?? 'No selected release',
+  });
   view.append(heading('Workspace transfer'),
-    muted('Save the retained editions, complete refresh comparisons, operator decisions, reviewed selections, publisher history, dataset versions, merchant packages, seller releases and buyer requests as one project.'),
+    muted('Save the retained editions, complete refresh comparisons, operator decisions, reviewed selections, publisher history, dataset versions, merchant packages, seller releases and buyer requests as one project. Remote catalogue targets, reviewed plans, original response files and publication recovery state travel with the same archive; supply the target credential separately on the receiving host.' +
+      (hasDcat ? ' The same archive includes all DCAT source configurations and versions, retained acquisition receipts and response files, original documents, migration reviews, corrected candidates and complete release and rollback history.' : '')),
     card(heading('Export this workspace'),
-      table([{ editions: state.editions.length, selections: state.sources.length,
-        publications: state.publications.length, reviewed_refreshes: (state.refreshes ?? []).length, merchant_packages: state.exports.length,
-        buyer_requests: state.buyerRequests.length }]),
-      muted('Stop the seller and finish the current project operation before exporting. Each export records the project state immediately before its own operation.'),
+      table([counts]),
+      muted((state.sourceKind === 'dcat-us' && state.exports.length === 0
+        ? 'Finish the current project operation before exporting. '
+        : 'Stop the seller and finish the current project operation before exporting. ') +
+        'Each export records the project state immediately before its own operation.'),
       button('Create complete workspace archive', () => act('workspace/archives', {}), true)));
   for (const item of records) view.append(card(
     element('h3', {}, 'Workspace saved ' + item.createdAt),
     row(pill(item.files + ' files'), pill(item.bytes.toLocaleString() + ' archive bytes')),
     label('Archive SHA-256', input('archive-sha256', item.sha256, 'text', { readonly: true, class: 'mono' })),
-    button('Download workspace archive', () => download('workspace/archives/' + item.id, 'ckan-workspace-' + item.id + '.ckanw')),
+    button('Download workspace archive', () => download('workspace/archives/' + item.id, (item.source?.sourceKind === 'dcat-us' ? 'dcat-workspace-' : 'ckan-workspace-') + item.id + '.ckanw')),
     detail('Retained project', item.source)));
   view.append(card(heading('Receive a workspace'),
     muted('Choose the archive, paste its SHA-256, and name a new project directory beside this one. A repeated receive resumes the same archive and destination.'),
@@ -409,14 +464,20 @@ async function renderWorkspace(generation) {
     },
     label('Workspace archive', input('archive', '', 'file', { accept: '.ckanw', required: true })),
     label('Archive SHA-256', input('sha256', '', 'text', { required: true, pattern: '[a-f0-9]{64}', class: 'mono' })),
-    label('New project directory name', input('name', 'received-ckan-project', 'text', { required: true, pattern: '[A-Za-z0-9][A-Za-z0-9._-]{0,79}' })),
+    label('New project directory name', input('name', state.sourceKind === 'dcat-us' ? 'received-catalogue-project' : 'received-ckan-project', 'text', { required: true, pattern: '[A-Za-z0-9][A-Za-z0-9._-]{0,79}' })),
     submit('Receive complete workspace'))));
   const operation = state.operation;
   if (operation?.kind === 'receive complete workspace' && operation.state === 'COMPLETE') {
     const result = operation.result;
+    const receivedDcat = result.project?.sourceKind === 'dcat-us';
+    const quotedDirectory = "'" + String(result.directory).replaceAll("'", "'\"'\"'") + "'";
     view.append(card(heading('Received project'),
       element('p', { class: 'mono' }, result.directory),
-      muted('Open this directory in the existing CKAN Applications provider or the CKAN serve command. Its original seller selection is retained and can be started from its release store.'),
+      muted(receivedDcat
+        ? 'Open this directory through DCAT catalog migration in Applications or the dcat serve command. The received project retains its source configurations, acquired documents and HTTP history, reviews, selected catalogue release and rollback history.'
+        : 'Open this directory in the existing CKAN Applications provider or the CKAN serve command. Its original seller selection is retained and can be started from its release store.'),
+      pre(receivedDcat ? 'starforge dcat serve --workspace ' + quotedDirectory
+        : 'starforge ckan serve --project ' + quotedDirectory + ' --port 0'),
       detail('Original project and receive result', result)));
   }
 }

@@ -1,0 +1,110 @@
+{
+  "schema": "commons-semantic-native-job/1",
+  "description": "A job consumes explicitly selected original local files and writes a complete native result into its owned output directory.",
+  "entrypoint": "semantic_operator.rdf_engine.execute(job, input_paths, output_dir)",
+  "job_fields": {
+    "schema": "commons-semantic-native-job/1",
+    "job_id": "stable identifier",
+    "action": "inspect | snapshot | validate | query | compare",
+    "inputs": [
+      {
+        "key": "stable local input key",
+        "sha256": "exact input SHA-256",
+        "bytes": "exact input length",
+        "format": "turtle | nt | xml | json-ld | csv | json",
+        "role": "data | table | ontology | shapes | snapshot | provenance",
+        "source_id": "retained source or snapshot ID",
+        "revision": "retained revision",
+        "title": "operator title",
+        "source_reference": "original URL or record reference"
+      }
+    ],
+    "parameters": "action-specific object"
+  },
+  "parameters": {
+    "inspect": {
+      "input_key": "one selected source key"
+    },
+    "snapshot": {
+      "data_keys": [
+        "original RDF graph source keys"
+      ],
+      "mappings": [
+        {
+          "mapping_id": "original mapping ID",
+          "revision": 1,
+          "input_key": "original CSV source key",
+          "subject_template": "https://example.org/item/{ID}",
+          "classes": [
+            "https://example.org/Item"
+          ],
+          "delimiter": ",",
+          "null_values": [
+            ""
+          ],
+          "fields": [
+            {
+              "column": "Name",
+              "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+              "kind": "literal",
+              "datatype": null,
+              "language": "en",
+              "iri_template": null
+            }
+          ]
+        }
+      ]
+    },
+    "validate": {
+      "graph_key": "selected snapshot N-Triples input",
+      "shape_keys": [
+        "original SHACL source keys"
+      ],
+      "ontology_keys": [
+        "original ontology source keys"
+      ],
+      "inference": "none | rdfs | owlrl | both",
+      "allow_infos": false,
+      "allow_warnings": false
+    },
+    "query": {
+      "graph_key": "selected snapshot N-Triples input",
+      "query": "SPARQL SELECT/ASK/CONSTRUCT/DESCRIBE",
+      "row_limit": 10000
+    },
+    "compare": {
+      "before_graph_key": "original before snapshot N-Triples input",
+      "after_graph_key": "original after snapshot N-Triples input",
+      "before_provenance_key": null,
+      "after_provenance_key": null,
+      "edge_predicates": [],
+      "depth": 2,
+      "node_limit": 100000
+    }
+  },
+  "return_fields": {
+    "schema": "commons-semantic-native-engine-result/1",
+    "action": "same selected action",
+    "summary": "JSON-safe complete counts, native outcome and readable overview",
+    "files": [
+      {
+        "path": "relative owned output filename",
+        "media_type": "original MIME type",
+        "role": "graph | turtle | provenance | inspection | validation_report | findings | report | query_result | additions | removals | impact",
+        "title": "readable title"
+      }
+    ],
+    "warnings": []
+  },
+  "rules": [
+    "Use RDFLib 7.6.0 and pySHACL 0.40.1; keep engine versions in result summary.",
+    "input_paths maps each declared key to its already byte-validated original local file. No network fetch, external XML entities, remote JSON-LD context, automatic owl:imports or SPARQL FROM/SERVICE/update.",
+    "Preserve exact RDF lexical forms, datatypes, language tags and distinct source-scoped blank nodes. Keep raw source files unchanged.",
+    "Do not flatten literal and IRI terms into indistinguishable strings in structured results.",
+    "CSV mapping is explicit: URI-encode substituted values, require declared original headers, retain the raw cell and row/source provenance, and apply only declared datatype/language/IRI/null rules.",
+    "A snapshot emits graph.nt plus a Turtle representation and complete provenance. Query, comparison and validation consume that exact retained graph.",
+    "Validation emits the full native SHACL report graph and complete readable findings, uses native meta_shacl and keeps optional inference explicit. SHACL-JS and automatic imports remain off.",
+    "A limited query or impact view declares truncation and its original total when known. Retain complete native files where the result is complete.",
+    "The wrapper owns job_id, operation, generations, cancellation, file hashing, child lifecycle and final result manifest. The engine must not start child workers or rewrite application records."
+  ]
+}

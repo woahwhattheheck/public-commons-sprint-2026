@@ -172,7 +172,7 @@ applications. The shared provider registry remains the catalog/preparation/
 startup dispatch owner.
 
 The native selection binds both original configuration files, the stable project
-identity and fourteen original launcher/merchant/CKAN/browser source files.
+identity and twenty-three original launcher/merchant/CKAN/browser/release source files.
 Installed runtime verification retains the complete dependency closure.
 Selected and adopted copies may occupy different directories; their selected
 source bytes must agree. The authenticated native listener returns its actual

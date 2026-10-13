@@ -7,6 +7,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
   const pretty=n=>Number(n||0).toLocaleString();
   const options=(rows,label)=>'<option value="">None selected</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(label(x))+'</option>').join('');
   const nativeStudyViews=new Map();
+  const runRevisionViews=new Map();
   const storageKey=ws=>'upstate-gis-selection:'+ws;
   function error(message){const box=root?.querySelector('[data-gis-error]');if(box){box.textContent=message;box.hidden=!message;}}
   function readSaved(){try{return JSON.parse(localStorage.getItem(storageKey(activeWorkspace))||'null');}catch{return null;}}
@@ -38,6 +39,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     for(const name of ['scenario_run_ids','comparison_ids'])for(const input of root.querySelectorAll('[name="'+name+'"]'))input.checked=(saved?.[name]||[]).includes(input.value);
     selected('notes').value=(saved?.notes||[]).join('\n');
     syncNativeStudy();
+    syncRunRevision();
   }
 
   function nativeStudy(){
@@ -117,6 +119,79 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
           ...(detail.selected_scientific_report?{scientific_report:detail.selected_scientific_report.binding}:{}),
           ...(detail.selected_execution_history?{execution_history:detail.selected_execution_history.binding}:{})},
         notes:sameSource?selected('notes').value.split('\n').filter(value=>value.trim()):[]};
+      saveSelection(value);render();root.querySelector('[data-gis-export]')?.scrollIntoView({block:'start'});
+      return JSON.parse(JSON.stringify(value));
+    }finally{if(token===intakeVersion)intakeLoading=false;}
+  }
+
+
+  function syncRunRevision(){
+    const saved=lastSelection||readSaved(),chosen=saved?.run_revision,panel=root?.querySelector('[data-run-revision-summary]');
+    if(!panel)return;
+    if(!chosen){panel.innerHTML='';return;}
+    for(const name of ['native_study_collection','delivery_id','source_collection_id','source','grid_id','baseline_run_id','scenario_run_ids','comparison_ids'])
+      for(const input of root.querySelectorAll('[name="'+name+'"]'))input.disabled=true;
+    const detail=runRevisionViews.get(activeWorkspace+':'+chosen.handover_sha256);
+    const histories=detail?.execution_histories?.histories||[];
+    const selectedHistory=chosen.execution_history?.id||'';
+    panel.innerHTML='<h3>Saved reference and revised run</h3><p>This handover keeps the exact original run pair, saved comparison, original inputs and complete revision record together. Physical values and comparison direction are unchanged.</p>'+
+      (detail?'<dl><dt>Original reference</dt><dd class="gis-id">'+esc(detail.baseline_run_id)+'</dd><dt>Revised run</dt><dd class="gis-id">'+esc(detail.revised_run_id)+'</dd><dt>Saved comparison</dt><dd class="gis-id">'+esc(detail.comparison_id)+'</dd></dl>'+
+        '<details><summary>Original quantities and comparison direction</summary><pre>'+esc(JSON.stringify({quantities:detail.quantities,direction:detail.direction},null,2))+'</pre></details>':
+        '<p class="gis-id">Retained revision '+esc(chosen.revision_id)+' · snapshot '+esc(chosen.handover_sha256)+'</p>')+
+      '<label>Matching saved execution history<select name="revision_execution_history_id"><option value="">No additional history selected</option>'+
+      histories.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===selectedHistory?' selected':'')+'>'+esc(row.title+' · '+row.captured_at)+'</option>').join('')+
+      (selectedHistory&&!histories.some(row=>row.id===selectedHistory)?'<option selected value="'+esc(selectedHistory)+'">Retained original history · '+esc(selectedHistory.slice(0,12))+'</option>':'')+
+      '</select></label><p>Only the exact two original runs are eligible. Use the revision desk’s execution-history action to inspect and save that pair first.</p>'+
+      (detail?.execution_histories?.available===false?'<p>'+esc(detail.execution_histories.message)+'</p>':'')+
+      '<button type="button" data-revision-gis-refresh>Refresh revision and selected history</button> '+
+      '<button type="button" data-revision-gis-clear>Choose a different GIS selection</button>';
+    const refresh=()=>createForRunRevision({workspace_key:activeWorkspace,revision_id:chosen.revision_id,
+      execution_history_id:selected('revision_execution_history_id').value}).catch(reason=>error(reason.message));
+    selected('revision_execution_history_id').addEventListener('change',refresh);
+    panel.querySelector('[data-revision-gis-refresh]').addEventListener('click',refresh);
+    panel.querySelector('[data-revision-gis-clear]').addEventListener('click',()=>{
+      intakeVersion++;controller?.abort();intakeLoading=false;
+      saveSelection({title:selected('title').value,project_crs:selected('project_crs').value,
+        sources:[],scenario_run_ids:[],comparison_ids:[],notes:selected('notes').value.split('\n').filter(Boolean)});
+      render();
+    });
+  }
+
+  async function createForRunRevision(request){
+    const frozen=JSON.parse(JSON.stringify(request||{})),workspace=getState()?.workspace_key;
+    if(!root||!workspace||frozen.workspace_key!==workspace||activeWorkspace!==workspace)
+      throw new Error('Open the original revision Workspace before preparing its GIS handover.');
+    if(!catalogue||!root.querySelector('[data-gis-export]'))
+      throw new Error('Wait for the original GIS catalogue to open, then choose the revision again.');
+    if(!/^[0-9a-f]{64}$/.test(frozen.revision_id||''))
+      throw new Error('Choose a saved original run revision.');
+    const current=lastSelection||readSaved(),same=current?.run_revision?.revision_id===frozen.revision_id;
+    const history=Object.prototype.hasOwnProperty.call(frozen,'execution_history_id')?frozen.execution_history_id:
+      (same?current.run_revision.execution_history?.id:'');
+    const snapshot=()=>canonical({selection:formSelection(false),history:selected('revision_execution_history_id')?.value});
+    const before=snapshot(),element=root,token=++intakeVersion;
+    controller?.abort();const own=new AbortController();controller=own;intakeLoading=true;
+    try{
+      const data=await api('/api/gis/projects?'+new URLSearchParams({workspace,run_revision_id:frozen.revision_id,
+        ...(history?{execution_history_id:history}:{})}),{signal:own.signal});
+      if(token!==intakeVersion||own.signal.aborted||root!==element||getState()?.workspace_key!==workspace||snapshot()!==before)
+        throw new Error('The Workspace or handover selection changed while opening the revision.');
+      const detail=data.run_revision;
+      if(data.workspace_key!==workspace||detail?.schema!=='upstate.gis-run-revision-preview/v1'||
+         detail.project_id!==catalogue.project_id||detail.binding?.revision_id!==frozen.revision_id||
+         !/^[0-9a-f]{64}$/.test(detail.binding?.handover_sha256||'')||
+         detail.baseline_run_id===detail.revised_run_id||
+         (history||null)!==(detail.selected_execution_history?.binding.id||null)||
+         canonical(detail.binding.execution_history||null)!==canonical(detail.selected_execution_history?.binding||null)||
+         (frozen.baseline_run_id&&frozen.baseline_run_id!==detail.baseline_run_id)||
+         (frozen.revised_run_id&&frozen.revised_run_id!==detail.revised_run_id))
+        throw new Error('The GIS preview changed the original revision, run pair or selected history.');
+      for(const id of [detail.baseline_run_id,detail.revised_run_id,detail.comparison_id,detail.grid_id])
+        if(!/^[0-9a-f]{64}$/.test(id||''))throw new Error('The original revision preview is incomplete.');
+      const value={title:same?selected('title').value:(detail.title+' · reference and revision').slice(0,240),
+        project_crs:selected('project_crs').value||'EPSG:5070',run_revision:JSON.parse(JSON.stringify(detail.binding)),
+        notes:same?selected('notes').value.split('\n').filter(Boolean):[]};
+      runRevisionViews.set(workspace+':'+detail.binding.handover_sha256,detail);
       saveSelection(value);render();root.querySelector('[data-gis-export]')?.scrollIntoView({block:'start'});
       return JSON.parse(JSON.stringify(value));
     }finally{if(token===intakeVersion)intakeLoading=false;}
@@ -342,7 +417,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       esc(row.title+' · '+(row.eligible?row.dataset_count+' GIS datasets':row.reason||row.state))+'</option>').join('')+
       (saved?.delivery_id&&!deliveries.some(row=>row.id===saved.delivery_id)?
        '<option value="'+esc(saved.delivery_id)+'" disabled>Unavailable retained delivery · '+esc(saved.delivery_id.slice(0,12))+'</option>':'');
-    root.innerHTML='<section class="gis-workspace"><header><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Editable GIS projects</h1><p>Export retained sources and physical results as a complete QGIS working directory. Receive a colleague’s revised edition without changing the original study.</p></header><p data-gis-error class="gis-error" role="alert" hidden></p><div class="gis-columns"><form data-gis-export><h2>Prepare a GIS handover</h2><label>Project title<input name="title" required maxlength="240"></label><label>Display coordinate system<input name="project_crs" required placeholder="EPSG:5070"></label><p class="gis-help">Display projection only. Working files retain their native coordinates, numerical cells and masks.</p><label>Saved native-model study<select name="native_study_collection">'+
+    root.innerHTML='<section class="gis-workspace"><header><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Editable GIS projects</h1><p>Export retained sources and physical results as a complete QGIS working directory. Receive a colleague’s revised edition without changing the original study.</p></header><p data-gis-error class="gis-error" role="alert" hidden></p><div class="gis-columns"><form data-gis-export><h2>Prepare a GIS handover</h2><label>Project title<input name="title" required maxlength="240"></label><label>Display coordinate system<input name="project_crs" required placeholder="EPSG:5070"></label><p class="gis-help">Display projection only. Working files retain their native coordinates, numerical cells and masks.</p><div data-run-revision-summary class="gis-help"></div><label>Saved native-model study<select name="native_study_collection">'+
       '<option value="">Manual selection or map delivery</option>'+
       (catalogue.native_studies||[]).map(row=>'<option value="'+esc(row.source_collection_id)+'"'+
         (!row.local_project?' disabled':'')+'>'+esc(row.title)+(!row.local_project?' · open original project':'')+'</option>').join('')+
@@ -411,6 +486,13 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       sources:sourceIDs.map(id=>({source_collection_id:collection,source_id:id})),
       scenario_run_ids:selectedIDs('scenario_run_ids'),comparison_ids:selectedIDs('comparison_ids'),
       include_grid:true,notes:selected('notes').value.split('\n').map(x=>x.trim()).filter(Boolean)};
+    const frozenRevision=(lastSelection||readSaved())?.run_revision;
+    if(frozenRevision){
+      if(validate&&(selected('revision_execution_history_id')?.value||'')!==(frozenRevision.execution_history?.id||''))
+        throw new Error('Refresh the selected execution history before exporting this revision.');
+      return {title:value.title,project_crs:value.project_crs,notes:value.notes,
+        run_revision:JSON.parse(JSON.stringify(frozenRevision))};
+    }
     if(selected('native_study_collection')?.value){
       const row=nativeStudy(),retained=lastSelection||readSaved();
       if(validate&&(selected('scientific_report_id')?.value||'')!==(retained?.native_study?.scientific_report?.id||''))
@@ -606,6 +688,6 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       else render();await load(true);},
     update(state){if(root&&getState()?.workspace_key===state?.workspace_key)void load();},
     detach(){intakeVersion++;intakeLoading=false;controller?.abort();controller=null;root=null;},
-    createForSources,createForDelivery,createForNativeStudy
+    createForSources,createForDelivery,createForNativeStudy,createForRunRevision
   };
 }

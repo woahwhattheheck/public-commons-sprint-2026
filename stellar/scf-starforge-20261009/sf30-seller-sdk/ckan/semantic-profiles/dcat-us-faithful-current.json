@@ -1,0 +1,37 @@
+{
+  "label": "GSA example · faithful DCAT-US binding · current catalogue",
+  "baseIRI": "https://data.gsa.gov/",
+  "contextMode": "require-absent",
+  "context": {
+    "file": "../vendor/dcat-us-binding/build/dcat-us-3.0.context.jsonld",
+    "bytes": 14228,
+    "sha256": "b08b049c2bbb96598bbc0e0c2fe621b8705865dab278a7310ee7ba67a9ec46f6"
+  },
+  "shapes": [
+    {
+      "file": "../vendor/dcat-us-binding/build/dcat-us-3.0-shapes.ttl",
+      "bytes": 77273,
+      "sha256": "19da736a8018e5d29fcd5c300872eeb2b89bfa1a51cf60923dc6e53eeeb57910",
+      "format": "turtle"
+    }
+  ],
+  "ontologies": [],
+  "attachments": [
+    {
+      "file": "../vendor/dcat-us-binding/build/audit.json",
+      "bytes": 13667,
+      "sha256": "c42b95cb4066c1df5f76e4f5ee5c6a3926819b121b228fbe23573b8566a1a44c",
+      "mediaType": "application/json"
+    }
+  ],
+  "coverageClasses": [
+    "http://www.w3.org/ns/dcat#Catalog",
+    "http://www.w3.org/ns/dcat#Dataset",
+    "http://www.w3.org/ns/dcat#DatasetSeries"
+  ],
+  "parameters": {
+    "inference": "none",
+    "allow_infos": false,
+    "allow_warnings": false
+  }
+}

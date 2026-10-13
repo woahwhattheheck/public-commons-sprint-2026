@@ -1647,12 +1647,1000 @@ def receive_operator(args, original_url, origin, token, journal):
             browser.close()
 
 
+
+class PhaseJournal(Journal):
+    """Durable request journal for the phased operation; old course unchanged."""
+    def save(self):
+        target = self.root / "operator-journey.json"
+        temporary = target.with_suffix(".tmp")
+        with temporary.open("w", encoding="utf-8") as handle:
+            json.dump(self.clean(self.record), handle, indent=2, ensure_ascii=False, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(target)
+        if os.name != "nt":
+            handle = os.open(self.root, os.O_RDONLY)
+            try:
+                os.fsync(handle)
+            finally:
+                os.close(handle)
+
+
+class NativeHTTPError(RuntimeError):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+
+
+class NativeHTTP:
+    """Original authenticated API only; never forward its capability on redirects."""
+    def __init__(self, origin, token, timeout):
+        from urllib.request import build_opener, HTTPRedirectHandler
+        class NoRedirect(HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+        self.origin, self.token, self.timeout = origin, token, timeout
+        self.opener = build_opener(NoRedirect())
+        self.resume_interrupted_tasks = False
+
+    def _url(self, path, query=None):
+        require(isinstance(path, str) and path.startswith("/") and not path.startswith("//")
+                and not urlsplit(path).scheme and not urlsplit(path).netloc,
+                "Use a relative endpoint on the original authenticated operator.")
+        return self.origin + path + (("?" + urlencode(query)) if query else "")
+
+    def open(self, path, *, method="GET", body=None, raw=None, workspace=None,
+             filename=None, query=None, length=None):
+        from urllib.request import Request
+        from urllib.error import HTTPError
+        headers = {"Authorization": "Bearer " + self.token}
+        if workspace:
+            headers["X-Workspace"] = workspace
+        if body is not None:
+            raw = json.dumps(body, ensure_ascii=False, allow_nan=False).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        if filename:
+            from urllib.parse import quote
+            headers["X-Upload-Filename"] = quote(filename, safe="")
+            headers["Content-Type"] = "application/octet-stream"
+        if length is not None:
+            headers["Content-Length"] = str(length)
+        try:
+            return self.opener.open(Request(self._url(path, query), data=raw,
+                                           headers=headers, method=method), timeout=self.timeout)
+        except HTTPError as error:
+            text = error.read(65536).decode("utf-8", errors="replace").replace(self.token, "[redacted]")
+            raise NativeHTTPError(error.code, "Original operator HTTP " + str(error.code) + ": " + text) from error
+
+    def json(self, path, **options):
+        with self.open(path, **options) as response:
+            return json.load(response)
+
+    def get(self, path, **query):
+        return self.json(path, query=query)
+
+    def post(self, path, body, workspace):
+        return self.json(path, method="POST", body=body, workspace=workspace)
+
+    def download(self, item, target, *, expected=None):
+        expected = expected or item
+        require(isinstance(item.get("url"), str), "The original operator returned no download URL.")
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_file() and expected.get("sha256"):
+            if target.stat().st_size == expected.get("bytes") and digest(target) == expected["sha256"]:
+                return
+        pending = target.with_name("." + target.name + ".receiving")
+        try:
+            with self.open(item["url"]) as response, pending.open("wb") as output:
+                shutil.copyfileobj(response, output, length=1024 * 1024)
+                output.flush()
+                os.fsync(output.fileno())
+            require(pending.stat().st_size > 0, "The original download is empty.")
+            if expected.get("bytes") is not None:
+                require(pending.stat().st_size == expected["bytes"], "The downloaded original byte count changed.")
+            if expected.get("sha256"):
+                require(digest(pending) == expected["sha256"], "The downloaded original SHA256 changed.")
+            pending.replace(target)
+        finally:
+            pending.unlink(missing_ok=True)
+
+
+def _phase_save(journal, name, value):
+    path = journal.root / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = json.dumps(journal.clean(value), ensure_ascii=False, sort_keys=True,
+                      indent=2, allow_nan=False) + "\n"
+    if path.is_file():
+        require(json.loads(path.read_text(encoding="utf-8")) == journal.clean(value),
+                "The retained native receiving member changed: " + name)
+    else:
+        temporary = path.with_name("." + path.name + ".receiving")
+        with temporary.open("w", encoding="utf-8") as handle:
+            handle.write(body)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(path)
+    return descriptor(path, journal.root)
+
+
+def _native_queue(api, journal, name, workspace, action, payload, timeout):
+    """Persist the original outer queue operation ID before its first POST."""
+    requests = journal.record.setdefault("native_requests", {})
+    if name in requests:
+        slot = requests[name]
+        request = slot["request"]
+        require(request["workspace"] == workspace and request["action"] == action
+                and request["payload"] == payload,
+                "The retained task request changed; do not replace its original operation.")
+    else:
+        request = {"workspace": workspace, "action": action, "payload": payload,
+                   "operation_id": uuid.uuid4().hex}
+        slot = {"request": request, "created_at": now(), "state": "prepared"}
+        requests[name] = slot
+        journal.save()
+    task = None
+    if slot.get("task_id"):
+        # An existing failed/interrupted task is retained for its native recovery;
+        # do not issue a replacement operation or repeat its model work.
+        task = api.get("/api/task", id=slot["task_id"])
+    if task is None:
+        slot["state"] = "submitting"
+        journal.save()
+        result = api.post("/api/actions", request, workspace)
+        task = result.get("task", result)
+        slot.update(task_id=task["id"], state=task["state"])
+        journal.save()
+    deadline = time.monotonic() + timeout
+    resumed = False
+    while True:
+        require(task["workspace"] == workspace and task["action"] == action
+                and task["id"] == slot["task_id"] and task["payload"] == payload,
+                "The original queued task differs from its retained request.")
+        slot["state"] = task["state"]
+        journal.save()
+        if task["state"] == "complete":
+            break
+        if task["state"] in {"failed", "cancelled", "interrupted"}:
+            require(api.resume_interrupted_tasks and not resumed,
+                    "Original task " + task["id"] + " is " + task["state"] +
+                    "; repair the cause, then resume this journey with --resume-interrupted-tasks: " +
+                    json.dumps(task.get("error")))
+            slot.setdefault("resume_attempts", []).append({"at": now(), "task_id": task["id"],
+                                                         "previous_state": task["state"]})
+            journal.save()
+            result = api.post("/api/task/resume", {"id": task["id"]}, workspace)
+            task = result.get("task", result)
+            resumed = True
+            continue
+        require(time.monotonic() < deadline,
+                "Original task " + task["id"] + " remains " + task["state"] +
+                "; resume this same journey to rejoin it.")
+        time.sleep(1)
+        task = api.get("/api/task", id=task["id"])
+    # POST submit/resume returns a raw stored task; GET applies the existing
+    # download decorators even when a completed response was being recovered.
+    task = api.get("/api/task", id=slot["task_id"])
+    require(task["id"] == slot["task_id"] and task["workspace"] == workspace
+            and task["action"] == action and task["payload"] == payload and task["state"] == "complete",
+            "The completed original task changed before decorated reopening.")
+    slot["result"] = task["result"]
+    slot["finished_at"] = slot.get("finished_at") or now()
+    journal.save()
+    return task
+
+
+def _native_member(api, journal, item, name, *, expected=None):
+    path = journal.root / name
+    api.download(item, path, expected=expected)
+    return descriptor(path, journal.root)
+
+
+def _native_ticket(items, filename):
+    matches = [item for item in items if item.get("filename") == filename
+               or PurePosixPath(item.get("path", "")).name == filename]
+    require(len(matches) == 1, "Choose the exact original download: " + filename)
+    return matches[0]
+
+
+def _native_validate_physical(first, second):
+    require(first["report"]["baseline"]["outputs"] == second["report"]["baseline"]["outputs"]
+            and {row["run_id"]: row["outputs"] for row in first["report"]["alternatives"]}
+                == {row["run_id"]: row["outputs"] for row in second["report"]["alternatives"]},
+            "The completed reviewed edition changed original physical quantities or support.")
+
+
+def _native_relative(value):
+    require(isinstance(value, str) and value and "\\" not in value and "\0" not in value
+            and not PurePosixPath(value).is_absolute()
+            and all(part not in {"", ".", ".."} for part in value.split("/")),
+            "Use the exact canonical original relative member path.")
+    return PurePosixPath(value)
+
+
+def _phase_extract(archive_path, destination, *, schema="upstate.decision-delivery/v1"):
+    """Verify and reuse completed extraction; never erase an interrupted original."""
+    if destination.exists():
+        manifest_path = destination / "manifest.json"
+        require(manifest_path.is_file(), "The retained extraction lacks its original manifest.")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        require(manifest.get("schema") == schema, "The retained package schema changed.")
+        for item in manifest["members"]:
+            path = destination / _native_relative(item["path"])
+            require(path.is_file() and not path.is_symlink()
+                    and path.stat().st_size == item["bytes"] and digest(path) == item["sha256"],
+                    "An extracted original package member changed: " + item["path"])
+        return manifest
+    staging = destination.with_name("." + destination.name + "-" + uuid.uuid4().hex + ".receiving")
+    manifest = extract_edition(archive_path, staging, schema=schema)
+    staging.replace(destination)
+    return manifest
+
+
+def _native_report_selection(report):
+    selection = report["edition"]["render_identity"]["selection"]
+    return selection.get("observed_context_sources") or [selection["source_roles"]["OBSERVED_CONTEXT"]]
+
+
+def _native_report_snapshot(report):
+    return {"edition": report["edition"],
+            "files": [{key: item[key] for key in ("role", "path", "bytes", "sha256")}
+                      for item in report["files"]]}
+
+
+def _native_report_files(api, journal, report):
+    result = []
+    for item in report["files"]:
+        relative = _native_relative(item["path"])
+        value = _native_member(api, journal, item,
+                               "comparison-scientific-report/" + relative.as_posix())
+        value.update(original_path=item["path"], original_role=item["role"])
+        result.append(value)
+    require(any(item["original_role"] == "report_html" for item in result),
+            "The original scientific report has no retained HTML output.")
+    return result
+
+
+def _native_check_received(api, workspace, record):
+    value = record["economic_comparison_report"]
+    detail = api.get("/api/study-transfer/received-detail", workspace=workspace, study_id=value["study_id"])
+    require(detail["workspace_key"] == workspace and detail["id"] == value["study_id"]
+            and detail["project"]["id"] == record["project_id"],
+            "The received Study changed its original project or selection.")
+    pair = value["source_pair"]
+    rows = detail.get("economic_comparison_sources") or []
+    matches = [(index, row) for index, row in enumerate(rows)
+               if row.get("native_origin", {}).get("comparison_id") == value["comparison_id"]
+               and all(row.get(key) == field for key, field in pair.items())]
+    require(len(matches) == 1, "The received Study omitted or repeated its original Economic comparison source.")
+    index, row = matches[0]
+    require(row["relationship"] == "same_project"
+            and row["native_comparison"]["id"] == value["comparison_id"],
+            "The original comparison was not restored as native history.")
+    comparison = api.get("/api/economic-comparison/detail", workspace=workspace, id=value["comparison_id"])
+    require(comparison["input"] == record["economic_comparison"]["input"],
+            "The received comparison selected different original editions.")
+    report = api.get("/api/source-reports/scientific-edition", workspace=workspace, id=value["report_id"])
+    require(report["edition"]["id"] == value["report_id"] and report["edition"]["state"] == "complete"
+            and _native_report_selection(report) == [pair],
+            "The restored scientific report changed its saved original sources.")
+    return detail, index, row, comparison, report
+
+
+
+def _phase_json(journal, name, build):
+    path = journal.root / name
+    files = journal.record.setdefault("native_files", {})
+    if path.is_file():
+        if name in files:
+            item = files[name]
+            require(path.stat().st_size == item["bytes"] and digest(path) == item["sha256"],
+                    "A retained native receiving response changed: " + name)
+        value = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        value = build()
+        _phase_save(journal, name, value)
+    files[name] = descriptor(path, journal.root)
+    journal.save()
+    return value
+
+
+def receive_native_phase(args, api, journal):
+    """Complete the existing provider workflow without a browser dependency."""
+    record, output = journal.record, journal.root
+    workspace = record.get("workspace_key") or args.workspace_key
+    require(workspace, "The native phase requires the original --workspace-key.")
+    require(args.cost_plan_id or record.get("native_input") or (output / "native-input.json").is_file(),
+            "The native phase uses --cost-plan-id from the completed original programme binder.")
+    record["workspace_key"] = workspace
+    journal.save()
+    with journal.stage("native_pin_original_plan_and_cost_review"):
+        def pin():
+            require(args.cost_review, "Supply the original --cost-review JSON.")
+            detail = api.get("/api/implementation/detail", workspace=workspace, id=args.cost_plan_id)
+            plan = detail["plan"]
+            catalog = api.get("/api/implementation-costs/catalog", workspace=workspace,
+                              plan_id=plan["id"], revision=plan["revision"],
+                              document_digest=detail["document_digest"])
+            candidates = [
+                row for row in catalog["candidates"]
+                if (not args.cost_candidate_id or row["id"] == args.cost_candidate_id)
+                and all(not getattr(args, key) or row["binding"][key] == getattr(args, key)
+                        for key in ("report_id", "zone_id", "run_id"))
+            ]
+            require(len(candidates) == 1,
+                    "Select one exact original candidate with --cost-candidate-id: " +
+                    json.dumps([{"id": row["id"], "binding": row["binding"]} for row in candidates]))
+            candidate = candidates[0]
+            binding = candidate["binding"]
+            require(binding["plan_id"] == plan["id"] and binding["revision"] == plan["revision"]
+                    and binding["document_digest"] == detail["document_digest"],
+                    "The original cost catalogue changed its saved-plan identity.")
+            source_path = Path(args.cost_review).resolve(strict=True)
+            require(source_path.is_file() and source_path.stat().st_size <= 16 * 1024 * 1024,
+                    "Choose the original cost review JSON within 16 MiB.")
+            supplied = json.loads(source_path.read_text(encoding="utf-8-sig"))
+            raw_path = output / "original-field-cost-review-source.json"
+            if raw_path.exists():
+                require(raw_path.stat().st_size == source_path.stat().st_size
+                        and digest(raw_path) == digest(source_path), "The original review source bytes changed.")
+            else:
+                temporary = output / ".original-field-cost-review-source.receiving"
+                with source_path.open("rb") as incoming, temporary.open("wb") as target:
+                    shutil.copyfileobj(incoming, target, length=1024 * 1024)
+                    target.flush()
+                    os.fsync(target.fileno())
+                temporary.replace(raw_path)
+            if "binding" in supplied:
+                require(supplied["binding"] == binding, "The review names another saved plan.")
+            review = supplied.get("review", supplied)
+            require(review.get("schema") == "upstate.implementation-cost-review-selection/v1",
+                    "Use the explicit original cost-review selection.")
+            _phase_save(journal, "original-field-cost-review.json", supplied)
+            _phase_save(journal, "existing-cost-plan-original.json", plan)
+            return {"workspace_key": workspace, "binding": binding,
+                    "review": review, "plan_id": plan["id"], "candidate_id": candidate["id"],
+                    "review_source": descriptor(raw_path, output), "review_source_path": str(source_path)}
+        selected = _phase_json(journal, "native-input.json", pin)
+        record["native_input"] = selected
+        binding = selected["binding"]
+        retained_review = selected["review_source"]
+        retained_path = output / _native_relative(retained_review["path"])
+        require(retained_path.stat().st_size == retained_review["bytes"]
+                and digest(retained_path) == retained_review["sha256"],
+                "The retained original review bytes changed.")
+        require(selected["workspace_key"] == workspace,
+                "Resume the native phase in its original operator Workspace.")
+        if args.cost_plan_id:
+            require(args.cost_plan_id == selected["plan_id"], "The resumed plan differs.")
+        if args.cost_candidate_id:
+            require(args.cost_candidate_id == selected["candidate_id"], "The resumed candidate differs.")
+        if args.cost_review:
+            supplied_path = Path(args.cost_review).resolve()
+            if supplied_path.exists():
+                require(supplied_path.is_file() and supplied_path.stat().st_size == retained_review["bytes"]
+                        and digest(supplied_path) == retained_review["sha256"],
+                        "The resumed original cost review bytes changed.")
+                supplied = json.loads(supplied_path.read_text(encoding="utf-8-sig"))
+                require(supplied.get("review", supplied) == selected["review"],
+                        "The resumed original cost review changed.")
+            else:
+                require(str(supplied_path) == selected["review_source_path"],
+                        "A missing replacement review is not the retained original source path.")
+                # Its pinned exact bytes were verified above; staging may have
+                # been retired after the original input was accepted.
+        base = {key: binding[key] for key in ("plan_id", "revision", "document_digest", "candidate_id")}
+        original = api.get("/api/economic-desk/edition", workspace=workspace, edition_id=binding["edition_id"])
+        require(original["id"] == binding["edition_id"]
+                and all(original["input"][key] == binding[key]
+                        for key in ("report_id", "report_sha256", "zone_id")),
+                "The original source edition no longer matches the candidate binding.")
+        plan = api.get("/api/implementation/detail", workspace=workspace,
+                       id=binding["plan_id"], revision=binding["revision"])
+        require(plan["document_digest"] == binding["document_digest"],
+                "The retained original saved plan changed.")
+        candidate = next(row for row in plan["plan"]["candidates"] if row["id"] == binding["candidate_id"])
+        link = next(row for row in plan["plan"]["source_links"]
+                    if row["id"] == candidate["source"]["source_link_id"])
+        snapshot = link["snapshot"]
+        alternative = next(row for row in original["report"]["alternatives"] if row["run_id"] == binding["run_id"])
+        require(original["input"] == snapshot["edition"]["input"]
+                and original["report"] == snapshot["economic_report"]
+                and candidate["source"]["row_snapshot"]["original_alternative"] == alternative
+                and {row["metric"]: row["output"] for row in candidate["modeled_benefits"]} == alternative["outputs"],
+                "The saved candidate changed its original Economic snapshot or physical support.")
+        _phase_save(journal, "existing-cost-source-edition.json",
+                    {key: value for key, value in original.items() if key != "_downloads"})
+        record.update(producer_report_id=binding["report_id"], zone_id=binding["zone_id"],
+                      selected_run_id=binding["run_id"], edition_id=original["id"],
+                      project_id=original["report"]["project"]["id"])
+        journal.save()
+
+    with journal.stage("native_review_and_complete_original_cost_operation"):
+        context = _phase_json(journal, "field-cost-context.json", lambda:
+            api.post("/api/implementation-costs/context", base, workspace))
+        require(context["binding"] == binding, "The cost context changed its source binding.")
+        preview = _phase_json(journal, "field-cost-preview.json", lambda:
+            api.post("/api/implementation-costs/preview", {**base, "review": selected["review"]}, workspace))
+        require(preview["can_apply"] and preview["binding"] == binding,
+                "The original cost review has unresolved errors or changed its binding.")
+        _native_validate_physical(original, {"report": preview["economic_preview"]})
+        payload = {**base, "review": selected["review"], "expected_operation_id": preview["operation_id"]}
+        task = _native_queue(api, journal, "cost_review", workspace,
+                             "implementation.cost-review.apply", payload, args.task_timeout_seconds)
+        receipt = api.get("/api/implementation-costs/detail", workspace=workspace,
+                          operation_id=preview["operation_id"])
+        require(receipt["operation_id"] == preview["operation_id"] and receipt["binding"] == binding
+                and task["result"]["edition"]["id"] == receipt["edition"]["id"],
+                "The original cost receipt changed its saved edition.")
+        reviewed = api.get("/api/economic-desk/edition", workspace=workspace,
+                           edition_id=receipt["edition"]["id"])
+        require(reviewed["input"] == preview["proposed_input"]
+                and reviewed["input"]["selection"]["field12_cost_reviews"][preview["operation_id"]] == preview["source_audit"],
+                "The reviewed edition differs from the exact accepted forecast.")
+        _native_validate_physical(original, reviewed)
+        _phase_save(journal, "field-cost-economic-edition.json",
+                    {key: value for key, value in reviewed.items() if key != "_downloads"})
+        record["implementation"] = {"plan_id": binding["plan_id"], "candidate_id": binding["candidate_id"],
+            "revision": binding["revision"], "cost_review": {
+                "operation_id": preview["operation_id"], "task_id": task["id"],
+                "draft_id": receipt["draft"]["id"], "edition_id": reviewed["id"],
+                "original_economic_edition_id": original["id"], "original_plan_revision": binding["revision"]}}
+        ticket = _native_ticket(receipt["_downloads"], "cost-review-package.zip")
+        record["native_cost_package"] = _native_member(api, journal, ticket, "complete-cost-review-package.zip")
+        journal.save()
+
+    with journal.stage("native_complete_original_economic_comparison"):
+        preview = _phase_json(journal, "original-economic-comparison-preview.json", lambda:
+            api.post("/api/economic-comparison/preview",
+                     {"first_edition_id": original["id"], "second_edition_id": reviewed["id"]}, workspace))
+        require(preview["comparison"]["comparability"]["physical"]
+                and preview["input"]["first_edition_id"] == original["id"]
+                and preview["input"]["second_edition_id"] == reviewed["id"],
+                "The comparison preview changed the original pair or its physical support.")
+        task = _native_queue(api, journal, "comparison", workspace, "economic.comparison.build",
+                             {**preview["input"], "expected_comparison_id": preview["comparison_id"]},
+                             args.task_timeout_seconds)
+        comparison = api.get("/api/economic-comparison/detail", workspace=workspace, id=preview["comparison_id"])
+        require(task["result"]["id"] == comparison["id"]
+                and comparison["comparison"] == preview["comparison"]
+                and comparison["input"] == preview["input"],
+                "The completed comparison changed the original values.")
+        record["economic_comparison"] = {"id": comparison["id"], "task_id": task["id"],
+            "first_edition_id": original["id"], "second_edition_id": reviewed["id"],
+            "input": comparison["input"], "physical_comparable": True}
+        ticket = _native_ticket(comparison["_downloads"], "comparison-package.zip")
+        record["native_comparison_package"] = _native_member(api, journal, ticket, "complete-economic-comparison.zip")
+        _phase_json(journal, "saved-economic-comparison.json", lambda:
+                    {key: value for key, value in comparison.items() if key not in {"_downloads", "viewer_url"}})
+        journal.save()
+
+    with journal.stage("native_register_original_comparison_source"):
+        preview = _phase_json(journal, "comparison-source-preview.json", lambda:
+            api.post("/api/economic-comparison/report-source-preview",
+                     {"comparison_id": comparison["id"]}, workspace))
+        require(preview["comparison_id"] == comparison["id"] and not preview["delivery_selection_supplied"],
+                "The source preview changed its original comparison or ordered source selection.")
+        task = _native_queue(api, journal, "comparison_source", workspace,
+                             "economic.comparison.report-source.import",
+                             {"comparison_id": comparison["id"], "expected_source_key": preview["source_key"],
+                              "expected_operation_id": preview["operation_id"]},
+                             args.task_timeout_seconds)
+        source = task["result"]
+        require(source["state"] == "imported" and source["operation_id"] == preview["operation_id"]
+                and source["source_key"] == preview["source_key"]
+                and source["comparison_id"] == comparison["id"],
+                "The scientific source changed its accepted identity.")
+        pair = {key: source[key] for key in ("source_collection_id", "source_id")}
+        require(pair in source["delivery_selection"]["observed_context_sources"],
+                "The original scientific source pair is absent from its selection.")
+        record.setdefault("economic_comparison_report", {}).update({
+            "comparison_id": comparison["id"], "source_key": source["source_key"],
+            "source_operation_id": source["operation_id"], "source_task_id": task["id"], "source_pair": pair})
+        journal.save()
+
+
+    with journal.stage("native_verify_original_cost_and_comparison_packages"):
+        cost_directory = output / "field-cost-review"
+        cost_manifest = _phase_extract(output / record["native_cost_package"]["path"], cost_directory,
+                                       schema="upstate.implementation-cost-review-package/v1")
+        require(cost_manifest["operation_id"] == record["implementation"]["cost_review"]["operation_id"]
+                and cost_manifest["edition_id"] == reviewed["id"],
+                "The original complete cost package changed its operation or edition.")
+        require(json.loads((cost_directory / "plan.json").read_text(encoding="utf-8")) == plan["plan"]
+                and json.loads((cost_directory / "source-audit.json").read_text(encoding="utf-8"))
+                    == json.loads((output / "field-cost-preview.json").read_text(encoding="utf-8"))["source_audit"],
+                "The cost package changed its original saved plan or reviewed audit.")
+        economic_manifest = _phase_extract(cost_directory / "economic" / "decision-package.zip",
+                                           cost_directory / "economic" / "edition")
+        require(economic_manifest["report_id"] == reviewed["report_id"],
+                "The nested cost package belongs to another Economic report.")
+        comparison_directory = output / "economic-comparison"
+        manifest = _phase_extract(output / record["native_comparison_package"]["path"], comparison_directory,
+                                  schema="upstate.economic-comparison-package/v1")
+        require(manifest["id"] == comparison["id"]
+                and json.loads((comparison_directory / "comparison.json").read_text(encoding="utf-8"))
+                    == comparison["comparison"],
+                "The complete comparison changed its original values.")
+        for side, edition in (("first", original), ("second", reviewed)):
+            retained = json.loads((comparison_directory / (side + "-edition.json")).read_text(encoding="utf-8"))
+            retained_report = json.loads((comparison_directory / (side + "-report.json")).read_text(encoding="utf-8"))
+            require(retained["id"] == edition["id"] and retained["input"] == edition["input"]
+                    and retained_report == edition["report"], "A complete original Economic edition changed.")
+            nested = _phase_extract(comparison_directory / (side + "-economic-package.zip"),
+                                    comparison_directory / (side + "-economic-edition"))
+            require(nested["report_id"] == edition["report_id"], "A nested original report identity changed.")
+
+    with journal.stage("native_render_and_export_original_scientific_report"):
+        report_request = {"sources": [pair], "contact": {}}
+        report_preview = _phase_json(journal, "scientific-report-preview.json", lambda:
+            api.post("/api/source-reports/scientific-preview", report_request, workspace))
+        require(report_preview["workspace_key"] == workspace
+                and [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
+                     for row in report_preview["sources"]] == [pair],
+                "The original scientific preview changed its exact source choice.")
+        # A previously complete edition is opened without asking the installed
+        # renderer to generate a new source identity.
+        if not report_preview["existing"]:
+            task = _native_queue(api, journal, "scientific_report", workspace, "source-reports.render",
+                                 {**report_request, "preview_id": report_preview["id"]},
+                                 args.task_timeout_seconds)
+            require(task["result"]["scientific_report_edition_id"] == report_preview["id"],
+                    "The completed scientific report differs from its original preview.")
+        report = api.get("/api/source-reports/scientific-edition", workspace=workspace, id=report_preview["id"])
+        require(report["edition"]["id"] == report_preview["id"] and report["edition"]["state"] == "complete"
+                and _native_report_selection(report) == [pair],
+                "The retained scientific report changed its original ordered source.")
+        _phase_save(journal, "comparison-scientific-report-edition.json", _native_report_snapshot(report))
+        report_files = _native_report_files(api, journal, report)
+        export_task = _native_queue(api, journal, "scientific_report_export", workspace, "source-reports.export",
+                                    {"id": report["edition"]["id"]}, args.task_timeout_seconds)
+        require(export_task["result"]["scientific_report_edition_id"] == report["edition"]["id"],
+                "The report export selected another original edition.")
+        report = api.get("/api/source-reports/scientific-edition", workspace=workspace, id=report["edition"]["id"])
+        require(report.get("archive"), "The completed original report has no archive.")
+        report_archive = _native_member(api, journal, report["archive"], "complete-comparison-scientific-report.zip")
+        with zipfile.ZipFile(output / report_archive["path"]) as archive:
+            require(archive.testzip() is None, "The native scientific archive has a damaged member.")
+        record["economic_comparison_report"].update(
+            report_id=report["edition"]["id"], report_files=report_files, report_archive=report_archive,
+            report_render_request=report_request, report_export_task_id=export_task["id"])
+        journal.save()
+
+    with journal.stage("native_export_original_scientific_study"):
+        selection = {"schema": "upstate.study-selection/v1",
+                     "title": "Economic comparison " + comparison["id"][:12],
+                     "roots": [{"kind": "scientific-report-editions", "id": report["edition"]["id"]}],
+                     "include_related_results": True}
+        preview = _phase_json(journal, "comparison-study-preview.json", lambda:
+            api.post("/api/study-transfer/preview", {"workspace": workspace, "selection": selection}, workspace))
+        require(any(row["id"] == report["edition"]["id"] for row in preview.get("scientific_report_editions", [])),
+                "The original Study preview omitted the saved scientific report.")
+        task = _native_queue(api, journal, "study_export", workspace, "study.export",
+                             {**selection, "preview_token": preview["preview_token"]}, args.task_timeout_seconds)
+        tickets = task.get("_downloads") or []
+        require(len(tickets) == 1, "Choose the exact complete original Study download.")
+        study_file = _native_member(api, journal, tickets[0], "comparison-scientific-study.zip")
+        from model.study_transfer import inspect_transfer_archive
+        inspected = inspect_transfer_archive(output / study_file["path"], verify=True)
+        manifest, study = inspected["manifest"], inspected["study"]
+        require(manifest["schema"] == "upstate.scientific-workspace-archive/v1"
+                and study["schema"] == "upstate.study-transfer/v1" and study["id"] == task["result"]["id"]
+                and manifest["project"]["id"] == record["project_id"]
+                and study["identity"]["selection"]["roots"] == selection["roots"],
+                "The original Study archive changed its project, roots or native identity.")
+        retained = next((row for row in study["identity"]["scientific_report_editions"]
+                         if row["id"] == report["edition"]["id"]), None)
+        require(retained and retained["source_choices"] == [pair] and retained["sources"]
+                and all(row.get("body_sha256") for row in retained["sources"]),
+                "The original Study lost its complete scientific report or source bodies.")
+        for item in retained["members"]:
+            member = manifest["members"].get("workspace/" + item["path"])
+            require(member and all(member[key] == item[key] for key in ("bytes", "sha256")),
+                    "The original Study changed a scientific report member.")
+        _phase_save(journal, "comparison-study-inspection.json", inspected)
+        record["economic_comparison_report"].update(study_id=study["id"], study_task_id=task["id"],
+                                                   study_selection=selection, study_archive=study_file)
+        journal.save()
+
+    with journal.stage("native_cold_restore_original_study"):
+        study_path = output / record["economic_comparison_report"]["study_archive"]["path"]
+        intent = {"workspace": workspace, "filename": study_path.name,
+                  "media_type": "application/octet-stream", "bytes": study_path.stat().st_size,
+                  "sha256": digest(study_path)}
+        _phase_save(journal, "study-upload-intent.json", intent)
+        def upload():
+            # The original server derives the upload ID from exact
+            # SHA256/filename/media_type. Repeating an uncertain response
+            # reconnects that upload; it never submits another restore task.
+            with study_path.open("rb") as stream:
+                return api.json("/api/upload", method="POST", raw=stream, workspace=workspace,
+                                filename=intent["filename"], length=intent["bytes"])
+        uploaded = _phase_json(journal, "study-upload.json", upload)
+        require(uploaded["sha256"] == intent["sha256"] and uploaded["bytes"] == intent["bytes"]
+                and uploaded["filename"] == intent["filename"],
+                "The original upload changed the complete Study bytes or filename.")
+        task = _native_queue(api, journal, "study_restore", workspace, "workspace.restore",
+                             {"upload_id": uploaded["id"]}, args.task_timeout_seconds)
+        restored = task["result"]
+        received_workspace = restored["workspace_key"]
+        require(received_workspace != workspace and restored["identity"] == "MATCH"
+                and restored["archive_sha256"] == intent["sha256"]
+                and restored["project"]["id"] == record["project_id"],
+                "The original Study was not restored unchanged into a fresh Workspace.")
+        record["economic_comparison_report"].update(
+            received_workspace_key=received_workspace, restore_task_id=task["id"],
+            restore_upload_id=uploaded["id"], restore_archive_sha256=intent["sha256"])
+        journal.save()
+        detail, index, row, cold_comparison, cold_report = _native_check_received(api, received_workspace, record)
+        require(cold_comparison["comparison"] == comparison["comparison"]
+                and _native_report_snapshot(cold_report) == _native_report_snapshot(report),
+                "Cold reopening changed original comparison values or scientific report files.")
+        # Retain source availability separately from captured comparison lineage.
+        _phase_save(journal, "cold-received-economic-source.json", row)
+        record["economic_comparison_report"].update(
+            received_source_index=index, native_source_availability=row.get("native_source_availability") or [],
+            product_view_status="native_complete_visual_pending")
+        record["native_completed_at"] = record.get("native_completed_at") or now()
+        journal.save()
+    return record["economic_comparison_report"]
+
+
+
+def receive_browser_phase(args, original_url, api, journal):
+    """Inspect the original saved native IDs; this phase submits no queue action."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as error:
+        raise BrowserUnavailable("Playwright is absent from the selected Python environment") from error
+    record, output = journal.record, journal.root
+    require(record.get("native_completed_at"), "Complete this same journey's native phase before browser receiving.")
+    value = record["economic_comparison_report"]
+    workspace = args.workspace_key or value["received_workspace_key"]
+    # Another operator may expose a separately restored copy. Require exactly the
+    # same project, report, comparison, source pair, and all retained bytes.
+    detail, index, row, comparison, report = _native_check_received(api, workspace, record)
+    saved_comparison = json.loads((output / "saved-economic-comparison.json").read_text(encoding="utf-8"))
+    saved_report = json.loads((output / "comparison-scientific-report-edition.json").read_text(encoding="utf-8"))
+    require(comparison["comparison"] == saved_comparison["comparison"]
+            and _native_report_snapshot(report) == saved_report,
+            "The browser destination does not contain the same original native results.")
+    with sync_playwright() as playwright:
+        browser = launch_browser(playwright, args)
+        record["browser"] = {"version": browser.version, "configured_executable": args.browser_executable}
+        context = browser.new_context(accept_downloads=True, viewport={"width": 1440, "height": 1000})
+        context.set_default_timeout(args.timeout_seconds * 1000)
+        page = context.new_page()
+        page.on("pageerror", lambda error: record["browser_errors"].append(
+            {"kind": "pageerror", "message": journal.clean(str(error))}))
+        page.on("console", lambda message: record["browser_errors"].append(
+            {"kind": "console", "message": journal.clean(message.text)}) if message.type == "error" else None)
+        artifacts = []
+
+        def capture(name):
+            path = output / name
+            page.screenshot(path=str(path), full_page=True)
+            artifacts.append(descriptor(path, output))
+
+        def close_details():
+            button = page.locator('#detail-dialog button[data-action="detail-close"]')
+            if button.is_visible():
+                button.click()
+
+        def checked_download(control, destination, expected):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with page.expect_download() as pending:
+                control.click()
+            received = pending.value
+            require(not received.failure(), "The original browser download failed.")
+            received.save_as(str(destination))
+            require(destination.stat().st_size == expected["bytes"]
+                    and digest(destination) == expected["sha256"],
+                    "The browser download differs from the completed native file.")
+            artifacts.append(descriptor(destination, output))
+
+        def select_workspace():
+            if page.locator("#workspace-select").input_value() != workspace:
+                with page.expect_response(lambda response: urlsplit(response.url).path == "/api/state"
+                                          and parse_qs(urlsplit(response.url).query).get("workspace") == [workspace]):
+                    page.locator("#workspace-select").select_option(workspace)
+
+        try:
+            with journal.stage("browser_open_exact_cold_received_study"):
+                page.goto(original_url, wait_until="load")
+                page.locator("#workspace-select").wait_for(state="visible")
+                select_workspace()
+                page.locator('[data-view="study-transfer"]').click()
+                control = page.locator('.study-transfer [data-received-action="open"][data-id="' +
+                                       value["study_id"] + '"]')
+                control.wait_for(state="visible")
+                with page.expect_response(lambda response:
+                                          urlsplit(response.url).path == "/api/study-transfer/received-detail"
+                                          and parse_qs(urlsplit(response.url).query).get("study_id") == [value["study_id"]]
+                                          and parse_qs(urlsplit(response.url).query).get("workspace") == [workspace]) as opened:
+                    control.click()
+                check_response(opened.value, "Open the original received Study")
+                require(opened.value.json()["project"]["id"] == record["project_id"],
+                        "The received Study UI opened a different project.")
+                capture("phase-browser-received-study-desktop.png")
+                page.set_viewport_size({"width": 390, "height": 844})
+                capture("phase-browser-received-study-narrow.png")
+                page.set_viewport_size({"width": 1440, "height": 1000})
+
+            with journal.stage("browser_open_original_comparison_from_received_study"):
+                with page.expect_response(lambda response:
+                                          urlsplit(response.url).path == "/api/economic-comparison/detail"
+                                          and parse_qs(urlsplit(response.url).query).get("id") == [comparison["id"]]
+                                          and parse_qs(urlsplit(response.url).query).get("workspace") == [workspace]) as opened:
+                    page.locator('[data-received-action="economic-comparison-open"]'
+                                 '[data-economic-comparison-source="' + str(index) + '"]').click()
+                check_response(opened.value, "Open the exact received Economic comparison")
+                require(opened.value.json()["comparison"] == saved_comparison["comparison"],
+                        "The comparison UI changed original costs, quantities or support.")
+                dialog = page.locator("dialog.economic-comparison")
+                dialog.wait_for(state="visible")
+                dialog.get_by_role("link", name="Open complete comparison report", exact=True).wait_for(state="visible")
+                capture("phase-browser-economic-comparison-desktop.png")
+                page.set_viewport_size({"width": 390, "height": 844})
+                capture("phase-browser-economic-comparison-narrow.png")
+                page.set_viewport_size({"width": 1440, "height": 1000})
+                # The original completed package is downloaded through its
+                # mounted control, without queuing another comparison.
+                ticket = _native_ticket(comparison["_downloads"], "comparison-package.zip")
+                link = dialog.locator('a[download]').filter(has_text="ZIP")
+                if link.count() != 1:
+                    from urllib.parse import urljoin
+                    relative = urljoin(api.origin + "/", ticket["url"])
+                    link = dialog.locator('a[href="' + relative + '"]')
+                require(link.count() == 1, "Choose the saved comparison's original complete ZIP control.")
+                checked_download(link, output / "browser-downloads" / "comparison-package.zip", ticket)
+                dialog.locator('[data-ec-action="close"]').click()
+
+            with journal.stage("browser_open_saved_scientific_report_and_all_downloads"):
+                close_details()
+                page.locator('[data-view="sources"]').click()
+                composer = page.locator(".scientific-report-editions")
+                composer.wait_for(state="visible")
+                saved = composer.locator('[data-scientific-report-action="open"][data-id="' + value["report_id"] + '"]')
+                saved.wait_for(state="visible")
+                with page.expect_response(lambda response:
+                                          urlsplit(response.url).path == "/api/source-reports/scientific-edition"
+                                          and parse_qs(urlsplit(response.url).query).get("id") == [value["report_id"]]) as opened:
+                    saved.click()
+                check_response(opened.value, "Open the exact completed scientific report")
+                require(_native_report_snapshot(opened.value.json()) == saved_report,
+                        "The report UI selected different original members.")
+                panel = composer.locator('[data-scientific-report-detail]')
+                panel.wait_for(state="visible")
+                panel.frame_locator("iframe").first.locator("body").wait_for(state="visible")
+                capture("phase-browser-scientific-report-desktop.png")
+                page.set_viewport_size({"width": 390, "height": 844})
+                capture("phase-browser-scientific-report-narrow.png")
+                page.set_viewport_size({"width": 1440, "height": 1000})
+                for item in report["files"]:
+                    relative = _native_relative(item["path"])
+                    url = item["url"] + ("&" if "?" in item["url"] else "?") + "download=1"
+                    control = composer.locator('[data-scientific-report-files] a[download][href="' + url + '"]')
+                    checked_download(control, output / "browser-downloads" / "scientific-report" / relative, item)
+                require(report.get("archive"), "The original saved report lacks its completed archive.")
+                checked_download(panel.get_by_role("link", name="Download report ZIP", exact=True),
+                                 output / "browser-downloads" / "scientific-report.zip", report["archive"])
+
+            with journal.stage("browser_reopen_exact_downloaded_reports_and_print"):
+                html = next(item for item in report["files"] if item["role"] == "report_html")
+                local = output / "browser-downloads" / "scientific-report" / _native_relative(html["path"])
+                outgoing = context.new_page()
+                outgoing.goto(local.as_uri(), wait_until="load")
+                outgoing.screenshot(path=str(output / "phase-browser-downloaded-report-desktop.png"), full_page=True)
+                outgoing.set_viewport_size({"width": 390, "height": 844})
+                outgoing.screenshot(path=str(output / "phase-browser-downloaded-report-narrow.png"), full_page=True)
+                outgoing.set_viewport_size({"width": 1440, "height": 1000})
+                outgoing.pdf(path=str(output / "phase-browser-downloaded-report.pdf"),
+                             format="A4", prefer_css_page_size=True, print_background=True)
+                outgoing.close()
+                for name in ("phase-browser-downloaded-report-desktop.png",
+                             "phase-browser-downloaded-report-narrow.png", "phase-browser-downloaded-report.pdf"):
+                    artifacts.append(descriptor(output / name, output))
+                # The complete original Economic package already verified by the
+                # native phase enters the maintained offline control course.
+                from model import decision_receive
+                arguments = ["--edition", str(output / "field-cost-review" / "economic" / "edition"),
+                             "--run-id", record["selected_run_id"],
+                             "--notes", "Received the same native completed cost-review edition.",
+                             "--timeout-seconds", str(args.timeout_seconds)]
+                if args.browser_executable:
+                    arguments.extend(["--browser-executable", args.browser_executable])
+                def run_offline():
+                    captured = io.StringIO()
+                    with redirect_stdout(captured):
+                        exit_code = decision_receive.main(arguments)
+                    value = {"exit_code": exit_code, "result": json.loads(captured.getvalue())}
+                    if exit_code != 0:
+                        _phase_save(journal, "offline-attempts/" + uuid.uuid4().hex + ".json", value)
+                        raise ValueError("The original offline Economic controls require repair; failed attempt retained.")
+                    return value
+                result = _phase_json(journal, "phase-browser-offline-economic-result.json", run_offline)
+                require(result["exit_code"] == 0,
+                        "The original offline Economic controls require repair; see retained result.")
+
+            with journal.stage("browser_reload_and_reopen_same_saved_comparison"):
+                page.reload(wait_until="load")
+                page.locator("#workspace-select").wait_for(state="visible")
+                select_workspace()
+                page.locator('[data-view="economic-desk"]').click()
+                page.locator('[data-econ="compare-editions"]').first.click()
+                dialog = page.locator("dialog.economic-comparison")
+                dialog.wait_for(state="visible")
+                saved = dialog.locator('[data-ec-action="saved"][data-id="' + comparison["id"] + '"]').first
+                saved.wait_for(state="visible")
+                with page.expect_response(lambda response:
+                                          urlsplit(response.url).path == "/api/economic-comparison/detail"
+                                          and parse_qs(urlsplit(response.url).query).get("id") == [comparison["id"]]) as opened:
+                    saved.click()
+                check_response(opened.value, "Reopen the same original comparison after reload")
+                require(opened.value.json()["comparison"] == saved_comparison["comparison"],
+                        "Reload changed original native values.")
+                capture("phase-browser-reopened-comparison.png")
+                dialog.locator('[data-ec-action="close"]').click()
+            record["browser_completed_at"] = now()
+            record["browser_workspace_key"] = workspace
+            record["browser_origin"] = api.origin
+            record["visual_artifacts"] = artifacts
+            record["product_view_status"] = "captured_for_producer_review"
+            record["visual_review_instruction"] = (
+                "The producing worker must open and LOOK at the exact saved desktop and 390 px images, "
+                "downloaded HTML/PDF/ZIP and original control states; capture alone is not inspection.")
+            journal.save()
+        finally:
+            context.close()
+            browser.close()
+
+
+
+def phased_main(args, argv=None):
+    """Resume one real native operation and its later visual receiving course."""
+    journal = None
+    started = time.perf_counter()
+    try:
+        require(args.timeout_seconds > 0 and args.task_timeout_seconds > 0, "Use positive HTTP and queue timeouts.")
+        require(args.phase in {"native", "browser"},
+                "--resume-journey requires --phase native or --phase browser.")
+        original_url, origin, token = read_url(args)
+        application = Path(args.application).resolve(strict=True)
+        require((application / "model" / "study_transfer.py").is_file(),
+                "Select the existing complete application with its original Study transfer implementation.")
+        sys.path.insert(0, str(application))
+        from model.common import held
+        if args.resume_journey:
+            path = Path(args.resume_journey).resolve(strict=True)
+            require(path.name == "operator-journey.json", "Resume the original operator-journey.json.")
+            directory = path.parent
+        else:
+            require(args.phase == "native", "The browser phase requires --resume-journey from native completion.")
+            require(args.workspace_key and args.cost_plan_id and args.cost_review,
+                    "Native receiving requires --workspace-key, --cost-plan-id and --cost-review.")
+            parent = Path(args.output).resolve()
+            parent.mkdir(parents=True, exist_ok=True)
+            directory = parent / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8])
+            directory.mkdir()
+        with held(directory / ".receiving.lock"):
+            path = directory / "operator-journey.json"
+            if path.is_file():
+                record = json.loads(path.read_text(encoding="utf-8"))
+                require(record.get("schema") == "upstate.economic-operator-receiving/v1"
+                        and record.get("phase_schema") == "upstate.economic-receiving-phases/v1",
+                        "Resume a journal created by this explicit phased receiving course.")
+                if args.phase == "native":
+                    require(record["operator_origin"] == origin,
+                            "Native queue replay must use its original operator origin.")
+                    if args.workspace_key:
+                        require(args.workspace_key == record["workspace_key"],
+                                "Native queue replay must use its original Workspace key.")
+            else:
+                record = {"schema": "upstate.economic-operator-receiving/v1",
+                          "phase_schema": "upstate.economic-receiving-phases/v1",
+                          "status": "running", "started_at": now(), "operator_origin": origin,
+                          "receiving_directory": str(directory), "workspace_key": args.workspace_key,
+                          "receiver_sha256": digest(__file__), "steps": [], "tasks": [],
+                          "browser_errors": [], "native_requests": {}}
+            journal = PhaseJournal(directory, token, record)
+            record["application"] = str(application)
+            record["current_receiving_directory"] = str(directory)
+            record.setdefault("phase_attempts", []).append(
+                {"phase": args.phase, "started_at": now(), "receiver_sha256": digest(__file__),
+                 "operator_origin": origin, "resume_interrupted_tasks": args.resume_interrupted_tasks})
+            receiver = directory / ("economic_receive-" + digest(__file__)[:16] + ".py")
+            if receiver.exists():
+                require(digest(receiver) == digest(__file__), "The retained receiver source changed.")
+            else:
+                shutil.copyfile(__file__, receiver)
+            api = NativeHTTP(origin, token, args.timeout_seconds)
+            api.resume_interrupted_tasks = args.resume_interrupted_tasks
+            journal.save()
+            code = 0
+            try:
+                if args.phase == "native":
+                    receive_native_phase(args, api, journal)
+                    record["status"] = ("browser_complete_visual_review_pending" if record.get("browser_completed_at")
+                                        else "native_complete_visual_pending")
+                else:
+                    receive_browser_phase(args, original_url, api, journal)
+                    record["status"] = "browser_complete_visual_review_pending"
+            except BrowserUnavailable as error:
+                record.update(status="native_complete_browser_unavailable",
+                              error={"type": type(error).__name__, "message": journal.clean(str(error))})
+                code = 3
+            except Exception as error:
+                record.update(status="phase_failed", error={"type": type(error).__name__,
+                                                           "message": journal.clean(str(error))})
+                code = 1
+            record["phase_attempts"][-1].update(
+                finished_at=now(), seconds=round(time.perf_counter() - started, 6), exit_code=code)
+            if code:
+                record["phase_attempts"][-1]["error"] = record.get("error")
+            elif "error" in record:
+                record.setdefault("resolved_errors", []).append(
+                    {"resolved_at": now(), "phase": args.phase, "error": record.pop("error")})
+            record["last_finished_at"] = now()
+            prefix = [sys.executable, "-B", str(Path(__file__).resolve()),
+                      "--application", str(application), "--output", str(directory.parent),
+                      "--resume-journey", str(path)]
+            if args.operator_url_file:
+                prefix.extend(["--operator-url-file", str(Path(args.operator_url_file).resolve())])
+            else:
+                prefix.extend(["--operator-url-env", args.operator_url_env])
+            record["native_resume_command"] = shlex.join(prefix + ["--phase", "native"])
+            record["browser_resume_command"] = shlex.join(prefix + ["--phase", "browser"])
+            record["next_browser_entry"] = {
+                "journey": "operator-journey.json",
+                "workspace_key": record.get("economic_comparison_report", {}).get("received_workspace_key"),
+                "comparison_id": record.get("economic_comparison", {}).get("id"),
+                "report_id": record.get("economic_comparison_report", {}).get("report_id"),
+                "study_id": record.get("economic_comparison_report", {}).get("study_id"),
+                "instruction": ("Use the authorized original operator URL file. If the complete Study and journey "
+                                "were moved to another browser host, supply its current --workspace-key only after "
+                                "restoring that exact Study. The browser phase validates original project/results "
+                                "and never submits another cost, comparison, render, export or restore task.")}
+            archive_path = directory / "economic-operator-receiving-package.zip"
+            artifacts = [descriptor(item, directory) for item in sorted(directory.rglob("*"))
+                         if item.is_file() and item not in {path, archive_path}
+                         and not any(part.startswith(".") for part in item.relative_to(directory).parts)]
+            record["artifacts"] = artifacts
+            journal.save()
+            temporary = directory / ".economic-operator-receiving-package.receiving"
+            with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
+                for item in [path, *(directory / row["path"] for row in artifacts)]:
+                    archive.write(item, item.relative_to(directory).as_posix())
+            temporary.replace(archive_path)
+            result = {"status": record["status"], "phase": args.phase,
+                      "workspace_key": record.get("workspace_key"),
+                      "implementation": record.get("implementation"),
+                      "economic_comparison": record.get("economic_comparison"),
+                      "economic_comparison_report": record.get("economic_comparison_report"),
+                      "journey": str(path), "archive": str(archive_path),
+                      "native_resume_command": record["native_resume_command"],
+                      "browser_resume_command": record["browser_resume_command"],
+                      "visual_review_required": True}
+            print(json.dumps(journal.clean(result), indent=2), flush=True)
+            return code
+    except Exception as error:
+        print(json.dumps({"status": "input_error", "error": type(error).__name__,
+                          "message": journal.clean(str(error)) if journal else str(error)}), file=sys.stderr)
+        return 2
+
+
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--operator-url-file", help="Text file with the original printed URL, or JSON containing url")
     result.add_argument("--operator-url-env", default="UPSTATE_OPERATOR_URL", help="Existing URL environment variable when no file is supplied")
     result.add_argument("--output", required=True, help="Directory receiving a new timestamped journey for each invocation")
     result.add_argument("--application", default=str(Path(__file__).resolve().parent.parent), help="Existing complete application root")
+    result.add_argument("--phase", choices=("all", "native", "browser"), default="all",
+                        help="Default original browser course; native completes queued work, browser resumes its exact saved IDs")
+    result.add_argument("--resume-journey", help="Exact phased operator-journey.json to rejoin without replacing original requests")
+    result.add_argument("--resume-interrupted-tasks", action="store_true",
+                        help="Explicitly resume each retained failed/interrupted/cancelled original task at most once this invocation")
     result.add_argument("--workspace-key")
     result.add_argument("--report-id")
     result.add_argument("--zone-id")
@@ -1676,6 +2664,8 @@ def parser():
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    if args.phase != "all" or args.resume_journey:
+        return phased_main(args, argv)
     journal = None
     started = time.perf_counter()
     try:

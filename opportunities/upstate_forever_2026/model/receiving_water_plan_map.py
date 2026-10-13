@@ -86,7 +86,7 @@ def _layer(workspace, layers, plan, receptor, key, role):
             or record.get("scope") != workspace.root / "receiving-water-plans" / plan["id"]):
         raise ValueError("The Spatial layer does not match the exact retained plan geometry")
     # Use the original catalogue ID; never reconstruct its identity formula.
-    return {"layer_id": public["id"], "layer": public["native_layer"]}, record
+    return {"layer_id": public["id"], "layer": public["native_layer"], "where": {}}, record
 
 
 def _extent(spatial, choice, record, expected_crs, target):
@@ -176,7 +176,7 @@ def read(workspace, selection, *, spatial=None):
             bounds.append(extent["bounds"])
             overlays.append({
                 "selection": deepcopy(choice),
-                "label": (side.title() + " / " + label + " / " + receptor["title"])[:500],
+                "label": (side.title() + " / " + label + " / " + receptor["title"])[:500].strip(),
                 "visible": True, "style": "dash" if side == "reference" else "solid",
                 "width": 1.25 if role == "contribution" else 2.5, "opacity": 1,
             })
@@ -212,11 +212,14 @@ def read(workspace, selection, *, spatial=None):
         "reference": _header(reference, reference_subject),
         "candidate": _header(candidate, candidate_subject), "presence": present,
         "title": "Receiving-water geography / " + subject_id,
-        "view": {"crs": reference["analysis_crs"], "bounds": view_bounds},
+        "view": {"crs": target.to_string(), "bounds": view_bounds},
         "geometry_bounds": exact,
         "extent_method": "Bounds of actual retained feature vertices in the reference plan CRS; 3% or 1 metre display padding",
         "overlays": overlays, "bindings": bindings,
         "notes": (
+            "Reference plan " + reference["id"] + " (record SHA-256 " + reference["record_sha256"] + "). "
+            "Candidate plan " + candidate["id"] + " (record SHA-256 " + candidate["record_sha256"] + "). "
+            "Exact receiving-water ID: " + subject_id + ". "
             "Reference boundaries are dashed; candidate boundaries are solid. "
             "The wider lines identify the original receiving-water feature and the thinner lines its selected contribution area. "
             "A water absent on one side remains explicitly absent. Reprojection fits the shared display only; "

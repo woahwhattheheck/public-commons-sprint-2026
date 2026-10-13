@@ -1,0 +1,4 @@
+rdflib==7.6.0
+pyshacl==0.40.1
+cryptography==50.0.1
+PyLD==3.3.0

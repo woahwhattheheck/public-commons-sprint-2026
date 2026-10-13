@@ -58,6 +58,24 @@ export function attachNativeRunHistory({getState,api,getRunIds,submitOriginal,op
   if(signature!==c.taskSignature){c.taskSignature=signature;loadCatalog(c,true);}
   else if(!c.catalog&&!c.read&&!c.error)loadCatalog(c);
  }
+ function intakeState(){
+  const c=active;
+  if(!c||!current(c))return null;
+  const tasks=originalTasks(c),last=tasks.find(task=>task.id===c.lastTask?.id)||c.lastTask;
+  return {workspace:c.workspace,title:c.title,epoch:c.epoch,
+   busy:c.busy||tasks.some(task=>['queued','running'].includes(task.state))||['queued','running'].includes(last?.state),
+   preview_id:c.preview?.id||null,task_id:last?.id||null,task_state:last?.state||null};
+ }
+ function setTitle(value){
+  const c=active;
+  if(!c||!current(c))throw Error('Open the original run desk before naming its history.');
+  if(c.busy)throw Error('Finish the current history request before changing its selection.');
+  if(typeof value!=='string'||!value.trim()||value.length>240)
+   throw Error('Name the execution history in at most 240 characters.');
+  c.title=value.trim();c.preview=null;c.error='';
+  // The parent commits the matching visible run selection and repaints once.
+  return c.title;
+ }
  function change(event){
   if(event.target?.dataset.nativeHistoryField!=='title')return false;
   const c=context(getState()?.workspace_key);
@@ -151,5 +169,5 @@ export function attachNativeRunHistory({getState,api,getRunIds,submitOriginal,op
   finally{c.busy=false;if(current(c))changed();}
  }
  function detach(){disposed=true;if(active)active.epoch++;active=null;}
- return {update,render,change,dispatch,detach};
+ return {update,render,change,dispatch,detach,intakeState,setTitle};
 }

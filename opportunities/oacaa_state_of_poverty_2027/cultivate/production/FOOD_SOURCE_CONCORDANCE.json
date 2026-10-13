@@ -1,0 +1,140 @@
+{
+  "schema": "tjl.oacaa.food-source-concordance.v1",
+  "checkedAt": "2026-10-13",
+  "items": [
+    {
+      "id": "table13-year",
+      "originalLocator": "Original 2026 report Table 13",
+      "originalHeadingYear": "2024",
+      "originalFooterYear": "2022",
+      "originalProseYears": "2021→2023",
+      "originalOhioChildCount": "517450",
+      "originalOhioChildRate": "20.1",
+      "resolvedMeasurementYear": "2023",
+      "resolution": "The original statewide count/rate matches Feeding America 2023. Keep that historical observation labeled 2023. The source-current 2024 edition uses 534,640 and 20.8%.",
+      "sourceUrl": "https://map.feedingamerica.org/county/2023/child/ohio"
+    },
+    {
+      "id": "county-2023-revision",
+      "sourceUrl": "https://www.feedingamerica.org/sites/default/files/2026-09/Map%20the%20Meal%20Gap%20Technical%20Brief.pdf",
+      "locator": "Physical PDF pages 4–5",
+      "resolution": "The 2026 technical brief corrects 2023 county overall, child and income-eligibility estimates after the earlier county release used 2022 BLS unemployment. State and congressional results were unaffected."
+    },
+    {
+      "id": "eligibility-denominator",
+      "resolution": "Income eligibility among food-insecure children uses 185% of the federal poverty level. It is a share of food-insecure children, not all children, and does not establish actual participation or every program eligibility rule. Original Table 10 percentage of ALL children who are both food insecure and above income eligibility is a different denominator. Do not paste the among-food-insecure 33% into that column."
+    },
+    {
+      "id": "rounding",
+      "resolution": "The Ohio overall page publishes 60% above and 41% below the SNAP threshold. Retain both; do not alter one to force 100%. Source counts and rates do not provide an exact unrounded denominator."
+    },
+    {
+      "id": "cost-universe",
+      "resolution": "Meal cost and annual budget shortfall are geography-wide food-cost measures. They are not child-only costs and are not benefit amounts."
+    },
+    {
+      "id": "snap-month",
+      "originalLocator": "Original 2026 report Table 10",
+      "originalPeriod": "2025",
+      "resolution": "The published SNAP percentage cites Ohio JFS monthly statistics without naming the month. The food-security dataset does not relabel it as a 2024 meal-gap measure or infer a month or denominator."
+    }
+  ],
+  "countyComparisons": [
+    {
+      "geography": "Ashland",
+      "measurementPeriod": "2023",
+      "originalReportValue": "19.7",
+      "currentRedistributedValue": "19.4",
+      "originalLocator": "Original 2026 report Table 10 part 1",
+      "currentLocator": "Original CSV record 3",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Ashtabula",
+      "measurementPeriod": "2023",
+      "originalReportValue": "23.3",
+      "currentRedistributedValue": "23.0",
+      "originalLocator": "Original 2026 report Table 10 part 1",
+      "currentLocator": "Original CSV record 15",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Cuyahoga",
+      "measurementPeriod": "2023",
+      "originalReportValue": "26.0",
+      "currentRedistributedValue": "25.3",
+      "originalLocator": "Original 2026 report Table 10 part 4",
+      "currentLocator": "Original CSV record 27",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Geauga",
+      "measurementPeriod": "2023",
+      "originalReportValue": "10.1",
+      "currentRedistributedValue": "9.5",
+      "originalLocator": "Original 2026 report Table 10 part 6",
+      "currentLocator": "Original CSV record 39",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Lake",
+      "measurementPeriod": "2023",
+      "originalReportValue": "16.2",
+      "currentRedistributedValue": "15.6",
+      "originalLocator": "Original 2026 report Table 10 part 9",
+      "currentLocator": "Original CSV record 51",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Lorain",
+      "measurementPeriod": "2023",
+      "originalReportValue": "19.3",
+      "currentRedistributedValue": "18.4",
+      "originalLocator": "Original 2026 report Table 10 part 10",
+      "currentLocator": "Original CSV record 63",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Medina",
+      "measurementPeriod": "2023",
+      "originalReportValue": "12.3",
+      "currentRedistributedValue": "11.7",
+      "originalLocator": "Original 2026 report Table 10 part 11",
+      "currentLocator": "Original CSV record 75",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Portage",
+      "measurementPeriod": "2023",
+      "originalReportValue": "16.5",
+      "currentRedistributedValue": "16.3",
+      "originalLocator": "Original 2026 report Table 10 part 14",
+      "currentLocator": "Original CSV record 87",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "geography": "Summit",
+      "measurementPeriod": "2023",
+      "originalReportValue": "21.0",
+      "currentRedistributedValue": "20.7",
+      "originalLocator": "Original 2026 report Table 10 part 16",
+      "currentLocator": "Original CSV record 99",
+      "status": "revised-source-value",
+      "explanation": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    }
+  ],
+  "coverage": {
+    "currentPrimaryCounties": 88,
+    "currentStatePopulations": 2,
+    "historicalCounties": 9,
+    "historicalRows": 108
+  }
+}
