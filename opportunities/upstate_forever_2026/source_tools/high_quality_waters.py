@@ -789,7 +789,7 @@ def inspect(args):
         read_retained(root, item)
     result = []
     for layer in document["layers"]:
-        data = json.loads(gzip.decompress((root / layer["combined_path"]).read_bytes()))
+        _, data = retained_json(root / layer["combined_path"])
         columns = []
         for field in layer["field_schema"]:
             if field.get("type") not in ("esriFieldTypeString", "esriFieldTypeSmallInteger",
