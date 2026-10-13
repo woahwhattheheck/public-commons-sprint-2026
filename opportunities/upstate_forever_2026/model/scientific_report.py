@@ -12,7 +12,7 @@ from pathlib import Path
 from .common import atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v3"
+REPORT_VERSION = "upstate.scientific-report/v4"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -353,6 +353,49 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
     return [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
 
 
+def _receiving_metric_blocks(baseline_physical, alternatives):
+    """Read retained subject metrics without recomputing or merging receptor areas."""
+    def physical_table(physical, caption):
+        rows = [[_label(key), _quantity(value), _mass_units(key, value),
+                 _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
+                for key, value in physical.items()]
+        return _table(["Pollutant", "Annual export", "Unit", "Valid cells", "Coverage"],
+                      rows, widths=[1.0, 1.0, 1.4, .9, .9], caption=caption)
+
+    blocks = [physical_table(
+        baseline_physical, "Baseline annual exports over the retained valid cells for this subject."
+    )]
+    for run_id, alternative in alternatives.items():
+        if alternative.get("physical"):
+            blocks.append(physical_table(
+                alternative["physical"],
+                "Native run " + str(run_id) + ". Alternative annual exports over this run's valid cells. "
+                "The paired scenario-change table uses the common baseline and alternative cells.",
+            ))
+        changes = alternative.get("changes", {})
+        rows = []
+        bases = {}
+        for key, value in changes.items():
+            rows.append([_label(key), _quantity(value, signed=True),
+                         _quantity(value, "sum_increased_export"),
+                         _quantity(value, "sum_avoided_export"), _mass_units(key, value),
+                         _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))])
+            if value.get("sum_basis"):
+                bases.setdefault(str(value["sum_basis"]), []).append(_label(key))
+        caption = ("Native run " + str(run_id) + ". Net change is alternative minus baseline. "
+                   "Increased and avoided exports sum the positive and negative cell-level components separately.")
+        for basis, pollutants in bases.items():
+            caption += " Net-change sum basis (" + ", ".join(pollutants) + "): " + basis + "."
+        if "stored Float32 signed difference pixels" in bases:
+            caption += (" Increased and avoided exports retain the native Float64 paired-difference sums; "
+                        "their difference can therefore vary slightly from the stored net at floating-point precision.")
+        blocks.append(_table(
+            ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
+            rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8], caption=caption,
+        ))
+    return blocks
+
+
 def receiving_sections(product):
     """Format the existing receiving-water delivery's actual quantities and support."""
     if product is None:
@@ -364,6 +407,19 @@ def receiving_sections(product):
                 if measurement.get(key)]]
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
+    for family, union in inventory.get("families", {}).items():
+        blocks.append("Unduplicated family union: " + str(union.get("title", family)) + ".")
+        blocks.append("Each contributing cell is counted once within this family. "
+                      "Different families can overlap; their union totals must not be added together.")
+        if union.get("interpretation"):
+            blocks.append(str(union["interpretation"]))
+        if union.get("relationship_precision"):
+            blocks.append("Contribution relationship: " + str(union["relationship_precision"]) + ".")
+        blocks.append("Retained receptor IDs: " + ", ".join(str(value) for value in union.get("receptor_ids", [])) + ".")
+        blocks.extend(_receiving_metric_blocks(
+            union.get("baseline_physical", {}),
+            {run_id: value["metrics"] for run_id, value in union.get("alternatives", {}).items()},
+        ))
     for receptor in inventory.get("receptors", []):
         blocks.append(str(receptor["title"]) + " — " + str(receptor["relationship_precision"]) + ".")
         if receptor.get("classification"):
@@ -372,24 +428,9 @@ def receiving_sections(product):
                       + " ha; area within the selected quantity scope: "
                       + _number(receptor.get("area_in_quantity_scope_ha")) + " ha.")
         metrics = receptor["metrics"]
-        current_rows = [[_label(key), _quantity(value), _mass_units(key, value),
-                         _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
-                        for key, value in metrics.get("baseline_physical", {}).items()]
-        blocks.append(_table(["Pollutant", "Annual export", "Unit", "Valid cells", "Coverage"],
-                             current_rows, widths=[1.0, 1.0, 1.4, .9, .9]))
-        for run_id, alternative in metrics.get("alternatives", {}).items():
-            rows = []
-            for key, value in alternative.get("changes", {}).items():
-                rows.append([_label(key), _quantity(value, signed=True),
-                             _quantity(value, "sum_increased_export"),
-                             _quantity(value, "sum_avoided_export"), _mass_units(key, value),
-                             _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))])
-            blocks.append(_table(
-                ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
-                rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8],
-                caption="Native run " + str(run_id) + ". Net change is alternative minus baseline. "
-                        "Increased and avoided exports sum the positive and negative cell-level components separately.",
-            ))
+        blocks.extend(_receiving_metric_blocks(
+            metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
+        ))
         if receptor.get("source"):
             blocks.append("Original receiving-water source: " + _plain(receptor["source"]))
     return [("Receiving-water quantities and priorities", blocks)]
