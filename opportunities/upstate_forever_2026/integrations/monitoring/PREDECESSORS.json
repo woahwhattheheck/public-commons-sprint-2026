@@ -476,5 +476,24 @@
   },
   "original-receiving-waters-before-editable-revisions-1528b5f1": {
     "src/opportunities/upstate_forever_2026/operator/install_receiving_waters.py": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
+  },
+  "maintained-before-native-report-bootstrap-fa7a77aecef81f13765a0c1024aef68dd323cb15": {
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/current_application_files.json": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/PREDECESSORS.json": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/source_adoption.json": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_observed_sources.json": "ad0d9d525a2305c729a11adb22623319d69490841a83890a3ea41eb424706a6f",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_study_transfer_sources.json": "5b63658973fba77de088c6a389fe816acf55de037d727b9db6d16d87cfc0c1aa"
+  },
+  "original-observed-report-renderer-ae20b184c066145f4a97077ecd403b27b91e524e": {
+    "src/opportunities/upstate_forever_2026/model/observed_report_render.py": "2d4b900c605f57638989946719df0b4e49439dcda8088a909f73d1286005779c"
+  },
+  "original-observed-report-renderer-82ad7a3727770d38688fce4461818706e6f88f46": {
+    "src/opportunities/upstate_forever_2026/model/observed_report_render.py": "ba9ba98b9bfbd2b3ed0df689e176b346382390c433aeec24c478fc754c809f8e"
+  },
+  "original-observed-report-renderer-52636636f236a507dc6e91b15c1def4faa3b7441": {
+    "src/opportunities/upstate_forever_2026/model/observed_report_render.py": "79550b9bb7d1d3a021fcde480f459eee6a855021910448e3386c5a1e9359807e"
+  },
+  "original-observed-report-renderer-55cbd08e73a0648d00d5af464d6640665e4893cc": {
+    "src/opportunities/upstate_forever_2026/model/observed_report_render.py": "1ae28262f41e37cc2d173a95c501c8d50c7bbbe786565e694b40cbbd48d85e20"
   }
 }

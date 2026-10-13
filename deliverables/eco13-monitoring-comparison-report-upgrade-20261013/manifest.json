@@ -1,55 +1,55 @@
 {
   "schema": "upstate.monitoring-source-upgrade/v1",
-  "source_commit": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
+  "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MONITORING-SCOPED-UPGRADE-DD6B-20261013",
   "native_project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
   "installer": "integrations/monitoring/install_monitoring.py",
   "inventory": "integrations/monitoring/current_application_files.json",
-  "source_files": 94,
-  "source_bytes": 1754013,
+  "source_files": 97,
+  "source_bytes": 1866478,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 449164,
-      "sha256": "c35d5704e42856f13816cb30033eddd3745ee956c7e0eb3c81deba93e015b5fe",
+      "bytes": 456411,
+      "sha256": "f6d0b7bf0c7e120b5c51a96dafe1ece1bf8782cccb07ea89e5a65455f91c4048",
       "members": 22,
-      "source_bytes": 333242
+      "source_bytes": 338564
     },
     {
       "path": "source-02.json",
-      "bytes": 459143,
-      "sha256": "7242db9bf2d54e4e21545063140e618b8bdf3a780de72a805dcb0b410c06b0e1",
-      "members": 18,
-      "source_bytes": 341519
+      "bytes": 446920,
+      "sha256": "102a1ad6370f042d2e275a078d3855cb9f223e3ab20677152bfdedf3a44337a8",
+      "members": 17,
+      "source_bytes": 332383
     },
     {
       "path": "source-03.json",
-      "bytes": 429642,
-      "sha256": "e9a4e1e37c29869c2ad313f80069e15b107dddd02d8d2bb74b4813fb08cb8b7a",
-      "members": 13,
-      "source_bytes": 320124
+      "bytes": 357085,
+      "sha256": "7a9a285f6e21fc930ef3bbca4fc2672238c53947404e1ccf2615143a5b7242d1",
+      "members": 12,
+      "source_bytes": 265736
     },
     {
       "path": "source-04.json",
-      "bytes": 443131,
-      "sha256": "86a8bc78869748750c0c19faf29bc05df1180315cce632fa112ee8e19a3e00f6",
-      "members": 21,
-      "source_bytes": 329036
+      "bytes": 438658,
+      "sha256": "e6ecd3b4a6449c403c49914392d9b8f17ef55d24a570fa4cebd83a6152d1996b",
+      "members": 13,
+      "source_bytes": 326785
     },
     {
       "path": "source-05.json",
-      "bytes": 438798,
-      "sha256": "0e310971ccc626085f1f11888332c21e7fbf41a223f60dfa88423312cc9f19ab",
-      "members": 16,
-      "source_bytes": 326497
+      "bytes": 458277,
+      "sha256": "745b24a60a4f4bb42b14153758d489aa520c5e0fa520b405726d1f181e1c678c",
+      "members": 24,
+      "source_bytes": 339791
     },
     {
       "path": "source-06.json",
-      "bytes": 139237,
-      "sha256": "63c76168974a0e7811fad13a9f185382c7646c870b111dee29ba36ad099bf67a",
-      "members": 4,
-      "source_bytes": 103595
+      "bytes": 353200,
+      "sha256": "d03c3c3efff57abc88e28f691d9cec967b58519416ea5a6135d1c02ce66d52c8",
+      "members": 9,
+      "source_bytes": 263219
     }
   ],
   "files": [
@@ -91,26 +91,26 @@
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 42243,
-      "sha256": "ad0d9d525a2305c729a11adb22623319d69490841a83890a3ea41eb424706a6f",
+      "bytes": 43362,
+      "sha256": "03e80cfd1ccd9e8d22d96b447776e5a8782ba1be8dbdcf24ca79ee62c9105296",
       "role": "installed_component"
     },
     {
       "path": "integration/monitoring_study_transfer_sources.json",
-      "bytes": 22842,
-      "sha256": "5b63658973fba77de088c6a389fe816acf55de037d727b9db6d16d87cfc0c1aa",
+      "bytes": 24037,
+      "sha256": "022bd02d6d69963386ea549919cb661a0f39a5d437d235ab1b49da977e990e6f",
       "role": "installed_component"
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 58210,
-      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
+      "bytes": 60040,
+      "sha256": "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29",
       "role": "installed_component"
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
-      "bytes": 6889,
-      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
+      "bytes": 7416,
+      "sha256": "2fe34c5e17280b9ba31a4414bf4a3c9adcdf6354ac0dd852054428669a41d159",
       "role": "installed_component"
     },
     {
@@ -133,8 +133,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 47827,
-      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
+      "bytes": 48478,
+      "sha256": "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12",
       "role": "installed_component"
     },
     {
@@ -312,6 +312,12 @@
       "role": "installed_component"
     },
     {
+      "path": "model/observed_report_render.py",
+      "bytes": 17355,
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695",
+      "role": "installed_component"
+    },
+    {
       "path": "model/portable_implementation.py",
       "bytes": 11505,
       "sha256": "699c40189ce642caf58689c7dc5c46a6e83ca5ff62cee098380563a26ec7a8a0",
@@ -352,6 +358,18 @@
       "bytes": 15526,
       "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302",
       "role": "installed_component"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "bytes": 80044,
+      "sha256": "512e8157bc378176a545bef885dc768343ebeee6bdd425f0f499f1507ab71353",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/scientific_tables.py",
+      "bytes": 9744,
+      "sha256": "719540de0ea4858b3977a73c4264884db0718a7becad1716607069da6d7779ab",
+      "role": "existing_base_dependency"
     },
     {
       "path": "model/study_delivery_transfer.py",
@@ -630,6 +648,8 @@
       "model/portable_parameter_studies.py",
       "model/receiving_water_monitoring.py",
       "model/receiving_waters.py",
+      "model/scientific_report.py",
+      "model/scientific_tables.py",
       "model/study_delivery_transfer.py",
       "model/study_transfer.py",
       "model/study_transfer_cli.py",
@@ -666,7 +686,38 @@
     "guard": "Original Monitoring PREDECESSORS.json",
     "map_role_labels_version": 1,
     "historical_map_editions": 2,
-    "historical_vector_editions": 3
+    "historical_vector_editions": 3,
+    "observed_report_capture_fix": {
+      "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
+      "producer_commit": "08cd869286c8cafd1ef217f20507a365a558ae15",
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
+    },
+    "historical_observed_report_editions": 4
   },
-  "data_custody": "The original retained Workspace supplies its exact native sources, completed plans, campaigns and model runs. Original broader source manifests remain intact; this bank performs no scientific data import."
+  "data_custody": "The original retained Workspace supplies its exact native sources, completed plans, campaigns and model runs. Original broader source manifests remain intact; this bank performs no scientific data import.",
+  "bootstrap": {
+    "path": "bootstrap/source_tools/application_assembly.py",
+    "bytes": 83770,
+    "sha256": "a0010a624c9d1fc5a765eaf7a0e99474f88c41df1f4f6dbefdd54f22902b3ce7",
+    "source_path": "opportunities/upstate_forever_2026/source_tools/application_assembly.py",
+    "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
+  },
+  "native_receiving": {
+    "path": "receive_native.py",
+    "bytes": 15959,
+    "sha256": "f4ccb7663cd5ba2a9c9500ccee265d77466201c25d3b1f3247753fe5d6e96140",
+    "original_apis": [
+      "monitoring_frontier_comparison.prepare",
+      "monitoring_frontier_comparison.export_comparison",
+      "monitoring_report_source.prepare",
+      "monitoring_report_source.inspect",
+      "scientific_report_editions.preview",
+      "scientific_report_editions.render",
+      "scientific_report_editions.inspect",
+      "ScientificReportEditions.export",
+      "portable.backup",
+      "portable.restore",
+      "portable.resume_restore (when available)"
+    ]
+  }
 }
