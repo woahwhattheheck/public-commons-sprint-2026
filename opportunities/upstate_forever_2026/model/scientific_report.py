@@ -476,6 +476,38 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
     return [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
 
 
+def _retained_rows(value, prefix=""):
+    """Expose original nested settings and identifiers with their field paths."""
+    if isinstance(value, dict):
+        for key, child in value.items():
+            name = (prefix + " / " if prefix else "") + _label(key)
+            yield from _retained_rows(child, name)
+    elif isinstance(value, (list, tuple)) and value:
+        if any(isinstance(item, (dict, list, tuple)) for item in value):
+            for index, item in enumerate(value, 1):
+                yield from _retained_rows(item, prefix + " [" + str(index) + "]")
+        elif len(value) > 12 or len(_plain(value)) > 400:
+            # Large selected native cohorts must remain readable, splittable table
+            # rows rather than one cell taller than an entire PDF page.
+            chunk, start, characters = [], 1, 0
+            for index, item in enumerate(value, 1):
+                text = _plain(item)
+                if chunk and (len(chunk) >= 12 or characters + len(text) > 400):
+                    label = prefix + " [" + str(start) + "–" + str(index - 1) + " of " + str(len(value)) + "]"
+                    yield [label, _plain(chunk)]
+                    chunk, start, characters = [], index, 0
+                chunk.append(item)
+                characters += len(text) + 2
+            if chunk:
+                label = prefix + " [" + str(start) + "–" + str(len(value)) + " of " + str(len(value)) + "]"
+                yield [label, _plain(chunk)]
+        else:
+            yield [prefix, _plain(value)]
+    else:
+        yield [prefix, _plain(value)]
+
+
+
 def _receiving_metric_blocks(baseline_physical, alternatives):
     """Read retained subject metrics without recomputing or merging receptor areas."""
     def physical_table(physical, caption):
@@ -541,23 +573,27 @@ def receiving_sections(product):
     blocks = ["Receiving-water quantity scope: " + inventory["quantity_scope"].replace("_", " ") + ".",
               *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship")
                 if measurement.get(key)]]
+    identity = inventory.get("identity", {})
+    selection_rows = [
+        ["Receiving-water analysis", _plain(identity.get("analysis_id"))],
+        ["Original source plan", _plain(identity.get("plan_id"))],
+        ["Quantity scope", _plain(inventory.get("quantity_scope"))],
+        ["Baseline run", _plain(inventory.get("baseline_run_id"))],
+    ]
+    selection_rows.extend(["Alternative run", _plain(run_id)]
+                          for run_id in inventory.get("alternative_run_ids", []))
+    blocks.append(_table(["Study selection", "Retained value"], selection_rows, widths=[1.8, 4.2]))
+    if identity:
+        blocks.append(_table(["Receiving-water identity", "Retained value"],
+                             list(_retained_rows(identity)), widths=[2.2, 3.8]))
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
-    retained_settings = [[_label(key), _plain(value)] for key, value in normalization.items()
-                         if key not in ("caps", "weights", "cap_units")]
-    if retained_settings:
-        blocks.append(_table(
-            ["Original normalization setting", "Retained value"], retained_settings,
-            widths=[1.6, 4.4],
-            caption="Original settings for the dimensionless priority maps. "
-                    "The physical annual quantities below keep their own units.",
-        ))
-    if inventory.get("identity"):
-        blocks.append(_table(
-            ["Receiving-water identity", "Retained value"],
-            [[_label(key), _plain(value)] for key, value in inventory["identity"].items()],
-            widths=[1.6, 4.4],
-        ))
+    setting_rows = [row for key, value in normalization.items()
+                    if key not in ("caps", "weights", "cap_units")
+                    for row in _retained_rows(value, _label(key))]
+    if setting_rows:
+        blocks.append(_table(["Original normalization setting", "Retained value"],
+                             setting_rows, widths=[2.2, 3.8]))
     for family, union in inventory.get("families", {}).items():
         blocks.append("Unduplicated family union: " + str(union.get("title", family)) + ".")
         blocks.append("Each contributing cell is counted once within this family. "
@@ -573,30 +609,35 @@ def receiving_sections(product):
         ))
     for receptor in inventory.get("receptors", []):
         blocks.append(str(receptor["title"]) + " — " + str(receptor["relationship_precision"]) + ".")
-        if receptor.get("classification"):
-            blocks.append("Retained designation: " + _plain(receptor["classification"]))
-        blocks.append("Contributing area: " + _number(receptor.get("contribution_area_ha"))
-                      + " ha; area within the selected quantity scope: "
-                      + _number(receptor.get("area_in_quantity_scope_ha")) + " ha.")
         metrics = receptor["metrics"]
+        context_rows = [
+            ["Receiving-area identifier", _plain(receptor.get("id"))],
+            ["Map family", _plain(receptor.get("family"))],
+            ["Geographic relationship", _plain(receptor.get("relationship_precision"))],
+            ["Complete contributing area (ha)", _number(receptor.get("contribution_area_ha"))],
+            ["Area within quantity scope (ha)", _number(receptor.get("area_in_quantity_scope_ha"))],
+            ["Selected grid cells", _count(metrics.get("selected_cells"))],
+            ["Total selected pixel area (ha)", _number(metrics.get("selected_pixel_area_ha"))],
+        ]
+        source = receptor.get("source") or {}
+        for key, value in source.items():
+            if key == "uri":
+                original = str(value)
+                reference = link("Open original receiving-water source", original)
+                context_rows.append(["Original source reference",
+                                     reference if isinstance(reference, dict) else original])
+            else:
+                context_rows.extend(_retained_rows(value, "Source / " + _label(key)))
+        context_rows.extend(_retained_rows(receptor.get("classification") or {}, "Classification"))
         blocks.append(_table(
-            ["Contributing-footprint support", "Recorded value"],
-            [["Selected grid cells", _count(metrics.get("selected_cells"))],
-             ["Selected pixel area (ha)", _number(metrics.get("selected_pixel_area_ha"))]],
-            widths=[2.6, 3.4],
-            caption="Pixel selection and geometry areas retain their original distinct definitions.",
+            ["Receiving-area context", "Retained value"], context_rows, widths=[2.2, 3.8],
+            caption="Areas, selected grid cells, original feature identifiers and designations retain "
+                    "the source analysis values. Total selected pixel area is the area of all selected "
+                    "cells; each quantity's valid support is reported separately.",
         ))
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
-        if receptor.get("source"):
-            blocks.append(_table(
-                ["Original receiving-water source", "Retained value"],
-                [[_label(key), link("Open original source", value) if key == "uri" else _plain(value)]
-                 for key, value in receptor["source"].items()],
-                widths=[1.6, 4.4],
-                caption="Original source identifiers, editions and selected feature IDs are retained.",
-            ))
     return [("Receiving-water quantities and priorities", blocks)]
 
 
@@ -700,8 +741,12 @@ def economic_coverage_sections(value):
     return [("Economic scope and source coverage", blocks)]
 
 
-def delivery_sections(state):
-    """Link only files actually retained before report composition."""
+def delivery_sections(state, *, working_archive_path=None):
+    """Link retained files and the builder's explicit final workspace archive path.
+
+    The planned path creates a report reference only. The package builder records
+    the real archive descriptor after its single final backup succeeds.
+    """
     blocks = []
     asset_rows = []
     for key, title in (("map_atlas", "Complete publication map atlas"),
@@ -719,6 +764,29 @@ def delivery_sections(state):
         item = state.get("files", {}).get(key)
         if item and item.get("path"):
             asset_rows.append([title, link("Open retained file", item["path"]), item["path"]])
+    if working_archive_path is not None:
+        relative = _relative_link(working_archive_path)
+        retained = state.get("files", {}).get("working_archive")
+        if retained and retained.get("path") != relative:
+            raise ValueError("The retained and planned working archive paths differ")
+        if not retained:
+            asset_rows.append(["Complete scientific workspace",
+                               link("Open retained file", relative), relative])
+    seen_paths = {row[2] for row in asset_rows}
+    receiving_titles = {
+        "receiving_water_analysis_quantities_csv": "Receiving-water annual quantities and scenario changes",
+        "receiving_water_analysis_receiving_waters_gpkg": "Receiving waters and contributing land",
+        "receiving_water_analysis_record": "Original receiving-water analysis",
+        "receiving_water_plan_record": "Original receiving-water source and relationship plan",
+    }
+    for key, item in state.get("files", {}).items():
+        if not key.startswith("receiving_water_") or not isinstance(item, dict):
+            continue
+        path = item.get("path")
+        if path and path not in seen_paths:
+            title = receiving_titles.get(key, _label(key))
+            asset_rows.append([title, link("Open retained file", path), path])
+            seen_paths.add(path)
     if asset_rows:
         blocks.append(_table(["Working material", "Retained file", "Package path"],
                              asset_rows, widths=[2.1, 1.1, 2.8]))

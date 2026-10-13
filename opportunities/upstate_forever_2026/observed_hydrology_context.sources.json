@@ -9,7 +9,7 @@
       "kind": "document",
       "path": "observed_hydrology_context.report.json",
       "bytes": 107657,
-      "sha256": "38da55cc25a22365c0db0b4e56baba8a507d66e50e0f3476ea9afa9464b1fc81",
+      "sha256": "91e6bc80fac951cee04e84fabb87f19bbafa8803e9d81d0e55e111db321dc1d6",
       "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
       "vintage": "2023 water quality and discharge; 2020–2025 observed hydrology; source recovery 2026-10-13",
       "metadata": {
@@ -965,8 +965,8 @@
         },
         {
           "path": "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
-          "bytes": 17048,
-          "sha256": "2b711f112b1fe189d2f7714e3e8b3a55384adf2c639cfdcfe56a9860b8fce634"
+          "bytes": 20608,
+          "sha256": "789a8d62c853e26891aec0939768a4c990e25f99725b4422a0c4a61e7f9616b5"
         },
         {
           "path": "observations/observed_hydrology_20261013/calibration-context.json",
