@@ -49,7 +49,7 @@ export class WorldBankProgrammeClient {
     }
     return Buffer.concat(chunks, size);
   }
-  async #response(route, body, consume, { timeoutMs = 120000 } = {}) {
+  async #response(route, body, consume, { timeoutMs = 120000, maximumRequestBytes = 1024 * 1024 } = {}) {
     need(typeof route === 'string' && route && !route.startsWith('/') && !route.includes('#'), 'Select an original Analysis route.');
     const target = new URL(route, this.#base);
     need(target.origin === this.#base.origin && target.pathname.startsWith('/api/'), 'Keep the original local Analysis capability.');
@@ -58,7 +58,8 @@ export class WorldBankProgrammeClient {
     if (body !== undefined) {
       need(plain(body), 'Retain the complete original request object.');
       encoded = JSON.stringify(body);
-      need(Buffer.byteLength(encoded) <= 1024 * 1024, 'The original Analysis request accepts at most one MiB.');
+      need(Number.isSafeInteger(maximumRequestBytes) && maximumRequestBytes >= 1 && maximumRequestBytes <= 16 * 1024 * 1024 &&
+        Buffer.byteLength(encoded) <= maximumRequestBytes, 'Keep the complete original Analysis request within its native route limit.');
     }
     const signal = AbortSignal.any([this.#controller.signal, this.#signal, AbortSignal.timeout(timeoutMs)].filter(Boolean));
     let response, answered = false;
@@ -178,6 +179,44 @@ export class WorldBankProgrammeClient {
   }
   intakeDownload(intakeId, descriptor, output) {
     return this.#download('worldbank-intake/' + id(intakeId) + '/original', descriptor, output);
+  }
+  // These two routes reuse the same original Analysis connection and stream writer.
+  // Only the native attributed-return endpoint accepts a 16 MiB request.
+  async reportReviewReceive(request) {
+    return this.#response('report-review-returns', request, async response => {
+      const raw = await this.#bytes(response, 128 * 1024 * 1024);
+      try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)); }
+      catch { throw fail('REPORT_REVIEW_RESPONSE_INVALID', 'Read the complete original returned-review response.'); }
+    }, { maximumRequestBytes: 16 * 1024 * 1024 });
+  }
+  async reportReviewDownload(issueId, filename, output) {
+    id(issueId);
+    need(['review.html','package.json'].includes(filename), 'Select the original recipient file.');
+    return this.#response('report-reviews/' + issueId + '/' + filename, undefined, async response => {
+      const expected = response.headers.get('x-content-sha256');
+      const rawLength = response.headers.get('content-length');
+      const length = Number(rawLength);
+      need(typeof rawLength === 'string' && /^[0-9]+$/.test(rawLength) && Number.isSafeInteger(length) &&
+        length >= 0 && length <= 512 * 1024 * 1024 && typeof expected === 'string' && WORLDBANK_SHA.test(expected),
+        'Retain the complete recipient file length and SHA256.', 'REPORT_REVIEW_FILE_INVALID');
+      try {
+        const saved = await inspectConsoleWorkflowFile(output, {bytes:length,sha256:expected});
+        need(saved.bytes === length && saved.sha256 === expected,
+          'The retained recipient file contains different original bytes.', 'REPORT_REVIEW_FILE_CHANGED');
+        return {state:'REOPENED',path:output,...saved};
+      } catch(error) { if(error.code !== 'ENOENT') throw error; }
+      return writeConsoleWorkflowStream(output, async handle => {
+        const hash = createHash('sha256'); let bytes = 0;
+        for await(const chunk of response.body) {
+          bytes += chunk.length; need(bytes <= length,'The recipient stream exceeded its original length.','REPORT_REVIEW_FILE_CHANGED');
+          hash.update(chunk); await handle.writeFile(chunk);
+        }
+        const sha256 = hash.digest('hex');
+        need(bytes === length && sha256 === expected,
+          'The complete recipient file differs from its original length or hash.','REPORT_REVIEW_FILE_CHANGED');
+        return {bytes,sha256};
+      });
+    }, {timeoutMs:60*60*1000});
   }
   close() { this.#closing = true; this.#controller.abort(); }
 }
