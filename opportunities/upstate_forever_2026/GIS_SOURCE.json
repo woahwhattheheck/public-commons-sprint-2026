@@ -1,0 +1,79 @@
+{
+  "schema": "upstate.gis-source/v1",
+  "version": "1.1.0",
+  "source_root": "opportunities/upstate_forever_2026",
+  "files": [
+    {
+      "path": "install_gis_projects.py",
+      "bytes": 9699,
+      "sha256": "f6f7c7d2b3b0081f962538e51d2810f065d504368c8000edc99ea0b4ef3f465a",
+      "git_blob": "c92f66fe370af575307d2f5e94513e9e41086f15"
+    },
+    {
+      "path": "model/GIS_PROJECTS.md",
+      "bytes": 13394,
+      "sha256": "67c0631adaa119b2ac6781c192ac8bf3258df7dc46c78c44c6c137bb62f6f775",
+      "git_blob": "30ce4361196b410d5d276e7790d84663e8760d38"
+    },
+    {
+      "path": "model/gis_project.py",
+      "bytes": 50684,
+      "sha256": "b9ec764cc8ca220eb6a330530a4b0221f72425e3059ffbdd98f60bb44635d8ed",
+      "git_blob": "d3dc7126bf3a3c973193788461aba98ab3af6e2e"
+    },
+    {
+      "path": "model/gis_project_cli.py",
+      "bytes": 2954,
+      "sha256": "7e4a702ebe33874ccae38424cd43a3421934364641ae544d812e692d2cf3f7bd",
+      "git_blob": "6730b3cc62b21c2f8370c6af029f377db55466c9"
+    },
+    {
+      "path": "model/gis_project_native.py",
+      "bytes": 5772,
+      "sha256": "087d35603314835c3ab01092914192154459644b3a6f32657f0d6546759cd2ac",
+      "git_blob": "d0779a8a6f61255b1ac5a527f8f7fd34661a62dd"
+    },
+    {
+      "path": "model/gis_project_view.html",
+      "bytes": 14784,
+      "sha256": "8c5b367b1635fbb975102e5742de8de3b6bffc78b16246aa9db7bd6763dcb814",
+      "git_blob": "5be793437144545ee130aac82a23c511646ef73f"
+    },
+    {
+      "path": "model/gis_workspace.py",
+      "bytes": 13521,
+      "sha256": "084a7c1884f0d9a579e7af8623352df04a3ece9deac740fcd6c1327c1011caec",
+      "git_blob": "800b0c4f909f0894bf7b2e99dddbead8ab708cf2"
+    },
+    {
+      "path": "model/requirements-gis.txt",
+      "bytes": 320,
+      "sha256": "f6778630097989c67554225d6d38c3b0876643dfa422442505a219af6dbaf58a",
+      "git_blob": "c99707e401e4dd90ced88cd546269d34e3f97054"
+    },
+    {
+      "path": "operator/extensions/gis-projects.json",
+      "bytes": 1702,
+      "sha256": "d7cb15ecdb57d770b2ac0e13f0d7e7f0f1bd9ef99407657454411afa17093c3e",
+      "git_blob": "8ca0eff20295cc7982ad352176a110aacd2f2cca"
+    },
+    {
+      "path": "operator/gis_projects.py",
+      "bytes": 9334,
+      "sha256": "327b873c5b2d420f3ea19cf0b8aa2d9345f07bdda6a7f96e9c689750be0548a7",
+      "git_blob": "83b4a1de04030b2678fe5ece429123e4dbf3e2ba"
+    },
+    {
+      "path": "operator/web/gis-projects.css",
+      "bytes": 2096,
+      "sha256": "afca9aa91f88f66fe074326e67403d3d13ca0513ebf6cf1590b2aa3154616ece",
+      "git_blob": "8f53966e32ec9f36e9b225bbbc27033e31a2cdd3"
+    },
+    {
+      "path": "operator/web/gis-projects.mjs",
+      "bytes": 12511,
+      "sha256": "a3b87b225a6e4c1e952d5264a865b895704b48a0191f3dc69ba11faed3611d17",
+      "git_blob": "b7f78622ce1ddbccd70bf606406a616d5f3982f8"
+    }
+  ]
+}

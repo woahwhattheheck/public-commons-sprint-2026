@@ -27,7 +27,7 @@ Selecting ORW gives 332 features and approximately 131.521 km in the publisher's
 
 R.61-69 lists the Chattooga ORW reach from the North Carolina line to Opossum Creek, followed by FW to the Tugaloo. It lists the Chauga ORW reach from its headwaters to one mile above U.S. Route 76, followed by FW to the Tugaloo. Its notation in parentheses after ORW or ONRW records the previous class. Its sp annotation records site-specific standards.
 
-Use exact source values when selecting. The legal-source crosswalk and source-review desk explain class meaning and retain the associated legal context. The current shared crosswalk source is v1.1.0 from F0C9JF1PWQG, paired with source-review v1.2.0 from F0C9JF3QZ3J. It handles SFH and attached sp notation and binds each layer to its native OID and retained publisher metadata.
+Use exact source values when selecting. The legal-source crosswalk and source-review desk explain class meaning and retain the associated legal context. The current shared crosswalk is source_tools/high_quality_water_crosswalk.py v1.1.0, paired with source-review v1.3.0 in operator/water_source_review.py and operator/WATER_SOURCE_REVIEW.md. It handles SFH and attached sp notation and binds each layer to its native OID and retained publisher metadata.
 
 ## Source editions and geometry
 

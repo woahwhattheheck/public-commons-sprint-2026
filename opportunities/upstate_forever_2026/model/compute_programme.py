@@ -597,6 +597,8 @@ class ComputeProgrammes:
                 "execution_sources": state.get("execution_sources"),
                 "error": state.get("error"), "report": latest or None, "latest_report": latest or None,
                 "files": latest.get("files", []), "deliveries": state.get("deliveries", {}),
+                "pair_completion": self._pair_completion_origin(key, record),
+                "pair_completions": state.get("pair_completions", {}),
                 **(_ensemble_candidates(record, rows) if include_ensemble_candidates else {})}
 
     def catalog(self, *, include_completed_sources=True):
@@ -659,6 +661,143 @@ class ComputeProgrammes:
             if candidate["id"] == selected:
                 return _copy(candidate)
         raise ValueError("This completed pair cohort changed; reopen the programme's current ensemble candidates")
+
+    def pair_completion_preview(self, key):
+        """Resolve missing matched-pair calculations from the current programme."""
+        record = self._load(key)
+        status = self.status(key)
+        issues = status["ensemble_candidate_issues"]
+        selection = _copy(record["selection"])
+        selection["title"] = record["title"] + " / matched pairs"
+        selection["description"] = ("Complete the same-profile baseline and alternative calculations "
+            "required by programme " + key + ". Retain its original named runs, prepared grid, "
+            "saved profiles, scenarios and completed source stages.")
+        selection["source_reference"] = "upstate.programme-pair-completion:" + key
+        required, additions, targets = {}, [], {}
+        by_key = {row["key"]: row for row in record["runs"]}
+        occupied = set(by_key)
+        for issue in issues:
+            selected = _copy(issue["required_selection"])
+            if selected["grid_id"] != selection["grid_id"]:
+                raise ValueError("A required pair calculation differs from the retained programme grid")
+            requirement_id = digest(selected)
+            if requirement_id in required:
+                required[requirement_id]["issues"].append(_copy(issue))
+                continue
+            matching = [row for row in record["runs"]
+                if row["profile_id"] == selected["profile_id"]
+                and row["scenario_id"] == selected["scenario_id"]
+                and set(selected["models"]).issubset(_models(row["native_selection"].get("models")))]
+            requirement = {"selection": selected, "issues": [_copy(issue)],
+                "run_keys": [row["key"] for row in matching],
+                "run_ids": list(dict.fromkeys(row["run_id"] for row in matching)),
+                "action": "verify_or_resume" if matching else "prepare"}
+            required[requirement_id] = requirement
+            if matching:
+                continue
+            target = (selected["profile_id"], selected["scenario_id"])
+            item = targets.setdefault(target, {"models": set(), "requirements": [],
+                "profile_title": issue["profile_title"],
+                "scenario_title": (status["ensemble_pairing"]["baseline_scenario_title"]
+                    if issue["side"] == "baseline" else issue["scenario_title"])})
+            item["models"].update(selected["models"])
+            item["requirements"].append(requirement_id)
+        for (profile_id, scenario_id), target in sorted(targets.items()):
+            models = [name for name in ("ndr", "sdr") if name in target["models"]]
+            native = _native_selection(selection["grid_id"], profile_id, scenario_id, models)
+            run_id = digest(native)
+            prefix = "pair-" + run_id[:52]
+            run_key, suffix = prefix, 1
+            while run_key in occupied:
+                run_key = prefix + "-" + str(suffix)
+                suffix += 1
+            occupied.add(run_key)
+            run = {"key": run_key,
+                "title": target["profile_title"] + " / " + target["scenario_title"]
+                         + " / " + " + ".join(name.upper() for name in models),
+                "profile_id": profile_id, "scenario_id": scenario_id, "models": models,
+                "reason": "Same-profile pair completion for programme " + key,
+                "changes": {"pair_completion": {"parent_programme_id": key,
+                    "required_models": models}}}
+            selection["runs"].append(run)
+            additions.append({**run, "run_id": run_id, "native_selection": native})
+            for requirement_id in target["requirements"]:
+                required[requirement_id]["run_keys"] = [run_key]
+                required[requirement_id]["run_ids"] = [run_id]
+        requirements = [required[name] for name in sorted(required)]
+        retained_requirements = [{name: item for name, item in requirement.items() if name != "issues"}
+                                 for requirement in requirements]
+        selection["source_reference"] += ":" + digest(retained_requirements)
+        # Use the original preparation contract for every newly selected scope.
+        preview = self.preview(selection)
+        identity = {"parent_programme_id": key, "selection": preview["selection"],
+            "required_selections": [item["selection"] for item in requirements]}
+        has_alternatives = any(row["scenario_id"] != status["ensemble_pairing"]["baseline_scenario_id"]
+                               for row in record["runs"])
+        return {"schema": "upstate.compute-programme-pair-completion-preview/v1",
+            "preview_id": digest(identity), "parent_programme_id": key,
+            "workspace_id": record["workspace_id"], "selection": preview["selection"],
+            "needed": bool(issues), "has_alternatives": has_alternatives,
+            "additions": additions, "requirements": requirements, "issues": issues,
+            "run_count": preview["run_count"], "unique_run_count": preview["unique_run_count"],
+            "runs": preview["runs"], "existing_pair_count": len(status["ensemble_candidates"]),
+            "interpretation": ("Existing native IDs remain reusable. Only absent model/profile/scenario "
+                "selections are added; unfinished retained calculations are continued under their original IDs.")}
+
+    def _pair_completion_origin(self, key, record=None):
+        path = self._directory(key) / "pair-completion.json"
+        if not path.exists():
+            return None
+        value = read_json(path)
+        record = self._load(key) if record is None else record
+        payload = {name: item for name, item in value.items() if name not in ("id", "created_at")}
+        if (value.get("schema") != "upstate.compute-programme-pair-completion/v1"
+                or value.get("programme_id") != key
+                or value.get("workspace_id") != self.workspace.project["id"]
+                or value.get("selection_sha256") != digest(record["selection"])
+                or digest(payload) != value.get("id")
+                or record["selection"].get("source_reference") !=
+                    "upstate.programme-pair-completion:" + value.get("parent_programme_id", "")
+                    + ":" + digest(value.get("requirements"))):
+            raise ValueError("The retained pair-completion origin differs from this programme")
+        identifier(value["parent_programme_id"])
+        identifier(value["preview_id"])
+        return value
+
+    def create_pair_completion(self, key, expected_preview_id=None):
+        """Retain a complete derived programme; execute it through normal resume."""
+        with held(self._directory(key) / ".programme.lock", blocking=False):
+            preview = self.pair_completion_preview(key)
+            if expected_preview_id is not None and identifier(expected_preview_id) != preview["preview_id"]:
+                raise ValueError("Matched-pair requirements changed; reopen their current continuation preview")
+            if not preview["has_alternatives"]:
+                raise ValueError("Select a retained alternative scenario before preparing matched pairs")
+            if not preview["needed"]:
+                raise ValueError("The programme already has its complete matched pairs; open its paired selections")
+            result = self.create(preview["selection"])
+            child = result["programme_id"]
+            payload = {"schema": "upstate.compute-programme-pair-completion/v1",
+                "programme_id": child, "parent_programme_id": key,
+                "workspace_id": self.workspace.project["id"], "preview_id": preview["preview_id"],
+                "selection_sha256": digest(result["selection"]), "additions": preview["additions"],
+                "requirements": [{name: item for name, item in requirement.items() if name != "issues"}
+                                 for requirement in preview["requirements"]]}
+            origin_path = self._directory(child) / "pair-completion.json"
+            if origin_path.exists():
+                origin = self._pair_completion_origin(child)
+                retained = {name: item for name, item in origin.items() if name not in ("id", "created_at")}
+                if retained != payload:
+                    raise ValueError("Existing matched-pair continuation has different required native selections")
+            else:
+                origin = {**payload, "id": digest(payload), "created_at": now()}
+                atomic_json(origin_path, origin, immutable=True)
+            state = self._state(key)
+            state.setdefault("pair_completions", {})[preview["preview_id"]] = {
+                "programme_id": child, "created_at": origin["created_at"],
+                "added_runs": len(preview["additions"]),
+                "origin": describe_file(self.workspace.root, origin_path)}
+            self._write_state(key, state)
+            return {**self.status(child), "pair_completion": origin}
 
     def pause(self, key):
         control = self._set_pause(key, True)

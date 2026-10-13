@@ -92,15 +92,57 @@ def patch_server(text):
                 '                    return self.send_json(200, self.app.conservation.read(workspace,\n'
                 '                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))\n',
                 "Conservation read routes", marker='conservation_reads = {"/api/conservation/"')
-    if '"conservation.mjs"' not in text:
-        pattern = r'(?m)^(\s*if selected not in \{[^\n]*"index\.html"[^\n]*)(\}:)$'
-        matches = list(re.finditer(pattern, text))
-        if len(matches) != 1:
-            raise ValueError("Expected one original operator static-file allowlist")
-        m = matches[0]
-        text = text[:m.start()] + m.group(1) + ', "conservation.mjs", "conservation.css"' + m.group(2) + text[m.end():]
+    # Compose into the existing builtin asset set while preserving the ECSA
+    # web_assets union and its original authenticated static-file transport.
+    tree = ast.parse(text)
+    asset_sets = []
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Compare) and isinstance(node.left, ast.Name)
+                and node.left.id == "selected" and len(node.ops) == 1
+                and isinstance(node.ops[0], ast.NotIn)):
+            for choice in ast.walk(node.comparators[0]):
+                if (isinstance(choice, ast.Set) and any(
+                        isinstance(item, ast.Constant) and item.value == "index.html"
+                        for item in choice.elts)):
+                    asset_sets.append(choice)
+    if len(asset_sets) != 1:
+        raise ValueError("Expected one original builtin operator static-file set")
+    node = asset_sets[0]
+    values = {item.value for item in node.elts if isinstance(item, ast.Constant)}
+    missing = [name for name in ("conservation.mjs", "conservation.css") if name not in values]
+    if missing:
+        original_set = ast.get_source_segment(text, node)
+        replacement = original_set[:-1].rstrip().rstrip(",")
+        replacement += ", " + ", ".join(json.dumps(name) for name in missing) + "}"
+        lines = text.splitlines(keepends=True)
+        first = sum(len(line) for line in lines[:node.lineno - 1]) + node.col_offset
+        last = sum(len(line) for line in lines[:node.end_lineno - 1]) + node.end_col_offset
+        text = text[:first] + replacement + text[last:]
     ast.parse(text)
     return text
+
+
+
+def conservation_lifecycle(text):
+    """Detach the current host's other desks before replacing their shared root."""
+    opening = "  if(view==='conservation'){\n"
+    start = text.find(opening)
+    end = text.find("conservation.mount($('#content'),state)", start)
+    if start < 0 or end < 0:
+        raise ValueError("Expected the installed original Conservation render branch")
+    current = text[start:end]
+    lifecycle = (
+        "    if(typeof extensions!=='undefined')extensions.detach();\n",
+        "    if(typeof experiments!=='undefined')experiments.detach();\n",
+        "    if(typeof programmes!=='undefined')programmes.detach();\n",
+        "    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n",
+        "    if(typeof rehearsal!=='undefined')rehearsal.detach();\n",
+        "    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n",
+        "    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n",
+    )
+    addition = "".join(line for line in lifecycle if line.strip() not in current)
+    position = start + len(opening)
+    return text[:position] + addition + text[position:]
 
 
 def patch_app(text):
@@ -138,6 +180,7 @@ def patch_app(text):
     )
     text = once(text, "function render(){\n  if(!state)return;\n", branch,
                 "Conservation mounted view", marker="conservation.mount($('#content'),state)")
+    text = conservation_lifecycle(text)
     text = once(text, "async function dispatch(button){\n",
                 "async function dispatch(button){\n"
                 " if(button.dataset.action?.startsWith('conservation-')){\n"
@@ -155,9 +198,13 @@ def patch_app(text):
         match = matches[0]
         extra = "conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')).map(t=>[t.id,t.state]):undefined,"
         text = text[:match.start()] + match.group(1) + extra + match.group(2) + match.group(3) + text[match.end():]
-    text = once(text, "async function selectWorkspace(id){\n",
-                "async function selectWorkspace(id){\n conservation.detach();\n",
-                "Conservation workspace transition", marker="async function selectWorkspace(id){\n conservation.detach();")
+    # Keep a rejected workspace switch attached to its current live draft.
+    text = text.replace("async function selectWorkspace(id){\n conservation.detach();\n",
+                        "async function selectWorkspace(id){\n", 1)
+    draft_guard = " if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');\n"
+    text = once(text, draft_guard, draft_guard + " conservation.detach();\n",
+                "Conservation workspace transition after draft guard",
+                marker=draft_guard + " conservation.detach();\n")
     if "conservation.taskActions(row)" not in text:
         start = text.find("async function showTask(")
         end = text.find("\nconst input=", start)
