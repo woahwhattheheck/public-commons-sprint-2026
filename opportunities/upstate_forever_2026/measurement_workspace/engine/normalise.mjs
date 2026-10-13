@@ -2,6 +2,65 @@ import {createHash} from 'node:crypto';
 import {clean, number, day, InputError, parseCSV, safeJSON} from './parse.mjs';
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export const stable = value => JSON.stringify(value, (key, val) => val && !Array.isArray(val) && typeof val==='object' ? Object.fromEntries(Object.keys(val).sort().map(k=>[k,val[k]])) : val);
+
+export const USGS_DAILY_EDITION='usgs-daily-source/v2';
+export const WQP_DETECTION_EDITION='wqp-detection-conditions/v2';
+const DETECTION_MAPPING='_wqp_detection';
+const label=text=>clean(text).toLowerCase().replace(/\s+/g,' ');
+function detectionCondition(text) {
+  const value=label(text);
+  if(!value||value==='detected')return {direction:'none',known:true};
+  if(/^(?:present )?below (?:quantification|quantitation) limit$/.test(value)
+    || /^below (?:daily detection|detection|long-term blank-basd dt|method detection|reporting|sample-specific detect|system detection) limit$/.test(value)
+    || /^(?:not detected(?: at (?:detection|reporting) limit)?|non[ -]?detect(?:ed)?|detected not quantified|less than)$/.test(value))
+    return {direction:'left',known:true};
+  if(/^(?:(?:present )?above (?:quantification|quantitation) limit|above operating range|greater than|exceeds (?:quantification|quantitation) limit)$/.test(value))
+    return {direction:'right',known:true};
+  // Other published conditions require the source's own interpretation.
+  // In particular, do not collapse "Between Inst Detect and Quant Limit".
+  return {direction:'none',known:false};
+}
+function limitDirection(type) {
+  const value=label(type);
+  if(/^upper (?:quantitation|quantification|reporting|calibration) limit$/.test(value))return 'right';
+  if(/^(?:practical|lower|sample-specific|estimated|contract) (?:quantitation|quantification) limit$/.test(value)
+    || /^(?:minimum reporting level|reporting limit|sample-specific min detect conc|laboratory reporting level|lower reporting limit|sample detection limit|lower limit of detection|instrument detection level|estimated detection level|method detection level|method detection limit|long term method detection level|interim reporting level|daily detection limit|blank-adjusted method detect limit|contract detection limit)$/.test(value))return 'left';
+  return null;
+}
+function limitAgrees(type,condition,direction) {
+  if(limitDirection(type)!==direction)return false;
+  const c=label(condition),t=label(type);
+  if(c.includes('reporting'))return /report/.test(t);
+  if(c.includes('quantification')||c.includes('quantitation')||c==='detected not quantified')return /quant/.test(t);
+  if(c.includes('detection')||c.includes('detect limit'))return /detect/.test(t);
+  return true;
+}
+function detectionV2({rawValue,detection,qualifier,reported,match,detectionLimits}) {
+  const condition=detectionCondition(detection);
+  const comparator=match?(match[1].startsWith('<')||match[1]==='≤'?'left':'right'):null;
+  const qualified=/(^|[;, ])U($|[;, ])/i.test(qualifier)?'left':null;
+  const directions=[comparator,condition.direction==='none'?null:condition.direction,qualified].filter(Boolean);
+  const conflict=new Set(directions).size>1;
+  const censor=comparator||qualified||condition.direction;
+  const candidates=detectionLimits.filter(d=>d.normalizedValue!==null&&d.normalizedValue>=0&&limitAgrees(d.type,detection,censor));
+  let limit=null,limitSource=null;
+  if(censor!=='none'&&!conflict) {
+    if(comparator&&reported!==null){limit=reported;limitSource='explicit-result-comparator';}
+    else if(candidates.length===1){limit=candidates[0].normalizedValue;limitSource='paired-typed-limit';}
+  }
+  const issues=[];
+  if(!condition.known||conflict)issues.push('review-detection-condition');
+  if(conflict)issues.push('conflicting-censor-directions');
+  if(censor!=='none'&&!match&&reported!==null)issues.push('censored-reported-number-not-used-as-limit');
+  if(censor!=='none'&&!limitSource&&detectionLimits.length)issues.push('ambiguous-or-incompatible-censor-limit');
+  return {censor,limit,issues,interpretation:{
+    edition:WQP_DETECTION_EDITION,conditionRecognized:condition.known,
+    directionSource:comparator?'explicit-result-comparator':qualified?'qualifier-U':condition.direction!=='none'?'result-detection-condition':null,
+    limitSource,conflictingDirections:conflict,
+    reportedNumberIsBound:limitSource==='explicit-result-comparator',
+  }};
+}
+
 // WQX3 fields plus their WQX2 names. Explicit overrides accommodate laboratory exports.
 export const FIELDS = {
  station:['Location_Identifier','MonitoringLocationIdentifier','stationId'],
@@ -33,13 +92,18 @@ export const FIELDS = {
 };
 export function fieldReader(headers, overrides={}) {
   if(!overrides || typeof overrides!=='object' || Array.isArray(overrides)) throw new InputError('Column mapping must be an object');
+  if(Object.hasOwn(overrides,DETECTION_MAPPING)&&overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION)throw new InputError('Unsupported WQP detection interpretation edition');
   for (const [key,name] of Object.entries(overrides)) {
+    if(key===DETECTION_MAPPING)continue;
     if(typeof name!=='string') throw new InputError('Mapped column names must be strings; use an empty string to disable a field');
     if(!Object.hasOwn(FIELDS,key)) throw new InputError('Unknown mapping field: '+key);
     if(name && !headers.includes(name)) throw new InputError('Mapped column is absent: '+name);
   }
   const mapping = Object.fromEntries(Object.entries(FIELDS).map(([key, aliases])=>[key,Object.hasOwn(overrides,key) ? overrides[key] : aliases.find(x=>headers.includes(x)) || '']));
-  return {mapping, get:(row,key)=>clean(row[mapping[key]])};
+  if(Object.hasOwn(overrides,DETECTION_MAPPING))mapping[DETECTION_MAPPING]=WQP_DETECTION_EDITION;
+  // The directive travels inside the resolved mapping and thus the import ID.
+  // Unpinned historical imports keep their exact original normalization.
+  return {mapping, get:(row,key)=>key===DETECTION_MAPPING?(mapping[DETECTION_MAPPING]||''):clean(row[mapping[key]])};
 }
 function unitSpec(raw) {
   const u=clean(raw).toLowerCase().replaceAll('μ','u').replaceAll('µ','u').replaceAll('³','3').replace(/\s+/g,' ');
@@ -82,7 +146,17 @@ function timestamp(date, time, zone, combined) {
   return {sampledDate,sampledAt:match&&offset?new Date(`${sampledDate}T${time.length===5?time+':00':time}${offset}`).toISOString():null,
     timePrecision:match&&offset?'instant':match?'local-time':'date',sourceTime:time,timeZone:zone};
 }
-function limits(raw) {
+function limits(raw,versioned=false) {
+  if(versioned&&clean(raw.WQPDetectionLimitsJSON)) {
+    const rows=safeJSON(raw.WQPDetectionLimitsJSON);
+    if(!Array.isArray(rows))throw new InputError('Original joined detection limits must be an array');
+    return rows.map(row=>{
+      if(!row||typeof row!=='object'||Array.isArray(row))throw new InputError('Invalid original joined detection limit');
+      const value=number(row.value);
+      if(value===null||!clean(row.unit)||!clean(row.type))throw new InputError('Joined detection limit lacks its original numeric value, unit or type');
+      return {value,unit:clean(row.unit),type:clean(row.type),original:row};
+    });
+  }
   const result=[];
   for(const suffix of ['A','B','C','D']) {
     const value=number(raw['DetectionLimit_Measure'+suffix]);
@@ -96,7 +170,8 @@ export function normaliseWQP(raw, get) {
   const stationId=get(raw,'station'); if(!stationId) throw new InputError('Station identifier is missing');
   const org=get(raw,'organization'), characteristic=get(raw,'characteristic');
   if(!characteristic)throw new InputError('Characteristic is missing; configure its source column');
-  const sourceLimits=limits(raw), declaredUnit=get(raw,'unit');
+  const versioned=get(raw,DETECTION_MAPPING)===WQP_DETECTION_EDITION;
+  const sourceLimits=limits(raw,versioned), declaredUnit=get(raw,'unit');
   const inferredUnit=!declaredUnit && sourceLimits.length===1 ? sourceLimits[0].unit : '';
   const spec=unitSpec(declaredUnit||inferredUnit), [parameter,basis]=constituent(characteristic,get(raw,'pcode'),get(raw,'fraction'),spec);
   const rawValue=get(raw,'value'), detection=get(raw,'detection'), qualifier=get(raw,'qualifier');
@@ -105,12 +180,14 @@ export function normaliseWQP(raw, get) {
   if(/not detected|non.?detect|below quant|detected not quant|less than/i.test(detection)||/(^|[;, ])U($|[;, ])/.test(qualifier))censor='left';
   if(/above quant|greater than|exceeds quant/i.test(detection))censor='right';
   const numeric=number(match?match[2]:rawValue), reported=numeric===null?null:numeric*spec.factor+spec.offset;
-  const detectionLimits=sourceLimits.map(d=>{const u=unitSpec(d.unit);return {...d,normalizedValue:u.kind===spec.kind&&u.basis===spec.basis?d.value*u.factor+u.offset:null,normalizedUnit:u.unit};});
+  const detectionLimits=sourceLimits.map(d=>{const u=unitSpec(d.unit);const compatible=u.kind===spec.kind&&u.basis===spec.basis&&(!versioned||u.kind!=='unknown'||label(d.unit)===label(declaredUnit||inferredUnit));return {...d,normalizedValue:compatible?d.value*u.factor+u.offset:null,normalizedUnit:u.unit};});
   const knownLimits=detectionLimits.filter(d=>d.normalizedValue!==null);
   // Do not choose among multiple laboratory detection/quantitation thresholds implicitly.
-  const limit=reported!==null?reported:knownLimits.length===1?knownLimits[0].normalizedValue:null;
+  let limit=reported!==null?reported:knownLimits.length===1?knownLimits[0].normalizedValue:null;
+  const interpretation=versioned?detectionV2({rawValue,detection,qualifier,reported,match,detectionLimits}):null;
+  if(interpretation){censor=interpretation.censor;limit=interpretation.limit;}
   const value=censor==='none'?reported:null, lower=censor==='right'?limit:value, upper=censor==='left'?limit:value;
-  const issues=[];
+  const issues=interpretation?[...interpretation.issues]:[];
   if(sourceLimits.some(d=>d.value<0))issues.push('negative-detection-limit');
   if(inferredUnit)issues.push('unit-from-single-detection-limit');
   const lat=number(get(raw,'latitude')),lon=number(get(raw,'longitude'));
@@ -120,7 +197,7 @@ export function normaliseWQP(raw, get) {
   if(spec.kind==='concentration'&&numeric!==null&&numeric<0)issues.push('negative-concentration');
   if(censor==='none'&&value===null)issues.push('missing-numeric-result');
   if(censor!=='none'&&limit===null)issues.push('censor-limit-unresolved');
-  if(detection && !/^(not detected|non.?detect|below quantification limit|detected not quantified|present above quantification limit|detected|less than|greater than|above quantification limit)$/i.test(detection))issues.push('review-detection-condition');
+  if(!versioned && detection && !/^(not detected|non.?detect|below quantification limit|detected not quantified|present above quantification limit|detected|less than|greater than|above quantification limit)$/i.test(detection))issues.push('review-detection-condition');
   if(qualifier)issues.push('qualified-result');
   const status=get(raw,'status'), medium=get(raw,'medium'), activityType=get(raw,'activityType'), valueType=get(raw,'valueType');
   if(!/^(accepted|final|validated|approved)$/i.test(status))issues.push('review-source-status');
@@ -132,20 +209,27 @@ export function normaliseWQP(raw, get) {
   const resultId=get(raw,'result'),activityId=get(raw,'activity');
   const logicalKey=resultId ? stable(['wqp',org,stationId,resultId]) : stable(['wqp',org,stationId,activityId,when,characteristic,get(raw,'fraction'),get(raw,'method'),get(raw,'unit')]);
   return {sourceKind:'wqp',stationId,organization:org,activityId,sourceResultId:resultId,logicalKey:hash(logicalKey),
+    ...(interpretation?{detectionInterpretation:interpretation.interpretation}:{}),
     ...when,parameter,characteristic,pcode:get(raw,'pcode'),basis,fraction:get(raw,'fraction'),unit:spec.unit,
     value,lower,upper,censor,reportedValue:rawValue,reportedUnit:get(raw,'unit'),detection,detectionLimits,qualifier,status,medium,activityType,valueType,
     method:get(raw,'method'),laboratory:get(raw,'laboratory'),comment:get(raw,'comment'),issues,
     station:{id:stationId,name:get(raw,'name')||stationId,latitude:number(get(raw,'latitude')),longitude:number(get(raw,'longitude')),datum:get(raw,'datum')},raw};
 }
-export function normaliseFlow(feature) {
+export function normaliseFlow(feature,edition='') {
   const p=feature?.properties;
   if(!p || !p.monitoring_location_id || p.parameter_code!=='00060' || p.statistic_id!=='00003')throw new InputError('Only USGS discharge (00060), daily mean (00003) features are accepted');
   const spec=unitSpec(p.unit_of_measure), v=number(p.value);
   if(spec.kind!=='flow'||v===null||v<0)throw new InputError('Discharge must be nonnegative with a recognized flow unit');
   const sampledDate=day(clean(p.time).slice(0,10)),value=v*spec.factor;
-  const logicalKey=hash(stable(['usgs-daily',p.time_series_id||'',p.monitoring_location_id,p.parameter_code,p.statistic_id,sampledDate]));
+  let series=p.time_series_id||'',approval=p.approval_status;
+  if(edition===USGS_DAILY_EDITION){
+    const alias=(a,b)=>{if(p[a]!==undefined&&p[b]!==undefined&&clean(p[a])!==clean(p[b]))throw new InputError('Conflicting original USGS fields: '+a+' / '+b);return p[a]??p[b];};
+    series=alias('time_series_id','timeseries_id')||'';
+    approval=alias('approval_status','approvals_status');
+  }
+  const logicalKey=hash(stable(['usgs-daily',series,p.monitoring_location_id,p.parameter_code,p.statistic_id,sampledDate]));
   const coords=feature.geometry?.type==='Point'?feature.geometry.coordinates:[];
-  const qualifier=clean(p.qualifier),status=clean(p.approval_status),issues=[];
+  const qualifier=clean(p.qualifier),status=clean(approval),issues=[];
   if(qualifier)issues.push('qualified-result');if(status!=='Approved')issues.push('review-source-status');
   return {sourceKind:'usgs-daily',stationId:p.monitoring_location_id,organization:'USGS',activityId:'',sourceResultId:String(feature.id||''),logicalKey,
     sampledDate,sampledAt:null,timePrecision:'daily-mean',sourceTime:clean(p.time),timeZone:clean(p.time_zone_abbreviation),
@@ -158,9 +242,14 @@ export function parseSource({kind, text, mapping={}}) {
   if(typeof text!=='string'||!text.trim())throw new InputError('A nonempty UTF-8 source is required');
   const rows=[],rejected=[]; let headers=[], resolved={};
   if(kind==='usgs-daily') {
+    let flowEdition='';
+    if(mapping&&Object.hasOwn(mapping,'_usgs_daily')){
+      if(mapping._usgs_daily!==USGS_DAILY_EDITION||Object.keys(mapping).some(key=>key!=='_usgs_daily'))throw new InputError('Choose the explicit supported USGS daily interpretation');
+      flowEdition=USGS_DAILY_EDITION;resolved={_usgs_daily:flowEdition};
+    }
     const data=safeJSON(text);if(data.type!=='FeatureCollection'||!Array.isArray(data.features))throw new InputError('Expected a complete USGS GeoJSON FeatureCollection');
     if(data.links?.some(l=>l.rel==='next'))throw new InputError('This source has a next-page link. Acquire all pages with the provider fetch or combine all pages before importing.');
-    for(let i=0;i<data.features.length;i++) {try{rows.push({line:i+1,row:normaliseFlow(data.features[i])});}catch(e){rejected.push({line:i+1,reason:e.message,raw:data.features[i]});}}
+    for(let i=0;i<data.features.length;i++) {try{rows.push({line:i+1,row:normaliseFlow(data.features[i],flowEdition)});}catch(e){rejected.push({line:i+1,reason:e.message,raw:data.features[i]});}}
   } else {
     const input=parseCSV(text);headers=input.headers;rejected.push(...input.rejected);const reader=fieldReader(headers,mapping);resolved=reader.mapping;
     if(!resolved.station)throw new InputError('Missing station column; choose the correct column mapping');
