@@ -62,7 +62,7 @@ def validate_analysis(workspace):
     a=workspace.document("analysis",ANALYSIS)
     if a["id"]!=ANALYSIS or a["result_sha256"]!=RESULT_SHA:raise ValueError("Original accepted pricing result differs")
     if a["reviews"][-1]["id"]!=REVIEW or a["reviews"][-1]["outcome"]!="accepted":raise ValueError("Original recorded acceptance differs")
-    if a["consensus"]!={"p25":"35200","p50":"37950","p75":"43950"}:raise ValueError("Original source amounts differ")
+    if a["consensus"]!={"p25":"35200.0","p50":"37950.0","p75":"43950.0"}:raise ValueError("Original source amounts differ")
     if a.get("target_date")is not None:raise ValueError("The undated source acquired an effective date")
     return a
 def seed(args):
