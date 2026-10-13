@@ -183,22 +183,61 @@ function history(){const host=$('#content');host.append(panel('Retained releases
 
 let maximoSerial=0;
 const maximoDraftPrefix='municipal-maximo:';
-function maximoRequests(id){
-  const result=[];
-  for(let index=0;index<localStorage.length;index++){
-    const name=localStorage.key(index);
-    if(!name?.startsWith(maximoDraftPrefix+location.origin+':'+id+':')||name.endsWith(':load-mapping-draft'))continue;
-    try{const value=JSON.parse(localStorage.getItem(name));if(value.project_id===id&&value.actor===session.actor)result.push({name,value});}
-    catch{result.push({name,error:'Saved request could not be read. Preserve/export browser storage before removing it.'});}
-  }
-  return result;
+function maximoDatabase(){
+  return new Promise((resolve,reject)=>{
+    const open=indexedDB.open('municipal-maximo-original-requests',1);
+    open.onupgradeneeded=()=>open.result.createObjectStore('requests',{keyPath:'name'});
+    open.onerror=()=>reject(open.error);
+    open.onblocked=()=>reject(new Error('Close the other pending database-upgrade tab and retry this original request.'));
+    open.onsuccess=()=>resolve(open.result);
+  });
 }
-async function maximoSend(saved,name){
-  if(busy||pending)return;
+async function maximoStored(mode,work){
+  const db=await maximoDatabase();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('requests',mode),store=tx.objectStore('requests');
+    let result,error;
+    tx.oncomplete=()=>{db.close();resolve(result);};
+    tx.onabort=tx.onerror=()=>{db.close();reject(error||tx.error||new Error('The complete original request was not retained.'));};
+    try{work(store,value=>{result=value;},problem=>{error=problem;tx.abort();});}
+    catch(problem){error=problem;tx.abort();}
+  });
+}
+async function maximoRequests(id){
+  const rows=await maximoStored('readonly',(store,done)=>{
+    const request=store.getAll();request.onsuccess=()=>done(request.result);
+  });
+  return rows.filter(row=>row.value.project_id===id&&row.value.actor===session.actor);
+}
+async function maximoRetain(name,value){
+  const text=JSON.stringify(value);
+  if(new TextEncoder().encode(text).length>16*1024*1024)throw new Error('Complete saved request exceeds16MiB. Use the original native CLI with the full file.');
+  return maximoStored('readwrite',(store,done,fail)=>{
+    const existing=store.get(name);
+    existing.onsuccess=()=>{
+      if(existing.result&&JSON.stringify(existing.result.value)!==text){fail(new Error('This original operation already retains a different request.'));return;}
+      if(!existing.result)store.add({name,value});
+      done({name,value});
+    };
+  });
+}
+async function maximoSettled(name,value){
+  return maximoStored('readwrite',(store,done,fail)=>{
+    const current=store.get(name);
+    current.onsuccess=()=>{
+      if(current.result&&JSON.stringify(current.result.value)!==JSON.stringify(value)){fail(new Error('The saved original request changed; its source is preserved.'));return;}
+      if(current.result)store.delete(name);
+      done(true);
+    };
+  });
+}
+async function maximoSend(saved,name,held=false){
+  if((busy&&!held)||pending)return;
+  if(saved.actor!==session.actor)throw new Error('Continue the saved operation as its original operator.');
   setBusy(true);
   try{
     const result=await request('/api/projects/'+saved.project_id+'/maximo',{method:'POST',body:JSON.stringify(saved.payload)});
-    localStorage.removeItem(name);
+    await maximoSettled(name,saved);
     if(project?.id===saved.project_id)await loadProject(saved.project_id);
     notice('Original Maximo operation retained. Review its source or returned result below.');
     return result;
@@ -207,26 +246,25 @@ async function maximoSend(saved,name){
 }
 async function maximoStart(payload){
   if(busy||pending||!project)return;
-  const saved={project_id:project.id,actor:session.actor,payload:{...payload,revision:project.revision,operation:payload.operation||crypto.randomUUID()}};
-  const name=maximoDraftPrefix+location.origin+':'+project.id+':'+saved.payload.operation;
-  // One immutable slot per request, including delayed original replies.
-  const content=JSON.stringify(saved),prior=localStorage.getItem(name);
-  if(prior&&prior!==content)throw new Error('This original operation has a different saved request.');
-  localStorage.setItem(name,content);
-  return maximoSend(saved,name);
+  setBusy(true);
+  try{
+    const saved={project_id:project.id,actor:session.actor,payload:{...payload,revision:project.revision,operation:payload.operation||crypto.randomUUID()}};
+    const name=maximoDraftPrefix+location.origin+':'+project.id+':'+saved.payload.operation;
+    await maximoRetain(name,saved);
+    return await maximoSend(saved,name,true);
+  }finally{setBusy(false);}
 }
 function maximo(){
   const host=$('#content'),id=project.id,serial=++maximoSerial;host.replaceChildren();
-  const pendingRows=maximoRequests(id);
-  if(pendingRows.length)host.append(panel('Saved original requests',...pendingRows.map(item=>el('div',{class:'panel'},
-    el('p',{},item.error||item.value.payload.action+' · '+item.value.payload.operation),
-    item.error?null:button('Retry this original request',()=>safely(()=>maximoSend(item.value,item.name))),
-    button('Download saved request',()=>{const raw=localStorage.getItem(item.name);const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));const a=el('a',{href:url,download:'Maximo-Saved-Request.json'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);})))));
   host.append(panel('Original target intake',el('p',{},'Use the configured tenant profile to retain its actual object schema and every selected asset. Two complete ordinary-page observations must agree before receiving the target edition. Your existing source, mapping, history and project remain selected.')));
   const content=el('div');host.append(content);
   safely(async()=>{
-    const data=await request('/api/projects/'+id+'/maximo');
+    const [data,pendingRows]=await Promise.all([request('/api/projects/'+id+'/maximo'),maximoRequests(id)]);
     if(project?.id!==id||tab!=='maximo'||serial!==maximoSerial||!content.isConnected)return;
+    if(pendingRows.length)content.append(panel('Saved original requests',...pendingRows.map(item=>el('div',{class:'panel'},
+      el('p',{},item.value.payload.action+' · '+item.value.payload.operation),
+      button('Retry this original request',()=>safely(()=>maximoSend(item.value,item.name))),
+      button('Download saved request',()=>{const raw=JSON.stringify(item.value);const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));const a=el('a',{href:url,download:'Maximo-Saved-Request.json'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);})))));
     const profile=el('select',{},...data.profiles.map(row=>option(row.id,row.label+' · '+row.object_structure)));
     content.append(panel('Capture a configured target',field('Maximo profile',profile),
       el('p',{class:'small'},'Configure actual HTTPS endpoint, org/site, compound identity and source-link mapping with the native maximo_cli profile command. The API key stays in the server environment.'),
