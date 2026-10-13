@@ -1,6 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
-  "components": {
+  "id": "received-study-navigation",
+  "extend_components": {
     "study-transfer": {
       "paths": [
         "docs/RECEIVED_STUDY_FIELDWORK.md",

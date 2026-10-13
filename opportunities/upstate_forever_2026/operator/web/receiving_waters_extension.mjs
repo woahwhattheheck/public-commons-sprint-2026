@@ -43,7 +43,7 @@ export function attachReceivingWatersExtension(context){
     mount,update,detach,dispatch:desk.dispatch,
     openPlan:desk.openPlan,openAnalysis:desk.openAnalysis,openCatalog:desk.openCatalog,
     createCatalog:desk.createCatalog,createPlan:desk.createPlan,analyze:desk.analyze,
-    openDelivery:desk.openDelivery,
+    openDelivery:desk.openDelivery,openStudyTransfer:desk.openStudyTransfer,
     taskActions:desk.taskActions,deliveryFields:desk.deliveryFields,deliverySelection:desk.deliverySelection
   };
 }

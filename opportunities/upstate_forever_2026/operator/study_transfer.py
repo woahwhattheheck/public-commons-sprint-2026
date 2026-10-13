@@ -40,7 +40,7 @@ class StudyTransfer:
         value = value or {}
         workspace = self.operator.ws(workspace_key)
         if operation in {"received", "received-detail"}:
-            from . import study_receiving
+            import study_receiving
             return study_receiving.read(self.operator, workspace_key, operation, value)
         if operation == "catalog":
             return study_transfer.catalog(

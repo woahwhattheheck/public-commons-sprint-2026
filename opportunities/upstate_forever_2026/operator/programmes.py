@@ -21,7 +21,7 @@ ACTIONS = {
     "compute.programme.report",
     "compute.programme.delivery",
 }
-READS = {"catalog", "detail", "report", "pair-completion-preview"}
+READS = {"catalog", "detail", "report", "pair-completion-preview", "execution"}
 
 
 class Programmes:
@@ -63,6 +63,12 @@ class Programmes:
             include_sources = payload.get("include_sources") in (True, 1, "1", "true")
             return {"workspace_key": workspace, **self.catalogue(workspace, include_completed_sources=include_sources)}
         key = self._id(payload)
+        if operation == "execution":
+            from model.programme_case_status import read
+            return {"workspace_key": workspace, **read(manager.workspace, key, payload.get("run_id"),
+                    **{name: payload[name] for name in (
+                        "attempt_id", "stream", "log_offset", "expected_attempt_id",
+                        "history_offset", "limit") if payload.get(name) not in (None, "")})}
         if operation == "pair-completion-preview":
             return {"workspace_key": workspace, **manager.pair_completion_preview(key)}
         if operation == "detail":

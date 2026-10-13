@@ -8,6 +8,8 @@ const ROOTS = [
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['receiving-water-plans', 'Receiving-water source plans'],
+  ['receiving-water-analyses', 'Receiving-water analyses'],
   ['community-tables', 'Community source tables'],
   ['community-plans', 'Editable Community plans'],
   ['community-reports', 'Saved Community reports'],
@@ -23,6 +25,7 @@ const ROOTS = [
   ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
+const monitoringOpenKinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
   staging:'Preparing original study files', decisions:'Saving decision history', investigations:'Saving investigation history',
@@ -156,6 +159,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
+    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
   }
 
   function renderCatalogue() {
@@ -179,6 +183,8 @@ export function attachStudyTransfer(host) {
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
             (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+
+            (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
+              ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -414,7 +420,13 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='reload'){await loadCatalogue();}
+      if(action==='open-monitoring'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
+          throw new Error('Choose an available saved Monitoring record.');
+        if(typeof host.openDesk!=='function')throw new Error('Use the current native Monitoring desk to open this study.');
+        await host.openDesk('monitoring','openStudy',{workspace_key:workspace,kind:row.kind,id:row.id});
+      }else if(action==='reload'){await loadCatalogue();}
       else if(action==='select-page'){
         for(const row of visiblePage().items)if(row.state!=='unreadable')selected.set(keyOf(row),row);
         invalidatePlan();renderCatalogue();
@@ -440,7 +452,7 @@ export function attachStudyTransfer(host) {
         await transferHandler({workspace_key:workspace,task_id:task.id,
           study_id:task.result?.id,title:task._study_transfer?.title||task.payload?.title,archive:file});
       }
-    }catch(error){fail(error);}
+    }catch(error){fail(error);if(!root&&typeof host.toast==='function')host.toast(error.message||String(error));}
   }
 
   function reset(nextWorkspace) {

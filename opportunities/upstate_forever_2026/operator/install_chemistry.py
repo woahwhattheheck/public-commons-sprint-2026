@@ -12,6 +12,10 @@ from pathlib import Path
 import tempfile
 
 FILES = [
+    "model/chemistry_study_transfer.py",
+    "model/CHEMISTRY_STUDY_TRANSFER.md",
+    "source_tools/chemistry_study_composition.py",
+    "integration/component_fragments/chemistry_study_transfer.json",
     "model/chemistry.py",
     "model/chemistry_reports.py",
     "model/chemistry_report_source.py",
@@ -91,6 +95,14 @@ SOURCE_PREVIOUS_SHA256 = {
     "operator/CHEMISTRY_OPERATOR.md": "f6e2951c63f24ee392cd4ea6e02923f4eded2a8ddc8bdc6f8926b7520994e88b"
 }
 
+STUDY_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "4a2b11d112dbf2447781e72ead1b9173194dfeb195f7ae067d872e14e6a830f7",
+    "operator/CHEMISTRY_OPERATOR.md": "6f4c99b4dbe7b7d3022f9d6321bb598437811d27116ff7183c61696293ea0575",
+    "integration/component_fragments/chemistry_reports.json": "934c20327454e074f6a7af3c29e65d10e260257bebcc3802b2f8df6146fb1ef6",
+    "integration/component_fragments/chemistry_report_sources.json": "6770524f1e908912e82aa2aebcf9538b95dec6b66a7d99be96c8f0cd5b3a4762"
+}
+SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
+
 SHARED_REPORT_FILES = [
     "model/observed_context.py",
     "model/scientific_figures.py",
@@ -114,7 +126,7 @@ def install(application, source_root=None, dry_run=False):
         fcntl.flock(handle, fcntl.LOCK_EX)
         pending, preimages = {}, {}
         shared = {}
-        for name in SHARED_REPORT_FILES:
+        for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES]:
             path = target / name
             if not path.is_file() or path.is_symlink():
                 raise ValueError("Receive the maintained Scientific Reports component; missing " + name)
@@ -133,15 +145,24 @@ def install(application, source_root=None, dry_run=False):
             if (current is not None and current != body
                     and hashlib.sha256(current).hexdigest() not in
                     {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
-                     REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name)}):
+                     REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name),
+                     STUDY_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
+        composer = "source_tools/chemistry_study_composition.py"
+        namespace = {"__name__": "_chemistry_study_composition", "__file__": str(source / composer)}
+        exec(compile(pending[composer], composer, "exec"), namespace)
+        joined = namespace["compose"]({name: shared[name].decode("utf-8")
+                                       for name in SHARED_STUDY_FILES})
+        for name, body in joined.items():
+            ast.parse(body, filename=name)
+            pending[name], preimages[name] = body.encode("utf-8"), shared[name]
         descriptor = json.loads(pending["operator/extensions/chemistry.json"])
         if (descriptor.get("schema") != "upstate.operator-extension/v1"
                 or descriptor.get("id") != "chemistry"
                 or descriptor["backend"]["factory"]["name"] != "ChemistryOperations"):
             raise ValueError("Select the original native chemistry registration")
-        changed = [name for name in FILES if pending[name] != preimages[name]]
+        changed = [name for name in pending if pending[name] != preimages[name]]
         if not dry_run:
             with tempfile.TemporaryDirectory(prefix=".chemistry-install-", dir=target.parent) as temporary:
                 stage = Path(temporary)
@@ -162,6 +183,9 @@ def install(application, source_root=None, dry_run=False):
                     for name in changed:
                         destination = target / name
                         destination.parent.mkdir(parents=True, exist_ok=True)
+                        current = destination.read_bytes() if destination.is_file() else None
+                        if current != preimages[name]:
+                            raise RuntimeError("Concurrent application change: " + name)
                         os.replace(stage / name, destination)
                         committed.append(name)
                 except BaseException:
@@ -179,7 +203,7 @@ def install(application, source_root=None, dry_run=False):
                             os.replace(rollback, destination)
                     raise
         return {"schema": "upstate.chemistry-native-install/v1", "application": str(target),
-                "dry_run": dry_run, "changed": changed, "files": len(FILES), "view": "chemistry",
+                "dry_run": dry_run, "changed": changed, "files": len(pending), "view": "chemistry",
                 "report_dependencies": {name: hashlib.sha256(body).hexdigest()
                                         for name, body in shared.items()}}
 

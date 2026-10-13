@@ -248,8 +248,20 @@ def operate(args):
     if output == workspace or output in workspace.parents or workspace in output.parents:
         raise ValueError("Keep the scientific Workspace and demo output in separate sibling directories")
     output.mkdir(parents=True, exist_ok=True)
+    from source_tools.demo_deadline import cutoff_guard, retain_checkpoint
     with held(output / ".demo-operation.lock", blocking=False):
-        return operate_locked(args, output)
+        try:
+            with cutoff_guard():
+                return operate_locked(args, output)
+        except BaseException as exc:
+            from model.native_execution import process_interrupted
+            if not isinstance(exc, Exception) or process_interrupted(exc):
+                try:
+                    retain_checkpoint(output, workspace, exc)
+                except Exception as receipt_error:
+                    if hasattr(exc, "add_note"):
+                        exc.add_note("Could not save the demo checkpoint: " + str(receipt_error))
+            raise
 
 
 def operate_locked(args, output):
@@ -278,16 +290,26 @@ def operate_locked(args, output):
         save(active_stage=name, state="running")
         event("demo_stage_started", stage=name)
         try:
+            from source_tools.demo_deadline import check_cutoff
+            check_cutoff()
             result = operation()
-        except Exception as exc:
-            receipt["stages"].setdefault(name, {})["last_error"] = {
+        except BaseException as exc:
+            from model.native_execution import process_interrupted
+            interrupted = not isinstance(exc, Exception) or process_interrupted(exc)
+            attempt_state = "interrupted" if interrupted else "failed"
+            retained = receipt["stages"].setdefault(name, {})
+            retained["last_error"] = {
                 "type": type(exc).__name__, "message": str(exc), "at": utc_now()}
+            retained["last_attempt_state"] = attempt_state
+            if retained.get("state") != "complete":
+                retained["state"] = attempt_state
             try:
-                save(state="failed")
-            except OSError as receipt_error:
+                save(state=attempt_state)
+            except Exception as receipt_error:
                 exc.demo_receipt_error = {
                     "type": type(receipt_error).__name__,
-                    "message": str(receipt_error), "errno": receipt_error.errno,
+                    "message": str(receipt_error),
+                    "errno": getattr(receipt_error, "errno", None),
                 }
                 if hasattr(exc, "add_note"):
                     exc.add_note("Could not retain the demo failure record: " + str(receipt_error))
@@ -622,9 +644,16 @@ def main(argv=None):
     modes.add_argument("--field-only", action="store_true",
                        help="Prepare the same scientific case and complete its native field/lab chapter before model execution.")
     args = parser.parse_args(argv)
-    result = operate(args)
+    try:
+        result = operate(args)
+    except KeyboardInterrupt as exc:
+        event("demo_interrupted", error_type=type(exc).__name__, message=str(exc),
+              checkpoint=str(args.output.resolve() / "demo-checkpoint.json"),
+              automatic_resume=False)
+        return 130
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

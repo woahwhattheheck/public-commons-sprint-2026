@@ -9,6 +9,8 @@ import {pipeline} from 'node:stream/promises';
 import {Transform} from 'node:stream';
 import {TextDecoder} from 'node:util';
 import {publicTables,publicActions} from './operator.mjs';
+import {createGridProcedureController} from './procedure-controller.mjs';
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 import {createGridFabricFileReader,GRIDFABRIC_FILE_RANGE} from './native-file-reader.mjs';
 import {privateDirectory} from './sqlite-store.mjs';
 import {exportWorkspace,listExports,exportMetadata,restoreWorkspace,restorationStatus,artifactIdentity} from './delivery.mjs';
@@ -77,7 +79,8 @@ function publishedConnection(path,url){
 }
 export function sourceIdentity(){
   const names=['core.cjs','model.cjs','sqlite-store.mjs','files.mjs','native-file-reader.mjs','operator.mjs','server.mjs','delivery.mjs','cli.mjs',
-    'public/index.html','public/style.css','public/app.mjs','contracts/plaid-public-contract.json','contracts/management-examples.json'];
+    'public/index.html','public/style.css','public/app.mjs','contracts/plaid-public-contract.json','contracts/management-examples.json',
+    'procedure-files.mjs','procedure-archive.mjs','procedure-controller.mjs','public/procedures.html','public/procedures.mjs','public/procedures.css','browser-assets.json','../../distribution/browser-assets.mjs'];
   const modules=names.map(path=>{const bytes=readFileSync(join(ROOT,path));return {path,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};});
   const leasePath=new URL('../../merchant-fleet-gateway/state-lease.mjs',import.meta.url),lease=readFileSync(leasePath);
   modules.push({path:'../../merchant-fleet-gateway/state-lease.mjs',bytes:lease.length,sha256:createHash('sha256').update(lease).digest('hex')});
@@ -90,9 +93,12 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
   if(!Number.isSafeInteger(port)||port<0||port>65535)throw fail('GRIDFABRIC_LISTEN_PORT','Select a valid loopback port, or zero.');
   if(!Number.isSafeInteger(maximumRequestBytes)||maximumRequestBytes<1024||!Number.isSafeInteger(maximumPortableBytes)||maximumPortableBytes<1024)
     throw fail('GRIDFABRIC_HTTP_LIMIT','Select positive complete request and portable byte allowances.');
+  const browserAssets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
   const token=randomBytes(32).toString('base64url'),callbacks=new Set(),requests=new Set(),jobs=new Set(),exportsInFlight=new Map(),restoresInFlight=new Set();
   const callbackRoutes=new Map(workspace.publicContract.callbacks.map(item=>[item.endpoint,item]));
   const source=sourceIdentity(),transferFiles=createGridFabricFileReader();let origin=null,closing=false,closePromise=null,removeConnection=()=>{};
+  const procedures=createGridProcedureController({workspace,source,origin:()=>origin,token,tables:publicTables(),maximumRequestBytes,
+    maximumArchiveBytes:maximumPortableBytes});
   async function transferFile(kind,id) {
     let path,metadata;
     if(kind==='file') {
@@ -132,7 +138,7 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
     const completed=()=>{requests.delete(drained);callbacks.delete(drained);settle();};
     response.once('finish',completed);response.once('close',completed);
     const handle=async()=>{
-      if(closing)throw fail('GRIDFABRIC_LISTENER_CLOSING','The original listener is draining.',503);
+      if(closing&&request.method!=='GET')throw fail('GRIDFABRIC_LISTENER_CLOSING','The original listener is draining.',503);
       if(request.headers.host!==new URL(origin).host)throw fail('GRIDFABRIC_HOST','Use the original loopback authority.',403);
       const url=new URL(request.url,origin);
       const browserOrigin=request.headers.origin;
@@ -152,15 +158,14 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
           'Content-Length':body.length,'X-GridFabric-Callback-Id':String(result.callback_id||''),'X-GridFabric-Delivery-Id':String(result.delivery_id||'')});
         response.end(body);return;
       }
-      const assets=new Map([['/','public/index.html'],['/index.html','public/index.html'],['/style.css','public/style.css'],['/app.mjs','public/app.mjs']]);
-      if(request.method==='GET'&&assets.has(url.pathname)){
-        const path=assets.get(url.pathname),body=readFileSync(join(ROOT,path));
-        const type=path.endsWith('.html')?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
+      if(request.method==='GET'&&browserAssets.has(url.pathname)){
+        const {url:assetUrl,type}=browserAssets.get(url.pathname),body=readFileSync(assetUrl);
         response.writeHead(200,{'Content-Type':type,'Content-Length':body.length});response.end(body);return;
       }
       if(!safeEqual(request.headers.authorization||'','Bearer '+token))throw fail('GRIDFABRIC_OPERATOR_AUTH','Use the private original operator connection.',401);
       response.setHeader('X-GridFabric-Workspace-ID',workspace.workspace_id);
       if(request.method==='POST'&&browserOrigin!==origin)throw fail('GRIDFABRIC_ORIGIN','Native operator writes require the exact Origin header.',403);
+      if(await procedures.handle(request,response,url))return;
       if(request.method==='GET'){
         if(url.pathname==='/api/state'){json(response,200,workspace.state());return;}
         if(url.pathname==='/api/launch'){json(response,200,{schema:'stellar-forge.gridfabric-launch.v1',status:'READY',workspace_id:workspace.workspace_id,
@@ -330,8 +335,10 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
     close(){
       if(closePromise)return closePromise;closing=true;
       closePromise=(async()=>{
+        // Existing captures finish their read-only SDK requests before this listener closes.
+        await procedures.close();
         const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));server.closeIdleConnections();
         await stopped;await Promise.allSettled([...requests,...jobs,...[...exportsInFlight.values()].map(item=>item.promise)]);removeConnection();transferFiles.close();
-      })();return closePromise;
+      })().catch(error=>{closePromise=null;throw error;});return closePromise;
     }};
 }

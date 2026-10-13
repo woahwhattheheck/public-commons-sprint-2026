@@ -1,0 +1,165 @@
+{
+  "schema": "upstate.conservation-report-map-composition/v1",
+  "edition": "conservation-report-geography/1",
+  "source_references": {
+    "producer": {
+      "merge": "abcad7958580b4218f3fe2c920cbf45f8065197b",
+      "blob": "de136cfd8e3ad0624dc43c51dbbe63d2fd6f8dc4"
+    },
+    "shared_renderer": {
+      "blob": "713dca1e6847dc96d8b29107f814a3a5aaf8c1aa",
+      "bytes": 15502,
+      "sha256": "bc773822b484c2c5bc0f8b278849560668f5e6c304e6d13a8f5836940539c7c3"
+    },
+    "geographic_helper_blob": "b0201becc44aaa93249e035fe8f6e71a50c5062b"
+  },
+  "ownership": {
+    "conservation_source": "E7A1",
+    "publication": "E7A1 intake on fresh current source",
+    "shared_renderer": "WATERLINK's current merged optional role labels and dynamic label layout, adopted unchanged",
+    "shared_engine": "Existing Scientific Reports/observed-context renderer and transfer owners"
+  },
+  "guarded_replacements": [
+    {
+      "path": "model/conservation_report_source.py",
+      "before_sha256": "72182c02d1d91e710139026c24d1ce5af1ab3961174426a7790c2ebd81bfc482",
+      "after_sha256": "1b45682222a4626d602fd2a2f0cc1c399790f4b1ac00d9d1d2214c0f67a42321",
+      "replacements": [
+        {
+          "before": "EDITION = \"conservation-saved-plan-report/2\"",
+          "after": "EDITION = \"conservation-saved-plan-report/3\""
+        },
+        {
+          "before": "    if not isinstance(spec, dict) or set(spec) - {\"plan_id\", \"title\"}:\n        raise ValueError(\"Supply the original plan_id and optional report-source title\")",
+          "after": "    if not isinstance(spec, dict) or set(spec) - {\"plan_id\", \"title\", \"include_maps\"}:\n        raise ValueError(\"Supply the original plan_id, optional title and include_maps choice\")\n    include_maps = spec.get(\"include_maps\", True)\n    if not isinstance(include_maps, bool):\n        raise ValueError(\"include_maps must be true or false\")\n    map_implementation = None\n    if include_maps:\n        from . import conservation_report_maps\n        map_implementation = conservation_report_maps.implementation()"
+        },
+        {
+          "before": "        \"native_execution\": state.get(\"native_execution\", {}),\n    }",
+          "after": "        \"native_execution\": state.get(\"native_execution\", {}),\n        \"maps\": map_implementation,\n    }"
+        },
+        {
+          "before": "        recipe = {\n            \"schema\": observed_context.SCHEMA,",
+          "after": "        maps = None\n        if include_maps:\n            maps = conservation_report_maps.prepare(workspace, state, plan, directory)\n            for item in maps[\"files\"]:\n                name = _relative(item[\"path\"])\n                if name in members:\n                    raise ValueError(\"Original map companion names collide: \" + name)\n                verify_file(directory, item)\n                members[name] = item\n        recipe = {\n            \"schema\": observed_context.SCHEMA,"
+        },
+        {
+          "before": "        recipe_path = directory / \"conservation-report.json\"",
+          "after": "        if maps is not None:\n            recipe.update(figure_spec=maps[\"figure_spec\"], figures=maps[\"figures\"])\n            recipe[\"source_links\"] += [conservation_report_maps.INPUTS,\n                                       conservation_report_maps.SPEC,\n                                       conservation_report_maps.INVENTORY,\n                                       conservation_report_maps.CONTEXT_REGISTER]\n            recipe[\"sections\"].append([\"Original geographic figures\", [\n                \"The geographic panels preserve saved original and reporting-clipped planning \"\n                \"geometry, selected unions and declared context boundaries. Saved planning vertices \"\n                \"and holes remain intact. Contexts use the same bound reader, projected CRS and \"\n                \"declared clipping/buffer; the renderer applies no reprojection or simplification. \"\n                \"Scale and north refer to the saved projected grid.\",\n                \"Grey and outlines represent the exact roles printed in each frame. An overlap \"\n                \"area remains separate from the entire selected footprint. Cartographic shapes \"\n                \"do not stand for a measured concentration, model output or inferred flow path.\",\n                _links([\n                    (\"Complete original geographic input and area checks\", conservation_report_maps.INPUTS),\n                    (\"Original geographic figure specification\", conservation_report_maps.SPEC),\n                    (\"Verified geographic figure inventory\", conservation_report_maps.INVENTORY),\n                    (\"Complete original context-feature register\", conservation_report_maps.CONTEXT_REGISTER),\n                ]),\n            ]])\n        recipe_path = directory / \"conservation-report.json\""
+        },
+        {
+          "before": "        _verify_source(workspace, result)\n        atomic_json(receipt, result, immutable=True)",
+          "after": "        if maps is not None:\n            result[\"maps\"] = {\"summary\": _copy(maps[\"summary\"]),\n                              \"figure_spec\": maps[\"figure_spec\"], \"figures\": _copy(maps[\"figures\"])}\n            for index, item in enumerate(maps[\"files\"]):\n                result[\"files\"][\"geography_%03d\" % index] = describe_file(\n                    workspace.root, directory / item[\"path\"])\n        _verify_source(workspace, result)\n        atomic_json(receipt, result, immutable=True)"
+        },
+        {
+          "before": "        recipe_path = directory / \"conservation-report.json\"",
+          "after": "            if maps[\"context_register\"]:\n                recipe[\"sections\"].append([\"Original context features\", [\n                    \"These are original source attributes. Blank values mean the field is absent or null. \"\n                    \"Cartographic map labels identify these features; they are not monitoring or intake sites.\",\n                    {\"kind\": \"table\", \"columns\": [\"Context\", \"Source ID\", \"Native feature ID\",\n                                                   \"NAME\", \"FACILITY\", \"INTAKE\", \"BUFFER_FT\"],\n                     \"rows\": [[row[name] for name in (\"context\", \"source_id\", \"native_feature_id\",\n                                                       \"NAME\", \"FACILITY\", \"INTAKE\", \"BUFFER_FT\")]\n                              for row in maps[\"context_register\"]]},\n                ]])\n        recipe_path = directory / \"conservation-report.json\""
+        }
+      ]
+    },
+    {
+      "path": "model/conservation_report_source_cli.py",
+      "before_sha256": "a653d0b858b46d2ff1f69c0628acf80c4681c2a4cde351932bb6f984a678d1c4",
+      "after_sha256": "e6650f85344cb00dc066f8fb0b519fb0c5b7087934e944ba8b286bedfb35a3dd",
+      "replacements": [
+        {
+          "before": "    prepare.add_argument(\"--title\")",
+          "after": "    prepare.add_argument(\"--title\")\n    prepare.add_argument(\"--no-maps\", action=\"store_true\", help=\"Retain a source-only edition without geographic figures\")"
+        },
+        {
+          "before": "        spec = {\"plan_id\": args.plan_id}",
+          "after": "        spec = {\"plan_id\": args.plan_id, \"include_maps\": not args.no_maps}"
+        }
+      ]
+    },
+    {
+      "path": "model/CONSERVATION_REPORT_SOURCE.md",
+      "before_sha256": "0337aca8899e357dea61ea672413ae85f2cbe413cf4bf18936faf423322f6ccd",
+      "after_sha256": "c16e495ac4ddb20cb5470807274f6e273f4a46ee0e1b65e4a132e51f6fe2b845"
+    },
+    {
+      "path": "integration/component_fragments/conservation-scientific-report-source.json",
+      "before_sha256": "b701d372ba30d3f8372a58cddfba33e11434f29be891970e367a3fe9baee9c99",
+      "after_sha256": "c9aca50ffbb2ae341b2a53abad146db3d791003aa3b1e47cb71513025987ad44"
+    }
+  ],
+  "native_contract": {
+    "original_plan_id": "51de867031a4365cab5090693cc4d534399225c31a3f0731368431ee2b77cc8a",
+    "original_study_id": "2b0e6ae0c186dedceceb10a189cfddae2d893e58d0f07b89b0223aeb19d6ec13",
+    "source_context": true,
+    "expected_geographic_figures": 4,
+    "expected_context_features": 4,
+    "original_selected_units": 12,
+    "original_inventory_units": 217,
+    "renderer": "model.scientific_figures.panel_drawings",
+    "maps_are_native_model_outputs": false
+  },
+  "validation": {
+    "exact_guards_replayed": true,
+    "complete_source_hashes": true,
+    "independent_capture_and_original_api_review": "compute_delivery",
+    "native_execution": "Continue the existing original Workspace/report operation; no native result claimed by source publication",
+    "shared_renderer": "Owner's actual _role_labels API and dynamic layout read from current complete source; earlier proposed shared patch superseded"
+  },
+  "receiving_dependencies": [
+    "conservation-scientific-report-source",
+    "scientific-map-figures"
+  ],
+  "publication_note": "Preserve the map owner's current component dependency split and ES26's newer Conservation controller; this producer adds no controller replacement.",
+  "publication": {
+    "status": "Composed against fresh current main",
+    "base_commit": "3edfb2f55b0b80dc31edcc477d12348d4cf95486",
+    "complete_source_bank": "b722148b722a67ab230f70c55e91aa35b72b717a",
+    "shared_renderer": "Current owner implementation retained without modification",
+    "guide_corrections": [
+      {
+        "path": "model/CONSERVATION_REPORT_MAPS.md",
+        "replacements": 4,
+        "before_sha256": "cc84a2d6ca7d40c65e7e75f2113ce3f8c01c8bbec7a9ef52f2611a2a7d94811c",
+        "after_sha256": "530b9bbff779a9f01e061ef110ef8be3206436a3ced39fab865815f37bf21f0e"
+      }
+    ],
+    "installer": {
+      "before_bytes": 65946,
+      "before_sha256": "8da0c5e4b6fb38c7cdeddd65f86f1256186da1aa1876c00c454bedb303e4bbfd",
+      "after_bytes": 68103,
+      "after_sha256": "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4",
+      "changes": [
+        "Receive the complete geographic helper, guide and source composition.",
+        "Require the original shared map renderer and dispatcher when receiving geographic source.",
+        "Recognize exact previously published source/CLI/guide/component/installer identities.",
+        "Recognize the actual64,962-byte regional receiver before its maintained3578 successor.",
+        "Require all three geographic source files when the received producer imports the map helper; preserve older complete packets.",
+        "Validate original shared renderer role-label capability through its actual top-level function before installation."
+      ]
+    }
+  },
+  "published_files": {
+    "model/conservation_report_maps.py": {
+      "bytes": 31413,
+      "sha256": "f1d494b72926a93762812c35478971a2e73ddf4484434be0e8b4a6f789b40158"
+    },
+    "model/conservation_report_source.py": {
+      "bytes": 37283,
+      "sha256": "1b45682222a4626d602fd2a2f0cc1c399790f4b1ac00d9d1d2214c0f67a42321"
+    },
+    "model/conservation_report_source_cli.py": {
+      "bytes": 1733,
+      "sha256": "e6650f85344cb00dc066f8fb0b519fb0c5b7087934e944ba8b286bedfb35a3dd"
+    },
+    "model/CONSERVATION_REPORT_MAPS.md": {
+      "bytes": 10685,
+      "sha256": "530b9bbff779a9f01e061ef110ef8be3206436a3ced39fab865815f37bf21f0e"
+    },
+    "model/CONSERVATION_REPORT_SOURCE.md": {
+      "bytes": 12951,
+      "sha256": "c16e495ac4ddb20cb5470807274f6e273f4a46ee0e1b65e4a132e51f6fe2b845"
+    },
+    "integration/component_fragments/conservation-scientific-report-source.json": {
+      "bytes": 1149,
+      "sha256": "ee8b9fc6a4f5254ec39e35ab421f6f3807ed6e55c9d22c2d02d6b779e01da1ab"
+    },
+    "operator/install_conservation.py": {
+      "bytes": 68103,
+      "sha256": "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4"
+    }
+  }
+}

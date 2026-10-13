@@ -4,6 +4,8 @@ import {createHash} from 'node:crypto';
 import {readBrowserAssets} from '../../stellar/scf-starforge-20261009/distribution/browser-assets.mjs';
 import {documentProvider,defaultDocumentSettings,documentError} from './contracts.mjs';
 
+import {documentAgentAuthenticatedRoute} from './agent.mjs';
+
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const number=(url,name,fallback)=>url.searchParams.has(name)?Number(url.searchParams.get(name)):fallback;
 function file(body,name){
@@ -30,7 +32,10 @@ export async function documentCompositionExtension(controller){
   const declared=await readBrowserAssets(new URL('./composition-browser-assets.json',import.meta.url));
   const additionalAssets=await Promise.all([...declared].map(async([route,{url,type}])=>
     ({route,type,bytes:await readFile(url)})));
-  async function authenticatedRoute({request,url,send,body,signal,registerDownload}){
+  const agentRoute=documentAgentAuthenticatedRoute(controller,{example:documentCompositionExample});
+  async function authenticatedRoute(context){
+    if(await agentRoute(context))return true;
+    const {request,url,send,body,signal,registerDownload}=context;
     if(!url.pathname.startsWith('/api/document-composition/'))return false;
     const path=url.pathname.slice('/api/document-composition/'.length),method=request.method;
     if(path.startsWith('bundles/')){

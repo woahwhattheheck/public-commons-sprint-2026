@@ -39,6 +39,12 @@ CODE_FILES = (
     "operator/team_route_policy.json",
     "operator/extensions/published-studies.json",
     "operator/web/published_studies.mjs",
+    "operator/web/published_review_reports.mjs",
+    "operator/PUBLISHED_REVIEW_REPORTS.md",
+    "model/published_review_report_source.py",
+    "model/published_review_study_transfer.py",
+    "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+    "integration/component_fragments/published-review-report-source.json",
     "operator/web/published_studies.css",
     "PUBLISHED_STUDIES.md",
     "published_studies_family.json",
@@ -114,13 +120,59 @@ def portable_source(source):
     return source
 
 
+def review_transfer_source(source):
+    """Add the saved-review resolver without replacing peer report handlers."""
+    functions = [
+        node for node in ast.parse(source).body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_source"
+    ]
+    if len(functions) != 1:
+        raise ValueError("The installed scientific report transfer needs its maintained _source dispatcher.")
+    node = functions[0]
+    lines = source.splitlines(keepends=True)
+    start = sum(len(line) for line in lines[:node.lineno - 1])
+    end = sum(len(line) for line in lines[:node.end_lineno])
+    block = source[start:end]
+    original_import = "    from . import native_process_study_transfer\n"
+    original_call = "    native_process_study_transfer.include_source(closure, collection_id, entry)\n"
+    addition_import = "    from . import published_review_study_transfer\n"
+    addition_call = "    published_review_study_transfer.include_source(closure, collection_id, entry)\n"
+    if block.count(original_import) != 1 or block.count(original_call) != 1:
+        raise ValueError("The installed scientific report dispatcher needs the current native-process handoff before this extension can be composed.")
+    imported, called = block.count(addition_import), block.count(addition_call)
+    if imported == called == 1:
+        return source
+    if imported or called or "published_review_study_transfer" in source:
+        raise ValueError("The installed saved-review transfer registration needs review before this extension can be composed.")
+    updated = block.replace(original_import, original_import + addition_import, 1)
+    updated = updated.replace(original_call, original_call + addition_call, 1)
+    result = source[:start] + updated + source[end:]
+    ast.parse(result)
+    return result
+
+
+def atomic_text(target, content):
+    fd, temporary = tempfile.mkstemp(prefix="." + target.name + "-", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True)
     args = parser.parse_args()
     source = Path(__file__).resolve().parent
     application = Path(args.application).expanduser().resolve(strict=True)
-    for required in ("model/workspace.py", "operator/extension_registry.py"):
+    for required in ("model/workspace.py", "operator/extension_registry.py",
+                     "model/scientific_report_study_transfer.py"):
         if not (application / required).is_file():
             parser.error("The existing ECSA application is missing " + required)
     data_files = [str(path.relative_to(source)) for path in sorted((source / DATA_ROOT).iterdir()) if path.is_file()]
@@ -209,6 +261,9 @@ def main():
     portable_path = application / "model" / "portable.py"
     portable_original = portable_path.read_text(encoding="utf-8")
     portable_updated = portable_source(portable_original)
+    transfer_path = application / "model" / "scientific_report_study_transfer.py"
+    transfer_original = transfer_path.read_text(encoding="utf-8")
+    transfer_updated = review_transfer_source(transfer_original)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     changed, reused = [], []
     for relative in expected:
@@ -222,19 +277,19 @@ def main():
             shutil.copy2(target, backup)
         atomic_copy(original, target)
         changed.append(relative)
-    if portable_updated != portable_original:
-        backup = application / ".published-studies-backups" / stamp / "model" / "portable.py"
+    for path, original, updated in (
+        (portable_path, portable_original, portable_updated),
+        (transfer_path, transfer_original, transfer_updated),
+    ):
+        relative = str(path.relative_to(application))
+        if updated == original:
+            reused.append(relative)
+            continue
+        backup = application / ".published-studies-backups" / stamp / relative
         backup.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(portable_path, backup)
-        fd, temporary = tempfile.mkstemp(prefix=".portable-", dir=portable_path.parent)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as output:
-                output.write(portable_updated)
-            os.replace(temporary, portable_path)
-        finally:
-            if os.path.exists(temporary):
-                os.unlink(temporary)
-        changed.append("model/portable.py")
+        shutil.copy2(path, backup)
+        atomic_text(path, updated)
+        changed.append(relative)
     package = application / "measurement_workspace" / "__init__.py"
     if not package.exists():
         package.write_text('"""Measurement workspace extensions."""\n', encoding="utf-8")
@@ -246,7 +301,8 @@ def main():
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
         "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []),
-        "files": [{"path": name, "sha256": digest(application / name)} for name in expected],
+        "files": [{"path": name, "sha256": digest(application / name)} for name in [
+            *expected, "model/portable.py", "model/scientific_report_study_transfer.py"]],
     }, indent=2))
 
 
