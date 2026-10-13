@@ -1,0 +1,249 @@
+{
+  "schema": "unlost.complete-customer-documents.v1",
+  "prepared_at": "2026-10-13T12:00:00.000Z",
+  "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
+  "working_record_sha256": "b3d820f84a4cddda4a1f9112df4449a0e0c8f8e5bfafdb4bc2dffaf07242b814",
+  "complete_record_received_equal": true,
+  "archives": [
+    {
+      "edition": "sample",
+      "name": "Unlost-localization-sample.zip",
+      "package_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02",
+      "bytes": 248149,
+      "sha256": "058971c967d1f236ce62a40bacaf0fe31edf379ea3c6b1dbb316c4475e0cfa5b",
+      "members": 8,
+      "all_member_bytes_equal": true
+    },
+    {
+      "edition": "paid",
+      "name": "Unlost-localization-paid.zip",
+      "package_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02",
+      "bytes": 390558,
+      "sha256": "67d80d5829966794216631306e8f4e14128dae090af004e0d24e7feb3ca9cf39",
+      "members": 8,
+      "all_member_bytes_equal": true
+    }
+  ],
+  "panels": [
+    {
+      "edition": "sample",
+      "name": "Unlost-complete-sample-documents.html",
+      "bytes": 162248,
+      "sha256": "3b160c46649b34be169e22ddbf693e0b9c406c43cd2611e6268731fdb3d4de7d"
+    },
+    {
+      "edition": "paid",
+      "name": "Unlost-complete-paid-documents.html",
+      "bytes": 218558,
+      "sha256": "40ddb525fe1330589cc03f897503df70f0aee4cfdfb77c4f94a2969601ae5923"
+    }
+  ],
+  "selections": [
+    {
+      "edition": "sample",
+      "packet": {
+        "version": "dealscout.lead-customer-package.v1",
+        "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02",
+        "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
+        "edition_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-01",
+        "edition_sha256": "3973d3a79cdf78003dac9a4f504ede110c64d2d5f3228e1ce0c3fa3c3d2f0950",
+        "title": "Unlost — free merchant and localization desk",
+        "instructions": "Start with Merchant context. The dated research identifies the original company, public contact, languages observed and suggested product comparison.\n\n1. In Pilot scope, enter the actual merchant's selected language, current process, reviewer and product/page. Keep unconfirmed fields blank.\n2. In Content & review, add the selected source text and an entered translation. This workspace keeps the actual text; it does not translate or publish to Shopify.\n3. Add preferred terms or protected names in Glossary. Literal reminders help the reviewer inspect wording; they are not a language-quality score.\n4. Record the reviewer's decision. Source, translation, tone and applicable glossary changes make an earlier review visibly out of date while preserving the previous translation and decision.\n5. Save a named handover, download its complete JSON/report, and keep the full working file. Open that working file in the same edition to continue all original research, edits, decisions and history.\n\nThe free edition contains one original merchant. The paid edition contains its five original merchants. Each works offline and includes complete application source. Browser storage is convenient; the downloaded working file is your portable copy. The content CSV is a human review worksheet, with spreadsheet formula prefixes escaped. Use the complete working JSON for lossless receiving.\n\nCommercial terms in Pilot scope are your entered notes. The original five-profile research package price and the translation app's own plans are separate. Confirm any current app offer in the actual app before selecting it.",
+        "prepared_at": "2026-10-13T12:00:00.000Z",
+        "files": [
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:instructions",
+            "revision": 1,
+            "sha256": "4790baeb55ce320cbb93bb28a28a197f1613ccb2d7b512c752519b6048097c66"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:sample-html",
+            "revision": 1,
+            "sha256": "f660ae0a6214f9d98ed23f3d82e6cbac49c01357803ec2185d55b7c7c7a61817"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:sample-csv",
+            "revision": 1,
+            "sha256": "d426e2a8f581a9b42592c9de49377c01a3a4975b8f8737b156c746e24e27a34e"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:sample-json",
+            "revision": 1,
+            "sha256": "2bee18d4de1703eb26d7505319ea74880e38143bf8eb3097d21a206c13240b7b"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:guide",
+            "revision": 1,
+            "sha256": "db3fe79b62fa4361871b59de4ed91a4d408cd8e1e45c65297d1e149b6f78b31a"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-app-html",
+            "revision": 1,
+            "sha256": "4f3f19dc6bfedf64e85b4198b84a2cb8ab93ecfea9b67b9a9df947da85d975b2"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-application-source-json",
+            "revision": 1,
+            "sha256": "29ee6c5b368a0e6628dadef1732dc9988dabcc03d286e360b06635daf57c12e8"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-working-json",
+            "revision": 1,
+            "sha256": "a4fc8e2b74b7eb9128426c4135580ef1830466608fb00773dcc74341c221cba7"
+          }
+        ],
+        "supersedes": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-customer-package-01",
+        "reason": "Adds a complete editable localization application, scoped source and working file while retaining every original customer document.",
+        "sha256": "f175c64738e52cc54c289f2a88a35a94cb83b3f417250bb890f87391e446f7ad"
+      },
+      "files": [
+        {
+          "name": "README.txt",
+          "bytes": 1125,
+          "sha256": "01f41f071c31fb6649ecb0fdc06fa0e1853ab0fd2efe37f00654f53845ced43c"
+        },
+        {
+          "name": "sample.html",
+          "bytes": 5063,
+          "sha256": "4ef3f806a47ce46f149602e17d72fd88c935af9a1e45bb97b9b022a82e2ac992"
+        },
+        {
+          "name": "sample.csv",
+          "bytes": 1934,
+          "sha256": "0ea67f943b3d996caf20c8d710115c46fe7edac4577cb6f04186fae1e95b4811"
+        },
+        {
+          "name": "sample.json",
+          "bytes": 2631,
+          "sha256": "71c5e2a7ca715f981add6f28cf5de95111eda1456be6eb92bea22312e15f7787"
+        },
+        {
+          "name": "localization-README.txt",
+          "bytes": 1610,
+          "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+        },
+        {
+          "name": "localization-sample/app.html",
+          "bytes": 149897,
+          "sha256": "00404da4cf402976475074bb8b1f910561e8a549c617a3bc4427437dd6ca0375"
+        },
+        {
+          "name": "localization-sample/application-source.json",
+          "bytes": 77027,
+          "sha256": "cc6e2f2a828c11e6e1d1c2ef8649812960bbacc32eacc34087bef18c1a9dacce"
+        },
+        {
+          "name": "localization-sample/working.json",
+          "bytes": 7896,
+          "sha256": "5d6e07ac89771f75b028e63f12b61e72977cd5dc4d4c3d5ff1dd8164cd638a42"
+        }
+      ]
+    },
+    {
+      "edition": "paid",
+      "packet": {
+        "version": "dealscout.lead-customer-package.v1",
+        "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02",
+        "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
+        "edition_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-01",
+        "edition_sha256": "bd3f65c2940243825a0a79491207699134b4699170275dcc093c0ba0677358a9",
+        "title": "Unlost — five merchants and localization desk",
+        "instructions": "Start with Merchant context. The dated research identifies the original company, public contact, languages observed and suggested product comparison.\n\n1. In Pilot scope, enter the actual merchant's selected language, current process, reviewer and product/page. Keep unconfirmed fields blank.\n2. In Content & review, add the selected source text and an entered translation. This workspace keeps the actual text; it does not translate or publish to Shopify.\n3. Add preferred terms or protected names in Glossary. Literal reminders help the reviewer inspect wording; they are not a language-quality score.\n4. Record the reviewer's decision. Source, translation, tone and applicable glossary changes make an earlier review visibly out of date while preserving the previous translation and decision.\n5. Save a named handover, download its complete JSON/report, and keep the full working file. Open that working file in the same edition to continue all original research, edits, decisions and history.\n\nThe free edition contains one original merchant. The paid edition contains its five original merchants. Each works offline and includes complete application source. Browser storage is convenient; the downloaded working file is your portable copy. The content CSV is a human review worksheet, with spreadsheet formula prefixes escaped. Use the complete working JSON for lossless receiving.\n\nCommercial terms in Pilot scope are your entered notes. The original five-profile research package price and the translation app's own plans are separate. Confirm any current app offer in the actual app before selecting it.",
+        "prepared_at": "2026-10-13T12:00:00.000Z",
+        "files": [
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:instructions",
+            "revision": 1,
+            "sha256": "4790baeb55ce320cbb93bb28a28a197f1613ccb2d7b512c752519b6048097c66"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:paid-html",
+            "revision": 1,
+            "sha256": "1bd2fa90424f7eb5d57827c1f043d8bea36c1a6d0faa5435b6337a4844ff3967"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:paid-csv",
+            "revision": 1,
+            "sha256": "b1f7d7f00a1979d7113aa565a7997b44fd13329a15b5626a662603948bb0fc60"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:file:paid-json",
+            "revision": 1,
+            "sha256": "82fbfb3578cc52e088e6adde12e60f2fceb42d84f178c50cfb9a0e857e213f4f"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:guide",
+            "revision": 1,
+            "sha256": "db3fe79b62fa4361871b59de4ed91a4d408cd8e1e45c65297d1e149b6f78b31a"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-app-html",
+            "revision": 1,
+            "sha256": "734f74138b3f32b692b967586383112d8ae00bd20beec579aca438821066d15a"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-application-source-json",
+            "revision": 1,
+            "sha256": "524ac096b0e22a470199407bebcd0bdcf77bf814d80180e1ee272e8fd7e5657a"
+          },
+          {
+            "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-working-json",
+            "revision": 1,
+            "sha256": "5a5ecf286ce8174888a90d48d2a2291fda03b02055dceee4e96da37fc8a7e756"
+          }
+        ],
+        "supersedes": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-customer-package-01",
+        "reason": "Adds a complete editable localization application, scoped source and working file while retaining every original customer document.",
+        "sha256": "6502ef0f1920e1a68c8c4c1bbf133d71e32b6535961bba99d4b7f4aed49d00ab"
+      },
+      "files": [
+        {
+          "name": "README.txt",
+          "bytes": 1125,
+          "sha256": "01f41f071c31fb6649ecb0fdc06fa0e1853ab0fd2efe37f00654f53845ced43c"
+        },
+        {
+          "name": "paid.html",
+          "bytes": 16032,
+          "sha256": "e1ad4dc50564534a57502598c210fe84ec44e12b33b0d7d35295ab5682568d67"
+        },
+        {
+          "name": "paid.csv",
+          "bytes": 8753,
+          "sha256": "a7e45ee9dcf3f9e0410492b48a4d9e28b093c7083978e776ed49bf4cd10e6505"
+        },
+        {
+          "name": "paid.json",
+          "bytes": 9972,
+          "sha256": "91365b81214e4ddc34fd4854c2bb75734590fcf84f1aa73df13d413cc4d1b120"
+        },
+        {
+          "name": "localization-README.txt",
+          "bytes": 1610,
+          "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+        },
+        {
+          "name": "localization-paid/app.html",
+          "bytes": 205894,
+          "sha256": "3b1c4f2a537ad03ce516654f344747ba24edd0070a905b1ccdf432102dec3951"
+        },
+        {
+          "name": "localization-paid/application-source.json",
+          "bytes": 108535,
+          "sha256": "46fa35a8d79c243598d15d6a570d6c87e1db93ae213d552a442e1f464715cf81"
+        },
+        {
+          "name": "localization-paid/working.json",
+          "bytes": 37695,
+          "sha256": "ee579e6118e1e3e9cdce24c699fa101141b9e6b46cfd4cea150526b3884e36eb"
+        }
+      ]
+    }
+  ],
+  "source": {
+    "zip": "public-commons-sprint-2026@0546dccef76d47fac69abb17e0ddad213eaf5e23:host/connected_zip.cjs",
+    "gzip": "public-commons-sprint-2026@0546dccef76d47fac69abb17e0ddad213eaf5e23:host/connected_gzip.cjs",
+    "viewer": "commons@0bde290df8daab241a024fa42b46bb90ebbc1c9b:tools/revenue_owner_console_20261010/lead_pack_sources/seven_original_customer_packages_6a62_20261013/customer-package-panel.mjs"
+  },
+  "interactive_workspace": "Use each original direct app.html for the editable workspace. The complete-document viewer previews included files with scripts disabled and downloads their exact original bytes."
+}
