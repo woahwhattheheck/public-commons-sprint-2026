@@ -1,0 +1,1706 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-assistance-medicaid-2025-snapshot",
+  "title": "Medicaid: retained county enrollment snapshot",
+  "description": "HPIO statistical redistribution of ODM enrollment and Census population, with explicit source dates.",
+  "publicationPeriod": "Source vintages retained separately",
+  "dataPeriod": "Retrieved February 19, 2025; enrollment month not specified",
+  "geography": "All 88 Ohio counties",
+  "methodology": "The source attributes enrollment to ODM Demographic and Expenditure Dashboard and total population to ACS 2023 five-year. Its February 2025 publication does not identify an enrollment month; published percentages remain unchanged.",
+  "source": {
+    "title": "Ohio Medicaid Basics 2025: county enrollment",
+    "url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+    "publisher": "Health Policy Institute of Ohio; original data ODM and U.S. Census Bureau",
+    "locator": "Three-page county table and page 3 source note",
+    "retrievedAt": "2026-10-13",
+    "note": "Attribution identifies this as HPIO analysis, not a new raw ODM response.",
+    "rights": "Attributed statistical facts; original publisher rights remain with its source."
+  },
+  "columns": [
+    {
+      "key": "geography",
+      "label": "Geography",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "fips",
+      "label": "FIPS",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "period",
+      "label": "Measurement period",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "source_url",
+      "label": "Source",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "population",
+      "label": "ACS population denominator",
+      "kind": "integer",
+      "role": "value",
+      "unit": "persons",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "expansion",
+      "label": "Expansion enrollment",
+      "kind": "integer",
+      "role": "value",
+      "unit": "persons",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "expansion_share",
+      "label": "Expansion / population",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "enrolled",
+      "label": "All Medicaid enrollment",
+      "kind": "integer",
+      "role": "value",
+      "unit": "persons",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "share",
+      "label": "All Medicaid / population",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "population_period",
+      "label": "Population release",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "source_county",
+      "label": "Printed county name",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    }
+  ],
+  "rows": [
+    {
+      "id": "assistance-medicaid-39001",
+      "values": {
+        "geography": "Adams County, Ohio",
+        "fips": "39001",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "27510",
+        "expansion": "2395",
+        "expansion_share": "8.7",
+        "enrolled": "10650",
+        "share": "38.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Adams"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39003",
+      "values": {
+        "geography": "Allen County, Ohio",
+        "fips": "39003",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "101685",
+        "expansion": "6531",
+        "expansion_share": "6.4",
+        "enrolled": "28412",
+        "share": "27.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Allen"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39005",
+      "values": {
+        "geography": "Ashland County, Ohio",
+        "fips": "39005",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "52296",
+        "expansion": "2780",
+        "expansion_share": "5.3",
+        "enrolled": "11078",
+        "share": "21.2",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Ashland"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39007",
+      "values": {
+        "geography": "Ashtabula County, Ohio",
+        "fips": "39007",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "97343",
+        "expansion": "7523",
+        "expansion_share": "7.7",
+        "enrolled": "30566",
+        "share": "31.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Ashtabula"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39009",
+      "values": {
+        "geography": "Athens County, Ohio",
+        "fips": "39009",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "61573",
+        "expansion": "4037",
+        "expansion_share": "6.6",
+        "enrolled": "14957",
+        "share": "24.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Athens"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39011",
+      "values": {
+        "geography": "Auglaize County, Ohio",
+        "fips": "39011",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "46209",
+        "expansion": "1316",
+        "expansion_share": "2.8",
+        "enrolled": "6696",
+        "share": "14.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Auglaize"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39013",
+      "values": {
+        "geography": "Belmont County, Ohio",
+        "fips": "39013",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "65982",
+        "expansion": "4558",
+        "expansion_share": "6.9",
+        "enrolled": "17539",
+        "share": "26.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Belmont"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39015",
+      "values": {
+        "geography": "Brown County, Ohio",
+        "fips": "39015",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "43710",
+        "expansion": "2949",
+        "expansion_share": "6.7",
+        "enrolled": "12967",
+        "share": "29.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Brown"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39017",
+      "values": {
+        "geography": "Butler County, Ohio",
+        "fips": "39017",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "389910",
+        "expansion": "23907",
+        "expansion_share": "6.1",
+        "enrolled": "95986",
+        "share": "24.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Butler"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39019",
+      "values": {
+        "geography": "Carroll County, Ohio",
+        "fips": "39019",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "26731",
+        "expansion": "1154",
+        "expansion_share": "4.3",
+        "enrolled": "5798",
+        "share": "21.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Carroll"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39021",
+      "values": {
+        "geography": "Champaign County, Ohio",
+        "fips": "39021",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "38772",
+        "expansion": "1878",
+        "expansion_share": "4.8",
+        "enrolled": "8607",
+        "share": "22.2",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Champaign"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39023",
+      "values": {
+        "geography": "Clark County, Ohio",
+        "fips": "39023",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "135445",
+        "expansion": "13261",
+        "expansion_share": "9.8",
+        "enrolled": "49702",
+        "share": "36.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Clark"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39025",
+      "values": {
+        "geography": "Clermont County, Ohio",
+        "fips": "39025",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "209862",
+        "expansion": "9721",
+        "expansion_share": "4.6",
+        "enrolled": "39649",
+        "share": "18.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Clermont"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39027",
+      "values": {
+        "geography": "Clinton County, Ohio",
+        "fips": "39027",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "42014",
+        "expansion": "2415",
+        "expansion_share": "5.7",
+        "enrolled": "10243",
+        "share": "24.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Clinton"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39029",
+      "values": {
+        "geography": "Columbiana County, Ohio",
+        "fips": "39029",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "101203",
+        "expansion": "5934",
+        "expansion_share": "5.9",
+        "enrolled": "26355",
+        "share": "26.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Columbiana"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39031",
+      "values": {
+        "geography": "Coshocton County, Ohio",
+        "fips": "39031",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "36679",
+        "expansion": "2374",
+        "expansion_share": "6.5",
+        "enrolled": "10468",
+        "share": "28.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Coshocton"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39033",
+      "values": {
+        "geography": "Crawford County, Ohio",
+        "fips": "39033",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "41767",
+        "expansion": "2954",
+        "expansion_share": "7.1",
+        "enrolled": "12506",
+        "share": "29.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Crawford"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39035",
+      "values": {
+        "geography": "Cuyahoga County, Ohio",
+        "fips": "39035",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "1249418",
+        "expansion": "98883",
+        "expansion_share": "7.9",
+        "enrolled": "379137",
+        "share": "30.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Cuyahoga"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39037",
+      "values": {
+        "geography": "Darke County, Ohio",
+        "fips": "39037",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "51655",
+        "expansion": "1844",
+        "expansion_share": "3.6",
+        "enrolled": "10067",
+        "share": "19.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Darke"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39039",
+      "values": {
+        "geography": "Defiance County, Ohio",
+        "fips": "39039",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "38258",
+        "expansion": "1786",
+        "expansion_share": "4.7",
+        "enrolled": "8465",
+        "share": "22.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Defiance"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39041",
+      "values": {
+        "geography": "Delaware County, Ohio",
+        "fips": "39041",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "221160",
+        "expansion": "4315",
+        "expansion_share": "2.0",
+        "enrolled": "19062",
+        "share": "8.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Delaware"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39043",
+      "values": {
+        "geography": "Erie County, Ohio",
+        "fips": "39043",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "74938",
+        "expansion": "4368",
+        "expansion_share": "5.8",
+        "enrolled": "17306",
+        "share": "23.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Erie"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39045",
+      "values": {
+        "geography": "Fairfield County, Ohio",
+        "fips": "39045",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "161289",
+        "expansion": "8243",
+        "expansion_share": "5.1",
+        "enrolled": "35163",
+        "share": "21.8",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Fairfield"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39047",
+      "values": {
+        "geography": "Fayette County, Ohio",
+        "fips": "39047",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "28880",
+        "expansion": "1833",
+        "expansion_share": "6.3",
+        "enrolled": "8379",
+        "share": "29.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Fayette"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39049",
+      "values": {
+        "geography": "Franklin County, Ohio",
+        "fips": "39049",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "1321635",
+        "expansion": "114834",
+        "expansion_share": "8.7",
+        "enrolled": "401765",
+        "share": "30.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Franklin"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39051",
+      "values": {
+        "geography": "Fulton County, Ohio",
+        "fips": "39051",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "42434",
+        "expansion": "1423",
+        "expansion_share": "3.4",
+        "enrolled": "7126",
+        "share": "16.8",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Fulton"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39053",
+      "values": {
+        "geography": "Gallia County, Ohio",
+        "fips": "39053",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "29162",
+        "expansion": "2455",
+        "expansion_share": "8.4",
+        "enrolled": "10126",
+        "share": "34.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Gallia"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39055",
+      "values": {
+        "geography": "Geauga County, Ohio",
+        "fips": "39055",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "95479",
+        "expansion": "2222",
+        "expansion_share": "2.3",
+        "enrolled": "8569",
+        "share": "9.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Geauga"
+      },
+      "locator": "HPIO February 2025 county table; page 1",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39057",
+      "values": {
+        "geography": "Greene County, Ohio",
+        "fips": "39057",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "168531",
+        "expansion": "8398",
+        "expansion_share": "5.0",
+        "enrolled": "31136",
+        "share": "18.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Greene"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39059",
+      "values": {
+        "geography": "Guernsey County, Ohio",
+        "fips": "39059",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "38283",
+        "expansion": "2491",
+        "expansion_share": "6.5",
+        "enrolled": "11397",
+        "share": "29.8",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Guernsey"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39061",
+      "values": {
+        "geography": "Hamilton County, Ohio",
+        "fips": "39061",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "827878",
+        "expansion": "59603",
+        "expansion_share": "7.2",
+        "enrolled": "226796",
+        "share": "27.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Hamilton"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39063",
+      "values": {
+        "geography": "Hancock County, Ohio",
+        "fips": "39063",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "74885",
+        "expansion": "3139",
+        "expansion_share": "4.2",
+        "enrolled": "17089",
+        "share": "22.8",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Hancock"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39065",
+      "values": {
+        "geography": "Hardin County, Ohio",
+        "fips": "39065",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "30527",
+        "expansion": "1547",
+        "expansion_share": "5.1",
+        "enrolled": "7189",
+        "share": "23.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Hardin"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39067",
+      "values": {
+        "geography": "Harrison County, Ohio",
+        "fips": "39067",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "14408",
+        "expansion": "761",
+        "expansion_share": "5.3",
+        "enrolled": "3608",
+        "share": "25.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Harrison"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39069",
+      "values": {
+        "geography": "Henry County, Ohio",
+        "fips": "39069",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "27581",
+        "expansion": "751",
+        "expansion_share": "2.7",
+        "enrolled": "4132",
+        "share": "15.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Henry"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39071",
+      "values": {
+        "geography": "Highland County, Ohio",
+        "fips": "39071",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "43403",
+        "expansion": "2949",
+        "expansion_share": "6.8",
+        "enrolled": "13221",
+        "share": "30.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Highland"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39073",
+      "values": {
+        "geography": "Hocking County, Ohio",
+        "fips": "39073",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "27938",
+        "expansion": "1909",
+        "expansion_share": "6.8",
+        "enrolled": "7940",
+        "share": "28.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Hocking"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39075",
+      "values": {
+        "geography": "Holmes County, Ohio",
+        "fips": "39075",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "44312",
+        "expansion": "721",
+        "expansion_share": "1.6",
+        "enrolled": "3747",
+        "share": "8.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Holmes"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39077",
+      "values": {
+        "geography": "Huron County, Ohio",
+        "fips": "39077",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "58412",
+        "expansion": "3176",
+        "expansion_share": "5.4",
+        "enrolled": "14342",
+        "share": "24.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Huron"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39079",
+      "values": {
+        "geography": "Jackson County, Ohio",
+        "fips": "39079",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "32588",
+        "expansion": "2509",
+        "expansion_share": "7.7",
+        "enrolled": "11273",
+        "share": "34.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Jackson"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39081",
+      "values": {
+        "geography": "Jefferson County, Ohio",
+        "fips": "39081",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "64855",
+        "expansion": "5443",
+        "expansion_share": "8.4",
+        "enrolled": "19771",
+        "share": "30.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Jefferson"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39083",
+      "values": {
+        "geography": "Knox County, Ohio",
+        "fips": "39083",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "62888",
+        "expansion": "2628",
+        "expansion_share": "4.2",
+        "enrolled": "12076",
+        "share": "19.2",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Knox"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39085",
+      "values": {
+        "geography": "Lake County, Ohio",
+        "fips": "39085",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "232101",
+        "expansion": "9845",
+        "expansion_share": "4.2",
+        "enrolled": "37946",
+        "share": "16.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Lake"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39087",
+      "values": {
+        "geography": "Lawrence County, Ohio",
+        "fips": "39087",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "57385",
+        "expansion": "6090",
+        "expansion_share": "10.6",
+        "enrolled": "21576",
+        "share": "37.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Lawrence"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39089",
+      "values": {
+        "geography": "Licking County, Ohio",
+        "fips": "39089",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "180311",
+        "expansion": "8591",
+        "expansion_share": "4.8",
+        "enrolled": "37733",
+        "share": "20.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Licking"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39091",
+      "values": {
+        "geography": "Logan County, Ohio",
+        "fips": "39091",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "46140",
+        "expansion": "2201",
+        "expansion_share": "4.8",
+        "enrolled": "10116",
+        "share": "21.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Logan"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39093",
+      "values": {
+        "geography": "Lorain County, Ohio",
+        "fips": "39093",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "314588",
+        "expansion": "17227",
+        "expansion_share": "5.5",
+        "enrolled": "71899",
+        "share": "22.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Lorain"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39095",
+      "values": {
+        "geography": "Lucas County, Ohio",
+        "fips": "39095",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "428748",
+        "expansion": "34493",
+        "expansion_share": "8.0",
+        "enrolled": "138558",
+        "share": "32.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Lucas"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39097",
+      "values": {
+        "geography": "Madison County, Ohio",
+        "fips": "39097",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "44126",
+        "expansion": "2004",
+        "expansion_share": "4.5",
+        "enrolled": "8822",
+        "share": "20.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Madison"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39099",
+      "values": {
+        "geography": "Mahoning County, Ohio",
+        "fips": "39099",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "227063",
+        "expansion": "21040",
+        "expansion_share": "9.3",
+        "enrolled": "77947",
+        "share": "34.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Mahoning"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39101",
+      "values": {
+        "geography": "Marion County, Ohio",
+        "fips": "39101",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "65145",
+        "expansion": "4909",
+        "expansion_share": "7.5",
+        "enrolled": "21853",
+        "share": "33.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Marion"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39103",
+      "values": {
+        "geography": "Medina County, Ohio",
+        "fips": "39103",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "183049",
+        "expansion": "5897",
+        "expansion_share": "3.2",
+        "enrolled": "22545",
+        "share": "12.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Medina"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39105",
+      "values": {
+        "geography": "Meigs County, Ohio",
+        "fips": "39105",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "22072",
+        "expansion": "1785",
+        "expansion_share": "8.1",
+        "enrolled": "7593",
+        "share": "34.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Meigs"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39107",
+      "values": {
+        "geography": "Mercer County, Ohio",
+        "fips": "39107",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "42438",
+        "expansion": "1112",
+        "expansion_share": "2.6",
+        "enrolled": "5753",
+        "share": "13.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Mercer"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39109",
+      "values": {
+        "geography": "Miami County, Ohio",
+        "fips": "39109",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "109549",
+        "expansion": "4922",
+        "expansion_share": "4.5",
+        "enrolled": "22099",
+        "share": "20.2",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Miami"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39111",
+      "values": {
+        "geography": "Monroe County, Ohio",
+        "fips": "39111",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "13308",
+        "expansion": "916",
+        "expansion_share": "6.9",
+        "enrolled": "3597",
+        "share": "27.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Monroe"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39113",
+      "values": {
+        "geography": "Montgomery County, Ohio",
+        "fips": "39113",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "535528",
+        "expansion": "44295",
+        "expansion_share": "8.3",
+        "enrolled": "169175",
+        "share": "31.6",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Montgomery"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39115",
+      "values": {
+        "geography": "Morgan County, Ohio",
+        "fips": "39115",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "13758",
+        "expansion": "836",
+        "expansion_share": "6.1",
+        "enrolled": "3897",
+        "share": "28.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Morgan"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39117",
+      "values": {
+        "geography": "Morrow County, Ohio",
+        "fips": "39117",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "35214",
+        "expansion": "1587",
+        "expansion_share": "4.5",
+        "enrolled": "7127",
+        "share": "20.2",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Morrow"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39119",
+      "values": {
+        "geography": "Muskingum County, Ohio",
+        "fips": "39119",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "86382",
+        "expansion": "6149",
+        "expansion_share": "7.1",
+        "enrolled": "27010",
+        "share": "31.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Muskingum"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39121",
+      "values": {
+        "geography": "Noble County, Ohio",
+        "fips": "39121",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "14252",
+        "expansion": "647",
+        "expansion_share": "4.5",
+        "enrolled": "2758",
+        "share": "19.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Noble"
+      },
+      "locator": "HPIO February 2025 county table; page 2",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39123",
+      "values": {
+        "geography": "Ottawa County, Ohio",
+        "fips": "39123",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "40161",
+        "expansion": "1466",
+        "expansion_share": "3.7",
+        "enrolled": "6176",
+        "share": "15.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Ottawa"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39125",
+      "values": {
+        "geography": "Paulding County, Ohio",
+        "fips": "39125",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "18800",
+        "expansion": "836",
+        "expansion_share": "4.4",
+        "enrolled": "3975",
+        "share": "21.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Paulding"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39127",
+      "values": {
+        "geography": "Perry County, Ohio",
+        "fips": "39127",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "35474",
+        "expansion": "2553",
+        "expansion_share": "7.2",
+        "enrolled": "11135",
+        "share": "31.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Perry"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39129",
+      "values": {
+        "geography": "Pickaway County, Ohio",
+        "fips": "39129",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "59407",
+        "expansion": "3189",
+        "expansion_share": "5.4",
+        "enrolled": "13372",
+        "share": "22.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Pickaway"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39131",
+      "values": {
+        "geography": "Pike County, Ohio",
+        "fips": "39131",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "27080",
+        "expansion": "2788",
+        "expansion_share": "10.3",
+        "enrolled": "11388",
+        "share": "42.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Pike"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39133",
+      "values": {
+        "geography": "Portage County, Ohio",
+        "fips": "39133",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "161421",
+        "expansion": "8574",
+        "expansion_share": "5.3",
+        "enrolled": "30697",
+        "share": "19.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Portage"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39135",
+      "values": {
+        "geography": "Preble County, Ohio",
+        "fips": "39135",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "40802",
+        "expansion": "2175",
+        "expansion_share": "5.3",
+        "enrolled": "8970",
+        "share": "22.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Preble"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39137",
+      "values": {
+        "geography": "Putnam County, Ohio",
+        "fips": "39137",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "34352",
+        "expansion": "780",
+        "expansion_share": "2.3",
+        "enrolled": "4167",
+        "share": "12.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Putnam"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39139",
+      "values": {
+        "geography": "Richland County, Ohio",
+        "fips": "39139",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "125138",
+        "expansion": "8104",
+        "expansion_share": "6.5",
+        "enrolled": "34619",
+        "share": "27.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Richland"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39141",
+      "values": {
+        "geography": "Ross County, Ohio",
+        "fips": "39141",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "76748",
+        "expansion": "6309",
+        "expansion_share": "8.2",
+        "enrolled": "24841",
+        "share": "32.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Ross"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39143",
+      "values": {
+        "geography": "Sandusky County, Ohio",
+        "fips": "39143",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "58770",
+        "expansion": "3133",
+        "expansion_share": "5.3",
+        "enrolled": "13505",
+        "share": "23.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Sandusky"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39145",
+      "values": {
+        "geography": "Scioto County, Ohio",
+        "fips": "39145",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "73118",
+        "expansion": "8591",
+        "expansion_share": "11.7",
+        "enrolled": "29858",
+        "share": "40.8",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Scioto"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39147",
+      "values": {
+        "geography": "Seneca County, Ohio",
+        "fips": "39147",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "54861",
+        "expansion": "2852",
+        "expansion_share": "5.2",
+        "enrolled": "12997",
+        "share": "23.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Seneca"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39149",
+      "values": {
+        "geography": "Shelby County, Ohio",
+        "fips": "39149",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "48007",
+        "expansion": "1997",
+        "expansion_share": "4.2",
+        "enrolled": "9447",
+        "share": "19.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Shelby"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39151",
+      "values": {
+        "geography": "Stark County, Ohio",
+        "fips": "39151",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "373764",
+        "expansion": "22873",
+        "expansion_share": "6.1",
+        "enrolled": "94554",
+        "share": "25.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Stark"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39153",
+      "values": {
+        "geography": "Summit County, Ohio",
+        "fips": "39153",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "538087",
+        "expansion": "40080",
+        "expansion_share": "7.4",
+        "enrolled": "144940",
+        "share": "26.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Summit"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39155",
+      "values": {
+        "geography": "Trumbull County, Ohio",
+        "fips": "39155",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "201367",
+        "expansion": "15922",
+        "expansion_share": "7.9",
+        "enrolled": "60627",
+        "share": "30.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Trumbull"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39157",
+      "values": {
+        "geography": "Tuscarawas County, Ohio",
+        "fips": "39157",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "92585",
+        "expansion": "4298",
+        "expansion_share": "4.6",
+        "enrolled": "20715",
+        "share": "22.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Tuscawaras"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39159",
+      "values": {
+        "geography": "Union County, Ohio",
+        "fips": "39159",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "65293",
+        "expansion": "1850",
+        "expansion_share": "2.8",
+        "enrolled": "7803",
+        "share": "12.0",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Union"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39161",
+      "values": {
+        "geography": "Van Wert County, Ohio",
+        "fips": "39161",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "28824",
+        "expansion": "1264",
+        "expansion_share": "4.4",
+        "enrolled": "5884",
+        "share": "20.4",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Van Wert"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39163",
+      "values": {
+        "geography": "Vinton County, Ohio",
+        "fips": "39163",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "12686",
+        "expansion": "925",
+        "expansion_share": "7.3",
+        "enrolled": "3787",
+        "share": "29.9",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Vinton"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39165",
+      "values": {
+        "geography": "Warren County, Ohio",
+        "fips": "39165",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "246364",
+        "expansion": "7040",
+        "expansion_share": "2.9",
+        "enrolled": "30889",
+        "share": "12.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Warren"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39167",
+      "values": {
+        "geography": "Washington County, Ohio",
+        "fips": "39167",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "59318",
+        "expansion": "3690",
+        "expansion_share": "6.2",
+        "enrolled": "15122",
+        "share": "25.5",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Washington"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39169",
+      "values": {
+        "geography": "Wayne County, Ohio",
+        "fips": "39169",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "116618",
+        "expansion": "4753",
+        "expansion_share": "4.1",
+        "enrolled": "20233",
+        "share": "17.3",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Wayne"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39171",
+      "values": {
+        "geography": "Williams County, Ohio",
+        "fips": "39171",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "36862",
+        "expansion": "1626",
+        "expansion_share": "4.4",
+        "enrolled": "7785",
+        "share": "21.1",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Williams"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39173",
+      "values": {
+        "geography": "Wood County, Ohio",
+        "fips": "39173",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "131795",
+        "expansion": "3921",
+        "expansion_share": "3.0",
+        "enrolled": "18011",
+        "share": "13.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Wood"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    },
+    {
+      "id": "assistance-medicaid-39175",
+      "values": {
+        "geography": "Wyandot County, Ohio",
+        "fips": "39175",
+        "period": "Snapshot retrieved 2025-02-19; enrollment month unstated",
+        "source_url": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+        "population": "21699",
+        "expansion": "839",
+        "expansion_share": "3.9",
+        "enrolled": "4279",
+        "share": "19.7",
+        "population_period": "2019–2023 ACS five-year",
+        "source_county": "Wyandot"
+      },
+      "locator": "HPIO February 2025 county table; page 3",
+      "note": "The source reports retrieval date, not a named enrollment month. Monthly ODM data can change for retroactive eligibility. The printed county spelling is retained alongside canonical geography."
+    }
+  ]
+}

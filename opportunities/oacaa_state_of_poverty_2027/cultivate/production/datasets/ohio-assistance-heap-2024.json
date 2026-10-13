@@ -1,0 +1,1415 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-assistance-heap-2024",
+  "title": "HEAP: county applications and published household shares",
+  "description": "The actual OHFA public CSV with its literal measure labels.",
+  "publicationPeriod": "Source vintages retained separately",
+  "dataPeriod": "2024",
+  "geography": "All 88 Ohio counties",
+  "methodology": "Published counts are labeled applications. The narrative uses household participation; the retained guide makes the distinction explicit. Published shares retain their displayed precision; no denominator is reconstructed.",
+  "source": {
+    "title": "OHFA Housing Needs Assessment: HHHEAP county CSV",
+    "url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+    "publisher": "Ohio Housing Finance Agency / Ohio Department of Development",
+    "locator": "RentUtilitiesHousingInstabilityMaps / HHHEAP",
+    "retrievedAt": "2026-10-13",
+    "note": "Source context cites ACS five-year DP04; exact denominator release span is not specified.",
+    "rights": "Attributed statistical facts; original publisher rights remain with its source."
+  },
+  "columns": [
+    {
+      "key": "geography",
+      "label": "Geography",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "fips",
+      "label": "FIPS",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "period",
+      "label": "Measurement period",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "source_url",
+      "label": "Source",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "applications",
+      "label": "Applications (source label)",
+      "kind": "integer",
+      "role": "value",
+      "unit": "applications",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "share",
+      "label": "Published household share",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "denominator",
+      "label": "Denominator source",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    },
+    {
+      "key": "source_label",
+      "label": "Original measure label",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "",
+      "definition": ""
+    }
+  ],
+  "rows": [
+    {
+      "id": "assistance-heap-39001",
+      "values": {
+        "geography": "Adams County, Ohio",
+        "fips": "39001",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1958",
+        "share": "19.14",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Adams",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39003",
+      "values": {
+        "geography": "Allen County, Ohio",
+        "fips": "39003",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3280",
+        "share": "8.01",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Allen",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39005",
+      "values": {
+        "geography": "Ashland County, Ohio",
+        "fips": "39005",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "552",
+        "share": "2.67",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Ashland",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39007",
+      "values": {
+        "geography": "Ashtabula County, Ohio",
+        "fips": "39007",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "4169",
+        "share": "10.70",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Ashtabula",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39009",
+      "values": {
+        "geography": "Athens County, Ohio",
+        "fips": "39009",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2491",
+        "share": "10.96",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Athens",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39011",
+      "values": {
+        "geography": "Auglaize County, Ohio",
+        "fips": "39011",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "590",
+        "share": "3.11",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Auglaize",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39013",
+      "values": {
+        "geography": "Belmont County, Ohio",
+        "fips": "39013",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2089",
+        "share": "7.90",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Belmont",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39015",
+      "values": {
+        "geography": "Brown County, Ohio",
+        "fips": "39015",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1309",
+        "share": "7.63",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Brown",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39017",
+      "values": {
+        "geography": "Butler County, Ohio",
+        "fips": "39017",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3569",
+        "share": "2.46",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Butler",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39019",
+      "values": {
+        "geography": "Carroll County, Ohio",
+        "fips": "39019",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "726",
+        "share": "6.33",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Carroll",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39021",
+      "values": {
+        "geography": "Champaign County, Ohio",
+        "fips": "39021",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "978",
+        "share": "6.30",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Champaign",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39023",
+      "values": {
+        "geography": "Clark County, Ohio",
+        "fips": "39023",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3266",
+        "share": "5.90",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Clark",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39025",
+      "values": {
+        "geography": "Clermont County, Ohio",
+        "fips": "39025",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1697",
+        "share": "2.01",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Clermont",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39027",
+      "values": {
+        "geography": "Clinton County, Ohio",
+        "fips": "39027",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1341",
+        "share": "8.11",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Clinton",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39029",
+      "values": {
+        "geography": "Columbiana County, Ohio",
+        "fips": "39029",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3803",
+        "share": "9.19",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Columbiana",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39031",
+      "values": {
+        "geography": "Coshocton County, Ohio",
+        "fips": "39031",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1568",
+        "share": "10.55",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Coshocton",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39033",
+      "values": {
+        "geography": "Crawford County, Ohio",
+        "fips": "39033",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1688",
+        "share": "9.32",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Crawford",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39035",
+      "values": {
+        "geography": "Cuyahoga County, Ohio",
+        "fips": "39035",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "24820",
+        "share": "4.48",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Cuyahoga",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39037",
+      "values": {
+        "geography": "Darke County, Ohio",
+        "fips": "39037",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "917",
+        "share": "4.30",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Darke",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39039",
+      "values": {
+        "geography": "Defiance County, Ohio",
+        "fips": "39039",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1089",
+        "share": "7.08",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Defiance",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39041",
+      "values": {
+        "geography": "Delaware County, Ohio",
+        "fips": "39041",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1060",
+        "share": "1.32",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Delaware",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39043",
+      "values": {
+        "geography": "Erie County, Ohio",
+        "fips": "39043",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1883",
+        "share": "5.86",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Erie",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39045",
+      "values": {
+        "geography": "Fairfield County, Ohio",
+        "fips": "39045",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2791",
+        "share": "4.65",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Fairfield",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39047",
+      "values": {
+        "geography": "Fayette County, Ohio",
+        "fips": "39047",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1520",
+        "share": "13.06",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Fayette",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39049",
+      "values": {
+        "geography": "Franklin County, Ohio",
+        "fips": "39049",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "25962",
+        "share": "4.74",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Franklin",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39051",
+      "values": {
+        "geography": "Fulton County, Ohio",
+        "fips": "39051",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "824",
+        "share": "4.88",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Fulton",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39053",
+      "values": {
+        "geography": "Gallia County, Ohio",
+        "fips": "39053",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1404",
+        "share": "12.42",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Gallia",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39055",
+      "values": {
+        "geography": "Geauga County, Ohio",
+        "fips": "39055",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "878",
+        "share": "2.47",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Geauga",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39057",
+      "values": {
+        "geography": "Greene County, Ohio",
+        "fips": "39057",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1796",
+        "share": "2.66",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Greene",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39059",
+      "values": {
+        "geography": "Guernsey County, Ohio",
+        "fips": "39059",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1758",
+        "share": "10.82",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Guernsey",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39061",
+      "values": {
+        "geography": "Hamilton County, Ohio",
+        "fips": "39061",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "6850",
+        "share": "1.95",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Hamilton",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39063",
+      "values": {
+        "geography": "Hancock County, Ohio",
+        "fips": "39063",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2001",
+        "share": "6.33",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Hancock",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39065",
+      "values": {
+        "geography": "Hardin County, Ohio",
+        "fips": "39065",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1011",
+        "share": "8.63",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Hardin",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39067",
+      "values": {
+        "geography": "Harrison County, Ohio",
+        "fips": "39067",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "687",
+        "share": "11.60",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Harrison",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39069",
+      "values": {
+        "geography": "Henry County, Ohio",
+        "fips": "39069",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "510",
+        "share": "4.54",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Henry",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39071",
+      "values": {
+        "geography": "Highland County, Ohio",
+        "fips": "39071",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1918",
+        "share": "11.41",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Highland",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39073",
+      "values": {
+        "geography": "Hocking County, Ohio",
+        "fips": "39073",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1310",
+        "share": "11.33",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Hocking",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39075",
+      "values": {
+        "geography": "Holmes County, Ohio",
+        "fips": "39075",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "354",
+        "share": "2.66",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Holmes",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39077",
+      "values": {
+        "geography": "Huron County, Ohio",
+        "fips": "39077",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1441",
+        "share": "6.15",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Huron",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39079",
+      "values": {
+        "geography": "Jackson County, Ohio",
+        "fips": "39079",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1835",
+        "share": "14.48",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Jackson",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39081",
+      "values": {
+        "geography": "Jefferson County, Ohio",
+        "fips": "39081",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2594",
+        "share": "9.56",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Jefferson",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39083",
+      "values": {
+        "geography": "Knox County, Ohio",
+        "fips": "39083",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1462",
+        "share": "6.24",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Knox",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39085",
+      "values": {
+        "geography": "Lake County, Ohio",
+        "fips": "39085",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2451",
+        "share": "2.44",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Lake",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39087",
+      "values": {
+        "geography": "Lawrence County, Ohio",
+        "fips": "39087",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3557",
+        "share": "15.81",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Lawrence",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39089",
+      "values": {
+        "geography": "Licking County, Ohio",
+        "fips": "39089",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3357",
+        "share": "4.91",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Licking",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39091",
+      "values": {
+        "geography": "Logan County, Ohio",
+        "fips": "39091",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1402",
+        "share": "7.17",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Logan",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39093",
+      "values": {
+        "geography": "Lorain County, Ohio",
+        "fips": "39093",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "5862",
+        "share": "4.66",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Lorain",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39095",
+      "values": {
+        "geography": "Lucas County, Ohio",
+        "fips": "39095",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "14275",
+        "share": "7.84",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Lucas",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39097",
+      "values": {
+        "geography": "Madison County, Ohio",
+        "fips": "39097",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "923",
+        "share": "6.01",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Madison",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39099",
+      "values": {
+        "geography": "Mahoning County, Ohio",
+        "fips": "39099",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "8322",
+        "share": "8.48",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Mahoning",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39101",
+      "values": {
+        "geography": "Marion County, Ohio",
+        "fips": "39101",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2651",
+        "share": "10.81",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Marion",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39103",
+      "values": {
+        "geography": "Medina County, Ohio",
+        "fips": "39103",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1655",
+        "share": "2.28",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Medina",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39105",
+      "values": {
+        "geography": "Meigs County, Ohio",
+        "fips": "39105",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1271",
+        "share": "14.32",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Meigs",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39107",
+      "values": {
+        "geography": "Mercer County, Ohio",
+        "fips": "39107",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "540",
+        "share": "3.32",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Mercer",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39109",
+      "values": {
+        "geography": "Miami County, Ohio",
+        "fips": "39109",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2121",
+        "share": "4.76",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Miami",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39111",
+      "values": {
+        "geography": "Monroe County, Ohio",
+        "fips": "39111",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "528",
+        "share": "9.58",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Monroe",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39113",
+      "values": {
+        "geography": "Montgomery County, Ohio",
+        "fips": "39113",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "8865",
+        "share": "3.85",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Montgomery",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39115",
+      "values": {
+        "geography": "Morgan County, Ohio",
+        "fips": "39115",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1033",
+        "share": "18.34",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Morgan",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39117",
+      "values": {
+        "geography": "Morrow County, Ohio",
+        "fips": "39117",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "876",
+        "share": "6.51",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Morrow",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39119",
+      "values": {
+        "geography": "Muskingum County, Ohio",
+        "fips": "39119",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3568",
+        "share": "10.42",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Muskingum",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39121",
+      "values": {
+        "geography": "Noble County, Ohio",
+        "fips": "39121",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "409",
+        "share": "8.92",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Noble",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39123",
+      "values": {
+        "geography": "Ottawa County, Ohio",
+        "fips": "39123",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "699",
+        "share": "3.86",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Ottawa",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39125",
+      "values": {
+        "geography": "Paulding County, Ohio",
+        "fips": "39125",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "616",
+        "share": "8.17",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Paulding",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39127",
+      "values": {
+        "geography": "Perry County, Ohio",
+        "fips": "39127",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1846",
+        "share": "13.83",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Perry",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39129",
+      "values": {
+        "geography": "Pickaway County, Ohio",
+        "fips": "39129",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1551",
+        "share": "7.24",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Pickaway",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39131",
+      "values": {
+        "geography": "Pike County, Ohio",
+        "fips": "39131",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2304",
+        "share": "21.30",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Pike",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39133",
+      "values": {
+        "geography": "Portage County, Ohio",
+        "fips": "39133",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3321",
+        "share": "5.14",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Portage",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39135",
+      "values": {
+        "geography": "Preble County, Ohio",
+        "fips": "39135",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "935",
+        "share": "5.58",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Preble",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39137",
+      "values": {
+        "geography": "Putnam County, Ohio",
+        "fips": "39137",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "550",
+        "share": "4.18",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Putnam",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39139",
+      "values": {
+        "geography": "Richland County, Ohio",
+        "fips": "39139",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3647",
+        "share": "7.28",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Richland",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39141",
+      "values": {
+        "geography": "Ross County, Ohio",
+        "fips": "39141",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "3678",
+        "share": "12.50",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Ross",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39143",
+      "values": {
+        "geography": "Sandusky County, Ohio",
+        "fips": "39143",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1389",
+        "share": "5.68",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Sandusky",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39145",
+      "values": {
+        "geography": "Scioto County, Ohio",
+        "fips": "39145",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "5558",
+        "share": "19.41",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Scioto",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39147",
+      "values": {
+        "geography": "Seneca County, Ohio",
+        "fips": "39147",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1309",
+        "share": "5.92",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Seneca",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39149",
+      "values": {
+        "geography": "Shelby County, Ohio",
+        "fips": "39149",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1124",
+        "share": "5.98",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Shelby",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39151",
+      "values": {
+        "geography": "Stark County, Ohio",
+        "fips": "39151",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "6946",
+        "share": "4.47",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Stark",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39153",
+      "values": {
+        "geography": "Summit County, Ohio",
+        "fips": "39153",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "10676",
+        "share": "4.65",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Summit",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39155",
+      "values": {
+        "geography": "Trumbull County, Ohio",
+        "fips": "39155",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "4323",
+        "share": "5.02",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Trumbull",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39157",
+      "values": {
+        "geography": "Tuscarawas County, Ohio",
+        "fips": "39157",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2098",
+        "share": "5.50",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Tuscarawas",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39159",
+      "values": {
+        "geography": "Union County, Ohio",
+        "fips": "39159",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "689",
+        "share": "2.93",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Union",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39161",
+      "values": {
+        "geography": "Van Wert County, Ohio",
+        "fips": "39161",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "844",
+        "share": "7.24",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Van Wert",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39163",
+      "values": {
+        "geography": "Vinton County, Ohio",
+        "fips": "39163",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "964",
+        "share": "18.46",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Vinton",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39165",
+      "values": {
+        "geography": "Warren County, Ohio",
+        "fips": "39165",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1412",
+        "share": "1.56",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Warren",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39167",
+      "values": {
+        "geography": "Washington County, Ohio",
+        "fips": "39167",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2255",
+        "share": "9.06",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Washington",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39169",
+      "values": {
+        "geography": "Wayne County, Ohio",
+        "fips": "39169",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "2205",
+        "share": "4.99",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Wayne",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39171",
+      "values": {
+        "geography": "Williams County, Ohio",
+        "fips": "39171",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "749",
+        "share": "4.85",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Williams",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39173",
+      "values": {
+        "geography": "Wood County, Ohio",
+        "fips": "39173",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "1424",
+        "share": "2.63",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Wood",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    },
+    {
+      "id": "assistance-heap-39175",
+      "values": {
+        "geography": "Wyandot County, Ohio",
+        "fips": "39175",
+        "period": "2024",
+        "source_url": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+        "applications": "663",
+        "share": "7.31",
+        "denominator": "ACS five-year households, DP04; exact release span unstated",
+        "source_label": "2024 HEAP Applications by County"
+      },
+      "locator": "Published HHHEAP CSV; Wyandot",
+      "note": "The CSV names applications; the accompanying narrative calls the measure participating households. Preserve this definitional distinction. No approved, paid or unique-household count is inferred."
+    }
+  ]
+}
