@@ -18,9 +18,9 @@ PACKAGES = ('setuptools', 'wheel', 'setuptools_scm', 'Cython', 'numpy', 'GDAL',
 PINS = {'ndr': 'f518b2867d4a327675fcb1c9b4ba56f29b12188d',
         'sdr': '0cac27add172011df367ff8026427dbbdbcda5b2'}
 
-def command(argv, *, text=None, output_limit=16000):
+def command(argv, *, text=None, output_limit=16000, timeout=30):
     try:
-        p = subprocess.run(argv, input=text, text=True, capture_output=True, timeout=30)
+        p = subprocess.run(argv, input=text, text=True, capture_output=True, timeout=timeout)
         return {'ok': p.returncode == 0, 'return_code': p.returncode,
                 'stdout': p.stdout[-output_limit:], 'stderr': p.stderr[-output_limit:]}
     except (OSError, subprocess.TimeoutExpired) as e:
@@ -51,10 +51,14 @@ def report():
             out['omissions'].append({'check': name, 'scopes': scopes, 'action': action})
     add('python_supported', sys.version_info >= (3, 10), sys.version.split()[0],
         ['pygeoprocessing_build', 'invest_build', 'runtime'], 'Use Python >=3.10 for InVEST3.20.')
+    for name in ['setuptools','setuptools_scm']:
+        add('pygeoprocessing_build_'+name, bool(versions[name]), versions[name],
+            ['pygeoprocessing_build'], 'Provide '+name+' in the selected build interpreter.')
     for name, minimum in [('setuptools', (64,0,0)), ('setuptools_scm',(8,0,0)),
                           ('Cython',(3,0,0)), ('numpy',(2,0,0))]:
         add('build_version_'+name, at_least(versions[name],minimum), versions[name],
-            ['pygeoprocessing_build','invest_build'], 'Provide '+name+'>='+'.'.join(map(str,minimum))+' in the selected build interpreter.')
+            ['invest_build'] if name in ('setuptools','setuptools_scm') else ['pygeoprocessing_build','invest_build'],
+            'Provide '+name+'>='+'.'.join(map(str,minimum))+' in the selected build interpreter.')
     add('build_wheel', bool(versions['wheel']), versions['wheel'],
         ['pygeoprocessing_build','invest_build'], 'Provide wheel in the selected build interpreter.')
     config = shutil.which('gdal-config')
@@ -66,11 +70,15 @@ def report():
                                     for k in ['--version','--cflags','--libs']))
     add('gdal_build_configuration',config_ok,details,['pygeoprocessing_build','invest_build'],
         'Provide gdal-config, GDAL development headers and the matching link library; osgeo alone is insufficient.')
-    compiler = shutil.which(os.environ.get('CXX','c++'))
-    compile_result = {'executable': compiler}
+    try:
+        compiler_argv = shlex.split(os.environ.get('CXX','c++'))
+    except ValueError:
+        compiler_argv = []
+    compiler = shutil.which(compiler_argv[0]) if compiler_argv else None
+    compile_result = {'executable': compiler, 'arguments': compiler_argv[1:]}
     if compiler and config_ok:
         flags = shlex.split(details['--cflags']['stdout'].strip())
-        compile_result['syntax'] = command([compiler,'-std=c++20','-fsyntax-only','-x','c++',*flags,'-'],
+        compile_result['syntax'] = command([compiler,*compiler_argv[1:],'-std=c++20','-fsyntax-only','-x','c++',*flags,'-'],
             text='#include <gdal.h>\n#include <concepts>\nstatic_assert(std::same_as<int,int>);\n')
     add('gdal_headers_cpp20', bool(compile_result.get('syntax',{}).get('ok')),compile_result,
         ['pygeoprocessing_build','invest_build'], 'Provide a C++20 compiler and usable gdal.h include flags. This syntax check does not link a library.')
@@ -120,7 +128,10 @@ def main(argv=None):
     parser.add_argument('--output',type=Path,help='write only this requested JSON report')
     args = parser.parse_args(argv)
     if args.python:
-        result = command([args.python,'-B',str(Path(__file__).resolve())],output_limit=1024*1024)
+        # The selected interpreter performs multiple independently bounded checks.
+        # Its outer budget must permit their complete report, including timeouts.
+        result = command([args.python,'-B',str(Path(__file__).resolve())],
+                         output_limit=1024*1024,timeout=900)
         if not result['ok']:
             parser.error('Selected interpreter preflight failed: '+json.dumps(result))
         data = json.loads(result['stdout'])
