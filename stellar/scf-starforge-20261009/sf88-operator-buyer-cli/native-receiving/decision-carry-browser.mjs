@@ -25,6 +25,15 @@ async function fileIdentity(path){
   for await(const bytes of createReadStream(path))hash.update(bytes);
   return {bytes:info.size,sha256:hash.digest('hex')};
 }
+async function durableFile(path){
+  const handle=await open(path,'r');
+  try{await handle.sync();}finally{await handle.close();}
+  await durableDirectory(dirname(path));
+}
+async function durableDirectory(path){
+  const directory=await open(path,'r');
+  try{await directory.sync();}finally{await directory.close();}
+}
 async function maybeJson(path){
   try{return JSON.parse(await readFile(path,'utf8'));}
   catch(error){if(error.code==='ENOENT')return null;throw error;}
@@ -86,7 +95,16 @@ export async function runDecisionCarryBrowserReceiving({url,input,outputDirector
   if(prior)need(prior.schema==='stellar-forge.decision-carry.browser-receiving.v1'&&canonical(prior.input)===canonical(input),
     'Continue the same complete browser receiving input and directory.');
   if(prior?.status==='COMPLETE'&&!prior.close_error&&prior.result){
-    const manifest=await fileIdentity(join(prior.result.download_directory,'manifest.json'));
+    need(prior.result.download_directory===join(output,'handover')&&Array.isArray(prior.result.files)&&prior.result.files.length>0,
+      'Reopen the original complete receiving directory.');
+    for(const file of prior.result.files){
+      const path=await regularParents(output,'handover/'+safeRelative(file.name));
+      need(file.path===path,'The completed handover file path changed: '+file.name);
+      const actual=await fileIdentity(path);
+      need(actual.bytes===file.bytes&&actual.sha256===file.sha256,'The completed native handover file changed: '+file.name);
+      await durableFile(path);
+    }
+    const manifest=await fileIdentity(join(output,'handover','manifest.json'));
     need(manifest.sha256===prior.result.manifest_sha256,'The completed native handover manifest changed.');
     return prior.result;
   }
@@ -170,6 +188,7 @@ export async function runDecisionCarryBrowserReceiving({url,input,outputDirector
       const actual=await fileIdentity(path);
       need(actual.bytes===known.bytes&&actual.sha256===known.sha256,'The completed receiving file changed: '+name);
       if(expected)need(actual.bytes===expected.bytes&&actual.sha256===expected.sha256,'The retained file differs from the native export: '+name);
+      await durableFile(path);
       return path;
     }
     const temporary=path+'.download-'+randomUUID();
@@ -183,7 +202,9 @@ export async function runDecisionCarryBrowserReceiving({url,input,outputDirector
     const actual=await fileIdentity(temporary);
     if(expected)need(actual.bytes===expected.bytes&&actual.sha256===expected.sha256,
       'The complete downloaded file differs from the native manifest: '+name);
+    await durableFile(temporary);
     await rename(temporary,path);
+    await durableDirectory(dirname(path));
     const descriptor={path:name,suggested_filename:item.suggestedFilename(),...actual};
     if(expected)journal.downloads[name]=descriptor;else journal.artifacts[name]=descriptor;
     await persist();return path;
