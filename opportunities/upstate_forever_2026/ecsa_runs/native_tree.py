@@ -34,8 +34,14 @@ def _directories(names, values):
 
 
 def capture_tree(store: RunStore, files: dict[str, str | Path], *,
-                 directories: tuple[str, ...] = ()) -> dict:
+                 directories: tuple[str, ...] = (),
+                 expected: dict[str, dict] | None = None) -> dict:
     declared, _ = _directories(list(files), directories)
+    if expected is not None and not isinstance(expected, dict):
+        raise TypeError('Expected native files must be a descriptor mapping')
+    expected = expected or {}
+    if set(expected).difference(files):
+        raise ValueError('A declared original native file is absent from its capture')
     members = []
     for name, source in sorted(files.items()):
         relative = safe_relative(name).as_posix()
@@ -44,10 +50,7 @@ def capture_tree(store: RunStore, files: dict[str, str | Path], *,
         path = Path(source)
         if path.is_symlink() or not path.is_file():
             raise ValueError(f'Native member must be an ordinary file: {name}')
-        if path.parent.resolve() == (store.root / 'blobs').resolve() and len(path.name) == 64:
-            sha, size = path.name, store.verify_blob(path.name)
-        else:
-            sha, size = store.put_file(path)
+        sha, size = store.put_file(path, expected=expected.get(name))
         members.append({'path': name, 'sha256': sha, 'bytes': size})
     result = {'schema': 'ecsa.native-workspace-tree/v1', 'files': members}
     if declared:
