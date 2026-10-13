@@ -1,0 +1,40 @@
+{
+  "_comment": "Prefix map for the DCAT-US 3.0 RDF binding. Every entry records where it came from. The baseline is the only context DCAT-US has ever published (DOI-DO/dcat-us@main:context/dcat-us-3.0.jsonld, HTTP 200, 48311 bytes, retrieved 2026-08-20). Three entries are corrected; each correction carries its evidence and can be reverted with --literal-namespaces.",
+  "prefixes": {
+    "adms": {"iri": "http://www.w3.org/ns/adms#", "source": "legacy-context"},
+    "cnt": {"iri": "http://www.w3.org/2011/content#", "source": "legacy-context"},
+    "dcat": {"iri": "http://www.w3.org/ns/dcat#", "source": "legacy-context"},
+    "dc": {"iri": "http://purl.org/dc/elements/1.1/", "source": "added", "note": "Used by Document.publisher (dc:publisher). Absent from the legacy context, so a document using it could not be expanded at all."},
+    "dcterms": {"iri": "http://purl.org/dc/terms/", "source": "legacy-context"},
+    "dqv": {"iri": "http://www.w3.org/ns/dqv#", "source": "legacy-context"},
+    "foaf": {"iri": "http://xmlns.com/foaf/0.1/", "source": "legacy-context"},
+    "locn": {"iri": "http://www.w3.org/ns/locn#", "source": "legacy-context"},
+    "org": {
+      "iri": "http://www.w3.org/ns/org#",
+      "source": "corrected",
+      "legacy": "http://www.w3c.org/ns/org#",
+      "note": "The W3C Organization Ontology declares its namespace as http://www.w3.org/ns/org# (fetched from https://www.w3.org/ns/org, Turtle: '@prefix org: <http://www.w3.org/ns/org#>'). The legacy context says www.w3c.org, a different host. It redirects in a browser, so the error is invisible to a human, but in RDF the two produce distinct IRIs and org:Organization minted from the legacy value does not join to the canonical class."
+    },
+    "prov": {"iri": "http://www.w3.org/ns/prov#", "source": "legacy-context"},
+    "rdf": {"iri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#", "source": "legacy-context"},
+    "rdfs": {"iri": "http://www.w3.org/2000/01/rdf-schema#", "source": "legacy-context"},
+    "schema": {"iri": "http://schema.org/", "source": "legacy-context"},
+    "sdmx-attribute": {"iri": "http://purl.org/linked-data/sdmx/2009/attribute#", "source": "legacy-context"},
+    "skos": {"iri": "http://www.w3.org/2004/02/skos/core#", "source": "legacy-context"},
+    "spdx": {"iri": "http://spdx.org/rdf/terms#", "source": "legacy-context"},
+    "vcard": {"iri": "http://www.w3.org/2006/vcard/ns#", "source": "legacy-context"},
+    "xsd": {"iri": "http://www.w3.org/2001/XMLSchema#", "source": "added", "note": "Needed for datatype coercion; the legacy context omits it."},
+    "dcat-us": {
+      "iri": "http://resources.data.gov/ontology/dcat-us#",
+      "source": "corrected",
+      "legacy": "http://data.resources.gov/ontology/dcat-us#",
+      "note": "data.resources.gov does not resolve (DNS failure). resources.data.gov returns HTTP 200 and is the host the JSON Schema $id values use. Commit d5cd9531 in the predecessor repository, 'replace data.resources.gov to resources.data.gov in all files', did not reach the context. Only the host is corrected here; the scheme and path are left as published."
+    },
+    "dcat-us-shp": {
+      "iri": "http://resources.data.gov/shapes/dcat-us#",
+      "source": "corrected",
+      "legacy": "http://data.resources.gov/shapes/dcat-us#",
+      "note": "Same transposition as dcat-us."
+    }
+  }
+}

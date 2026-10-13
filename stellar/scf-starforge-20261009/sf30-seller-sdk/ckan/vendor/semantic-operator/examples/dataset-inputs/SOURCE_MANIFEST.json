@@ -1,0 +1,117 @@
+{
+  "schema": "commons-semantic-dataset-source-closure/1",
+  "repository": "woahwhattheheck/commons",
+  "root": "revenue/semantic_interoperability_operator",
+  "files": [
+    {
+      "path": "semantic_operator/dataset_engine.py",
+      "git_blob": "1e679d4208c18f8be86341119d056a9fbe30af17",
+      "bytes": 60633,
+      "sha256": "5d039e3e59dd6be9974fe321f3e22c02583d35d00d4f48e14dcd8e689a9c900d",
+      "native_readback": "exact"
+    },
+    {
+      "path": "DATASET_ENGINE.md",
+      "git_blob": "ea858da97414fb06f869752606f7a51ac3fb4936",
+      "bytes": 20405,
+      "sha256": "6e5e71f549b7d95f5e93d025ade9a3767faa766d1881b81a3365dcc5abe27b85",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/DATASET_ENGINE_OPERATION.py",
+      "git_blob": "19c071f3e9071226a150518c1026a728998ce59a",
+      "bytes": 20224,
+      "sha256": "dc13c0310d2a46e8f385fd982e867e78129d021e84a4a0de5d0f5ca26ef7fa85",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/baseline.trig",
+      "git_blob": "0f8a7d19cd8e59781d1e62ec460e75793bba2f41",
+      "bytes": 1293,
+      "sha256": "4902fdd321fe8dcefa83cbb20c48265146e553b34bd27c5ac0b1b6bb08ace7a1",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/corrected.trig",
+      "git_blob": "b353cc15da3faa333e0f8cc906efabd06c972713",
+      "bytes": 1450,
+      "sha256": "215c6d835636997eaba1715150ddbc334ed6925f587e96b2a69dfff05a1f4e8b",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/shapes.ttl",
+      "git_blob": "8ee0d9f6a76a5dca90ef4a01121a124dbd36df64",
+      "bytes": 595,
+      "sha256": "36e9c3bd6ae647a3191d15093613f258b0e40551c928224c62c6b478d3c72c17",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/mapped-rows.csv",
+      "git_blob": "67218acfa3b84ef39786983416ef2bd037613c69",
+      "bytes": 44,
+      "sha256": "30eee97dc4120b4a0d37d971bde049916cbac42f1afcc30cb182f8d7e066fa47",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/document-a.nt",
+      "git_blob": "d3541420462a12a15a1c26cafc3bae562b3d9862",
+      "bytes": 157,
+      "sha256": "716bb1f851d1a09063f4df8a611ee110a042740fbd1886c2adc038d6ee8b0360",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/document-b.nt",
+      "git_blob": "1940dadfe6e0722d85e2c6fb348f830359da3a14",
+      "bytes": 158,
+      "sha256": "6469ca97ba486a4b7db274b20b966f05769c7bb5a2b71c620adca4626e14a638",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/local-dataset.jsonld",
+      "git_blob": "b5ac6a176a7a2427066fc0f8a22dccda3251917f",
+      "bytes": 585,
+      "sha256": "250695b60d0faa3eafe13a01562abb4ec482e899e64adec86ec48519700240f7",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/symmetric-empty.trig",
+      "git_blob": "235f77f654a46373dfca461c0b8d6773c1ca4884",
+      "bytes": 94,
+      "sha256": "18e7eee9ca6d32ee994c15cda6b8bf6f5a71dea1cd7eed3299f231f61b8ad937",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/symmetric-empty-relabelled.trig",
+      "git_blob": "e8b9f9f2702e77f576ef24e305cf6daaa3a8d573",
+      "bytes": 95,
+      "sha256": "25d0dacc6568f6a0e7c654de3f6c08cfdd0e513dd93e337186b7d075d6616ea8",
+      "native_readback": "exact"
+    },
+    {
+      "path": "examples/dataset-inputs/receiving-inputs.json",
+      "git_blob": "89de57fa2e479ee971eb0ed87ae999ff8cce4d6e",
+      "bytes": 5305,
+      "sha256": "fcf0969ce4d7303ff6f9646f4df02007af18cfbca854c8f9069178771f07c3f6",
+      "native_readback": "exact"
+    }
+  ],
+  "original_reference": {
+    "path": "reference/w3c/examples/conformance-standards.trig",
+    "git_blob": "dcac9db94bd3d95dd0b0f20f85d8f5c239dc4321",
+    "sha256": "3b3e4c0a851d8d9811f5948110fb8d79dc2521bff4434b8aae6d2ca0627fe033",
+    "bytes": 7853,
+    "changed": false
+  },
+  "operation": {
+    "command": "python3 examples/DATASET_ENGINE_OPERATION.py --output /absolute/new-operation",
+    "resume": "Add --resume for the same retained operation directory.",
+    "inputs": "examples/dataset-inputs/receiving-inputs.json",
+    "state": "Authored and source-readback verified; no execution result is claimed in this source manifest."
+  },
+  "canonicalization": {
+    "algorithm": "URDNA2015",
+    "implementation": "PyLD",
+    "version": "3.3.0",
+    "profile": "commons-semantic-dataset-inventory/1"
+  }
+}

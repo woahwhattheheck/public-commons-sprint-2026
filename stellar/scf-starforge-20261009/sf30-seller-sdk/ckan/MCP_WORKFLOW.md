@@ -11,6 +11,11 @@ The [workbench guide](README.md) explains the operator interface and source
 semantics. The [publisher guide](publisher/README.md) describes the portable
 merchant and original SF82/SF88 interfaces.
 
+The [complete workspace transfer](AGENT_WORKSPACE_TRANSFER.md) adds five native
+archive/receiving tools. The [reviewed refresh workflow](REVIEWED_REFRESH.md)
+adds seven complete comparison, preview, file and decision tools. Both operate
+on this same project owner and retained history.
+
 ## Host setup
 
 Use the existing Linux runtime with Node 24 or newer, util-linux `flock`, and
@@ -143,7 +148,7 @@ running CKAN CLI/server before opening that directory through MCP.
 
 ## Tool map
 
-The CKAN family contains 28 tools. The ordinary merchant release controls in
+The CKAN family contains 40 tools. The ordinary merchant release controls in
 this map remain part of the same maintained operator.
 
 | Job | Original tools |

@@ -218,6 +218,15 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
     getRuntimes: () => getState()?.runtimes ?? [],
     selectedRuntime: () => getState()?.selected?.phase === 'READY' ? getState().selected.id : null,
     renderSettings,
+    async readApplications() {
+      const own = scope, workspaceId = getState()?.workspaceId;
+      const value = await api('/api/applications/state?historyLimit=1');
+      if (own !== scope || workspaceId !== getState()?.workspaceId)
+        throw new Error('The workspace changed. Open its setup before comparing saved changes.');
+      data = value; drafts.refresh(); library.update(data, selectedId);
+      return value;
+    },
+    onOpen() { configuration.open = true; label.focus(); },
     onContext(id, { select = true } = {}) {
       editingId = id;
       if (select && id && selectedId !== id) {

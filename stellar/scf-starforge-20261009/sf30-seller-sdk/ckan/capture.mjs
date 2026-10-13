@@ -66,8 +66,7 @@ export function parseCkanJson(buffer) {
     throw fault('CKAN_RESPONSE_JSON_INVALID');
   }
 }
-function result(buffer) {
-  const envelope = parseCkanJson(buffer);
+function result(buffer, envelope = parseCkanJson(buffer)) {
   if (!object(envelope) || envelope.success !== true || !object(envelope.result))
     throw fault('CKAN_ACTION_FAILED', 'The provider did not return a successful CKAN Action API result.');
   return envelope.result;
@@ -100,16 +99,23 @@ export function ckanSchemaUrl(origin, value) {
 export async function requestCkanSchema(origin, schemaUrl, options = {}) {
   const url = new URL(ckanSchemaUrl(origin, schemaUrl)), config = requestOptions(options);
   config.maxResponseBytes = Math.min(config.maxResponseBytes, 4194304);
-  return receiveJson(url, config, options, raw => {
-    const value = parseCkanJson(raw);
+  return receiveJson(url, config, options, (raw, value = parseCkanJson(raw)) => {
     if (!object(value)) throw fault('CKAN_SEMANTIC_SCHEMA_INVALID');
     return value;
   });
 }
+function reflectedCredential(value, token) {
+  if (typeof value === 'string') return value.includes(token);
+  if (Array.isArray(value)) return value.some(item => reflectedCredential(item, token));
+  if (value !== null && typeof value === 'object')
+    return Object.entries(value).some(([key,item]) => key.includes(token) || reflectedCredential(item, token));
+  return false;
+}
 async function receiveJson(url, config, options, decode) {
   const headers = { accept: 'application/json' };
+  let token;
   if (config.authTokenEnv) {
-    const token = (options.env ?? process.env)[config.authTokenEnv];
+    token = (options.env ?? process.env)[config.authTokenEnv];
     if (typeof token !== 'string' || !token.length || token.length > 16384 || /[^\x21-\x7e]/.test(token))
       throw fault('CKAN_TOKEN_UNAVAILABLE', 'Provide the configured private CKAN API token environment reference.');
     headers.authorization = token;
@@ -121,7 +127,7 @@ async function receiveJson(url, config, options, decode) {
   catch { throw fault(signal.aborted ? 'CKAN_REQUEST_CANCELLED' : 'CKAN_PROVIDER_UNREACHABLE'); }
   const receipt = { url: url.href, method: 'GET', receivedAt: stamp(), status: response.status,
     headers: Object.fromEntries(['content-type', 'etag', 'last-modified', 'date', 'retry-after']
-      .map(key => [key, response.headers.get(key)]).filter(([,value]) => value !== null)) };
+      .map(key => [key, response.headers.get(key)]).filter(([,value]) => value !== null && (!token || !value.includes(token)))) };
   if (!response.ok) {
     await response.body?.cancel();
     throw Object.assign(fault(response.status === 429 ? 'CKAN_RATE_LIMITED' : 'CKAN_PROVIDER_HTTP_' + response.status,
@@ -142,7 +148,16 @@ async function receiveJson(url, config, options, decode) {
     if (error.code) throw error;
     throw fault(signal.aborted ? 'CKAN_REQUEST_CANCELLED' : 'CKAN_RESPONSE_INTERRUPTED');
   }
-  const raw = Buffer.concat(chunks), value = decode(raw);
+  const raw = Buffer.concat(chunks);
+  let envelope;
+  if (token) {
+    if (raw.includes(Buffer.from(token))) throw fault('CKAN_CREDENTIAL_REFLECTED',
+      'The provider reflected a private credential; its response was not retained.');
+    envelope = parseCkanJson(raw);
+    if (reflectedCredential(envelope, token)) throw fault('CKAN_CREDENTIAL_REFLECTED',
+      'The provider reflected a private credential; its response was not retained.');
+  }
+  const value = decode(raw, envelope);
   return { raw, value, receipt: { ...receipt, bytes: raw.length, sha256: digest(raw) } };
 }
 export function captureSelection(value) {
