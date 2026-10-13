@@ -27,7 +27,7 @@ from workbooks import cell_parts, cell_value, col_letters, col_number, read_xlsx
 ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,79}$")
 KINDS = {"text","number","integer","date","boolean","choice","table"}
 SOURCE = Path(__file__).resolve().parent
-EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation")
+EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake")
 
 
 class OperationError(ValueError):
@@ -82,6 +82,29 @@ def csv_safe(value):
         except OperationError:
             return "'"+text
     return text
+
+
+def table_rows(binding):
+    """Retain explicit physical worksheet rows, including gaps between answers."""
+    start,end = binding.get("start_row"),binding.get("end_row")
+    explicit = binding.get("rows")
+    if explicit is not None:
+        if not isinstance(explicit,list) or not 1 <= len(explicit) <= 10000 or any(type(row) is not int or not 1 <= row <= 1048576 for row in explicit) or len(set(explicit)) != len(explicit):
+            raise OperationError("DEFINITION","Bound table rows must be an ordered list of distinct original worksheet row numbers")
+        if start is not None and (type(start) is not int or start < 1 or any(row < start for row in explicit)) or end is not None and (type(end) is not int or end > 1048576 or any(row > end for row in explicit)):
+            raise OperationError("DEFINITION","Explicit table rows fall outside their original worksheet bounds")
+        return list(explicit)
+    if type(start) is not int or type(end) is not int or start < 1 or end < start or end > 1048576 or end-start >= 10000:
+        raise OperationError("DEFINITION","Bound table row range is invalid")
+    return list(range(start,end+1))
+
+
+def is_calculated(field):
+    return "calculation" in field or field.get("source_calculated") is True
+
+
+def question_refs(field):
+    return (expression_refs(field["calculation"]) if "calculation" in field else set()) | set(field.get("native_dependencies",[]))
 
 
 def disclosure_projection(definition,values,disclosures=None,public_confirmed=False,final=True):
@@ -143,14 +166,14 @@ def disclosure_projection(definition,values,disclosures=None,public_confirmed=Fa
         choices[key] = item
 
     # A public calculated answer must not reveal a protected source answer.
-    unresolved = {q["id"]:q for q in definition["questions"] if "calculation" in q}
+    unresolved = {q["id"]:q for q in definition["questions"] if is_calculated(q)}
     while unresolved:
-        ready = [k for k,q in unresolved.items() if not expression_refs(q["calculation"]) & set(unresolved)]
+        ready = [k for k,q in unresolved.items() if not question_refs(q) & set(unresolved)]
         if not ready: raise OperationError("DISCLOSURE","Calculation dependencies contain a cycle")
         for key in ready:
             q = unresolved.pop(key)
-            protected = False
-            for dependency in expression_refs(q["calculation"]):
+            protected = q.get("native_protected_dependencies") is True
+            for dependency in question_refs(q):
                 dep = choices[dependency]
                 if dep["classification"] == "protected" or any(cell["classification"] == "protected" for row in dep.get("cells",[]) for cell in row.values()):
                     protected = True
@@ -273,6 +296,13 @@ def validate_definition(definition):
             raise OperationError("DEFINITION","Every question needs a label and supported answer type")
         if field.get("disclosure","protected") not in {"public","protected"}:
             raise OperationError("DEFINITION","Choose public or protected disclosure for every question")
+        for flag in ("source_calculated","source_readonly","native_protected_dependencies"):
+            if flag in field and type(field[flag]) is not bool:
+                raise OperationError("DEFINITION",flag+" must be true or false")
+        if field.get("source_calculated") and (field["kind"] == "table" or "calculation" in field or not field.get("source")):
+            raise OperationError("DEFINITION","Native calculated questions need a scalar original source binding")
+        if "native_dependencies" in field and (not isinstance(field["native_dependencies"],list) or any(not isinstance(k,str) for k in field["native_dependencies"]) or len(set(field["native_dependencies"])) != len(field["native_dependencies"])):
+            raise OperationError("DEFINITION","Native dependencies must be distinct stable question identifiers")
         if field["kind"] == "choice" and (not isinstance(field.get("choices"),list) or not field["choices"] or any(not isinstance(x,str) for x in field["choices"])):
             raise OperationError("DEFINITION","Choice questions need text choices")
         if "minimum" in field: decimal(field["minimum"])
@@ -292,10 +322,12 @@ def validate_definition(definition):
                     raise OperationError("DEFINITION","Every table column needs a label")
                 if column.get("disclosure",field.get("disclosure","protected")) not in {"public","protected"}:
                     raise OperationError("DEFINITION","Table column disclosure must be public or protected")
-    computations = {q["id"]:q["calculation"] for q in definition["questions"] if "calculation" in q}
+                if "source_readonly" in column and type(column["source_readonly"]) is not bool:
+                    raise OperationError("DEFINITION","A source_readonly table column must use true or false")
+    computations = {q["id"]:q for q in definition["questions"] if is_calculated(q)}
     dependencies = {}
-    for name,node in computations.items():
-        refs = expression_refs(node)
+    for name,field in computations.items():
+        refs = question_refs(field)
         if not refs <= known: raise OperationError("DEFINITION",f"Unknown calculation input for {name}")
         dependencies[name] = refs & set(computations)
     remaining = dict(dependencies)
@@ -309,21 +341,31 @@ def validate_definition(definition):
     return definition
 
 
-def validate_answers(definition,answers):
+def validate_answers(definition,answers,computed_values=None,formula_issues=None,source_values=None):
     questions = {x["id"]:x for x in definition["questions"]}
     values,issues = {},[]
+    computed_values,source_values = computed_values or {},source_values or {}
     if not isinstance(answers,dict):
         raise OperationError("ANSWERS","Answers must be an object keyed by question identifier")
     for key in set(answers)-set(questions):
         issues.append({"field":key,"code":"UNKNOWN_FIELD","message":"Answer has no question in this published edition"})
     for key,field in questions.items():
-        if "calculation" in field:
+        if is_calculated(field):
             if key in answers:
                 issues.append({"field":key,"code":"CALCULATED_FIELD","message":"Calculated questions are read-only"})
+            if field.get("source_calculated"):
+                try: values[key] = scalar(field,computed_values.get(key))
+                except OperationError as e: issues.append({"field":key,"code":e.code,"message":str(e)})
             continue
         try:
             if field["kind"] != "table":
-                values[key] = scalar(field,answers.get(key))
+                supplied = answers.get(key)
+                if field.get("source_readonly") and key in source_values:
+                    retained = source_values[key]
+                    if key in answers and scalar(field,supplied) != scalar(field,retained):
+                        issues.append({"field":key,"code":"SOURCE_READONLY","message":"This value is fixed by the retained original workbook"})
+                    supplied = retained
+                values[key] = scalar(field,supplied)
                 continue
             rows = answers.get(key,[])
             if not isinstance(rows,list) or len(rows) > int(field.get("max_rows",10000)):
@@ -331,13 +373,23 @@ def validate_answers(definition,answers):
             if field.get("required") and not rows:
                 raise OperationError("REQUIRED","At least one table row is required")
             columns = {c["id"]:c for c in field["columns"]}
+            fixed = source_values.get(key,[])
+            if field.get("source",{}).get("rows") and rows and len(rows) != len(table_rows(field["source"])):
+                raise OperationError("TABLE_ROWS","Answer rows must follow all selected original worksheet positions")
             result = []
             for index,row in enumerate(rows):
                 if not isinstance(row,dict) or set(row)-set(columns):
                     raise OperationError("TABLE_ROW","A table row contains unknown columns")
                 item = {}
                 for column,column_field in columns.items():
-                    try: item[column] = scalar(column_field,row.get(column))
+                    try:
+                        supplied = row.get(column)
+                        if column_field.get("source_readonly") and index < len(fixed) and column in fixed[index]:
+                            retained = fixed[index][column]
+                            if column in row and scalar(column_field,supplied) != scalar(column_field,retained):
+                                issues.append({"field":key,"row":index,"column":column,"code":"SOURCE_READONLY","message":"This label is fixed by the retained original worksheet row"})
+                            supplied = retained
+                        item[column] = scalar(column_field,supplied)
                     except OperationError as e: issues.append({"field":key,"row":index,"column":column,"code":e.code,"message":str(e)})
                 result.append(item)
             values[key] = result
@@ -359,7 +411,7 @@ def validate_answers(definition,answers):
             if type(outcome) is not bool: raise OperationError("EXPRESSION","A validation rule must return true or false")
             if not outcome: issues.append({"rule":rule["id"],"code":"RULE","message":rule["message"]})
         except OperationError as e: issues.append({"rule":rule["id"],"code":e.code,"message":str(e)})
-    return {"valid":not issues,"issues":issues,"values":plain(values)}
+    return {"valid":not issues,"issues":issues,"values":plain(values),"formula_issues":formula_issues or [],"native_calculation_pending":any(q.get("source_calculated") and q["id"] not in computed_values for q in questions.values())}
 
 
 class Workspace:
@@ -401,6 +453,10 @@ class Workspace:
                 if error.name == name: continue
                 raise OperationError("DEPENDENCY","Install the native dependency required by "+name) from error
             operations = getattr(module,"OPERATIONS",{})
+            if name == "respondent_operations":
+                self.outreach = module.RespondentOperations(self)
+                operations = {"outreach."+key[3:]: (lambda ws,p,operation=key[3:]:ws.outreach.invoke(operation,p)) for key in dir(self.outreach) if key.startswith("op_") and callable(getattr(self.outreach,key))}
+                operations["outreach.public_enter"] = lambda ws,p:ws.outreach.public_enter(p)
             if not isinstance(operations,dict) or any(not isinstance(k,str) or not callable(v) for k,v in operations.items()):
                 raise OperationError("EXTENSION","The native extension operation map is invalid")
             for method,handler in operations.items():
@@ -462,8 +518,35 @@ class Workspace:
 
     get_workbook_bytes = workbook_bytes
 
+    def source_values(self,definition):
+        """Read immutable source labels from retained original workbook BLOBs."""
+        books,values = {},{}
+        for field in definition["questions"]:
+            binding = field.get("source")
+            if not binding or not (field.get("source_readonly") or any(c.get("source_readonly") for c in field.get("columns",[]))): continue
+            sha = binding["workbook_sha256"]
+            if sha not in books: books[sha] = self.workbook(sha)
+            book = books[sha]
+            if field["kind"] == "table":
+                values[field["id"]] = [{c["id"]:cell_value(book,binding["sheet"],c["source_column"]+str(row)) for c in field["columns"] if c.get("source_readonly")} for row in table_rows(binding)]
+            else: values[field["id"]] = cell_value(book,binding["sheet"],binding["cell"])
+        return values
+
+    def _request_result(self,method):
+        context = getattr(self.context,"request",None) or {}
+        if not context.get("request_id"): return None
+        with self.connection() as db:
+            row = db.execute("SELECT * FROM operation_requests WHERE request_id=?",(context["request_id"],)).fetchone()
+        if row is None: return None
+        if row["method"] != method or row["payload_sha256"] != context["payload_sha256"]:
+            raise OperationError("REQUEST_CONFLICT","This request identifier belongs to different native inputs")
+        return json.loads(row["result"])
+
+    _cached_mutation = _request_result
+
     def invoke(self,method,params=None):
-        params = params or {}
+        params = {} if params is None else params
+        if not isinstance(method,str): raise OperationError("METHOD","Use a native operation name")
         function = getattr(self,"op_"+method,None)
         if function is None and method in self.extensions:
             function = lambda p:self.extensions[method](self,p)
@@ -473,7 +556,7 @@ class Workspace:
         if request_id is not None and (not isinstance(request_id,str) or not 1 <= len(request_id) <= 200):
             raise OperationError("REQUEST_ID","Use a stable request identifier of at most 200 characters")
         previous = getattr(self.context,"request",None)
-        self.context.request = {"request_id":request_id,"payload_sha256":digest(encoded({k:v for k,v in params.items() if k not in {'request_id','_actor'}}).encode()),"actor":params.get("_actor",{"role":"native_operator"})}
+        self.context.request = {"request_id":request_id,"payload_sha256":digest(encoded({k:v for k,v in params.items() if k not in {'request_id','_actor'}}).encode()),"actor":params.get("_actor",(previous or {}).get("actor",{"role":"native_operator"})),"external_request_cache":method.startswith("outreach.")}
         try: return function(params)
         finally: self.context.request = previous
 
@@ -483,7 +566,8 @@ class Workspace:
             try:
                 context = getattr(self.context,"request",None) or {"actor":{"role":"native_operator"},"request_id":None}
                 request_id = context.get("request_id")
-                if request_id:
+                cache_request = request_id and not context.get("external_request_cache")
+                if cache_request:
                     previous = db.execute("SELECT * FROM operation_requests WHERE request_id=?",(request_id,)).fetchone()
                     if previous:
                         if previous["method"] != method or previous["payload_sha256"] != context["payload_sha256"]:
@@ -493,7 +577,7 @@ class Workspace:
                 result = action(db)
                 event = {**detail,"actor":context["actor"],"outcome":"saved","request_id":request_id}
                 db.execute("INSERT INTO journal(method,identity,detail,created) VALUES(?,?,?,?)",(method,key,encoded(event),now()))
-                if request_id:
+                if cache_request:
                     db.execute("INSERT INTO operation_requests VALUES(?,?,?,?,?)",(request_id,method,context["payload_sha256"],encoded(result),now()))
                 db.commit()
                 return result
@@ -559,9 +643,7 @@ class Workspace:
                 for column in field["columns"]:
                     if "source_column" not in column: raise OperationError("DEFINITION","Bound table columns need their original workbook column")
                     cell_parts(str(column["source_column"])+"1")
-                start,end = int(binding.get("start_row",0)),int(binding.get("end_row",0))
-                if start < 1 or end < start or end > 1048576 or end-start > 10000:
-                    raise OperationError("DEFINITION","Bound table row range is invalid")
+                table_rows(binding)
             else: cell_parts(binding.get("cell",""))
         key = p["questionnaire_id"]
         def action(db):
@@ -592,20 +674,25 @@ class Workspace:
             return {"publication_id":key,"questionnaire_id":questionnaire["id"],"definition_version":questionnaire["version"]}
         return self._write("publish",key,{"questionnaire_id":p["questionnaire_id"]},action)
 
+    def _invite_record(self,db,p,key,access):
+        name = str(p.get("name","")).strip()
+        if not name: raise OperationError("NAME","A respondent name is required")
+        self._row(db,"publications",p["publication_id"])
+        db.execute("INSERT INTO respondents VALUES(?,?,?,?,0,NULL,'invited',?)",(key,p["publication_id"],name,digest(access.encode()),now()))
+        return {"respondent_id":key,"publication_id":p["publication_id"],"name":name,"version":0,"access_code":access,"entry_path":"/respondent/"+key}
+
     def op_invite(self,p):
         key,access = identifier(),secrets.token_urlsafe(30)
         name = str(p.get("name","")).strip()
         if not name: raise OperationError("NAME","A respondent name is required")
         def action(db):
-            self._row(db,"publications",p["publication_id"])
-            db.execute("INSERT INTO respondents VALUES(?,?,?,?,0,NULL,'invited',?)",(key,p["publication_id"],name,digest(access.encode()),now()))
-            return {"respondent_id":key,"publication_id":p["publication_id"],"name":name,"version":0,"access_code":access,"entry_path":"/respondent/"+key}
+            return self._invite_record(db,p,key,access)
         result = self._write("invite",key,{"publication_id":p["publication_id"],"name":name},action)
         retained = "respondent-"+result["respondent_id"]+".json"
         invitation = json.dumps(result,ensure_ascii=False,indent=2)+"\n"
         path = self.directory/retained
         if path.exists():
-            if path.read_text() != invitation: raise OperationError("INVITATION","The retained invitation differs from this native request")
+            if json.loads(path.read_text()) != result: raise OperationError("INVITATION","The retained invitation differs from this native request")
         else: self._private_file(retained,invitation)
         return result
 
@@ -623,7 +710,7 @@ class Workspace:
             if draft:
                 draft["answers"] = json.loads(draft["answers"])
                 draft["validation"] = json.loads(draft["validation"])
-            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"revisions":revisions,"draft":draft}
+            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"revisions":revisions,"draft":draft,"source_values":self.source_values(definition)}
 
     def op_save_progress(self,p):
         key = p["respondent_id"]
@@ -639,7 +726,7 @@ class Workspace:
                 raise OperationError("VERSION_CONFLICT","The saved response progress changed; reopen before editing",{"current_draft_version":version})
             _,definition = self._definition(db,respondent["publication_id"])
             answers = p.get("answers",{})
-            validation = validate_answers(definition,answers)
+            validation = validate_answers(definition,answers,source_values=self.source_values(definition))
             validation.update(disclosure_projection(definition,validation["values"],p.get("disclosures"),p.get("public_confirmed",False),final=False))
             stamp = now()
             db.execute("INSERT INTO drafts VALUES(?,?,?,?,?) ON CONFLICT(respondent_id) DO UPDATE SET version=excluded.version,answers=excluded.answers,validation=excluded.validation,updated=excluded.updated",(key,version+1,encoded(answers),encoded(validation),stamp))
@@ -651,32 +738,53 @@ class Workspace:
             respondent = self._row(db,"respondents",p["respondent_id"])
             _,definition = self._definition(db,respondent["publication_id"])
         book = self.workbook(p["sha256"])
-        answers,issues = {},[]
-        for field in definition["questions"]:
-            binding = field.get("source")
-            if not binding or "calculation" in field: continue
-            try:
-                if field["kind"] == "table":
-                    rows = []
-                    for row in range(int(binding["start_row"]),int(binding["end_row"])+1):
-                        values = {c["id"]:cell_value(book,binding["sheet"],c["source_column"]+str(row)) for c in field["columns"]}
-                        if any(v is not None and v != "" for v in values.values()): rows.append(values)
-                    answers[field["id"]] = rows
-                else: answers[field["id"]] = cell_value(book,binding["sheet"],binding["cell"])
-            except ValueError as e: issues.append({"field":field["id"],"code":"WORKBOOK_BINDING","message":str(e)})
-        validation = validate_answers(definition,answers)
+        sources = definition.get("source_workbooks",[])
+        binding_sha = p.get("source_binding_sha256") or (p["sha256"] if p["sha256"] in sources else sources[0] if len(sources)==1 else None)
+        if binding_sha not in sources:
+            raise OperationError("WORKBOOK_SOURCE","Choose the retained original template for this workbook edition")
+        from workbook_calculation import project_answers
+        projected = project_answers({**definition,"questions":[q for q in definition["questions"] if not is_calculated(q)]},book,binding_sha)
+        record = self.op_get_respondent({"respondent_id":respondent["id"]})
+        current = record["draft"] or (record["revisions"][-1] if record["revisions"] else None)
+        answers = {**({} if current is None else current["answers"]),**projected["answers"]}
+        issues = projected["issues"]
+        validation = validate_answers(definition,answers,source_values=self.source_values(definition))
         if issues:
             validation["issues"].extend(issues)
             validation["valid"] = False
-        return {"respondent_id":respondent["id"],"workbook_sha256":book["sha256"],"answers":answers,"validation":validation}
+        return {"respondent_id":respondent["id"],"workbook_sha256":book["sha256"],"source_binding_sha256":binding_sha,"answers":answers,"validation":validation}
 
     def op_submit_revision(self,p):
+        cached = self._request_result("submit_revision")
+        if cached is not None: return cached
         key = identifier()
         if p.get("workbook_sha256"):
-            extracted = self.op_workbook_answers({"respondent_id":p["respondent_id"],"sha256":p["workbook_sha256"]})
+            extracted = self.op_workbook_answers({"respondent_id":p["respondent_id"],"sha256":p["workbook_sha256"],"source_binding_sha256":p.get("source_binding_sha256")})
             answers = extracted["answers"]
             if p.get("answers") is not None: raise OperationError("ANSWERS","Choose either native answers or a retained workbook revision")
         else: answers = p.get("answers",{})
+        # Calculation runs before the short revision transaction. The transaction
+        # still checks the original expected version after the native engine closes.
+        with self.connection() as db:
+            current = self._row(db,"respondents",p["respondent_id"])
+            _,definition = self._definition(db,current["publication_id"])
+        if current["version"] != p.get("expected_version"):
+            raise OperationError("VERSION_CONFLICT","This respondent has a newer revision; reopen before submitting",{"current_version":current["version"]})
+        if current["status"] == "accepted" and (getattr(self.context,"request",None) or {}).get("actor",{}).get("role") == "respondent":
+            raise OperationError("RESPONSE_LOCKED","The accepted response is retained; the analyst can reopen it for a revised submission")
+        source_values = self.source_values(definition)
+        native = None
+        native_fields = {q["id"] for q in definition["questions"] if q.get("source_calculated")}
+        if native_fields:
+            if "calculate_response" not in self.extensions:
+                raise OperationError("NATIVE_CALCULATION","The original workbook calculation runtime is required to seal this edition")
+            preflight = validate_answers(definition,answers,source_values=source_values)
+            input_errors = [issue for issue in preflight["issues"] if issue.get("field") not in native_fields and "rule" not in issue and issue.get("code") not in {"CALCULATION_INPUT","DIVISION_BY_ZERO"}]
+            if not input_errors:
+                calculation_request = "response-calculation-"+digest(encoded({"respondent_id":p["respondent_id"],"publication_id":current["publication_id"],"expected_version":p["expected_version"],"answers":answers,"workbook_sha256":p.get("workbook_sha256")}).encode())
+                native = self.invoke("calculate_response",{"respondent_id":p["respondent_id"],"answers":answers,"request_id":calculation_request,**({"workbook_sha256":p["workbook_sha256"],"source_binding_sha256":extracted["source_binding_sha256"]} if p.get("workbook_sha256") else {})})
+                if not isinstance(native,dict) or not isinstance(native.get("computed_values"),dict) or set(native["computed_values"])-native_fields or not isinstance(native.get("formula_issues",[]),list):
+                    raise OperationError("NATIVE_CALCULATION","The original calculation returned an invalid question projection")
         def action(db):
             respondent = self._row(db,"respondents",p["respondent_id"])
             if respondent["status"] == "accepted" and (getattr(self.context,"request",None) or {}).get("actor",{}).get("role") == "respondent":
@@ -684,7 +792,9 @@ class Workspace:
             if respondent["version"] != p.get("expected_version"):
                 raise OperationError("VERSION_CONFLICT","This respondent has a newer revision; reopen before submitting",{"current_version":respondent["version"]})
             _,definition = self._definition(db,respondent["publication_id"])
-            validation = validate_answers(definition,answers)
+            validation = validate_answers(definition,answers,computed_values=None if native is None else native["computed_values"],formula_issues=None if native is None else native.get("formula_issues",[]),source_values=source_values)
+            if native is not None:
+                validation["native_calculation"] = {k:native[k] for k in ("calculation_ids","input_hash","source_successor_bindings","source_bindings","schema") if k in native}
             projection = disclosure_projection(definition,validation["values"],p.get("disclosures"),p.get("public_confirmed",False))
             validation.update(projection)
             validation["issues"].extend(projection["disclosure_issues"])
@@ -808,7 +918,7 @@ class Workspace:
             for q in questions:
                 if "columns" in q: q["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
         values = projection["public_values"] if public else {**answers,**validation["values"]}
-        response = {"values":values,"public_alternatives":projection["public_alternatives"],"disclosures":projection["disclosures"]}
+        response = {"values":values,"public_alternatives":projection["public_alternatives"],"disclosures":projection["disclosures"],"revision_number":record["respondent"]["version"]}
         if not public: response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"]})
         stamp = record["respondent"]["created"] if current is None else current.get("updated",current.get("created"))
         return {"schema":"atssc.response-document."+edition+".v1","edition":edition,"questionnaire_title":definition.get("title","Questionnaire"),"created":now(),"updated":stamp,"questions":questions,"accepted_responses":[response],"state":"Saved draft" if record["draft"] else "Submitted revision" if current else "Empty questionnaire","document_state":"draft" if record["draft"] else "submitted" if current else "empty","sealed_revision":record["respondent"]["version"],"draft_version":None if not record["draft"] else record["draft"]["version"],"public_confirmed":projection["public_confirmed"],"validation_issues":validation["issues"] if not public else [],"numeric_totals":{}}
@@ -838,6 +948,9 @@ class Workspace:
             from document_exports import render_document
             return render_document({**report,"edition":edition},format_name)
         if format_name == "json": return (json.dumps(report,ensure_ascii=False,indent=2)+"\n").encode()
+        if "report_views" in report and format_name in {"html","csv"}:
+            from reporting_workbench import render_summary_html,summary_csv
+            return render_summary_html(report) if format_name == "html" else summary_csv(report)
         questions = report.get("questions",report.get("definition",{}).get("questions",[]))
         if format_name == "csv":
             out = io.StringIO(newline="")

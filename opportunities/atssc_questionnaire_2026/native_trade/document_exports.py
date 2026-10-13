@@ -225,7 +225,7 @@ def _metric(value):
 
 
 def _view_chart(view):
-    if view.get("kind") == "text" or view.get("chart") == "none":
+    if view.get("kind") == "text" or view.get("chart") == "none" or not view.get("summary", {}).get("answered"):
         return None
     metric = next((x for x in view["statistics"] if x in {"sum","average","ratio","count","percentage"}),"count")
     if view.get("cross_tab"):
