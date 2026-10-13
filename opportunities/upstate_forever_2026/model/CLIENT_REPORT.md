@@ -81,3 +81,32 @@ This integration carries forward ED6E's seven-map decision guide and economic re
 The prepared-atlas revision is composed with the current scientific v7 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `native-grid-analysis-economic-report-7` binds this report metadata to a new release identity.
 
 The existing native grid record, source-native versus regional audit scope, saved-analysis attachment, package recovery and final atlas-browser snapshot remain in the delivery. The final browser snapshot runs after report and analysis members have been retained. Existing completed releases reopen unchanged through their original identities.
+
+## Separate client companion in the complete delivery
+
+The full client decision guide is produced alongside the canonical scientific report. Its current compiler retains the selected models, original grid, paired support, source-area interpretation and edition4 receiving-water quantities, with separate companion filenames. Values with no native valid or common support remain unavailable in the report. The scientific renderer includes the original observed figures and source-bound context.
+
+```python
+generated = client_report.build_report(
+    workspace=workspace, directory=directory, selection=selection,
+    state=state, baseline=baseline, alternatives=alternatives,
+    grid=grid, profile=profile, records=records,
+    observation_results=observation_results, comparison=comparison,
+    scenario_summary=summary,
+    additional_sections=receiving_water_delivery.report_section(water_product),
+    output_stem="client-report", file_key_prefix="client_")
+for name, relative in generated.items():
+    state["files"][name] = describe_file(directory, directory / relative)
+```
+
+The four original companion keys are `client_report`, `client_report_html`, `client_report_markdown`, and `client_report_model`, with files `client-report.pdf`, `client-report.html`, `client-report.md`, and `client-report-model.json`. The normal builder already makes this call and retains all four paths in its project assets and working snapshot. The original scientific filenames and full economic/scenario sections stay in place.
+
+Before the delivery identity is calculated, `selection.client_companion_edition` records this compiler's `REPORT_EDITION`. The scientific `selection.client_report_edition` and `report_renderer_version` retain their independent current producer editions. The current complete application inventory is bound as `application_sha256`.
+
+The existing delivery screen opens either report through the authenticated preview route. Both report models must bind the exact selected delivery ID. Its file tickets preserve each real map, GIS and report path, and the grouped downloads expose both complete formats. Received copies list their retained snapshot and can prepare a complete local delivery through the original task queue.
+
+Customer-specific narrative and RFP delivery coverage are maintained in the private handoff alongside this reusable compiler.
+
+## Reopening the working project
+
+The first rendered report links to `working/scientific-workspace.zip`. The actual ZIP is registered and verified after both reports are complete, so its selected snapshot includes their final bytes. Receiving retains the original input ZIP outside its own member manifest, beside the extracted reports and through the restored delivery record. Same-filesystem receiving uses one linked data copy; cross-filesystem receiving streams the original open archive into the destination. Identity reads and result construction finish before the receiving directory is published.
