@@ -103,6 +103,7 @@ def portable_source(source):
     additions = {
         "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations", "source", "source_tools"),
         "APPLICATION_FILES": (
+            "CURRENT_OWNER_DIRECTION.md", "AGENTS.md",
             "PUBLISHED_STUDIES.md", "published_studies_family.json", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
             "eighteenmile_chlorophyll_reconciled.sources.json",
