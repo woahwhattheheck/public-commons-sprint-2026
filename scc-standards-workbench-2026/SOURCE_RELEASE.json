@@ -1,9 +1,49 @@
 {
   "schema": "scc-workbench/source-release/v2",
   "package": "scc-standards-workbench",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "identity_algorithm": "git-blob-sha1",
   "source_files": [
+    {
+      "path": "API.md",
+      "git_blob_sha": "b546cf2104c05a734260bbbf41203544c7319ee0",
+      "bytes": 20806
+    },
+    {
+      "path": "BALLOT-EXCHANGE.md",
+      "git_blob_sha": "1e54865ba5b14e3f94355fe4f1ee80f1a729e9c7",
+      "bytes": 14467
+    },
+    {
+      "path": "BALLOT-RECEIVING.md",
+      "git_blob_sha": "73f83cb79c394c9479a2cd349f4f96c33fa59e37",
+      "bytes": 16417
+    },
+    {
+      "path": "CONSULTATION.md",
+      "git_blob_sha": "378896d6b917947de0bfc226043a79b799aee1f8",
+      "bytes": 16548
+    },
+    {
+      "path": "LICENSE",
+      "git_blob_sha": "ae4af7b573be649fe306a1c2de69e4b8e381d9a2",
+      "bytes": 1365
+    },
+    {
+      "path": "PUBLICATION.md",
+      "git_blob_sha": "e531f91b22e3b4dcff8a3c881d5e23af6ff176f8",
+      "bytes": 9750
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha": "9f4ea00111aa8b1786ce45facb428bb392f3ee0c",
+      "bytes": 21348
+    },
+    {
+      "path": "SOURCE-NOTICES.md",
+      "git_blob_sha": "7824144ae9c304f0c0ec713c24f1bfebb6f5b027",
+      "bytes": 5089
+    },
     {
       "path": "__init__.py",
       "git_blob_sha": "e5319a3655d3ade93289dd7459040194b5a912f8",
@@ -15,14 +55,9 @@
       "bytes": 64
     },
     {
-      "path": "API.md",
-      "git_blob_sha": "f8f4ecbc5be4a4c17a7f10ce0870a9155831f9ce",
-      "bytes": 20149
-    },
-    {
-      "path": "CONSULTATION.md",
-      "git_blob_sha": "378896d6b917947de0bfc226043a79b799aee1f8",
-      "bytes": 16548
+      "path": "ballot_exchange.py",
+      "git_blob_sha": "057b69ae55b24afa0f2138c92ba4ae666b62ae7e",
+      "bytes": 27365
     },
     {
       "path": "consultation.py",
@@ -30,14 +65,19 @@
       "bytes": 54079
     },
     {
-      "path": "delivery/consultation-config.example.json",
-      "git_blob_sha": "822349dac2933600fc47b3e147be2a152fe3d727",
-      "bytes": 332
-    },
-    {
       "path": "delivery/CONSULTATION-RECEIVING.md",
       "git_blob_sha": "99ef9290810f04fceb0344f30a3dc5041515c409",
       "bytes": 7512
+    },
+    {
+      "path": "delivery/ballot-receiving.mjs",
+      "git_blob_sha": "2e3d0db6c71d41b4d961287ff4e95d51f17d3a0e",
+      "bytes": 46740
+    },
+    {
+      "path": "delivery/consultation-config.example.json",
+      "git_blob_sha": "822349dac2933600fc47b3e147be2a152fe3d727",
+      "bytes": 332
     },
     {
       "path": "delivery/consultation-receiving.mjs",
@@ -136,23 +176,13 @@
     },
     {
       "path": "engine.py",
-      "git_blob_sha": "14f0f59f226669de6a9da5197db363336f154e00",
-      "bytes": 84239
+      "git_blob_sha": "180580efd9b4c195d3ba073502383eb93e6d5d90",
+      "bytes": 85354
     },
     {
       "path": "exports.py",
-      "git_blob_sha": "f9b350516bfae58d331a6f62130a532c90f5a5b6",
-      "bytes": 12049
-    },
-    {
-      "path": "LICENSE",
-      "git_blob_sha": "ae4af7b573be649fe306a1c2de69e4b8e381d9a2",
-      "bytes": 1365
-    },
-    {
-      "path": "PUBLICATION.md",
-      "git_blob_sha": "e531f91b22e3b4dcff8a3c881d5e23af6ff176f8",
-      "bytes": 9750
+      "git_blob_sha": "f4cff730ab9f017ca8ea90be7e97394fdf073a1a",
+      "bytes": 13287
     },
     {
       "path": "publisher.py",
@@ -161,18 +191,13 @@
     },
     {
       "path": "pyproject.toml",
-      "git_blob_sha": "68a79e9f17a79ac88272a2a66810b9bb84aa69b5",
-      "bytes": 839
-    },
-    {
-      "path": "README.md",
-      "git_blob_sha": "3f9f38848bf2873bb427b2b0dcbc399f80e7f6d6",
-      "bytes": 20728
+      "git_blob_sha": "f9a63cdf7b06a7cbee1c97d43a7e59cbf051045a",
+      "bytes": 979
     },
     {
       "path": "server.py",
-      "git_blob_sha": "187f73c18f07a4b192ebd7ef54a047fd870dc770",
-      "bytes": 16728
+      "git_blob_sha": "42052c91293b58b95679683a1a8850d899e7651a",
+      "bytes": 18121
     },
     {
       "path": "source_intake.py",
@@ -180,14 +205,19 @@
       "bytes": 78645
     },
     {
-      "path": "SOURCE-NOTICES.md",
-      "git_blob_sha": "7824144ae9c304f0c0ec713c24f1bfebb6f5b027",
-      "bytes": 5089
+      "path": "web/app.js",
+      "git_blob_sha": "52a78ab0edf4b25736f9a7ebadb9fe0da9309744",
+      "bytes": 80667
     },
     {
-      "path": "web/app.js",
-      "git_blob_sha": "98d88547b9b0b7a262e877c22047ed0cd53bec29",
-      "bytes": 80242
+      "path": "web/ballot-exchange.css",
+      "git_blob_sha": "6bd7e03a4ee07df72143dba4fb8af6717e9417a9",
+      "bytes": 2140
+    },
+    {
+      "path": "web/ballot-exchange.js",
+      "git_blob_sha": "b3f63707ce4c7aea9c1259260b025f80cd68ddbe",
+      "bytes": 22031
     },
     {
       "path": "web/consultation.css",
@@ -201,8 +231,28 @@
     },
     {
       "path": "web/index.html",
-      "git_blob_sha": "0bdb0d9c168e06b7d0ff6bb2e1aa035b95f4b33d",
-      "bytes": 2538
+      "git_blob_sha": "14472ff10c047f0c827810d9102b5872339311ae",
+      "bytes": 2589
+    },
+    {
+      "path": "web/member-ballot-guide.txt",
+      "git_blob_sha": "6beafaeeddc73f83f726da0b4f2cacf776b627eb",
+      "bytes": 3008
+    },
+    {
+      "path": "web/member-ballot.css",
+      "git_blob_sha": "d3ffb5283407e7796e7256e04a3f4be80c5fc32e",
+      "bytes": 2827
+    },
+    {
+      "path": "web/member-ballot.html",
+      "git_blob_sha": "5211ea4b856aeb73c5dedb262975a5e0ecc13904",
+      "bytes": 919
+    },
+    {
+      "path": "web/member-ballot.js",
+      "git_blob_sha": "c2519a930910bff9ff0ca3eebfee2745e5ba07b2",
+      "bytes": 18467
     },
     {
       "path": "web/reviewer-guide.txt",
@@ -231,14 +281,16 @@
     },
     {
       "path": "workspace.py",
-      "git_blob_sha": "d64c956aa96e1da48ffe59bbf1173a4d27a9fcff",
-      "bytes": 46377
+      "git_blob_sha": "8c70c3576e42ad42d2dca95e28d5dacac58899e8",
+      "bytes": 49588
     }
   ],
   "execution": {
     "initial_feature_imports_and_javascript_checks": "completed on the first feature cut",
     "consultation_full_browser_and_installed_return_journey": "The same saved project completed all 16 business stages and the complete 40-view desktop/phone review at release 0.2.3, public commit 87b16f92d5fb7a8116ac33d1730d3a043423cd89. The original receiving controller retains this project and its published source records across source continuations.",
-    "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review"
+    "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review",
+    "member_ballot_source_review": "Complete engine, original-vote adoption, offline return/correction, installed-source and browser-course integration received independent source review.",
+    "member_ballot_native_receiving": "Complete original course is included at delivery/ballot-receiving.mjs. Cloud admission ended before CreateProcess; the original equipped receiving operation remains selected for actual native and rendered completion."
   },
   "notes": [
     "The original source data, license notices and previous release downloads are retained.",
@@ -246,6 +298,10 @@
     "The receiving controller resumes the same saved project and records the selected source when a correction is applied.",
     "Reopening a saved response preserves its reviewer details, language, comments and pending editor before persisting the rendered state.",
     "Operator presentation keeps complete original records and distinguishes missing amounts from zero. Publication dates are formatted for the selected language while the captured edition and source JSON remain unchanged.",
-    "The completed visual review is incorporated in the phone consultation navigation, active tab counts and singular record labels."
+    "The completed visual review is incorporated in the phone consultation navigation, active tab counts and singular record labels.",
+    "Version 0.3.0 adds complete individual-member offline ballot receiving, retaining the original ballot/vote/authority/publication contracts.",
+    "The two original publisher CSV files are retained byte-for-byte in their original CP1252 encoding and match the original source-manifest.json hashes.",
+    "Prior 0.2.3 source downloads and completed consultation/publication operations remain unchanged.",
+    "All new guides, offline assets and the complete original receiving course are included in this installable source edition."
   ]
 }
