@@ -130,7 +130,7 @@ async function waitNativeTask(id){
  requireValue(Number.isFinite(seconds)&&seconds>0,'Choose a positive native task timeout.');
  const until=Date.now()+seconds*1000;
  while(Date.now()<until){
-  const response=await page.request.get(origin+'/api/task?id='+encodeURIComponent(id));
+  const response=await page.request.get(origin+'/api/task?id='+encodeURIComponent(id),{headers:{Authorization:'Bearer '+capability},maxRedirects:0});
   const task=await nativeJSON(response,'Original queued task');
   requireValue(task.id===id,'The task reader returned another retained operation.');
   if(task.state==='complete')return task;
@@ -237,6 +237,7 @@ async function main(){
  let parsed;try{parsed=new URL(privateURL);}catch{throw Error('Supply the original private operator URL via --url-file, --url or ECO_OPERATOR_URL.');}
  requireValue(['http:','https:'].includes(parsed.protocol),'Use the original HTTP or HTTPS operator URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
+ requireValue(capability,'Use the original operator startup URL including its private capability fragment.');
  browser=await chromium.launch({headless:!args.headed,...(args['browser-channel']?{channel:args['browser-channel']}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);
