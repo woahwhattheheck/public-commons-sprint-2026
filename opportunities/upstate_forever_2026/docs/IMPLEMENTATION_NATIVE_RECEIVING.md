@@ -109,3 +109,11 @@ python -B source_tools/receive_monitoring_fieldwork.py \
 ```
 
 The operation directory holds the immutable selection and handoff, native state/progress and final `receiving.json`. Its `fieldwork` directory holds the complete original report/capture/restore course. Repeat the exact command to continue an interrupted operation. A saved handoff keeps its original fieldwork revision even when later edits have advanced the live plan. The original scientific scenario, model parameters and campaign events remain those selected in the actual workspace.
+
+## Original campaign packet memory and continuation
+
+Campaign handoff writes original publisher files and their native companions directly into the retained ZIP in 1 MiB chunks. Small canonical campaign, design, network and history records retain their existing serialization. Member names, sorted order, timestamps, permissions, compression and the source manifest stay compatible with the existing packet format. Each original body is checked against its selected size and SHA256 during transfer, and the completed packet is synchronized before atomic publication.
+
+The same `monitoring_fieldwork/<revision-id>/monitoring-field-package.zip` remains the source attachment. If a process stops after publishing the packet but before saving the fieldwork plan, continuation verifies the saved member inventory and every member body, then reuses that original archive. An incomplete temporary packet is never published. Source changes, conflicting member names and mismatched retained archives produce an error against that original selection. The existing `export_source` bytes-dictionary API remains available to its current consumers.
+
+The installed application includes `model/monitoring_packet.py`; the campaign receiving course records its source identity alongside the original Monitoring modules. Continue with the same campaign, saved revision and operation directory shown above.
