@@ -10,7 +10,7 @@ import textwrap
 from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
 from . import cartography
 
-ATLAS_VERSION = "seven-family-atlas/v3"
+ATLAS_VERSION = "seven-family-atlas/v4"
 PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
          "a3": (420 / 25.4, 297 / 25.4)}
 INDEX_ROWS = 14
@@ -277,6 +277,7 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
             "receptor_spec": selection.get("receptor_spec"),
             "receptor_profile_source": selection.get("receptor_profile_source"),
             "resolved_receptor_network": state.get("receptor_inventory", {}).get("network_source"),
+            "receiving_waters": state.get("receiving_waters"),
             "rendered_overlay_sources": [
                 {"map_key": row["map_key"], "overlays": row["overlays"]} for row in rows
             ],
