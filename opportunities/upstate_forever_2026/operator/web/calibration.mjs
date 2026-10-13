@@ -27,7 +27,7 @@ const notesList = values => (values??[]).length ? '<ul class="calibration-notes"
 
 export function createCalibrationDesk(host){return attachCalibration(host);}
 
-export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery}){
+export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery,openScientificReport}){
   let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
   let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null,formRequest=0;
   let activeUncertainty=null,resultRequest=0;
@@ -45,7 +45,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
     openReport,openUncertainty,activate:()=>{if(!mounted)location.hash='calibration';else repaint();}});
-  const reviewsDesk=createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,openDelivery,openItem,
+  const reviewsDesk=createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,openDelivery,openScientificReport,openItem,
     getReport:()=>activeReport,getData:calibrationData,repaint,openReport,
     activate:()=>{mapsDesk.reset();activeUncertainty=null;if(!mounted)location.hash='calibration';}});
   async function read(operation,values={}){
@@ -894,7 +894,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+
       (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+
       (value.calibration_review_id?button('review-open','Open complete review',value.calibration_review_id):'')+
-      (value.calibration_report_source_id?button('review-source-delivery','Open delivery with original review',value.calibration_report_source_id):'')+'</div>';
+      (value.calibration_report_source_id?button('review-source-report','Open scientific report',value.calibration_report_source_id,true)+
+        button('review-source-delivery','Open mapped report form',value.calibration_report_source_id):'')+'</div>';
   }
   async function dispatch(node){
     if(node.dataset.action?.startsWith('calibration-review-')){resultRequest++;return reviewsDesk.dispatch(node);}
