@@ -1,0 +1,206 @@
+{
+  "schema": "tjlabs.forms-workspace.api-contract.v1",
+  "implementation": "forms_workspace.py",
+  "workspace": {
+    "class": "Workspace(directory, create=False, label=None)",
+    "ownership": "One process holds the existing workspace .workspace.lock; threads share its native mutex. Do not open a second mutating CLI while the service owns the workspace.",
+    "source": "Unchanged 33-file Forms product plus nine complete authoring/receiving/Installation files; workspace.json binds all 42 exact source bodies.",
+    "database": "SQLite DELETE journal with synchronous FULL; original requests and full draft history remain in workspace.sqlite."
+  },
+  "dispatch": {
+    "signature": "Workspace.dispatch(method, params={}, request_id=None)",
+    "response": {
+      "schema": "tjlabs.forms-workspace.response.v1",
+      "workspace_id": "original identifier",
+      "workspace_revision": 0,
+      "value": "complete method result"
+    },
+    "request": "Every mutation requires a stable request_id matching [A-Za-z][A-Za-z0-9_.-]{0,63}. The exact same method/parameters recover or return that original request. A different body with that ID is rejected. Preserve the ID and original body before HTTP dispatch. A returned failure is terminal; a corrected action has a new explicit request. Process loss leaves the original frozen request RUNNING for its identical recovery."
+  },
+  "reads": {
+    "workspace.describe": {
+      "params": {},
+      "value": "Complete workspace identity/source files, native revision, capture/draft/run/request counts and explicit raw limit."
+    },
+    "capture.list": {
+      "params": {
+        "offset": 0,
+        "limit": 40
+      },
+      "value": "Paged complete capture descriptors."
+    },
+    "capture.show": {
+      "params": {
+        "capture_id": "capture-ID"
+      },
+      "value": "Original capture descriptor after source verification."
+    },
+    "capture.assets": {
+      "params": {
+        "capture_id": "capture-ID",
+        "offset": 0,
+        "limit": 40,
+        "search": "optional",
+        "asset_class": "optional",
+        "side": "optional",
+        "availability": "optional"
+      },
+      "value": "Complete original asset records, total/offset/limit; paging never limits native calculation."
+    },
+    "capture.worksheet": {
+      "params": {
+        "capture_id": "capture-ID"
+      },
+      "value": "Whole original mapping-worksheet.json including complete metadata and explicit original attachment links."
+    },
+    "capture.csv": {
+      "params": {
+        "capture_id": "capture-ID",
+        "asset_id": "original ID",
+        "offset": 0,
+        "limit": 40,
+        "encoding": "utf-8-sig",
+        "delimiter": ",",
+        "quotechar": "\""
+      },
+      "value": "capture_id,asset_id,source,encoding,headers,header_unique,total,offset,limit,rows:[{record:one-based data ordinal,values:complete literal array,width_valid:boolean}],meaning. Strict complete CSV scan and indexed raw paging; no inferred types or keys. Explicit one-character delimiter/quotechar agree with the original engine and form part of the immutable CSV cache identity."
+    },
+    "draft.list": {
+      "params": {
+        "offset": 0,
+        "limit": 40
+      },
+      "value": "Paged metadata for current named drafts; draft.show returns complete raw text."
+    },
+    "draft.show": {
+      "params": {
+        "draft_id": "draft-ID",
+        "revision": "optional original integer"
+      },
+      "value": "Complete selected current or historical draft, including raw text, source review, capture and original request."
+    },
+    "draft.history": {
+      "params": {
+        "draft_id": "draft-ID",
+        "offset": 0,
+        "limit": 40
+      },
+      "value": "All named draft revisions via paging, newest first. Original revision bodies remain downloadable through draft.show."
+    },
+    "draft.validate": {
+      "params": {
+        "draft_id": "draft-ID",
+        "expected_revision": "optional current integer"
+      },
+      "value": "valid,errors,stage,draft_id,draft_revision and intake_sha256 when structurally valid. STRUCTURE_VALID means original native manifest/key/field/asset validation; native source quality and attachment findings require run.create."
+    },
+    "run.list": {
+      "params": {
+        "offset": 0,
+        "limit": 40
+      },
+      "value": "Paged complete immutable calculated-edition descriptors."
+    },
+    "run.show": {
+      "params": {
+        "run_id": "run-ID"
+      },
+      "value": "Verified complete run descriptor including project, received, project_identity, source_run_identity, complete project archive, source selection, six class states and output counts."
+    },
+    "request.show": {
+      "params": {
+        "request_id": "original ID"
+      },
+      "value": "Complete original method, parameters, frozen input, status/result/error and timestamps. Uses the single owner mutex."
+    },
+    "request.status": {
+      "params": {
+        "request_id": "original ID"
+      },
+      "value": "Original method/status/timestamps/error and actual immutable phase records; a separate read-only SQLite connection permits polling during the native operation. Returns no invented progress percentage."
+    }
+  },
+  "writes": {
+    "capture.import": {
+      "params": {
+        "archive_name": "original incoming file identifier"
+      },
+      "effect": "Receive a whole original forms_capture.pack ZIP from the workspace/incoming directory through original forms_capture.receive and verify. Same exact archive SHA returns the retained capture. No provider call occurs.",
+      "value": "id,directory,archive:{path,bytes,sha256},selection_sha256,label,edition,data_class,assets,classes,created_at,original_request_id"
+    },
+    "draft.create": {
+      "params": {
+        "capture_id": "capture-ID",
+        "name": "complete name",
+        "base_draft_id": "optional",
+        "rebind_reference": "required nonempty decision when switching captures",
+        "base_draft_revision": "Required exact historical native revision whenever base_draft_id is selected"
+      },
+      "effect": "Start the original complete mapping-required intake. A same-capture fork retains exact unfinished raw text. An explicitly reviewed new-capture rebind retains old/new complete asset differences, prior draft ID/revision and the operator reference; it replaces original inventory and bound CSV path/hash identities. All existing explicit mappings and parent decisions remain for actual native checking. The exact selected historical base revision is frozen before admission; a concurrently saved later revision is never silently substituted. Full before/after capture metadata and inventory differences remain in source_review.",
+      "value": "id,revision,name,capture_id,raw,created_at,updated_at,base_draft_id,base_draft_revision,source_review,original_request_id"
+    },
+    "draft.save": {
+      "params": {
+        "draft_id": "draft-ID",
+        "expected_revision": 1,
+        "name": "complete name",
+        "raw": "complete original UTF-8 text"
+      },
+      "effect": "Atomic compare-and-save of complete raw draft and original revision history. Invalid or unfinished text can be saved exactly. A later native revision is never silently replaced. Explicit limit128MiB encoded UTF-8.",
+      "value": "Complete new native draft revision"
+    },
+    "run.create": {
+      "params": {
+        "draft_id": "draft-ID",
+        "expected_revision": 1
+      },
+      "effect": "Freeze the exact original complete draft and capture, run the unchanged native engine into a new immutable project, verify, pack, independently receive and verify the complete returned project. Phase records reflect returned stages. Recover a process interruption with the same original request ID and parameters.",
+      "value": "id,created_at,draft_id,draft_revision,capture_id,original_request_id,project,received,project_identity,source_run_identity,archive:{path,bytes,sha256},data_class,edition,label,classes,assets,attachments,findings,meaning"
+    }
+  },
+  "large_files": {
+    "upload": "The local server streams a full selected capture ZIP to an exclusive temporary input, fsyncs and finalizes its exact file in workspace/incoming before capture.import. It validates declared limits and actual byte count/digest. Keep upload temporary files outside incoming until complete; incomplete uploads cannot become original selected input. Never buffer a complete ZIP in JSON or select an arbitrary remote-supplied host path.",
+    "downloads": "Stream original files, project ZIPs and full workspace ZIPs. Use server-selected IDs and complete source checks, never path traversal or browser-memory reconstruction.",
+    "privacy": "Receipts, native paths and tokens remain in original private control directories. Bind to127.0.0.1 with generated private capability and Host/Origin/Fetch-Site checks. Public source carries no customer inputs."
+  },
+  "handover": {
+    "export_signature": "Workspace.export(destination)",
+    "export_result": {
+      "schema": "tjlabs.forms-workspace.export.v1",
+      "workspace_id": "original ID",
+      "workspace_revision": 0,
+      "archive": {
+        "path": "actual path",
+        "bytes": 0,
+        "sha256": "whole archive SHA"
+      },
+      "members": 0,
+      "source_files": "all42 complete software descriptors"
+    },
+    "receive_signature": "receive_workspace(archive,destination,max_bytes=20*1024**3)",
+    "receive_result": {
+      "schema": "tjlabs.forms-workspace.receiving.v1",
+      "workspace_id": "same original ID",
+      "workspace_revision": 0,
+      "directory": "actual new directory",
+      "archive": {
+        "path": "selected original archive",
+        "bytes": 0,
+        "sha256": "whole SHA"
+      },
+      "source_files": "all42 original software descriptors"
+    },
+    "contents": "Complete consistent SQLite backup, workspace metadata, all original capture archives/received captures, native run inputs/projects/project ZIPs/independently received projects, full original request and draft histories, operation phase records, and42 source files. Ephemeral cache and process lock are reconstructed. Pending original requests must be recovered before export.",
+    "reopen": "Run the actually received software/forms_workspace.py or its server against the independently received workspace. Continue original workspace identity/draft history and request IDs; no second business case.",
+    "local_import": "forms_workspace.py import-capture --workspace ORIGINAL --archive COMPLETE_ZIP --request-id STABLE_ID streams and retains a selected local capture using the same native owner; close an active HTTP owner first."
+  },
+  "installation": {
+    "commercial": "Actual FormAssembly work remains unpriced. Native Installation can retain its ordinary unbound commercial draft. A priced Workshare is an explicit existing native source only.",
+    "binding": "Bind actual workspace ID/revision, selected run/draft/capture IDs, project identity, exact project ZIP and full workspace archive to the original operating case. Selection metadata is a binding, not a substitute for complete large source bodies."
+  },
+  "receiving": {
+    "native_owner": "receiving_forms_workspace.py",
+    "browser_owner": "receiving_forms_workspace_browser.mjs",
+    "requirement": "Operate complete mapping-required capture to authoring, unfinished draft/revisions/conflict, explicit following source review, native complete editions, complete export and cold reopened history. Open/use the exact outgoing UI and attachments; inspect actual desktop/narrow pixels and every PDF page."
+  }
+}
