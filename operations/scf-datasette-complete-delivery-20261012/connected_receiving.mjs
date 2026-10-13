@@ -349,7 +349,7 @@ export async function resumeConnectedOriginal(c,{key,control,controlId,reconcile
  }
  await sendSource();await flushWire(c,key,s);
  if(control){
-  if(!s.invocationId||control.operation!==OPERATION||control.root!==originalRoot)
+  if(!s.invocationId||control.operation!==OPERATION||control.root!==(s.selection.storage_root??originalRoot))
    throw Error("Use the original controller operation/root.");
   if(!await resolveRequests(c,key,s,consumerId))return summary(s);
   if(typeof controlId!=="string"||!controlId)throw Error("Select and retain one original command ID before delivery.");
