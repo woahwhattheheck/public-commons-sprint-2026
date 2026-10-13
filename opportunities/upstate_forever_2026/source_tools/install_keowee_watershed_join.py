@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the Keowee profile and completed-watershed receiving join.
+"""Install the Keowee, watershed and scientific-setup receiving workflows.
 
 Run the installer from a current source checkout against an existing application:
   python -B source_tools/install_keowee_watershed_join.py \
@@ -18,6 +18,7 @@ import stat
 import shutil
 import shlex
 import subprocess
+import sys
 import tempfile
 
 SCHEMA = "upstate.keowee-watershed-install/v1"
@@ -25,6 +26,8 @@ SOURCE_SCHEMA = "upstate.keowee-watershed-source/v1"
 MANIFEST = "source_tools/keowee_watershed_join.source.json"
 ENTRYPOINTS = ("model/keowee_priority.py", "operator/receive_watershed_context.py",
                "operator/web/conservation.mjs")
+REGISTRATIONS = ("operator/extensions/keowee-method-view.json",
+                 "operator/extensions/scientific-setup.json")
 PACKAGE_FILES = (
     "model/keowee_profile_adapter.py", "model/keowee_priority.py",
     "source/keowee-native-binding-20261013.json",
@@ -41,6 +44,12 @@ PACKAGE_FILES = (
     "operator/web/keowee-method-view.mjs", "operator/web/conservation.mjs",
     "operator/KEOWEE_METHOD_VIEW.md", "source/keowee-method-view-integration-20261013.json",
     "operator/extensions/keowee-method-view.json",
+    "model/setup_review.py", "operator/scientific_setup.py",
+    "source_tools/receive_scientific_setup.py", "model/SCIENTIFIC_SETUP.md",
+    "source/scientific-setup-selection.schema.json",
+    "source/scientific-setup-integration-20261013.json",
+    "operator/web/scientific-setup.mjs", "operator/web/scientific-setup.css",
+    "operator/extensions/scientific-setup.json", "operator/SCIENTIFIC_SETUP_DESK.md",
 )
 PROFILE_NAMES = (
     "lake-keowee-methodology.json", "keowee-evaluator.mjs", "keowee-evaluator.d.mts",
@@ -54,6 +63,8 @@ HOST_FILES = (
     "model/conservation_scenarios.py", "model/watershed_context.py",
     "operator/watershed_context.py", "source/keowee-priority-methods-20261013.json",
     "operator/server.py", "operator/extension_registry.py", "operator/web/app.mjs",
+    "model/reviews.py", "model/model_selection.py", "model/scenario_footprint.py",
+    "operator/customer_reviews.py",
 )
 
 
@@ -119,9 +130,13 @@ def validate_host(application):
     for name, body in bodies.items():
         validate_body(name, body)
     required = (
-        ("model/workspace.py", "Workspace", {"import_sources", "source_file"}),
+        ("model/workspace.py", "Workspace", {"import_sources", "source_file", "get_grid", "_get", "_save", "_list"}),
         ("model/conservation.py", None, {"prepare", "build", "inspect", "save_plan", "get_plan"}),
-        ("model/portable.py", None, {"backup", "restore"}),
+        ("model/portable.py", None, {"backup", "restore", "inspect_archive"}),
+        ("model/reviews.py", None, {"create_review", "show_review", "history", "export_review",
+                                    "describe_export", "response_template", "validate_workspace"}),
+        ("model/model_selection.py", None, {"grid_models", "selected", "required_roles"}),
+        ("model/scenario_footprint.py", None, {"validate_destination_codes"}),
         ("operator/watershed_context.py", "WatershedContextActions", {"read", "invoke", "_export"}),
     )
     for name, class_name, needed in required:
@@ -138,6 +153,10 @@ def validate_host(application):
     if ("ExtensionRegistry" not in server or "web_assets" not in server
             or "createExtensionHost" not in browser):
         raise ValueError("Install the maintained shared operator extension host before receiving the method view")
+    customer_reviews = bodies["operator/customer_reviews.py"].decode("utf-8")
+    for action in ("customer.review.create", "customer.review.export"):
+        if action not in customer_reviews:
+            raise ValueError("The original customer-review action is required: " + action)
     return {name: sha(body) for name, body in bodies.items()}
 
 
@@ -224,6 +243,14 @@ def package(source_root):
             or descriptor.get("id") != "keowee-method-view"
             or descriptor.get("assets") != ["keowee-method-view.mjs"]):
         raise ValueError("Expected the maintained method-view asset registration")
+    setup_descriptor = json.loads(sources["operator/extensions/scientific-setup.json"])
+    if (setup_descriptor.get("schema") != "upstate.operator-extension/v1"
+            or setup_descriptor.get("id") != "scientific-setup"
+            or setup_descriptor.get("assets") != ["scientific-setup.mjs", "scientific-setup.css"]
+            or setup_descriptor.get("backend", {}).get("module") != "scientific_setup"
+            or setup_descriptor.get("backend", {}).get("actions") != ["scientific.setup.create"]
+            or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]):
+        raise ValueError("Expected the original scientific setup action and view registration")
     sources[MANIFEST] = raw
     return manifest, rows, profiles, recipes, sources
 
@@ -328,11 +355,12 @@ def install(application, source_root, *, dry_run=False):
         for name, body in pending.items():
             validate_body(name, body)
         changed = [name for name in pending if pending[name] != original[name]]
-        # Profile, adapter, view module and descriptor precede the shared entrypoints.
-        # The original Conservation browser is the final executable source change.
+        # Publish complete implementation dependencies before shared entrypoints.
+        # Registration follows every implementation member; scientific setup is last.
         order = ([row["path"] for row in profiles]
-                 + [name for name in PACKAGE_FILES if name not in ENTRYPOINTS]
-                 + list(ENTRYPOINTS) + [MANIFEST])
+                 + [name for name in PACKAGE_FILES if name not in ENTRYPOINTS
+                    and name not in REGISTRATIONS]
+                 + list(ENTRYPOINTS) + list(REGISTRATIONS) + [MANIFEST])
         result = {
             "schema": SCHEMA, "operation_id": manifest["operation_id"],
             "application": str(application), "source_root": str(source_root),
@@ -348,12 +376,25 @@ def install(application, source_root, *, dry_run=False):
             } for name in order],
             "receiving_commands": [
                 "cd " + shlex.quote(str(application))
-                + " && python -B -m source_tools.keowee_profile_receiving "
+                + " && " + shlex.quote(sys.executable)
+                + " -B -m source_tools.keowee_profile_receiving "
                 "--workspace /actual/owned/receiving/keowee-profile",
-                "python -B " + shlex.quote(str(application / "source_tools/receive_watershed_edition.py"))
+                shlex.quote(sys.executable) + " -B "
+                + shlex.quote(str(application / "source_tools/receive_watershed_edition.py"))
                 + " --application " + shlex.quote(str(application))
                 + " --manifest " + shlex.quote(str(source_root / "source/water_context/20261013/complete-sources.json"))
                 + " --output /actual/owned/receiving/watershed",
+                "cd " + shlex.quote(str(application))
+                + " && " + shlex.quote(sys.executable)
+                + " -B -m source_tools.receive_scientific_setup "
+                "--workspace /actual/existing/scientific-workspace --catalog "
+                "--output-dir /actual/owned/receiving/setup-catalog",
+                "cd " + shlex.quote(str(application))
+                + " && " + shlex.quote(sys.executable)
+                + " -B -m source_tools.receive_scientific_setup "
+                "--workspace /actual/existing/scientific-workspace "
+                "--selection /actual/owned/receiving/setup-selection.json "
+                "--output-dir /actual/owned/receiving/scientific-setup",
             ],
         }
         if dry_run or not changed:
