@@ -1,0 +1,64 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ESEXP-2319-scientific-fieldwork-20261013",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 57,
+  "source_bytes": 1177728,
+  "banks": [
+    {
+      "name": "scientific-fieldwork",
+      "original_git_blob": "00436c0c52073253f52ba13d7edf8513c8219051",
+      "original_bytes": 1582623,
+      "original_sha256": "76c26942fce8441ca2d4ca6d51547289ba6deda238ab6de43a8e0919a162aeaf",
+      "gzip_bytes": 546031,
+      "gzip_sha256": "4d42c85477716d649a7779e13fa229fdb807eadf9562b241027c30db0947b32f",
+      "parts": [
+        {
+          "git_blob": "e6302913ac0b4f138db76629cd8bc9e83ce83a9c",
+          "json_bytes": 173554,
+          "json_sha256": "6b9e9970b2969dbae26924c701900a9a5d03d2e0affee64cf12933b223507cb1",
+          "index": 0,
+          "offset": 0,
+          "bytes": 130000,
+          "sha256": "f621429823bd4b4acd42ac10fec92484ca6a20e10f2425f338c18699a2ea0c13"
+        },
+        {
+          "git_blob": "a0c11fb8467bb88d2b0c475de9a6336a51e5fac4",
+          "json_bytes": 173559,
+          "json_sha256": "913d402300fb514494f572c3444c6bc10728a87b5b00015fa2edc7d6294d9870",
+          "index": 1,
+          "offset": 130000,
+          "bytes": 130000,
+          "sha256": "18da3293f99d2f7a7ffaa7d7b2ce9566f967bcc82bc8d3715fc1456b3c75fe00"
+        },
+        {
+          "git_blob": "6f158509e38e7a5d7a8214d540042e2e4c6ba157",
+          "json_bytes": 173559,
+          "json_sha256": "a107e3bc4fb0ecd42ea4b0dc87c38309cb011e633512465e4bb0157dc8f7ba6e",
+          "index": 2,
+          "offset": 260000,
+          "bytes": 130000,
+          "sha256": "bf2e219ce900ac66222416829463b20f7f19daec76c078365a92a87fbcfdf5e2"
+        },
+        {
+          "git_blob": "cfbd4f36876cd4316d1f677173ea427c020bd057",
+          "json_bytes": 173559,
+          "json_sha256": "7d395e19b6b02a6ad63884d29a6f3a989074a0407b3a735d362dc8a4befaeec2",
+          "index": 3,
+          "offset": 390000,
+          "bytes": 130000,
+          "sha256": "49294aa03dc763abcba757479e9d9cc2d33d574a53de8317e343dd41933d2f54"
+        },
+        {
+          "git_blob": "0db330d380a952c1a92a76f5ef7831398a298a56",
+          "json_bytes": 34930,
+          "json_sha256": "dda02a6688f020faab2b2ef7a9ce9b36c4c0f67b5c693b387ef4750eccafc825",
+          "index": 4,
+          "offset": 520000,
+          "bytes": 26031,
+          "sha256": "44c165e209b7412d5649434b7a71497bb2b218f724e381f5bd61213b649d634e"
+        }
+      ]
+    }
+  ]
+}
