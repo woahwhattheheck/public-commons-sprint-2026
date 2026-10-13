@@ -164,13 +164,23 @@ def inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):
                     "cohort.selection", "Native study maps require the same original grid and profile")
             require(run["scenario"]["kind"] == ("baseline" if index == 0 else "landcover"),
                     "cohort.scenario", "Retain baseline and explicit source-bound land-cover changes")
-            runtime = run["runtime"]
-            require(runtime.get("version") == INVEST_VERSION
-                    and runtime.get("declared_source") == INVEST_SOURCE,
-                    "native.version", "Retain the original InVEST source and version")
+            runtimes = run.get("stage_runtimes")
+            if runtimes is None:
+                runtimes = {model: run.get("runtime") for model in ("ndr", "sdr")}
+            if not isinstance(runtimes, dict) or set(runtimes) != {"ndr", "sdr"}:
+                raise ValueError("Retain the original NDR and SDR runtime records")
             for model in ("ndr", "sdr"):
-                require(runtime.get("modules", {}).get(model, {}).get("git_blob")
-                        == INVEST_SOURCE[model + "_blob"], "native." + model,
+                runtime = runtimes[model]
+                if not isinstance(runtime, dict):
+                    raise ValueError("Retain the original " + model.upper() + " runtime record")
+                require(runtime.get("version") == INVEST_VERSION
+                        and runtime.get("declared_source") == INVEST_SOURCE,
+                        "native.version." + model, "Retain the original InVEST source and version")
+                modules = runtime.get("modules")
+                module = modules.get(model) if isinstance(modules, dict) else None
+                require(isinstance(module, dict)
+                        and module.get("git_blob") == INVEST_SOURCE[model + "_blob"],
+                        "native." + model,
                         "Native runtime module differs from its retained official source")
 
         maps = data["maps"]
