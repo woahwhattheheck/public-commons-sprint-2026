@@ -1,0 +1,161 @@
+{
+  "schema": "commons.complete-source-manifest.v1",
+  "case_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+  "files": [
+    {
+      "path": "compose.cjs",
+      "bytes": 13620,
+      "sha256": "d88f84e73cdd81c13e936ba7402ef6bc61a4eba3c48f9937b28d6803cdeab620"
+    },
+    {
+      "path": "build.cjs",
+      "bytes": 4604,
+      "sha256": "4c871ac0b12c6e4b4b992c2793baeaeeda43aa77532c3958cb2db9643b92d407"
+    },
+    {
+      "path": "receive.cjs",
+      "bytes": 1523,
+      "sha256": "94e3ffcb4d3a68be180caefdcd727bd8ddd50578d2280789f5642194dd437335"
+    },
+    {
+      "path": "research-input.json",
+      "bytes": 16299,
+      "sha256": "7b0a17afde803155656332b25130d25de15e6d6b4856204f783a9b74e67727d0"
+    },
+    {
+      "path": "source-pins.json",
+      "bytes": 1421,
+      "sha256": "b3d236bb3fb9860e02c4dd0ce65e78877cdd3de662fc3ebc685e42330fffa80e"
+    },
+    {
+      "path": "working-record.json",
+      "bytes": 128411,
+      "sha256": "b8e0372f72980c0e4f0a030415fdb67b8ef12316c399fd86f69d89c905ab9278"
+    },
+    {
+      "path": "fulfillment-operations.json",
+      "bytes": 104921,
+      "sha256": "246447f199856d60aacc6091161e1e7fe11b648597a48b278bd18c8dbd47e5ab"
+    },
+    {
+      "path": "customer-packages.json",
+      "bytes": 3568,
+      "sha256": "325e108baab11c7b3ecf350f03d86c2fc79e88f95e792a8322a8b19a8af8d313"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 211,
+      "sha256": "0ef33880fa9896e725840602d61c847b90533f7495097f13dda68abb1fc3b6ae"
+    },
+    {
+      "path": "outreach/initial-offer.txt",
+      "bytes": 1054,
+      "sha256": "fc91c738b9cf6fec57eb1666e073098827759204c92607ad353e930bec5caf2c"
+    },
+    {
+      "path": "outreach/initial-offer.html",
+      "bytes": 1094,
+      "sha256": "fecd72cab916aca7988fb047f6b044c0c9bdea47ff3bcc05819f87146dc36f41"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5683,
+      "sha256": "b4fe3efac2e1115e77ca75a826fb81cde952be8aa96c7ff95b55a7cb13fdfd37"
+    },
+    {
+      "path": "customer/sample.csv",
+      "bytes": 2118,
+      "sha256": "5cf6f5d1d463e252cbc585d4b48ecaaa0b214e59cbec10a15627096c8b5e7d18"
+    },
+    {
+      "path": "customer/sample.md",
+      "bytes": 2370,
+      "sha256": "440ee9272ea327bc802ff9c72720b503bbbc5e12b536600dddbd9d200ab719fc"
+    },
+    {
+      "path": "customer/sample.html",
+      "bytes": 4345,
+      "sha256": "8bc1d0f2d9855aa2f48b3ce156c22f11574b9d4a96a7eb179827a0412629e04a"
+    },
+    {
+      "path": "customer/sample-edition.json",
+      "bytes": 2551,
+      "sha256": "639a4b3b7964ed075d0a7e184d4116193f5bc64be1c8afd4cfbe25d26472e12c"
+    },
+    {
+      "path": "customer/paid.csv",
+      "bytes": 9016,
+      "sha256": "50153940a9b6faddb8daf171d4d31c33b73029a2ee8b1a0f1db65a5be1f0ef13"
+    },
+    {
+      "path": "customer/paid.md",
+      "bytes": 10177,
+      "sha256": "20ee6e65908a3ded44ef93998c22612c998612d7d6a9387760baefca48264c89"
+    },
+    {
+      "path": "customer/paid.html",
+      "bytes": 13457,
+      "sha256": "f504b3043f60614dff7eb185ee5ddb8f8b47ba0263abb5a005c36df16f9712d0"
+    },
+    {
+      "path": "customer/paid-edition.json",
+      "bytes": 9680,
+      "sha256": "df053321a14508f86e81142911a4c87e83dc26f0e8966fb58e20bc767efb669c"
+    },
+    {
+      "path": "customer/START-HERE.md",
+      "bytes": 2437,
+      "sha256": "ea698869ed55426473891195b35cac0e6500af7a9b490030ef3f78f27b53df86"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 81753,
+      "sha256": "c683ae05e7a83e43ea8d5a3e7a0735f635d20954c1b7002c3c976e2e475b024d"
+    },
+    {
+      "path": "host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+      "bytes": 12268,
+      "sha256": "75b949c45a4b848671fd78c7b631794d27691b092549e4259edb017c0474fae2"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+      "bytes": 19719,
+      "sha256": "6fd989943d558d806cbb5cdb5e3bad9ee630950aebae13ba6a58dd373d897081"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+      "bytes": 20121,
+      "sha256": "9225050eb8ea3a86fcc02e1845fbe0970473e7ae6bd08a858fb7c806f67562ad"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+      "bytes": 35457,
+      "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+      "bytes": 9998,
+      "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6"
+    },
+    {
+      "path": "browser-originals.json",
+      "bytes": 21665,
+      "sha256": "c434397a8b7ea19283f7d1c3a0a7e6383e8eb2ebb4602ae5fd646def447aace1"
+    },
+    {
+      "path": "browser-receiving.mjs",
+      "bytes": 13203,
+      "sha256": "80327d061a77597d58a4eacd4bddc220ad5005d5a1a846096d09e580347f8c82"
+    },
+    {
+      "path": "RECEIVING.md",
+      "bytes": 4126,
+      "sha256": "76e91b6ee30e7b580f30f39c37640a50ddf037cfbacdfe848c58ece53c75558a"
+    }
+  ]
+}
