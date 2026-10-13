@@ -150,7 +150,7 @@ function absolute(value,name) {
 export async function runInstalledDatasetteBrowser({
   repository,sourceRef,publisherProgrammeDirectory,outputDirectory,
   playwrightModule='playwright',browserExecutable,port=53173,receivedPort=53174,
-  offline=false,npmCache,python='python3',npm='npm',installedCheckpoint,
+  offline=false,npmCache,python='python3',npm='npm',installedCheckpoint,storageBindingFile,
 }={}) {
   for(const [name,value] of Object.entries({repository,publisherProgrammeDirectory,outputDirectory}))
     absolute(value,name);
@@ -181,15 +181,63 @@ export async function runInstalledDatasetteBrowser({
   need(sourceState.phase==='COMPLETE'&&programme.sourceRefresh?.state==='COMPLETE'&&programme.mcpReceiving?.passed&&
     programme.managedUpload?.resumed?.state==='COMPLETE','DATASETTE_INSTALLED_COMPLETED_ORIGINAL_PROGRAMME',
     'Continue the completed original publisher programme and its retained received workspace.');
-  const workspaceDirectory=absolute(programme.receiving.directory,'Original received workspace');
+  let storageBinding=null;
+  if(storageBindingFile!==undefined){
+    absolute(storageBindingFile,'Original storage binding');
+    need(await realpath(storageBindingFile)===storageBindingFile,'DATASETTE_INSTALLED_STORAGE_BINDING_PATH');
+    storageBinding=await readJSON(storageBindingFile);
+    need(storageBinding.schema==='commons.datasette-physical-workspace-binding.v1'&&
+      storageBinding.state==='COMPLETE'&&storageBinding.operation==='SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012'&&
+      storageBinding.physicalRoot===dirname(outputDirectory)&&
+      storageBindingFile===join(storageBinding.physicalRoot,'run-history/physical-storage/binding.json')&&
+      storageBinding.originalRoot==='/dev/datasette-publisher-a49aa-fq7r4j79'&&
+      storageBinding.publisherResultSha256===sha(await readFile(join(publisherProgrammeDirectory,'publisher-programme-result.json')))&&
+      storageBinding.publisherJournalSha256===sha(await readFile(join(publisherProgrammeDirectory,'publisher-programme-state.json')))&&
+      storageBinding.workspace.originalDirectory===programme.receiving.directory&&
+      storageBinding.workspace.directory===join(storageBinding.physicalRoot,'journey/received-storage'),
+      'DATASETTE_INSTALLED_STORAGE_BINDING_CHANGED');
+  }
+  const workspaceDirectory=absolute(storageBinding?.workspace.directory??programme.receiving.directory,'Original received workspace');
   const sourceDeclaration=await readJSON(join(workspaceDirectory,'workspace.json'));
   const input={repository,sourceRef,publisherProgrammeDirectory,outputDirectory,workspaceDirectory,
     workspaceId:sourceDeclaration.workspaceId,port,receivedPort,playwrightModule,browserExecutable:browserExecutable??null};
-  // Host browser paths can change when the same retained workspace moves hosts.
-  // Preserve the original input; only these two execution bindings may differ.
-  if(state)need(same(state.input,{...input,
-    playwrightModule:state.input.playwrightModule,browserExecutable:state.input.browserExecutable}),
-    'DATASETTE_INSTALLED_ORIGINAL_INPUT_CHANGED');
+  // Preserve original business/source input; host browser paths and an explicitly
+  // retained pre-build physical-storage binding are separate execution locations.
+  need(!storageBinding||state,'DATASETTE_INSTALLED_STORAGE_ORIGINAL_JOURNAL_REQUIRED');
+  if(state){
+    const originalExpected=storageBinding?{...input,
+      repository:join(storageBinding.originalRoot,'canonical-repository'),
+      publisherProgrammeDirectory:join(storageBinding.originalRoot,'journey'),
+      outputDirectory:join(storageBinding.originalRoot,'installed'),
+      workspaceDirectory:storageBinding.workspace.originalDirectory}:input;
+    need(same(state.input,{...originalExpected,
+      playwrightModule:state.input.playwrightModule,browserExecutable:state.input.browserExecutable}),
+      'DATASETTE_INSTALLED_ORIGINAL_INPUT_CHANGED');
+    if(storageBinding){
+      need(storageBinding.workspace.workspaceId===input.workspaceId&&storageBinding.installedJournalId===state.id,
+        'DATASETTE_INSTALLED_STORAGE_IDENTITY_CHANGED');
+      const selected={schema:storageBinding.schema,operation:storageBinding.operation,
+        originalRoot:storageBinding.originalRoot,physicalRoot:storageBinding.physicalRoot,
+        checkpointSha256:storageBinding.checkpointSha256,workspace:storageBinding.workspace,
+        originalInstalledJournalSha256:storageBinding.originalInstalledJournalSha256,
+        installedJournalId:storageBinding.installedJournalId,bindingFile:storageBindingFile};
+      if(state.storageBinding)need(same(state.storageBinding,selected),'DATASETTE_INSTALLED_STORAGE_RESELECTED');
+      else{
+        need(!state.build&&!state.installation&&!state.runtime&&!state.applicationWorkspace&&
+          Object.keys(state.applications??{}).length===0&&(state.runs??[]).length===0&&(state.artifacts??[]).length===0,
+          'DATASETTE_INSTALLED_STORAGE_PREBUILD_CHECKPOINT_REQUIRED');
+        const retained=join(storageBinding.physicalRoot,'run-history/physical-storage/original-installed-browser-journey.json');
+        need(sha(await readFile(retained))===storageBinding.originalInstalledJournalSha256,
+          'DATASETTE_INSTALLED_ORIGINAL_JOURNAL_CHANGED');
+        state.storageBinding=selected;
+        state.storageBoundAt=stamp();
+      }
+      // The original input remains immutable; actual file locations are a
+      // separately retained host execution binding for this same journal.
+      state.executionInput={...input};
+      await retain(stateFile,state);
+    }
+  }
   else state={schema:'stellar-forge.datasette-installed-browser-journey.v1',id:randomUUID(),input,
     sourceResolution:{kind:sourceResolution,commit:sourceRef},startedAt:stamp(),phase:'CREATED',checks:{},applications:{},runs:[],browserErrors:[],artifacts:[]};
   const save=async phase=>{state.phase=phase;state.updatedAt=stamp();await retain(stateFile,state);

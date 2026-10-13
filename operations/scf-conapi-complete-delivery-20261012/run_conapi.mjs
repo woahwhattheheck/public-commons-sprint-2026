@@ -474,7 +474,21 @@ export async function runConapiDelivery(input){
       await checkpoint('APPLICATION_STOPPED');return stopped;
     };
 
-    const sourceDirectory=absolute(publisher.receiving.directory),sourceDeclaration=await read(join(sourceDirectory,'workspace.json'));
+    let selectedSourceDirectory=publisher.receiving.directory;
+    if(originalDatasette.storageBinding){
+      const binding=originalDatasette.storageBinding,execution=originalDatasette.executionInput;
+      need(binding.schema==='commons.datasette-physical-workspace-binding.v1'&&
+        binding.operation==='SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012'&&
+        binding.workspace.originalDirectory===publisher.receiving.directory&&
+        execution?.workspaceDirectory===binding.workspace.directory&&
+        execution.workspaceId===binding.workspace.workspaceId&&
+        execution.repository===input.repository&&execution.publisherProgrammeDirectory===input.publisherProgrammeDirectory,
+        'CONAPI_ORIGINAL_STORAGE_BINDING_CHANGED');
+      selectedSourceDirectory=execution.workspaceDirectory;
+    }
+    const sourceDirectory=absolute(selectedSourceDirectory),sourceDeclaration=await read(join(sourceDirectory,'workspace.json'));
+    need(!originalDatasette.storageBinding||sourceDeclaration.workspaceId===originalDatasette.storageBinding.workspace.workspaceId,
+      'CONAPI_ORIGINAL_STORAGE_WORKSPACE_CHANGED');
     const sourceApp=await ensureApplication('source',originalAttachment.runtimeId,'datasette','Conapi original publisher source',
       {workspaceDirectory:sourceDirectory,connectionFile:join(sourceDirectory,'conapi-source-connection.json'),port:0});
     const sourceListener=await startApplication(sourceApp);
