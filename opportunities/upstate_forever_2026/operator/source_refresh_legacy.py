@@ -42,9 +42,10 @@ def dispatch(workspace, action, payload=None, *, submit=None):
                          'captured_at': s.get('captured_at'), 'entries': len(s['entries'])}
                         for s in workspace.sources()],
             'plans': [{'id': item['plan']['id'], 'title': item['plan']['title'],
-                       'from_collection_id': item['plan'].get('from_collection_id', item['plan'].get('selection', {}).get('from_collection_id')),
-                       'to_collection_id': item['plan'].get('to_collection_id', item['plan'].get('selection', {}).get('to_collection_id')),
-                       'status': item['state']['status']} for item in refresh.list()]})
+                       'from_collection_id': item['plan']['from_collection_id'],
+                       'to_collection_id': item['plan']['to_collection_id'],
+                       'status': item['state']['status']} for item in refresh.list()
+                      if item.get('engine', 'roots') == 'roots']})
     if action in ('diff', 'plan'):
         old, new = identifier(value['from_collection_id']), identifier(value['to_collection_id'])
         mapping = value.get('mapping')

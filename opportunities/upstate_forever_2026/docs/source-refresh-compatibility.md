@@ -17,6 +17,8 @@ get_plan returns a common read view with top-level ID, title, selection, preview
 
 SourceRefresh.source_diff and SourceRefresh.plan retain the original argument forms. In particular roots=None preserves original automatic root selection, while roots={} preserves an explicitly empty selection. SourceRefresh.get returns the exact saved body used for original export validation. SourceRefresh.list retains the original nested plan/state list shape and includes both formats.
 
+The retained legacy browser catalog lists roots-format plans only, matching its original dependency-node renderer. Its existing root-plan operations stay unchanged. Use the shared Source Updates view to browse and operate on both formats. The class and CLI list APIs continue to include both formats; immutable plan bodies and IDs are preserved.
+
 ## Apply, resume, reports and backup
 
 The original root-selective apply implementation keeps its progress, cancellation and SQLite step state. The edition engine retains its original per-object checkpoints. The class facade forwards progress events and observes cancellation after an edition checkpoint; an active native model finishes its current call before cancellation is recorded. Native operations continue through the original Workspace runner, so existing model-stage reuse remains available.
