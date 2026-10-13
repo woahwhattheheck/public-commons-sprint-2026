@@ -31,6 +31,10 @@ def _state_database(name, path):
     return isinstance(name, str) and (
         name in MUTABLE_DATABASE_MEMBERS
         or re.fullmatch(r"workspace/source-refreshes/[0-9a-f]{64}/state\.sqlite3", name) is not None
+        # A returned-review result is independently editable through the same
+        # original Measurements engine; retain its later committed WAL edits.
+        or re.fullmatch(r"workspace/measurement-returned-reviews/results/[0-9a-f]{64}/"
+                        r"result/measurements/measurements\.sqlite", name) is not None
     )
 
 

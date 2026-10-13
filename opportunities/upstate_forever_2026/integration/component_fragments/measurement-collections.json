@@ -27,7 +27,9 @@
         "operator/web/measured_collections.mjs",
         "operator/web/measured_observations.css",
         "operator/web/measured_observations.mjs",
-        "operator/web/measured_observations_extension.mjs"
+        "operator/web/measured_observations_extension.mjs",
+        "operator/web/measured_returned_reviews.mjs",
+        "measurement_workspace/web/returned_reviews.mjs"
       ],
       "requires": [
         "core"
