@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
+import { workspaceBackupCommands, workspaceBackupHelp, runWorkspaceBackupCommand } from './workspace-backup-cli.mjs';
 import { readJSON } from './storage.mjs';
 import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
 
@@ -16,6 +17,8 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace attach --workspace DIRECTORY --runtime EXISTING_RUNTIME [--label NAME]
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
+  runtime-workspace operation-status --workspace DIRECTORY --operation-id UUID
+  runtime-workspace operation-log --workspace DIRECTORY --operation-id UUID
   runtime-workspace source-plans --workspace DIRECTORY [--query TEXT --limit 30 --cursor ID] [--receiving-query TEXT --receiving-status all --receiving-limit 30 --receiving-cursor ID]
   runtime-workspace source-plan-inspect --document COMPLETE_JSON
   runtime-workspace source-plan-save --workspace DIRECTORY --request COMPLETE_JSON
@@ -64,6 +67,8 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace application-recover --workspace DIRECTORY --application-id ID --operation-id UUID
   runtime-workspace application-output --workspace DIRECTORY --application-id ID --operation-id UUID
 
+${workspaceBackupHelp}
+
 The private browser receives an original archive or reuses an existing runtime,
 reviews exact dependency profiles, prepares and resumes original installations,
 compares upgrades, recovers into a new directory and exports the original
@@ -72,6 +77,7 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  ...workspaceBackupCommands,
   'source-plans': ['--workspace', '--query', '--limit', '--cursor', '--receiving-query', '--receiving-status', '--receiving-limit', '--receiving-cursor'],
   'source-plan-inspect': ['--document'],
   'source-plan-save': ['--workspace', '--request'],
@@ -110,6 +116,7 @@ const allowed = {
   'managed-config': ['--workspace', '--home-id', '--path'],
   init: ['--workspace', '--runtime-home'], attach: ['--workspace', '--runtime', '--label'],
   serve: ['--workspace', '--port'], status: ['--workspace', '--runtime-id'], handoff: ['--workspace', '--runtime-id'],
+  'operation-status': ['--workspace', '--operation-id'], 'operation-log': ['--workspace', '--operation-id'],
 };
 export async function main(argv = process.argv.slice(2)) {
   if (!argv.length || argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP); return; }
@@ -148,7 +155,8 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'source-plans') result = await model.sourcePlansState({
+  if (Object.hasOwn(workspaceBackupCommands, command)) result = await runWorkspaceBackupCommand(model, command, options);
+  else if (command === 'source-plans') result = await model.sourcePlansState({
     ...(options['--query'] !== undefined ? { query: options['--query'] } : {}),
     ...(options['--limit'] !== undefined ? { limit: Number(options['--limit']) } : {}),
     ...(options['--cursor'] !== undefined ? { cursor: options['--cursor'] } : {}),
@@ -293,6 +301,10 @@ export async function main(argv = process.argv.slice(2)) {
   } else if (command === 'handoff') {
     if (!options['--runtime-id']) fail('RUNTIME_WORKSPACE_RUNTIME_ID_REQUIRED');
     result = await model.handoff(options['--runtime-id']);
+  } else if (command === 'operation-status') result = await model.operationStatus({ operationId: options['--operation-id'] });
+  else if (command === 'operation-log') {
+    if (!options['--operation-id']) fail('RUNTIME_WORKSPACE_OPERATION_INVALID');
+    result = await model.logs({ operationId: options['--operation-id'] });
   } else result = await model.state({ runtimeId: options['--runtime-id'] ?? null });
   process.stdout.write(json(result));
 }

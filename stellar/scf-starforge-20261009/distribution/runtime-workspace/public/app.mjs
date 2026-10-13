@@ -1,5 +1,6 @@
 import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 import { createRuntimeTransferView } from './transfer.mjs';
+import { createWorkspaceReceivingView } from './workspace-receiving.mjs';
 import { createManagedWorkspaceView } from './managed.mjs';
 import { createApplicationsWorkspaceView } from './applications.mjs';
 import { createPythonWorkspaceView } from './python.mjs';
@@ -12,7 +13,7 @@ let token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname); }
 let state, selectedId = null, profileReview = null, selectedArchive = null, handoff = null;
 let loading = false, refreshAgain = false, view = 'runtime', logSelection = null, initial = true;
-let archiveSelectionGeneration = 0;
+let archiveSelectionGeneration = 0, logRequestGeneration = 0;
 const pendingKey = () => 'starforge-runtime-pending-request-' + state?.workspaceId;
 function message(text = '') { $('message').textContent = text; $('message').hidden = !text; }
 function error(value) {
@@ -42,6 +43,7 @@ function switchView(name) {
   if (name === 'managed') managed.refresh().catch(error);
   if (name === 'applications') applications.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
+  if (name === 'workspace-backups') workspaceReceiving.refresh().catch(error);
   if (name === 'python') python.refresh().catch(error);
   if (name === 'source-builds') sourceBuilds.refresh().catch(error);
 }
@@ -73,7 +75,7 @@ function cacheOptions() {
   return value;
 }
 function busy(runtimeId) {
-  return !!state?.operations.some(job => (job.runtimeId === runtimeId || job.targetId === runtimeId) && (job.workerActive || job.phase === 'QUEUED'));
+  return !!state?.operations.some(job => (job.runtimeId === runtimeId || job.targetId === runtimeId) && (job.workerActive || job.workerActive === null || job.commandActive || job.phase === 'QUEUED'));
 }
 function updateControls() {
   const value = selected(), exists = !!value, active = exists && busy(value.id);
@@ -140,6 +142,12 @@ function renderOperations() {
       [job.cacheTransferId ? 'Runtime source transfer' : 'Image transfer', job.transferDirectory], ['Container output', job.containerDirectory], ['Product build', job.sourceBuildOutput]])
       if (path) article.append(make('p', label + ': ' + path));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
+    if (job.observation?.status === 'UNAVAILABLE') {
+      article.append(make('p', 'Current process status is unavailable. Open retained output or refresh this operation.', 'note'));
+      const detail = make('details');
+      detail.append(make('summary', 'Status check detail'), make('pre', JSON.stringify(job.observation, null, 2)));
+      article.append(detail);
+    }
     if (job.error?.flock) {
       const receipt = make('details'); receipt.append(make('summary', 'Original lock process diagnostics'),
         make('pre', JSON.stringify(job.error.flock, null, 2))); article.append(receipt);
@@ -199,6 +207,8 @@ function renderOperations() {
       const open = make('button', 'Open runtime'); open.type = 'button';
       open.addEventListener('click', () => chooseRuntime(job.targetId ?? job.runtimeId)); actions.append(open);
     }
+    const observe = make('button', 'Refresh operation status'); observe.type = 'button';
+    observe.addEventListener('click', () => refreshOperation(job.id).catch(error)); actions.append(observe);
     const log = make('button', selectedLog === job.id ? 'Refresh selected worker log' : 'Open worker log'); log.type = 'button';
     log.addEventListener('click', () => openLog({ operationId: job.id }).catch(error)); actions.append(log);
     if (job.phase === 'QUEUED' && !job.sourceBuildId && !job.operation.startsWith('python-')) {
@@ -210,6 +220,26 @@ function renderOperations() {
     if (job.resultSource) article.append(make('p', 'Original receipt: ' + job.resultSource));
     list.append(article);
   }
+}
+function connectionStatus() {
+  const ids = state.operations.filter(job => job.observation?.status === 'UNAVAILABLE').map(job => job.id);
+  const unavailable = ids.length;
+  state.operationObservation = { status: unavailable ? 'PARTIAL' : 'CURRENT',
+    total: state.operations.length, unavailable, unavailableOperationIds: ids };
+  $('connection').textContent = unavailable
+    ? 'Connected · ' + unavailable + ' operation status ' + (unavailable === 1 ? 'check' : 'checks') + ' unavailable'
+    : state.operations.some(job => job.workerActive || job.commandActive) ? 'Operation in progress' : 'Connected';
+}
+async function refreshOperation(id) {
+  const requestedToken = token, workspaceId = state?.workspaceId;
+  const job = await api(query('/api/operation-status', { operationId: id }));
+  if (token !== requestedToken || state?.workspaceId !== workspaceId) return;
+  const index = state.operations.findIndex(item => item.id === id);
+  if (index < 0) state.operations.push(job);
+  else if ((state.operations[index].observation?.checkedAt ?? '') <= (job.observation?.checkedAt ?? ''))
+    state.operations[index] = job;
+  connectionStatus(); renderRuntime(); renderOperations();
+  if (view === 'managed') await managed.refresh();
 }
 async function refresh({ quiet = false } = {}) {
   if (loading) { refreshAgain = true; return; }
@@ -225,13 +255,19 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds'].includes(saved?.view) && view === requestedView) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds', 'workspace-backups'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
     if (token !== requestedToken) { refreshAgain = true; return; }
+    if (state?.workspaceId === value.workspaceId) {
+      // Preserve a newer direct operation refresh while the larger snapshot was loading.
+      const current = new Map(state.operations.map(job => [job.id, job]));
+      value.operations = value.operations.map(job =>
+        (current.get(job.id)?.observation?.checkedAt ?? '') > (job.observation?.checkedAt ?? '') ? current.get(job.id) : job);
+    }
     state = value; selectedId = value.selected?.id ?? selectedId;
-    $('connection').textContent = value.operations.some(job => job.workerActive) ? 'Operation in progress' : 'Connected';
+    connectionStatus();
     $('workspace-location').textContent = value.directory;
     $('runtime-home').textContent = 'New runtime directories: ' + value.runtimeHome;
     $('runtime-count').textContent = String(value.runtimes.length);
@@ -262,6 +298,10 @@ async function refresh({ quiet = false } = {}) {
   } catch (value) {
     if (token !== requestedToken) { refreshAgain = true; return; }
     $('connection').textContent = 'Connection unavailable'; if (!quiet) error(value);
+    if (!state) {
+      if (view !== 'workspace-backups') switchView('workspace-backups');
+      else workspaceReceiving.refresh().catch(error);
+    }
   }
   finally { loading = false; if (refreshAgain) { refreshAgain = false; await refresh({ quiet }); } }
 }
@@ -360,11 +400,17 @@ async function operation(value) {
   return result;
 }
 async function openLog(value) {
+  const generation = ++logRequestGeneration, requestedToken = token, workspaceId = state?.workspaceId;
   const result = await api(query('/api/log', value));
+  if (generation !== logRequestGeneration || requestedToken !== token || state?.workspaceId !== workspaceId) return;
   logSelection = value; $('log-panel').hidden = false;
   $('log-title').textContent = result.name;
-  $('log-detail').textContent = result.offset ? 'Showing the final ' + (result.totalBytes - result.offset) + ' of ' + result.totalBytes + ' bytes.' : result.totalBytes + ' retained bytes.';
-  $('log-text').textContent = result.text || '(The selected log is empty.)'; switchView('operations'); prefs();
+  $('log-detail').textContent = result.available === false
+    ? result.state === 'NOT_CREATED' ? 'This operation has not created its worker log yet.' : 'The retained worker log is currently unavailable.'
+    : result.offset ? 'Showing the final ' + (result.totalBytes - result.offset) + ' of ' + result.totalBytes + ' bytes.' : result.totalBytes + ' retained bytes.';
+  $('log-text').textContent = result.available === false
+    ? result.error.code + ': ' + result.error.message : result.text || '(The selected log is empty.)';
+  switchView('operations'); prefs();
 }
 const images = initImageWorkspace({ root: $('image-workspace'), api, operation, refresh, openLog, message, error,
   switchView, getState: () => state, getToken: () => token, getView: () => view });
@@ -464,8 +510,10 @@ const sourceBuilds = createSourceBuildWorkspaceView({ root: $('source-build-work
 });
 const transfers = createRuntimeTransferView({ root: $('transfer-workspace'), api, getState: () => state,
   getToken: () => token, getView: () => view, operation, refreshWorkspace: refresh, openLog, switchView, message, error });
+const workspaceReceiving = createWorkspaceReceivingView({ root: $('workspace-receiving'), api,
+  getState: () => state, getToken: () => token, getView: () => view, message, error });
 const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
-  openLog, switchView, message, error });
+  refreshOperation, openLog, switchView, message, error });
 const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state,
   refreshWorkspace: refresh, switchView, message, error });
 const python = createPythonWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
@@ -488,9 +536,10 @@ window.addEventListener('hashchange', () => {
   managed.reset();
   applications.reset();
   transfers.reset();
+  workspaceReceiving.reset();
   python.reset();
   sourceBuilds.reset();
-  archiveSelectionGeneration++;
+  archiveSelectionGeneration++; logRequestGeneration++;
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;
