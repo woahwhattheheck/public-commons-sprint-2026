@@ -10,6 +10,7 @@ import {benchmarkHTML} from './benchmark_reports.mjs';
 import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
 import {flowLoadOperation,readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
 import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
+import {chiquesOperation} from './chiques_nutrient_workspace.mjs';
 import {nativeSourceOperation} from './native_observations.mjs';
 import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
 import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
@@ -70,6 +71,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         }
         send(response,200,sedimentComparisonOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
+      if(parts[0]==='chiques'){send(response,200,chiquesOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;}
       if(parts[0]==='sediment'){
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4){const study=readSedimentStudy(s,parts[2]);if(parts[3]==='report.html'){send(response,200,sedimentHTML(study),'text/html; charset=utf-8','sediment-study-'+study.id.slice(0,12)+'.html');return;}if(['pairs.csv','residuals.csv','predictions.csv','coefficients.csv'].includes(parts[3])){send(response,200,sedimentCSV(study,parts[3].split('.')[0]),'text/csv; charset=utf-8','sediment-'+parts[3]);return;}}
         send(response,200,sedimentOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
