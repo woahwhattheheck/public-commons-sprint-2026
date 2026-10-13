@@ -1,4 +1,5 @@
 // MIT. Saved DCAT migration operations through the original CKAN owner.
+import { executeCkanDcatCorrection, pageDcatCorrectionState } from './ckan-dcat-corrections.mjs';
 import { executeCkanDcatSemantic, pageDcatSemanticState } from './ckan-dcat-semantic.mjs';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
@@ -66,6 +67,7 @@ export function pageDcatState(value, input = {}) {
       reviewsOffset: input.semanticReviewsOffset });
     result.semantic = selected.semantic; paging.semantic = selected.paging;
   }
+  if (value.corrections !== undefined) result.corrections = pageDcatCorrectionState(value.corrections, limit);
   return { dcat: result, paging };
 }
 export function forgetDcatReview(model) { reports.delete(model); }
@@ -258,6 +260,7 @@ async function openRetained(model, kind, itemId) {
 /** The caller owns the original lease, native mutation guard and retained reader. */
 export async function executeCkanDcat(context, name, input) {
   const { model, workspace, launch } = context;
+  if (name.startsWith('merchant_ckan_dcat_correction_')) return executeCkanDcatCorrection(context, name, input);
   if (name.startsWith('merchant_ckan_dcat_semantic_')) return executeCkanDcatSemantic(context, name, input);
   switch (name) {
     case 'merchant_ckan_dcat_status': {
