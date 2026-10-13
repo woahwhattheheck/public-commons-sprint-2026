@@ -528,6 +528,261 @@
           "sha256": "76ea59d49068e6586e3e6007570c334599ec21ac346f3cead45e45434570c07d"
         }
       ]
+    },
+    {
+      "id": "analysis-report-agent-native-transport",
+      "label": "Original Analysis capability and complete recipient file transport",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/worldbank-programme-client.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "fefd381a2479d8107cb4eb0dfd7fc9df70e9859f",
+          "bytes": 16196,
+          "sha256": "628e9a793875b05d8d4e65ed465a5f17208653f933f03c665a2cd3057c242dca"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-native-client",
+      "label": "Native report editorial requests with original durable intent",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/analysis-report-review-client.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "7cc8921d2ba2fc8125c0d5a2960196f26b3dbd9c",
+          "bytes": 5735,
+          "sha256": "9d1c309dd71b0a8468d96178fcbf50d6d9ec925cb302667e9676947fe4487f1a"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-native-types",
+      "label": "Typed original Analysis editorial client contract",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/analysis-report-review-client.d.mts",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "175bff74ce3fb1c7bde78cf36628ed8e95b6da25",
+          "bytes": 1562,
+          "sha256": "f33c114af002d7d4c130ccc07c09efa5927b643e86dc2b1aa2a2c17fe72f535b"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-custody",
+      "label": "Complete report agent, return intake and retained file custody",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-agent.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "e2f3a80c9aefa30fd49209f8b73a2b8ec4b1aa53",
+          "bytes": 21213,
+          "sha256": "56c914aefb52085d86b5b3f9681b815b7e6e8a18d00a7be69add5f7e0ee0d0f5"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-receiving",
+      "label": "Durable agent calls, full return upload and independent receiving",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-client.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "412ea5d6102ab8ced6e968395c8844da01f60994",
+          "bytes": 12881,
+          "sha256": "d42952c73b1a1c9dd4251498f1b5ff2c50d04c03b856515b8c9d3b5b8a91a7b7"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-receiving-types",
+      "label": "Typed customer agent and complete receiving contract",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-client.d.mts",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "0fd3cb3a7e5ca58be015150151f5418cbc69d796",
+          "bytes": 1458,
+          "sha256": "dc79a4c8ac18bccde6089dd806cea625147d93ba323e4e40f79af4bf173ae39b"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-connection",
+      "label": "Host-declared original Analysis workspace connection",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-connection.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "78359e3d38039e6c3c865bf675c1f7d5db529792",
+          "bytes": 1658,
+          "sha256": "3d3bd5d01ad9e640861ba2b345a7976c004ef99070435707d625abddfd208c76"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-manifest",
+      "label": "Complete recipient delivery manifest and source identity",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-contracts.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "119087238b26c8ba5023700ad217e425813f0c0f",
+          "bytes": 2437,
+          "sha256": "c3953ce0138883d836d7056a80a9901ed2d13825ce860245f337aaba55a4048c"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-tools",
+      "label": "Full report editorial tool catalogue and request capacities",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/catalog/report-editorial.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "540bd8696914af6bb5f4a838f055814e9a5b1a2d",
+          "bytes": 6074,
+          "sha256": "be6c80295642e2b7a19ed420b48100aa774a9a4fd56990a21bfff57bfc34e408"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-provider",
+      "label": "Source-owned installed report editorial provider",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/providers/report-editorial.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "55fb1d292a24a4f215a0cf0b56f38e7b84e93ec8",
+          "bytes": 2304,
+          "sha256": "798b7cfc2fb54798a48e11d400a0547ac433e1a67e464c7d1daf37d1b1760b25"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-command",
+      "label": "Complete installed report editorial command",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-cli.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "4cc7abbe6f4a899e6e02b55c74e98a6c5aa76e9c",
+          "bytes": 4567,
+          "sha256": "162ca684825a6a1232acce80d10fbe40fa78d3089fbba92fa4db04ab97b1c0e9"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-guide",
+      "label": "Customer report agent commissioning and full operating guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/REPORT_EDITORIAL_AGENT.md",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "a018555f6c138f24baa0432fd239781779cf77d6",
+          "bytes": 12735,
+          "sha256": "e9e84fde3d32b42f835690df736788f1da8ee8fb13999aa5b8756b655ae38597"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-configuration",
+      "label": "Original workspace connection configuration example",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/examples/report-editorial-connection.json",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "800fc48a9018958e0ad15be905146bde4e28b287",
+          "bytes": 284,
+          "sha256": "debb1326f616ca89bc666d1861ed87bbf7502894d65c298ec60635f3dccbd36c"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-records",
+      "label": "Canonical complete request and source identity records",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/report-editorial-records.mjs",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "7d36466f7fa246190c5cb6f919320759b8bb4611",
+          "bytes": 1319,
+          "sha256": "4fe532e762d26f3d19751f3abd9281be23307c5540ef5c1bc3a630a1d28387e0"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-agent-distribution",
+      "label": "Installed commands, typed exports and complete source registration",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/report-editorial-agent.json",
+      "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+      "required": false,
+      "editions": [
+        {
+          "commit": "374237b449a8639bc01936cda3b533eec45565c5",
+          "git_blob": "9235d784acb9a0ca018538ae3a045727e04edec2",
+          "bytes": 2227,
+          "sha256": "c98b5c05be408128d7f9cd0b0223232be56fad7553c7a7ca335a720c649173c5"
+        }
+      ]
     }
   ]
 }
