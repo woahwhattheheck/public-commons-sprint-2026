@@ -28,7 +28,7 @@ Repeat --visit-id for an ordered subset of actual visits. Without it, the packet
 ## What completes
 
 1. The original native plan report is retained and registered as an observed scientific source through implementation_report_source.
-2. The maintained scientific_report_editions lifecycle renders the ordered original report sources; the real Operator prepares its complete companion ZIP. The original full preview is saved before rendering, so a lost completion reply reconnects to that exact edition.
+2. The maintained scientific_report_editions lifecycle renders the ordered original report sources; the shared native report model prepares its complete companion ZIP through the same archive producer used by the web operator. The original full preview is saved before rendering, so a lost completion reply reconnects to that exact edition.
 3. scientific_briefing prepares the original report model, linked figures, slide/meeting-note index and complete briefing ZIP.
 4. field_deployment prepares the selected revision's printable crew packet, offline field workbench, native editable plan, original selected records, calendar, sites and attachments.
 5. The selected scientific report Study includes the native report's complete editable Implementation lineage and crew packets through the existing dependency resolver.
