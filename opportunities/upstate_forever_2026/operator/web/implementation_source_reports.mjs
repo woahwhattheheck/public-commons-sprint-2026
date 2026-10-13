@@ -40,7 +40,7 @@ export async function openImplementationSourceReport(workbench,values,{title,clo
  w.cache?.();
  if(typeof closeEditor==='function')closeEditor();
  if(w.gone||w.host.getState?.()?.workspace_key!==workspace_key)throw Error('The selected workspace changed before opening the report publisher.');
- const payload={workspace_key,sources};
+ const payload={workspace_key,sources,...(selection===null?{}:{selection_mode:'replace'})};
  if(typeof title==='string'&&title.trim())payload.title=title.trim();
  await w.host.openScientificReport(payload);
 }
