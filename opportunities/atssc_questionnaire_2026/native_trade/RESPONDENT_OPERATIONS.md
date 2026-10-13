@@ -208,3 +208,15 @@ Primary sources:
 - [Complete issuer archive and catalogue](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/988f2172887d2eb60665e43a64cc52532779eb5f/atssc-questionnaire-source-2026): original RFI/Annexes and all five workbooks.
 - [Python SMTP client](https://docs.python.org/3/library/smtplib.html): native relay operations and responses.
 - [RFC 3464](https://www.rfc-editor.org/rfc/rfc3464): original per-message/per-recipient delivery-status identities and outcomes.
+
+## Continue the saved case through its browser
+
+RESPONDENT_EXERCISE.py opens the original five Annex workbooks and carries the company, contact, assignment, native SMTP and cold-receiving operation through the existing questionnaire application. RESPONDENT_BROWSER.py continues that same saved workspace through the visible operator and respondent forms. It uses the existing Chrome and Playwright runtime supplied by the receiving host.
+
+Run:
+
+    python3 RESPONDENT_BROWSER.py --workspace /absolute/path/to/final-cold-received/workspace --output /absolute/path/to/new-browser-operation --chrome /absolute/path/to/chrome-headless-shell --playwright /absolute/path/to/playwright
+
+The browser continuation imports and reviews a complete contact file, saves the original coverage selection, creates company assignments, previews and submits a message to its local commissioning relay, saves and reopens respondent progress, submits the original questionnaire, changes contact language, operates public French registration, and uses the actual download controls. It retains the complete original Download URL and resulting bytes. The wrapper receives the downloaded project, continues the same original contact history, exports the edited full project, and reopens that final edition. Its operating workbook and operating ZIP come from that same final case.
+
+The programme writes BROWSER_RESULT.json after each completed operating phase. If the browser returns an error, BROWSER_RECEIVING_RESULT.json identifies the exact phase and preserves the current complete project before runtime cleanup. Continue that retained case after correcting the source; the original questionnaire and respondent identities remain with it.
