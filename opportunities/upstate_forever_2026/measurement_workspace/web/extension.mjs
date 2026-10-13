@@ -5,11 +5,15 @@ import {mountCollectionPanel} from './collections.mjs';
 import {mountMeasurements} from './workspace.js';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),benchmarkMemory=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
   let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
+  const benchmarkKey=(workspace,owner)=>JSON.stringify([workspace,owner]);
+  const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;return !!instance?.hasUnsavedBenchmarks?.();};
+  const beforeUnload=event=>{if(unsavedBenchmarks()){event.preventDefault();event.returnValue='';}};
+  window.addEventListener('beforeunload',beforeUnload);
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
   const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/provider-query','/handbacks/preview'].includes(path);
   function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();handbackMemory.clear();return true;}
@@ -89,12 +93,15 @@ export function createMeasuredObservations(capabilities){
         guard();status.textContent=`${result.count} original identifiers registered; source SHA-256 ${result.source_sha256}`;await refresh();
       }catch(error){if(active())status.textContent=error.message;}
     });
-    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css',sourceHandbackCss:'/web/source_handback.css',sourceHandbackState:handbackMemory.get(boundWorkspace)||null,onSourceHandbackState:value=>{if(personIdentity()===boundPerson)handbackMemory.set(boundWorkspace,JSON.parse(JSON.stringify(value)));}});
+    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css',initialBenchmarkState:benchmarkMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,sourceHandbackCss:'/web/source_handback.css',sourceHandbackState:handbackMemory.get(boundWorkspace)||null,onSourceHandbackState:value=>{if(personIdentity()===boundPerson)handbackMemory.set(boundWorkspace,JSON.parse(JSON.stringify(value)));}});
     paintCurrentNotice();
   }
   function suspend(){
+    // The original host detaches after selection changes. Retain the exact old
+    // editor locally; never send an old-identity write through the new selection.
+    if(instance&&displayedPerson!==null){const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);}
     generation++;paintCurrentNotice=()=>{};displayedPerson=null;
-    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy();instance=null;root=null;key=null;
+    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true});instance=null;root=null;key=null;
   }
-  return {mount,update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
+  return {mount,async prepareLeave(){if(instance)await instance.prepareLeave?.();},cancelLeave(){instance?.cancelLeave?.();},destroy(){suspend();window.removeEventListener('beforeunload',beforeUnload);},update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
 }
