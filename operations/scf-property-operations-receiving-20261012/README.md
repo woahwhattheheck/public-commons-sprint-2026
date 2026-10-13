@@ -36,7 +36,7 @@ The manager performs normal Stop. The entry records the original result, removed
 
 The complete saved portable package is restored with the original CLI into the receiver's own cold directory. Every member is compared against its declared byte/hash identity. A cold re-export is verified against the original logical workspace and all complete source bytes.
 
-When browser inputs are selected, each successful application lifetime also opens the original UI, receives all eight workspace sections and four Property workflow views, downloads the largest existing native export member through its normal browser button, and records desktop/mobile screenshots. It allows only native reads, and closes both browser context and process.
+When browser inputs are selected, each successful application lifetime also opens the original UI, receives all eight workspace sections and four Property workflow views, downloads the largest existing native export member through its normal browser button, and checks desktop 1440×1000 and mobile 390×844 views. The selected Playwright module may expose Chromium through an ES module namespace or its CommonJS default export. Screenshots stay under the operation's private `private/browser-inspection/` directory for local inspection. `Browser_Receiving.json` and the complete downloaded native member remain in the customer directory. It allows only native reads, and closes both browser context and process.
 
 ## Continuation and uncertain outcomes
 
@@ -53,7 +53,7 @@ Do not remove a native workspace lock, change a source selection to make a stale
 
 ## Complete output
 
-`customer/Property_Operations_Operation.json` is the complete result report. The customer directory includes the original paid ZIP and identity, all native Property record/file receiving, full query pages, source and merchant manifests, complete package exports, original application histories and closure receipts, the exact cold receiver and re-export, operating instructions and any actual browser artifacts.
+`customer/Property_Operations_Operation.json` is the complete result report. The customer directory includes the original paid ZIP and identity, all native Property record/file receiving, full query pages, source and merchant manifests, complete package exports, original application histories and closure receipts, the exact cold receiver and re-export, operating instructions, the actual browser receiving reports and complete native browser downloads. Private inspection screenshots are excluded.
 
 `customer/MANIFEST.json` declares every final customer member. `Property_Operations_Complete_Delivery.tar.gz` contains that complete directory. Keep the private receiving journal separately for exact operation continuation.
 

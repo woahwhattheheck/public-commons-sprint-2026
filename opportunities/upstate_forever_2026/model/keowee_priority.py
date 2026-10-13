@@ -20,12 +20,15 @@ from . import keowee_profile_adapter as profile_adapter
 METHOD_FILE = Path(__file__).resolve().parents[1] / "source" / "keowee-priority-methods-20261013.json"
 METHOD_SCHEMA = "upstate.keowee-priority-methods/v1"
 TABLE_SCHEMA = "upstate.parcel-criteria/v1"
-VERSION = 1
+VERSION = 2
 ACRES_PER_HECTARE = 10000.0 / 4046.8564224
 CANDIDATE_FIELDS = {
     "area_ha", "reporting_area_ha", "protected_fraction", "protected_area_ha",
     "source_water_fraction", "source_water_area_ha", "high_quality_context",
     "high_quality_overlap_area_ha", "high_quality_contact_length_m",
+}
+NUMERIC_METRIC_UNITS = {
+    "parcel_acres": "acres", "hydric_soil_acres": "acres", "sensitive_riparian_acres": "acres",
 }
 EXPORT_UNITS = {
     "nitrogen_export": ("kg/ha/year", "kg/cell/year"),
@@ -333,7 +336,7 @@ def bind(workspace, spec):
 
 def _table(workspace, score, retained):
     if not score.get("metrics"):
-        return profile_adapter.CriterionTable(), {"state": "parcel_attributes_and_native_quantities", "rows": 0}
+        return profile_adapter.CriterionTable(), {"state": "parcel_attributes_and_native_quantities", "rows": 0}, {}
     choice = score["metrics"]
     path, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
     raw = path.read_bytes()
@@ -358,7 +361,7 @@ def _table(workspace, score, retained):
             metadata = {key: value for key, value in payload.items() if key != "rows"}
         else:
             raise ValueError("A criterion JSON table must contain rows under upstate.parcel-criteria/v1")
-    result = profile_adapter.CriterionTable()
+    result, bounds = profile_adapter.CriterionTable(), {}
     result.metadata = metadata
     for row in records:
         if not isinstance(row, dict):
@@ -373,7 +376,55 @@ def _table(workspace, score, retained):
             raise ValueError("Parcel criterion values must be an object")
         result[key] = values
         result.retain_row(key, row, choice["id_column"])
-    return result, {"state": "retained_table", "rows": len(result), "body_sha256": original, "metadata": metadata}
+        limits = row.get("metric_bounds", {})
+        if isinstance(limits, str):
+            limits = json.loads(limits) if limits.strip() else {}
+        if not isinstance(limits, dict):
+            raise ValueError("Parcel metric_bounds must map numeric field names to closed source intervals")
+        bounds[key] = {
+            _text(name, "Bounded metric field"): _numeric_interval(interval, name)
+            for name, interval in limits.items()
+        }
+    return result, {
+        "state": "retained_table", "rows": len(result), "body_sha256": original, "metadata": metadata,
+        "rows_with_numeric_intervals": sum(bool(value) for value in bounds.values()),
+    }, bounds
+
+
+def _numeric_interval(value, name):
+    if not isinstance(value, dict):
+        raise ValueError(name + " requires a source interval object")
+    result = _copy(value)
+    lower = _number(result.get("lower"), name + " lower limit")
+    upper = _number(result.get("upper"), name + " upper limit")
+    if upper < lower:
+        raise ValueError(name + " upper limit is below its lower limit")
+    if result.get("closed", True) is not True:
+        raise ValueError(name + " requires closed numeric interval endpoints")
+    result.update(lower=lower, upper=upper, closed=True)
+    result["unit"] = _text(result.get("unit"), name + " interval unit")
+    result["method"] = _text(result.get("method"), name + " interval method")
+    result["reference"] = _text(result.get("reference"), name + " interval source reference")
+    return result
+
+
+def _resolved_interval(original, binding, name):
+    result = _copy(original)
+    transform = binding.get("transform", "identity") if binding else "identity"
+    if transform == "ha_to_acres":
+        if result["unit"] not in ("ha", "hectares"):
+            raise ValueError(name + " hectare conversion requires interval units ha or hectares")
+        result["lower"] *= ACRES_PER_HECTARE
+        result["upper"] *= ACRES_PER_HECTARE
+        result["unit"] = "acres"
+        result["input_interval"] = _copy(original)
+        result["conversion"] = "hectares * 10000 / 4046.8564224"
+    elif transform != "identity":
+        raise ValueError(name + " numeric interval requires identity or ha_to_acres")
+    expected = NUMERIC_METRIC_UNITS.get(name)
+    if expected is not None and result["unit"] != expected:
+        raise ValueError(name + " interval must be expressed in " + expected)
+    return result
 
 
 def _missing(value):
@@ -447,14 +498,18 @@ def _stream_orders(raw, name):
     return set(values)
 
 
-def _resolve(row, table, score, required, means, cell_area_ha):
-    values, provenance = {}, {}
+def _resolve(row, table, score, required, means, cell_area_ha, table_bounds):
+    values, provenance, resolved_bounds = {}, {}, {}
     for name, kind in required.items():
         binding = score["bindings"].get(name)
+        interval_field = None
         if binding is None:
             if name in table.get(row["id"], {}):
                 raw = table[row["id"]][name]
                 detail = {"kind": "table", "field": name}
+                interval_field = name
+            elif name in table_bounds.get(row["id"], {}):
+                raw, detail, interval_field = None, {"kind": "table", "field": name}, name
             elif name == "parcel_acres":
                 raw = row["area_ha"] * ACRES_PER_HECTARE
                 detail = {"kind": "derived", "field": "area_ha", "formula": "hectares * 10000 / 4046.8564224"}
@@ -470,6 +525,7 @@ def _resolve(row, table, score, required, means, cell_area_ha):
                 raw = row["original_attributes"].get(binding["field"])
             elif source == "table":
                 raw = table.get(row["id"], {}).get(binding["field"])
+                interval_field = binding["field"]
             elif source == "study_mean":
                 raw = _field(row, table, binding)
                 mean = means.get(name)
@@ -497,45 +553,158 @@ def _resolve(row, table, score, required, means, cell_area_ha):
             if source not in ("study_mean", "stream_order"):
                 value = _typed(_transform(raw, binding, name), kind, name)
                 detail["raw"] = raw
+        if kind == "number" and interval_field in table_bounds.get(row["id"], {}):
+            original_interval = table_bounds[row["id"]][interval_field]
+            interval = _resolved_interval(original_interval, binding, name)
+            if value is not None and not interval["lower"] <= value <= interval["upper"]:
+                raise ValueError(name + " exact value is outside its retained source interval")
+            if value is None and interval["lower"] == interval["upper"]:
+                value = interval["lower"]
+            resolved_bounds[name] = interval
+            detail["numeric_interval"] = interval
+            detail["value_state"] = "exact" if value is not None else "source_interval"
         values[name] = value
         provenance[name] = detail
-    return values, provenance
+    return values, provenance, resolved_bounds
 
 
-def _criterion(rule, metrics, profile_identity=None):
+def _threshold_points(rule, value):
+    return next((row["points"] for row in rule["thresholds"] if value >= row["min"]), rule["otherwise"])
+
+
+def _threshold_interval(rule, interval):
+    options = _threshold_options(rule, interval)
+    return min(options), max(options)
+
+
+
+def _source_profile_interval(rule, interval, profile_identity):
+    """Evaluate every literal source bin over a closed geometric interval.
+
+    Bin endpoints and the open regions between them exhaust the classification
+    changes. A gap keeps the profile's unresolved alternatives; an overlap keeps
+    every matched class. Probe values are evaluation points, never observations.
+    """
+    lower, upper = interval["lower"], interval["upper"]
+    boundaries = {lower, upper}
+    for band in rule["source_profile_rule"]["bins"]:
+        for key in ("min", "max"):
+            boundary = band[key]
+            if boundary is not None and lower <= boundary <= upper:
+                boundaries.add(float(boundary))
+    ordered = sorted(boundaries)
+    probes = list(ordered)
+    for left, right in zip(ordered, ordered[1:]):
+        # Half-sums avoid overflowing a finite interval; nextafter handles an
+        # endpoint-rounded midpoint without escaping the closed input bounds.
+        middle = left / 2 + right / 2
+        if not left < middle < right:
+            middle = math.nextafter(left, right)
+        if left < middle < right:
+            probes.append(middle)
+    classifications = [
+        profile_adapter.classify(
+            value, rule["source_profile_rule"],
+            criterion_id=rule["source_profile_criterion_id"],
+            identity=profile_identity, references=rule["source_profile_references"],
+        )
+        for value in probes
+    ]
+    options = sorted({value for item in classifications for value in item["score_options"]})
+    return {
+        "schema": profile_adapter.CLASS_SCHEMA,
+        "criterion_id": rule["source_profile_criterion_id"],
+        "value": None, "unit": rule["source_profile_rule"]["unit"],
+        "state": "bounded_interval",
+        "value_interval": {key: interval[key] for key in ("lower", "upper", "unit", "method", "reference")},
+        "attainable_states": sorted({item["state"] for item in classifications}),
+        "matched_classes": list(dict.fromkeys(
+            label for item in classifications for label in item["matched_classes"])),
+        "classes": list(dict.fromkeys(label for item in classifications for label in item["classes"])),
+        "score_options": options,
+        "source_profile": _copy(profile_identity),
+        "references": _copy(rule["source_profile_references"]),
+    }
+
+
+def _threshold_options(rule, interval):
+    """Retain attainable step values rather than filling gaps between scores."""
+    lower, upper = interval["lower"], interval["upper"]
+    probes = [lower, upper]
+    for threshold in rule["thresholds"]:
+        cutoff = float(threshold["min"])
+        if lower <= cutoff <= upper:
+            probes.append(cutoff)
+        if lower < cutoff <= upper:
+            probes.append(max(lower, math.nextafter(cutoff, -math.inf)))
+    return sorted({_threshold_points(rule, value) for value in probes})
+
+
+def _criterion(rule, metrics, metric_bounds=None, profile_identity=None):
+    metric_bounds = metric_bounds or {}
     kind = rule["type"]
     if kind in ("maximum", "sum"):
-        children = [_criterion(row, metrics, profile_identity) for row in rule["terms"]]
+        children = [_criterion(row, metrics, metric_bounds, profile_identity) for row in rule["terms"]]
         options = profile_adapter.aggregate_options(
             children, operation=kind, cap=rule.get("cap") if kind == "sum" else None)
         lower, upper = min(options), max(options)
-        return {"id": rule["id"], "known_points": lower, "possible_points": upper,
-                "points": lower if lower == upper else None, "score_options": options,
-                "terms": children, "reference": rule["reference"]}
+        interval_used = any(row.get("interval_used", False) for row in children)
+        return {
+            "id": rule["id"], "known_points": lower, "possible_points": upper,
+            "points": lower if lower == upper else None, "score_options": options,
+            "terms": children, "reference": rule["reference"],
+            "interval_used": interval_used,
+            "points_determined_by_interval": interval_used and lower == upper,
+        }
     value = metrics.get(rule["metric"])
+    interval = metric_bounds.get(rule["metric"]) if kind == "thresholds" else None
+    classification = None
     if kind == "thresholds" and "source_profile_rule" in rule:
-        return profile_adapter.numeric_component(rule, value, profile_identity)
-    if kind == "boolean":
+        if value is None and interval is not None:
+            classification = _source_profile_interval(rule, interval, profile_identity)
+        else:
+            classification = profile_adapter.classify(
+                value, rule["source_profile_rule"],
+                criterion_id=rule["source_profile_criterion_id"],
+                identity=profile_identity, references=rule["source_profile_references"],
+            )
+        options = classification["score_options"]
+    elif kind == "boolean":
         options = [0, rule["points"]] if value is None else [rule["points"] if value else 0]
     elif kind == "levels":
         if isinstance(value, dict) and value.get("schema") == profile_adapter.CLASS_SCHEMA:
+            classification = value
             options = [rule["levels"][label] for label in value["classes"]]
         else:
             options = list(rule["levels"].values()) if value is None else [rule["levels"][value]]
     elif kind == "thresholds":
-        options = ([rule["otherwise"]] + [row["points"] for row in rule["thresholds"]]
-                   if value is None else [next((row["points"] for row in rule["thresholds"]
-                                              if value >= row["min"]), rule["otherwise"])])
+        if value is not None:
+            options = [_threshold_points(rule, value)]
+        elif interval is not None:
+            options = _threshold_options(rule, interval)
+        else:
+            options = [rule["otherwise"], *(row["points"] for row in rule["thresholds"])]
     else:
         raise ValueError("Unsupported published criterion type")
     options = sorted(set(options))
     lower, upper = min(options), max(options)
-    result = {"id": rule["id"], "metric": rule["metric"], "value": value,
-              "known_points": lower, "possible_points": upper, "score_options": options,
-              "points": lower if lower == upper else None, "reference": rule["reference"]}
-    if isinstance(value, dict) and value.get("schema") == profile_adapter.CLASS_SCHEMA:
-        result["classification"] = value
+    result = {
+        "id": rule["id"], "metric": rule["metric"], "value": value,
+        "known_points": lower, "possible_points": upper, "score_options": options,
+        "points": lower if lower == upper else None, "reference": rule["reference"],
+        "evaluation": "exact_metric" if value is not None else "bounded_metric" if interval else "undetermined_metric",
+        "interval_used": value is None and interval is not None,
+    }
+    if classification is not None:
+        result["classification"] = classification
+    if interval is not None:
+        result["value_interval"] = {
+            key: interval[key] for key in ("lower", "upper", "unit", "method", "reference")
+        }
+        result["points_determined_by_interval"] = value is None and lower == upper
     return result
+
+
 
 def _eligible(rule, metrics):
     if "constant" in rule:
@@ -636,7 +805,7 @@ def rank(workspace, candidates, spec, retained, bindings):
     profile_state = profile_adapter.load()
     if retained.get("source_profile") != document["source_profile"]:
         raise ValueError("The saved study belongs to another source-profile binding; prepare its successor")
-    table, table_info = _table(workspace, score, retained)
+    table, table_info, table_bounds = _table(workspace, score, retained)
     required = metric_types(selected)
     cell_area_ha = _native_cell_area(workspace, spec, bindings)
     resolved_bands = _native_bands(candidates, score, cell_area_ha)
@@ -647,10 +816,19 @@ def rank(workspace, candidates, spec, retained, bindings):
             numbers = [_number(x, name) for x in numbers if not _missing(x)]
             numbers = [x for x in numbers if x > 0]
             means[name] = math.fsum(numbers) / len(numbers) if numbers else None
-    summary = {"complete": 0, "partial": 0, "prerequisite_absent": 0, "prerequisite_unknown": 0}
+    summary = {
+        "complete": 0, "partial": 0, "prerequisite_absent": 0, "prerequisite_unknown": 0,
+        "parcels_with_numeric_intervals": 0, "criteria_determined_by_intervals": 0,
+        "complete_scores_using_intervals": 0,
+    }
     for row in candidates:
-        metrics, provenance = _resolve(row, table, score, required, means, cell_area_ha)
-        components = [_criterion(rule, metrics, document["source_profile"]) for rule in selected["criteria"]]
+        metrics, provenance, metric_bounds = _resolve(
+            row, table, score, required, means, cell_area_ha, table_bounds)
+        components = [_criterion(rule, metrics, metric_bounds, document["source_profile"])
+                      for rule in selected["criteria"]]
+        interval_criteria = sum(bool(item.get("points_determined_by_interval")) for item in components)
+        summary["parcels_with_numeric_intervals"] += bool(metric_bounds)
+        summary["criteria_determined_by_intervals"] += interval_criteria
         lower = sum(item["known_points"] for item in components)
         upper = sum(item["possible_points"] for item in components)
         prerequisite = _eligible(selected["eligibility"], metrics)
@@ -666,12 +844,14 @@ def rank(workspace, candidates, spec, retained, bindings):
             "points": lower if complete and prerequisite is True else None, "known_points": lower, "possible_points": upper,
             "maximum": selected["maximum"], "priority": priority,
             "prerequisite": prerequisite, "metric_values": metrics, "metric_sources": provenance,
+            "metric_bounds": metric_bounds,
             "definition_sha256": sha,
         }
         profile_adapter.candidate_trace(row, table, score, document, components, profile_state)
         row["point_priority"] = priority
         row["score_unit"] = "points"
         summary["complete" if complete else "partial"] += 1
+        summary["complete_scores_using_intervals"] += bool(complete and prerequisite is True and interval_criteria)
         if prerequisite is False:
             row["exclusion_reasons"].append("Published " + selected["title"] + " prerequisite is absent")
             summary["prerequisite_absent"] += 1
@@ -697,6 +877,11 @@ def rank(workspace, candidates, spec, retained, bindings):
         "reference": selected["reference"], "source_uri": document["source_uri"],
         "definition_sha256": sha, "implementation_sha256": current_code,
         "formula": "Sum published criterion contributions, preserving each criterion maximum and practice prerequisite.",
+        "numeric_intervals": (
+            "Closed acreage limits retain observed positive geometry and unresolved source coverage; "
+            "literal source bins, including gaps and overlaps, are evaluated across the whole interval. "
+            "Exact points can be determined "
+            "without assigning an exact acreage."),
         "interpretation": score["interpretation"], "headwater_orders": score["headwater_orders"],
         "source_interpretations": document["source_interpretations"],
         "source_profile": document["source_profile"],

@@ -65,7 +65,7 @@ RentCheck requires a reviewed, retained **account-specific** contract before a h
 | One inspection | `GET /v1/inspections/:id` |
 | Create one inspection | `POST /v2/inspections`, using `inspection_template_id` |
 
-The readable public documentation does **not** establish production authentication, full create bodies, property/unit identity fields, returned identity envelopes, pagination, report download URLs or idempotency behavior. The staging documentation is not a production configuration. Do not guess a base URL, field name, pagination cursor, report endpoint or idempotency header.
+The original source owner now retains the complete officially linked OpenAPI document, including declared authentication, request bodies, response schemas and pagination. Select the receiving account's actual environment and review its source-backed field pointers against that retained contract. Preserve the documented inspection-list version and maintenance-report wrapper discrepancies. No idempotency header or replay guarantee is established for inspection creation; reconcile the original request and complete response before another dispatch.
 
 Retain the complete original contract file with **Retain exact file**, then enter this configuration using values from that actual contract:
 
@@ -290,7 +290,7 @@ For CLI `property.publisher.release.start`, the same original operator remains a
 
 The Propply adapter uses only the two documented report operations at the fixed official endpoint. Each complete report response is limited to 16 MiB; a local retained source/report file is limited to 64 MiB. The original workspace package retains its existing aggregate size limits. Limits are checked before import/retention and never justify truncating a source.
 
-The RentCheck portal's publicly unreadable production schema is an explicit configuration boundary. No vendor response, report, inspection, licence, hosting permission or payment is invented to complete a demonstration. Use the actual receiving account contract and authorized original records when that integration is commissioned.
+The original source owner captured the complete officially linked RentCheck OpenAPI document on 12 October 2026: 434,208 bytes, SHA-256 `3865e074ff61d2ac05a0b49ddad6f85c3efaf392c8602bfcf83f845cb36d7808`, with 42 paths, 66 operations and 56 schemas. The [developer portal](https://developers.getrentcheck.com/) links the [original YAML](https://rentcheck-lambdas-static-files.s3-us-east-2.amazonaws.com/doc_specs.yml). Keep the account-specific reviewed selection: the retained specification and separate guide still differ on inspection-list v2/v3 and the maintenance-report wrapper. Preserve the complete source and actual receiving account contract when commissioning that integration.
 
 ### Complete browser request records and moved source workspaces
 

@@ -47,6 +47,8 @@ HTML keeps an opaque sandbox with scripts, downloads, modals and popups. PDF ret
 - original relative companions send a message to the parent;
 - external HTTP/HTTPS public-source links are opened by the parent with noopener/noreferrer; a visible parent link also supports browsers that block a popup.
 
+For a retained HTML document with its own Content-Security-Policy meta element, the derived preview admits the exact SHA256 of the navigation bridge in that document's effective script policy. Existing script hashes/nonces and all other resource directives remain intact. A policy that already permits unqualified inline scripts is preserved, because adding a hash would otherwise disable its original economic controls. Each actual policy meta element is handled independently; quoted text inside a report's script or narrative is untouched. The byte-exact original download is unchanged.
+
 The parent accepts messages only from the currently displayed iframe, in the current workspace, with the expected message type. Relative file navigation must match the exact current delivery-preview prefix and exact retained inventory member. It cannot navigate an operator route or request another delivery. Public-source navigation rejects credentials and non-HTTP/HTTPS schemes. Other original download types use the parent context and original file route. No same-origin privilege is added to the child.
 
 The standards relevant to this choice are WHATWG's iframe sandbox rules (https://html.spec.whatwg.org/dev/iframe-embed-object.html) and Chromium's explanation of opaque sandbox cookie behavior (https://github.com/explainers-by-googlers/csp-sandbox-allow-same-site-none-cookies/blob/main/README.md).

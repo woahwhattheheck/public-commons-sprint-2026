@@ -19,6 +19,7 @@ from .common import (
     finite, held, identifier, now, read_json, verify_file,
 )
 from . import rasters
+from . import conservation_reporting
 
 VERSION = 1
 POLLUTANTS = {
@@ -912,10 +913,12 @@ def _csv_rows(candidates, alternatives):
                 "delta", "reduction", "comparison_availability", "comparison_availability_reason",
                 "common_baseline", "common_alternative", "common_coverage_fraction",
                 "common_valid_area_ha", "common_structural_stream_area_ha", "profile_changed")]
+    fields += conservation_reporting.csv_fields()
     fields += ["score_components", "original_attributes"]
     rows = []
     for candidate in candidates:
         row = {key: candidate.get(key) for key in fields}
+        row.update(conservation_reporting.flat_values(candidate))
         for pollutant, metric in candidate["pollutants"].items():
             for key in ("baseline", "unit", "availability", "availability_reason",
             "coverage_fraction", "valid_area_ha", "structural_stream_area_ha", "missing_area_ha"):
@@ -956,6 +959,7 @@ def _write_gpkg(path, crs, candidates, geometries, *, selected=None, union=None)
         "n_kg_year": "float", "p_kg_year": "float", "sed_t_year": "float",
         "metrics_json": "str", "source_attributes": "str", "score_unit": "str",
         "point_priority": "str", "point_score": "str",
+        **conservation_reporting.gis_fields(),
     }}
     path.unlink(missing_ok=True)
     selected = set(selected) if selected is not None else None
@@ -977,6 +981,7 @@ def _write_gpkg(path, crs, candidates, geometries, *, selected=None, union=None)
                         "score_unit": row.get("score_unit"), "point_priority": row.get("point_priority"),
                         "point_score": json.dumps(row["point_score"], sort_keys=True, ensure_ascii=False) if row.get("point_score") else None,
                     }
+                    props.update(conservation_reporting.flat_values(row))
                     geometry = wkb.loads(bytes.fromhex(geometries[row["id"]][geometry_key]))
                     dst.write({"geometry": mapping(_multipolygon(geometry)), "properties": props})
         if union is not None and not union.is_empty:
@@ -996,7 +1001,7 @@ def _display(value, *, digits=4):
     return html.escape(str(value))
 
 
-def _report(state, candidates, *, plan=None):
+def _base_report(state, candidates, *, plan=None):
     spec = state["selection"]["spec"]
     selected = set(plan["selected_ids"]) if plan else None
     title = plan["title"] if plan else state["title"]
@@ -1112,6 +1117,11 @@ a{color:#203948}footer{border-top:1px solid #cbd0d4;margin-top:30px;padding-top:
         " · Portfolio <code>" + plan["id"] + "</code>" if plan else "") + "</footer></main></html>"
 
 
+def _report(state, candidates, *, plan=None):
+    return conservation_reporting.extend_report(
+        _base_report(state, candidates, plan=plan), state, candidates, plan=plan)
+
+
 def build(workspace, selection):
     """Compute or resume a whole retained candidate study and its complete exports."""
     state = prepare(workspace, selection) if isinstance(selection, dict) else _read_state(workspace, selection)
@@ -1212,6 +1222,8 @@ def build(workspace, selection):
                 ("candidates", "candidates.json"), ("geometries", "geometries.json"), ("selection", "selection.json"),
                 ("candidates_csv", "candidates.csv"), ("geopackage", "geodata.gpkg"), ("report", "index.html"),
             )}
+            state["files"].update(conservation_reporting.write_supplements(
+                workspace, directory, state, candidates))
             state.update(state="complete", completed_at=now(), updated_at=now(),
                          progress={"stage": "complete", "completed": len(candidates), "total": len(candidates)})
             atomic_json(directory / "study.json", state)
@@ -1434,6 +1446,8 @@ def save_plan(workspace, value):
                 ("geopackage", "geodata.gpkg"), ("selection", "selection.json"),
                 ("portfolio", "portfolio.json"), ("report", "index.html"),
             )}
+            plan["files"].update(conservation_reporting.write_supplements(
+                workspace, directory, state, candidates, plan=plan))
             plan["files"]["footprint"] = {
                 **plan["files"]["geopackage"], "layer": "selected_union",
                 "crs": crs.to_wkt(), "geometry_role": "Selected reporting-area union",
@@ -1457,8 +1471,10 @@ def export_packet(workspace, study_id, plan_id=None):
         raise ValueError("Choose a completed portfolio from this exact study")
     subject = plan if plan else state
     root = workspace.root
+    presentation = conservation_reporting.identity()
+    # Rebuilt presentation has its own identity; prior study/plan bytes stay retained.
     key = digest({"version": VERSION, "study_id": study_id, "plan_id": plan_id,
-                  "files": subject["files"]})
+                  "files": subject["files"], "presentation": presentation})
     directory = root / "conservation-exports" / key
     with held(root / ".workspace.lock", blocking=False), held(directory / ".export.lock", blocking=False):
         record = directory / "export.json"
@@ -1486,7 +1502,11 @@ def export_packet(workspace, study_id, plan_id=None):
         if plan is not None:
             plan_path = root / "conservation-plans" / plan["id"] / "plan.json"
             members["plan.json"] = (plan_path, describe_file(root, plan_path))
+        candidates = read_json(candidate_source)["candidates"]
+        members.update(conservation_reporting.presentation_members(
+            workspace, directory, state, candidates, plan=plan))
         manifest = {
+            "presentation": presentation,
             "schema": "upstate.conservation-packet/v1", "id": key, "study_id": study_id, "plan_id": plan_id,
             "entrypoint": "index.html", "members": {
                 name: {"bytes": descriptor["bytes"], "sha256": descriptor["sha256"]}
@@ -1509,6 +1529,7 @@ def export_packet(workspace, study_id, plan_id=None):
             **describe_file(root, target), "schema": "upstate.conservation-export/v1", "id": key,
             "study_id": study_id, "plan_id": plan_id, "filename": target.name,
             "files": manifest["members"], "entrypoint": "index.html", "created_at": now(),
+            "presentation": presentation,
         }
         atomic_json(record, result, immutable=True)
         return result

@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v7"
+REPORT_VERSION = "upstate.scientific-report/v8"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -693,13 +693,39 @@ def _relative_link(value):
     return normalized
 
 
+def _figure(block, root=None):
+    """Bind a readable figure to its retained SVG and original numeric specification."""
+    relative = _relative_link(block.get("path"))
+    if Path(relative).suffix.lower() != ".svg":
+        raise ValueError("Scientific figures require their retained original SVG")
+    for name in ("alt", "caption"):
+        if not isinstance(block.get(name), str) or not block[name].strip():
+            raise ValueError("Scientific figures require nonempty " + name)
+    if not isinstance(block.get("spec"), dict):
+        raise ValueError("Scientific figures require the original numeric specification")
+    size, sha = block.get("bytes"), block.get("sha256")
+    if (not isinstance(size, int) or isinstance(size, bool) or size <= 0
+            or not isinstance(sha, str) or len(sha) != 64
+            or any(value not in "0123456789abcdef" for value in sha)):
+        raise ValueError("Scientific figures require the retained SVG length and SHA256")
+    if root is not None:
+        directory = Path(root).resolve(strict=True)
+        source = (directory / relative).resolve(strict=True)
+        if not source.is_relative_to(directory):
+            raise ValueError("Scientific figure is outside the original delivery")
+        actual = describe_file(directory, source)
+        if actual["bytes"] != size or actual["sha256"] != sha:
+            raise ValueError("Scientific figure differs from its retained original SVG")
+    return {**block, "path": relative}
+
+
 def report_pdf(path, title, sections, *, contact, source_records):
     """Render the original report content with repeating, page-aware data tables."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
     from xml.sax.saxutils import escape
 
     styles = getSampleStyleSheet()
@@ -719,7 +745,20 @@ def report_pdf(path, title, sections, *, contact, source_records):
         return Paragraph(body, style or styles["BodyText"])
 
     def append(block):
-        if isinstance(block, dict) and block.get("kind") == "links":
+        if isinstance(block, dict) and block.get("kind") == "figure":
+            from .scientific_figures import panel_drawings
+            figure = _figure(block, Path(path).parent)
+            if figure.get("title"):
+                story.append(paragraph(figure["title"], styles["Heading3"]))
+            drawings = list(panel_drawings(figure["spec"], 7.1 * inch))
+            if not drawings:
+                raise ValueError("Scientific figure contains no native report panels")
+            for drawing in drawings[:-1]:
+                story.extend([drawing, Spacer(1, .08 * inch)])
+            story.append(KeepTogether([
+                drawings[-1], Spacer(1, .05 * inch), paragraph(figure["caption"]),
+            ]))
+        elif isinstance(block, dict) and block.get("kind") == "links":
             for item in block["items"]:
                 relative = _relative_link(item["path"])
                 story.append(Paragraph('<link href="' + html_escape(relative, quote=True) + '">' +
@@ -753,8 +792,9 @@ def report_pdf(path, title, sections, *, contact, source_records):
             append(block)
     story.append(paragraph("Source editions", styles["Heading2"]))
     append(_source_block(source_records))
-    story.append(paragraph("Prepared by " + str(contact["name"]) + " · "
-                           + str(contact["organization"]) + " · " + str(contact["email"])))
+    prepared = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
+    if prepared:
+        story.append(paragraph("Prepared by " + prepared))
 
     def page_number(canvas, document):
         canvas.saveState()
@@ -776,6 +816,14 @@ def _html_block(block):
         if isinstance(value, dict):
             return '<a href="' + html_escape(value["href"], quote=True) + '">' + html_escape(value["label"]).replace("\n", "<br>") + "</a>"
         return html_escape(value).replace("\n", "<br>")
+    if isinstance(block, dict) and block.get("kind") == "figure":
+        figure = _figure(block)
+        title = ("<strong>" + cell(figure["title"]) + "</strong> "
+                 if figure.get("title") else "")
+        return ('<figure class="scientific-figure"><img src="' +
+                html_escape(figure["path"], quote=True) + '" alt="' +
+                html_escape(figure["alt"], quote=True) + '"><figcaption>' +
+                title + cell(figure["caption"]) + "</figcaption></figure>")
     if isinstance(block, dict) and block.get("kind") == "links":
         return "<ul>" + "".join(
             '<li><a href="' + html_escape(_relative_link(item["path"]), quote=True) + '">' +
@@ -808,7 +856,14 @@ def _markdown_report(title, sections, prepared):
     for heading, blocks in sections:
         lines.extend(["## " + _markdown_cell(heading), ""])
         for block in blocks:
-            if isinstance(block, dict) and block.get("kind") == "table":
+            if isinstance(block, dict) and block.get("kind") == "figure":
+                figure = _figure(block)
+                # Reuse the maintained link/cell escaping for original captions and paths.
+                lines.extend(["!" + _markdown_cell(link(figure["alt"], figure["path"])), ""])
+                if figure.get("title"):
+                    lines.extend([_markdown_cell(figure["title"]), ""])
+                lines.extend([_markdown_cell(figure["caption"]), ""])
+            elif isinstance(block, dict) and block.get("kind") == "table":
                 if block.get("caption"):
                     lines.extend([_markdown_cell(block["caption"]), ""])
                 lines.append("| " + " | ".join(_markdown_cell(v) for v in block["columns"]) + " |")
@@ -830,13 +885,19 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     all_sections = list(sections) + [("Source editions", [_source_block(source_records)])]
+    for _, blocks in all_sections:
+        for block in blocks:
+            if isinstance(block, dict) and block.get("kind") == "figure":
+                _figure(block, directory)
     headings = "".join("<li><a href=\"#section-" + str(index) + "\">" + html_escape(str(heading))
                        + "</a></li>" for index, (heading, _) in enumerate(all_sections))
     content = "".join("<section id=\"section-" + str(index) + "\"><h2>"
                       + html_escape(str(heading)) + "</h2>"
                       + "".join(_html_block(block) for block in blocks) + "</section>"
                       for index, (heading, blocks) in enumerate(all_sections))
-    prepared = "Prepared by " + str(contact["name"]) + " · " + str(contact["organization"]) + " · " + str(contact["email"])
+    supplied_contact = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
+    prepared = ("Prepared by " + supplied_contact if supplied_contact
+                else "Original scientific study, source editions and model selections retained with this report.")
     body = (
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -849,7 +910,10 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;margin:16px 0}"
         "table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;"
         "padding:8px;border-bottom:1px solid #ccc;overflow-wrap:anywhere}th{background:#eee;border-bottom:1px solid #444}"
-        "caption{text-align:left;margin-bottom:8px}footer{border-top:1px solid #777;margin-top:32px;padding-top:16px}"
+        "caption{text-align:left;margin-bottom:8px}.scientific-figure{margin:20px 0}"
+        ".scientific-figure img{display:block;max-width:100%;height:auto}"
+        ".scientific-figure figcaption{margin-top:8px;font-size:13px;max-width:95ch}"
+        "footer{border-top:1px solid #777;margin-top:32px;padding-top:16px}"
         "@media(max-width:620px){main{padding:16px}nav ol{columns:1}h1{font-size:25px}}"
         "@media print{main{max-width:none;padding:0}nav{display:none}.table-wrap{overflow:visible}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}body{font-size:10pt}"

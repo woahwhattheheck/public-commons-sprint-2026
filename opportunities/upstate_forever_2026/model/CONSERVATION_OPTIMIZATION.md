@@ -397,3 +397,8 @@ decoded 220,922 bytes, SHA256
 The adapter keeps the saved selected union, original model domain and reporting
 overlap, selected model families, matching baseline and prepared experiment
 IDs. The same actual native programme executes the cases.
+
+
+## Save the reviewed selection
+
+The existing save API also accepts the completed original preview through the operator's `preview_task_id` payload. The operator reopens that retained task, requires the same workspace, completed state and original preview action, and supplies its full analysis to `save(..., retained_analysis=...)`. The model validates the original content identity, exact study selection, candidate and geometry descriptors, current retained file bodies, decision request and selected original IDs. It then persists that exact analysis and saves the selected IDs through the ordinary conservation plan. Saving a reviewed selection does not rerun the optimizer; the authoritative plan still recomputes quantities and geometry across the selected union. A new spec retains the original optimize-and-save behavior.

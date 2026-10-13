@@ -101,3 +101,12 @@ Earlier assessments retain their original implementation and applicable files. T
 The same managed Directory application includes **Returned procedures**. It reopens the complete saved plan basis, imports full returned histories, retains explicit original-model choices and saves a completed review before receiving its result. All controls freeze during pending reads or saves; complete working JSON preserves unfinished custom text and exact pending requests across reload. Historical reviews remain immutable and reopen from the return library.
 
 Managed Save/Start/open/Stop/reopen uses the same original workspace and authenticated operator. Full workspace receiving includes the original `operatingPlanReturns` collection and all review/comparison/input files, with model replay and source-basis verification. Completion, plan save and applied receipt are separate recoverable stages. The original installed application consumer retains these collections through its generic complete record handling; the dedicated full operator/Merchant/customer course and source semantics are documented in [OPERATING_RETURNS.md](OPERATING_RETURNS.md).
+
+
+## Source correction workbench
+
+The installed Human Services Directory application includes **Source corrections**. It opens exact original edition rows, preserves complete lexical JSON and physical CSV values, saves ordered plans, builds separate candidates, and accepts explicitly reviewed candidates. All prior source, conformance, Operating Plans and returned-procedure records remain available.
+
+Working correction JSON, unfinished editor values and pending request bodies stay in the selected browser session and can be downloaded completely. Before leaving, retain the complete working JSON if browser storage reports a capacity failure. The application does not write to the source publisher.
+
+The same original workspace export/import includes every correction input, preview/review file, original and derived source/member/index and accepted candidate lineage. Read [SOURCE_CORRECTIONS.md](SOURCE_CORRECTIONS.md) for ordinary use and [CORRECTION_CLIENTS.md](CORRECTION_CLIENTS.md) for the complete operated customer handover.

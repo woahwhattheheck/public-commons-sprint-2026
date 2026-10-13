@@ -27,7 +27,7 @@ A delivery selection may explicitly set `audit_scope` to `regional-30m` or `sour
 
 The source-native contract permits the original 15-metre Gura grid and zero added context. The audit compares that zero with the completed grid selection. It does not replace the original modelling domain or resample the outputs. An explicit regional selection still requires the regional grid and positive buffer. Existing manifests without a grid declaration retain those regional requirements.
 
-The delivery format changes to `native-grid-analysis-economic-report-6`, creating a new delivery identity for this complete asset set. Existing run, grid, profile and source identities remain the source of the rebuilt delivery. Native model runs can be reused through the existing completed-run workflow.
+The producer includes its current `DELIVERY_FORMAT_VERSION` in the delivery identity, so a newer package format creates a new delivery edition. Rebuild with the installed producer to include its current grid, report and capture behaviour. Existing run, grid, profile and source identities remain the source of the rebuilt delivery; completed native model runs can be reused.
 
 ## Complete package and offline atlas
 

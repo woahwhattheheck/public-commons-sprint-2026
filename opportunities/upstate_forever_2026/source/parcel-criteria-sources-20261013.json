@@ -1,9 +1,9 @@
 {
   "schema": "upstate.parcel-criteria-source-profile/v1",
-  "id": "upstate-keowee-original-parcel-criteria-20261013",
+  "id": "original-parcel-criteria-sources-20261013-full-parcel",
   "title": "Source-derived Lake Keowee parcel criteria for the retained Upper Savannah study",
   "method_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
-  "method_reference": "Lake Keowee Watershed-based Plan (2020), section 9, Tables 31/34/36/37/39/40/41/42; Appendix D, printed pages 138-147.",
+  "method_reference": "Lake Keowee Watershed-based Plan (2020), Tables 31/34/36/37/39/40/41/42; Appendix D, printed pages 138-147.",
   "roles": {
     "protected_lands": {
       "title": "Original protected-land inventory",
@@ -638,19 +638,102 @@
   ],
   "metric_conventions": {
     "parcel_acres": "Full original parcel polygon area / 4046.8564224; reporting parcel acres remain separate.",
-    "context_geometry": "Water, wetland, hydric, sensitive-riparian, floodplain, impairment and source-point intersections use the retained reporting parcel.",
+    "context_geometry": "Original water, wetland, hydric, sensitive-riparian, floodplain, impairment, point and CWA criteria use settings.spatial_criteria_basis. New default whole_original_parcel preserves parcel-based source definitions; reporting_parcel is an explicit retained boundary adaptation.",
     "agricultural_cover": "At least half the full original parcel under default land_cover_basis; explicit reporting_parcel adaptation is recorded.",
     "protected_status": "Default already_protected requires full original parcel coverage by the selected protected-land inventory. Raw observed fraction remains available; protected_fraction_threshold records an explicit alternative.",
     "adjacency": "Default exact original geometry contact (0 metres); positive adjacency_m is recorded as an explicit distance adaptation.",
-    "stream_length": "Unioned original ftype 460 line length in the reporting parcel. Study threshold is the actual arithmetic mean among positive complete lengths; all selected parcels must have source coverage.",
+    "stream_length": "Unioned original ftype 460 line length inside the selected spatial_criteria_basis. Study threshold is the arithmetic mean among positive complete lengths; all selected parcels must have source coverage under that same basis.",
     "headwater": "Default original positive integer streamorde in [1,2]; raw complete stream_orders and observed values are retained for the [1] protection variant.",
     "floodplain": "Presence of the selected one-percent footprint plus development status; without_development means no selected developed class is present, with complete land-cover support.",
-    "sensitive_riparian": "Original full union or original variable buffer unioned with 30.48-metre surface-water buffer. A constant buffer alone remains a separately named observed quantity.",
+    "sensitive_riparian": "Original full union or original variable buffer unioned with the 30.48-metre surface-water buffer. Every mapped component is a positive subset of that union; a missing component expands the retained acreage interval. A constant buffer alone retains its named observed quantity and contributes a lower limit to the union.",
     "water_classification": "Exact mapped original class values; target-only capture does not establish FW absence. All-class/FW and active high-quality source editions remain separate.",
     "impairment": "Explicit selected edition/pollutant scope and spatial/upstream contribution relation. An upstream contribution layer must come from the existing receiving-water workflow.",
     "raster": "Original projected metre-based north-up pixels, no resampling, exact cell/polygon overlap areas; native study binds its exact original grid NLCD source.",
-    "empty": "False or exact area zero requires the actual source capture footprint. Positive original feature intersections remain usable when the capture extent is narrower.",
+    "empty": "False or exact area zero uses actual certainty coverage. For numeric acreage, original parcel geometry also supplies an upper limit; published threshold points can be determined even when exact acreage remains null.",
     "unknown": "Null records a criterion that the selected original inputs do not yet determine; original IDs, observed quantities and matched field values remain available.",
-    "current_export": "Current model export classes are supplied by the existing native score binding; the source-only builder never replaces them with geographic proxies."
+    "current_export": "Current model export classes are supplied by the existing native score binding; the source-only builder never replaces them with geographic proxies.",
+    "numeric_intervals": "Closed acreage limits retain positive geometry and unresolved source coverage inside the declared spatial_criteria_basis. Whole original parcel size remains independent. Exact acreage stays null until determined; equal published threshold contributions can still determine exact points."
+  },
+  "numeric_intervals": {
+    "schema": "upstate.parcel-criteria-intervals/v1",
+    "fields": {
+      "parcel_acres": {
+        "unit": "acres",
+        "area_basis": "whole_original_parcel"
+      },
+      "hydric_soil_acres": {
+        "unit": "acres",
+        "area_basis": "settings.spatial_criteria_basis",
+        "default": "whole_original_parcel",
+        "alternatives": [
+          "whole_original_parcel",
+          "reporting_parcel"
+        ]
+      },
+      "sensitive_riparian_acres": {
+        "unit": "acres",
+        "area_basis": "settings.spatial_criteria_basis",
+        "default": "whole_original_parcel",
+        "alternatives": [
+          "whole_original_parcel",
+          "reporting_parcel"
+        ]
+      }
+    },
+    "endpoints": "closed",
+    "lower": "Area of original positively selected footprint intersecting the selected parcel geometry.",
+    "upper": "Lower area plus parcel area outside the union of positive footprint and actual certainty coverage.",
+    "exact_value": "Canonical numeric value is retained only when known exactly; row.metric_bounds retains source-limited endpoints otherwise.",
+    "hydric": "Default fully hydric/nonhydric certainty excludes mixed and unknown map units; component percentages are retained original attributes and are never allocated to an unobserved part of a parcel.",
+    "riparian": "A positively mapped component belongs to the original variable-plus-constant union. Composite absence uses complete component support; partial composite upper limits remain conservative.",
+    "threshold_application": "Evaluate the original published piecewise step function on all attainable interval values. Equal point limits determine exact criterion points.",
+    "exports": [
+      "criteria.json rows[].metric_bounds",
+      "criteria.csv numeric *_lower and *_upper columns plus metric_bounds JSON",
+      "criteria.gpkg original_parcels and reporting_parcels numeric lower/upper columns plus metric_bounds"
+    ],
+    "point_detail": [
+      "point_score.metric_bounds",
+      "score_components.<criterion>.value_interval",
+      "score_components.<criterion>.points_determined_by_interval"
+    ],
+    "source_references": [
+      {
+        "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf",
+        "printed_pages": [
+          139,
+          140,
+          142
+        ],
+        "meaning": "Published riparian, hydric and full-parcel acreage thresholds."
+      },
+      {
+        "uri": "https://sdmdataaccess.sc.egov.usda.gov/documents/TableColumnDescriptionsReport.pdf",
+        "meaning": "Original hydclprs, component hydricrating, native MUKEY and soil polygon fields."
+      }
+    ]
+  },
+  "spatial_criteria_geometry": {
+    "setting": "spatial_criteria_basis",
+    "default": "whole_original_parcel",
+    "choices": [
+      "whole_original_parcel",
+      "reporting_parcel"
+    ],
+    "reference": "Lake Keowee Watershed Plan (2020), Appendix D: printed139 describes riparian acreage within each parcel; printed140 describes parcel acreage containing hydric soil; printed142 describes the full parcel size criterion.",
+    "source_uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf",
+    "source_mirror": "https://www.des.sc.gov/sites/des/files/media/document/WBP_for_Lake_Keowee_Watersheds_2020.pdf",
+    "interpretation": "Whole original parcel is the default implementation of the parcel-based criteria. An explicit reporting intersection is retained as an adaptation, with its full original parcel and reporting area still exported separately.",
+    "independent_bases": {
+      "parcel_acres": "whole_original_parcel",
+      "protected_status": "whole_original_parcel",
+      "protected_adjacency": "whole_original_parcel",
+      "land_cover": "settings.land_cover_basis",
+      "floodplain_development": "settings.floodplain_development_basis",
+      "native_exports": "original native reporting geometry/support"
+    },
+    "legacy": "Completed prior tables retain their original interval area_basis and table settings. New preparation creates a new implementation/source identity; an old table is never relabelled.",
+    "source_coverage": "Query masks and source certainty must cover the actually selected geometry. Missing coverage outside the reporting boundary remains unresolved; exact positive observations and closed acreage bounds are preserved.",
+    "halo": "Waterway-buffer derivation queries original waterways within the selected parcel buffered by the retained waterway_buffer_m; adjacency uses the retained adjacency_m."
   }
 }

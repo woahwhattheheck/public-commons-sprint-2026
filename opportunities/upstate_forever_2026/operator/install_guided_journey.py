@@ -97,6 +97,21 @@ def read_component(source):
 
 
 def patch_text(text, patches):
+    # Keep the application's exact maintained postimage when an explicitly
+    # declared compatible source form is already present.
+    selected = []
+    for original in patches:
+        patch = dict(original)
+        present = [variant for variant in patch.get("compatible_after", [])
+                   if variant["after"] in text]
+        if len(present) > 1:
+            raise ValueError("Ambiguous compatible source join: " + patch["id"])
+        if present:
+            if patch["after"] in text or patch["marker"] in text:
+                raise ValueError("Multiple current source forms at: " + patch["id"])
+            patch.update(present[0])
+        selected.append(patch)
+    patches = selected
     for patch in patches:
         before, after, marker = patch["before"], patch["after"], patch["marker"]
         if after in text:

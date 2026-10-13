@@ -373,12 +373,19 @@ class ExperimentOperator:
                 raise ValueError("Choose a saved experiment or provide its selection.")
             key = experiments.prepare(ws, selection)["id"]
         key = _id(key)
+        # The queue retains this exact identity even when execution or report
+        # rendering raises before a result can be returned.
+        task["experiment_id"] = key
+        task.pop("study_report_error", None)
         if action == "experiment.run":
             try:
                 experiments.execute(ws, key)
             except Exception:
-                with contextlib.suppress(Exception):
+                try:
                     self._report(task["workspace"], key)
+                except Exception as report_error:
+                    task["study_report_error"] = {
+                        "type": type(report_error).__name__, "message": str(report_error)}
                 raise
             summary = experiments.read_summary(ws, key)
         elif action == "experiment.summarize":
@@ -387,10 +394,45 @@ class ExperimentOperator:
             raise ValueError("Unknown experiment operation.")
         return self._report(task["workspace"], key, summary)
 
+    def retained_result(self, workspace, key):
+        """Expose current retained files without starting or resuming a model."""
+        ws = self.app.ws(workspace)
+        key = _id(key)
+        summary = experiments.read_summary(ws, key)
+        if summary is None:
+            return None
+        try:
+            return self._decorate(workspace, summary)
+        except (OSError, ValueError, KeyError) as error:
+            # A damaged report must remain actionable without hiding the
+            # separately retained scientific summary and comparison CSV.
+            return {**summary,
+                    "_downloads": self.app._files(
+                        workspace, summary, ws.root / "experiments" / key),
+                    "_report_error": str(error)}
+
     def decorate_task(self, task):
-        if task.get("action") in ACTIONS and task.get("state") == "complete":
-            result = task.get("result", {})
-            if result.get("id"):
-                decorated = self._decorate(task["workspace"], result)
-                task["_downloads"] = decorated["_downloads"]
+        if task.get("action") not in ACTIONS:
+            return task
+        result = task.get("result") or {}
+        key = (task.get("experiment_id") or result.get("id")
+               or task.get("payload", {}).get("experiment_id"))
+        if not key:
+            return task
+        task["experiment"] = {"id": _id(key)}
+        if task.get("study_report_error"):
+            task["experiment"]["report_error"] = task["study_report_error"]["message"]
+        if task.get("state") not in {"complete", "failed", "interrupted", "cancelled"}:
+            return task
+        try:
+            record = self.retained_result(task["workspace"], key)
+            if record is not None:
+                task["experiment"].update(
+                    {name: record[name] for name in
+                     ("title", "state", "progress", "study_report") if name in record})
+                if record.get("_report_error"):
+                    task["experiment"]["report_error"] = record["_report_error"]
+                task["_downloads"] = record["_downloads"]
+        except (OSError, ValueError, KeyError) as error:
+            task["experiment"]["report_error"] = str(error)
         return task

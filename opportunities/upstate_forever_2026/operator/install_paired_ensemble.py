@@ -42,8 +42,7 @@ def install(root, integration="auto"):
         if parked_path.exists() and parked_path.read_bytes() == manifest_path.read_bytes():
             parked_path.unlink()
         return result
-    from model.paired_ensemble.ensemble_store import held
-    from model.paired_ensemble.ensemble_report import text_file
+    from model.common import atomic_bytes, held
     server, page = root / 'server.py', root / 'web' / 'index.html'
     expected_new = [root/'paired_ensemble.py', root/'web'/'paired_ensemble.html',
                     root/'web'/'paired_ensemble.mjs', root/'web'/'paired_ensemble.css']
@@ -72,7 +71,7 @@ def install(root, integration="auto"):
             if backup.exists() and backup.read_bytes() != body:
                 raise ValueError("The retained descriptor preimage differs.")
             if not backup.exists():
-                text_file(backup, body.decode("utf-8"))
+                atomic_bytes(backup, body)
             earlier.unlink()
         before = server.read_text(encoding='utf-8')
         html = page.read_text(encoding='utf-8')
@@ -107,19 +106,19 @@ def install(root, integration="auto"):
                 html_after = html_after.replace('</nav>', LINK + '</nav>', 1)
         ast.parse(after)
         if after != before:
-            text_file(server, after)
+            atomic_bytes(server, after.encode('utf-8'))
         if html_after != html:
-            text_file(page, html_after)
+            atomic_bytes(page, html_after.encode('utf-8'))
         # A legacy edition parks only this descriptor so a later shared-host
         # install cannot dispatch the same actions through two providers. Run
         # this idempotent installer again after installing the shared host.
         if mode == 'extensions':
             if not manifest.exists():
-                text_file(manifest, descriptor_text)
+                atomic_bytes(manifest, descriptor_text.encode('utf-8'))
             parked_manifest.unlink(missing_ok=True)
         else:
             if not parked_manifest.exists():
-                text_file(parked_manifest, descriptor_text)
+                atomic_bytes(parked_manifest, descriptor_text.encode('utf-8'))
             manifest.unlink(missing_ok=True)
         removed, preserved = [], []
         # A different peer edition is never removed, even at a former path.

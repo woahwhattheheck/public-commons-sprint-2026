@@ -13,6 +13,15 @@ import tempfile
 
 FILES = (
     "model/station_geography.py",
+    "model/station_inventory.py",
+    "model/assessment_context.py",
+    "operator/assessment_context.py",
+    "operator/extensions/assessment-context.json",
+    "operator/web/assessment_context.mjs",
+    "operator/web/assessment_context.css",
+    "operator/ASSESSMENT_CONTEXT.md",
+    "source/station-assessment-context/sources.json",
+    "source/station-assessment-context/assessment-records-domain217.csv",
     "model/station_assessment_context.py",
     "model/station_study.py",
     "operator/PREPARED_STATION_STUDY.md",

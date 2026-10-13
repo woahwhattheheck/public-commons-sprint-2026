@@ -1,0 +1,2121 @@
+[
+  {
+    "site_no": "02193340",
+    "station_nm": "KETTLE CREEK NEAR WASHINGTON, GA",
+    "source_huc8": "03060105",
+    "ts_id": "34493",
+    "latitude": "33.68266667",
+    "longitude": "-82.8585",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1986-04-16",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 2.88,
+        "maximum_observed_daily_cfs": 1440,
+        "mean_observed_daily_cfs": 41.088032786885286,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.73,
+        "maximum_observed_daily_cfs": 579,
+        "mean_observed_daily_cfs": 19.889835616438358,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 363,
+          "A:e": 2
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 0.16,
+        "maximum_observed_daily_cfs": 1430,
+        "mean_observed_daily_cfs": 23.62216438356165,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 285,
+          "A:e": 80
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 80,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 2.71,
+        "maximum_observed_daily_cfs": 606,
+        "mean_observed_daily_cfs": 22.7271506849315,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 326,
+          "A:e": 40
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 40,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 0.67,
+        "maximum_observed_daily_cfs": 1260,
+        "mean_observed_daily_cfs": 25.290109289617494,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 320,
+          "A:e": 45
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 45,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.52,
+        "maximum_observed_daily_cfs": 544,
+        "mean_observed_daily_cfs": 19.889369863013695,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02193500",
+    "station_nm": "LITTLE RIVER NEAR WASHINGTON, GA",
+    "source_huc8": "03060105",
+    "ts_id": "324274",
+    "latitude": "33.61277778",
+    "longitude": "-82.7425",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1949-10-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 362,
+          "A:e": 4
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 4,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 21.2,
+        "maximum_observed_daily_cfs": 10000,
+        "mean_observed_daily_cfs": 434.0937158469945,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 358,
+          "A:e": 7
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 7,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 15.1,
+        "maximum_observed_daily_cfs": 3730,
+        "mean_observed_daily_cfs": 201.85616438356158,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 359,
+          "A:e": 6
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 6,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.81,
+        "maximum_observed_daily_cfs": 10600,
+        "mean_observed_daily_cfs": 233.46928767123285,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 14.4,
+        "maximum_observed_daily_cfs": 2720,
+        "mean_observed_daily_cfs": 200.38328767123278,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3.71,
+        "maximum_observed_daily_cfs": 8120,
+        "mean_observed_daily_cfs": 226.9586338797813,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 362,
+          "A:e": 3
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 3,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 14.8,
+        "maximum_observed_daily_cfs": 4560,
+        "mean_observed_daily_cfs": 219.2175342465754,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02195320",
+    "station_nm": "KIOKEE CREEK AT GA 104, NEAR EVANS, GA",
+    "source_huc8": "03060106",
+    "ts_id": "324277",
+    "latitude": "33.6011111",
+    "longitude": "-82.2326111",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2004-12-28",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 338,
+          "A:e": 28
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 28,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 6.14,
+        "maximum_observed_daily_cfs": 2990,
+        "mean_observed_daily_cfs": 109.88142076502726,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4.81,
+        "maximum_observed_daily_cfs": 801,
+        "mean_observed_daily_cfs": 60.925424657534236,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4.02,
+        "maximum_observed_daily_cfs": 1420,
+        "mean_observed_daily_cfs": 53.796328767123256,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 358,
+          "A:e": 7
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 7,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.57,
+        "maximum_observed_daily_cfs": 1050,
+        "mean_observed_daily_cfs": 96.97956164383565,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 0.52,
+        "maximum_observed_daily_cfs": 1340,
+        "mean_observed_daily_cfs": 73.5775409836066,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.29,
+        "maximum_observed_daily_cfs": 766,
+        "mean_observed_daily_cfs": 45.28865753424656,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02195470",
+    "station_nm": "UCHEE CREEK AT GA 104, NEAR EVANS, GA",
+    "source_huc8": "03060106",
+    "ts_id": "344257",
+    "latitude": "33.5673611",
+    "longitude": "-82.18338889",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2022-09-29",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 0,
+        "numeric_day_count": 0,
+        "missing_date_count": 366,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0,
+        "first_source_date": null,
+        "last_source_date": null,
+        "qualifier_counts": {},
+        "approved_numeric_days": 0,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": null,
+        "maximum_observed_daily_cfs": null,
+        "mean_observed_daily_cfs": null,
+        "missing_date_ranges": [
+          {
+            "start": "2020-01-01",
+            "end": "2020-12-31",
+            "days": 366
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 0,
+        "numeric_day_count": 0,
+        "missing_date_count": 365,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0,
+        "first_source_date": null,
+        "last_source_date": null,
+        "qualifier_counts": {},
+        "approved_numeric_days": 0,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": null,
+        "maximum_observed_daily_cfs": null,
+        "mean_observed_daily_cfs": null,
+        "missing_date_ranges": [
+          {
+            "start": "2021-01-01",
+            "end": "2021-12-31",
+            "days": 365
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 94,
+        "numeric_day_count": 94,
+        "missing_date_count": 271,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.25753424657534246,
+        "first_source_date": "2022-09-29",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 94
+        },
+        "approved_numeric_days": 94,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 2.26,
+        "maximum_observed_daily_cfs": 162,
+        "mean_observed_daily_cfs": 21.067446808510642,
+        "missing_date_ranges": [
+          {
+            "start": "2022-01-01",
+            "end": "2022-09-28",
+            "days": 271
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3.52,
+        "maximum_observed_daily_cfs": 1190,
+        "mean_observed_daily_cfs": 74.35301369863012,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.95,
+        "maximum_observed_daily_cfs": 3890,
+        "mean_observed_daily_cfs": 73.76959016393438,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 2.69,
+        "maximum_observed_daily_cfs": 966,
+        "mean_observed_daily_cfs": 52.506630136986274,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02196000",
+    "station_nm": "STEVENS CREEK NEAR MODOC, SC",
+    "source_huc8": "03060107",
+    "ts_id": "126801",
+    "latitude": "33.72929717",
+    "longitude": "-82.1817873",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1929-11-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 17.5,
+        "maximum_observed_daily_cfs": 20000,
+        "mean_observed_daily_cfs": 589.6423497267759,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 17.9,
+        "maximum_observed_daily_cfs": 10500,
+        "mean_observed_daily_cfs": 390.11041095890386,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.28,
+        "maximum_observed_daily_cfs": 15000,
+        "mean_observed_daily_cfs": 329.792712328767,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.49,
+        "maximum_observed_daily_cfs": 13600,
+        "mean_observed_daily_cfs": 496.93167123287606,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 364,
+          "A:e": 2
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 9.19,
+        "maximum_observed_daily_cfs": 48700,
+        "mean_observed_daily_cfs": 673.9059289617486,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 21.9,
+        "maximum_observed_daily_cfs": 13800,
+        "mean_observed_daily_cfs": 445.96684931506815,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02196485",
+    "station_nm": "AUGUSTA CANAL UPPER NR AUGUSTA, GA",
+    "source_huc8": "03060106",
+    "ts_id": "126828",
+    "latitude": "33.54916667",
+    "longitude": "-82.03713889",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1996-10-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 748,
+        "maximum_observed_daily_cfs": 3270,
+        "mean_observed_daily_cfs": 2455.4590163934427,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 359,
+        "numeric_day_count": 359,
+        "missing_date_count": 6,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9835616438356164,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 359
+        },
+        "approved_numeric_days": 359,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 295,
+        "maximum_observed_daily_cfs": 3220,
+        "mean_observed_daily_cfs": 2295.036211699164,
+        "missing_date_ranges": [
+          {
+            "start": "2021-10-04",
+            "end": "2021-10-04",
+            "days": 1
+          },
+          {
+            "start": "2021-10-06",
+            "end": "2021-10-08",
+            "days": 3
+          },
+          {
+            "start": "2021-10-12",
+            "end": "2021-10-13",
+            "days": 2
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 363,
+        "numeric_day_count": 363,
+        "missing_date_count": 2,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9945205479452055,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 363
+        },
+        "approved_numeric_days": 363,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 797,
+        "maximum_observed_daily_cfs": 2520,
+        "mean_observed_daily_cfs": 1841.1184573002754,
+        "missing_date_ranges": [
+          {
+            "start": "2022-07-27",
+            "end": "2022-07-28",
+            "days": 2
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 327,
+        "numeric_day_count": 327,
+        "missing_date_count": 38,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.8958904109589041,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 327
+        },
+        "approved_numeric_days": 327,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 698,
+        "maximum_observed_daily_cfs": 2250,
+        "mean_observed_daily_cfs": 1601.2935779816514,
+        "missing_date_ranges": [
+          {
+            "start": "2023-02-08",
+            "end": "2023-03-17",
+            "days": 38
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 352,
+        "numeric_day_count": 352,
+        "missing_date_count": 14,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9617486338797814,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 352
+        },
+        "approved_numeric_days": 352,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 362,
+        "maximum_observed_daily_cfs": 2330,
+        "mean_observed_daily_cfs": 1773.0511363636363,
+        "missing_date_ranges": [
+          {
+            "start": "2024-02-21",
+            "end": "2024-02-22",
+            "days": 2
+          },
+          {
+            "start": "2024-03-11",
+            "end": "2024-03-19",
+            "days": 9
+          },
+          {
+            "start": "2024-04-10",
+            "end": "2024-04-11",
+            "days": 2
+          },
+          {
+            "start": "2024-09-27",
+            "end": "2024-09-27",
+            "days": 1
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1160,
+        "maximum_observed_daily_cfs": 2890,
+        "mean_observed_daily_cfs": 2138.931506849315,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02196690",
+    "station_nm": "HORSE CREEK AT CLEARWATER, SC",
+    "source_huc8": "03060106",
+    "ts_id": "126845",
+    "latitude": "33.4781928",
+    "longitude": "-81.90761399",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2005-04-06",
+    "catalog_end": "2024-09-24",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 107,
+        "maximum_observed_daily_cfs": 857,
+        "mean_observed_daily_cfs": 238.4207650273224,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 363,
+          "A:e": 2
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 99.7,
+        "maximum_observed_daily_cfs": 1100,
+        "mean_observed_daily_cfs": 208.32246575342464,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 361,
+          "A:e": 4
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 4,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 83.3,
+        "maximum_observed_daily_cfs": 1060,
+        "mean_observed_daily_cfs": 168.39123287671234,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 135,
+        "maximum_observed_daily_cfs": 863,
+        "mean_observed_daily_cfs": 224.8082191780822,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 268,
+        "numeric_day_count": 267,
+        "missing_date_count": 98,
+        "non_numeric_count": 1,
+        "calendar_numeric_fraction": 0.7295081967213115,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-09-24",
+        "qualifier_counts": {
+          "A": 267,
+          "P": 1
+        },
+        "approved_numeric_days": 267,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 97.8,
+        "maximum_observed_daily_cfs": 522,
+        "mean_observed_daily_cfs": 189.7550561797753,
+        "missing_date_ranges": [
+          {
+            "start": "2024-09-25",
+            "end": "2024-12-31",
+            "days": 98
+          }
+        ],
+        "non_numeric_date_ranges": [
+          {
+            "start": "2024-09-24",
+            "end": "2024-09-24",
+            "days": 1
+          }
+        ]
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 0,
+        "numeric_day_count": 0,
+        "missing_date_count": 365,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0,
+        "first_source_date": null,
+        "last_source_date": null,
+        "qualifier_counts": {},
+        "approved_numeric_days": 0,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": null,
+        "maximum_observed_daily_cfs": null,
+        "mean_observed_daily_cfs": null,
+        "missing_date_ranges": [
+          {
+            "start": "2025-01-01",
+            "end": "2025-12-31",
+            "days": 365
+          }
+        ],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02196835",
+    "station_nm": "BUTLER CREEK BELOW 7TH AVENUE, AT FT. GORDON, GA",
+    "source_huc8": "03060106",
+    "ts_id": "34520",
+    "latitude": "33.4386111",
+    "longitude": "-82.1161111",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2001-10-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 0,
+        "numeric_day_count": 0,
+        "missing_date_count": 366,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0,
+        "first_source_date": null,
+        "last_source_date": null,
+        "qualifier_counts": {},
+        "approved_numeric_days": 0,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": null,
+        "maximum_observed_daily_cfs": null,
+        "mean_observed_daily_cfs": null,
+        "missing_date_ranges": [
+          {
+            "start": "2020-01-01",
+            "end": "2020-12-31",
+            "days": 366
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 162,
+        "numeric_day_count": 162,
+        "missing_date_count": 203,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.4438356164383562,
+        "first_source_date": "2021-07-23",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 156,
+          "A:e": 6
+        },
+        "approved_numeric_days": 162,
+        "estimated_numeric_days": 6,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4.13,
+        "maximum_observed_daily_cfs": 184,
+        "mean_observed_daily_cfs": 18.046234567901237,
+        "missing_date_ranges": [
+          {
+            "start": "2021-01-01",
+            "end": "2021-07-22",
+            "days": 203
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 356,
+          "A:e": 9
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 9,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.65,
+        "maximum_observed_daily_cfs": 184,
+        "mean_observed_daily_cfs": 13.709835616438356,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 289,
+          "A:e": 76
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 76,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 2.27,
+        "maximum_observed_daily_cfs": 238,
+        "mean_observed_daily_cfs": 20.426657534246576,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 344,
+          "A:e": 22
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 22,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.7,
+        "maximum_observed_daily_cfs": 625,
+        "mean_observed_daily_cfs": 19.126147540983606,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4.28,
+        "maximum_observed_daily_cfs": 236,
+        "mean_observed_daily_cfs": 14.264739726027388,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "021968385",
+    "station_nm": "BUTLER CR BELOW BUTLER CR RSVR AT FORT GORDON, GA",
+    "source_huc8": "03060106",
+    "ts_id": "243203",
+    "latitude": "33.42509167",
+    "longitude": "-82.09873889",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2018-05-24",
+    "catalog_end": "2026-10-10",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 354,
+          "A:e": 12
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 12,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.28,
+        "maximum_observed_daily_cfs": 139,
+        "mean_observed_daily_cfs": 21.827240437158476,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 341,
+          "A:e": 24
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 24,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.06,
+        "maximum_observed_daily_cfs": 94.1,
+        "mean_observed_daily_cfs": 18.14627397260275,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 348,
+          "A:e": 17
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 17,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 1.27,
+        "maximum_observed_daily_cfs": 98.7,
+        "mean_observed_daily_cfs": 11.278767123287675,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5.33,
+        "maximum_observed_daily_cfs": 101,
+        "mean_observed_daily_cfs": 17.860602739726033,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 364,
+          "A:e": 2
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4,
+        "maximum_observed_daily_cfs": 213,
+        "mean_observed_daily_cfs": 17.019617486338788,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 363,
+        "numeric_day_count": 363,
+        "missing_date_count": 2,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9945205479452055,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 292,
+          "A:e": 58,
+          "P": 11,
+          "P:e": 2
+        },
+        "approved_numeric_days": 350,
+        "estimated_numeric_days": 60,
+        "provisional_numeric_days": 13,
+        "minimum_observed_daily_cfs": 7.19,
+        "maximum_observed_daily_cfs": 115,
+        "mean_observed_daily_cfs": 17.478512396694207,
+        "missing_date_ranges": [
+          {
+            "start": "2025-12-27",
+            "end": "2025-12-27",
+            "days": 1
+          },
+          {
+            "start": "2025-12-29",
+            "end": "2025-12-29",
+            "days": 1
+          }
+        ],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02197000",
+    "station_nm": "SAVANNAH RIVER AT AUGUSTA, GA",
+    "source_huc8": "03060106",
+    "ts_id": "126852",
+    "latitude": "33.37252778",
+    "longitude": "-81.9420833",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1883-10-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 365,
+          "A:e": 1
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 1,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4160,
+        "maximum_observed_daily_cfs": 33600,
+        "mean_observed_daily_cfs": 13865.191256830602,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 357,
+          "A:e": 8
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 8,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4360,
+        "maximum_observed_daily_cfs": 24100,
+        "mean_observed_daily_cfs": 9747.643835616438,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3650,
+        "maximum_observed_daily_cfs": 36800,
+        "mean_observed_daily_cfs": 7749.287671232877,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3730,
+        "maximum_observed_daily_cfs": 28200,
+        "mean_observed_daily_cfs": 8436.054794520547,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 366
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3660,
+        "maximum_observed_daily_cfs": 43400,
+        "mean_observed_daily_cfs": 8466.967213114754,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 3860,
+        "maximum_observed_daily_cfs": 19200,
+        "mean_observed_daily_cfs": 7001.780821917808,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02197020",
+    "station_nm": "SPIRIT CREEK AT US 1, NEAR AUGUSTA, GA",
+    "source_huc8": "03060106",
+    "ts_id": "34530",
+    "latitude": "33.37366667",
+    "longitude": "-82.1391944",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2001-10-01",
+    "catalog_end": "2026-10-09",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 346,
+          "A:e": 20
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 20,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 11.9,
+        "maximum_observed_daily_cfs": 925,
+        "mean_observed_daily_cfs": 22.662841530054646,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A:e": 43,
+          "A": 322
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 43,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 11,
+        "maximum_observed_daily_cfs": 80.5,
+        "mean_observed_daily_cfs": 20.473424657534235,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 351,
+          "A:e": 14
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 14,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 7.4,
+        "maximum_observed_daily_cfs": 387,
+        "mean_observed_daily_cfs": 16.247561643835613,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 354,
+          "A:e": 11
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 11,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 7.15,
+        "maximum_observed_daily_cfs": 356,
+        "mean_observed_daily_cfs": 24.09128767123288,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 336,
+          "A:e": 30
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 30,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 9.03,
+        "maximum_observed_daily_cfs": 537,
+        "mean_observed_daily_cfs": 22.008989071038247,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 348,
+          "A:e": 17
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 17,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 9.39,
+        "maximum_observed_daily_cfs": 319,
+        "mean_observed_daily_cfs": 20.573424657534247,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "021973269",
+    "station_nm": "SAVANNAH RIVER NEAR WAYNESBORO, GA",
+    "source_huc8": "03060106",
+    "ts_id": "34535",
+    "latitude": "33.1503611",
+    "longitude": "-81.7540833",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "2005-01-22",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 277,
+        "numeric_day_count": 277,
+        "missing_date_count": 89,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.7568306010928961,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 277
+        },
+        "approved_numeric_days": 277,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4560,
+        "maximum_observed_daily_cfs": 17700,
+        "mean_observed_daily_cfs": 10486.787003610109,
+        "missing_date_ranges": [
+          {
+            "start": "2020-01-15",
+            "end": "2020-01-17",
+            "days": 3
+          },
+          {
+            "start": "2020-01-25",
+            "end": "2020-02-01",
+            "days": 8
+          },
+          {
+            "start": "2020-02-08",
+            "end": "2020-03-23",
+            "days": 45
+          },
+          {
+            "start": "2020-03-27",
+            "end": "2020-04-01",
+            "days": 6
+          },
+          {
+            "start": "2020-04-27",
+            "end": "2020-04-27",
+            "days": 1
+          },
+          {
+            "start": "2020-05-26",
+            "end": "2020-06-06",
+            "days": 12
+          },
+          {
+            "start": "2020-11-14",
+            "end": "2020-11-27",
+            "days": 14
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 353,
+        "numeric_day_count": 353,
+        "missing_date_count": 12,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9671232876712329,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 353
+        },
+        "approved_numeric_days": 353,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5410,
+        "maximum_observed_daily_cfs": 17700,
+        "mean_observed_daily_cfs": 9925.014164305949,
+        "missing_date_ranges": [
+          {
+            "start": "2021-01-04",
+            "end": "2021-01-06",
+            "days": 3
+          },
+          {
+            "start": "2021-03-04",
+            "end": "2021-03-05",
+            "days": 2
+          },
+          {
+            "start": "2021-03-31",
+            "end": "2021-04-06",
+            "days": 7
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 347,
+        "numeric_day_count": 347,
+        "missing_date_count": 18,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9506849315068493,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 347
+        },
+        "approved_numeric_days": 347,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4240,
+        "maximum_observed_daily_cfs": 17400,
+        "mean_observed_daily_cfs": 7437.435158501441,
+        "missing_date_ranges": [
+          {
+            "start": "2022-03-25",
+            "end": "2022-03-27",
+            "days": 3
+          },
+          {
+            "start": "2022-04-08",
+            "end": "2022-04-22",
+            "days": 15
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 344,
+        "numeric_day_count": 344,
+        "missing_date_count": 21,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9424657534246575,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 342,
+          "A:e": 2
+        },
+        "approved_numeric_days": 344,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4240,
+        "maximum_observed_daily_cfs": 17400,
+        "mean_observed_daily_cfs": 8357.587209302326,
+        "missing_date_ranges": [
+          {
+            "start": "2023-01-15",
+            "end": "2023-01-17",
+            "days": 3
+          },
+          {
+            "start": "2023-01-30",
+            "end": "2023-02-06",
+            "days": 8
+          },
+          {
+            "start": "2023-02-14",
+            "end": "2023-02-17",
+            "days": 4
+          },
+          {
+            "start": "2023-04-11",
+            "end": "2023-04-16",
+            "days": 6
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 348,
+        "numeric_day_count": 348,
+        "missing_date_count": 18,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 0.9508196721311475,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 348
+        },
+        "approved_numeric_days": 348,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4660,
+        "maximum_observed_daily_cfs": 17400,
+        "mean_observed_daily_cfs": 8449.281609195403,
+        "missing_date_ranges": [
+          {
+            "start": "2024-03-11",
+            "end": "2024-03-22",
+            "days": 12
+          },
+          {
+            "start": "2024-09-29",
+            "end": "2024-10-04",
+            "days": 6
+          }
+        ],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4490,
+        "maximum_observed_daily_cfs": 17000,
+        "mean_observed_daily_cfs": 7957.041095890411,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  },
+  {
+    "site_no": "02197500",
+    "station_nm": "SAVANNAH R AT BURTONS FERRY BR NR MILLHAVEN, GA",
+    "source_huc8": "03060106",
+    "ts_id": "127079",
+    "latitude": "32.93644444",
+    "longitude": "-81.5025278",
+    "coordinate_datum": "NAD83",
+    "catalog_begin": "1939-10-01",
+    "catalog_end": "2026-10-11",
+    "years": [
+      {
+        "year": 2020,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2020-01-01",
+        "last_source_date": "2020-12-31",
+        "qualifier_counts": {
+          "A": 361,
+          "A:e": 5
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 5,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5310,
+        "maximum_observed_daily_cfs": 37700,
+        "mean_observed_daily_cfs": 15216.557377049181,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2021,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2021-01-01",
+        "last_source_date": "2021-12-31",
+        "qualifier_counts": {
+          "A": 363,
+          "A:e": 2
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 2,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5840,
+        "maximum_observed_daily_cfs": 20400,
+        "mean_observed_daily_cfs": 10508.13698630137,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2022,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2022-01-01",
+        "last_source_date": "2022-12-31",
+        "qualifier_counts": {
+          "A": 358,
+          "A:e": 7
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 7,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4280,
+        "maximum_observed_daily_cfs": 29500,
+        "mean_observed_daily_cfs": 8777.561643835616,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2023,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2023-01-01",
+        "last_source_date": "2023-12-31",
+        "qualifier_counts": {
+          "A": 352,
+          "A:e": 13
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 13,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4810,
+        "maximum_observed_daily_cfs": 23400,
+        "mean_observed_daily_cfs": 9847.72602739726,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2024,
+        "calendar_days": 366,
+        "source_record_count": 366,
+        "numeric_day_count": 366,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2024-01-01",
+        "last_source_date": "2024-12-31",
+        "qualifier_counts": {
+          "A": 343,
+          "A:e": 23
+        },
+        "approved_numeric_days": 366,
+        "estimated_numeric_days": 23,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 5070,
+        "maximum_observed_daily_cfs": 26100,
+        "mean_observed_daily_cfs": 9899.098360655738,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      },
+      {
+        "year": 2025,
+        "calendar_days": 365,
+        "source_record_count": 365,
+        "numeric_day_count": 365,
+        "missing_date_count": 0,
+        "non_numeric_count": 0,
+        "calendar_numeric_fraction": 1,
+        "first_source_date": "2025-01-01",
+        "last_source_date": "2025-12-31",
+        "qualifier_counts": {
+          "A": 365
+        },
+        "approved_numeric_days": 365,
+        "estimated_numeric_days": 0,
+        "provisional_numeric_days": 0,
+        "minimum_observed_daily_cfs": 4690,
+        "maximum_observed_daily_cfs": 18600,
+        "mean_observed_daily_cfs": 8350.630136986301,
+        "missing_date_ranges": [],
+        "non_numeric_date_ranges": []
+      }
+    ]
+  }
+]

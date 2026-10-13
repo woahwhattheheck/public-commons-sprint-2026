@@ -1,0 +1,558 @@
+{
+  "schema": "upstate.sources/v1",
+  "operation_id": "UPSTATE-EIGHTEENMILE-2023-DMR-GAUGE-ROUTING-20261013",
+  "title": "Eighteenmile DMR quantities and actual gauge routing",
+  "entries": [
+    {
+      "id": "upstate-eighteenmile-dmr-gauge-routing-state-point-b5baceee2122",
+      "title": "SCDES outfalls - actual gauge relationship",
+      "kind": "vector",
+      "role": "OUTFALL_GAUGE_RELATION",
+      "path": "routing/derived/outfalls_state_geometry_wgs84.geojson",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "vintage": "2023 quantities / 2026-10-13 source geometry and network",
+      "bytes": 8562,
+      "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
+      "metadata": {
+        "context_layer": true,
+        "gauge_id": "USGS-02186702",
+        "load_calendar_year": 2023,
+        "source_capture_date": "2026-10-13",
+        "row_count": 4,
+        "point_identity": "Original permit join with separate state outfall and EPA reporting features",
+        "quantity_basis": "Original reported effluent quantities; separate annual and quantified-period coverage",
+        "species_basis": "Original EPA parameter codes, no cross-species sum",
+        "network_basis": "Original hydrolocation and upstream flowline sources; same-reach measures compared explicitly",
+        "geometry_type": "Point",
+        "feature_count": 4
+      },
+      "companions": [
+        {
+          "path": "routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        }
+      ],
+      "source_crs": "EPSG:4326"
+    },
+    {
+      "id": "upstate-eighteenmile-dmr-gauge-routing-indexed-point-3d719668f1e4",
+      "title": "NLDI indexed outfalls - actual gauge relationship",
+      "kind": "vector",
+      "role": "OUTFALL_GAUGE_RELATION",
+      "path": "routing/derived/outfalls_nldi_indexed_geometry.geojson",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "vintage": "2023 quantities / 2026-10-13 source geometry and network",
+      "bytes": 8502,
+      "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
+      "metadata": {
+        "context_layer": true,
+        "gauge_id": "USGS-02186702",
+        "load_calendar_year": 2023,
+        "source_capture_date": "2026-10-13",
+        "row_count": 4,
+        "point_identity": "Original permit join with separate state outfall and EPA reporting features",
+        "quantity_basis": "Original reported effluent quantities; separate annual and quantified-period coverage",
+        "species_basis": "Original EPA parameter codes, no cross-species sum",
+        "network_basis": "Original hydrolocation and upstream flowline sources; same-reach measures compared explicitly",
+        "geometry_type": "Point",
+        "feature_count": 4
+      },
+      "companions": [
+        {
+          "path": "routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        }
+      ],
+      "source_crs": "EPSG:4326"
+    },
+    {
+      "id": "upstate-eighteenmile-dmr-gauge-routing-relations-6d76f4cc627d",
+      "title": "Outfall-to-gauge network relationships",
+      "kind": "table",
+      "role": "POINT_SOURCE_ROUTING",
+      "path": "routing/derived/outfall_gauge_relations.csv",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "vintage": "2023 quantities / 2026-10-13 source geometry and network",
+      "bytes": 3398,
+      "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2",
+      "metadata": {
+        "context_layer": true,
+        "gauge_id": "USGS-02186702",
+        "load_calendar_year": 2023,
+        "source_capture_date": "2026-10-13",
+        "row_count": 4,
+        "point_identity": "Original permit join with separate state outfall and EPA reporting features",
+        "quantity_basis": "Original reported effluent quantities; separate annual and quantified-period coverage",
+        "species_basis": "Original EPA parameter codes, no cross-species sum",
+        "network_basis": "Original hydrolocation and upstream flowline sources; same-reach measures compared explicitly"
+      },
+      "companions": [
+        {
+          "path": "routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        }
+      ]
+    },
+    {
+      "id": "upstate-eighteenmile-dmr-gauge-routing-annual-62ad3646420b",
+      "title": "2023 reported quantities with actual gauge relationship",
+      "kind": "table",
+      "role": "POINT_SOURCE_ROUTING",
+      "path": "routing/derived/annual_quantities_with_routing.csv",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "vintage": "2023 quantities / 2026-10-13 source geometry and network",
+      "bytes": 14034,
+      "sha256": "62ad3646420b25f53693fd6a02f2d6dcd4ea8a309763a4a3a6f306bd39dfba1c",
+      "metadata": {
+        "context_layer": true,
+        "gauge_id": "USGS-02186702",
+        "load_calendar_year": 2023,
+        "source_capture_date": "2026-10-13",
+        "row_count": 20,
+        "point_identity": "Original permit join with separate state outfall and EPA reporting features",
+        "quantity_basis": "Original reported effluent quantities; separate annual and quantified-period coverage",
+        "species_basis": "Original EPA parameter codes, no cross-species sum",
+        "network_basis": "Original hydrolocation and upstream flowline sources; same-reach measures compared explicitly"
+      },
+      "companions": [
+        {
+          "path": "routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        }
+      ]
+    },
+    {
+      "id": "upstate-eighteenmile-dmr-gauge-routing-cohorts-aa755c73bf33",
+      "title": "2023 reported quantities by gauge relationship and species",
+      "kind": "table",
+      "role": "POINT_SOURCE_ROUTING",
+      "path": "routing/derived/reported_quantities_by_gauge_relation.csv",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "vintage": "2023 quantities / 2026-10-13 source geometry and network",
+      "bytes": 7247,
+      "sha256": "aa755c73bf33c6bb0a15be6fa2b464547a9434d208e482a0d7d3f9f7c577df9c",
+      "metadata": {
+        "context_layer": true,
+        "gauge_id": "USGS-02186702",
+        "load_calendar_year": 2023,
+        "source_capture_date": "2026-10-13",
+        "row_count": 17,
+        "point_identity": "Original permit join with separate state outfall and EPA reporting features",
+        "quantity_basis": "Original reported effluent quantities; separate annual and quantified-period coverage",
+        "species_basis": "Original EPA parameter codes, no cross-species sum",
+        "network_basis": "Original hydrolocation and upstream flowline sources; same-reach measures compared explicitly"
+      },
+      "companions": [
+        {
+          "path": "routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        }
+      ]
+    }
+  ]
+}

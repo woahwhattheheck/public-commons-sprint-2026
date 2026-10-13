@@ -10,6 +10,7 @@ export const directorySourceContract=JSON.parse(readFileSync(new URL('../directo
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingReturnsContract=JSON.parse(readFileSync(new URL('../directory-operating-returns-schema.json',import.meta.url),'utf8'));
+export const directoryCorrectionsContract=JSON.parse(readFileSync(new URL('../directory-corrections-schema.json',import.meta.url),'utf8'));
 export const directoryForeignKeyQueries=Object.freeze([
   {
     "key": "conformance_foreign_keys",
@@ -126,7 +127,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns'
+  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns',...directoryCorrectionsContract.collections
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -137,6 +138,15 @@ function tool(action,description,properties={},required=[],options={}){
 }
 const originalId=str('Exact original record or operation ID.',{pattern:'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$'});
 const added=[
+  tool('directory_correction_rows','Read every retained ordered edit or original before/after change for the selected immutable correction record.',{
+    collection:str('Exact native correction collection.',{enum:directoryCorrectionsContract.collections}),
+    recordId:hash('Exact immutable correction record ID.'),offset:page.offset,limit:page.limit
+  },['collection','recordId']),
+  tool('directory_correction_file','Receive the entire original plan input, change JSONL or complete review graph with its native byte identity.',{
+    collection:str('Exact native correction collection.',{enum:directoryCorrectionsContract.collections}),
+    recordId:hash('Exact immutable correction record ID.'),
+    fileKind:str('Plans expose input; previews and accepted corrections expose changes and review.',{enum:['input','changes','review']})
+  },['collection','recordId','fileKind']),
   tool('directory_state','Read complete native state including original directory sources, reviews, selections and receiving.'),
   tool('directory_catalogue','Read the installed native directory and source input catalogues.'),
   tool('directory_guidance','Read every original published mapping and the explicit reviewed migration definitions.'),

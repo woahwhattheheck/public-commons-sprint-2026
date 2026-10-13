@@ -302,8 +302,9 @@ export function attachEco13(host){
   }
   function taskActions(task){
     if(!String(task?.action||'').startsWith('eco13.'))return '';
-    const id=task._eco13?.record_id||task.result?.record_id;
-    return id?'<button type="button" data-action="eco13-open" data-id="'+esc(id)+'">Open comparison</button>':'';
+    const id=task._eco13?.record_id||task.result?.record_id;if(!id)return '';
+    const message=task._eco13?.archive_status==='export_from_saved_record'&&typeof task._eco13.archive_message==='string'?task._eco13.archive_message:'';
+    return (message?'<p class="eco13-muted">'+esc(message)+'</p>':'')+'<button type="button" data-action="eco13-open" data-id="'+esc(id)+'">Open comparison</button>';
   }
   async function dispatch(button){
     const action=button?.dataset?.action;if(!action?.startsWith('eco13-'))return false;

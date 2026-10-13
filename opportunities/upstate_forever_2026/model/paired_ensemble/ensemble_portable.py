@@ -45,6 +45,9 @@ def export_project(directory, destination):
             members[descriptor['path']] = fingerprint(path)
         for name in ('analysis.json', 'reports.json'):
             members[name] = fingerprint(directory / name)
+        for name in ('execution.json', 'execution-settings.json'):
+            if (directory / name).is_file():
+                members[name] = fingerprint(directory / name)
         manifest = {'schema': SCHEMA, 'ensemble_id': analysis['id'],
                     'title': analysis['selection']['title'], 'entrypoint': 'index.html',
                     'contents': 'Complete quantitative result rasters, source/profile/run identities, member totals and offline report',
