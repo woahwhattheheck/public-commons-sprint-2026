@@ -1,0 +1,30 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "terrain-conditioning",
+  "source_reference": "ECO-PRODUCTION-INPUTS13/1.0.0/2026-10-13",
+  "components": {
+    "terrain-conditioning": {
+      "paths": [
+        "checks/terrain_conditioning_course.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/terrain_conditioning_native.py",
+        "operator/web/terrain_conditioning.css",
+        "operator/web/terrain_conditioning.mjs",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_flood.cpp",
+        "source_tools/terrain_prepare.py",
+        "integration/component_fragments/terrain-conditioning.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "retained_only": []
+    }
+  },
+  "required_components": [
+    "terrain-conditioning"
+  ]
+}
