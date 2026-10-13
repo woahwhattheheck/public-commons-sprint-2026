@@ -62,6 +62,8 @@ class PublishedStudyProvider:
             self.builtin / "model-sources.json",
             self.builtin / "wqp_20261013" / "source-manifest.json",
             self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
         )
         for manifest_path in manifests:
             if not manifest_path.is_file():

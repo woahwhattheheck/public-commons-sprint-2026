@@ -454,6 +454,69 @@ def raster_summary(path, units):
                 "area_conversion": "each original native raster rate multiplied once by actual hectares per cell"}
 
 
+def retained_native_export(receiving, record, model, pollutant):
+    """Resolve an original export inside the current received operation.
+
+    Saved execution paths remain provenance. New exports retain their relative
+    descriptor directly; earlier records map the original path relative to the
+    recorded native selection root and then use the verified output inventory.
+    """
+    from model.common import verify_file
+
+    if model not in OUTPUTS or pollutant not in {row[0] for row in OUTPUTS[model]}:
+        raise ValueError("Select an original native model export")
+    identity = record.get("selection_id")
+    if (not isinstance(identity, str) or len(identity) != 64
+            or any(character not in "0123456789abcdef" for character in identity)):
+        raise ValueError("Original native selection identity is invalid")
+    native = record.get("exports", {}).get(pollutant)
+    if not isinstance(native, dict):
+        raise ValueError("Original native export metadata is unavailable")
+    prefix = PurePosixPath("native-original", model, identity)
+    selected = native.get("artifact")
+    if selected is None:
+        original_path = native.get("path")
+        original_root = record.get("workspace_dir")
+        if not isinstance(original_path, str) or not isinstance(original_root, str):
+            raise ValueError("Original native export has no retained source path")
+        original_path, original_root = Path(original_path), Path(original_root)
+        if not original_path.is_absolute() or not original_root.is_absolute():
+            raise ValueError("Original native execution paths must be absolute")
+        try:
+            member = original_path.relative_to(original_root)
+        except ValueError as error:
+            raise ValueError("Original native export is outside its recorded selection") from error
+        if not member.parts or ".." in member.parts:
+            raise ValueError("Original native export has an invalid relative member")
+        selected_path = (prefix / PurePosixPath(member.as_posix())).as_posix()
+    elif isinstance(selected, dict):
+        selected_path = selected.get("path")
+    else:
+        raise ValueError("Original native export descriptor is invalid")
+    if not isinstance(selected_path, str):
+        raise ValueError("Original native export needs its retained relative path")
+    member = PurePosixPath(selected_path)
+    if (member.is_absolute() or ".." in member.parts or "\\" in selected_path
+            or "\0" in selected_path or member.as_posix() != selected_path
+            or not member.is_relative_to(prefix) or member == prefix):
+        raise ValueError("Original native export escapes its retained selection")
+    matches = [item for item in record.get("outputs", [])
+               if isinstance(item, dict) and item.get("path") == selected_path]
+    if len(matches) != 1:
+        raise ValueError("Original native export is not uniquely retained in its output inventory")
+    item = matches[0]
+    descriptor = {name: item.get(name) for name in ("path", "bytes", "sha256")}
+    if selected is not None and any(selected.get(name) != descriptor[name]
+                                    for name in descriptor):
+        raise ValueError("Original native export descriptor differs from its retained inventory")
+    size, checksum = descriptor["bytes"], descriptor["sha256"]
+    if (isinstance(size, bool) or not isinstance(size, int) or size < 0
+            or not isinstance(checksum, str) or len(checksum) != 64
+            or any(character not in "0123456789abcdef" for character in checksum)):
+        raise ValueError("Original native export inventory is incomplete")
+    return verify_file(receiving, descriptor), descriptor
+
+
 def native_reference(receiving, original, module, metadata, progress, checkpoint):
     model = original["model"]
     cohort = native_cohort(metadata, model)
@@ -497,8 +560,9 @@ def native_reference(receiving, original, module, metadata, progress, checkpoint
         path = Path(registry.get(filename, root / (filename + suffix + ".tif")))
         if not path.is_file():
             raise ValueError("Native execution did not produce " + str(path))
-        summaries[pollutant] = raster_summary(path, units)
-        outputs.append(artifact(path, receiving))
+        descriptor = artifact(path, receiving)
+        summaries[pollutant] = {**raster_summary(path, units), "artifact": descriptor}
+        outputs.append(descriptor)
     for path in sorted(root.glob("watershed_results*")):
         if path.is_file():
             outputs.append(artifact(path, receiving))
@@ -673,7 +737,8 @@ def comparison_summary(workspace, receiving, run, progress):
             item = run.get("artifacts", {}).get(pollutant + "_export")
             if item is None:
                 continue
-            source, output = Path(native["path"]), run_root / item["path"]
+            source, source_descriptor = retained_native_export(receiving, original, model, pollutant)
+            output = run_root / item["path"]
             with rasterio.open(source) as a, rasterio.open(output) as b:
                 if a.crs != b.crs:
                     raise ValueError("Native/workspace export coordinate systems differ")
@@ -716,6 +781,8 @@ def comparison_summary(workspace, receiving, run, progress):
                 result[pollutant] = {
                     "units": native["annual_mass_units"], "common_cells": count,
                     "native_reference_selection_id": original["selection_id"],
+                    "native_reference_artifact": source_descriptor,
+                    "native_reference_artifact_root": "gura-receiving",
                     "workspace_run_id": run["id"],
                     "runtime_cohort_matches": reference_cohort == application_cohort,
                     "native_reference_runtime": reference_cohort,
