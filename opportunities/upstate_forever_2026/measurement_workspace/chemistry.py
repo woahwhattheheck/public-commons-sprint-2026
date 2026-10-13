@@ -1,0 +1,565 @@
+"""Explicit original Measurements-to-Chemistry bindings in the existing Workspace.
+
+The Measurements engine owns normalization, review, source revisions and portable
+receiving. This adapter consumes its full original records and preserves every
+population decision. The existing Chemistry engine owns all numerical inference.
+"""
+from __future__ import annotations
+from collections import Counter, defaultdict
+from copy import deepcopy
+from datetime import datetime, timezone, date
+import json
+import math
+from pathlib import Path
+from urllib.parse import urlencode
+
+from model.common import atomic_json, canonical, digest, file_digest, held, identifier, read_json
+from model.chemistry import Chemistry
+from model.reach_chemistry.model import Project, ModelError
+from model.reach_chemistry.inference import observation_components, observation_rows
+
+FAMILY = "measurement-chemistry-bindings"
+FORMAT = "upstate.measurement-chemistry-binding/v1"
+MEASUREMENT_CHOICES = [
+    {"id": "ammonia_n", "title": "Ammonia nitrogen", "basis": "N",
+     "scope": "The explicitly declared ammonia pool; source method and basis remain attached."},
+    {"id": "nitrate_nitrite_n", "title": "Nitrate plus nitrite nitrogen", "basis": "N",
+     "scope": "All modeled nitrate and nitrite pools represented by the source method."},
+    {"id": "kjeldahl_n", "title": "Total Kjeldahl nitrogen", "basis": "N",
+     "scope": "Ammonia plus organic nitrogen represented by the source method."},
+    {"id": "total_nitrogen", "title": "Total nitrogen", "basis": "N",
+     "scope": "Complete declared nitrogen pools, with original TKN plus NOx derivation when selected."},
+    {"id": "total_phosphorus", "title": "Total phosphorus", "basis": "P",
+     "scope": "Complete declared dissolved and particulate phosphorus pools."},
+    {"id": "nitrate", "title": "Nitrate", "basis": None},
+    {"id": "orthophosphate", "title": "Orthophosphate", "basis": None},
+    {"id": "dissolved_oxygen", "title": "Dissolved oxygen", "basis": "O2"},
+]
+FILTERS = {"stationId", "parameter", "fraction", "unit", "censor", "from", "to", "q"}
+
+
+def _text(value, name):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(name + " must be a nonempty string")
+    return value.strip()
+
+
+def _number(value, name, *, positive=False):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValueError(name + " must be a finite number")
+    if value < 0 or positive and value <= 0:
+        raise ValueError(name + " is outside its permitted range")
+    return value
+
+
+def _iso(value, name):
+    text = _text(value, name)
+    parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(name + " requires the explicit original time zone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _query(filters, **extra):
+    if not isinstance(filters, dict) or set(filters) - FILTERS:
+        raise ValueError("Select documented original measurement filters")
+    return urlencode({**filters, **extra})
+
+
+def _snapshot(service, filters, expected_revision=None):
+    """Read full original records; reject a source edit during the complete read."""
+    before = service.json("GET")
+    revision = before["revision"]
+    if expected_revision is not None and expected_revision != revision:
+        raise ValueError("Measurements changed after inspection; review the current source revision")
+    rows, offset, expected_total = [], 0, None
+    while True:
+        page = service.json("GET", "records?" + _query(filters, limit=500, offset=offset))
+        if page["revision"] != revision:
+            raise ValueError("Measurements changed while reading the source population")
+        if expected_total is None:
+            expected_total = page["total"]
+        if page["total"] != expected_total:
+            raise ValueError("The selected source population changed")
+        for projected in page["rows"]:
+            rows.append(service.json("GET", "records/" + identifier(projected["id"])))
+        offset += len(page["rows"])
+        if offset == expected_total:
+            break
+        if not page["rows"] or offset > expected_total:
+            raise ValueError("Original measurement paging did not cover the complete population")
+    portable = service.json("GET", "portable")
+    after = service.json("GET")
+    if portable["revision"] != revision or after["revision"] != revision:
+        raise ValueError("Measurements changed while retaining originals; repeat the same inspection")
+    if len({r["id"] for r in rows}) != len(rows):
+        raise ValueError("Original source population repeats a record ID")
+    return {"revision": revision, "records": rows, "portable": portable, "summary": before}
+
+
+def catalog(workspace, service):
+    bindings = workspace._list(FAMILY)
+    return {"cases": Chemistry(workspace).catalog()["cases"],
+            "bindings": [{k: b[k] for k in ("id", "title", "case_id", "original_case_id", "counts", "source_revision")}
+                         for b in bindings],
+            "measurement_choices": MEASUREMENT_CHOICES,
+            "measurement_revision": service.json("GET")["revision"]}
+
+
+def inspect(workspace, service, payload):
+    case = Chemistry(workspace).get_case(payload["case_id"])
+    snap = _snapshot(service, payload.get("filters", {}), payload.get("expected_revision"))
+    groups = {}
+    for row in snap["records"]:
+        key = (row["characteristic"], row["method"], row["fraction"], row["basis"], row["unit"])
+        if key not in groups:
+            groups[key] = {"characteristic": key[0], "method": key[1], "fraction": key[2],
+                           "basis": key[3], "unit": key[4], "count": 0, "record_ids": [],
+                           "stations": set(), "dates": set(), "censors": Counter(), "exclusions": Counter()}
+        group = groups[key]
+        group["count"] += 1
+        group["record_ids"].append(row["id"])
+        group["stations"].add(row["stationId"])
+        group["dates"].add(row["sampledDate"])
+        group["censors"][row["censor"]] += 1
+        group["exclusions"].update(row["eligible"]["reasons"])
+    values = []
+    for key in sorted(groups):
+        group = groups[key]
+        values.append({**group, "stations": sorted(group["stations"]), "dates": sorted(group["dates"]),
+                       "censors": dict(group["censors"]), "exclusions": dict(group["exclusions"])})
+    return {"case": case, "revision": snap["revision"], "filters": payload.get("filters", {}),
+            "records": snap["records"], "groups": values, "measurement_choices": MEASUREMENT_CHOICES}
+
+
+def _mapping(project, value):
+    if not isinstance(value, dict):
+        raise ValueError("Each measurement mapping must be an object")
+    for key in ("characteristic", "measurement", "basis",
+                "basis_reference", "basis_reason", "uncertainty_reason"):
+        _text(value.get(key), "measurement mapping " + key)
+    for key in ("method", "fraction"):
+        if not isinstance(value.get(key), str):
+            raise ValueError("Select the exact source " + key + ", including an explicit blank when original")
+    _number(value.get("sigma_mg_l"), "mapping sigma_mg_l", positive=True)
+    observation_components(project, {"id": "mapping-review", "reach": project.rids[0],
+        "measurement": value["measurement"], "basis": value["basis"], "components": value.get("components")})
+    expected = next((r["basis"] for r in MEASUREMENT_CHOICES if r["id"] == value["measurement"]), None)
+    if expected and value["basis"] != expected:
+        raise ValueError("The selected measured identity uses conserved basis " + expected)
+    return value
+
+
+def _source_interval(row):
+    """Use the original Eighteenmile exact-decimal source reader when applicable."""
+    raw = row.get("raw", {})
+    try:
+        from observations.eighteenmile_stoichiometry_20261013.stoichiometry import concentration, METHODS, CHARACTERS
+        component = CHARACTERS.get(raw.get("CharacteristicName"))
+        if component and raw.get("ResultAnalyticalMethod/MethodIdentifier") == METHODS[component]:
+            value = concentration(raw)
+            return value.as_dict(), "original-eighteenmile-stoichiometry"
+    except (KeyError, ValueError):
+        pass
+    if row["censor"] == "none":
+        value = _number(row.get("value"), "original concentration")
+        return {"lower": value, "upper": value, "lower_open": False, "upper_open": False}, "original-normalized-point"
+    lower, upper = row.get("lower"), row.get("upper")
+    if lower is None or upper is None:
+        raise ValueError("finite-source-interval-required")
+    _number(lower, "source lower bound")
+    _number(upper, "source upper bound")
+    if upper <= lower:
+        raise ValueError("finite-source-interval-required")
+    # Normalized left/right censoring does not itself declare endpoint closure.
+    raise ValueError("original-interval-endpoint-review-required")
+
+
+def _bounds(row, selection):
+    override = selection.get("interval_overrides", {}).get(row["id"])
+    if override is None:
+        return _source_interval(row)
+    if row["censor"] == "none":
+        raise ValueError("A point result cannot be replaced with censoring bounds")
+    _text(override.get("reason"), "source interval review reason")
+    lower = _number(override.get("lower_mg_l"), "reviewed source lower bound")
+    upper = _number(override.get("upper_mg_l"), "reviewed source upper bound")
+    if upper <= lower or type(override.get("lower_closed")) is not bool or type(override.get("upper_closed")) is not bool:
+        raise ValueError("A reviewed finite source interval needs ordered bounds and explicit endpoint closure")
+    if row.get("lower") is not None and lower != row["lower"]:
+        raise ValueError("Reviewed lower bound differs from the original normalized source")
+    if row.get("upper") is not None and upper != row["upper"]:
+        raise ValueError("Reviewed upper bound differs from the original normalized source")
+    if row["censor"] == "left" and lower != 0:
+        raise ValueError("A left-censored mass concentration review may declare only the physical zero lower bound")
+    if row["censor"] == "right" and row.get("upper") is None:
+        raise ValueError("An unbounded source cannot acquire an invented finite upper bound")
+    return {"lower": lower, "upper": upper, "lower_open": not override["lower_closed"],
+            "upper_open": not override["upper_closed"], "review": deepcopy(override)}, "explicit-original-bound-review"
+
+
+def _day(row, selection, project):
+    explicit = selection.get("day_overrides", {}).get(row["id"])
+    if explicit is not None:
+        _text(explicit.get("reason"), "sampling time review reason")
+        day = _number(explicit.get("day"), "explicit model day")
+    else:
+        if row.get("timePrecision") != "instant" or not row.get("sampledAt"):
+            raise ValueError("explicit-time-binding-required")
+        day = (_iso(row["sampledAt"], "original sample timestamp") -
+               _iso(selection.get("time_origin"), "selected original model time origin")).total_seconds() / 86400
+    if day < 0 or day > project.end_day:
+        raise ValueError("sample-outside-selected-case-duration")
+    return day
+
+
+def _role(row, selection):
+    roles = selection.get("roles", {})
+    result = roles.get("by_record", {}).get(row["id"], roles.get("default"))
+    cutoff = roles.get("holdout_from")
+    if cutoff:
+        date.fromisoformat(cutoff)
+        if row["sampledDate"] >= cutoff and row["id"] not in roles.get("by_record", {}):
+            result = "holdout"
+    if result not in ("fit", "holdout"):
+        raise ValueError("Choose an explicit fit/holdout role for every original record")
+    return result
+
+
+def _observation(project, row, mapping, station, selection):
+    reasons = list(row["eligible"]["reasons"])
+    resolved = {"reach-unassigned", "unmapped-constituent"}
+    # The separate Chemistry assignment does not change the original HUC/source assignment.
+    if row["unit"] != "mg/L":
+        raise ValueError("measured-mass-concentration-unit-required")
+    if row.get("basis") not in ("", "unspecified", mapping["basis"]):
+        raise ValueError("declared-basis-conflicts-with-original-source")
+    interval, interval_source = _bounds(row, selection)
+    if row["censor"] != "none":
+        if selection.get("allow_censored") is not True:
+            raise ValueError("censored-source-not-selected")
+        resolved.update({"censored-result", "missing-numeric-result"})
+        if interval_source == "original-eighteenmile-stoichiometry":
+            # The original reader recognizes this exact published condition/method.
+            resolved.add("review-detection-condition")
+    remaining = [r for r in reasons if r not in resolved]
+    if remaining:
+        raise ValueError(";".join(remaining))
+    day = _day(row, selection, project)
+    value = {"id": row["id"], "reach": station["reach_id"], "day": day,
+             "measurement": mapping["measurement"], "basis": mapping["basis"],
+             "components": deepcopy(mapping["components"]), "sigma_mg_l": mapping["sigma_mg_l"],
+             "role": _role(row, selection),
+             "provenance": {"reference": "original-measurement:" + row["id"],
+                "record_id": row["id"], "source_references": deepcopy(row["sources"]),
+                "station_binding": deepcopy(station), "measurement_mapping": deepcopy(mapping),
+                "sampled_date": row["sampledDate"], "sampled_at": row.get("sampledAt"),
+                "time_precision": row["timePrecision"], "method": row["method"],
+                "fraction": row["fraction"], "reported_unit": row.get("reportedUnit"),
+                "original_exclusions": reasons, "resolved_exclusions": [r for r in reasons if r in resolved],
+                "interval_source": interval_source, "source_interval": interval}}
+    if interval["lower"] == interval["upper"]:
+        value.update(qualifier="equal", mg_l=interval["lower"])
+    else:
+        value.update(qualifier="interval", lower_mg_l=interval["lower"], upper_mg_l=interval["upper"],
+                     lower_closed=not interval["lower_open"], upper_closed=not interval["upper_open"])
+    observation_rows(project, [value], fitting=True)
+    return value
+
+
+def _derived_nitrogen(project, records, accepted, selection):
+    """Reuse STOICH's original exact source intervals and activity match, not a new model."""
+    mapping = selection.get("derived_total_nitrogen")
+    if not mapping:
+        return [], []
+    _mapping(project, {**mapping, "characteristic": "TKN + NOx", "method": "original same-activity sum",
+                       "fraction": "Unfiltered"})
+    if mapping["measurement"] != "total_nitrogen" or mapping["basis"] != "N":
+        raise ValueError("The original TKN plus NOx source derivation represents total nitrogen as N")
+    from observations.eighteenmile_stoichiometry_20261013.stoichiometry import (
+        concentration, plus, ACTIVITY_FIELDS, METHODS)
+    by_id = {r["id"]: r for r in records}
+    candidates = defaultdict(lambda: defaultdict(list))
+    for value in accepted:
+        row = by_id[value["id"]]
+        raw = row.get("raw", {})
+        char = raw.get("CharacteristicName")
+        if char in ("Kjeldahl nitrogen", "Nitrate + Nitrite"):
+            candidates[(row["stationId"], row.get("activityId", ""))][char].append(value)
+    values, excluded = [], []
+    for (station, activity), groups in sorted(candidates.items()):
+        identity = "tkn-nox-" + digest({"station": station, "activity": activity})[:40]
+        try:
+            if not activity or any(len(groups.get(c, [])) != 1 for c in ("Kjeldahl nitrogen", "Nitrate + Nitrite")):
+                raise ValueError("ambiguous-or-incomplete-original-sampling-activity")
+            a, b = groups["Kjeldahl nitrogen"][0], groups["Nitrate + Nitrite"][0]
+            ra, rb = by_id[a["id"]], by_id[b["id"]]
+            if (ra["raw"]["ResultAnalyticalMethod/MethodIdentifier"] != METHODS["tkn"]
+                    or rb["raw"]["ResultAnalyticalMethod/MethodIdentifier"] != METHODS["nox"]):
+                raise ValueError("original-component-method-differs")
+            if any(ra["raw"].get(k) != rb["raw"].get(k) for k in ACTIVITY_FIELDS):
+                raise ValueError("component-sampling-context-differs")
+            if any(a[k] != b[k] for k in ("reach", "day", "role", "basis")):
+                raise ValueError("component-case-time-role-or-basis-differs")
+            interval = plus(concentration(ra["raw"]), concentration(rb["raw"])).as_dict()
+            value = {"id": identity, "reach": a["reach"], "day": a["day"], "role": a["role"],
+                     "measurement": mapping["measurement"], "basis": "N",
+                     "components": deepcopy(mapping["components"]), "sigma_mg_l": mapping["sigma_mg_l"],
+                     "provenance": {"reference": "original-TKN-plus-NOx:" + activity,
+                         "original_record_ids": [a["id"], b["id"]], "measurement_mapping": deepcopy(mapping),
+                         "source_interval": interval, "method": "original STOICH concentration + plus",
+                         "activity_id": activity, "station_id": station}}
+            if interval["lower"] == interval["upper"]:
+                value.update(qualifier="equal", mg_l=interval["lower"])
+            else:
+                value.update(qualifier="interval", lower_mg_l=interval["lower"], upper_mg_l=interval["upper"],
+                             lower_closed=not interval["lower_open"], upper_closed=not interval["upper_open"])
+            observation_rows(project, [value], fitting=True)
+            values.append(value)
+        except (ValueError, KeyError) as error:
+            excluded.append({"id": identity, "activity_id": activity, "station_id": station,
+                             "reasons": [str(error)], "original_record_ids": sorted(v["id"] for g in groups.values() for v in g)})
+    return values, excluded
+
+
+def _review(case, snap, selection):
+    project = Project(case["project"])
+    for key in ("title", "reviewer", "reason"):
+        _text(selection.get(key), key)
+    if not isinstance(selection.get("station_bindings"), list) or not isinstance(selection.get("measurement_mappings"), list):
+        raise ValueError("Declare original station and measurement mappings")
+    stations = {}
+    for station in selection["station_bindings"]:
+        for key in ("station_id", "reach_id", "reason", "reference"):
+            _text(station.get(key), "station binding " + key)
+        project.reach(station["reach_id"])
+        if station["station_id"] in stations:
+            raise ValueError("Select each original station once")
+        stations[station["station_id"]] = station
+    mappings = {}
+    for mapping in selection["measurement_mappings"]:
+        _mapping(project, mapping)
+        key = tuple(mapping[k] for k in ("characteristic", "method", "fraction"))
+        if key in mappings:
+            raise ValueError("Each exact source characteristic/method/fraction needs one interpretation")
+        mappings[key] = mapping
+    accepted, excluded = [], []
+    for row in snap["records"]:
+        try:
+            station = stations.get(row["stationId"])
+            if station is None:
+                raise ValueError("explicit-case-station-binding-required")
+            mapping = mappings.get(tuple(row[k] for k in ("characteristic", "method", "fraction")))
+            if mapping is None:
+                raise ValueError("explicit-measurement-mapping-required")
+            accepted.append(_observation(project, row, mapping, station, selection))
+        except (ValueError, KeyError) as error:
+            excluded.append({"id": row["id"], "station_id": row["stationId"],
+                             "sampled_date": row["sampledDate"], "source_references": deepcopy(row["sources"]),
+                             "original_exclusions": list(row["eligible"]["reasons"]),
+                             "reasons": str(error).split(";")})
+    derived, derived_excluded = _derived_nitrogen(project, snap["records"], accepted, selection)
+    component_ids = {rid for row in derived for rid in row["provenance"]["original_record_ids"]}
+    observations = [row for row in accepted if row["id"] not in component_ids] + derived
+    if not observations:
+        raise ValueError("No original measurements match the declared native case, source review and time selection")
+    request = deepcopy(selection.get("request", {}))
+    if request.get("mode") not in ("calibrate", "sensitivity", "uncertainty", "monitoring"):
+        raise ValueError("Select an original Chemistry inference mode")
+    if "observations" in request:
+        raise ValueError("The binding supplies observations from the reviewed original population")
+    request["observations"] = observations
+    return {"accepted": accepted, "excluded": excluded, "derived": derived,
+            "derived_excluded": derived_excluded, "request": request,
+            "counts": {"source_records": len(snap["records"]), "accepted": len(accepted),
+                "excluded": len(excluded), "derived": len(derived), "derived_excluded": len(derived_excluded),
+                "fit": sum(r["role"] == "fit" for r in observations),
+                "holdout": sum(r["role"] == "holdout" for r in observations),
+                "interval": sum(r["qualifier"] == "interval" for r in observations),
+                "observations": len(observations), "derived_component_records": len(component_ids)}}
+
+
+def prepare(workspace, service, selection):
+    """Retain one reviewed source edition and a child of the actual native case."""
+    if not isinstance(selection, dict):
+        raise ValueError("A complete measurement binding selection is required")
+    selection = deepcopy(selection)
+    chemistry = Chemistry(workspace)
+    original = chemistry.get_case(selection["case_id"])
+    snap = _snapshot(service, selection.get("filters", {}), selection.get("expected_revision"))
+    review = _review(original, snap, selection)
+    identity = digest({"selection": selection, "case_sha256": original["project_sha256"],
+                       "revision": snap["revision"], "records": snap["records"]})
+    directory = workspace.root / "measurement-chemistry" / identity
+    directory.mkdir(parents=True, exist_ok=True)
+    with held(directory / ".prepare.lock"):
+        receipt = directory / "binding.json"
+        if receipt.exists():
+            return get(workspace, read_json(receipt)["binding_id"])
+        portable = deepcopy(snap["portable"])
+        # Preserve the first complete source snapshot; its creation clock is descriptive.
+        portable_path = directory / "measurements.json"
+        if portable_path.exists():
+            retained = read_json(portable_path)
+            stable = lambda value: {k: v for k, v in value.items() if k != "createdAt"}
+            if stable(retained) != stable(portable):
+                raise ValueError("Interrupted binding source snapshot differs from the original measured revision")
+        else:
+            atomic_json(portable_path, portable, immutable=True)
+        document = {"format": FORMAT, "title": selection["title"], "selection": selection,
+                    "original_case_id": original["id"], "project_sha256": original["project_sha256"],
+                    "source_revision": snap["revision"], "original_records": snap["records"], **review}
+        atomic_json(directory / "binding-source.json", document, immutable=True)
+        source_id = "measured-chemistry-" + identity
+        manifest = {"schema": "upstate.sources/v1", "title": selection["title"],
+                    "entries": [{"id": source_id, "kind": "document", "title": selection["title"],
+                        "uri": "urn:original-measurements:" + identity,
+                        "vintage": "Measurements source revision " + str(snap["revision"]),
+                        "path": "binding-source.json", "sha256": file_digest(directory / "binding-source.json"),
+                        "companions": [{"path": "measurements.json", "sha256": file_digest(directory / "measurements.json")}]}]}
+        atomic_json(directory / "sources.json", manifest, immutable=True)
+        collection = workspace.import_sources(directory / "sources.json")
+        source = {"source_collection_id": collection["id"], "source_id": source_id}
+        case = chemistry.save_case({"project": original["project"], "parent_id": original["id"],
+            "source_refs": [*original["source_refs"], source],
+            "reason": selection["reason"] + " — reviewed original measurement binding " + identity})
+        binding = workspace._save(FAMILY, {"format": FORMAT, "title": selection["title"],
+            "case_id": case["id"], "original_case_id": original["id"],
+            "project_sha256": original["project_sha256"], "source_revision": snap["revision"],
+            "selection": selection, "source": source, "source_sha256": manifest["entries"][0]["sha256"],
+            "directory": str(directory.relative_to(workspace.root)), **review})
+        atomic_json(receipt, {"binding_id": binding["id"]}, immutable=True)
+        return get(workspace, binding["id"])
+
+
+def native_payload(binding, chemistry, case_id=None):
+    """Original adapter-compatible call; preserve the exact reviewed native request."""
+    if binding.get("format") != FORMAT:
+        raise ValueError("Choose a retained measured Chemistry binding")
+    case = chemistry.get_case(binding["case_id"])
+    if case_id is not None and case_id not in (binding["case_id"], binding["original_case_id"]):
+        raise ValueError("The binding belongs to a different selected native case")
+    if case["project_sha256"] != binding["project_sha256"]:
+        raise ValueError("The bound original Chemistry project changed")
+    request = deepcopy(binding["request"])
+    metadata = request.get("metadata", {})
+    if not isinstance(metadata, dict):
+        raise ValueError("Native request metadata must be an object")
+    if "measurement_binding" in metadata:
+        raise ValueError("The native request already has a competing measurement binding")
+    request["metadata"] = {**metadata, "measurement_binding": {
+        "binding_id": binding["id"], "source": binding["source"], "source_sha256": binding["source_sha256"],
+        "source_revision": binding["source_revision"], "original_case_id": binding["original_case_id"],
+        "selection": binding["selection"], "counts": binding["counts"],
+        "accepted": binding["accepted"], "excluded": binding["excluded"],
+        "derived": binding["derived"], "derived_excluded": binding["derived_excluded"]}}
+    return {"case_id": case["id"], "request": request}
+
+
+def get(workspace, binding_id):
+    binding = workspace._get(FAMILY, identifier(binding_id))
+    source_path, entry = workspace.source_file(binding["source"]["source_collection_id"], binding["source"]["source_id"])
+    if file_digest(source_path) != binding["source_sha256"]:
+        raise ValueError("The original binding source edition changed")
+    result = {**binding, "binding_id": binding["id"]}
+    result["native_payload"] = native_payload(binding, Chemistry(workspace))
+    return result
+
+
+def export(workspace, binding_id):
+    binding = get(workspace, binding_id)
+    return {"filename": "measured-chemistry-" + binding["id"][:16] + ".json",
+            "content_type": "application/json", "document": binding,
+            "sha256": digest(binding),
+            "native_payload": binding["native_payload"],
+            "source": binding["source"],
+            "editable_export": {"action": "chemistry.export", "payload": {"case_id": binding["case_id"], "run_ids": []}}}
+
+
+
+def adopt_source(workspace, payload):
+    """Reopen the complete binding carried by an independently received native case."""
+    chemistry = Chemistry(workspace)
+    case = chemistry.get_case(payload["case_id"])
+    choice = {k: payload[k] for k in ("source_collection_id", "source_id")}
+    if not any(all(ref[k] == choice[k] for k in choice) for ref in case["source_refs"]):
+        raise ValueError("Choose an original source retained by the selected received Chemistry case")
+    source_path, entry = workspace.source_file(**choice)
+    document = read_json(source_path)
+    if document.get("format") != FORMAT or document.get("project_sha256") != case["project_sha256"]:
+        raise ValueError("The original binding does not belong to this received native project")
+    request = document["request"]
+    observation_rows(Project(case["project"]), request["observations"], fitting=True)
+    selection = {**document["selection"], "case_id": case["id"]}
+    binding = workspace._save(FAMILY, {"format": FORMAT, "title": document["title"],
+        "case_id": case["id"], "original_case_id": case["id"], "project_sha256": case["project_sha256"],
+        "source_revision": document["source_revision"], "selection": selection,
+        "source": choice, "source_sha256": file_digest(source_path),
+        "received_from": {"case_id": document["original_case_id"], "selection": document["selection"]},
+        **{key: document[key] for key in ("accepted", "excluded", "derived", "derived_excluded", "counts", "request")}})
+    return get(workspace, binding["id"])
+
+def handle(workspace, service, payload):
+    action = payload.get("action", "catalog")
+    if action == "catalog":
+        return catalog(workspace, service)
+    if action == "inspect":
+        return inspect(workspace, service, payload)
+    if action == "prepare":
+        return prepare(workspace, service, payload["selection"])
+    if action == "get":
+        return get(workspace, payload["binding_id"])
+    if action == "export":
+        return export(workspace, payload["binding_id"])
+    if action == "adopt-source":
+        return adopt_source(workspace, payload)
+    raise ValueError("Choose catalog, inspect, prepare, get, export or adopt-source for measured Chemistry")
+
+
+def main(argv=None):
+    import argparse
+    from model.workspace import Workspace
+    from .extension import MeasuredObservationExtension
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--output", required=True, help="Complete JSON output outside the native Workspace")
+    sub = parser.add_subparsers(dest="action", required=True)
+    sub.add_parser("catalog")
+    inspection = sub.add_parser("inspect")
+    inspection.add_argument("--case-id", required=True)
+    inspection.add_argument("--filters", help="JSON file with original measurement filters")
+    preparation = sub.add_parser("prepare")
+    preparation.add_argument("--selection", required=True)
+    for action in ("get", "export"):
+        entry = sub.add_parser(action)
+        entry.add_argument("--binding-id", required=True)
+    adoption = sub.add_parser("adopt-source")
+    adoption.add_argument("--case-id", required=True)
+    adoption.add_argument("--source-collection-id", required=True)
+    adoption.add_argument("--source-id", required=True)
+    args = parser.parse_args(argv)
+    workspace = Workspace(Path(args.workspace))
+    output = Path(args.output).resolve()
+    if output.is_relative_to(workspace.root.resolve()):
+        raise ValueError("Choose an output file outside the original Workspace")
+    extension = MeasuredObservationExtension(None, lambda *a: ValueError(str(a)))
+    try:
+        payload = {"action": args.action}
+        if args.action == "inspect":
+            payload.update(case_id=args.case_id, filters=read_json(args.filters) if args.filters else {})
+        if args.action == "prepare":
+            payload["selection"] = read_json(args.selection)
+        if args.action in ("get", "export"):
+            payload["binding_id"] = args.binding_id
+        if args.action == "adopt-source":
+            payload.update(case_id=args.case_id, source_collection_id=args.source_collection_id, source_id=args.source_id)
+        result = handle(workspace, extension._service(workspace), payload)
+        atomic_json(output, result)
+        print(json.dumps({"output": str(output), "binding_id": result.get("binding_id"),
+                          "case_id": result.get("case_id"), "counts": result.get("counts")}))
+    finally:
+        extension.close()
+
+
+if __name__ == "__main__":
+    main()
