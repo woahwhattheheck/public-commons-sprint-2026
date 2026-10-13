@@ -246,15 +246,32 @@ def _matches(model, original, target, exact):
 
 def _outputs(context, stage, model):
     companions = {item["path"]: item for item in stage.get("companions", [])}
-    companions.update({item["path"]: item
-                       for item in native_companions(context["directory"], stage["files"])})
-    original_arguments = {**stage["arguments"], "path": model + "-source-arguments.json"}
-    return (list(stage["files"].values()) + list(companions.values()) + [original_arguments],
-            [companions[name] for name in sorted(companions)])
+    for item in native_companions(context["directory"], stage["files"]):
+        companions.setdefault(item["path"], item)
+    additional = list(stage.get("additional_files", []))
+    bodies = list(stage["files"].values()) + list(companions.values()) + additional
+    directories = set()
+    for output in stage.get("registry_outputs", {}).values():
+        if output.get("kind") == "directory":
+            directories.add(output["path"])
+            directories.update(output.get("directories", []))
+    for relative in [item["path"] for item in bodies] + sorted(directories):
+        if (not isinstance(relative, str) or not Path(relative).parts
+                or Path(relative).parts[0] != model):
+            raise ValueError("The original output belongs to another native model")
+        original = destination_file(context["directory"], relative)
+        if relative in directories and not original.is_dir():
+            raise ValueError("Retain the original native registry directory: " + relative)
+    argument_name = model + "-source-arguments-" + stage["arguments"]["sha256"] + ".json"
+    original_arguments = {**stage["arguments"], "path": argument_name}
+    return {"descriptors": bodies + [original_arguments],
+            "companions": [companions[name] for name in sorted(companions)],
+            "additional_files": additional, "directories": sorted(directories),
+            "argument_name": argument_name}
 
 
-def _preflight(directory, descriptors):
-    selected = {}
+def _preflight(directory, descriptors, original_directories=()):
+    selected, directories = {}, set(original_directories)
     for item in descriptors:
         path = item["path"]
         if path in selected and (selected[path]["bytes"], selected[path]["sha256"]) != (
@@ -262,8 +279,19 @@ def _preflight(directory, descriptors):
             raise ValueError("The selected native stages have conflicting output paths: " + path)
         selected[path] = item
         destination = destination_file(directory, path)
-        if destination.exists():
-            verify_file(directory, item)
+        if destination.exists() and not destination.is_file():
+            raise ValueError("A native output destination is not a regular file: " + path)
+        directories.update(parent.as_posix() for parent in PurePosixPath(path).parents
+                           if parent.as_posix() != ".")
+    for relative in sorted(directories):
+        if relative in selected:
+            raise ValueError("A native output is selected as both file and directory: " + relative)
+        target = destination_file(directory, relative)
+        if target.exists() and not target.is_dir():
+            raise ValueError("A native output directory is occupied by a file: " + relative)
+    # Planned bodies belong only to unfinished target stages. Complete target
+    # stages were verified separately and remain in place. An interrupted
+    # transfer is replaced atomically by the next complete original body.
 
 
 def seed_completed_models(workspace, selection, source_runs):
@@ -298,21 +326,23 @@ def seed_completed_models(workspace, selection, source_runs):
                 **original_lulc["record"],
                 "path": (directory / "scenario_lulc.tif").relative_to(workspace.root).as_posix()}}
             companions = {item["path"]: item for item in landcover.get("companions", [])}
-            companions.update({item["path"]: item for item in native_companions(
-                owner["directory"], {"landcover": landcover["artifact"]})})
+            for item in native_companions(owner["directory"],
+                                          {"landcover": landcover["artifact"]}):
+                companions.setdefault(item["path"], item)
             landcover_companions = [companions[name] for name in sorted(companions)]
         matches = {name: _matches(name, originals[name], target, exact) for name in ("ndr", "sdr")}
-        keep, planned, companions = {}, [], {}
+        keep, planned, outputs, directories = {}, [], {}, []
         for name in ("ndr", "sdr"):
             if name in state["stages"]:
                 keep[name] = _stage(target, name, workspace)
             else:
-                outputs, companions[name] = _outputs(originals[name], stages[name], name)
-                planned.extend(outputs)
+                outputs[name] = _outputs(originals[name], stages[name], name)
+                planned.extend(outputs[name]["descriptors"])
+                directories.extend(outputs[name]["directories"])
         if landcover is not None:
             planned.append(landcover["artifact"])
             planned.extend(landcover_companions)
-        _preflight(directory, planned)
+        _preflight(directory, planned, directories)
         selected = {"schema": SCHEMA, "target_selection": state["selection"], "source_runs": sources}
         previous_assembly = state.get("assembly")
         assembly = {"schema": SCHEMA, "id": digest(selected), "selection": selected,
@@ -324,10 +354,13 @@ def seed_completed_models(workspace, selection, source_runs):
             # Its original assembly is retained in the full operation history.
             state.setdefault("assembly_history", []).append(state["assembly"])
         if landcover is not None:
+            landcover_transfer = {"files": 0, "bytes": 0, "methods": {}}
             landcover["artifact"] = copy_verified(originals["ndr"]["directory"],
-                landcover["artifact"], directory, path="scenario_lulc.tif")
-            landcover["companions"] = [copy_verified(originals["ndr"]["directory"], item, directory)
-                                       for item in landcover_companions]
+                landcover["artifact"], directory, path="scenario_lulc.tif",
+                transfer=landcover_transfer, replace_mismatch=True)
+            landcover["companions"] = [copy_verified(originals["ndr"]["directory"], item, directory,
+                transfer=landcover_transfer, replace_mismatch=True) for item in landcover_companions]
+            landcover["transfer"] = landcover_transfer
             state["stages"]["landcover"] = landcover
         for name in ("ndr", "sdr"):
             original, stage = originals[name], stages[name]
@@ -339,17 +372,30 @@ def seed_completed_models(workspace, selection, source_runs):
                     "requested_source_run_id": sources[name], "retained_stage": keep[name],
                     "input_matches": matches[name]}
                 continue
-            files = {key: copy_verified(original["directory"], item, directory)
-                     for key, item in stage["files"].items()}
-            copied_companions = [copy_verified(original["directory"], item, directory)
-                                 for item in companions[name]]
+            plan = outputs[name]
+            transfer = {"files": 0, "bytes": 0, "methods": {},
+                        "directories": len(plan["directories"])}
+            reuse_started = now()
+            copied = {}
+            for item in (list(stage["files"].values()) + plan["companions"] +
+                         plan["additional_files"]):
+                if item["path"] not in copied:
+                    copied[item["path"]] = copy_verified(original["directory"], item, directory,
+                        transfer=transfer, replace_mismatch=True)
+            files = {key: copied[item["path"]] for key, item in stage["files"].items()}
+            copied_companions = [copied[item["path"]] for item in plan["companions"]]
+            copied_additional = [copied[item["path"]] for item in plan["additional_files"]]
+            for relative in plan["directories"]:
+                destination_file(directory, relative).mkdir(parents=True, exist_ok=True)
             arguments = copy_verified(original["directory"], stage["arguments"], directory,
-                                       path=name + "-source-arguments.json")
+                path=plan["argument_name"], transfer=transfer, replace_mismatch=True)
             requested = directory / (name + "-arguments.json")
             atomic_json(requested, target["arguments"][name])
             state["stages"][name] = {**stage, "files": files, "companions": copied_companions,
-                "arguments": arguments, "requested_arguments": describe_file(directory, requested),
-                "reused_at": now(), "reused_from": {
+                "additional_files": copied_additional, "arguments": arguments,
+                "requested_arguments": describe_file(directory, requested),
+                "reuse_started_at": reuse_started, "reused_at": now(), "transfer": transfer,
+                "reused_from": {
                     "run_id": original["run"]["id"], "model": name,
                     "stage_completed_at": stage["completed_at"], "mode": "selected_completed_stage",
                     "input_signature": stage.get("input_signature", {}).get("id"),
