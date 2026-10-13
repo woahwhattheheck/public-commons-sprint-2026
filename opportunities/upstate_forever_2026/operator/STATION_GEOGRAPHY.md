@@ -211,3 +211,20 @@ The source family retains the current application `AGENTS.md` and
 `CURRENT_OWNER_DIRECTION.md` with its original owner instruction version. Install
 at the receiving application's normal safe boundary so an already-running native
 scientific operation continues under the source edition it loaded.
+
+## Existing observed-station receiving course
+
+This family installs the maintained observed-station receiver and its runtime
+dependencies so the current Station catalogue and selected Study navigation stay
+compatible. Its separate nine-study original observation source selection remains
+the existing observed-station course. When invoking
+`source_tools/receive_observed_station_studies.py`, pass `--source-root` pointing
+to that course's complete retained original source tree if those sources are not
+already in the application. That tree supplies
+`observations/station_context.sources.json`,
+`calibration_station_geography.sources.json`, and
+`regional_station_context.sources.json` with all declared original members.
+Keep the already retained observed report edition and the existing
+`--without-hydrology-report` installation choice. These original hydrology
+inputs are separate from the four complete assessment manifests supplied here;
+the assessment preparation command does not require the nine-study source tree.
