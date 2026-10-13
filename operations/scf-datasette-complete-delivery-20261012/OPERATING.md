@@ -232,3 +232,8 @@ Bryce also instructed: "also add that if u make a video use voice gen tts not ro
 Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+
+
+## Receiving through the host's connected Library
+
+For an equipped ChatGPT host whose native helper has no separate Codex authentication, use the complete [connected receiving guide](CONNECTED_RECEIVING.md) and its three whole source files. This optional path forwards the original three supported Library actions, retains exact bounded frames/results and reconnects only to the same native receiver. It preserves this complete original receiver, the twelve-part checkpoint, installed555b journal, selecteda787 runtime and Conapi following course. Select actual host paths and facilities from that guide; keep the original receiving owner and inspect the real outgoing product and every attachment before release.
