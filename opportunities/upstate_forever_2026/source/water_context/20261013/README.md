@@ -48,9 +48,15 @@ The classified attributes retain 599 TPGT, 1,040 ORW and 247 TN features. The or
 | `20261012/classified-reaches.csv` | Original 1,886 classified-feature attribute records |
 | `20261012/source-dictionary.json` | Original field definitions, source identities and acquisition metadata |
 
-The NRCS table entry includes the raw NRCS body, original IDs and source dictionary as companions. The context entry includes every file in this table. Both use the same content identities, so the existing source store can reuse retained objects.
+The NRCS table entry includes the raw NRCS body, original IDs and source dictionary as companions. The context entry includes every file in this table and the original USGS network companion described below. Both use the same content identities, so the existing source store can reuse retained objects.
 
 The classified CSV contains attributes; the existing retained SCDES geometry source supplies coordinates for spatial operations. Historical response filenames inside the unchanged coverage record identify the original capture. Its associated query URLs and hashes remain available there, while the manifest explicitly enumerates the files supplied in this edition.
+
+## Original watershed network
+
+The context entry retains `20261013/native-network.json`, the unchanged 71,787-byte USGS Savannah topology source. It contains 303 unique native `huc12` / `tohuc` rows, including every one of the selected 217 model HUCs. The existing watershed-context loader locates this companion by its filename and uses the original routing attributes directly.
+
+Its content is identical to the canonical repository capture at `source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json`, SHA-256 `2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac`. The source manifest retains the exact USGS WBD layer 6 request, capture vintage and original source entry identity. The topology companion travels in the same imported source collection as the context body, so the existing operator's watershed report can reopen the source and native network together.
 
 ## Interpretation in the model and operator
 

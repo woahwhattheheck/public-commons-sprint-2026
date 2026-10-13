@@ -1,9 +1,7 @@
 """Regional watershed context in the original operator and verified file transport."""
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import json
 import re
 from pathlib import Path
@@ -27,28 +25,9 @@ def _report_identifier(value):
     return value
 
 
-def _safe_cell(value):
-    text = "" if value is None else str(value)
-    return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
-
-
 def _csv(rows):
-    columns = [
-        "huc12", "name", "huc8", "states", "role", "area_acres", "area_km2",
-        "priority", "priority_states", "priority_reasons", "classification_count",
-        "selected_classification_count", "selected_classes", "classification_coverage",
-        "classification_scope", "classification_assignment", "downstream_huc12",
-    ]
-    out = io.StringIO(newline="")
-    writer = csv.DictWriter(out, fieldnames=columns, lineterminator="\n")
-    writer.writeheader()
-    for row in rows:
-        writer.writerow({
-            key: _safe_cell(" | ".join(map(str, row[key])) if isinstance(row.get(key), list)
-                            else row.get(key))
-            for key in columns
-        })
-    return out.getvalue().encode("utf-8")
+    """Use the native model columns and cell encoding for every selection export."""
+    return context_model._csv_bytes(rows, context_model.HUC_COLUMNS)
 
 
 class WatershedContextActions:
