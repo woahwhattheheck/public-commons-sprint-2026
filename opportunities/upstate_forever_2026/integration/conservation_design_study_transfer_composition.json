@@ -1,0 +1,208 @@
+{
+  "schema": "upstate.conservation-design-study-transfer-composition/v1",
+  "operation_id": "E7A1-original-conservation-design-study-history-20261013",
+  "state": "source-reviewed-native-receiving-pending",
+  "owner": "E7A1 additive adapter; ES26 shared study transfer; original Store retained",
+  "source_before": {
+    "core": {
+      "path": "model/study_transfer.py",
+      "git_blob": "c96a591e8ccc0b0ee02c397bf471426acbe89067",
+      "bytes": 55527,
+      "sha256": "80bad24748efdcc0a02dce06e493410ae963a9c6c128808d379df4e2f640a960"
+    },
+    "editor": {
+      "path": "model/conservation_design_editor.py",
+      "git_blob": "74d7e4ec23e324b8a4dbdc099d8361603b04c08a"
+    },
+    "store": {
+      "path": "scenario-design/server.py",
+      "git_blob": "67ab8f5edbf92b20d8986c6bb4b30b21cbb1fb30"
+    },
+    "portable": {
+      "path": "model/portable_databases.py",
+      "git_blob": "52a00f6123fd4511cdff453016dacbe571ed7825"
+    },
+    "conservation_transfer": {
+      "path": "model/conservation_study_transfer.py",
+      "git_blob": "ae5a03f9c3eb2c2ac1d05a3d0255662e2fbc7427"
+    }
+  },
+  "core_proposal": {
+    "path": "model/study_transfer.py",
+    "git_blob": "e5381978898880a20ad64a6d0647a8325dc5582f",
+    "after": {
+      "bytes": 56353,
+      "sha256": "ee7410830f9d822511cce5eb573e707baf9e9585c19c091a69f0830091930270"
+    },
+    "guards": [
+      {
+        "before": "from . import conservation_study_transfer as conservation_transfer\n",
+        "after": "from . import conservation_study_transfer as conservation_transfer\nfrom . import conservation_design_study_transfer as design_transfer\n"
+      },
+      {
+        "before": "        closure = _Closure(workspace, normal, decision_database=decision_database).resolve()\n        original_plan = closure.plan()",
+        "after": "        design_database = stack.enter_context(design_transfer.source_snapshot(\n            workspace, directory=root.parent))\n        closure = _Closure(workspace, normal, decision_database=decision_database).resolve()\n        original_plan = closure.plan()"
+      },
+      {
+        "before": "        snapshot_members = {**decision_members, **investigation_members}\n",
+        "after": "        design_history, design_members = design_transfer.capture(\n            workspace, staged, closure, database=design_database)\n        closure.assert_unchanged()\n        snapshot_members = {**decision_members, **investigation_members, **design_members}\n"
+      },
+      {
+        "before": "        transfer_id = digest(identity)\n",
+        "after": "        if design_history is not None:\n            identity[\"conservation_design_history\"] = design_history\n        transfer_id = digest(identity)\n"
+      },
+      {
+        "before": "                *(decision_history or {}).get(\"members\", []),\n",
+        "after": "                *(decision_history or {}).get(\"members\", []),\n                *(design_history or {}).get(\"members\", []),\n"
+      },
+      {
+        "before": "                                   \"robust_decisions/robust_decisions.sqlite3\"}\n",
+        "after": "                                   \"robust_decisions/robust_decisions.sqlite3\",\n                                   \"conservation-design/editor/projects.sqlite\"}\n"
+      },
+      {
+        "before": "        result.append({\"id\": receipt[\"id\"], \"title\": receipt[\"title\"],\n",
+        "after": "        design_history = design_transfer.verify(\n            workspace, receipt[\"identity\"].get(\"conservation_design_history\"))\n        result.append({\"id\": receipt[\"id\"], \"title\": receipt[\"title\"],\n"
+      },
+      {
+        "before": "                       \"monitoring_history\": monitoring_history,\n",
+        "after": "                       \"monitoring_history\": monitoring_history,\n                       \"conservation_design_history\": design_history,\n"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "model/conservation_design_study_transfer.py",
+      "bytes": 19611,
+      "sha256": "8381faa4a8a50af189ccca7501c83fa3d8a46c1f8469c44984c0bdba4eb4f215"
+    },
+    {
+      "path": "model/CONSERVATION_DESIGN_STUDY_TRANSFER.md",
+      "bytes": 11297,
+      "sha256": "b0fd125c8ffb308b0e0046404919c2cb6bc61ef366f6e149398b182638438034"
+    },
+    {
+      "path": "integration/component_fragments/conservation-design-study-transfer.json",
+      "bytes": 1072,
+      "sha256": "011a230395b1129708a7e46d5a7305f06777b81911a39f82e9573cdf69f28b51"
+    }
+  ],
+  "validation": {
+    "independent_source_reviews": [
+      "Original Store schema, package loader, UUID/body/history preservation, immutable baseline and current tip validated against retained original source.",
+      "Private temporary companion copies avoid changing original CAS inode ctime.",
+      "Exact original staged database descriptor flows through portable frozen_databases and archive manifest checks.",
+      "Existing browser companion uses original selected-study queue, exact snapshot cohort and existing receiving/history endpoints."
+    ],
+    "native_receiving": "Continue the existing original saved-plan/browser operation once sole-owner shared-core composition is published; no native execution result claimed."
+  },
+  "preserved": [
+    "original Store UUIDs and exact raw bodies",
+    "all captured revision rows and timestamps",
+    "original Conservation plan/study/source reference",
+    "later valid saves extending original history",
+    "historical transfers without additive field",
+    "original queue and Workspace receiving contracts"
+  ],
+  "application_closure": {
+    "component": "conservation-design-study-transfer",
+    "requires": [
+      "conservation-design",
+      "study-transfer"
+    ],
+    "study_transfer_additive_paths": [
+      "model/conservation_design_study_transfer.py"
+    ],
+    "reason": "The helper imports the original editor lazily; no reverse dependency from study-transfer to Conservation is introduced."
+  },
+  "publication": {
+    "base_commit": "851d01bbd02ecbecce97cd2f367ebe7d244c6b5c",
+    "shared_core_owner": "ES26; awaiting its current guarded composition",
+    "source_review": "Complete immutable carriers decoded; all six member hashes verified; companion 19 ordered guards replay exactly on current main.",
+    "installer": {
+      "path": "operator/install_conservation_design.py",
+      "before_git_blob": "f32ddbd679227b4a38e89a79abe4d8ec61c276f6",
+      "files": 45
+    },
+    "browser_sources": [
+      {
+        "path": "operator/conservation_design_browser_receiving.py",
+        "before_bytes": 45135,
+        "before_sha256": "224d81aa31403bcb87d8a8554446fc5567a9f1344b6e6be700a569bf6ad09a4e",
+        "after_bytes": 62169,
+        "after_sha256": "18a2de4f592838f7e49b9523e22303cc4d36019827872d98ea33d55c2e498d8f"
+      },
+      {
+        "path": "operator/CONSERVATION_DESIGN_BROWSER.md",
+        "before_bytes": 11546,
+        "before_sha256": "3185bb3eeb24dd7b302a470c7ef025b6587479a028d2731390d77b1fae09710d",
+        "after_bytes": 15144,
+        "after_sha256": "0ccd40f42fb459ca44a12f8914b78596482901698615f71256992497c7565082"
+      }
+    ],
+    "host_source_review": {
+      "commit": "c22086bf7c974b4c315205bdcc4a0280fa95a6f3",
+      "study_client_blob": "5bda31f25e74fcfcf724b331b4a56d322d6a7bc4",
+      "study_provider_blob": "b4e218f3d43e5e82cd14f4e772ef8c35b0dcca73",
+      "descriptor_blob": "0ba073bd31e6a56d45cfdd78237f88ebd9f412bf"
+    },
+    "installer_guards": [
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"integration/conservation_design_composition.json\",\n",
+        "after": "    \"integration/conservation_design_composition.json\",\n    \"integration/conservation_design_study_transfer_composition.json\",\n    \"integration/component_fragments/conservation-design-study-transfer.json\",\n    \"model/conservation_design_study_transfer.py\",\n    \"model/CONSERVATION_DESIGN_STUDY_TRANSFER.md\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"install_extensions.py\", \"operator/conservation_browser_receiving.py\",\n",
+        "after": "    \"install_extensions.py\", \"operator/conservation_browser_receiving.py\",\n    \"model/study_transfer.py\", \"model/conservation_study_transfer.py\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"operator/install_conservation_design.py\": [\n",
+        "after": "    \"operator/install_conservation_design.py\": [\n        \"e5fa566f9753e4e2b86131a5cbfcdbe5f6fc06f65050b0be32bc562f36137c8c\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"operator/conservation_design_browser_receiving.py\": [\n",
+        "after": "    \"operator/conservation_design_browser_receiving.py\": [\n        \"224d81aa31403bcb87d8a8554446fc5567a9f1344b6e6be700a569bf6ad09a4e\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"operator/CONSERVATION_DESIGN_BROWSER.md\": [\n",
+        "after": "    \"operator/CONSERVATION_DESIGN_BROWSER.md\": [\n        \"3185bb3eeb24dd7b302a470c7ef025b6587479a028d2731390d77b1fae09710d\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    \"operator/CONSERVATION_DESIGN_RECEIVING.md\": [\n",
+        "after": "    \"operator/CONSERVATION_DESIGN_RECEIVING.md\": [\n        \"065eae09be2088c9b2104518bfd431f2a423f734cdf4578760201e822b17bb2e\",\n"
+      },
+      {
+        "path": "operator/install_conservation_design.py",
+        "before": "    host = runpy.run_path(str(application / \"install_extensions.py\"))\n",
+        "after": "    study_tree = ast.parse(dependencies[\"model/study_transfer.py\"].decode(\"utf-8\"))\n    design_aliases = {\n        item.asname or item.name\n        for node in study_tree.body\n        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None\n        for item in node.names if item.name == \"conservation_design_study_transfer\"\n    }\n    design_calls = {\n        node.func.attr for node in ast.walk(study_tree)\n        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)\n        and isinstance(node.func.value, ast.Name)\n        and node.func.value.id in design_aliases\n    }\n    if not {\"source_snapshot\", \"capture\", \"verify\"}.issubset(design_calls):\n        raise ValueError(\n            \"Receive the maintained Study transfer editor snapshot, capture and receiving join \"\n            \"before installing this complete selected-study component\")\n    backups = [node for node in portable_tree.body\n               if isinstance(node, ast.FunctionDef) and node.name == \"backup\"]\n    if len(backups) != 1 or \"frozen_databases\" not in {\n            arg.arg for arg in [*backups[0].args.args, *backups[0].args.kwonlyargs]}:\n        raise ValueError(\"Receive the maintained portable backup with exact frozen database support\")\n    host = runpy.run_path(str(application / \"install_extensions.py\"))\n"
+      }
+    ],
+    "receiving_guide_guards": [
+      {
+        "path": "operator/CONSERVATION_DESIGN_RECEIVING.md",
+        "before": "entire 41-file `FILES` cohort",
+        "after": "entire 45-file `FILES` cohort"
+      },
+      {
+        "path": "operator/CONSERVATION_DESIGN_RECEIVING.md",
+        "before": "The current merged component includes the original UUID project-key correction and accepted-task export recovery.",
+        "after": "The current merged component includes the original UUID project-key correction and accepted-task export recovery. Its selected-study continuation also carries the complete editor-history adapter, guide, component fragment and guarded composition record."
+      },
+      {
+        "path": "operator/CONSERVATION_DESIGN_RECEIVING.md",
+        "before": "The descriptor must include the original",
+        "after": "The complete selected-study component also requires the current `model/study_transfer.py` and `model/conservation_study_transfer.py`. Its installer verifies that the original transfer core calls the editor snapshot, capture and receiving helpers, and that the maintained portable backup accepts exact frozen database identities. Receive the shared owner's current composition first; this installer preserves that core and does not write an older replacement. The separate `conservation-design-study-transfer` component depends on both existing products without adding a reverse dependency from Study transfer to Conservation.\n\nThe descriptor must include the original"
+      },
+      {
+        "path": "operator/CONSERVATION_DESIGN_RECEIVING.md",
+        "before": "### Independent standalone editor\n",
+        "after": "### Selected-study editor history\n\nThe existing Study desk can also transfer only the original selected Conservation portfolio and its related saved editor work. Select its original plan, retain related results, and use the ordinary Study export and Workspace restore controls. The maintained transfer freezes the original editor Store before discovering that selection, then copies the matching original projects into a private database. It retains their UUIDs, exact current bodies, alternatives, every captured revision and timestamp, and original plan bindings.\n\nThe selected archive identifies this capture in `identity.conservation_design_history`. The original archive checks verify its exact frozen database bytes before receiving. Later valid saves may extend the restored revision history; all captured revision bodies must still match. Original uncommitted browser drafts remain in their browser recovery keys.\n\nAppend `--selected-study` to the same browser receiving command below to exercise this continuation after its existing whole-Workspace archive/reopen course. Use the same output directory to preserve both sets of accepted task identities. The complete [selected-study guide](../model/CONSERVATION_DESIGN_STUDY_TRANSFER.md) describes the original Store and receipt contract.\n\n### Independent standalone editor\n"
+      }
+    ]
+  }
+}

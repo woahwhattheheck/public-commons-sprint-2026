@@ -6,7 +6,7 @@ Use [CONSERVATION_DESIGN.md](CONSERVATION_DESIGN.md) for the plan-to-scenario wo
 
 ## Install the complete current component
 
-Receive the installer's entire 41-file `FILES` cohort into one application source directory. It includes the complete original editor and its source manifest; the current binding and native-scenario source; the native provider, descriptor and browser; all four embedded-editor leaves; both browser receiving companion files; and this installer and guide. The current merged component includes the original UUID project-key correction and accepted-task export recovery.
+Receive the installer's entire 45-file `FILES` cohort into one application source directory. It includes the complete original editor and its source manifest; the current binding and native-scenario source; the native provider, descriptor and browser; all four embedded-editor leaves; both browser receiving companion files; and this installer and guide. The current merged component includes the original UUID project-key correction and accepted-task export recovery. Its selected-study continuation also carries the complete editor-history adapter, guide, component fragment and guarded composition record.
 
 From the receiving application's existing Python environment:
 
@@ -29,6 +29,8 @@ Installation checks current dependencies and target bytes, preserves changed pre
 The receiving application supplies its maintained Workspace, Conservation, profiles, common, raster and verified-copy modules, the registered extension host, and the original `operator/conservation_browser_receiving.py` used by the companion. The current original `model/conservation_bindings.py` and `model/conservation_scenarios.py` are included in this component cohort. Their native model-scope and paired-experiment behavior remains in those original modules.
 
 The current portable implementation must already use its maintained `model/portable_databases.py` online backup helper. The installer checks the helper's snapshot and source-verification entry points and the portable module's actual snapshot call before composing the editor database member. Receive that existing application dependency first when installing into an older application.
+
+The complete selected-study component also requires the current `model/study_transfer.py` and `model/conservation_study_transfer.py`. Its installer verifies that the original transfer core calls the editor snapshot, capture and receiving helpers, and that the maintained portable backup accepts exact frozen database identities. Receive the shared owner's current composition first; this installer preserves that core and does not write an older replacement. The separate `conservation-design-study-transfer` component depends on both existing products without adding a reverse dependency from Study transfer to Conservation.
 
 The descriptor must include the original `conservation.design.editor.open` and `conservation.design.editor.write` queue actions, the editor read route, its parent browser asset, and the authenticated editor file route. This catches a mixed edition in which the embedded source is present but its original transport is absent.
 
@@ -81,6 +83,14 @@ Save the editor's current alternative before requesting the Workspace archive. A
 Receive the archive into a new application/Workspace directory through the original portable flow, then reopen the same retained preparation in Scenario design. Its Edit control resolves the original project ID from the restored Store, retaining its saved alternatives and revisions. The extension restore hook also runs the original preparation and receiving validators, checking bindings, saved file identities and original plan/scenario/run relationships.
 
 A useful completed receiving record includes the original plan, preparation and project IDs; the saved editor revision and alternative; the native handover identity; the receiving/scenario/optional run IDs; the archive identity; and the same records reopened from the restored Workspace. Capture the actual visible result from the accepting host.
+
+### Selected-study editor history
+
+The existing Study desk can also transfer only the original selected Conservation portfolio and its related saved editor work. Select its original plan, retain related results, and use the ordinary Study export and Workspace restore controls. The maintained transfer freezes the original editor Store before discovering that selection, then copies the matching original projects into a private database. It retains their UUIDs, exact current bodies, alternatives, every captured revision and timestamp, and original plan bindings.
+
+The selected archive identifies this capture in `identity.conservation_design_history`. The original archive checks verify its exact frozen database bytes before receiving. Later valid saves may extend the restored revision history; all captured revision bodies must still match. Original uncommitted browser drafts remain in their browser recovery keys.
+
+Append `--selected-study` to the same browser receiving command below to exercise this continuation after its existing whole-Workspace archive/reopen course. Use the same output directory to preserve both sets of accepted task identities. The complete [selected-study guide](../model/CONSERVATION_DESIGN_STUDY_TRANSFER.md) describes the original Store and receipt contract.
 
 ### Independent standalone editor
 
