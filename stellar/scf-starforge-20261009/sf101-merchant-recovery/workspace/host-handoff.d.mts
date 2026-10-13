@@ -29,10 +29,43 @@ export interface HostHandoffAdoptInput extends HostHandoffReceivingInput {
   expectedReviewSha256: string;
   quiesced: true;
 }
+export interface HostHandoffPathObservation {
+  path: string;
+  kind: 'file' | 'directory' | 'entry';
+  actualKind?: 'file' | 'directory';
+  exists: boolean;
+  required: boolean;
+  role: string;
+  profileId: string;
+  operationId?: string;
+  selectionId: string | null;
+  custody: 'captured' | 'external';
+}
+export interface HostHandoffPathInventory {
+  schema: 'stellar-forge.recovery-workspace-host-paths.v1';
+  paths: HostHandoffPathObservation[];
+  planSources: Array<{ path: string; bytes: number; sha256: string; roots: HostHandoffRoot[] }>;
+  unavailablePlans: Array<{ path: string; profileId: string; operationId: string;
+    expectedSha256: string; actualSha256: string | null; rootsRetainedInRequest: boolean;
+    reason: 'ORIGINAL_PLAN_MISSING' | 'ORIGINAL_PLAN_CHANGED' }>;
+  objectSources: Array<{
+    directory: string;
+    stateRoot: string;
+    prepared: boolean;
+    treeSha256?: string;
+    nativeReviewSha256?: string;
+    objectSession?: Record<string, unknown>;
+    assemblies?: Array<Record<string, unknown>>;
+    absentLedger?: { path: string; state: 'ABSENT' };
+    restoreMode?: 'ORIGINAL_CANONICAL_STATE_ROOT';
+    walletEnvironmentExported?: false;
+  }>;
+}
 export interface HostHandoffResult {
   schema: 'stellar-forge.recovery-workspace-handoff-result.v1';
   status: 'HOST_HANDOFF_PLAN_READY' | 'HOST_HANDOFF_EXPORTED' | 'HOST_HANDOFF_RESTORED' |
     'HOST_HANDOFF_REVIEW' | 'HOST_HANDOFF_ADOPTED';
+  pathInventory?: HostHandoffPathInventory;
   [key: string]: unknown;
 }
 export declare const HOST_HANDOFF_SELECTION_SCHEMA: 'stellar-forge.recovery-workspace-handoff-selection.v1';
