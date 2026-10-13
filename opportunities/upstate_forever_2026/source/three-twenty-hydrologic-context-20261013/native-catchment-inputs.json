@@ -1,0 +1,64 @@
+{
+  "schema": "upstate.four-station-catchment-inputs/v1",
+  "source_inputs": [
+    {
+      "station_id": "SV-833",
+      "comid": 11749277,
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 7993,
+      "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+    },
+    {
+      "station_id": "RS-26250",
+      "comid": 11749733,
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 11423,
+      "sha256": "51099dea7e302f6c3fc60b5a45d8ff87a54ffe4d310ea11b2cbd0cdfb7bbfed3"
+    },
+    {
+      "station_id": "SV-735",
+      "comid": 11749763,
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 14475,
+      "sha256": "9d94a264163d102a05d28228eeba5018c24e01678bf29dd4ab53807634f8acfd"
+    },
+    {
+      "station_id": "SV-111",
+      "comid": 11749507,
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 15680,
+      "sha256": "32fd64e08f3b614e306a94b9acc1395a6533d17f3d3acad375f846d0496211f9"
+    }
+  ],
+  "network_source": {
+    "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv833-nldi-downstream-whole-reaches-100km-original.json",
+    "bytes": 26527,
+    "sha256": "9f2f631b3cfa5435ea668296173ca3bb104deb23bf156fe141365f77366ee04c"
+  },
+  "station_sources": [
+    {
+      "station_id": "SV-833",
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+      "bytes": 575,
+      "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+    },
+    {
+      "station_id": "RS-26250",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-feature-original.json",
+      "bytes": 586,
+      "sha256": "a6a5e73d97d849c87d0aab0f31553ceb2c31faa1109f4f64dce392fe3d67a881"
+    },
+    {
+      "station_id": "SV-735",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-feature-original.json",
+      "bytes": 576,
+      "sha256": "bff07db20857dbd945e97341ac5e02148345542249da4ada4912554eec2417e8"
+    },
+    {
+      "station_id": "SV-111",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-feature-original.json",
+      "bytes": 576,
+      "sha256": "0fe2a180083e337ce8c971edcf0ec53fba6aa3d1770761ae1d0deffcd52bc976"
+    }
+  ]
+}
