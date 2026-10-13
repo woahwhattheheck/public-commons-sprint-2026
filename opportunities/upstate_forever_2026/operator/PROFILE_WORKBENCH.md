@@ -80,3 +80,42 @@ The additive backend is model/biophysical_evidence.py; scientific format and CLI
 Receive the complete current source package, run the standard profile workbench installer against the existing application, then restart the operator. The installer includes the evidence backend, browser module, extension descriptor, guide and current portable workspace implementation. Preserve newer changes when composing shared files.
 
 On an actual retained profile, download its evidence template and import the unchanged template through Original sources. Inspect and save it: all unattributed cells should remain unknown, with the exact original values and load types retained. Then use actual supplied coefficient citations and ranges to inspect selected endpoints, prepare the native experiment and reopen the exported workspace. Confirm that the new evidence and ranges remain selectable and that the original central profile ID and table SHA256 are unchanged.
+
+## Populate original source provenance directly
+
+Use **Cite original table** in a saved profile's coefficient panel to retain an evidence CSV with the exact original table title, URI, vintage, row and column for every selected-model numeric coefficient. The existing operator queue performs the source import and saves the resulting evidence. The original profile and coefficient bytes remain unchanged.
+
+For specific publication citations, import the source evidence CSV, choose **Inspect source evidence**, then **Fill remaining table provenance**. Supplied citation cells must match the original profile's values, units, load types and model scope. Their exact references are retained; other cells receive their actual supplied-table citation. Original-table provenance documents where the configured value came from. Calibration and uncertainty require their own scientific sources.
+
+The complete verified Albright Appendix 1 citation table is included at source/regional-studies-20261013/albright-2023-biophysical-evidence.csv. It covers the 15 published NLCD rows and eight published coefficients (120 cells). Apply it to the matching regional profile with measured-runoff nutrient loads; the receiver checks every supplied value. The existing subsurface fraction remains tied to its original profile table. All supplied uncertainty fields remain empty.
+
+The queued action is profile.biophysical.evidence.populate. Its private output is retained under the original operator's outputs directory and resumes with the same task identity. The standalone receiver also supports the existing worker's actual application, workspace and profile:
+
+```bash
+python -B source_tools/receive_biophysical_evidence.py \\
+  --application /actual/application --workspace /actual/workspace \\
+  --profile ACTUAL_SAVED_PROFILE_ID --output /actual/receiving-output \\
+  --evidence-csv source/regional-studies-20261013/albright-2023-biophysical-evidence.csv
+```
+
+Use --resume with the same output, profile and optional supplied CSV after interruption. The operation retains the actual evidence selection, source manifest, populated CSV and result through the ordinary workspace source import.
+
+### Regional source choices
+
+| Matching saved profile | Retained citation CSV | Explicitly cited cells |
+| --- | --- | ---: |
+| Albright regional NDR and SDR | source/regional-studies-20261013/albright-2023-biophysical-evidence.csv | 120 |
+| Upper Flint combined | source/upper-flint-2024/biophysical-evidence-combined.csv | 81 |
+| Upper Flint NDR | source/upper-flint-2024/biophysical-evidence-ndr.csv | 63 |
+| Upper Flint SDR | source/upper-flint-2024/biophysical-evidence-sdr.csv | 18 |
+
+The receiver matches each supplied row against the exact selected profile's values, native units, nutrient load type and model scope. Fully unattributed rows in an imported template receive their actual original-table provenance; partial citations and inconsistent source values are reported for correction. Additional unchanged land-cover classes retain their own original table source.
+
+Albright et al. (2023) used InVEST 3.9.0 for 2011/2016 ecosystem-service comparisons on HUC12 watersheds intersecting Greenville County. The original appendix supplies the regional coefficient table. The maintained 3.20 profile selects measured-runoff for these direct nutrient-load values: version 3.9 maps the original load directly before area/runoff handling, while the 3.20 application-rate branch additionally applies local retention efficiency. This preserves the load-entry interpretation; native 3.20 calculations and units follow the maintained engine. The Upper Flint evidence follows the retained mapped table's S2, S3 and adjacent-text citations and its explicit NLCD category mapping.
+
+Primary references:
+
+- [Albright et al. 2023, Appendix 1](https://doi.org/10.1080/1747423X.2023.2234903)
+- [Publisher-provided full text and tables](https://www.researchgate.net/publication/372675263_Patterns_of_land_use_change_land_governance_and_the_supply_of_ecosystem_services_in_a_multifunctional_landscape_A_case_study_from_Upstate_SC_USA)
+- [Original InVEST 3.9 NDR load calculation](https://github.com/natcap/invest/blob/3.9.0/src/natcap/invest/ndr/ndr.py)
+- [Current InVEST 3.20 NDR load calculation](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/ndr/ndr.py)
