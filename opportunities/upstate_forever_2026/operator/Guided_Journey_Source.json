@@ -16,16 +16,16 @@
       "sha256": "081005d323f5c521227f030fbaa5795d2b965591b3c0a071e7ac361df939644d"
     },
     "operator/web/journey.mjs": {
-      "bytes": 64184,
-      "sha256": "78a2f2a5aed7e3fa7e3b621761eaf568b4d0c70fb865302894d9c15c33a4c05e"
+      "bytes": 65167,
+      "sha256": "6597690150bd4ebedb43a94469d404bd7ce9fc73acfc721d6b7ef6644ae9995e"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 21626,
-      "sha256": "9faa5e12248e0535d982fc5c528af10f85c301a187021ccee0f7f9cce134aaaa"
+      "bytes": 23569,
+      "sha256": "734f536b425dd264657e5fbeb6427fb960d2f1ae9a43db672ef2d84b1fc6dd4e"
     }
   },
   "source_context": {
@@ -39,6 +39,11 @@
     "operator_composition": "ECO13-CLOUD-INTEGRATION current-host adoption",
     "authored_source_carrier": "F0C8JE0BTC3",
     "current_host_continuation": "D406 current-host continuation based on 7956a4acb2e567a5d7a445a7c0898095cd3e1400; preserves registered desks and completed native stage predicate",
-    "regional_saved_view": "Regional selections, native project save and retained browser view composition"
+    "regional_saved_view": "Regional selections, native project save and retained browser view composition",
+    "project_continuity_handoff": {
+      "operation_id": "ES-9960",
+      "source_head": "b1e87539dcf820b7617fa9d6cae66e0395c1d3c6",
+      "route": "Saved guided view → complete project → receiving workspace → original task resumption"
+    }
   }
 }

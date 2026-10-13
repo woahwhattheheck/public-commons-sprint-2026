@@ -27,7 +27,7 @@ The default listener binds `127.0.0.1` on an available port. The interface, styl
 5. **Run the original models.** Prepare a run from a complete grid, saved profile and scenario, review the retained selection, then start it. The interface reads original stage status, native logs and output hashes. A failed or interrupted task resumes its original selection; completed native stages are reused by the model.
 6. **Compare outputs and observations.** Compare completed baseline and alternative runs on the same grid. Upload original observation CSVs with their column mapping, source period and source URI. Explicit annual mass-rate inputs require their actual annualization method. Context measurements, unaccepted qualifiers and other excluded rows remain retained. Observed comparisons join the original catchment identifiers and display annual mass, residuals, coverage and summary metrics.
 7. **Build the complete delivery.** Choose completed paired native runs, original protected-land/parcel/hydrography/wetland sources, actual drinking-water and designated high-quality-water overlays, contact metadata and map settings. Optional parcel priority produces the original parcel GIS/CSV inventory. The original delivery engine generates the seven map families, physical rasters, metadata, interpretation report, working archive and audited delivery package. PDFs can be viewed in the operator; every output is downloaded as its exact retained file.
-8. **Receive the workspace.** Create a complete native backup, download the archive, and use Restore an archive to verify all members into a new receiving directory. The restored copy appears in the workspace selector with the original project identity. The delivered CLI and application are also retained in the native archive.
+8. **Save, receive and continue the project.** In Guided journey, choose **Save view and transfer project**. Project continuity opens the complete-project form with the saved analysis and chosen operation history. Select a whole ZIP or incremental handover, then receive that edition on the destination and choose **Open received project**. The separate receiving workspace retains the original project identity, source, results, application, saved notes and original inputs needed by the selected unfinished tasks. Inspect its history and use **Resume unfinished work** to continue those selections.
 
 The interface starts with actual imported entities. It supplies no sample coefficient table, synthetic observations, invented source designations or prepared model result.
 
@@ -39,7 +39,9 @@ compare physical results, open maps and create the working handover. The native
 run desk and scenario experiments preserve each run's actual model selection.
 
 Choose **Save view and notes** to retain the current analysis in the scientific
-workspace. A complete backup also captures that selected baseline, alternative,
+workspace. **Save view and transfer project** saves that view and opens the
+complete continuity handoff. Its archive or incremental edition captures the
+chosen task history and the same selected baseline, alternative,
 comparison, map view, delivery and notes in `operator-session.json`. When its
 archive opens in a receiving workspace or a new browser, the saved guide resumes
 against the same project and scientific records. Distinct prior notes remain
@@ -68,7 +70,7 @@ The operator maintains one serial task queue. Every submitted action has an oper
 
 Each attempt records its timestamps, native outcome and error. Closing the server drains the running operation; queued tasks remain available as interrupted work when reopened. A task can be cancelled before it starts. Resume uses the same task and delegates continuation to the original model's existing grid/run/delivery stages.
 
-The current operator's task journal stays in its configured operator-state directory. Native backups preserve the scientific workspace, source and model stage state and complete application. A received workspace can resume its original incomplete model selections through its retained entities; server-local transport attempts remain with their original operator.
+The active task journal lives in the configured operator-state directory. **Project continuity** carries selected scientific operation history and required unfinished inputs into the native archive, then rejoins them to the receiving queue. It preserves original request identities and reuses completed results before offering explicit resumption. Scientific workspace backups carry source, model stage state, application and the saved operator view; use the complete-project route when the handoff also needs task history and unimported uploads. Transport-control attempts remain with the operator that executed them.
 
 Forms keep the entered draft open when the server rejects a selection or a request fails. Large original files stream directly to an immutable operator upload, then enter the original model through the selected operation. Physical paths are chosen by the CLI operator; the browser works with registered sources, uploaded original files and retained entity identifiers.
 
