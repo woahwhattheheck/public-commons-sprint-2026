@@ -85,13 +85,35 @@ The existing ECSA host reads the new descriptor and assets. Its original queue, 
 
 The installer parses Python, validates the registration, checks the current application and whole-parcel engine, and reports changed files with exact prior/postimage hashes. `--dry-run` previews the same composition. An already overlaid identical source bank is accepted. A concurrently authored different source is identified for composition.
 
+### Continue the selected quantitative study
+
+A source-context inventory uses the original parcel geometry and reporting overlap. For a quantitative inventory, select **Completed native model quantities**. The baseline selector shows original InVEST 3.20.0 runs with completed NDR and SDR stages and all three retained export quantities. Choose any completed alternatives on that same grid.
+
+Select the priority quantity explicitly:
+
+| Control | Original Conservation quantity |
+| --- | --- |
+| Current export | The selected baseline's N, P and sediment export. |
+| Reduction | Positive baseline-minus-alternative reduction; the original engine floors increases to zero for this priority. |
+| Increase | Positive alternative-minus-baseline increase; the original engine floors reductions to zero for this priority. |
+| Whole parcel reporting total | Actual mass within each original polygon's reporting overlap. |
+| Per reporting hectare | The same retained quantity divided by the relevant reporting area. |
+
+The separate pollutant weights are visible and editable. The engine retains original pollutant units and records its 95th-percentile normalization. Select at least one positive weight. A change priority selects one of the study's checked alternatives; all checked alternatives still remain in the study.
+
+For Bryce: choose the source edition and county, complete the native run/priority controls, then build the inventory. The operator carries the exact saved source binding into the original Conservation queue. Open the completed task's inventory to inspect original quantities and continue the existing portfolio/scenario workflow.
+
+Sentence for Tim: “These priorities use the retained native model results over the original parcel footprints, with the source edition, run comparison and scoring settings available for review.”
+
+Study settings are retained separately for each source edition. Reloading restores the selected baseline, alternatives, quantity basis and weights. The original preparation and study task IDs and request identities are also retained so reopening continues the submitted operation. The parcel, county-coverage and source-gap map controls each open their exact original source layer.
+
 ### Current source dependencies
 
 | Owner/source | Required retained contract |
 | --- | --- |
 | Complete original application and ECSA | [Public PR2672](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2672); Workspace, ExtensionRegistry, registered source roots and browser host. Existing interface: `operator/EXTENSIONS.md`. |
 | Full-reporting county parcel acquisition | [Public PR2682](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2682); `reporting_parcels.py`, `domain_overlays.py`, county catalog and source collector. |
-| Whole original parcel successor | [F0C8Q5W3XB4](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8Q5W3XB4); engine SHA256 `c122d1328539e8b0f1adbc58083ad10e7bb9868523f30f6b42c2ad315d7ae89b`, preparation method `upstate.reporting-parcels/whole-original-polygons/v2`. The desk consumes returned fingerprint/source IDs and `geometry_scope=whole_source_polygons`. |
+| Whole original parcel successor | [Merged public PR2755](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2755); engine SHA256 `fa83e647f45a2e9d77e5486389c12ca29a7810d1ff2f85cb7e06e24016963a27`, preparation method `upstate.reporting-parcels/whole-original-polygons/v2`. The desk consumes returned fingerprint/source IDs and `geometry_scope=whole_source_polygons`. |
 | Original collector/native CRS | [F0C8NA49K46](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8NA49K46); collector SHA256 `2f1934ee2a153a09d5d03a14343aca9a0a8dcb68c6ef548a3d5353affe3e94f5`. Native CRS is requested explicitly where published map CRS differs. |
 | Original domain/catalog dependency | [F0C9JNHAXU0](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9JNHAXU0); retain later ES26 provider/catalog changes when composing. |
 | Conservation application | [Public PR2635](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2635), current model/operator/browser and `conservation.build`. Existing plan and scenario adapters own portfolio selection and scenario creation. |
@@ -144,6 +166,20 @@ The output contains real stage durations, original task/source/edition IDs, down
 ~~~
 
 The launch file may contain the single original JSON object or the original server stdout with its launch JSON line. The recording omits the startup capability. `--chromium-executable` can select the receiving host's installed Chromium.
+
+For a quantitative parcel journey, choose an actual completed NDR + SDR baseline and alternatives whose retained reporting grid overlaps the South Carolina parcel reporting polygon. The original Conservation engine checks the parcel intersection against that selected native reporting geometry. Use the Gura source fixture for its separate original native benchmark workspace and journey. The default parcel journey uses source-context mode and the actual South Carolina county inventory.
+
+For the completed South Carolina run pair, add the original IDs to the same parcel journey:
+
+~~~sh
+--baseline-run "$ECO_BASELINE_RUN" \
+--alternative-run "$ECO_ALTERNATIVE_RUN" \
+--score-basis scenario_reduction \
+--scoring-alternative "$ECO_ALTERNATIVE_RUN" \
+--score-scale total
+~~~
+
+The journey selects these values in the real browser form, builds the original quantitative inventory, and records the returned study summary and reopened study controls. Omit the native run options to build the source-context inventory from actual parcel geometry.
 
 After the original full workspace backup/restore, use the same edition ID against the received operator:
 
