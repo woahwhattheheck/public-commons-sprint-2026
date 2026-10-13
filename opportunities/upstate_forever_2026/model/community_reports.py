@@ -14,7 +14,22 @@ from .common import atomic_bytes, canonical, describe_file, digest, held, verify
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
                           get_plan, get_table, text, verify_plan_context)
 
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
+
+SCIENTIFIC_SCOPE_NOTES = (
+    "Community summaries describe the selected whole source block groups. "
+    "Native model totals retain each run's original reporting-area valid cells; "
+    "the community and intervention selections do not clip or allocate those totals.",
+    "Alternative-minus-baseline changes use only the original comparison raster's "
+    "common valid cells. That support can differ from either run's total support, "
+    "so subtracting the separately reported full-run totals can give another value.",
+    "A negative signed change means lower modeled export on the common support; "
+    "a positive change means higher modeled export. A parameter-profile change "
+    "is retained as a sensitivity comparison.",
+    "Valid-cell counts and cell areas are retained from the original raster records. "
+    "Missing coverage metadata remains unspecified. These model results provide "
+    "scientific context alongside the selected communities.",
+)
 
 
 def _cell(value):
@@ -112,6 +127,9 @@ def _physical_rows(plan):
                 differences.setdefault(key, candidate)
     for row in context["physical_totals"]:
         value = dict(row)
+        artifact = row.get("artifact") or {}
+        value["run_valid_cells"] = artifact.get("valid_cells")
+        value["pixel_area_ha"] = artifact.get("pixel_area_ha")
         original = differences.get((row["run_id"], row["pollutant"]))
         if original:
             difference_unit = str(original["artifact"].get("units") or "").replace("/pixel", "")
@@ -154,12 +172,14 @@ def _contents(plan, table, title):
                             "reason", "owner", "next_step", "cost_estimate_usd", "notes"]
     physical_columns = ["run_id", "run_state", "pollutant", "value", "unit", "alternative_minus_baseline",
                         "comparison_kind", "comparison_id", "comparison_valid_cells", "comparison_spatial_basis",
-                        "grid_id", "profile_id", "scenario_id", "spatial_basis"]
+                        "grid_id", "profile_id", "scenario_id", "spatial_basis",
+                        "run_valid_cells", "pixel_area_ha"]
     payload = {"schema": "upstate.community-report/v1", "title": title,
                "project_basis": "Saved utility/community plan in the original Upper Savannah workspace",
                "plan": plan, "original_table": table, "communities": communities,
                "utility_summaries": utility_rows, "watershed_summaries": plan["summaries"]["watersheds"],
                "interventions": interventions, "physical_context": physical,
+               "scientific_scope_notes": list(SCIENTIFIC_SCOPE_NOTES) if physical else [],
                "csv_text_handling": "Formula-like free text is prefixed with an apostrophe in derived CSV; JSON preserves original text."}
     summary_headings = ["Utility", "Block groups", "Block-group population", "Households",
                         "Households below poverty", "Below state income", "Approx. utility service population"]
@@ -187,11 +207,17 @@ def _contents(plan, table, title):
                             _number(row["cost_estimate_usd"]),
                             (row["owner"] or "Unassigned") + "\n" + row["reason"] + "\n" + row["next_step"]]
                            for row in interventions]
-    physical_headings = ["Run", "State", "Pollutant", "Original total", "Unit",
-                         "Alternative − baseline", "Comparison"]
+    physical_headings = ["Run", "State", "Pollutant", "Reporting-area total", "Unit",
+                         "Run valid cells", "Cell area (ha)"]
     physical_display = [[row["run_id"], row["run_state"], row["pollutant"], _number(row["value"]),
-                         row["unit"] or "Unspecified", _number(row["alternative_minus_baseline"]),
-                         row["comparison_kind"]] for row in physical]
+                         row["unit"] or "Unspecified", _number(row["run_valid_cells"]),
+                         _number(row["pixel_area_ha"])] for row in physical]
+    change_headings = ["Alternative run", "Pollutant", "Alternative − baseline",
+                       "Unit", "Common valid cells", "Comparison"]
+    change_display = [[row["run_id"], row["pollutant"],
+                       _number(row["alternative_minus_baseline"]), row["unit"] or "Unspecified",
+                       _number(row["comparison_valid_cells"]), row["comparison_kind"]]
+                      for row in physical if row["comparison_id"]]
     intro = (
         str(aggregate["geoid_count"]) + " selected whole census block groups; "
         + _number(aggregate["population_total"]) + " people; "
@@ -207,7 +233,8 @@ def _contents(plan, table, title):
         ("Watershed context", watershed_headings, watershed_display),
         ("Original community rows", group_headings, group_display),
         ("Selected interventions", intervention_headings, intervention_display),
-        ("Original scientific context", physical_headings, physical_display),
+        ("Original run exports on their reporting areas", physical_headings, physical_display),
+        ("Native changes on common valid cells", change_headings, change_display),
     ]
     imported = plan.get("intervention_import")
     if imported:
@@ -237,6 +264,14 @@ def _contents(plan, table, title):
     html_sections = []
     markdown_sections = []
     for heading, heads, rows in sections:
+        if heading == "Original run exports on their reporting areas" and physical:
+            scope = " ".join(SCIENTIFIC_SCOPE_NOTES)
+            baseline_id = plan["context"].get("baseline_run_id")
+            if baseline_id:
+                scope += " Retained comparison baseline: " + baseline_id + "."
+            html_sections.append("<section><h2>Scientific coverage and interpretation</h2><p>"
+                                 + escape(scope) + "</p></section>")
+            markdown_sections.append("## Scientific coverage and interpretation\n\n" + scope)
         body = _table(heads, rows) if rows else "<p>No selection has been entered for this section.</p>"
         html_sections.append("<section><h2>" + escape(heading) + "</h2>" + body + "</section>")
         markdown_sections.append("## " + heading + "\n\n" +
