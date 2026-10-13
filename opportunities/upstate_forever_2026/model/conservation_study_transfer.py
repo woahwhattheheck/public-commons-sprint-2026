@@ -23,7 +23,8 @@ LABELS = {"conservation": "Conservation studies", "conservation-plans": "Conserv
 REPORT_SCHEMA = "upstate.conservation-report-source/v1"
 REPORT_EDITIONS = frozenset(("conservation-saved-plan-report/1",
                              "conservation-saved-plan-report/2",
-                             "conservation-saved-plan-report/3"))
+                             "conservation-saved-plan-report/3",
+                             "conservation-saved-plan-report/4"))
 
 
 def _path(kind, key):
