@@ -84,6 +84,36 @@ def _station_huc_relation(assessment_huc12, station_hucs):
     return "station_publisher_huc_missing"
 
 
+def _record_locator(reference, original, binding):
+    """Keep a normalized-record locator separate from the selected CSV position."""
+    if reference.get("record_pointer") is not None:
+        return {"record_pointer": reference["record_pointer"],
+                "record_index": reference.get("record_index"),
+                "sha256": reference.get("source_sha256"),
+                "record_id": original.get("id")}
+    metadata = binding.get("source_metadata", {}).get("metadata", {})
+    if metadata.get("schema") != "upstate.native-assessment-review-preparation/v1" or metadata.get("version") != 2:
+        return {}
+    checksum = _value(original, "original_normalized_sha256")
+    pointer = _value(original, "original_record_pointer")
+    index = _value(original, "original_record_index")
+    path = _value(original, "original_record_path")
+    if len(checksum) != 64 or any(c not in "0123456789abcdef" for c in checksum) or not index.isdigit() or pointer != "/records/" + str(int(index)) or not path:
+        raise ValueError("Retain the selected assessment's complete original record locator")
+    editions = [row for row in metadata.get("source_editions", [])
+                if row.get("source_sha256") == checksum
+                and row.get("publisher_source_id") == original.get("source_id")
+                and row.get("publisher_source_sha256") == original.get("source_sha256")]
+    members = [row for row in binding.get("companions", []) if row.get("sha256") == checksum]
+    if len(editions) != 1 or not members:
+        raise ValueError("The selected assessment lost its retained normalized source edition")
+    member = sorted(members, key=lambda row: row.get("view_path") or row["filename"])[0]
+    retained = {"path": member.get("view_path") or member["filename"],
+                "sha256": member["sha256"], "bytes": member["bytes"]}
+    return {"record_pointer": pointer, "record_index": int(index), "sha256": checksum,
+            "path": path, "record_id": original.get("id"), "retained_source_member": retained}
+
+
 def enrich(stations, source_bindings):
     """Return edition-specific links and enrich existing station rows in place."""
     bindings = {(source["collection_id"], source["source_id"]): source
@@ -130,6 +160,7 @@ def enrich(stations, source_bindings):
                 membership = ("matches_spatial_membership" if published_huc in spatial_hucs
                               else "differs_from_spatial_membership")
             source_id = _value(original, "source_id", reference.get("source_id", ""))
+            locator = _record_locator(reference, original, source)
             record = {
                 "id": hashlib.sha256((station["station_id"] + "|" + key).encode()).hexdigest()[:24],
                 "station_id": station["station_id"],
@@ -146,8 +177,8 @@ def enrich(stations, source_bindings):
                 "station_publisher_huc_fields": station_hucs["fields"],
                 "station_publisher_huc_relation": _station_huc_relation(published_huc, station_hucs),
                 "inventory_body_sha256": reference.get("source_sha256"),
-                "original_record_pointer": reference.get("record_pointer"),
-                "original_record_index": reference.get("record_index"),
+                "original_record_pointer": locator.get("record_pointer"),
+                "original_record_index": locator.get("record_index"),
                 "inventory_row_number": reference.get("row_number"),
                 "cause_code": cause,
                 "cause_label": _cause_label(cause, _value(original, "cause_label")),
@@ -168,6 +199,8 @@ def enrich(stations, source_bindings):
                 "inventory_source_ref": {key: value for key, value in reference.items() if key != "original"},
                 "original": original,
             }
+            if locator:
+                record["original_record_locator"] = locator
             records.append(record)
             links.append(record)
             edition_key = (source_id, edition, record["publication_status"], record["evidence_kind"])

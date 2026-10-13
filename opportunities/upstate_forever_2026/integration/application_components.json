@@ -135,7 +135,8 @@
         "source_tools/application_assembly.py",
         "source_tools/application_components.py",
         "source_tools/install_cumulative_application.py",
-        "model/scientific_figures.py"
+        "model/scientific_figures.py",
+        "model/scientific_tables.py"
       ],
       "requires": []
     },
