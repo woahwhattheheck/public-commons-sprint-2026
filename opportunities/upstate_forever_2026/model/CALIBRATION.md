@@ -202,6 +202,17 @@ The unchanged `Workspace.compare_observations(run_id, observation_id, catchments
 
 Original annual-rate rows with explicit `coverage_days` and `expected_days` must declare equal, nonzero counts to enter a native catchment comparison. A `coverage_complete: true` flag cannot override unequal counts; a false flag remains an exclusion even when counts match. Zero declared counts remain source context with readable issues. New imports reject malformed counts; previously retained malformed counts produce comparison exclusions without rewriting the source. The check uses the declared source-period denominator, without guessing a year length or changing inclusive/exclusive dates. Original CSV bytes, numeric strings, flags and source identities are preserved. An explicit legacy annual rate without coverage counts retains its existing admission contract; missing counts do not establish measured completeness.
 
+### Current source admission and retained import counts
+
+The Calibration selector now reads a current source-admission projection of each original observation edition. Its eligible count, parameter list and catchment list use the same original support/constituent/annual-rate/declared-coverage rules as preparation. The original imported admitted/context counts remain alongside them; source CSVs and saved observation records are never rewritten.
+
+Open **Current source admission and original import** to see each edition's original admitted count, current eligible rows and exclusion reasons. **Original source** opens that exact retained edition, including quantities outside the calibration objective. Reason counts may overlap because one row can have several issues. A saved selection whose source no longer has eligible rows remains visibly bound to that original edition; revision requires a deliberate source choice. A workspace with no eligible edition can still open the form and inspect its retained sources instead of losing the candidate choices.
+
+New observation-comparison report data captures this admission projection with original eligible record IDs and the record IDs for each exclusion reason. PDF, HTML and Markdown distinguish original import admission, source-rule eligibility and the rows that actually enter fit metrics after native model/catchment/raster checks. Previously completed comparisons and reports keep their original capture; this display does not change source values, recompute historical metrics or dispatch a model run.
+
+At the existing receiving boundary, operate the exact current Calibration selector with a retained older edition, inspect its original source, revise to an eligible edition, and save/reopen the selection. Open and LOOK at the populated form and exported comparison report at desktop and narrow widths; check original-source controls and download/reopen before describing the outgoing product as ready.
+
+
 | Native candidate selection | Available calibration parameters |
 | --- | --- |
 | NDR | Nitrogen and phosphorus |
