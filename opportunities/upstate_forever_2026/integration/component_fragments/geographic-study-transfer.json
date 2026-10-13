@@ -17,6 +17,7 @@
         "model/geographic_siting_contrasts.py",
         "model/geographic_utility_groups.py",
         "model/ensemble_study_transfer.py",
+        "model/paired_ensemble/ensemble_portable.py",
         "model/receiving_water_report_transfer.py",
         "model/scenario_footprint.py",
         "model/ensembles.py",
