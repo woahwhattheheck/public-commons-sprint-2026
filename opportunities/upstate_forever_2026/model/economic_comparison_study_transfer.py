@@ -253,6 +253,126 @@ def _local(closure, native):
             "members": deepcopy(native["members"]), "editions": editions}
 
 
+
+def _ordered_source_binding(closure, selection):
+    """Rebuild only the original binding identity from raw records and CAS."""
+    sources = []
+    for choice in observed_context.source_choices(selection):
+        collection_id = identifier(choice["source_collection_id"])
+        closure.need("sources", collection_id, "Original ordered Economic report handoff source")
+        collection = closure.read("sources/" + collection_id + ".json")
+        _require(collection.get("schema") == "upstate.sources/v1"
+                 and digest(collection) == collection_id,
+                 "The Economic handoff changed its original source collection")
+        entries = [row for row in collection["entries"] if row.get("id") == choice["source_id"]]
+        _require(len(entries) == 1 and entries[0].get("kind") == "document",
+                 "The Economic handoff lost its original report document")
+        entry = entries[0]
+        members = _entry_members(closure, entry)
+        recipe = closure.read(entry["body"]["object"])
+        _require(recipe.get("schema") == observed_context.SCHEMA,
+                 "The Economic handoff source has another original report schema")
+        for item in recipe.get("inputs", []):
+            name = _relative(item["path"])
+            _require(name in members and all(members[name][field] == item[field]
+                                            for field in ("bytes", "sha256")),
+                     "The Economic handoff changed an original report input")
+        binding = {"schema": "upstate.observed-report-binding/v1",
+                   "edition": observed_context.EDITION,
+                   "source_collection_id": collection_id, "source_id": choice["source_id"],
+                   "body_sha256": entry["body"]["sha256"],
+                   "member_sha256": {name: members[name]["sha256"] for name in sorted(members)}}
+        sources.append({"binding": binding})
+    return observed_context._binding(sources)
+
+
+def _source_history(closure, native, recipe, source_key):
+    """Retain an existing producer handoff without making its live roster identity."""
+    prefix = "economic-comparison-report-sources/" + source_key
+    declared = {"source_key": source_key, "directory": prefix,
+                "source_identity_sha256": digest(native)}
+    folder = closure.root / prefix
+    if not folder.exists() and not folder.is_symlink():
+        return declared
+    seen = getattr(closure, "_economic_source_history_seen", None)
+    if seen is None:
+        seen = closure._economic_source_history_seen = set()
+    if source_key in seen:
+        return declared
+    # Mark before following original source selections. They may refer to earlier
+    # handoffs from the same pair; no recursive scoped source resolver is called.
+    seen.add(source_key)
+    intent = closure.read(prefix + "/intent.json")
+    receipt = closure.read(prefix + "/source-receipt.json")
+    _require(intent.get("schema") == ORIGIN_SCHEMA and intent.get("source_key") == source_key
+             and intent.get("source_identity") == native and intent.get("recipe") == recipe
+             and digest({"identity": intent["source_identity"], "recipe": intent["recipe"]}) == source_key
+             and receipt.get("schema") == ORIGIN_SCHEMA and receipt.get("source_key") == source_key
+             and receipt.get("source_identity") == native,
+             "The Economic source lost its original frozen recipe or receipt")
+    files = _descriptors(receipt.get("files"))
+    expected = {prefix + "/" + name for name in ("intent.json", "observed-report.json", "model-sources.json")}
+    expected |= {prefix + "/comparison/" + item["path"] for item in native["members"]}
+    _require(set(files) == expected, "The original Economic source capture lost its complete file roster")
+    for item in files.values():
+        closure.add_file(item["path"], item)
+    _require(closure.read(prefix + "/observed-report.json") == recipe,
+             "The original Economic source recipe changed")
+    choice = {"source_collection_id": identifier(receipt.get("source_collection_id")),
+              "source_id": receipt.get("source_id")}
+    _require(choice["source_id"] == "economic-comparison-" + source_key
+             and receipt.get("source_role") == observed_context.ROLE,
+             "The Economic source receipt names another original document")
+    actual = _ordered_source_binding(closure, {"source_roles": {observed_context.ROLE: choice}})
+    _require(isinstance(receipt.get("binding"), dict)
+             and all(actual.get(name) == receipt["binding"].get(name) for name in
+                     ("source_collection_id", "source_id", "body_sha256", "member_sha256")),
+             "The original imported Economic source differs from its receipt")
+    collection = closure.read("sources/" + choice["source_collection_id"] + ".json")
+    manifest = closure.read(prefix + "/model-sources.json")
+    original_manifest = collection["original_manifest"]
+    _require(manifest.get("schema") == "upstate.sources/v1"
+             and all(files[prefix + "/model-sources.json"][field] == original_manifest[field]
+                     for field in ("bytes", "sha256")),
+             "The Economic source capture differs from its original imported manifest")
+    original_entry = next(row for row in collection["entries"] if row["id"] == choice["source_id"])
+    _source_binding(closure, choice["source_collection_id"], original_entry, native)
+    handoffs = folder / "handoffs"
+    for path in sorted(handoffs.glob("*/handoff.json")):
+        operation = identifier(path.parent.name)
+        value = closure.read(prefix + "/handoffs/" + operation + "/handoff.json")
+        identity = value.get("identity")
+        _require(value.get("schema") == ORIGIN_SCHEMA and value.get("state") == "imported"
+                 and value.get("source_key") == source_key and value.get("operation_id") == operation
+                 and isinstance(identity, dict) and digest(identity) == operation
+                 and identity.get("schema") == ORIGIN_SCHEMA + "/handoff"
+                 and identity.get("source_key") == source_key
+                 and identity.get("source_identity") == native
+                 and value.get("comparison_id") == native["comparison_id"]
+                 and all(value.get(name) == selected for name, selected in choice.items()),
+                 "The original Economic source handoff changed")
+        previous = identity.get("original_delivery_selection")
+        _require(previous is None or isinstance(previous, dict),
+                 "The Economic handoff lost its original ordered selection")
+        previous = deepcopy(previous) if previous is not None else {"source_roles": {}}
+        previous.setdefault("source_roles", {})
+        prior = _ordered_source_binding(closure, previous)
+        _require(prior == identity.get("original_observed_context_binding"),
+                 "The Economic handoff lost its original ordered source binding")
+        ordered = observed_context.source_choices(previous)
+        if choice not in ordered:
+            ordered.append(choice)
+        expected_selection = deepcopy(previous)
+        expected_selection["observed_context_sources"] = ordered
+        expected_selection["source_roles"][observed_context.ROLE] = deepcopy(ordered[0])
+        bound = _ordered_source_binding(closure, expected_selection)
+        expected_selection["observed_context_binding"] = bound
+        _require(value.get("delivery_selection") == expected_selection and value.get("binding") == bound,
+                 "The Economic source handoff changed its original report order or retained bytes")
+    closure.tree(prefix)
+    return declared
+
+
 def include_source(closure, collection_id, entry):
     """Called only for the exact explicitly selected scientific source edition."""
     native = origin(entry)
@@ -262,6 +382,8 @@ def include_source(closure, collection_id, entry):
     members, recipe, source_key = _source_binding(closure, collection_id, entry, native)
     local = native["project_id"] == closure.workspace.project["id"]
     saved = _local(closure, native) if local else None
+    if local:
+        _source_history(closure, native, recipe, source_key)
     record = {
         "schema": LINEAGE_SCHEMA, "source_collection_id": collection_id,
         "source_id": entry["id"], "source_body_sha256": entry["body"]["sha256"],
