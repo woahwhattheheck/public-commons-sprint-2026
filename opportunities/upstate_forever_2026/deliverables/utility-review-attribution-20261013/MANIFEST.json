@@ -1,0 +1,170 @@
+{
+  "schema": "upstate.utility-class-attribution-files/v1",
+  "source_edition": "4b2efdbd79bce5f9327f7c2a94e46d41bd6a975dcd10c2739b66f284c394365e",
+  "source_documents": [
+    {
+      "kind": "original",
+      "path": "observations/landcover_2023_2025/annual-2023.json",
+      "bytes": 477495,
+      "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+    },
+    {
+      "kind": "original",
+      "path": "observations/landcover_2023_2025/annual-2025.json",
+      "bytes": 477860,
+      "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8"
+    },
+    {
+      "kind": "original",
+      "path": "observations/landcover_2023_2025/huc12-change-summary.csv",
+      "bytes": 23193,
+      "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec"
+    },
+    {
+      "kind": "original",
+      "path": "observations/landcover_2023_2025/huc12-transitions.csv",
+      "bytes": 2729737,
+      "sha256": "275fd764bc637f3f0b9dfc633438f078703eecf05f8b983476ccfa1152fdf815"
+    },
+    {
+      "kind": "original",
+      "path": "observations/wbd_station_join_20261013/derived/point_watersheds.csv",
+      "bytes": 254495,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4"
+    },
+    {
+      "kind": "original",
+      "path": "observations/wbd_station_join_20261013/query-plan.json",
+      "bytes": 813824,
+      "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7"
+    },
+    {
+      "kind": "owner direction",
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4889,
+      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8"
+    },
+    {
+      "kind": "saved review",
+      "path": "Upper_Savannah_Review_Project.json",
+      "bytes": 5625,
+      "sha256": "3f8f2292d2633cbd4230f5d4b2d871ee8793cf652fc6a8b28f40d9f1db0cdfc6"
+    },
+    {
+      "kind": "original scope",
+      "path": "sources/scopes.json",
+      "bytes": 8117,
+      "sha256": "b14a294a17e352da7e2dec9a645f247aa801e0d0a2bba81f67d6c226617769e5"
+    },
+    {
+      "kind": "computation",
+      "path": "source_tools/watershed_review/build_attribution.mjs",
+      "bytes": 8649,
+      "sha256": "592311b58b9098ac6781278fc87205d1e603edf1d3053d467611668433e784ff"
+    },
+    {
+      "kind": "computation",
+      "path": "source_tools/watershed_review/attribution.mjs",
+      "bytes": 12472,
+      "sha256": "0681e0e426ee0008dccdfb54541e600fcaac1de859e2d385c0adb668e7f650c7"
+    },
+    {
+      "kind": "computation",
+      "path": "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
+      "bytes": 14173,
+      "sha256": "f4579c9394c64d78a38d676f0a370eb6ac0fc08a3c6644a6ce36ca51f1e5fbbc"
+    }
+  ],
+  "files": [
+    {
+      "path": "subject-summary.csv",
+      "bytes": 3129,
+      "sha256": "61116cb6afcbe5c51f4794db7e6a36d9cda0d255fe40c5ef3190545739ed9fc7"
+    },
+    {
+      "path": "group-quantities.csv",
+      "bytes": 11539,
+      "sha256": "3ff59cd132927e1cb5f5c775025999737cbab4bab849b8a0df50fbb7fdff8261"
+    },
+    {
+      "path": "criterion-pathways.csv",
+      "bytes": 100279,
+      "sha256": "f3b24046c557de7a702221ee7db41a91308bb1f4b119f9817e8cca76582dea63"
+    },
+    {
+      "path": "class-pathways.csv",
+      "bytes": 81718,
+      "sha256": "c739f23bc56e652558da5e9df45ff3ed3077d52c994b805adaa83964272c4f3d"
+    },
+    {
+      "path": "analysis.json",
+      "bytes": 613524,
+      "sha256": "07abf5e96876140bb17b37b542b9c09dd022cb3f4a2ce112744129c7001f4008"
+    },
+    {
+      "path": "OPEN_FIRST.html",
+      "bytes": 31309,
+      "sha256": "6b74a674d6fcb00839c9034e50dc0e94483efd9f59e11df3cbd5f22e513675b3"
+    },
+    {
+      "path": "originals/observations/landcover_2023_2025/annual-2023.json",
+      "bytes": 477495,
+      "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+    },
+    {
+      "path": "originals/observations/landcover_2023_2025/annual-2025.json",
+      "bytes": 477860,
+      "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8"
+    },
+    {
+      "path": "originals/observations/landcover_2023_2025/huc12-change-summary.csv",
+      "bytes": 23193,
+      "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec"
+    },
+    {
+      "path": "originals/observations/landcover_2023_2025/huc12-transitions.csv",
+      "bytes": 2729737,
+      "sha256": "275fd764bc637f3f0b9dfc633438f078703eecf05f8b983476ccfa1152fdf815"
+    },
+    {
+      "path": "originals/observations/wbd_station_join_20261013/derived/point_watersheds.csv",
+      "bytes": 254495,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4"
+    },
+    {
+      "path": "originals/observations/wbd_station_join_20261013/query-plan.json",
+      "bytes": 813824,
+      "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7"
+    },
+    {
+      "path": "originals/CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4889,
+      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8"
+    },
+    {
+      "path": "originals/Upper_Savannah_Review_Project.json",
+      "bytes": 5625,
+      "sha256": "3f8f2292d2633cbd4230f5d4b2d871ee8793cf652fc6a8b28f40d9f1db0cdfc6"
+    },
+    {
+      "path": "originals/sources/scopes.json",
+      "bytes": 8117,
+      "sha256": "b14a294a17e352da7e2dec9a645f247aa801e0d0a2bba81f67d6c226617769e5"
+    },
+    {
+      "path": "originals/source_tools/watershed_review/build_attribution.mjs",
+      "bytes": 8649,
+      "sha256": "592311b58b9098ac6781278fc87205d1e603edf1d3053d467611668433e784ff"
+    },
+    {
+      "path": "originals/source_tools/watershed_review/attribution.mjs",
+      "bytes": 12472,
+      "sha256": "0681e0e426ee0008dccdfb54541e600fcaac1de859e2d385c0adb668e7f650c7"
+    },
+    {
+      "path": "originals/observations/landcover_observation_profiles_20261013/profiles_core.mjs",
+      "bytes": 14173,
+      "sha256": "f4579c9394c64d78a38d676f0a370eb6ac0fc08a3c6644a6ce36ca51f1e5fbbc"
+    }
+  ]
+}
