@@ -13,10 +13,10 @@ const { values: args } = parseArgs({ options: {
   url: { type: 'string' }, 'url-file': { type: 'string' }, profile: { type: 'string' },
   workspace: { type: 'string' }, output: { type: 'string' }, 'run-label': { type: 'string' },
   headed: { type: 'boolean', default: false }, video: { type: 'boolean', default: false },
-  'browser-channel': { type: 'string' }, help: { type: 'boolean', default: false },
+  'browser-channel': { type: 'string' }, 'browser-executable': { type: 'string' }, help: { type: 'boolean', default: false },
 } });
 if (args.help) {
-  process.stdout.write('Usage: node source/run_profile_workbench_browser.mjs --url-file PRIVATE_URL_FILE --profile BASELINE_PROFILE_ID [--workspace ID] [--output DIRECTORY] [--video] [--headed]\nECO_OPERATOR_URL or --url also supplies the original private operator URL. Only use a retained 15-row baseline with code 82 usle_c=0.20.\n');
+  process.stdout.write('Usage: node source/run_profile_workbench_browser.mjs --url-file PRIVATE_URL_FILE --profile BASELINE_PROFILE_ID [--workspace ID] [--output DIRECTORY] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH]\nECO_OPERATOR_URL or --url also supplies the original private operator URL. Only use a retained 15-row baseline with code 82 usle_c=0.20.\n');
   process.exit(0);
 }
 const sourceURL = 'https://repository.library.noaa.gov/view/noaa/57797/noaa_57797_DS1.pdf';
@@ -41,6 +41,13 @@ const redact = value => {
   return result.replace(/#token=[^\s"'<>]+/g, '#token=[redacted]');
 };
 const requireValue = (condition, message) => { if (!condition) throw Error(message); };
+function browserRuntime() {
+  requireValue(!(args['browser-channel'] && args['browser-executable']),
+    'Choose a browser channel or an explicit executable path.');
+  return { kind: args['browser-executable'] ? 'executable' : args['browser-channel'] ? 'channel' : 'bundled',
+    executable_path: args['browser-executable'] ? resolve(args['browser-executable']) : null,
+    channel: args['browser-channel'] || null, headless: !args.headed };
+}
 const bodyOf = response => { try { return response.request().postDataJSON() || {}; } catch { return {}; } };
 const isRead = (operation, criteria = {}) => response => {
   if (new URL(response.url()).pathname !== '/api/profile-workbench/' + operation) return false;
@@ -121,6 +128,7 @@ async function writeJournal() {
   await rename(pending, reportPath);
 }
 async function continueJournal() {
+  const runtime = browserRuntime();
   let previous;
   try { previous = JSON.parse(await readFile(reportPath, 'utf8')); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -136,11 +144,13 @@ async function continueJournal() {
       started_at: previous.started_at, ended_at: previous.completed_at || null,
       status: previous.status, error: previous.error || null,
       browser_errors: previous.browser_errors || [],
+      browser_runtime: previous.browser_runtime || null,
     }];
     Object.assign(journal, previous, { title, status: 'running',
       started_at: new Date().toISOString(), attempts, browser_errors: [] });
     delete journal.error; delete journal.completed_at;
   }
+  journal.browser_runtime = runtime;
   journalWritable = true;
   await writeJournal();
 }
@@ -211,7 +221,9 @@ async function main() {
   requireValue(['http:', 'https:'].includes(parsed.protocol), 'The operator URL must use HTTP or HTTPS.');
   origin = parsed.origin; capability = new URLSearchParams(parsed.hash.slice(1)).get('token') || '';
   requireValue(capability, 'Use the original operator startup URL containing its capability fragment.');
-  browser = await chromium.launch({ headless: !args.headed, ...(args['browser-channel'] ? { channel: args['browser-channel'] } : {}) });
+  browser = await chromium.launch({ headless: !args.headed,
+    ...(args['browser-channel'] ? { channel: args['browser-channel'] } : {}),
+    ...(args['browser-executable'] ? { executablePath: resolve(args['browser-executable']) } : {}) });
   context = await browser.newContext({
     viewport: { width: 1440, height: 1000 }, locale: 'en-US',
     ...(args.video ? { recordVideo: { dir: join(output, 'video'), size: { width: 1440, height: 1000 } } } : {}),
