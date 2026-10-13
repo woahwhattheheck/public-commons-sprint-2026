@@ -14,10 +14,10 @@
 <header class="masthead">
   <a href="./index.html" class="brand">Stellar Forge</a>
   <span>Source tables</span>
-  <nav aria-label="Workspace links"><a href="./index.html#configure">Merchant workspace</a><a href="./source-table-guide.md" target="_blank" rel="noopener noreferrer">Operating guide</a></nav>
+  <nav aria-label="Workspace links"><a href="./collection-review.html">Collection review</a><a href="./index.html#configure">Merchant workspace</a><a href="./source-table-guide.md" target="_blank" rel="noopener noreferrer">Operating guide</a></nav>
 </header>
 <main id="main">
-  <section class="intro"><h1>Prepare a complete table resource.</h1><p>Import CSV or TSV, choose the field meanings, review the complete output and compare the next source edition. The exported workspace uses the existing native merchant.</p></section>
+  <section class="intro"><h1>Prepare a complete table resource.</h1><p>Import CSV or TSV, select a table from extracted document text, choose the field meanings, review the complete output and compare the next source edition. The exported workspace uses the existing native merchant.</p></section>
   <div class="toolbar" aria-label="Project actions">
     <button id="new-project" type="button">New project</button>
     <button id="open-project" type="button">Open project JSON</button>
@@ -44,6 +44,55 @@
     </div>
     <p class="note">Imported route payment choices and metadata stay attached to their original resources. Use the merchant workspace to edit its complete ordered choices, then import its starter-input.json here.</p>
   </section>
+  <section id="document-intake" class="panel document-intake">
+    <div class="section-title"><h2>Document table intake</h2><button id="open-document-text" type="button">Open extracted text / source JSON</button></div>
+    <p class="note">Choose extracted HTML or Markdown containing tables, or reopen a retained document-table source. PDF extraction happens before this step. The complete extraction and selected cell origins travel with the project.</p>
+    <details><summary>Original document details for a text file</summary>
+      <div class="fields">
+        <label>Original document URL<input id="document-source-url" type="url" placeholder="https://…"></label>
+        <label>Original document filename<input id="document-original-name" maxlength="500" placeholder="Optional"></label>
+        <label>Extraction provider or method<input id="document-provider" maxlength="500" placeholder="Optional"></label>
+      </div>
+      <p class="note">These optional details are used when opening extracted text. Retained source JSON supplies its own complete document details.</p>
+    </details>
+    <div class="fields"><label>Retained extraction<select id="document-source-choice"><option value="">Choose a retained extraction</option></select></label><label>Earlier preparation<select id="document-preparation-history"><option value="">Current preparation</option></select></label></div>
+    <div class="inline-actions"><button id="document-download-intake" type="button">Download all preparations</button><span class="note">Save or download the project to keep unfinished table choices. Open a preparations file with the extraction button.</span></div>
+    <p id="document-intake-status" class="note" role="status">Open an extraction to inspect its tables.</p>
+    <div id="document-intake-editor" hidden>
+      <div class="fields">
+        <label>Source table<select id="document-table-choice"></select></label>
+        <label>Header rows<input id="document-header-rows" spellcheck="false" placeholder="Blank for no headings"></label>
+        <label>Data rows<input id="document-data-rows" spellcheck="false" placeholder="2-10, 13"></label>
+        <label>Columns<input id="document-columns" spellcheck="false" placeholder="1-6"></label>
+        <label>Merged cells<select id="document-merge"><option value="anchor">Anchor only · covered cells empty</option><option value="repeat">Repeat anchor value</option><option value="reject">Reject selected merged cells</option></select></label>
+        <label>Cell whitespace<select id="document-whitespace"><option value="preserve">Preserve</option><option value="trim">Trim edges</option><option value="collapse">Collapse runs</option></select></label>
+      </div>
+      <p class="note">Numbers are the original table’s one-based rows and columns. Use comma-separated numbers or ranges. Omitted rows remain in the source; blank header rows produce Column N names.</p>
+      <details><summary>Optional notes for explicitly excluded rows</summary><label>One row and note per line, such as 7: repeated footer<textarea id="document-exclusions" rows="3" spellcheck="false"></textarea></label><p class="note">Selected headers and data rows cannot also be excluded. Notes are optional for other omitted rows.</p></details>
+      <div class="document-pagination" aria-label="Original cell preview pages">
+        <button id="document-rows-prev" type="button">Previous rows</button><button id="document-rows-next" type="button">Next rows</button>
+        <button id="document-cols-prev" type="button">Previous columns</button><button id="document-cols-next" type="button">Next columns</button>
+        <span id="document-preview-range" class="note"></span>
+      </div>
+      <p class="note">Select a cell to inspect its complete original text, markup and source coordinates. Covered cells show their anchor’s text here; the chosen merge policy controls the projected output.</p>
+      <div id="document-cell-grid" class="table-scroll"></div>
+      <details id="document-cell-detail"><summary>Selected cell origin and complete source</summary><pre id="document-cell-origin" class="source-literal"></pre></details>
+      <div class="inline-actions"><button id="document-show-markup" type="button">Show original table markup</button><button id="document-download-source" type="button">Download retained source JSON</button><button id="document-preview" type="button">Prepare CSV preview</button></div>
+      <pre id="document-original-markup" class="source-literal" hidden></pre>
+      <section id="document-projection-panel" hidden aria-label="Projected table">
+        <h3>Projected CSV</h3>
+        <p id="document-projection-summary" class="note"></p>
+        <div id="document-projection-preview" class="table-scroll"></div>
+        <details><summary>Omitted rows and selection notes</summary><pre id="document-omitted-rows" class="source-literal"></pre></details>
+        <div class="fields">
+          <label>Destination<select id="document-target"></select></label>
+          <label>CSV edition filename<input id="document-csv-name" maxlength="500"></label>
+        </div>
+        <div class="inline-actions"><button id="document-receive" class="primary" type="button">Use in field mapping</button><button id="document-download-csv" type="button">Download projected CSV</button><button id="document-download-selection" type="button">Save source and selection JSON</button></div>
+        <p class="note">Receiving keeps the complete source and projection. Continue with field mapping and retain the reviewed output in the existing editor below.</p>
+      </section>
+    </div>
+  </section>
   <div class="workspace">
     <aside class="panel source-sidebar" aria-label="Source documents">
       <h2>Tables <span id="table-count"></span></h2>
@@ -67,10 +116,27 @@
           <label class="check"><input id="has-header" type="checkbox">First record contains headings</label>
           <label class="check"><input id="skip-empty" type="checkbox">Skip records whose fields are all empty</label>
         </div>
-        <div class="inline-actions"><button id="reset-mapping" type="button">Reset columns from this source</button><button id="download-source" type="button">Download original source</button></div>
+        <div class="inline-actions"><button id="reopen-document-selection" type="button" hidden>Reopen document selection</button><button id="reset-mapping" type="button">Reset columns from this source</button><button id="download-source" type="button">Download original source</button></div>
         <p id="source-summary" class="note mono"></p>
         <p id="resource-terms" class="note"></p>
         <details><summary>Original source preview · first 20 records</summary><div id="source-preview" class="table-scroll"></div></details>
+      </section>
+      <section class="panel" id="source-corrections">
+        <h2>Review individual source records</h2>
+        <p class="note">Select a cell to inspect its complete original text. Record a replacement or row exclusion with a reviewer and reason. Decisions belong to this exact source edition and parsing choice. New source editions start with their own decisions.</p>
+        <p id="correction-summary" class="note"></p>
+        <div class="inline-actions"><button id="correction-prev" type="button">Previous records</button><button id="correction-next" type="button">Next records</button><button id="correction-cols-prev" type="button">Previous columns</button><button id="correction-cols-next" type="button">Next columns</button><span id="correction-page"></span></div>
+        <div id="correction-grid" class="table-scroll"></div>
+        <div id="correction-editor" hidden>
+          <h3 id="correction-selected"></h3><p id="correction-row-state" class="note"></p>
+          <div class="fields"><div><h3>Original cell</h3><pre id="correction-original" class="source-literal"></pre></div><div><h3>Selected value</h3><pre id="correction-current" class="source-literal"></pre></div></div>
+          <label>Replacement source text<textarea id="correction-value" rows="4"></textarea></label>
+          <div class="fields"><label>Reviewer<input id="correction-actor" maxlength="200" autocomplete="name"></label><label class="wide">Reason<textarea id="correction-reason" rows="2" maxlength="4000"></textarea></label></div>
+          <div class="inline-actions"><button id="correction-apply" type="button">Record replacement</button><button id="correction-restore-cell" type="button">Restore original cell</button><button id="correction-exclude" type="button">Exclude this row</button><button id="correction-restore-row" type="button">Restore this row</button></div>
+          <p class="note">Replacement text is processed by the existing field type and empty-value policy. An empty replacement remains an explicit decision. Excluded rows stay in the original source and correction history.</p>
+        </div>
+        <details><summary>Complete decision history</summary><pre id="correction-history" class="source-literal"></pre></details>
+        <button id="correction-download" type="button">Download decision history CSV</button>
       </section>
       <section class="panel">
         <h2>Field mapping</h2>
@@ -98,6 +164,7 @@
     <p class="note">The native dataset is a startup snapshot. Customer commissioning uses the existing source-bundle and workorder operation for the selected host, source rights, receiving application and release change.</p>
   </section>
 </main>
+<input id="document-extraction-file" type="file" accept=".html,.htm,.md,.markdown,.txt,.json,text/html,text/markdown,text/plain,application/json" hidden>
 <input id="source-files" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" multiple hidden>
 <input id="edition-file" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" hidden>
 <input id="project-file" type="file" accept=".json,application/json" hidden>

@@ -160,6 +160,8 @@ def register_static(routes):
         "/stellar-forge/developer-site/dist/source-document-tables.mjs": ("../../../../stellar-forge/developer-site/dist/source-document-tables.mjs", "text/javascript; charset=utf-8"),
         "/stellar-forge/developer-site/dist/source-table-intake.mjs": ("../../../../stellar-forge/developer-site/dist/source-table-intake.mjs", "text/javascript; charset=utf-8"),
         "/stellar-forge/developer-site/dist/source-table-workspace.mjs": ("../../../../stellar-forge/developer-site/dist/source-table-workspace.mjs", "text/javascript; charset=utf-8"),
+        "/stellar-forge/developer-site/dist/source-delimited.mjs": ("../../../../stellar-forge/developer-site/dist/source-delimited.mjs", "text/javascript; charset=utf-8"),
+        "/stellar-forge/developer-site/dist/source-table-corrections.mjs": ("../../../../stellar-forge/developer-site/dist/source-table-corrections.mjs", "text/javascript; charset=utf-8"),
         "/stellar-forge/developer-site/dist/onboarding.mjs": ("../../../../stellar-forge/developer-site/dist/onboarding.mjs", "text/javascript; charset=utf-8"),
         "/stellar-forge/developer-site/dist/offer.mjs": ("../../../../stellar-forge/developer-site/dist/offer.mjs", "text/javascript; charset=utf-8"),
     })

@@ -1,0 +1,181 @@
+[
+  {
+    "tableIndex": 1,
+    "headerRows": [
+      2
+    ],
+    "dataRows": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      14,
+      15
+    ],
+    "columns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  },
+  {
+    "tableIndex": 2,
+    "headerRows": [
+      2
+    ],
+    "dataRows": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "columns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  },
+  {
+    "tableIndex": 3,
+    "headerRows": [
+      2
+    ],
+    "dataRows": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "columns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  },
+  {
+    "tableIndex": 4,
+    "headerRows": [
+      2
+    ],
+    "dataRows": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "columns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  },
+  {
+    "tableIndex": 5,
+    "headerRows": [
+      2
+    ],
+    "dataRows": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "columns": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  },
+  {
+    "tableIndex": 6,
+    "headerRows": [],
+    "dataRows": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "columns": [
+      1,
+      2
+    ],
+    "excludedRows": [],
+    "mergedCells": "repeat",
+    "whitespace": "trim"
+  }
+]
