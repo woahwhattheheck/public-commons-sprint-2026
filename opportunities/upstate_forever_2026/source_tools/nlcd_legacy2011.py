@@ -17,8 +17,7 @@ import zipfile
 from model.common import (atomic_bytes, atomic_json, describe_file, digest,
                           file_digest, held, now, read_json, verify_file)
 from model import rasters
-from .nlcd_wcs import _domain_geometry
-from .prism_period import _domain_files
+from .prism_period import _domain_files, _selected_domain
 from .raster_sources import capture
 
 SCHEMA = "upstate.legacy-nlcd2011-source/v1"
@@ -62,17 +61,13 @@ def _selection(domain, *, buffer_m, layer, where, maximum_clip_pixels):
     if type(maximum_clip_pixels) is not int or maximum_clip_pixels <= 0:
         raise ValueError("The native window cell ceiling must be a positive integer")
     originals = _domain_files(domain)
-    rows, reader = _domain_geometry(originals[0], layer=layer, where=where, target_crs="EPSG:5070")
-    geometry = rasters.polygon_union(rows)
-    if buffer_m:
-        geometry = geometry.buffer(buffer_m)
-    if geometry.is_empty or not geometry.is_valid:
-        raise ValueError("The selected original contributing domain is invalid")
+    geometry, reader, feature_ids = _selected_domain(
+        originals[0], layer=layer, where=where, buffer_m=buffer_m)
     from shapely.geometry import mapping
     value = {"schema": SCHEMA, "product": BASENAME, "url": URL,
              "domain": {"files": [describe_file(p.parent, p) for p in originals],
                         "layer": layer, "where": where, "reader": reader,
-                        "feature_ids": [row["id"] for row in rows],
+                        "feature_ids": feature_ids,
                         "buffer_m": buffer_m, "crs": "EPSG:5070",
                         "geometry": json.loads(json.dumps(mapping(geometry)))},
              "maximum_clip_pixels": maximum_clip_pixels,

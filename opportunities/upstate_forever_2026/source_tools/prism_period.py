@@ -72,6 +72,69 @@ def _domain_files(path):
     return files
 
 
+def _selected_domain(path, *, layer=None, where=None, buffer_m=0):
+    """Read an unfiltered original GeoJSON without requiring a vector driver.
+
+    Other formats and explicit layer/filter selectors retain the maintained
+    vector-reader contract. RFC 7946 coordinates use longitude, latitude;
+    older named-CRS GeoJSON retains its explicit original CRS.
+    """
+    from shapely.geometry import shape
+    from shapely.ops import transform, unary_union
+    from pyproj import CRS, Transformer
+    from functools import partial
+
+    path = Path(path)
+    value = read_json(path) if path.suffix.lower() in {".json", ".geojson"} else None
+    if (isinstance(value, dict) and value.get("type") == "FeatureCollection"
+            and layer is None and where is None):
+        crs_member = value.get("crs")
+        if crs_member is None:
+            source_crs = CRS.from_user_input("OGC:CRS84")
+        elif (isinstance(crs_member, dict) and crs_member.get("type") == "name"
+              and isinstance(crs_member.get("properties"), dict)
+              and crs_member["properties"].get("name")):
+            source_crs = CRS.from_user_input(crs_member["properties"]["name"])
+        else:
+            raise ValueError("Retain a supported original named CRS for this GeoJSON domain")
+        target_crs = CRS.from_epsg(5070)
+        project = Transformer.from_crs(source_crs, target_crs, always_xy=True)
+        features = value.get("features")
+        if not isinstance(features, list) or not features:
+            raise ValueError("The original domain GeoJSON has no polygon features")
+        polygons, identifiers = [], []
+        for index, feature in enumerate(features):
+            if (not isinstance(feature, dict) or feature.get("type") != "Feature"
+                    or not isinstance(feature.get("geometry"), dict)
+                    or feature["geometry"].get("type") not in {"Polygon", "MultiPolygon"}):
+                raise ValueError("The complete original domain must contain polygon features")
+            geometry = shape(feature["geometry"])
+            if geometry.is_empty or not geometry.is_valid:
+                raise ValueError("The original domain contains an empty or invalid polygon")
+            geometry = transform(partial(project.transform, errcheck=True), geometry)
+            if (geometry.is_empty or not geometry.is_valid
+                    or not all(math.isfinite(value) for value in geometry.bounds)):
+                raise ValueError("The original domain cannot be projected as a finite valid polygon")
+            polygons.append(geometry)
+            raw_id = feature.get("id")
+            identifiers.append(str(index) if raw_id is None else str(raw_id))
+        if len(set(identifiers)) != len(identifiers):
+            raise ValueError("The original domain repeats a GeoJSON feature identity")
+        geometry = unary_union(polygons)
+        reader = {"format": "GeoJSON", "method": "shapely-pyproj",
+                  "source_crs": source_crs.to_string(), "target_crs": target_crs.to_string(),
+                  "axis_order": "x-y", "feature_identity": "original-id-or-zero-based-index"}
+    else:
+        rows, reader = _domain_geometry(path, layer=layer, where=where, target_crs="EPSG:5070")
+        geometry = rasters.polygon_union(rows)
+        identifiers = [row["id"] for row in rows]
+    if buffer_m:
+        geometry = geometry.buffer(buffer_m)
+    if geometry.is_empty or not geometry.is_valid:
+        raise ValueError("The selected complete contributing domain is invalid")
+    return geometry, reader, identifiers
+
+
 def plan(domain, *, start, end, resolution="800m", buffer_m=1000,
          layer=None, where=None, maximum_clip_pixels=4000000):
     if resolution not in RESOLUTIONS:
@@ -82,10 +145,8 @@ def plan(domain, *, start, end, resolution="800m", buffer_m=1000,
         raise ValueError("The native source-window cell ceiling must be a positive integer")
     files = _domain_files(domain)
     identities = [describe_file(item.parent, item) for item in files]
-    rows, reader = _domain_geometry(files[0], layer=layer, where=where, target_crs="EPSG:5070")
-    selected = rasters.polygon_union(rows).buffer(buffer_m) if buffer_m else rasters.polygon_union(rows)
-    if selected.is_empty or not selected.is_valid:
-        raise ValueError("The selected complete contributing domain is invalid")
+    selected, reader, feature_ids = _selected_domain(
+        files[0], layer=layer, where=where, buffer_m=buffer_m)
     from shapely.geometry import mapping
     sequence = periods(start, end)
     code = RESOLUTIONS[resolution][0]
@@ -97,7 +158,7 @@ def plan(domain, *, start, end, resolution="800m", buffer_m=1000,
              "years": dt.date.fromisoformat(end).year-dt.date.fromisoformat(start).year,
              "period_end_convention": "exclusive", "periods": sequence,
              "domain": {"files": identities, "layer": layer, "where": where,
-                        "reader": reader, "feature_ids": [row["id"] for row in rows],
+                        "reader": reader, "feature_ids": feature_ids,
                         "buffer_m": buffer_m, "crs": "EPSG:5070",
                         "geometry": json.loads(json.dumps(mapping(selected)))},
              "maximum_clip_pixels": maximum_clip_pixels, "references": REFERENCES,
