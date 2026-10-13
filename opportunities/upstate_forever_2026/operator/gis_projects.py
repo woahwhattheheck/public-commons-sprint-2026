@@ -80,7 +80,7 @@ class GISProjects:
         result['adoptions'] = [gis.load(p) for p in sorted((ws.root / 'gis-source-adoptions').glob('*/adoption.json'))]
         for record in result['received']:
             project = gis.load(ws.root / 'gis-received' / record['id'] / 'project' / 'project.json')
-            record['layer_choices'] = [{'id': layer['id'], 'title': layer['title'], 'kind': layer['data']['kind'], 'units': layer['data']['units']} for layer in project['layers']]
+            record.update(gis_workspace.adoption_choices(project))
         result['grids'] = [{k: row.get(k) for k in ('id', 'state', 'spec', 'grid')}
                            for row in (gis.load(p) for p in sorted((ws.root / 'grids').glob('*/grid.json')))]
         result['comparisons'] = [{k: row.get(k) for k in ('id', 'baseline_run_id', 'direction')}
@@ -103,6 +103,11 @@ class GISProjects:
         return gis_workspace.receive(ws, upload['path'], source_upload_id=upload['id'])
 
     def decorate_task(self, task):
+        if task['action'] == 'gis.project.adopt-sources' and task['state'] == 'complete':
+            collection_id = task['result']['source_collection_id']
+            record = self.operator.item(task['workspace'], 'sources', collection_id)
+            return {**task, '_item': {'kind': 'sources', 'id': collection_id},
+                    '_downloads': record['_downloads']}
         if task['action'] in {'gis.project.export', 'gis.project.receive'} and task['state'] == 'complete':
             kind = 'export' if task['action'] == 'gis.project.export' else 'received'
             result = self.describe(task['workspace'], kind, task['result']['id'])

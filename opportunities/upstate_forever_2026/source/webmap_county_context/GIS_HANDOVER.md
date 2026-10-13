@@ -152,3 +152,38 @@ The original receiving driver checks the embedded offline table values against
 both complete ten-row source CSVs before and after native adoption and
 working-layer-only re-export. This joins the human-readable opener to the same
 typed scientific sources and companion identities checked by the native flow.
+
+
+## Reuse an original table or document without a working layer
+
+Open **Editable GIS projects → Received independent editions → Use received layers, tables or documents as study sources**. Clear the working-layer selections, then select the original tables or documents you need. Each choice shows its retained kind, date, geography, declared units and number of companions. Give the new source edition a title and reason, then submit through the normal Operations queue.
+
+The new edition uses the original source importer. A selected CSV remains a table with its exact original header, values, primary bytes, ordered companions, URI, vintage, units and scientific metadata. A selected document remains a document. The source record retains the received GIS edition, original source binding and adoption reason. An additional provenance document carries the received project manifest and retained edition history. This mode does not require a vector or raster.
+
+The selected table is directly selectable in the ordinary Sources and Investigations catalogues. **Open original source files** in the GIS desk opens that saved edition through the existing source-item API and refreshes download tickets for every primary and companion. The completed adoption task also links the original source edition and its files. Adoption form selections and the original queue operation ID survive a page reload; a changed selection gets its own operation.
+
+If any working layer is selected, every original context attachment stays selected and is carried with that layer, preserving the existing layer-only re-export behavior. To choose a subset of tables or documents, clear all working layers first. Empty selections, repeated identities and identities absent from the received edition are rejected.
+
+### Native request
+
+The existing action is `gis.project.adopt-sources`:
+
+```json
+{
+  "receipt_id": "<actual saved receiving ID>",
+  "title": "Dated county population source",
+  "reason": "Reuse the original whole-county table in this study.",
+  "layer_ids": [],
+  "attachment_ids": ["<actual attachment ID from the received catalogue>"]
+}
+```
+
+`GISProjects.catalogue(workspace_key)` returns both `layer_choices` and `attachment_choices` for each received edition. Copy the exact attachment identity. A request with working layers and no `attachment_ids` retains every attachment, as earlier clients expect. When explicit attachment IDs accompany working layers, they must include the complete attachment set.
+
+The immutable adoption selection includes `adoption_format_version: 2`, the original receiving fingerprint, ordered selected IDs and the existing GIS builder version. Earlier cached layer-only adoptions remain intact. The result retains `sources` for working-layer mappings and adds `context_sources` with attachment ID, native source ID, title and kind.
+
+### Continue the original county receiving course
+
+The same `source_tools/receive_webmap_gis.py` now continues through independent table adoption. It checks the actual catalogue choice, admits the original dated Census CSV without working geometry, verifies all original metadata/companions and the complete native profile, and opens the completed native task's source downloads. It then selects the adopted originals and received-edition provenance using the actual Investigations repository references and delegates to the maintained `receiving/eco_intelligence/receive_original_collection.py` for its original export, companion checks, portable re-export and restart/reopen.
+
+This receiver uses `receiving_version: typed-source-selection-v2` and a separate `source-only-collection` state directory beneath the same receiving operation. Preserve any active earlier receiver and its task state. Run the maintained continuation only after that original lifetime is reconciled; use a new state directory for a different receiving/GIS version. The saved result reports `source_only_collection_id`, `source_only_tables`, `source_only_refs` and `source_only_collection_export` alongside the original full GIS course.
