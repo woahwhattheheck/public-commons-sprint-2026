@@ -278,11 +278,15 @@ def original_source_intake(args, course):
 
 
 def registered_manifests(intake, course):
-    """Register only an unfinished original manifest import; retained sources reopen independently."""
+    """Register a new intake only; retained native tasks reconcile their original preview."""
     if not intake or intake["mode"] != "registered-manifest":
         return ()
     phase = course.value["phases"].get("original-source-import")
-    if phase and phase.get("state") == "complete" and "result" in phase:
+    if phase:
+        required(phase["request"]["action"] == "source.import",
+                 "The retained source-intake phase uses another original action")
+        # Its immutable preview already retains path/hash. Reconcile the actual task before
+        # requiring temporary files; unfinished workers still validate the original preview.
         return ()
     original = intake["manifest"]
     path = Path(original["path"]).resolve(strict=True)
