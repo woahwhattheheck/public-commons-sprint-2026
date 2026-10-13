@@ -4,7 +4,7 @@
  * Callers provide original complete carriers; this module performs no network,
  * filesystem, supplied-source execution, scientific run or publishing operation.
  */
-import {fromBase64, utf8Decode, utf8Encode, sha256Bytes, inflateGzip} from "./carrier_codec.mjs";
+import {SOURCE_LIMIT_BYTES, fromBase64, utf8Decode, utf8Encode, sha256Bytes, inflateGzip} from "./carrier_codec.mjs";
 
 const ROOT = "opportunities/upstate_forever_2026";
 const MAP = "commons.source-map/1";
@@ -161,7 +161,7 @@ function layerFromDocument(document, {label = "source", payloadSha256 = null, pa
     files[path] = content; metadata[path] = item;
   }
   const total = Object.values(metadata).reduce((n, row) => n + row.bytes, 0);
-  if (total > 64 * 1024 * 1024) throw Error("Source exceeds the existing 64 MiB carrier capacity");
+  if (total > SOURCE_LIMIT_BYTES) throw Error("Source exceeds the complete carrier capacity");
   return {document, files, metadata, receipt: {carrier_name: label,
     payload_sha256: payloadSha256 || digest(document),
     payload_bytes: payloadBytes === null ? utf8Encode(canonical(document)).length : payloadBytes,
@@ -310,7 +310,7 @@ function composeApplication(layers, {edition, operationId = null} = {}) {
   for (const name of ["model/workspace.py", "operator/server.py", "operator/web/app.mjs"])
     if (!orderedFiles[name]) throw Error("Complete application is missing " + name);
   const total = Object.values(orderedMetadata).reduce((n, row) => n + row.bytes, 0);
-  if (Object.keys(orderedFiles).length > 10000 || total > 64 * 1024 * 1024) throw Error("Combined application exceeds receiving capacity");
+  if (Object.keys(orderedFiles).length > 10000 || total > SOURCE_LIMIT_BYTES) throw Error("Combined application exceeds receiving capacity");
   const externalSources = [...externals.values()].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   const externalReferences = [...references.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([, row]) => row);
   const assembly = {schema: "upstate.application-assembly/v1", edition, operation_id: operationId,
