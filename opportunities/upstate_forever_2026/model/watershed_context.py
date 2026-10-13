@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 import csv
+import gzip
 import hashlib
 import io
 import json
@@ -639,7 +640,12 @@ HUC_COLUMNS = (
     "system_types", "resource_concerns", "selected_classification_count",
     "selected_classes", "class_counts", "classification_coverage",
     "classification_query_coverage", "classification_scope", "classification_assignment",
-    "downstream_huc12", "source_references",
+    "state_portions_acres", "downstream_huc12", "native_record_present",
+    "downstream_state", "downstream_path_status", "downstream_domain_huc12s",
+    "known_upstream_domain_huc_count", "known_upstream_priority_huc_count",
+    "known_upstream_area_acres", "known_upstream_selected_classification_count",
+    "known_upstream_domain_huc12s", "known_external_upstream_huc12s",
+    "outgoing_records_complete_for_model_domain", "source_references",
 )
 HUC8_COLUMNS = (
     "huc8", "huc_count", "states", "area_acres", "area_km2", "state_portion_acres",
@@ -664,7 +670,8 @@ def _csv_bytes(rows: list[dict], columns: tuple[str, ...]) -> bytes:
     for row in rows:
         cells = {}
         for column in columns:
-            value = row.get(column)
+            value = (row[column] if column in row else
+                     (row.get("network") or {}).get(column))
             if isinstance(value, (list, dict)):
                 value = json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True)
             elif value is None:
@@ -807,18 +814,56 @@ def render_watershed_report(report: Mapping) -> str:
         lines.extend(["", _display(
             report["network"]["model_domain_native_row_count"])
             + " model-domain watersheds have explicit native network records.", ""])
+        exits = report["network"].get("domain_exit_edges", [])
+        if exits:
+            lines.extend(["### Downstream domain exits", ""])
+            lines.extend(_markdown_table(
+                ["Last model-domain HUC12", "Next original HUC12"],
+                ((edge["huc12"], edge["ToHUC"]) for edge in exits),
+            ))
+            lines.append("")
     else:
         lines.extend(["Connect native HUC12/ToHUC records to populate upstream watershed "
                       "areas, upstream priorities, downstream paths and domain exits.", ""])
     if report["selection"]["requested"]:
         selection = report["selection"]
-        selected_count = selection["summary"]["huc_count"]
-        selected_noun = "watershed" if selected_count == 1 else "watersheds"
+        selected_ids = set(selection["huc12s"])
+        selected_rows = [row for row in report["hucs"] if row["huc12"] in selected_ids]
+        noun = "watershed" if selection["summary"]["huc_count"] == 1 else "watersheds"
         lines.extend(["## Selected watersheds", "",
-            f"The selection contains {_display(selected_count)} {selected_noun} "
+            f"The selection contains {_display(selection['summary']['huc_count'])} {noun} "
             f"covering {_display(selection['summary']['area_acres'])} acres. "
-            "The complete model domain remains in the context report.", "",
-            "Selected HUC12s: " + ", ".join(selection["huc12s"]), ""])
+            "The complete model domain remains in the context report.", ""])
+        lines.extend(_markdown_table(
+            ["HUC12", "Watershed", "Whole watershed (ac)", "Priority states", "Selected SC class records"],
+            ((row["huc12"], row["name"], row["area_acres"], row["priority_states"],
+              row["selected_classification_count"]) for row in selected_rows),
+        ))
+        state_rows = [(row["huc12"], native) for row in selected_rows
+                      for native in row["nrcs_state_rows"]]
+        if state_rows:
+            lines.extend(["", "### Selected state portions", ""])
+            lines.extend(_markdown_table(
+                ["HUC12", "State", "State portion (ac)", "FY26 priority status", "System type"],
+                ((huc12, native.get("st_usps"), native.get("st_ac"),
+                  native.get("fy26_status"), native.get("system_type"))
+                 for huc12, native in state_rows),
+            ))
+        network_rows = [row for row in selected_rows if row.get("network")]
+        if network_rows:
+            lines.extend(["", "### Upstream context of selected watersheds", ""])
+            lines.extend(_markdown_table(
+                ["HUC12", "Next original HUC12", "Upstream model HUC12s",
+                 "Upstream area (ac)", "Upstream priority HUC12s", "Downstream path"],
+                ((row["huc12"],
+                  row.get("downstream_huc12") or row["network"]["downstream_state"].replace("_", " "),
+                  row["network"]["known_upstream_domain_huc_count"],
+                  row["network"]["known_upstream_area_acres"],
+                  row["network"]["known_upstream_priority_huc_count"],
+                  row["network"]["downstream_path_status"].replace("_", " "))
+                 for row in network_rows),
+            ))
+        lines.append("")
     lines.extend(["## Methods", ""])
     for method, description in report["methods"].items():
         lines.extend([f"**{method.replace('_', ' ').capitalize()}.** {description}", ""])
@@ -836,7 +881,9 @@ def render_watershed_report(report: Mapping) -> str:
         lines.extend([
             f"- **Canonical JSON SHA-256.** `{source['canonical_sha256']}`", "",
         ])
-    lines.extend(["", f"Context identifier: {report['id']}", ""])
+    lines.extend(["", "The complete source identities, original state records and query "
+                  "references accompany the JSON exports.", "",
+                  f"Context identifier: {report['id']}", ""])
     return "\n".join(lines)
 
 
@@ -874,16 +921,27 @@ def write_watershed_context(report: Mapping, output_dir: str | Path) -> dict:
     return result
 
 
+def _read_json_source(path: str | Path) -> Any:
+    """Read retained plain JSON or gzip bytes without an extracted intermediate."""
+    with Path(path).open("rb") as source:
+        compressed = source.read(2) == b"\x1f\x8b"
+        source.seek(0)
+        if compressed:
+            with gzip.GzipFile(fileobj=source, mode="rb") as decoded:
+                return json.load(decoded)
+        return json.load(source)
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-context", type=Path, required=True)
     parser.add_argument("--classification-coverage", type=Path)
-    parser.add_argument("--network", type=Path)
+    parser.add_argument("--network", type=Path, help="Original HUC12/ToHUC JSON or gzip source")
     parser.add_argument("--select-huc12", nargs="+", action="extend")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args(argv)
-    read = lambda path: json.loads(path.read_text(encoding="utf-8"))
+    read = _read_json_source
     report = build_watershed_context(
         read(args.source_context),
         read(args.classification_coverage) if args.classification_coverage else None,
