@@ -344,3 +344,127 @@ The original browser result now includes `community_scientific` with the origina
 Use the actual screenshots and files from this original programme. Open and view the desktop and narrow Community intake, complete handover preview, ordered scientific composer, populated report and independently reopened report. Open the generated PDF pages and HTML and inspect the mapped-column/line record alongside the complete attached CSV and `INTERVENTION_IMPORT.json`. Check every affected downloadable attachment and reopen the full editable Workspace on the receiving side. Repair a concrete visual, interaction or file defect in the same source/course before returning the product.
 
 Preserve the complete current `CURRENT_OWNER_DIRECTION.md` with any child or equipped-host handoff. Keep original attribution, units, domain/reporting-mask distinction, scientific source editions and current operators. Community source preparation and scientific rendering use the retained actual reports; they do not launch another environmental model.
+
+
+## Receive the original Community33 archive into an existing Workspace
+
+Use this course when the original completed Community report package is available
+and the receiving operator already has a real Workspace. The course imports the
+complete report as a scientific source, operates the scientific composer, and
+returns the full independently reopened receiving Workspace. Existing editable
+Community table, plan and report records are retained and compared in full.
+
+The input is the original 270,296-byte ZIP with SHA256
+`dd952535cc715a9a12aa2f665c5cddae0878dcb55d11792cd70e8cdbd1cc685e`.
+Its normal file reference is
+`libfile_eaab2ca88b388191b89efdf4c584d522`, file
+`file_00000000ef2881f58c0127fb151e21b8`. Materialize that complete original file
+on the existing accepting cloud host and select its actual path:
+
+```sh
+python3 operator/community_receiving.py \
+  --workspace /actual/receiving/workspace \
+  --output /actual/original/community-receiving \
+  --community-package /actual/input/community-complete-receiving-20261013.zip \
+  --source-revision COMPLETE_APPLICATION_COMMIT \
+  --node /actual/node \
+  --node-modules /actual/node_modules \
+  --chromium /actual/cloud/chromium
+```
+
+Use the installed interpreter for the complete selected application. Supply the
+actual 40-character source commit and the installed Playwright module directory.
+Keep the original operation output and accepted process when continuing. The
+`--community-package` mode requires `--workspace` and is separate from
+`--mapped-plan` / `--mapped-report`, whose editable original donor requirement
+is unchanged.
+
+### Complete original input and native source receiving
+
+The installed helper `operator/community_archive_inputs.py` validates the entire
+original ZIP before receiving. It retains the original outer file and every one
+of its 33 members under `original-community-input/`, keeping names and bytes.
+The two source members are selected uniquely by their recorded full identities:
+
+| Original source | Bytes | SHA256 |
+| --- | ---: | --- |
+| Community report ZIP | 29,241 | `8d7b0264b40c074e930073831b64e44a7e403a438fdb95f7e44cf78418606bff` |
+| Saved revised report record | 7,691 | `a907b7f38e1b0b226b9be3deba5abc11a0f38301812adb8a5ad77aca6cd3dd77` |
+
+The original native archive validator verifies the report JSON and all inner
+members, donor project `1c9d74a3-b813-4ef4-9db3-4a40cfb124f7`, report
+`153c431c1617bf3d47195fea1c83dd9d455c5ba28fa484ca78fa00f3ab098e91`,
+revised plan `d35858b2c34b63c48b5bb2c0298ce94bfe7c19f8ebb4100e7506be3ca6c608ba`
+and table `48b8e3a03030c9575c8d3fb7a356ee886d8198274a0995760df7802286e04285`.
+It uses the original `prepare_archive(import_source=False)` and
+`export_archive` functions to prepare the maintained source-handover ZIP. The
+actual browser receives that ZIP through the existing authenticated operator.
+
+The receiving Workspace keeps its own project identity. The source retains the
+original donor, plan, table, scientific context, saved report, original JSON,
+complete report archive and every attachment. The source validator controls the
+native import; the course never manufactures an editable donor registry.
+
+### Actual browser, composer and cold receiving
+
+The original course performs this complete sequence in its existing browser and
+request journal:
+
+1. Retain all pre-existing receiving Workspace Community records and the exact
+   original input selection.
+2. Open **Receive source handover**, select the actual full native handover,
+   inspect its project/report/source identity and receive it as a report source.
+   Save the complete task results and every original downloadable member.
+3. Open that original source as a scientific report, preserve contact details,
+   enter the report title, and use **Add to current report**. Repeating Add keeps
+   one source and preserves the full draft. Reload reopens the same title,
+   contact and ordered source selection.
+4. Preview the selection, run the original scientific renderer or reopen its
+   completed exact edition, and export the full report. View the complete
+   rendered HTML on desktop and at 390 pixels; inspect its original report,
+   plan and source hashes and ordered intervention programme.
+5. Download every scientific PDF, HTML, data and source member and the complete
+   scientific report ZIP. Back up the full Workspace with the original
+   application, restore it independently, and compare the complete source
+   collection, original handover, saved scientific edition, attachment
+   inventory and pre-existing editable Community records.
+6. Close the producing operator. Start the delivered application with its
+   independently restored Workspace, open the actual scientific report again,
+   download its unchanged members, and reload the real receiving interface.
+
+The result is `community-archive-receiving-result.json`. Its browser state and
+result are `browser/community-archive-browser-progress.json` and
+`browser/community-archive-browser-result.json`. They retain the complete
+`archive_selection`, all original member descriptors, native source task
+requests/results, complete scientific report, full Workspace archive and
+independent receiving paths. Keep `original-community-input/` with the whole
+course output so the complete 33-member original result remains available
+alongside the delivered editable Workspace and scientific report.
+
+Existing completed downloads are reused only after their original byte count and
+SHA256 match. Completed requests retain their exact original payload and operation
+ID; interruption resumes the same native task. Original input selection and
+receiving project remain fixed across restarts. An intentional application repair
+uses the existing source-edition continuation, preserving earlier completed
+archives and their original source editions.
+
+### Installed source and rendered-product handoff
+
+Select the complete current application and source distribution, then compose the
+five complete course leaves together: the Python controller, Node entry,
+scientific companion, archive-input helper and this guide. Preserve the native
+report-context/handover, scientific renderer, Source reader, server and existing
+extension declarations. The delivered application readback checks the coupled
+course and native files against the selected source before starting it.
+
+The accepting operator must return the actual desktop and narrow screenshots and
+all rendered report files to the producing seat for visual inspection. Open the
+PDF pages and HTML, inspect populated and empty source/composer controls, the
+upload/loading/error flow, complete source attachments, report export and cold
+reopen. Correct concrete product defects in this same operation.
+
+Bryce reserved his local Codex in-app browser from 16:00 UTC on 13 October 2026
+until he explicitly releases it after his meeting. Run this authorized receiving
+course in the existing cloud-isolated browser. Preserve the complete current
+`CURRENT_OWNER_DIRECTION.md` and the existing cloud owner's active work when
+handing over the course.
