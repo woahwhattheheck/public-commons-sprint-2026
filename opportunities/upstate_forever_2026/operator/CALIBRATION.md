@@ -393,3 +393,27 @@ The same calibration extension owns the `calibration.review.prepare` action, `ca
 The full workspace archive retains saved `calibration-reviews` plus all files under `calibration-review-exports`, including the independent offline ZIP and copied source/map members. The restored operator calls the registered calibration `verify_workspace` hook before registration; it delegates to the original review inspector. Open the original calibration in the received workspace and select its saved review. Scientific IDs remain unchanged, while file URLs use the new local workspace key.
 
 The report viewer preserves the operator origin so relative CSV, map and source links carry the existing HttpOnly `SameSite=Strict` download cookie. Both the iframe and member response retain a sandbox without scripts, forms, popups or top navigation. The complete native transfer/receive commands and exact member checks are in [CALIBRATION_REVIEW.md](../model/CALIBRATION_REVIEW.md#reopen-the-complete-review-after-a-project-transfer).
+
+
+## Saved guided review and project handover
+
+The registered calibration controller exposes
+`openForReview({workspace_key, review_id, preview:false})` for the original
+Guided journey. Navigate to the calibration view first; the controller validates
+the selected workspace and opens the saved review through the original
+authenticated `/api/calibration/review` route. Setting `preview:true` opens its
+readable report after the exact dossier has been loaded. A workspace change or a
+newer result request cannot open a stale report.
+
+The optional ninth guided step stores one dossier ID. Its displayed calibration,
+plan, native run, profile, uncertainty and map references are derived from that
+record. The native saved-view join calls `validate_review_journey(workspace,
+journey)`, which uses the original complete review inspector and verifies the
+captured dependency context. Old guided selections remain valid.
+
+Run the original native session composition before the calibration installer.
+The maintained installer patches only that saved-view validation point and
+retains all other current server code. The same function is used by the
+cumulative source assembly before its complete source map and archive are
+created. Current source-design controls and their exact support source also
+travel in the complete calibration component.
