@@ -158,6 +158,7 @@
     },
     "parameter-studies": {
       "paths": [
+        "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
@@ -165,7 +166,9 @@
         "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md",
         "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
         "install_native_supervision.py",
+        "integration/ensemble-parameter-core-joins.json",
         "model/delivery_catalogue.py",
+        "model/ensemble_parameter_studies.py",
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
@@ -274,6 +277,7 @@
     },
     "retained-application-source": {
       "paths": [
+        "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
@@ -283,7 +287,12 @@
         "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/WATERSHED_SOURCE_REVIEW.md",
         "install_native_supervision.py",
+        "integration/ensemble-parameter-core-joins.json",
+        "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
         "model/delivery_catalogue.py",
+        "model/ensemble_parameter_studies.py",
+        "model/ensemble_study_scope.py",
+        "model/ensemble_study_source.py",
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
@@ -316,6 +325,16 @@
         "model/monitoring_comparison_report.py",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_MONITORING_COMPARISONS.md"
+      ]
+    },
+    "ensembles": {
+      "paths": [
+        "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
+        "integration/ensemble-parameter-core-joins.json",
+        "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
+        "model/ensemble_parameter_studies.py",
+        "model/ensemble_study_scope.py",
+        "model/ensemble_study_source.py"
       ]
     }
   },
@@ -355,6 +374,8 @@
     "parameter_installed_result_console": "c0c76a776ab80b5a52f515fdccebc0f98c7611db",
     "utility_source_review": "85441320d77b99465d7b4f82947d01bbc0180206",
     "parameter_scientific_reports": "97fdd7ab82676b8ca1c52bd311186c541eb94d44",
-    "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f"
+    "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f",
+    "ensemble_study_scope": "6531fa308c8f2f32216680a80ad810e0cde479f3",
+    "ensemble_parameter_continuation": "7458e1c69817767acc1cecbd0cfcd4462be58ad1"
   }
 }
