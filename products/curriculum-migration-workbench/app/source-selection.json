@@ -1,0 +1,108 @@
+{
+  "schema": "stellar-forge.curriculum-migration-source.v1",
+  "repository": "woahwhattheheck/commons",
+  "commit": "0a79b94fb3fe14008d37e71838822e41dee174cb",
+  "files": [
+    {
+      "path": "CURRICULUM_COVERAGE.md",
+      "bytes": 15338,
+      "sha256": "b5a43777c1b4e669db67b3a7791ea4f455c17907369028d8387d0d83bf38ff8b"
+    },
+    {
+      "path": "CURRICULUM_MIGRATION.md",
+      "bytes": 8700,
+      "sha256": "445a63d5022b8b82d87f69b2c0a59f9960d8013d7c763cfc2a09b2666f76ca1b"
+    },
+    {
+      "path": "LICENSE.OAK",
+      "bytes": 1077,
+      "sha256": "0eeb9d32caed59b04fabf0c182bc817d6a2f0966a26341bd3458d3d8dc5f21b7"
+    },
+    {
+      "path": "README.md",
+      "bytes": 12564,
+      "sha256": "61880fa708345f9eca4945b14e085f9fe82fe2680b7637cac8fa44d8ce5a9105"
+    },
+    {
+      "path": "SDK_GUIDE.md",
+      "bytes": 14225,
+      "sha256": "2b8866f48c5d747506234d4e5e45f93ec75b53786f0c922bfac21b51257385ea"
+    },
+    {
+      "path": "cli.mjs",
+      "bytes": 6892,
+      "sha256": "0007215732383ce71447b173846812571953c8c635b9d8578f91e4313907eb76"
+    },
+    {
+      "path": "complete-receiving.mjs",
+      "bytes": 28835,
+      "sha256": "6a4dd90fa10b6636b440531b05fcc6cfb3b573cc27a16c4f8947fe48bd054f98"
+    },
+    {
+      "path": "curriculum-coverage.mjs",
+      "bytes": 21577,
+      "sha256": "00875446de9a53dffee779ce2ef854eab646593d73697e82c3f3ea5f0429187f"
+    },
+    {
+      "path": "curriculum-migration-workbench-bootstrap.html",
+      "bytes": 257881,
+      "sha256": "b29d1df3ef8ed6cb4fc190212b23716e1fcab765d2853fe69d25982fe174bda6"
+    },
+    {
+      "path": "curriculum-migration-workbench.html",
+      "bytes": 354747,
+      "sha256": "e23de2d6a03622b5a6d2a96d5e334c88968780ce298d7f2636dac050e8825daa"
+    },
+    {
+      "path": "curriculum-migration.mjs",
+      "bytes": 18883,
+      "sha256": "11a9fb5627501b6dfc6a44ab78e1b77427b773dff41b2bcd013d3cc37a1f3ba2"
+    },
+    {
+      "path": "curriculum-panel.mjs",
+      "bytes": 15080,
+      "sha256": "cf1414c0ef2d51349f03147eaa26bf06404af9c98aaf4094f3542f5444826292"
+    },
+    {
+      "path": "generate-sdk.mjs",
+      "bytes": 28101,
+      "sha256": "c15a0f5e46592a90a9d7e23cea3ed2634ad6dededb1640e7c41412a89982b2e8"
+    },
+    {
+      "path": "initial-workspace.json",
+      "bytes": 1019884,
+      "sha256": "797af3fc9fb01e20bf879f94010fb3a2f6f28ecfe5d9b1e210f2d4c12167cdd7"
+    },
+    {
+      "path": "model.mjs",
+      "bytes": 21774,
+      "sha256": "17f91bd26b57cf37def43420869f41c53ebd4ffed4a930bbe99575337c12b0ca"
+    },
+    {
+      "path": "public-source.json.gz.json",
+      "bytes": 64075,
+      "sha256": "de589e6422b4a60e785e9ef7edbbe7e2a36455316e055da57e9a378417e61e20"
+    },
+    {
+      "path": "run-receiving.py",
+      "bytes": 12716,
+      "sha256": "3a5dd7dea1e32b05e5247a3603869ee683ce006b1f7ae67bbdf425f008706a4d"
+    },
+    {
+      "path": "styles.css",
+      "bytes": 4327,
+      "sha256": "860ac9ff4c8ee98f6d86a02dc4f080fa0968153ee578cd1dbf97f633641ef96c"
+    },
+    {
+      "path": "ui.js",
+      "bytes": 21117,
+      "sha256": "7315345174cdd9482f79c41bf7467c3b02c16acef751adf17752a413338e3123"
+    },
+    {
+      "path": "zip.js",
+      "bytes": 1727,
+      "sha256": "b54be356a9906e37b5575b4cf90e8a271a1d3734d5377350aefce9ccccc9bdaf"
+    }
+  ],
+  "sha256": "0d327292684c56e52b45913e9acb5bb2efc6d7feb2a19f4ece489706fb432579"
+}
