@@ -33,6 +33,13 @@ backup --state ABS --state-root ABS --out NEW_BUNDLE --review SHA256 --quiesced
        [--profile ABS] [--pass-env SF88_BACKUP_PASSPHRASE]
 backup-verify --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
 backup-restore --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
+session-backup-review --session ABS --state-root ABS [--include ABS ...]
+session-backup --session ABS --state-root ABS --out NEW_BUNDLE --review SHA256 --quiesced
+               [--include ABS ...] [--pass-env SF88_BACKUP_PASSPHRASE]
+session-backup-verify --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME]
+session-backup-restore --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME]
+session-backup-compare --before-bundle ABS --before-expect SHA256 --after-bundle ABS --after-expect SHA256
+     [--before-pass-env NAME] [--after-pass-env NAME] [--result-file NEW_PRIVATE_JSON]
 analysis-review --state ABS --session SAVED_NAME --name SOURCE --format json|csv
                 [--analysis-python ABS]
 analysis-open --state ABS [--session SAVED_NAME --name SOURCE --format json|csv --review SHA256]
@@ -59,6 +66,11 @@ Workspace backup captures received files, native operators, original journals,
 saved parts and completed objects through the existing encrypted recovery engine.
 Restore publishes only to the original absent/empty state root and reopens saved
 purchase records. Set its separate passphrase environment in this terminal.
+Standalone zero-cap sessions use session-backup-* with the same SF101 encryption.
+Review selects the complete original inbox, evidence, parts, assembly and lease history.
+The configured ledger must remain absent. Restore opens the original session and
+does not create a managed workspace or execute an acquisition. See
+OBJECT_SESSION_RECOVERY.md for exact review, saved-output recovery and receiving.
 All destinations are absolute and new. See OBJECTS.md for the complete journey.
 Analysis commands select a saved session NAME inside the Object Buyer workspace.
 Review binds its existing recorded file and target source revision. analysis-open
@@ -168,11 +180,15 @@ async function operatorCommand(tokens) {
 }
 
 export async function main(tokens = process.argv.slice(2)) {
+  if(tokens[0]==='session-backup-compare')return sessionComparisonCommand(tokens.slice(1));
   if (tokens.length === 0 || tokens.length === 1 && ['help','--help'].includes(tokens[0])) {
     process.stdout.write(HELP); return;
   }
   if (tokens[0] === 'research-open') { await researchCommand(tokens.slice(1)); return; }
   if (tokens[0] === 'operator') { await operatorCommand(tokens); return; }
+  if (['session-backup-review','session-backup','session-backup-verify','session-backup-restore'].includes(tokens[0])) {
+    await sessionRecoveryCommand(tokens); return;
+  }
   if (['backup-review','backup','backup-verify','backup-restore'].includes(tokens[0])) {
     await recoveryCommand(tokens); return;
   }
@@ -306,6 +322,101 @@ async function analysisCommand([command,...tokens]) {
   } finally {
     await model.close(); process.off('SIGINT',interrupt); process.off('SIGTERM',terminate);
     if (interrupted) process.exitCode = interrupted;
+  }
+}
+
+
+async function sessionComparisonCommand(tokens) {
+  const names=['before-bundle','before-expect','before-pass-env','after-bundle','after-expect','after-pass-env','result-file'];
+  need(tokens.length%2===0,'OBJECT_FLAG_VALUE_REQUIRED');
+  const flags={};
+  for(let i=0;i<tokens.length;i+=2){
+    const name=tokens[i].startsWith('--')?tokens[i].slice(2):'';
+    need(names.includes(name)&&!Object.hasOwn(flags,name)&&tokens[i+1]&&!tokens[i+1].startsWith('--'),
+      'OBJECT_FLAG_INVALID_OR_REPEATED');flags[name]=tokens[i+1];
+  }
+  const options={};
+  for(const side of ['before','after']){
+    need(flags[side+'-bundle']&&/^[a-f0-9]{64}$/.test(flags[side+'-expect']??''),
+      'OBJECT_COMPARISON_EXACT_RECORD_REQUIRED');
+    options[side]={bundle:flags[side+'-bundle'],expected:flags[side+'-expect'],passEnv:flags[side+'-pass-env']};
+  }
+  const resultFile=flags['result-file'];
+  if(resultFile!==undefined)need(isAbsolute(resultFile)&&resolve(resultFile)===resultFile,
+    'OBJECT_COMPARISON_RESULT_PATH_INVALID');
+  const controller=new AbortController();let interrupted;
+  const interrupt=()=>{interrupted??=130;controller.abort();};
+  const terminate=()=>{interrupted??=143;controller.abort();};
+  process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+  async function output(result){
+    const raw=Buffer.from(JSON.stringify(result)+'\n');
+    need(raw.length<=267386880,'OBJECT_COMPARISON_RESULT_TOO_LARGE');
+    if(resultFile===undefined){process.stdout.write(raw);return;}
+    const parent=dirname(resultFile),stat=await lstat(parent);
+    need(stat.isDirectory()&&!stat.isSymbolicLink()&&!(stat.mode&0o077)&&await realpath(parent)===parent,
+      'OBJECT_COMPARISON_PRIVATE_RESULT_PARENT_REQUIRED');
+    const fd=await open(resultFile,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+    try{await fd.writeFile(raw);await fd.sync();}finally{await fd.close();}
+    process.stdout.write(JSON.stringify({schema:result.schema,status:result.status,
+      authenticated:result.authenticated===true,comparisonSha256:result.comparisonSha256??null,
+      resultFile,bytes:raw.length})+'\n');
+  }
+  try{
+    const {compareObjectRecoveryBackups}=await import('./object-comparison-core.mjs');
+    const result=await compareObjectRecoveryBackups(options,{signal:controller.signal,
+      onProgress:event=>process.stderr.write(JSON.stringify(event)+'\n')});
+    await output(result);
+  }catch(error){
+    if(error.partialComparison)await output({schema:'stellar-forge.sf88.object-session-comparison.v1',
+      status:'OBJECT_SESSION_COMPARISON_FAILED',authenticated:false,
+      error:{code:typeof error.code==='string'?error.code:'OBJECT_COMPARISON_FAILED'},
+      partialComparison:error.partialComparison});
+    throw error;
+  }finally{
+    process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);if(interrupted)process.exitCode=interrupted;
+  }
+}
+
+async function sessionRecoveryCommand([command,...tokens]) {
+  const quiesced=tokens.filter(value=>value==='--quiesced').length;
+  need(quiesced<2&&(command==='session-backup'||quiesced===0),'OBJECT_FLAG_INVALID_OR_REPEATED');
+  const args=tokens.filter(value=>value!=='--quiesced'),source=command==='session-backup-review'||command==='session-backup';
+  const names=source?['session','state-root','include',...(command==='session-backup'?['out','review','pass-env']:[])]:
+    ['bundle','expect','pass-env'];
+  need(args.length%2===0,'OBJECT_FLAG_VALUE_REQUIRED');
+  const options={include:[]};
+  for(let index=0;index<args.length;index+=2) {
+    const name=args[index].startsWith('--')?args[index].slice(2):'';
+    need(names.includes(name)&&(name==='include'||!Object.hasOwn(options,name))&&
+      args[index+1]&&!args[index+1].startsWith('--'),'OBJECT_FLAG_INVALID_OR_REPEATED');
+    if(name==='include')options.include.push(args[index+1]);else options[name]=args[index+1];
+  }
+  const controller=new AbortController();let interrupted;
+  const interrupt=()=>{interrupted??=130;controller.abort();};
+  const terminate=()=>{interrupted??=143;controller.abort();};
+  process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+  const context={signal:controller.signal,onProgress:event=>process.stderr.write(JSON.stringify(event)+'\n')};
+  try {
+    const recovery=await import('./workspace-recovery.mjs');
+    let result;
+    if(source) {
+      need(options.session&&options['state-root'],'OBJECT_RECOVERY_SESSION_AND_ROOT_REQUIRED');
+      const input={directory:options.session,stateRoot:options['state-root'],include:options.include,
+        output:options.out,expectedReviewSha256:options.review,passEnv:options['pass-env'],quiesced:quiesced===1};
+      result=command==='session-backup-review'?await recovery.inspectObjectSessionRecovery(input,context):
+        await recovery.snapshotObjectSessionRecovery(input,context);
+    } else {
+      need(options.bundle,'WORKSPACE_RECOVERY_BUNDLE_REQUIRED');
+      const input={bundle:options.bundle,expected:options.expect,passEnv:options['pass-env']};
+      result=command==='session-backup-verify'?await recovery.verifyObjectSessionRecovery(input,context):
+        await recovery.restoreObjectSessionRecovery(input,context);
+    }
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');
+    if(result.nativeReopenErrors?.length||result.publicationSyncError||result.cleanupErrors?.length||
+      result.leaseReleaseErrors?.length)process.exitCode=2;
+  } finally {
+    process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);
+    if(interrupted)process.exitCode=interrupted;
   }
 }
 
