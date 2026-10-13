@@ -38,6 +38,7 @@ The left navigation covers the complete workflow:
 | Workspace | Inspect retained sources, review workload, installed schemas and profiles. |
 | Source documents | Import complete original XML bytes and see each source's current revision. |
 | Inspect and correct | Browse entities, exact fields, local references, time series, validation, and the complete XML. Stage an atomic group of corrections or replace a complete document. |
+| Colleague corrections | Compare a complete colleague return with the original and current project, choose native corrections and returned reviews, and save one complete corrected edition. |
 | Compare revisions | Compare full field values and reference changes between two retained revisions of one source. |
 | Saved editions | Save and reopen a complete workspace selection with its source revisions and related work. |
 | Review work | Assign and maintain reviews tied to one source revision and, optionally, one entity. |
@@ -180,6 +181,10 @@ Choose the intended kind, select an edition where applicable, add a note, and pr
 To receive a case, select its complete exported workspace or application package. Review the original file's byte count and hash, add a receiving note, and choose **Receive complete case**. The native workspace receives the whole case in one transaction with distinct local identities and returns the received source, edition, review, and link counts together with the original-to-received source identity map and complete package SHA256.
 
 Large receiving packages use the same complete original request recovery as small XML imports. Their full bytes are retained in the browser's transactional request store before transmission.
+
+## Return a colleague's complete corrections
+
+Use **Colleague corrections** to send a complete editable project, open the colleague's full returned workspace/application ZIP, compare the original sent/current/returned revisions, and select the accepted native values and returned reviews. The original workspace validates and applies all selected sources in one retained mutation, keeps the complete returned project, and saves an edition. The complete operating, recovery and client workflow is in [CORRECTIONS.md](CORRECTIONS.md).
 
 ## Recover the original request
 

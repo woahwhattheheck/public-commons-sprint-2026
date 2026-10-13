@@ -50,6 +50,20 @@
         "standards/BUILDINGSYNC_LICENSE.txt",
         "text/plain; charset=utf-8"
       ]
+    ],
+    [
+      "/corrections.js",
+      [
+        "public/corrections.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/CORRECTIONS.md",
+      [
+        "CORRECTIONS.md",
+        "text/plain; charset=utf-8"
+      ]
     ]
   ]
 }
