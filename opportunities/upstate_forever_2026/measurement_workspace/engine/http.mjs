@@ -1,3 +1,5 @@
+import {sedimentOperation,readSedimentStudy} from './sediment_workspace.mjs';
+import {sedimentHTML,sedimentCSV} from './sediment_reports.mjs';
 import {observationEditionOperation,observationEditionCSV,observationCalibration} from './observation_editions.mjs';
 import {observationEditionHTML} from '../web/observation_editions.mjs';
 import {benchmarkOperation,readBenchmark,benchmarkCSV} from './benchmark_workspace.mjs';
@@ -56,6 +58,10 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
           send(response,200,value,type,'observation-edition-'+parts[2].slice(0,12)+'-'+format);return;
         }
         send(response,200,await observationEditionOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
+      if(parts[0]==='sediment'){
+        if(method==='GET'&&parts[1]==='studies'&&parts.length===4){const study=readSedimentStudy(s,parts[2]);if(parts[3]==='report.html'){send(response,200,sedimentHTML(study),'text/html; charset=utf-8','sediment-study-'+study.id.slice(0,12)+'.html');return;}if(['pairs.csv','residuals.csv','predictions.csv','coefficients.csv'].includes(parts[3])){send(response,200,sedimentCSV(study,parts[3].split('.')[0]),'text/csv; charset=utf-8','sediment-'+parts[3]);return;}}
+        send(response,200,sedimentOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='native-observations'){send(response,200,nativeSourceOperation(s,method,parts.slice(1),query));return;}
       if(parts[0]==='benchmarks'){
