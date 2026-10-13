@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Install the complete ECO13 receiving source bank into its existing package.
+"""Install a complete ECO13 source bank into its original receiving root.
 
-Usage:
-    python INSTALL_RECEIVING.py source-bank.json \
-        /path/to/upstate_forever_2026/integrations/eco13_scenario_lab
+For an application-relative bank containing operator/, integrations/ and receiving/:
+    python INSTALL_RECEIVING.py source-bank.json /path/to/upstate_forever_2026
 
-The source may also be a Slack canvas Markdown export containing a JSON fence.
-Only incoming Python is compiled; imports, native models, and tests are not run.
+For a package-relative bank containing eco_scenario_lab/ and its package guides:
+    python INSTALL_RECEIVING.py package-bank.json /path/to/upstate_forever_2026/integrations/eco13_scenario_lab
+
+Use the installation target recorded in the selected source bank. The source may
+also be a Slack canvas Markdown export containing a JSON fence. Only incoming
+Python is compiled; imports, native models, and tests are not run.
 """
 from __future__ import annotations
 import argparse
@@ -392,7 +395,7 @@ def apply_source(bank, bank_hash, entries, target, candidate_parent):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source_bank", type=Path, help="Complete JSON source bank or canvas Markdown export")
-    parser.add_argument("package_directory", type=Path, help="Existing integrations/eco13_scenario_lab package")
+    parser.add_argument("package_directory", type=Path, help="Existing application or package root matching the source bank relative paths")
     parser.add_argument("--candidate-parent", type=Path,
                         help="Existing directory outside the package for complete retained incoming source")
     args = parser.parse_args(argv)
