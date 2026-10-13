@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import http from "node:http";
 import {pathToFileURL} from "node:url";
 import {isDeepStrictEqual} from "node:util";
 
@@ -16,8 +17,9 @@ const check = (condition, message) => {if (!condition) throw new Error(message);
 const args = {};
 for (let i=2;i<process.argv.length;i++) {
   const name=process.argv[i];
-  check(["--receiving","--output","--playwright","--chromium","--resume"].includes(name), "Unknown argument "+name);
+  check(["--receiving","--output","--playwright","--chromium","--resume","--adopt-loopback"].includes(name), "Unknown argument "+name);
   if (name==="--resume") args.resume=true;
+  else if(name==="--adopt-loopback")args.adoptLoopback=true;
   else {check(process.argv[i+1]&&!process.argv[i+1].startsWith("--"), "Missing value "+name);args[name.slice(2)]=process.argv[++i];}
 }
 for (const key of ["receiving","output","playwright","chromium"]) check(args[key], "Required --"+key);
@@ -49,7 +51,9 @@ const input={schema:SCHEMA,receiving_path:receivingPath,receiving_sha256:sha(rec
   helper_sha256:sha(await fs.readFile(helperPath)),playwright:await fs.realpath(args.playwright),
   chromium:await fs.realpath(args.chromium),
   reports:reports.map(r=>({path:r.path,bytes:r.bytes,sha256:r.sha256,source_run_identity:r.result.source_run_identity}))};
-const inputText=JSON.stringify(input,null,2)+"\n";
+let inputText=JSON.stringify(input,null,2)+"\n";
+const predecessorHelperSha256="2cb210396e81432344ab054306748c3bff90f617d2f0a4743b25a706cf829b15";
+let adoption=null;
 async function atomic(file,body,replace=false) {
   const temporary=path.join(path.dirname(file),"."+path.basename(file)+"-"+crypto.randomUUID()+".tmp");
   let handle=null;
@@ -65,9 +69,26 @@ try {await fs.mkdir(root);} catch(error) {if(error.code!=="EEXIST")throw error;c
 for(const report of reports)check(root!==report.caseDir&&!contained(root,report.caseDir),"Keep browser output outside the immutable native case directories");
 const inputPath=path.join(root,"browser-input.json");
 try {await atomic(inputPath,inputText);}
-catch(error) {if(error.code!=="EEXIST")throw error;check((await fs.readFile(inputPath,"utf8"))===inputText,"Restore the exact original input/source/runtime selections");}
+catch(error) {
+  if(error.code!=="EEXIST")throw error;
+  const originalText=await fs.readFile(inputPath,"utf8");
+  if(originalText!==inputText) {
+    const original=JSON.parse(originalText), selectedWithoutHelper={...input}, originalWithoutHelper={...original};
+    delete selectedWithoutHelper.helper_sha256;delete originalWithoutHelper.helper_sha256;
+    check(args.resume&&args.adoptLoopback&&original.helper_sha256===predecessorHelperSha256&&
+          isDeepStrictEqual(selectedWithoutHelper,originalWithoutHelper),
+          "Restore original input/source/runtime selections; only the explicit reviewed --adopt-loopback successor may replace its exact predecessor helper");
+    adoption={schema:"tjlabs.water-reconciliation.browser-helper-adoption.v1",
+      original_input_sha256:sha(Buffer.from(originalText)),original_helper_sha256:original.helper_sha256,
+      selected_helper_sha256:input.helper_sha256,transport:"scoped-read-only-loopback-http",
+      meaning:"Original native reports, runtimes, browser-input.json and incomplete attempts remain unchanged; only the original browser helper has this explicit source successor."};
+    inputText=originalText;
+  }
+}
 const lockPath=path.join(root,"browser.lock"),owner={hostname:os.hostname(),pid:process.pid,token:crypto.randomUUID()};
-let ownsLock=false,browser=null;
+let ownsLock=false,browser=null,loopback=null;
+const served=new Map(),fileUrls=new Map();
+let loopbackOrigin=null,loopbackPrefix=null;
 const steps=[],artifacts=[],errors=[];
 let attemptDir=null,browserVersion=null;
 async function save(name,body) {
@@ -92,8 +113,74 @@ async function downloaded(page,button,name) {
   const item=await waiting;check(!(await item.failure()),"Actual download failed: "+name);
   const file=path.join(attemptDir,name);await item.saveAs(file);await retained(file);return file;
 }
+function media(file) {
+  const ext=path.extname(file).toLowerCase();
+  return ({".html":"text/html; charset=utf-8",".json":"application/json; charset=utf-8",
+    ".csv":"text/csv; charset=utf-8",".png":"image/png",".pdf":"application/pdf"})[ext]??"application/octet-stream";
+}
+async function expose(file,route,expected=null) {
+  check(route.startsWith("/")&&!route.split("/").includes("..")&&!served.has(route),"Unique selected loopback path required");
+  const real=await fs.realpath(file), info=await fs.lstat(file);
+  check(info.isFile()&&!info.isSymbolicLink()&&real===path.resolve(file),"Serve only the selected ordinary original file");
+  check(reports.some(r=>contained(real,r.caseDir))||(attemptDir&&contained(real,attemptDir)),"Loopback source escaped selected case or current attempt");
+  const body=await fs.readFile(real), identity={bytes:body.length,sha256:sha(body)};
+  if(expected)check(identity.bytes===expected.bytes&&identity.sha256===expected.sha256,"Loopback original differs: "+path.basename(file));
+  const value={path:real,...identity,media_type:media(real)};
+  served.set(route,value);fileUrls.set(real,route);
+}
+async function startLoopback() {
+  for(let i=0;i<reports.length;i++) {
+    const r=reports[i],base="/case/"+i+"/";
+    await expose(r.path,base+"water/report.html",{bytes:r.bytes,sha256:r.sha256});
+    for(const name of ["water/result.json","report.json","manifest.json","manifest.original.json",
+                       "manifest.receiving.json","water/selection.original.json","water/review-items.csv"]) {
+      const file=path.join(r.caseDir,name);
+      try {await expose(file,base+name);}catch(error){if(error.code!=="ENOENT")throw error;}
+    }
+    for(const source of r.result.source_inputs) {
+      check(source.retained_path==="inputs/"+source.table+".csv"&&/^[A-Za-z][A-Za-z0-9_.-]{0,95}$/.test(source.table),
+            "Original source route must retain its exact safe table path");
+      await expose(path.join(r.caseDir,source.retained_path),base+source.retained_path,source);
+    }
+  }
+  loopbackPrefix="/"+crypto.randomBytes(24).toString("hex");
+  loopback=http.createServer(async(req,res)=>{
+    const fail=(code,message)=>{res.writeHead(code,{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"});res.end(message);};
+    try {
+      if(req.method!=="GET"&&req.method!=="HEAD")return fail(405,"Read-only original files");
+      if(req.headers.host!==new URL(loopbackOrigin).host||
+         (req.headers.origin&&req.headers.origin!==loopbackOrigin)||
+         ![undefined,"none","same-origin"].includes(req.headers["sec-fetch-site"]))return fail(403,"Original local origin required");
+      const url=new URL(req.url,loopbackOrigin);
+      if(url.origin!==loopbackOrigin||url.search||!url.pathname.startsWith(loopbackPrefix+"/"))return fail(404,"Selected original file not found");
+      const item=served.get(url.pathname.slice(loopbackPrefix.length));
+      if(!item)return fail(404,"Selected original file not found");
+      const info=await fs.lstat(item.path);
+      check(info.isFile()&&!info.isSymbolicLink()&&(await fs.realpath(item.path))===item.path,"Selected loopback file changed");
+      const body=await fs.readFile(item.path);
+      check(body.length===item.bytes&&sha(body)===item.sha256,"Selected loopback bytes changed");
+      res.writeHead(200,{"Content-Type":item.media_type,"Content-Length":body.length,"Cache-Control":"no-store",
+        "X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer","Cross-Origin-Resource-Policy":"same-origin"});
+      res.end(req.method==="HEAD"?undefined:body);
+    }catch(error){if(!res.headersSent)fail(409,"Selected original file is unavailable or changed");else res.destroy();}
+  });
+  await new Promise((resolve,reject)=>{
+    const failed=error=>{loopback.off("listening",ready);reject(error);};
+    const ready=()=>{loopback.off("error",failed);resolve();};
+    loopback.once("error",failed);loopback.once("listening",ready);loopback.listen(0,"127.0.0.1");
+  });
+  loopbackOrigin="http://127.0.0.1:"+loopback.address().port;
+  await save("loopback-source-selection.json",JSON.stringify({schema:"tjlabs.water-reconciliation.loopback-source.v1",
+    read_only:true,hostname:"127.0.0.1",port:loopback.address().port,helper_sha256:input.helper_sha256,
+    files:[...served.entries()].map(([route,value])=>({route,...value})),
+    meaning:"Ephemeral process-owned exact-byte HTTP presentation of the same retained files; no provider access or native calculation."},null,2)+"\n");
+}
+function presentationUrl(file) {
+  const route=fileUrls.get(path.resolve(file));check(route&&loopbackOrigin,"Selected report must be registered with the original loopback server");
+  return loopbackOrigin+loopbackPrefix+route;
+}
 async function waitApp(page,file) {
-  await page.goto(pathToFileURL(file).href,{waitUntil:"domcontentloaded",timeout:60000});
+  await page.goto(presentationUrl(file),{waitUntil:"domcontentloaded",timeout:60000});
   await page.locator("#summary .stat").first().waitFor({timeout:30000});
   check(await page.locator("#fatal").isHidden(),"Report displayed a rendering error");
 }
@@ -122,6 +209,10 @@ try {
     await fs.rename(lockPath,path.join(root,"retired-lock-"+previous.token+".json"));
     await atomic(lockPath,JSON.stringify(owner));ownsLock=true;
   }
+  if(adoption) {
+    const file=path.join(root,"browser-helper-adoption.json"),body=JSON.stringify(adoption,null,2)+"\n";
+    try {await atomic(file,body);}catch(error){if(error.code!=="EEXIST")throw error;check((await fs.readFile(file,"utf8"))===body,"Retain the original helper successor selection");}
+  }
   const outcomePath=path.join(root,"browser-receiving.json");
   try {
     const previous=JSON.parse(await fs.readFile(outcomePath,"utf8"));
@@ -143,7 +234,11 @@ try {
     browser=await chromium.launch({headless:true,executablePath:input.chromium,args:["--disable-dev-shm-usage"]});
     browserVersion=browser.version();await save("browser-runtime.json",JSON.stringify({browser_version:browserVersion,playwright:input.playwright,chromium:input.chromium},null,2)+"\n");
     const context=await browser.newContext({viewport:{width:1440,height:1050},acceptDownloads:true,serviceWorkers:"block"});
-    await context.setOffline(true);
+    await startLoopback();
+    await context.route("**/*",route=>{
+      const url=new URL(route.request().url());
+      return url.origin===loopbackOrigin&&url.pathname.startsWith(loopbackPrefix+"/")?route.continue():route.abort("blockedbyclient");
+    });
     const page=await context.newPage();
     page.on("pageerror",error=>errors.push(String(error)));
     const report=reports[0];
@@ -212,6 +307,7 @@ try {
       check((await fs.readFile(csv,"utf8")).includes(chosen.period_id),"Filtered CSV includes chosen actual period");
       return {html,json,csv};
     });
+    await expose(exports.html,"/case/0/water/Water_Case_Inspector.html");
     await step("cold-open-downloaded-report-and-print-current-view",async()=>{
       const cold=await context.newPage();cold.on("pageerror",error=>errors.push(String(error)));
       await waitApp(cold,exports.html);await readPayload(cold,report);
@@ -252,7 +348,8 @@ try {
     await save("VIEWING.md",viewing);
     const result={schema:SCHEMA,status:"BROWSER_COURSE_COMPLETE",input_sha256:sha(Buffer.from(inputText)),
       native_receiving_sha256:input.receiving_sha256,data_class:receiving.data_class,
-      browser_version:browserVersion,
+      browser_version:browserVersion,helper_sha256:input.helper_sha256,
+      transport:"scoped-read-only-loopback-http",helper_adoption:adoption,
       steps,artifacts,visual_review:"PENDING_ACTUAL_SCREENSHOT_AND_EXPORT_VIEWING",
       native_operation:"Existing completed water receiving case; no new calculation or dataset"};
     await atomic(outcomePath,JSON.stringify(result,null,2)+"\n",true);
@@ -260,13 +357,14 @@ try {
   }
 } catch(error) {
   if(attemptDir) {
-    const failure={schema:SCHEMA,status:"INCOMPLETE",input_sha256:sha(Buffer.from(inputText)),error:String(error),steps,artifacts,
+    const failure={schema:SCHEMA,status:"INCOMPLETE",input_sha256:sha(Buffer.from(inputText)),error:String(error),helper_sha256:input.helper_sha256,transport:"scoped-read-only-loopback-http",helper_adoption:adoption,steps,artifacts,
       visual_review:"PENDING_ACTUAL_SCREENSHOT_AND_EXPORT_VIEWING"};
     await atomic(path.join(attemptDir,"failure.json"),JSON.stringify(failure,null,2)+"\n");
   }
   console.error(String(error));process.exitCode=2;
 } finally {
   if(browser)await browser.close().catch(()=>{});
+  if(loopback) {loopback.closeAllConnections();await new Promise(resolve=>loopback.close(()=>resolve()));}
   if(ownsLock) {
     try {const current=JSON.parse(await fs.readFile(lockPath,"utf8"));if(current.token===owner.token)await fs.unlink(lockPath);}
     catch(error){if(error.code!=="ENOENT")console.error("Original lock retained: "+error);}
