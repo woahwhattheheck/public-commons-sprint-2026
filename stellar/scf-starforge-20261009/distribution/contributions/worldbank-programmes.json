@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "worldbank-programmes",
+  "description": "Original World Bank programme agent, complete customer files and recurring Console handover",
+  "commands": {
+    "worldbank-programme-agent": "stellar-forge/mcp-merchant-operator/worldbank-programme-cli.mjs"
+  },
+  "commandDescriptions": {
+    "worldbank-programme-agent": "Operate the original reviewed World Bank programme and receive every retained customer file"
+  },
+  "exports": {
+    "./merchant/worldbank-programmes/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/worldbank-programme-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/worldbank-programme-client.mjs"
+    },
+    "./merchant/worldbank-programmes/recipes": "./source/stellar-forge/mcp-merchant-operator/console/worldbank-programme-recipes.mjs",
+    "./merchant/worldbank-programmes/provider": "./source/stellar-forge/mcp-merchant-operator/providers/worldbank-programmes.mjs"
+  },
+  "merchantProviders": {
+    "worldbank-programmes": "stellar-forge/mcp-merchant-operator/providers/worldbank-programmes.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/WORLDBANK_PROGRAMMES.md",
+    "stellar-forge/mcp-merchant-operator/examples/worldbank-programme-connection.json",
+    "stellar-forge/mcp-merchant-operator/worldbank-programme-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/worldbank-programme-agent.mjs",
+    "stellar-forge/mcp-merchant-operator/worldbank-programme-connection.mjs"
+  ]
+}
