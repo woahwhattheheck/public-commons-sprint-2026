@@ -467,3 +467,41 @@ In **Communities**, choose the retained table, utility and watershed, search and
 Use **Guided journey → Save project view** to keep that Community context with the operating notes. **Open saved project view** restores it and keeps the previous browser view available to reopen. **Open Community view** returns to the selected Community tab.
 
 A complete workspace backup carries the saved view into its restored copy and delivered application. The original Community receiving workflow saves the selected table, filters, compared GEOIDs, plan, report and notes, then reopens them through that same backup and restore path.
+
+## Actual operator reference (WO43)
+
+Choose **Operator reference** in the Guided journey header. The reference is part
+of this same original controller and presents screen purposes, source selection,
+calculation/recovery, actual units and signed differences, map choices and complete
+project receiving. Its opening controls use only navigation present in the
+installed operator. It reads the selected workspace without changing records or
+scientific settings. The open reference remains open during ordinary state
+refreshes in that same workspace.
+
+**Download complete reference** saves one self-contained readable HTML with the
+selected project's current source/run counts. The file also opens offline; its
+worked examples remain explicitly separate from the selected project. The
+equivalent static files are operator/OPERATOR_REFERENCE.html and
+operator/OPERATOR_REFERENCE.md. They are generated from the same complete
+operator/web/operator_reference.mjs body, including its scientific distinctions.
+Detailed methods remain in their original component guides.
+
+Source basis: completed terrain operation1791913117.693809 (original simulated
+project1b6a344c-df5a-4986-a5e4-47a2d158324b, case658a363d919dcd72d7fd666b588a1862c472d10cbf37e86e62358d3804371a45,
+responsef9985d3897c6c806abd7de9279ce4e66ad4748db61d51123dde60ac9d7fc6445),
+completed monitoring operation1791913703.962269 (original208-row edition9c6c7977,
+source2e3b1856 in projectb9d5d257), and the source-authored temporal receiving
+course merged4669/9db25e318ff3e58a8744c6381b60b37f046df38b. Native timing and
+result semantics use the complete original console source merged4682/2561b803.
+The reference labels the temporal teaching course separately from actual
+completed native outputs.
+
+The existing first-source receiving owner should operate this addition during
+the same complete original journey: open the reference on a populated workspace,
+use a visible screen-opening button and return, keep it open over a normal state
+refresh, download its complete HTML, cold-open it at1440 and390 pixels, follow
+its contents links and inspect every table and paragraph. The producer must
+actually LOOK at both the rendered application and downloaded attachment and
+repair clipping, unreadable text or wrong scientific wording. This consumes
+CURRENT_OWNER_DIRECTION.md v2026-10-13.4, AGENTS.md2026-10-13.1 and the current
+post-call52-order bankF0C8R2SQ0NP. It adds no scientific run or external send.

@@ -63,3 +63,12 @@ An existing draft without a prior contact journal has a different source history
 The full original module checks exercise exact source preparation, cold snapshot reopening, input/lease mismatch refusal and frozen request identity with zero provider/live state calls. The actual complete 1,039-event revised session was additionally prepared and cold reopened in explicit in-memory inspection storage with its original journal hash unchanged.
 
 These are source/module checks. They do not establish native SQLite execution, an accepted shared host, operational source receiving or a sent contact. Those outcomes require the original operator's actual receipts.
+
+
+## Receive an externally completed exact text contact
+
+Use the original `receiveSent(messageId)` when a contact was completed through the connected mailbox before this original journal invoked a send. It receives the same selected mailbox, original input, state key and lease. It retains the native message and records the original completion; it never invokes Gmail sending or rewrites earlier journal events.
+
+For an ordinary reviewed text contact without a fixed native envelope or attachments, the completed message may contain either the original renderer's exact single-part HTML or the exact reviewed single-part plain text. Plain text is compared byte-for-byte as returned in the complete native body: whitespace, line endings, Unicode, links and signatures are not normalized or inferred. Additional MIME parts, attachments, a changed subject or sender, extra recipients, duplicate envelope headers and DRAFT messages refuse. The receipt records the actual plain-text MIME type and body SHA256; it does not label plain text with an HTML hash.
+
+Native-envelope input, saved drafts, attachment deliveries, delivery corrections and retained original send invocations keep their existing exact receiving contracts. Continue their matching reconciliation methods. A failed receiving attempt retains its original message selection; resume that same receiving method after the source update. An actual completed message must never be sent again because its earlier receiver could not read its format.

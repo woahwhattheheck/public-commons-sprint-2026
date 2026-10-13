@@ -88,27 +88,29 @@ def _map_preview(directory, item, maximum, grid):
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 ' + str(plot_h + 180) + '" role="img">',
         "<title>" + e(title) + "</title><desc>Control minus restoration; group-common finite support. "
         "A nearest-neighbour display sample may omit small features; full original GeoTIFF retained.</desc>",
+        '<defs><pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="white"/><path d="M0 6L6 0" stroke="#b8b8b8" stroke-width=".7"/></pattern></defs>',
         '<rect width="720" height="' + str(plot_h + 180) + '" fill="white"/>',
         '<text x="40" y="25" font-family="sans-serif" font-size="17" fill="#17212b">' + e(title) + "</text>",
         '<text x="40" y="49" font-family="sans-serif" font-size="12">Control minus restoration · ' + e(item["units"]) + "</text>",
-        '<rect x="40" y="64" width="640" height="' + str(plot_h) + '" fill="#e5e7eb"/>']
+        '<rect x="40" y="64" width="640" height="' + str(plot_h) + '" fill="url(#nodata)"/>']
     limit = maximum if maximum > 0 else 1.0
     for y in range(height):
         for x in range(width):
             if not valid[y, x]:
                 continue
             fraction = min(1.0, abs(float(raw[y, x])) / limit)
-            low, high = ((178, 35, 35), (255, 255, 255)) if raw[y, x] < 0 else ((20, 100, 140), (255, 255, 255))
-            colour = "#" + "".join(format(round(high[i] + fraction * (low[i] - high[i])), "02x") for i in range(3))
+            end = 40 if raw[y, x] < 0 else 235
+            level = round(142 + fraction * (end - 142))
+            colour = "#" + format(level, "02x") * 3
             parts.append('<rect x="' + format(40 + x * cell_w, ".3f") + '" y="' + format(64 + y * cell_h, ".3f") +
                          '" width="' + format(cell_w + .02, ".3f") + '" height="' + format(cell_h + .02, ".3f") +
                          '" fill="' + colour + '"/>')
     y = plot_h + 89
-    for x, colour, label in [(40, "#b22323", "Negative: restoration exports more"),
-                             (330, "#14648c", "Positive: restoration exports less")]:
+    for x, colour, label in [(40, "#282828", "Negative: restoration exports more"),
+                             (330, "#ebebeb", "Positive: restoration exports less")]:
         parts += ['<rect x="' + str(x) + '" y="' + str(y-11) + '" width="12" height="12" fill="' + colour + '"/>',
             '<text x="' + str(x+18) + '" y="' + str(y) + '" font-family="sans-serif" font-size="11">' + label + "</text>"]
-    parts += ['<text x="40" y="' + str(y+22) + '" font-family="sans-serif" font-size="11">Shared legend ±' + e(_show(maximum)) + '; gray = NoData. Grid north is up.</text>',
+    parts += ['<text x="40" y="' + str(y+22) + '" font-family="sans-serif" font-size="11">Shared legend ±' + e(_show(maximum)) + '; zero = middle gray; hatching = NoData.</text>',
         '<text x="40" y="' + str(y+43) + '" font-family="sans-serif" font-size="11">Display sample only; original grid, bounds, CRS and full pixels are retained.</text>',
         '<text x="40" y="' + str(y+65) + '" font-family="sans-serif" font-size="10">TokenJunkieLabs · Original source/model quantities; scientist interpretation retained.</text></svg>']
     atomic_bytes(directory / (name + ".svg"), "".join(parts).encode("utf-8"), immutable=True)
@@ -282,7 +284,8 @@ def write(directory, assessment, notes):
         blocks.append(["Placement " + str(item["design_index"]) + " · " + item["pollutant"].replace("_", " ") + " map", [
             "The original Float64 GeoTIFF retains every signed control-minus-restoration pixel on group-common support. "
             "The directly viewable SVG uses nearest-neighbour display sampling on a common quantity legend; small features can be omitted from that preview. "
-            "NoData stays gray, positive blue means lower export under restoration, and negative red means higher export. Read full pixels in the original GIS map.",
+            "Hatching marks NoData. Dark negative values mean higher export under restoration; "
+            "light positive values mean lower export. Middle gray is zero. Read full pixels in the original GIS map.",
             {"kind": "links", "items": [
                 {"title": "Open readable map preview", "path": item["preview"]["path"]},
                 {"title": "Open original full-resolution GeoTIFF", "path": item["path"]},

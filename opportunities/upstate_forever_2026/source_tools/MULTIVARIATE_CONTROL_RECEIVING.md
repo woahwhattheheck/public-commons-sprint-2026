@@ -90,6 +90,69 @@ Existing queue tasks for the same action/design/workspace are followed instead o
 
 After the actual browser-created design is known, use the original native chapter with --matched-control-id against that same retained Workspace to export and cold-reopen it. The browser completion supplies that exact ID. This is the same original scientific workflow, not another new runner.
 
+## Completed native outcomes and exact Study receiving
+
+The same native receiver can retain the completed baseline/restoration/control outcome group after the original controls have been adopted and their native runs have completed. It does not rerun a model to produce this report. Use the actual retained catalogue:
+
+```bash
+"$GIS_PYTHON" -B -m model.multivariate_control_outcomes_cli \
+  --workspace "$WORKSPACE" catalog
+```
+
+Author a selection with schema `upstate.multivariate-control-outcome-selection/v1`, a title and scientific reason, ordered `design_ids`, an explicit nonempty subset of `nitrogen_export`, `phosphorus_export` and `sediment_export`, and `quantity_scope` of `reporting` or `model_domain`. Every selected accepted/adopted design must retain the same original baseline, restoration, grid, profile and model scope; each control must actually be complete. Include the exact saved design used by this receiving chapter. Keep authored ordering and original bytes. No receiver chooses placements, pollutants or quantity support on the scientist's behalf.
+
+```bash
+"$GIS_PYTHON" -B source_tools/receive_geographic_headwaters.py \
+  --workspace "$WORKSPACE" \
+  --matched-control-id "$ACTUAL_COMPLETED_DESIGN_ID" \
+  --matched-control-outcome-selection "$AUTHORED_OUTCOME_SELECTION_JSON" \
+  --output "$EXTERNAL_OUTCOME_RECEIVING"
+```
+
+Use a new external output directory for this new selection; an earlier sealed design-only Study remains unchanged. Resume this same command and directory after interruption. The native receiver keeps the outcome input SHA in its operation identity, compares the original preview with the saved outcome, and verifies that reporting did not change or add a completed native model record. Its original `outcome` status field remains the design status; `outcome_report` retains the entire native outcome record.
+
+The exported Study contains both `multivariate-controls` and `multivariate-control-outcomes` roots. Their original typed closure retains every selected design, adopted experiment/control, exact native source/output support, original outcome maps, report, figures, CSV/JSON and imported report source. The contained application reopens and compares the entire outcome after cold restore. The direct browser admission also pins the original outcome.json and its Study root. A missing native output or unavailable dependency is a real error to repair in this same source/application course.
+
+Interpret the two available support modes separately: the all-control common mask compares all selected placements on the same cells; each-design support retains the original B/R/C triple for that design. Keep pollutant-specific denominators and units, scope, signed changes, changed area, duplicate placement and overlap evidence. A matching design does not establish a causal effect. Outcome preparation uses retained original native quantities and performs no native model execution.
+
+## Open a received matched-control Study without a Geographic handover
+
+A555's original teaching Study and another ordinary completed native Workspace need not contain a Geographic preparation or a Geographic handover receipt. Do not invent those records. The maintained browser runner now also accepts the exact completed native matched-control receiving receipt generated above. Its admission is deliberately read-only: `multivariate_control.action` must be `inspect` and its design ID must match that receipt.
+
+Obtain the SHA256 of the exact final `receiving.json` after the native chapter finishes. Use the actual received sibling `application` and `workspace` in `receiving.json.restored`, open that Workspace through the existing authorized operator, and retain its real private connection file. Then create the complete original browser input:
+
+```json
+{
+  "schema": "upstate.geographic-browser-input/v1",
+  "operation_id": "ACTUAL_OWNED_MATCHED_STUDY_BROWSER_OPERATION",
+  "matched_control_receiving": {
+    "path": "/actual/external/outcome-receiving/receiving.json",
+    "sha256": "ACTUAL_FULL_SHA256_OF_THAT_RECEIPT"
+  },
+  "multivariate_control": {
+    "action": "inspect",
+    "design_id": "ACTUAL_SAVED_DESIGN_ID"
+  },
+  "connection_file": "/actual/private/original-operator-connection.json",
+  "output_directory": "/actual/external/browser-receiving",
+  "playwright_module": "/actual/installed/playwright/index.mjs",
+  "executable": "/actual/installed/chromium"
+}
+```
+
+Replace every placeholder with an actual value. The receiver derives the restored root from its verified native receipt. Do not supply Geographic `state_file`, `archive_sha256`, `handover_id`, `completion_scope`, `programme_action` or `delivery_preparation` in this direct Study mode; those identify the separate unchanged original Geographic course. Its source and R103D delivery-preparation workflow remain present in the same runner.
+
+```bash
+"$NODE" source_tools/receive_geographic_handover_browser.mjs \
+  "/actual/absolute/matched-control-browser-input.json"
+```
+
+The admission checks the raw receiving receipt SHA, exact native cold-reopen result, original project, selected Study receipt, design/adoption, optional outcome and all selected run.json descriptors. It opens the exact original B/R/control records and rejects another Workspace, replaced receipt or changed source member. When an outcome was included in that native receipt, the browser automatically inspects that exact saved outcome, then exercises every region and both support modes, complete downloads, editable-choice export/import and reload. The browser also opens HTML, SVG and image report members from their actual original locations so relative assets remain usable. PDF, GeoTIFF, tables and archives must still be opened and personally viewed by the producing peer using their appropriate original viewers.
+
+For the unchanged Geographic browser course, an additional explicit `multivariate_control_outcomes` property may select either `{"action":"inspect","outcome_id":"ACTUAL_ID"}` or `{"action":"prepare","selection_file":"/actual/authored-outcome.json"}`. The latter fills ordinary visible controls, compares the UI's preview with the original normalized native preview, and uses only `control.outcomes.prepare` through the existing queue. It follows an existing matching task rather than duplicating it. The direct received-Study mode instead opens only the outcome already verified in that Study.
+
+All native, outcome and browser additions keep the original operation lock, exact task identities, caller-selected cutoff and interruption behavior. No controller is started by this chapter; no new native run is authorized by reading an outcome. The feature source packet is an overlay onto the current complete original application, not a replacement for a donor's entire application.
+
 ## Producing peer: operate, LOOK and repair
 
 Before calling the client-facing application or export ready, the producing peer must open/run/render the exact outgoing version, look at the real screen or screenshots and operate the main controls. Cover the populated desktop and narrow/mobile layouts, the real empty/loading/error states, task/progress/error recovery, downloads, editable reopen and independent received application. Fix unstyled, cramped, clipped, overflowing or unreadable output directly.

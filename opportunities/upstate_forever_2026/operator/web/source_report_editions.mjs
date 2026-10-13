@@ -1,3 +1,4 @@
+import {attachScientificSynthesis} from './scientific_synthesis.mjs';
 import {attachScientificSourceReader} from './scientific_source_reader.mjs';
 /** Prepare ordered scientific reports through the original retained task queue. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -28,6 +29,7 @@ export function attachScientificReportEditions(host) {
   let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;
   const briefingFrames=new Map(),reportFrames=new Map();
   let sourceIntent=0,catalogGeneration=0,catalogRead=null;
+  const synthesis=attachScientificSynthesis({...host,getReportSources:()=>selected.map(choice),compose:value=>openForSources(value)});
   const sourceReader=attachScientificSourceReader({...host,compose:value=>openForSources(value),
     returnToSelection:()=>panel?.querySelector('[data-scientific-report-main]')?.scrollIntoView({block:'start'})});
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
@@ -79,6 +81,7 @@ export function attachScientificReportEditions(host) {
     if(panel.parentNode!==container)container.append(panel);
     panel.hidden=false;
     sourceReader.mount(panel);
+    synthesis.mount(panel);
   }
   function sourceActions(row,reportId=''){
     const native=row.native_study,available=typeof host.openGISStudy==='function'&&host.hasView?.('gis-projects');
@@ -124,7 +127,7 @@ export function attachScientificReportEditions(host) {
           '<button type="button" data-scientific-report-action="remove" data-index="'+index+'"'+(locked?' disabled':'')+'>Remove</button></div></li>';
       }).join('')+'</ol>':'<p class="note">Saved calibration reviews, Scientific interpretation, native process studies and observed-water reports appear here after their report source is prepared.</p>')+
       '<div class="inline-actions"><button type="button" data-scientific-report-action="preview"'+(!chosen.length||selectionIssue||locked?' disabled':'')+'>Preview selected sources</button>'+
-      '<button type="button" data-scientific-report-action="render"'+(!preview||locked?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare PDF, HTML and data')+'</button></div>'+
+      '<button type="button" data-scientific-report-action="render"'+(!preview||locked?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare complete report files')+'</button></div>'+
       '<div data-scientific-report-preview>'+previewHTML()+'</div>'+
       '<h3>Saved scientific reports</h3>'+
       (editions.length?'<div class="table-scroll"><table><thead><tr><th>Report</th><th>Contents</th><th></th></tr></thead><tbody>'+
@@ -219,6 +222,16 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});
     return result;
   }
+  function editableFilesHTML(){
+    const formats=[['report_odt','Editable report (ODT)'],['report_workbook','Editable tables (XLSX)']];
+    const files=formats.map(([role,label])=>{
+      const item=opened.files.find(value=>value.role===role);
+      return item?link(item.url,label):'';
+    }).filter(Boolean);
+    return files.length?'<section class="scientific-report-preview"><h4>Edit this report</h4>'+
+      '<div class="inline-actions">'+files.join('')+'</div>'+
+      '<p>Open these files in your word processor or spreadsheet application. Save an edited copy beside the complete report ZIP. Each file retains its original report data; scientific changes continue through the original study and report workflows.</p></section>':'';
+  }
   function renderDetail(){
     const target=panel.querySelector('[data-scientific-report-detail]'),row=opened.edition;
     target.innerHTML='<div class="source-reports-heading"><div><h3>'+esc(row.title)+'</h3><p>'+
@@ -231,7 +244,7 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
-      reportSourcesHTML()+briefingHTML();
+      editableFilesHTML()+reportSourcesHTML()+briefingHTML();
     panel.querySelector('[data-scientific-report-files]').innerHTML='<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
@@ -485,10 +498,10 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
     return {workspace_key:ws,sources:selected.map(choice)};
   }
-  function detach(){active=false;sourceIntent++;catalogGeneration++;catalogRead=null;detailGeneration++;captureGeneration++;sourceReader.detach();if(panel)panel.hidden=true;}
+  function detach(){active=false;sourceIntent++;catalogGeneration++;catalogRead=null;detailGeneration++;captureGeneration++;sourceReader.detach();synthesis.detach();if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
-    briefingFrames.clear();reportFrames.clear();sourceReader.reset();sourceIntent++;catalogGeneration++;catalogRead=null;
+    briefingFrames.clear();reportFrames.clear();sourceReader.reset();synthesis.reset();sourceIntent++;catalogGeneration++;catalogRead=null;
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
     capturedReports=[];captureIssues=[];capturePreview=null;captureGeneration++;
     contact={name:'',organization:'',email:''};

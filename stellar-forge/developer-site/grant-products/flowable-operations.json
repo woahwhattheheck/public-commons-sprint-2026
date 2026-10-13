@@ -426,6 +426,499 @@
           "sha256": "905c3ea575f61bc984e91fb22ed310357b8226e4bcf8703ce83a61922d25df5b"
         }
       ]
+    },
+    {
+      "id": "flowable-authoring-operating",
+      "label": "Complete editable source authoring and saved native programme intake",
+      "path": "products/flowable-merchant/AUTHORING.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "2890393e932fdb415f9d090eca641ed87b84a1e5",
+          "bytes": 8678,
+          "sha256": "1d7b7625c592f24038d59de179f59a7b400e6145d0a142185429a27194ebd5bf"
+        }
+      ]
+    },
+    {
+      "id": "flowable-authoring-source",
+      "label": "Full programme draft, original source and compiler composition",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "e711f8f0171a90d66b114c8a3ec57e5ba54625a9",
+          "bytes": 10113,
+          "sha256": "dde7922d2d18ebb96fc21554f8750ae8bb32729ca8fe04966c1ac87e31136c52"
+        }
+      ]
+    },
+    {
+      "id": "flowable-authoring-browser",
+      "label": "Complete original source editor and draft recovery",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-browser.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "c9783671ba8df1ddc23237b03147e134aca6a4b8",
+          "bytes": 20869,
+          "sha256": "7fb8239d56f4f57827df76472ddfaea77a340df0323d093ae94ab7e25908446d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-decision-programme-operating",
+      "label": "Decision cohort commissioning and exact native source review",
+      "path": "products/flowable-merchant/DECISION_PROGRAMMES.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "07e6fc571adf0f144f523544e120fda3964016b7",
+          "bytes": 8273,
+          "sha256": "9f7c509871eaa95bb08601b8404dae4bf27e9cf08ce0ff77a081e077dc7a7bfa"
+        }
+      ]
+    },
+    {
+      "id": "flowable-decision-programme-compiler",
+      "label": "Complete decision programme compiler",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "40de424a92cf40dc842fdf53307e49ee4fc6f4e5",
+          "bytes": 9529,
+          "sha256": "ff9d59c5488a7661653250cbcd6985c552839661bd67bee7427a51d9c7acab2f"
+        }
+      ]
+    },
+    {
+      "id": "flowable-decision-programme-reference",
+      "label": "Complete fourteen-step seven-source decision reference",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.programme.json",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "52b54f7faefd1b4cd83edcb5347246575ca39f5c",
+          "bytes": 46276,
+          "sha256": "d86aa552385156ed1dd0fd3df8cf3376163568934e9b0c5402fcefa36b49bc4d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-event-intake-operating",
+      "label": "CloudEvent source to original adaptive-case intake",
+      "path": "products/flowable-merchant/EVENT_INTAKE.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "6e703adec5645966124692198a4b5c490e1ec465",
+          "bytes": 10266,
+          "sha256": "24649dd7f07419cda9a74592dd07c6e0d80799c566c19aefa4fca2dfc45a7e07"
+        }
+      ]
+    },
+    {
+      "id": "flowable-event-intake-source",
+      "label": "Original event identity and reviewed case request",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-case.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "fa1469018615419c8a3888ef366e8e3b5f96135b",
+          "bytes": 13347,
+          "sha256": "54d29524838705c64ce69249eaa5e43f2a2c850e0010d7bd616a3f3013663a07"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-intake-operating",
+      "label": "Historical document selection and reviewed process intake",
+      "path": "products/flowable-merchant/DOCUMENT_INTAKE.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "65ac736554a2fe7c7910cdee721263f6ec78bf00",
+          "bytes": 13639,
+          "sha256": "5d130941d35381c29bad5f9c8e71f6e245ca6b225a5a540fa60b1f5339a4c912"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-version-source",
+      "label": "Original Alfresco selected-version capture and validation",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "d2a6ad45882c3f34bc719a4746ac3a91706df1a2",
+          "bytes": 12919,
+          "sha256": "694ead1684c26be5865c6f25ce25af0bdccc5414c4ebc9d541b9483120c2fbae"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-intake-source",
+      "label": "Complete original document-to-process programme",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-process.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "ecc13380ef4cb71e61ddc869bb988bb13d324872",
+          "bytes": 10633,
+          "sha256": "ef7b2e65b4eb3a10f9283ea93aca8b5dd92c3a3d32c9942ff3cf8c4b0743fce5"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-comparison-operating",
+      "label": "Selected historical document comparison and complete receiving",
+      "path": "products/flowable-merchant/DOCUMENT_COMPARISON.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "86a54a3d49359b34743d5fe5ed20be598d3c746b",
+          "bytes": 14007,
+          "sha256": "c89c7e35778a13579782f0e1e51a4ba93e77e0075180c673f2eaedf1b1d2f19a"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-comparison-source",
+      "label": "Exact source/target version comparison and independent receiving",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "7ff2f117c792fc4ef8080e396057dacd52fbdf84",
+          "bytes": 15177,
+          "sha256": "d9a9efc08c2ca05fdfef2495fe4a99be074dfd8d8450ea78bb814c88b7f25477"
+        }
+      ]
+    },
+    {
+      "id": "flowable-document-comparison-capture",
+      "label": "Original selected-pair capture with complete source custody",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-document-comparison.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "91d0c2aa47a37392e16c04ab43bf8e356e87a3d0",
+          "bytes": 6887,
+          "sha256": "c87fc2f18d4746c0ca820ebf71b8d9ca89e00915551f383d06d5f7740d9b5466"
+        }
+      ]
+    },
+    {
+      "id": "flowable-history-operating",
+      "label": "Saved native history cohort analysis and complete handover",
+      "path": "products/flowable-merchant/HISTORY_ANALYSIS.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "5cbd4b82ed743b594d943bc2c3f9aed6a203ecf2",
+          "bytes": 13037,
+          "sha256": "6d2c3379b52b8cac1044cee0c276869db1f67a3f12a5a25c3cfdcec934c9f0b1"
+        }
+      ]
+    },
+    {
+      "id": "flowable-history-analysis-source",
+      "label": "Original process and activity populations and source-quality analysis",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-analysis.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "4115015728441c8b5d5bfdc4329c81d7e2dafba4",
+          "bytes": 17294,
+          "sha256": "c3a314d025c1a6cb9f1a4e5044f185f93452fa9e07d61cf4bbc3882807cf5986"
+        }
+      ]
+    },
+    {
+      "id": "flowable-history-xes-operating",
+      "label": "Source-preserving XES observation export and receiving",
+      "path": "products/flowable-merchant/HISTORY_XES.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "e6c302311c99da69e54c7f9eb33926294e3d7f17",
+          "bytes": 13774,
+          "sha256": "843207c75fab9f28d00bb2ae263b40a133435a43e795d5df84664b76fa368262"
+        }
+      ]
+    },
+    {
+      "id": "flowable-history-xes-source",
+      "label": "Complete observed-event XES and every-row source mapping",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "0e156b37329cdcc6cc9214a49f2a784475cbdc29",
+          "bytes": 9301,
+          "sha256": "4668cb3f8f278c862b0c881d1cacf4874a9c9a4e6b94b3f4f39c92aa11151f95"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-installation-operating",
+      "label": "Whole Flowable programme to original commercial Installation",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "846318777b8e498053c9a620c2b4ecff04e7e0db",
+          "bytes": 17391,
+          "sha256": "181a2d4f0a2d57828a5d90214030142ed56dc4c5037623f762a1ed1c1f7a6950"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-installation-core",
+      "label": "Programme/source/commercial bindings through original Installation preparation",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-core.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "e1f6bccf5b9792719cd349018e8ae409e84aeb05",
+          "bytes": 8580,
+          "sha256": "9d05e937cb9e2b8ca4f332d2223f410c2f7f393a256986dbf2cbf4662d1e21a7"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-installation-source",
+      "label": "Complete workspace archive and selected programme catalogue",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-source.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "bd8f85566c7209994b337cc3a1d15e8f2dc2cade",
+          "bytes": 10972,
+          "sha256": "ccba7f508356226abaa0adc13df9e507ad0ff0d512f95de2a575185772cfcfac"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-installation-preparation",
+      "label": "Original full-source customer preparation and exact reopening",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "5b8e7db157a49397fd883983e8cfd6fb4c93db5d",
+          "bytes": 20624,
+          "sha256": "fe4b0016a0861c24a37bb038b704ecc4d361252cd52dd95254a3894759b6c69c"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-installation-receiving",
+      "label": "Whole original case and Flowable sidecar independent receiving",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "6abbaeb03f235ea1558c53548c0a926084e1751d",
+          "bytes": 29737,
+          "sha256": "f15b879c11d456d8bce95be66c14d675c982a0c85764a28db23a5fa30db6233d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-desk-operating",
+      "label": "Complete authenticated Source Desk operator course",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/FLOWABLE_SOURCE_DESK.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "0d9f889f62b2632f62af0ca3c152b73a80410858",
+          "bytes": 18366,
+          "sha256": "b13627d1b8fad85b22aa6d209976c8b212d1202ce64e6f2d4a397d35f86a6549"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-desk-service",
+      "label": "Whole source import, selection, preparation and saved request service",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "64753a5b3d41651312a3c4711048c281d1a67670",
+          "bytes": 22924,
+          "sha256": "061631664b30a72d96b4577a294666e0731da3041a7c82f7b4df2defa3aada4b"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-desk-browser",
+      "label": "Complete Source Desk inputs, working copies and Installation handoff",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_sources.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "3113b8f3ae5858849c90d1f46b08ab971fd373b8",
+          "bytes": 41853,
+          "sha256": "ffe4bcbc6f6cdc6970f7c314363da5a58d440c9f438c26db52047fb25bde7629"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-desk-native",
+      "label": "Original authenticated case, source and archive interface",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_sources.py",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "890b6fec7add752c0ad35478bff947e16d0d50fe",
+          "bytes": 38749,
+          "sha256": "18fa2199cb3663fbd728f7f9011a2d80e3d9cd3c9c43d3afc202c441945358a0"
+        }
+      ]
+    },
+    {
+      "id": "flowable-current-installed-receiving",
+      "label": "Complete installed authoring and three-family programme receiving continuation",
+      "path": "products/flowable-merchant/native-installed-journey.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "1fe416849e99960dd268db23342df0131066af09",
+          "bytes": 117452,
+          "sha256": "b108d8c39c69be726e037737a9cd6a7aa55f6740d081faa8d385fd3df41cb0e1"
+        }
+      ]
+    },
+    {
+      "id": "flowable-current-distribution",
+      "label": "Complete maintained source, document, history and customer Installation distribution",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "editions": [
+        {
+          "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+          "git_blob": "3ce028f704f5f33f574b8bb250d39a367bdcb204",
+          "bytes": 15795,
+          "sha256": "d2d6fc07e764b7f9641e5d09329beea688a21460cefa844c60971ad7e3a36efc"
+        }
+      ]
     }
   ]
 }

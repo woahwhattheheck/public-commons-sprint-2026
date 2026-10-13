@@ -6,7 +6,7 @@ The chapter is `products/flowable-merchant/GRANT.md`. Its exact heading is:
 
 > ## Process, decision and adaptive-case commissioning with complete customer receiving
 
-The declaration is `stellar-forge/developer-site/grant-products/flowable-operations.json`. It preserves the eight original public source IDs and adds nine complete programme sources. The two client/installed-receiving selections advance to merged programme edition `888cb09c514ac2f21f76b8b4eb5950eb50003a24`, retaining their earlier measured editions. The other original operating sources stay on their accepted source selections. Each current declaration binds its complete actual bytes.
+The declaration is `stellar-forge/developer-site/grant-products/flowable-operations.json`. It preserves all 25 preceding public source selections and their measured edition histories, and adds 29 complete current source selections. These additions cover source authoring, decision programmes, event/document intake, selected document comparison, history/XES, customer Installation and the Source Desk. The new source selections use merged public revision `05d9276b93a1887ce1fd499572d6dfc8f45f7214`. Each declaration binds the complete actual file bytes; earlier source selections retain their original pins.
 
 ## Receive the customer operation
 
@@ -57,7 +57,7 @@ For managed operation, register the READY runtime in the existing Runtime worksp
 
 ## Commission the selected source and original identities
 
-The source programme's original host owns engine acquisition, configuration, native database, process lifecycle and saved receiving directory. Continue that same operation and directory after an interruption. An equipped receiver uses the complete 628-member fixed source programme and original launcher; a later source edition retains its own current source/build selection.
+The source programme's original host owns engine acquisition, configuration, native database, process lifecycle and saved receiving directory. Continue that same operation and directory after an interruption. An equipped receiver uses the current complete source programme and the original receiving operation. Retain the actual selected source/build manifest and launcher rather than substituting a historical packet's member count for the current release.
 
 The three native operating paths are:
 
@@ -105,6 +105,58 @@ Save the complete output through the existing programme interface on the actual 
 
 The existing installed programme receiving continuation operates the 29-step reference in the same retained source/native programme and transfers the complete resulting history. Treat a source compilation result as source evidence. The original engine and receiving operation must provide its actual completed runtime and customer acceptance record.
 
+## Author and compile the complete customer sources
+
+Open the existing source-authoring desk with the actual process, case or decision connection. Receive full original files or a selected folder, preserving its relative source paths and original typed JSON. Inspect the selected resource and its byte/hash identity. The complete loadable examples contain 29 process, 73 case and 14 decision steps; they are editable commissioning references.
+
+Keep unfinished changes in the original workspace-scoped draft. Reloading reopens that exact working edition. If another tab changes it, explicitly reopen or fork; do not overwrite a conflicting draft. Editing invalidates compiled preview. After changing XML or another model, use the explicit catalogue-identity update and inspect its preserved typed cases and route selection. Compile and inspect the complete programme before saving it into the original workspace. Saving source never dispatches its native steps.
+
+Follow `products/flowable-merchant/AUTHORING.md`, `PROGRAMMES.md` and `DECISION_PROGRAMMES.md` for the exact source schemas and compiler commands. The maintained process and decision commands are `flowable-process-programme` and `flowable-decision-programme`. Use the actual complete configuration from the selected source edition; receive all its relative inputs.
+
+For DMN, preserve the selected key, actual tenant and complete evaluation body. A standalone deployment's ID is not a parent deployment ID. The original native preparation must match the selected complete model source before dispatch. Keep the original deployment owner during that course: the source check and native evaluation are separate operations. A lost evaluation response remains unresolved under its original request until original readback provides adequate evidence.
+
+## Receive an event or historical document without replacing the original source
+
+The original event intake keeps the complete structured event, mapping and captured CMMN definition/XML. Its source/ID identity selects the saved programme; changed mapping or source for the same event is a conflict. Read `products/flowable-merchant/EVENT_INTAKE.md` and use its actual input schema with the original case dispatcher.
+
+For a document, follow `products/flowable-merchant/DOCUMENT_INTAKE.md`. Select the original Alfresco repository, node and historical version; keep its complete read-only capture, mapping, captured BPMN definition/XML and binary content. Review the complete programme and prepared source before the original process start. A confirmed native process ID comes from the retained result, not an invented match in history.
+
+The reader preserves the observed version pages and selected version metadata before and after content acquisition. It rejects partial/unsuccessful content and changed selected metadata. These are per-capture consistency observations, not an atomic repository snapshot. Permissions and paging limits remain visible. Never substitute current-node content for the selected historical version.
+
+For selected migration acceptance, open the maintained document-comparison desk described in `DOCUMENT_COMPARISON.md`. Select complete source and target captures and explicit typed field mappings. Physical identity is normalized repository URL plus node ID and version ID; an alias cannot make a document independent of itself. Each pair retains full source, content and field observations. A pair without a captured source or target remains NOT_OBSERVED and cannot be accepted as a match or exception. Missing required fields and typed discrepancies remain visible for explicit review; optional fields absent on both sides retain ABSENT_BOTH. An accepted observed discrepancy needs the explicit exception decision and its reason.
+
+Preserve unfinished mapping/review work, download the complete HTML, CSV and source bundle, and use the original independent receiving recalculation. This operation does not migrate or delete repository content, certify every repository object, or infer an atomic cohort capture. A recorded reviewer name is the supplied record identity.
+
+## Examine the original history and deliver its complete source
+
+Choose a complete captured portfolio, explicit process definition IDs, process-start interval and as-of time. Follow `HISTORY_ANALYSIS.md` for the original population rules and source-quality observations. Completed, cancelled, open and unknown processes remain separate. Native activity end observations carry completion-unknown classification; open ages and ended durations must not be presented as successful completed-process timing.
+
+The report, CSVs and original bundle retain native IDs and full rows. Source completeness depends on the original capture, permission scope and retention; report those limits. Independent receiving recalculates from the original bundle rather than trusting a copied summary. For XES, follow `HISTORY_XES.md`; select the task or activity view, retain the full event/source ledger, and keep observed start/end lifecycle semantics. Do not relabel an ended activity as successful completion or claim certification beyond the documented published profile.
+
+## Prepare the original customer Installation in Source Desk
+
+Use the existing customer case, Workshare and accountable operator. Open Installation Source Desk, select its Flowable course and import the whole original NDJSON workspace. The private sidecar service accepts the complete archive up to its 256 MiB limit; it is separate from the ordinary case's attachment budget. The programme catalogue supplies actual record IDs, revisions, source hashes and operating bases. Inspect the selected programme, native outcomes, complete models and reviews before using it for the customer's commercial installation.
+
+Receive the original case seed, full commissioning source and bindings. Seed and bindings are each limited to 2 MiB by the maintained preparer; preserve their complete original JSON and exact numeric text. The customer seed and expected version must match the existing case. Use the template's original profile and commercial source to edit the complete bindings. Preserve unfinished edits and inspect retained originals before selecting a new preparation.
+
+Preparation calls the maintained `flowable-installation` implementation. It freezes the selected archive, source report, models, records, reviews, seed, bindings, commissioning input, workorder and commercial outputs. New Installation checks remain planned or open. Use **Preview in the original case**, then **Open reviewed Installation draft**, and deliberately Save through the existing Installation writer. Preparation does not automatically save or accept the Installation and does not dispatch a Flowable engine request.
+
+Read `stellar/scf_2026/sf47_budget_model/workspace/FLOWABLE_SOURCE_DESK.md` for current control labels, authenticated routes, request recovery and download behaviour. The whole preparation ZIP streams through the existing signed-in session; the descriptor supplies its complete bytes, SHA-256 and file inventory. The browser does not expose the producer's private preparation path. The receiver chooses the actual directory where that ZIP was fully extracted.
+
+| Actual result | Continue the existing operation |
+| --- | --- |
+| Complete preparation | Reopen the original saved result and its verified files |
+| Lost response or pending request | Read the saved UUID, then retry the exact original request if needed |
+| Not recorded | Keep the same UUID and complete frozen input for the original retry |
+| Explicit source/input rejection | Keep that rejection, then explicitly edit inputs for a new preparation |
+| Case advanced since preparation | Keep its historical source; obtain current native preview before Save |
+| Interrupted native Installation save | Continue its original writer request, without replacing it with a new source preparation |
+| Working-copy conflict | Download both complete copies and explicitly reopen or fork |
+
+Keep the complete Flowable NDJSON and source report as mandatory sidecars. The compact case descriptor binds their actual hashes and source selection; it does not contain the entire workspace. Follow `stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md` and its original `flowable-installation-receive` command for full receiving. Transfer the original case ZIP, complete preparation directory and all sidecars. Use the exact preparation hash, original request IDs, actual actor and distinct receiving directories.
+
+The existing receiving course saves/exports/imports through original SF47Operations, independently restores the unchanged Flowable archive, refuses the original producing workspace UUID as the receiver, compares all selected immutable records/source and cold reopens both applications. Later legitimate work may advance a receiving programme; historical source comparison must not require its current basis to stay frozen forever. Keep the source/preparation and actual receiving receipts together in the original customer workshare. Private commercial/customer material remains outside this public grant.
+
 ## Deliver all source and the complete workspace
 
 The original source receiver creates the full source ZIP/manifest, selected installed release and builder receipt. Its native continuation returns the final installed workspace export after subsequent SDK/CLI/MCP/browser work. Select those actual final identities when delivering the complete operating product.
@@ -139,7 +191,7 @@ A customer can receive the editable source before its full native commissioning 
 
 ## Receive the chapter in the original manuscript
 
-If an earlier manuscript contains the overview paragraph titled **Process and decision workflows with portable operating history**, update that original paragraph to the complete process, decision, adaptive-case and saved-programme product. The current source provides 51 merchant tools and 45 shared workspace actions. If its later **Process, decision and adaptive-case workflows with portable operating history** overview is already present, update only its programme capability, source and interface inventory. Preserve any later concurrent wording; do not invent an overview paragraph in a reviewer edition that has none.
+If an earlier manuscript contains the overview paragraph titled **Process and decision workflows with portable operating history**, update that original paragraph to the complete process, decision, adaptive-case and saved-programme product. The original workspace contract provides 51 merchant tools and 45 shared workspace actions. The source-authoring, document/history and customer Installation courses use the additional maintained application interfaces; do not count them as new native engine dispatchers. If its later **Process, decision and adaptive-case workflows with portable operating history** overview is already present, update only its programme capability, source and interface inventory. Preserve any later concurrent wording; do not invent an overview paragraph in a reviewer edition that has none.
 
 Receive the whole new H2 from `products/flowable-merchant/GRANT.md` once within the original **Current demonstration and operator journey** section. Preserve the surrounding H1/H2 order and every unrelated section. When the chapter is already present, replace only that original chapter with the accepted current full edition. The product declaration's exact heading must continue to match.
 
@@ -147,36 +199,43 @@ Keep the canonical USD 38,000 request, 400 prospective hours, 150 days, six pack
 
 ## Receive the independent source declaration
 
-The eight original public source selections remain:
+The complete declaration now contains 54 selected source IDs: all 25 preceding IDs and measured histories remain unchanged, with 29 current additions. Each new addition is optional for an earlier chapter that does not mention it. The updated full chapter contains every one of the 54 immutable source links. This lets the original composer receive the current whole product while an earlier authored edition continues to select only its accepted source.
+
+The current additions are:
 
 | Stable source ID | Complete original file |
 | --- | --- |
-| flowable-process-operating | products/flowable-merchant/OPERATING.md |
-| flowable-decision-operating | products/flowable-merchant/DECISIONS.md |
-| flowable-case-operating | products/flowable-merchant/CASES.md |
-| flowable-customer-receiving | products/flowable-merchant/RECEIVING.md |
-| flowable-selected-installation | stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md |
-| flowable-native-commissioning | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/NATIVE_RECEIVING.md |
-| flowable-typed-client | products/flowable-merchant/client.d.mts |
-| flowable-installed-receiving | products/flowable-merchant/native-installed-journey.mjs |
+| `flowable-authoring-operating` | `products/flowable-merchant/AUTHORING.md` |
+| `flowable-authoring-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring.mjs` |
+| `flowable-authoring-browser` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-browser.mjs` |
+| `flowable-decision-programme-operating` | `products/flowable-merchant/DECISION_PROGRAMMES.md` |
+| `flowable-decision-programme-compiler` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme.mjs` |
+| `flowable-decision-programme-reference` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.programme.json` |
+| `flowable-event-intake-operating` | `products/flowable-merchant/EVENT_INTAKE.md` |
+| `flowable-event-intake-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-case.mjs` |
+| `flowable-document-intake-operating` | `products/flowable-merchant/DOCUMENT_INTAKE.md` |
+| `flowable-document-version-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs` |
+| `flowable-document-intake-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-process.mjs` |
+| `flowable-document-comparison-operating` | `products/flowable-merchant/DOCUMENT_COMPARISON.md` |
+| `flowable-document-comparison-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison.mjs` |
+| `flowable-document-comparison-capture` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-document-comparison.mjs` |
+| `flowable-history-operating` | `products/flowable-merchant/HISTORY_ANALYSIS.md` |
+| `flowable-history-analysis-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-analysis.mjs` |
+| `flowable-history-xes-operating` | `products/flowable-merchant/HISTORY_XES.md` |
+| `flowable-history-xes-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes.mjs` |
+| `flowable-customer-installation-operating` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md` |
+| `flowable-customer-installation-core` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-core.mjs` |
+| `flowable-customer-installation-source` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-source.mjs` |
+| `flowable-customer-installation-preparation` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs` |
+| `flowable-customer-installation-receiving` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs` |
+| `flowable-source-desk-operating` | `stellar/scf_2026/sf47_budget_model/workspace/FLOWABLE_SOURCE_DESK.md` |
+| `flowable-source-desk-service` | `stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service.mjs` |
+| `flowable-source-desk-browser` | `stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_sources.mjs` |
+| `flowable-source-desk-native` | `stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_sources.py` |
+| `flowable-current-installed-receiving` | `products/flowable-merchant/native-installed-journey.mjs` |
+| `flowable-current-distribution` | `stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json` |
 
-The nine additional programme source selections are:
-
-| Stable source ID | Complete original file |
-| --- | --- |
-| `flowable-programme-operating` | products/flowable-merchant/PROGRAMMES.md |
-| `flowable-programme-source` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-core.mjs |
-| `flowable-programme-operations` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programmes.mjs |
-| `flowable-programme-browser` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-browser.mjs |
-| `flowable-case-programme-compiler` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/case-programme.mjs |
-| `flowable-reference-programme` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/case-commissioning.programme.json |
-| `flowable-programme-receiving` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/native-programme-receiving.mjs |
-| `flowable-workspace-actions` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs |
-| `flowable-merchant-catalog` | stellar-forge/mcp-merchant-operator/catalog/flowable-workspace.mjs |
-
-Each declaration carries the original full commit, Git blob, byte length and SHA-256. Its required immutable source link occurs in the complete chapter. The unchanged source receiver retains every preceding indexed source and receives these 17 selected product records when the chapter is present. Source counts in earlier receipts are historical observations, not a cap on the current complete index.
-
-The complete registration is optional for an earlier manuscript in which this chapter is absent. Once the chapter is selected, its required source links bind the exact source editions. An earlier application can therefore retain the declaration without acquiring invented product content.
+Every current addition carries the full commit, Git blob, byte length and SHA-256, measured from the merged source. The earlier client, guide, programme and distribution pins remain their original historical selections. Distinct current installed-receiving and distribution IDs bind the present whole implementation without rewriting those prior selections.
 
 Use the existing complete dist directory, original source index and current canonical manuscript:
 
@@ -187,9 +246,9 @@ node stellar-forge/developer-site/grant-compose.mjs \
   --source-pins-output /absolute/private/current-reader-pins.json
 ```
 
-When the new declaration has not yet been installed, append it with the maintained `--product-registration /absolute/flowable-operations.json` option. Keep the installed defaults and other selected declarations. The complete declaration directory option selects an entire replacement set, so an intake containing only this one product uses the append option.
+When this declaration is not yet installed, append it with the maintained `--product-registration /absolute/flowable-operations.json` option. Preserve defaults and all other selected declarations. The declaration-directory option selects a replacement set; it is not the single-product append path.
 
-The original composer writes its established four outputs: `grant.html`, `grant-data/application.md`, `grant-data/product-and-finance.md` and `grant-data/source-index.json`. Preserve its existing source selections and current cumulative manuscript.
+The original cumulative publisher owns the four generated outputs: `grant.html`, `grant-data/application.md`, `grant-data/product-and-finance.md` and `grant-data/source-index.json`. Receive this whole author chapter, declaration and guide into that current composition. Preserve all unrelated chapters, funding and application answers, and every prior source record. Do not independently publish a competing reduced companion/index or treat an earlier receipt's source count as the current union.
 
 ## Continue the saved review and actual adoption
 
@@ -202,3 +261,20 @@ For customer accounting, retain the parent useful task, merchant offer, buyer, r
 ## Implementation references
 
 The [complete chapter](../../products/flowable-merchant/GRANT.md) develops the operating and grant-delivery relationship. The [independent source schema](GRANT_PRODUCT_SOURCES.md) and [Product Sources workspace](GRANT_PRODUCT_AUTHORING.md) explain the original composer and saved authoring APIs. The [Flowable selected installation](../../stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md) retains all original build, application and native receiving commands.
+
+
+## Producing operator instruction
+
+This applies to every current, future, resumed and delegated worker, across providers and local or cloud runtimes. Bryce's standing rule is: “that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it”.
+
+Before presenting a client/prospect-facing application, website, dashboard, demo, report, presentation, export or any attachment, the producing peer must open/run/render the exact outgoing version, LOOK at it and normally use it as the recipient would. View the actual screenshots you capture. Inspect the actual presentation/screenshare width and relevant narrow/mobile width, important user controls, populated/empty/loading/error states, downloads and reopened exports. Open the usable contents of ZIPs/projects and every applicable report/PDF page. Source review, schemas, HTTP 200, DOM counts, tests, checklists and another worker's approval cannot substitute for observing and using the actual product.
+
+Fix broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Use plain industrial software design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. Preserve real workflows, source data and computations. Inspection must lead directly to repairs and continued delivery; it must not replace implementation/integration or become repeated checking. Keep validation focused on the actual remaining risk. Do not run broad test sweeps, repeat accepted checks, build a verification product or create review bureaucracy or an approval queue.
+
+For video and audio, Bryce directs: “also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them”. Use available high-quality generative voice/TTS and useful generative media, with natural professional delivery. Actually watch/listen to the final outgoing export, including pacing, pronunciation, timing and audio alignment. Preserve existing spending, voice and attribution controls.
+
+Include this complete instruction in delegated assignments and the active owner-controlled provider/project/cloud policy, boot, build and receiving guidance those workers actually read. Reuse already updated copies and return exact updated paths/version in the original policy thread with the next substantive result. Delivery of source does not establish that every runtime loaded it. Preserve all other owner controls and original operation identities; leave historical records and third-party/vendor policies intact. This instruction creates no restarts, watchers, credential gate or new release permission and does not revive owner-stopped work. When a runtime is unavailable, join the existing equipped receiver with the complete exact version and opening steps, review its actual rendered result, and continue independent implementation while it runs.
+
+Owner instruction and coordinated propagation: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791881496221999
+Canonical attachment/media clarification: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791885532614949
+

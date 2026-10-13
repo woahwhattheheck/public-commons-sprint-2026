@@ -1,0 +1,119 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "multivariate-control-outcomes",
+  "title": "Control outcomes",
+  "version": "1",
+  "order": 26,
+  "assets": [
+    "multivariate_control_outcomes.mjs",
+    "multivariate_control_outcomes_core.mjs",
+    "multivariate_control.css",
+    "multivariate_control_core.mjs"
+  ],
+  "backend": {
+    "module": "multivariate_control_outcomes_operator",
+    "factory": {
+      "handler": "MultivariateControlOutcomesOperator",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "control.outcomes.prepare"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control-outcomes/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control-outcomes/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control-outcomes/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/multivariate-control-outcomes/progress",
+        "operation": "progress",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/multivariate_control_outcomes.mjs",
+    "factory": "createMultivariateControlOutcomesWorkbench",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "navigate",
+      "showTask",
+      "openItem",
+      "openBackup"
+    ],
+    "styles": [
+      "/web/multivariate_control.css"
+    ],
+    "view": {
+      "id": "multivariate-control-outcomes",
+      "title": "Control outcomes",
+      "after": "multivariate-control"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

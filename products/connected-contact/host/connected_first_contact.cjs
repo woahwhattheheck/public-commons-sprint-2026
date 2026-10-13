@@ -1860,7 +1860,7 @@ function createConnectedFirstContact(options) {
       }
     }
   }
-  async function readMatchingSent(messageId, {exactEnvelope = false} = {}) {
+  async function readMatchingSent(messageId, {exactEnvelope = false, externalText = false} = {}) {
     if (typeof messageId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(messageId)) throw new TypeError('Original Gmail message ID required');
     const native = await invoke('mcp__codex_apps__gmail_read_email', {
       link_id: sender.link_id, message_id: messageId, format: 'full'
@@ -1879,6 +1879,16 @@ function createConnectedFirstContact(options) {
     const receivedBodies = nativeArguments && typeof modules.attachments?.receiveNativeBody === 'function'
       ? modules.attachments.receiveNativeBody(nativeArguments.payload, native.payload) : null;
     const bodyPart = receivedBodies ? receivedBodies.primary : originalBody;
+    // Only receiveSent may receive an externally completed plain-text form of
+    // the exact reviewed text. A retained native envelope, draft, attachment,
+    // correction or our own send invocation keeps its original MIME contract.
+    const externalTextBody = externalText && exactEnvelope && !nativeArguments &&
+      !nativeDraft && !delivery && !deliveryCorrection;
+    if (externalTextBody && (!['text/plain','text/html'].includes(bodyPart?.mime_type) ||
+        bodyPart?.parts?.length || bodyPart?.filename))
+      throw new TypeError('Original completed contact must retain its single text body');
+    const receivedPlainText = externalTextBody && bodyPart.mime_type === 'text/plain';
+    const expectedBody = receivedPlainText ? reviewed.body : html;
     if (delivery && (native.payload?.mime_type !== 'multipart/mixed' ||
         !Array.isArray(native.payload.parts) || native.payload.parts.length !== delivery.attachments.length + 1 ||
         bodyPart?.filename || bodyPart?.mime_type !== (nativeArguments ? reviewed.body_type : 'text/html') || bodyPart?.parts?.length))
@@ -1891,7 +1901,7 @@ function createConnectedFirstContact(options) {
       throw new TypeError('Original draft thread changed in SENT');
     if (native.id !== messageId || !labels.includes('SENT') || address(header('from')) !== sender.email ||
         to.length !== 1 || to[0] !== recipient || header('subject') !== reviewed.subject ||
-        bodyPart?.body?.content !== html) throw new TypeError('Original full SENT envelope mismatch');
+        bodyPart?.body?.content !== expectedBody) throw new TypeError('Original full SENT envelope mismatch');
     let attachmentReceipts = null;
     if (delivery) {
       const received = await modules.attachments.receive(delivery, native, {
@@ -1907,8 +1917,10 @@ function createConnectedFirstContact(options) {
     journal.receipt = {message_id: messageId, thread_id: native.thread_id || native.threadId,
       mailbox: {link_id:sender.link_id, profile_id:sender.id, email:sender.email},
       internal_date: native.internal_date, rfc_message_id: header('message-id'),
-      ...(!nativeArguments || reviewed.body_type === 'text/html'
+      ...((!nativeArguments && !receivedPlainText) || reviewed.body_type === 'text/html'
         ? {html_sha256:modules.sha256Utf8(html).sha256} : {}),
+      ...(receivedPlainText ? {body_mime_type:'text/plain',
+        body_sha256:modules.sha256Utf8(expectedBody).sha256} : {}),
       ...(nativeArguments ? {body_mime_type:reviewed.body_type,
         body_sha256:modules.sha256Utf8(html).sha256,
         native_arguments_sha256:modules.sha256Utf8(JSON.stringify(nativeArguments)).sha256,
@@ -5312,7 +5324,7 @@ function createConnectedFirstContact(options) {
       record({phase:'original-contact-sent-receiving',...journal.sent_receiving});
     }
     await verifyMailboxes();
-    await readMatchingSent(messageId, {exactEnvelope:true});
+    await readMatchingSent(messageId, {exactEnvelope:true,externalText:true});
     const receiptSha = modules.sha256Utf8(rateCanonical(journal.receipt)).sha256;
     record({phase:'original-contact-sent-received',source:'EXTERNALLY_COMPLETED_ORIGINAL_CONTACT',
       message_id:messageId,input_sha256:identity,operation_key:accountOperationKey,

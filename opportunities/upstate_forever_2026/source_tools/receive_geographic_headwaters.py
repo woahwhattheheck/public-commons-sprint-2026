@@ -553,6 +553,8 @@ def main(argv=None):
                         help="Execute only the newly adopted control through the original experiment")
     parser.add_argument("--matched-geographic-id",
                         help="Require exact baseline/restoration membership in this retained Geographic preparation")
+    parser.add_argument("--matched-control-outcome-selection", type=Path,
+                        help="Prepare an authored completed-control outcome group and retain it in the same received Study")
     args = parser.parse_args(argv)
     if args.matched_control_selection or args.matched_control_id:
         if (args.selection or args.import_sources or args.workspace_preparation
@@ -566,10 +568,12 @@ def main(argv=None):
         result = receive_matched_control(
             Workspace(args.workspace), args.output,
             selection_path=args.matched_control_selection, design_id=args.matched_control_id,
-            execute=args.execute_matched_control, prepared_id=args.matched_geographic_id)
+            execute=args.execute_matched_control, prepared_id=args.matched_geographic_id,
+            outcome_selection_path=args.matched_control_outcome_selection)
         print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
         return 0
-    if args.execute_matched_control or args.matched_geographic_id:
+    if (args.execute_matched_control or args.matched_geographic_id
+            or args.matched_control_outcome_selection):
         parser.error("Choose --matched-control-selection or --matched-control-id first")
     if args.workspace_preparation and not (args.report_only or args.run_reference or args.run):
         parser.error("--workspace-preparation requires --report-only, --run-reference or --run")

@@ -1,0 +1,10 @@
+{
+  "schema": "stellar-forge.report-editorial-connection.v1",
+  "workspaces": {
+    "research": {
+      "label": "Existing research Analysis workspace",
+      "workspaceId": "00000000000000000000000000000000",
+      "launchFile": "./private/original-analysis-launch.json"
+    }
+  }
+}

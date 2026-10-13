@@ -105,7 +105,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   function controls(task,native){
     const id=task.id;let html=button('refresh','Refresh',id);
     if(task.state==='queued')html+=button('stop','Cancel queued run',id);
-    else if(native.alive)html+=button('stop',native.stop_requested?'Stop requested':native.programme_context?'Stop calculation and pause programme':'Stop calculation',id,native.stop_requested);
+    else if(native.alive||(native.ensemble_context&&task.state==='running'))html+=button('stop',native.stop_requested?'Stop requested':native.ensemble_context?'Stop saved ensemble':native.programme_context?'Stop calculation and pause programme':'Stop calculation',id,native.stop_requested);
     if(['failed','interrupted','cancelled'].includes(task.state))html+=button('resume',native.alive?'Reconnect to calculation':'Resume retained run',id);
     html+=button('result','Open saved maps and results',id)+button('snapshot','Download operation record',id);
     return html;
@@ -129,6 +129,9 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-phase]').textContent=view.heading;
     node.querySelector('[data-native-guidance]').textContent=view.message;
     markup(node.querySelector('[data-native-case]'),selectionMarkup(view));
+    const ensemble=native.ensemble_context,ensembleNode=node.querySelector('[data-native-ensemble]');
+    ensembleNode.hidden=!ensemble;
+    if(ensemble)ensembleNode.textContent=(ensemble.ensemble_title||'Saved ensemble')+' · original run '+ensemble.run_number+' of '+ensemble.run_count+'. '+[...new Set((ensemble.bindings||[]).map(row=>row.member_label).filter(Boolean))].join(' · ')+'. Completed cases stay available; stop or reconnect continues this same saved design.';
     markup(node.querySelector('[data-native-outputs]'),outputsMarkup(view));
     node.querySelector('[data-native-elapsed]').textContent=duration(native.elapsed_seconds);
     const retainedMemory=native.resource_observation?.values?.process?.VmRSS_bytes;
@@ -150,7 +153,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-stages]').innerHTML=stageRows(native);
     node.querySelector('[data-native-selection]').textContent=pretty({
       selection:native.selection,native_run_id:native.run_id,execution_id:native.execution_id,
-      programme:native.programme_context,parameter_study:native.study_context});
+      programme:native.programme_context,parameter_study:native.study_context,ensemble:native.ensemble_context});
     const reuse=node.querySelector('[data-native-reuse]');
     markup(reuse,reuseMarkup(native,getState()));reuse.hidden=!reuse.innerHTML;
     const error=node.querySelector('[data-native-error]');
@@ -198,7 +201,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       '<section class="native-console" data-native-console>'+
       '<h2 data-native-phase aria-live="polite">Opening retained calculation…</h2>'+
       '<p class="note" data-native-guidance></p><section data-native-case></section>'+ 
-      '<p class="note" data-native-continuation></p>'+
+      '<p class="note" data-native-continuation></p><p class="note" data-native-ensemble hidden></p>'+
       '<div class="native-metrics"><dl><dt>Elapsed</dt><dd data-native-elapsed>—</dd></dl>'+
       '<dl><dt data-native-memory-label>Worker memory</dt><dd data-native-memory>—</dd></dl>'+
       '<dl><dt>Workspace disk available</dt><dd data-native-storage>—</dd></dl>'+
@@ -224,7 +227,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     await update();
   }
   function taskActions(task){
-    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||task?.action==='parameter-study.run'||
+    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||task?.action==='parameter-study.run'||task?.action==='ensemble.run'||
       (task?.action==='compute.programme.pair-completion'&&task.payload?.run===true);
     return supported?'<div class="page-actions">'+button('open','Open calculation console',task.id)+'</div>':'';
   }

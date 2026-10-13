@@ -31,5 +31,7 @@ def verify_all(workspace):
     reports = verify_reports(workspace)
     from .chemistry_report_source import verify_workspace
     report_sources = verify_workspace(workspace)
-    return {'cases': len(cases), 'runs': runs, 'scientific_reports': reports['reports'],
+    from .receiving_water_chemistry import verify_all as verify_water
+    water = verify_water(workspace)
+    return {'source_period_preparations': water['prepared'], 'cases': len(cases), 'runs': runs, 'scientific_reports': reports['reports'],
             'scientific_report_sources': report_sources}

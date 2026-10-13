@@ -8,7 +8,9 @@
         "model/landcover_temporal.py",
         "model/landcover_timeline_receiving.py",
         "model/LANDCOVER_TEMPORAL.md",
-        "operator/LANDCOVER_TIMELINE.md"
+        "operator/LANDCOVER_TIMELINE.md",
+        "operator/landcover_timeline_browser.mjs",
+        "operator/LANDCOVER_TIMELINE_BROWSER.md"
       ]
     }
   },

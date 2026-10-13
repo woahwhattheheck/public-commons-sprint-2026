@@ -1,3 +1,5 @@
+import {planFlowableSourceOperation,performFlowableSourceOperation} from './flowable-source-desk-agent.mjs';
+export * from './flowable-source-desk-agent.mjs';
 import { GRANT_AGENT_SCHEMA, GRANT_MAX_BUNDLE_BYTES, GRANT_MAX_SOURCE_BYTES, GRANT_CASE_ACTIONS } from './agent-contracts.mjs';
 import {performGrantPlanningSourceOperation} from './source-tables-agent.mjs';
 import {planInstallationSourceOperation, performInstallationSourceOperation,
@@ -604,8 +606,11 @@ function transport(connection, route, {body, contentType = 'application/json', h
   need(target.origin === new URL(connection.original.url).origin && route.startsWith('/api/'),
     'GRANT_ROUTE_INVALID', 'Use an original declared grant API route.');
   const bytes = body === undefined ? undefined : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
-  need(bytes === undefined || bytes.length <= GRANT_MAX_BUNDLE_BYTES, 'GRANT_INPUT_TOO_LARGE',
-    'The original grant API accepts complete requests up to 32 MiB.');
+  const maximumInput = /^\/api\/operations\/operation-[a-f0-9]{32}\/flowable-sources\/import$/.test(target.pathname) &&
+    contentType === 'application/octet-stream' && Buffer.isBuffer(body)
+    ? INSTALLATION_SOURCE_MAX_ARCHIVE_BYTES : GRANT_MAX_BUNDLE_BYTES;
+  need(bytes === undefined || bytes.length <= maximumInput, 'GRANT_INPUT_TOO_LARGE',
+    'The original request exceeds its declared native receiving capacity.');
   return new Promise((resolveResult, reject) => {
     let dispatched = false, settled = false;
     const uncertain = failure => {
@@ -998,6 +1003,11 @@ export class GrantWorkspaceClient {
     if (body.preview !== undefined) object(body.preview,'Original worksheet selection');
     if (body.mapping !== undefined) object(body.mapping,'Original workbook mapping');
     return this.#request('/api/source-tables/workbook/' + action,{body,mutation:false});
+  }
+  flowableSources(action, input) {
+    const plan=planFlowableSourceOperation(action,input);
+    return this.#admit(() => performFlowableSourceOperation(plan,
+      async (route, options) => transport(await this.#readLaunch(), route, options)));
   }
   installationSources(action, input = {}) {
     const plan = planInstallationSourceOperation(action, input);

@@ -23,6 +23,10 @@ OWNED = frozenset({
     "operator/web/journey.mjs",
     "operator/web/journey.css",
     "operator/GUIDED_JOURNEY.md",
+    "operator/web/operator_reference.mjs",
+    "operator/web/operator_reference.css",
+    "operator/OPERATOR_REFERENCE.md",
+    "operator/OPERATOR_REFERENCE.html",
     MANIFEST,
 })
 PREDECESSORS = {
@@ -53,6 +57,15 @@ FIRST_SOURCE_PREDECESSORS = {
     "operator/web/journey.css": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a",
     "operator/GUIDED_JOURNEY.md": "60f116de907383b8a4d2d85647b3e7998b0bfb00a669e207cba4b7242786fd19",
     "operator/Guided_Journey_Source.json": "87d3d6a9047fb5c5f77bbc655d93ac44c7708871713f1e4f5523c207554008ae"
+}
+# Exact complete first-source edition before the additive operator reference.
+OPERATOR_REFERENCE_PREDECESSORS = {
+    "operator/install_guided_journey.py": "5fb0c06d9435f47d39c6d0380b934bf5467d47fd7b37eafc1d5e93516d47c6f2",
+    "operator/Guided_Journey_Integration.json": "125025839b7903982a73f67977288b6e8051c2cc3612d9c08fc74991371f8371",
+    "operator/extensions/guided-journey.json": "f3957f17d155acf21add2cb9a11a010dd872a0738ea295fd0ee277b1750136c6",
+    "operator/web/journey.mjs": "ba4cd9709984cbd13be6824dad7d7e5ce67c4c790c59816a3f521e0fe47ccd02",
+    "operator/GUIDED_JOURNEY.md": "1f3810783f074e15ed386b1549b7a8464082684d69d8451bcef747a4494ee822",
+    "operator/Guided_Journey_Source.json": "827d3db43b68ff5eff7176d879be9b7eb1a5d232ac326c9b4fca59e720a101ea"
 }
 SHARED = ("operator/server.py", "operator/web/app.mjs")
 OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
@@ -112,7 +125,7 @@ def read_component(source):
         raise ValueError("Select the complete registered guided journey component, edition 2")
     records = manifest.get("files", {})
     if set(records) != OWNED - {MANIFEST}:
-        raise ValueError("The component must contain all seven complete source files")
+        raise ValueError("The component must contain every declared complete source file")
     files = {MANIFEST: manifest_body}
     for name, expected in records.items():
         body = safe_path(source, name).read_bytes()
@@ -190,7 +203,8 @@ def prepare(application, files, integration):
         if (before is not None and before != incoming
                 and hashlib.sha256(before).hexdigest() not in {
                     PREDECESSORS.get(name), CURRENT_PREDECESSORS.get(name),
-                    FIRST_SOURCE_PREDECESSORS.get(name)}):
+                    FIRST_SOURCE_PREDECESSORS.get(name),
+                    OPERATOR_REFERENCE_PREDECESSORS.get(name)}):
             raise ValueError("Preserve and compose the other installed journey edition at " + name)
         original[name], proposed[name] = before, incoming
         modes[name] = path.stat().st_mode & 0o777 if before is not None else 0o644

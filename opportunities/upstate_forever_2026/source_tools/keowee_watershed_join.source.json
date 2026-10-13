@@ -1,7 +1,7 @@
 {
   "schema": "upstate.keowee-watershed-source/v1",
   "operation_id": "ECO13-6A4E-KEOWEE-WATERSHED-JOIN",
-  "revision": "1.2.1",
+  "revision": "1.3.0",
   "source_commit": "f71d21b0eb204e5ef5306d069418ec0277eca670",
   "files": [
     {
@@ -98,13 +98,14 @@
     },
     {
       "path": "source_tools/install_keowee_watershed_join.py",
-      "bytes": 26456,
-      "sha256": "02d0ff889cc28ec8e139dc450a1d62836d043187d8c71869810a7251743ec44b",
+      "bytes": 27986,
+      "sha256": "361b7140cceab7d734799fef87e71d59d2b1f262bbe62759447b2e462f84aae7",
       "previous_sha256": [
         "b34ef7ac82b9006b6346bfce568d8806bf76cc39a47957112b817fda62a379df",
         "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf",
         "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512",
-        "4267bb1394612a5cdab5873614a4fdc01a297141f0bb4af0e6587341bd7ffc37"
+        "4267bb1394612a5cdab5873614a4fdc01a297141f0bb4af0e6587341bd7ffc37",
+        "02d0ff889cc28ec8e139dc450a1d62836d043187d8c71869810a7251743ec44b"
       ]
     },
     {
@@ -157,27 +158,30 @@
     },
     {
       "path": "model/setup_review.py",
-      "bytes": 42817,
-      "sha256": "6b2929e8a2df5d91a34ab1aa85b901e92da5dcec5f52a49eb0c90ae160cfdf60",
+      "bytes": 43122,
+      "sha256": "8ce0b6cfa91d9786f72cd9bc6e26ac17dea38efc9ec39f0518e69c715a94135f",
       "previous_sha256": [
         "0adae0c0b8537269a3abda6477ded9a143156a8cad5b3c1f868c3144f17c6aae",
-        "db27e948b37d44131dfdf7000ed0b8a6f06cf25e8682f90c19258fe8e2c37af0"
+        "db27e948b37d44131dfdf7000ed0b8a6f06cf25e8682f90c19258fe8e2c37af0",
+        "6b2929e8a2df5d91a34ab1aa85b901e92da5dcec5f52a49eb0c90ae160cfdf60"
       ]
     },
     {
       "path": "operator/scientific_setup.py",
-      "bytes": 4246,
-      "sha256": "2a781aafec72916a2581dd70859edf4906e94b7d84fee95307885c72c65b85ed",
+      "bytes": 5364,
+      "sha256": "21995c4142aeaad9aa1d1cea3986d5e89677f70ac34ed9d92fc8a3c29fcb0b08",
       "previous_sha256": [
-        "5d1e977d851930b4b5e1771ab1295625d451743d2461c8f6d93d28faf891de0f"
+        "5d1e977d851930b4b5e1771ab1295625d451743d2461c8f6d93d28faf891de0f",
+        "2a781aafec72916a2581dd70859edf4906e94b7d84fee95307885c72c65b85ed"
       ]
     },
     {
       "path": "source_tools/receive_scientific_setup.py",
-      "bytes": 12284,
-      "sha256": "af1e1d5389b254d7f15154fff06b9228064ce72a87ac329592340f1ebb0376ba",
+      "bytes": 14531,
+      "sha256": "ecca5b8f8081c4fe7e907ec21bf5d8e8ac105a760c0706dd0ecdf4933f72c6c3",
       "previous_sha256": [
-        "c31897a47a2737593d529f88d3f16b70fa16b6c8655bdc12eebfcc47bdbef3e3"
+        "c31897a47a2737593d529f88d3f16b70fa16b6c8655bdc12eebfcc47bdbef3e3",
+        "af1e1d5389b254d7f15154fff06b9228064ce72a87ac329592340f1ebb0376ba"
       ]
     },
     {
@@ -208,31 +212,37 @@
     },
     {
       "path": "operator/web/scientific-setup.mjs",
-      "bytes": 29636,
-      "sha256": "230885983022b58ad59a49e3dc111ca2aa45d3d6762774bf323d4e82628d4797",
+      "bytes": 35101,
+      "sha256": "200305ec3613208001476880c603770af180ca0bc1a5397375c8c5e14d1e1b81",
       "previous_sha256": [
-        "5b00df41d2144ca3100067624b8b5e99dbd2046f0ae5fc910da49c188502782b"
+        "5b00df41d2144ca3100067624b8b5e99dbd2046f0ae5fc910da49c188502782b",
+        "230885983022b58ad59a49e3dc111ca2aa45d3d6762774bf323d4e82628d4797"
       ]
     },
     {
       "path": "operator/web/scientific-setup.css",
-      "bytes": 1510,
-      "sha256": "babe24be4bd18c17401b355c2b4a2eda78220bd14d20c547afc2a524101d096e",
-      "previous_sha256": []
+      "bytes": 3417,
+      "sha256": "16756e0ab1b3beb2e34d4fe23a4add4f0007de467fee1375795a0eacaa3d0a15",
+      "previous_sha256": [
+        "babe24be4bd18c17401b355c2b4a2eda78220bd14d20c547afc2a524101d096e"
+      ]
     },
     {
       "path": "operator/extensions/scientific-setup.json",
-      "bytes": 2311,
-      "sha256": "e894a106e28acba4552d7e9d415c81bb43c5e10ab91b41527a0c1572bffa4aeb",
+      "bytes": 2643,
+      "sha256": "c5aef304f4f1f1cbec9ef8f96c7060054b8b81a73ccbcc29f9e071cadc790233",
       "previous_sha256": [
-        "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace"
+        "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace",
+        "e894a106e28acba4552d7e9d415c81bb43c5e10ab91b41527a0c1572bffa4aeb"
       ]
     },
     {
       "path": "operator/SCIENTIFIC_SETUP_DESK.md",
-      "bytes": 2654,
-      "sha256": "fa5818dc7cce66b44a2e508de31d115a3699d0c29f03d25b6fbcbd2f1f951330",
-      "previous_sha256": []
+      "bytes": 12314,
+      "sha256": "0489aa772451d08e6e24fed395cb0a9f4ff638b1e07505270953cce6e0e71333",
+      "previous_sha256": [
+        "fa5818dc7cce66b44a2e508de31d115a3699d0c29f03d25b6fbcbd2f1f951330"
+      ]
     },
     {
       "path": "source_tools/keowee_interval_receiving.mjs",
@@ -273,6 +283,24 @@
       "path": "source_tools/FIRST_GURA_RECEIVING.md",
       "bytes": 8148,
       "sha256": "912632751bf9420507894314404677a0498fda1cbb604b0a77481a789048a036"
+    },
+    {
+      "path": "model/setup_configuration.py",
+      "bytes": 11170,
+      "sha256": "f8823e068d690cb687666b98992e8292e880063f954e15f18f6e91c13716cb79",
+      "previous_sha256": []
+    },
+    {
+      "path": "operator/web/setup_configuration.mjs",
+      "bytes": 12131,
+      "sha256": "9e444b314688665cf19d0337644c27aa0693b2e9bde980e63d99c72db9400ac9",
+      "previous_sha256": []
+    },
+    {
+      "path": "source_tools/receive_scientific_configuration_browser.mjs",
+      "bytes": 15629,
+      "sha256": "c938196207f2ab14be075109fa8cc9ab8a1dc55ccc8c2c2bc78d1958be67c99b",
+      "previous_sha256": []
     }
   ],
   "required_profile": {
@@ -592,6 +620,19 @@
         "source_tools/FIRST_GURA_RECEIVING.md": "37c67cd722fc4a1b5fbe1cb209d02f8b07ecc81c"
       },
       "scope": "Original first Gura intake, scientific setup, baseline and two alternatives with retained existing data paths"
+    },
+    {
+      "commit": "a6b6aa0204e2f170ff7bc4c806e300f7d7f11162",
+      "source_blobs": {
+        "model/setup_configuration.py": "59db96fbaeee0dd22107ea7bbce1beedfea86ef2",
+        "operator/web/setup_configuration.mjs": "47fd20f2939a169a62e62f15a54265a975efa8c8",
+        "operator/scientific_setup.py": "556a9b9e7839baab567163ca5519500b9d33dd0d",
+        "operator/SCIENTIFIC_SETUP_DESK.md": "b315a2951bff2f5c9ea06dd5f51040ebc002b9f9",
+        "source_tools/install_keowee_watershed_join.py": "98073042fdeb37c243d32e3a9f55c1b7f2ee1637",
+        "integration/application_components.json": "4bda6397b768b9655dcc7477d23dd167aaae4c33",
+        "source_tools/receive_scientific_configuration_browser.mjs": "561acaea4ed782923ffa8eceeec86b4f8630fc4b"
+      },
+      "scope": "Original scientific configuration sheet, full source cells and observation support, existing Profile Workbench revision, same setup/review capture and whole original receiving"
     }
   ],
   "integration_corrections": [
