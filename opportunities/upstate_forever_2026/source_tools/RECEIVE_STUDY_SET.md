@@ -1,16 +1,12 @@
-# Receive the complete original Studies in one workbench
+# Receive complete original Studies in one workbench
 
-`receive_study_set.py` adds multi-Study receiving to the maintained local operator. It selects complete original scientific Workspace archives, streams their original bytes to the existing upload endpoint, queues the existing `workspace.restore` action, and retains each resulting project as a separately selectable Workspace in the same application. It does not replace the launcher, operator, source registry, science engine or native task queue.
+`receive_study_set.py` receives a selection of original scientific Workspace archives into the maintained local operator. It streams original archives through the existing upload and `workspace.restore` actions, reconnects their retained operations and collects original run artifacts. Each project remains separately selectable in the same application. The launcher, operator, source registry, science engine, active scientific work and native task queue remain authoritative.
 
-## What travels and what remains separate
+## Select the originals
 
-Each input is an original `upstate.scientific-workspace-archive/v1` ZIP containing `ARCHIVE.json`, `workspace/workspace.json`, the full selected Workspace and its application. The archive's project and retained run IDs are checked against the received catalogue. A report-only ZIP cannot stand in for a runnable Study. Teaching examples, regional models, input-response studies and receiving/review workspaces keep their own explicit family labels, project identities, cases and source classifications.
+Use complete `upstate.scientific-workspace-archive/v1` ZIPs with `ARCHIVE.json`, `workspace/workspace.json`, the selected Workspace and its application. A report-only ZIP or an outer handoff containing nested archives is not a runnable Study. Select the complete original Workspace archive inside that handoff. Teaching, regional, input-response and receiving/review families keep their own explicit labels, original project IDs, source classifications and accepted cases.
 
-Two archive editions of the same project can be selected independently. They are identified by their complete archive hashes, not silently merged by title or project ID. The server's original portable receiver owns restoration and member verification. Application source inside each original archive remains with that received Study; the running operator's current source and active peer changes are not overwritten.
-
-## Select the original archives
-
-Keep the selected originals inside one directory, with the selection JSON at its root. Archive subdirectories are supported. Use ordinary local Python; planning and HTTP receiving do not themselves import InVEST.
+Keep the selected originals in one directory, with the selection JSON at its root. Subdirectories are supported. These commands use Python's standard library; actual native calculations continue to use the existing selected-interpreter invocation and InVEST environment.
 
 ```sh
 python application/source_tools/receive_study_set.py plan \
@@ -20,13 +16,11 @@ python application/source_tools/receive_study_set.py plan \
   --output study-set.json
 ```
 
-The command reads each original archive and saves its exact bytes, SHA-256, embedded project, retained run IDs and relative path. It performs no extraction and changes no Workspace. Keep an existing selection; choose a new selection filename for new or changed originals. The same directory can move to another machine without changing the relative selections.
+The saved selection includes each available archive's actual byte count, SHA-256, embedded project, retained run IDs and relative path. Planning performs no extraction and changes no Workspace. A missing, unreadable or incompatible individual archive is recorded in `unavailable`; the other originals remain selected and can be received immediately. Exit 2 indicates those individual unresolved requests. Their exact file/project identities are not invented. Receive newly acquired or changed originals with a new selection filename, retaining the previous one. A completely unavailable selection can be recorded, but cannot return successful receiving.
 
-An outer handoff containing several nested ZIPs is not itself a native Workspace archive. Select the complete original Workspace ZIP from that handoff. Compact result companions are useful source/result attachments but do not supply missing source rasters, profiles or runnable cases.
+## Reopen the maintained operator
 
-## Receive through the running original operator
-
-Start or reopen the workbench with the maintained `source_tools/open_received_study.py` and the selected compatible interpreter. The existing native-runtime invocation remains the route for actual NDR/SDR execution. Use the launcher's private local-session JSON containing its original `url` or `operator_url`; keep that file in the receiver's private state directory.
+Use `source_tools/open_received_study.py` and its original private local-session JSON. The complete opening/reopening guide is [OPEN_RECEIVED_WORKBENCH.md](OPEN_RECEIVED_WORKBENCH.md). Existing native invocation, saved launch profiles and live-session adoption stay with that launcher. Do not restart another person's active server or calculations to receive source changes.
 
 ```sh
 python application/source_tools/receive_study_set.py receive study-set.json \
@@ -35,43 +29,60 @@ python application/source_tools/receive_study_set.py receive study-set.json \
   --destination received-results
 ```
 
-The client accepts only the existing 127.0.0.1 HTTP operator session. It does not follow redirects, use a proxy, change browser policies, open an external access route, or write a credential to the selection, checkpoint or result files. The checkpoint is outside the scientific archives by default.
+The session file must contain the original `url` or `operator_url`. It stays in the receiving machine's private state, outside the application and scientific Workspace. The client uses only the existing 127.0.0.1 HTTP operator. It follows no redirects, uses no proxy and changes no browser policy, network binding or external access route. Credentials are not written into the selection, checkpoint, result index or copied artifacts.
 
-Receiving uses only original contracts:
+## Original Workspace reuse and stable restoration
 
-1. `POST /api/upload` with original filename, content length and `X-Workspace`.
-2. `POST /api/actions` with `action=workspace.restore`, the returned `upload_id` and a stable archive-derived `operation_id`.
-3. `GET /api/task?id=...` and the existing `/api/task/resume` for an interrupted restore.
-4. `GET /api/state?workspace=...`, `/api/item?kind=runs&id=...` and original file tickets for joined results.
-
-The existing operator owns its serial queue, private registry, restore destinations, authentication and scientific state. The receiver starts no new server or native model worker. Its local checkpoint only retains the IDs needed to reconnect to the already accepted operations. Lost responses are recovered through the original stable operation identity. Closing the command does not cancel an accepted original task. A live checkpoint lock prevents two receiving clients from racing on the same checkpoint; the operating system releases that lock when its process ends.
-
-## Compact joined results
-
-The output directory contains `joined-studies.json`, `joined-runs.csv` and the copied original JSON/CSV/HTML run artifacts. Every copied artifact is checked against its original ticket's exact byte count and SHA-256. Original filenames, source labels and original full run records remain attached to each case. Equal filenames with different bodies cannot overwrite each other. Retained run IDs in the original archive must remain present in the received native catalogue.
-
-The index joins identities and existing outputs, not incompatible scientific totals. It applies no new area conversion, unit reinterpretation, catchment aggregation, coefficient changes or synthetic model calculation. Original nitrogen/phosphorus/sediment units, source domains, illustrative classification and accepted results remain in the original records. Source rasters and full native GIS outputs stay in the selected complete archive and the restored Workspace.
-
-To copy another original output type, specify the complete desired set of extensions, for example:
+Before creating a new restore, the receiver looks for an available registered Workspace carrying the exact original archive SHA and project ID. A single exact match is reused, including its subsequent local edits and accepted scientific work. Different archive editions are not silently merged by title or project ID. When more than one existing copy has that exact origin, choose the desired original registry key explicitly:
 
 ```sh
 python application/source_tools/receive_study_set.py receive study-set.json \
   --session-file /private/actual-local-session.json \
   --destination received-results \
-  --result-suffix .json --result-suffix .csv --result-suffix .html \
-  --result-suffix .tif --result-suffix .gpkg
+  --use-workspace ACTUAL_64_CHARACTER_ARCHIVE_SHA=ACTUAL_64_CHARACTER_WORKSPACE_KEY
 ```
 
-Existing correct result files are reused. A different file already occupying a selected result path is preserved and reported rather than overwritten. The result index contains original Workspace/item IDs, not expiring file-ticket URLs or local session credentials. Open a received project from the ordinary workbench Workspace selector, then use its original Runs, Parameter studies, source and reporting views.
+The actual SHA is in the saved selection; the available matching keys are returned in the receiving error. A checkpoint's previously selected exact Workspace is preferred. Choosing a different original copy is a receiving selection, not authority to overwrite or cancel the retained original restore task. Use a separate checkpoint for that separate receiving selection.
 
-## Recovery and independent inputs
+New receiving calls the maintained contracts: `POST /api/upload`, `POST /api/actions` with `action=workspace.restore`, `GET /api/task`, and the existing `/api/task/resume`. The operation ID is stable for the original archive. The server's original portable receiver performs full member verification, restores into its own retained destination and registers the Workspace. The running application's current source is not replaced by archived source.
 
-Run the same receiving command again after reconnecting the original operator. It reopens the retained task IDs and resumes an interrupted restore without issuing a new scientific operation. After repairing an actual failed restore's input/runtime fault, `--retry-failed` resumes that same original task. A cancelled original task is kept visible rather than silently restarted.
+The local checkpoint contains accepted upload/task/Workspace identities, not another queue or scientific database. Repeating the command reopens the original task. Lost responses reconnect through the same operation identity. Interrupting the client does not cancel the server's accepted work. A live operating-system lock prevents two clients from writing the same checkpoint or output directory; process exit releases it automatically.
 
-A missing, changed, incompatible or unreadable archive affects its own selected Study. The receiver records that exact failure and continues the remaining independent selections. A result-download failure retains the restored Workspace and all already collected originals, so the same command can finish the remaining downloads. Exit status 0 means every selected intake and requested result collection completed; 2 means the joined index contains individual unresolved entries; 130 retains the checkpoint after keyboard interruption.
+An already accepted restore or existing exact registered Workspace can be reconnected even after the transport ZIP is no longer present. Original archive bytes are needed only when performing a new upload/restore. A missing transport file therefore does not block access to cases already received in the original application.
 
-## Producing operation and receiving boundary
+## Joined cases and original artifacts
 
-Read the application's `AGENTS.md` and `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, together with Bryce's current post-call work order. Preserve existing active application and native-run owners. Source restoration must include the complete original runnable Studies, not a receiving-only or report-only substitute.
+`received-results/joined-studies.json` retains each original project, Workspace, native run record and file identity. `joined-runs.csv` is the compact case index. It joins actual identities and existing outputs; it performs no unit reinterpretation, coefficient changes, catchment aggregation or new model calculation. Original nitrogen/phosphorus/sediment units, source domains, illustrative classifications and accepted results remain in their original records.
 
-Use one focused end-to-end receiving course against the actual running operator: select the complete original archives; receive them; reconnect the same checkpoint; choose each populated original Workspace; open the retained cases and requested downloads; reopen the saved Study. View the exact outgoing desktop and narrow/mobile renderings and downloaded files, repairing actual defects. Existing accepted native calculations are reused; new inputs/physics use new native IDs and the original runner. No broad suite, hosted Actions, private repository, customer message or new session is part of this receiver.
+By default, every file ticket published by each original run is copied. The receiver preserves its original run-relative path under:
+
+```text
+results/<archive-sha>/workspace/runs/<original-run-id>/<original-artifact-path>
+```
+
+It does not prefix report/image names with hashes or flatten directories. Original reports and their declared companion paths therefore retain their relative organization. Duplicate bodies can retain distinct original paths. Every downloaded body is checked against its original ticket's exact size and SHA. Different bytes already occupying an output path are preserved and reported instead of overwritten. Source data or dependencies outside the original run's published artifact set remain in the complete restored Workspace/archive; the result index is not a replacement application.
+
+An explicit extension filter makes a smaller result selection:
+
+```sh
+python application/source_tools/receive_study_set.py receive study-set.json \
+  --session-file /private/actual-local-session.json \
+  --destination received-results \
+  --result-suffix .json --result-suffix .csv
+```
+
+The index records this filter and omitted original tickets. A filtered selection can exclude report dependencies; use the unfiltered receiving command for the published run artifact set. The index uses original Workspace/item IDs and local relative file paths, not expiring file-ticket URLs.
+
+Open each received project through the ordinary workbench Workspace selector, then use its original Runs, Parameter studies, source and reporting views. All original retained run IDs from the archive must remain in the received catalogue. Cases added to the live Workspace remain visible, with their original IDs, state and record. The catalogue is an observation of the live application, not a frozen archive of a running calculation.
+
+## Independent failures and continuation
+
+A failed archive or individual result download is recorded with its actual error while the other selected Studies and run files continue. Already restored Workspaces and copied correct originals are reused. After repairing a failed restore's actual input/runtime fault, `--retry-failed` resumes that same task. An interrupted task is resumed once per invocation; a cancelled task is not silently restarted. Reconnect the same selection and checkpoint after a client interruption.
+
+Exit 0 means all selected receiving operations and requested artifact downloads completed, with no unavailable selection requests. Exit 2 means the joined index includes unresolved selections or results. Exit 130 retains accepted operations after keyboard interruption. These statuses describe receiving, not independent scientific/model validation or client-facing visual acceptance.
+
+## Producing operation
+
+Read the application's `AGENTS.md`, `CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4`, and Bryce's current post-call work orders. Preserve actual active application and scientific writers. Complete original runnable Studies must travel; a receiving-only project or result-only companion cannot substitute for them.
+
+Use one focused end-to-end course on the actual existing operator: receive the original archives; repeat the same checkpoint; choose each populated original Workspace; open retained cases and downloads; reopen the saved Study. Inspect the exact outgoing desktop and narrow/mobile renderings and downloaded attachments in their normal viewers, repairing actual defects. Reuse accepted native calculations; new inputs or physics get new original IDs and use the original engine. Keep actual execution/result receipts in the original build thread. This receiver adds no hosted Actions, broad suite, external message or new session.
