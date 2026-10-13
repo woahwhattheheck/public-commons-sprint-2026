@@ -1,0 +1,474 @@
+{
+  "schema": "stellar-forge.measurement-workspace-source.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "sourceCommit": "a86893e4b783cc7e8e824451904e1390ea5eea7b",
+  "description": "Exact original Node scientific service, complete browser source, native archive helpers, original observed-load kernel, public station receiving input and selected operating guides. No private customer workspace, credentials or commercial documents.",
+  "files": [
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/ATOMIC_SNAPSHOT.md",
+      "bytes": 3580,
+      "sha256": "218fa461e7e7dbb4061c79dd05a9d1ceb91079e6862d583d0514cf0c0e128a4c",
+      "gitBlob": "b550318b686dbc6bb2c61a536268e22b208b6067"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/DAILY_FLOW_STUDIES.md",
+      "bytes": 9905,
+      "sha256": "dccc1493ca1ce16699aa24baa204cbf29ec57ee3b126928ab34dd43c07bf35b0",
+      "gitBlob": "8a629a78726eccef9d4404998d90902940fef7e7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/DAILY_FLOW_UI.md",
+      "bytes": 9030,
+      "sha256": "598f4c07cfdaa4d7a735bffca805158626016895e38cdca5aa9e7be8b0d4930b",
+      "gitBlob": "c21d7809b4f4c69d7bfcd736723f3dba05a1eecc"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/benchmark_reports.mjs",
+      "bytes": 9782,
+      "sha256": "09947f61e240696abf43d41617814dd92f10aa45f75f62e0bfdb55ce7c4eb643",
+      "gitBlob": "3f4de81907d6eb1cbafb992bd7099cc0ef9210f5"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/benchmark_workspace.mjs",
+      "bytes": 27122,
+      "sha256": "ddaacf48dda75079262c3e580f90376fe2db8f0ce7232177d18086d3b667656d",
+      "gitBlob": "07ff0ac272ae01094ac68c7987e4f35defb5d629"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/benchmarks.mjs",
+      "bytes": 14692,
+      "sha256": "eb871980f85c27f8ce7f1cc797ae6fd1fcd6ab07222b5c2a69fc464b3bbb4d4f",
+      "gitBlob": "32fe6601871f9cc7a31f2cc79d35a5f1d9b095d0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/calibration.mjs",
+      "bytes": 4461,
+      "sha256": "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199",
+      "gitBlob": "f35c9ce6f785d92997715e4653b79f1ff2354e85"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/characteristics.mjs",
+      "bytes": 10278,
+      "sha256": "a8cb9af87d6e2e4a101ad12beaf01a20a65133700d3b576d66e5290925a01488",
+      "gitBlob": "d7cf292e8fd644ffc2ddb8412e016dd8a6e34ffb"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/cli.mjs",
+      "bytes": 13204,
+      "sha256": "3aef55b9b9553ac0fd76ecd028d7da064c982a5145f7e516100ad32e39205afe",
+      "gitBlob": "15f454ee1a137f0492388b1fc812a516c77e6bf0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/collection_zip.mjs",
+      "bytes": 1548,
+      "sha256": "adaafa1a90bed1218168b53dac5bfc7e6f11813bdac389b2ffd8cab5ad009d5a",
+      "gitBlob": "c4adeefeab8268ca48de822580b25560009836be"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/collections.mjs",
+      "bytes": 15866,
+      "sha256": "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e",
+      "gitBlob": "a2a17c2a746796cd5e41d2d4ea4232882ecc4e0d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/file_product.mjs",
+      "bytes": 927,
+      "sha256": "54937b9ab989f1b6113c44169b7c46640614592285f4f97e42652e2f03ad18a9",
+      "gitBlob": "dea6ded9eabb4bd3b037cfdf4dcfd7398d8ffbc1"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_bundles.mjs",
+      "bytes": 4086,
+      "sha256": "7064b72e812a8e09b0f7043665e918c9403d47ac91feb6d3ac7dd5be1d91ffb6",
+      "gitBlob": "8b4e6936da31566113e6bd7960f0e3bd5c05e18b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_editions.mjs",
+      "bytes": 17200,
+      "sha256": "474eab98f78356e3a803b551e1383314e9e1a8b94b35ddf0855a87a78db747a5",
+      "gitBlob": "da5f6616ea0f838f40328200802a6a7a6e258138"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_loads.mjs",
+      "bytes": 9513,
+      "sha256": "c04d0d2993884330417c6faafe35e1c5b3ff2bd7d683dcc22ecee7f5c5d69865",
+      "gitBlob": "6297ad0a68063e660548f35bf9b986f960f5844c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_reports.mjs",
+      "bytes": 17869,
+      "sha256": "ed439016338b3b157a0b1f1b38251f23eac10b9b7c53b96ad1f266cbc503d6b6",
+      "gitBlob": "f3427a10abd76adbc476dc131183c66457c75055"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_results.mjs",
+      "bytes": 4695,
+      "sha256": "4f68b36f146e54f3739ef2dbee32485b5027268e8b7be695ac8e3da30bc69f3b",
+      "gitBlob": "91cef0eb9450a44fe0e2e7e10beb9402d3231247"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_workspace.mjs",
+      "bytes": 11157,
+      "sha256": "1300dbce60a30ee5c5dcf0399cc81dceec01f97d242e28506ea35d226b2676a7",
+      "gitBlob": "7a24aa8ec688fe2e716dfa999d24062ff047778c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_wqp_loads.mjs",
+      "bytes": 6747,
+      "sha256": "840f438bfe2eabb4c9cb27fe5a8028c86b78a659c6aa2e94abde1ddfa0dcefbb",
+      "gitBlob": "fb5dec7a875b9a362f23f95a6f5039f253edc9f0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/http.mjs",
+      "bytes": 13232,
+      "sha256": "541e78c73837dfd00ed769af0bfb18a932f40ec300c5f95e0f721a6f829d49cd",
+      "gitBlob": "042f5ec3b57710863e030936eda9468ccd85163b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake-receiving.mjs",
+      "bytes": 12704,
+      "sha256": "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2",
+      "gitBlob": "d2c972ae10dac346c361b47b0b7b315f717b19fb"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake.mjs",
+      "bytes": 18426,
+      "sha256": "b7930eea0b7980d5668889fa9ada87a206d166804ed72463e596aaac4bde450b",
+      "gitBlob": "c4bf2454cf81d2a380d4480b6d9bec9bb2973278"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_archive.py",
+      "bytes": 7422,
+      "sha256": "b696119eefc797eb544887c70d3c17d4aa66334679ffff0d2363b2592b7b1a4d",
+      "gitBlob": "bf7fbc5bbdd7302407ab55f1d6adc6447e79368a"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_cli.mjs",
+      "bytes": 3008,
+      "sha256": "d64245d07e20feb65b6099a5ebc407060fa5a9547a1d8a6c4cdf3f2ad8299762",
+      "gitBlob": "67239a7bf2a79a0481798fe217b6bdfb40f3ce8c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_delivery.mjs",
+      "bytes": 28739,
+      "sha256": "60075b257d2ad2414116b959079378d8d402c927765012fe540c7390409cabfe",
+      "gitBlob": "b3e80c2eacc4ec37c893d8e1d9a781abe237ef75"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_http.mjs",
+      "bytes": 2005,
+      "sha256": "7ae6567de4aa8ce2fce5454fee7a331a62f040449e1b9201da31ebfb80f02e54",
+      "gitBlob": "dbe3879371937540145d4906a71b32a8b7b17408"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_intake.mjs",
+      "bytes": 19455,
+      "sha256": "34e7518208949bba903b7fac72e93c61f01c95c42a393be8b6e265c917e0d706",
+      "gitBlob": "e2fa8060afcca35f72a70f5032aca6a3788e2a31"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_io.mjs",
+      "bytes": 4487,
+      "sha256": "331208c794eee0b45008f18598f7d426359a079c6ccf34a10d12302fb265d523",
+      "gitBlob": "431ef429d6f3cae21c19da57bf9ba9653e10c6c9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_sources.mjs",
+      "bytes": 5152,
+      "sha256": "0020b0a12817fb6e2e877ac0455fcd5cb5660d990c532f2222a430332b4d1792",
+      "gitBlob": "6a875e2063b588e7be010ce69b651e70811ce687"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/native_observations.mjs",
+      "bytes": 3802,
+      "sha256": "68fbc4c0a0722665b00cf37adde58b8f7d61b06598aa3e30c7c3a2fc972e00cd",
+      "gitBlob": "0192b61fb4878d75491b65d8c2f20149bb7904bb"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/normalise.mjs",
+      "bytes": 24314,
+      "sha256": "29c76f3147cda502ab12661767abb84c742ea5434062825e310c0ef02d032d80",
+      "gitBlob": "c00476c58ca6b56f171ddedd70cd3a118fae9d3b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/offline_review_cli.mjs",
+      "bytes": 1853,
+      "sha256": "d25c84a1d3abe817976ff8fe15f234eb1e1aaecb7dbeb6a82c24549d7f009325",
+      "gitBlob": "25847a8e9d17ced9593971fed0bf0eddda3def24"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/offline_review.mjs",
+      "bytes": 18811,
+      "sha256": "da27f0fe2c14cd4f26994a6c0c4a36f958d7bb72a04574734fcc68fe9e9ea435",
+      "gitBlob": "b2431ab729449e2d93735e6770602086c47bc418"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/parse.mjs",
+      "bytes": 3800,
+      "sha256": "6e5bf1bb14b2b3baad048eb2b1bd93c56d43aab333b9728799d00d7f8006e33b",
+      "gitBlob": "bc516688d3b224944a5a98d78bcbc6cb6edbb227"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/providers.mjs",
+      "bytes": 6562,
+      "sha256": "b0e69af0fdef3708159e8bb5cc42630060c81593a64621c3393632cbc40b371b",
+      "gitBlob": "4f8a1bbfd7b6a86829f5cc6476b0502d77033fca"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/reconciliation_cli.mjs",
+      "bytes": 2042,
+      "sha256": "84f28a12db782be3398d7e534c96d43675cccbf5d6949e753b496872b0e9e69b",
+      "gitBlob": "3c7c1d448afb3bd0ec040319e3bd8e2393eb38f4"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/reconciliation-receiving.mjs",
+      "bytes": 32377,
+      "sha256": "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1",
+      "gitBlob": "88bacaf506f3bc31ab3da69c08b411d1da0cd9af"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/returned_review_cli.mjs",
+      "bytes": 2977,
+      "sha256": "3c95ea1dd7a66d93c09359e3e5510a64f06dac93676be666a8e083b2d4277543",
+      "gitBlob": "d80e3adbff373088c094a21de11a52ed63fa9ef0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/returned_review_reports.mjs",
+      "bytes": 19394,
+      "sha256": "b66e08538849638a340fd4a2b334e8316e2473909332469b476b278b0cc1b5d3",
+      "gitBlob": "7774c2bf71404da64338919a8d15ffb2a83ade40"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/returned_reviews.mjs",
+      "bytes": 32888,
+      "sha256": "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea",
+      "gitBlob": "efaba678441308686b8a67f0ea52f886f69e219a"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback_cli.mjs",
+      "bytes": 1642,
+      "sha256": "0f56facc55e6e9b4d5f7455a87c2dd0dcdd2e644f543058d08192838301ae27d",
+      "gitBlob": "b7764d3c122ba1172233f4c99ce4149e9ea68f9f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback_core.mjs",
+      "bytes": 11274,
+      "sha256": "1cda0b2bf0f9c3bd031fd4773bc9c70521f22600356b1f0c8a5c6424579489da",
+      "gitBlob": "1d2ffa1d13d8e1f05a303e91632dd4b980e0022c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback_course.mjs",
+      "bytes": 3884,
+      "sha256": "4b6c54428eae88fb2fd9a4460827e8acf166061be74d53e4316e459d5e390742",
+      "gitBlob": "6f0d26af8bce5eea358e80c3d17d890b9de53420"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback_xlsx.mjs",
+      "bytes": 4909,
+      "sha256": "88f85d5f989b7614f40e14649307dc63890b5150a84a0d47d45d422192ead872",
+      "gitBlob": "ea378ec85c04352695042adb8db329265f930bed"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback.mjs",
+      "bytes": 28600,
+      "sha256": "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd",
+      "gitBlob": "75c1a9be82b94caaa7f20c5c5c45fcb1e9523786"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_lineage.mjs",
+      "bytes": 9101,
+      "sha256": "f0208ea12a2a87ba5874382d38f0513f9430d7461b471941e080eb66b1167f95",
+      "gitBlob": "97a1af505a911bfc1551a333709f0a9387d6b330"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_reconciliation.mjs",
+      "bytes": 18043,
+      "sha256": "3e1812e964df450f3cd357d8fa0b3ff4d770d7329ea1d93894a98abeb18eaad7",
+      "gitBlob": "b065871290ca2b59553d4ef1e6bbe3dc4b1d759e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/stream_csv.mjs",
+      "bytes": 2704,
+      "sha256": "08324ba99c7337fe82b2f1c76c7c1c2979b0064ee81762ba4881a7fbb31a16ff",
+      "gitBlob": "75dd38eaddce4db3b710acf080799710142aeb7e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/workspace.mjs",
+      "bytes": 23827,
+      "sha256": "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48",
+      "gitBlob": "3040b092019fa5cbb29fa0293027eb85ecc81b39"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/GUIDED_INTAKE.md",
+      "bytes": 7613,
+      "sha256": "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35",
+      "gitBlob": "9db81aff204098fbc24350f9ec9ba3b652f5070c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/large_context.py",
+      "bytes": 6545,
+      "sha256": "0d9cb79443768f48e04bc879a8beaf2bcf0324d29322ed31a96cedfe2e2f52c2",
+      "gitBlob": "88a9d5511b2e3b9e6668e1dc612ea1a301d71d3d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/LOAD_CONTRACT_CONTROLS.md",
+      "gitBlob": "edb4eb1c9297fad88b7902755605ac3e081a249b",
+      "bytes": 5332,
+      "sha256": "b574b2703172d251579646e5ef08b01e131e9b310e9005ccbdb47f6d77022e25"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/OBSERVATION_SUPPORT.md",
+      "bytes": 5368,
+      "sha256": "0d2d48b0788575f1ff842270d0a5d519db647ecf9660298c2d14959975fc23f1",
+      "gitBlob": "a4e9d9e6219a2283fff7796c08ed4874e245b3ed"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/OBSERVED_BENCHMARKS.md",
+      "bytes": 21542,
+      "sha256": "ba68da187551579836b5b5299c61393a745559626f91ee948332ad60a7e0d242",
+      "gitBlob": "593c989daa92d480f9070f599e565b3d20113170"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/PUBLISHED_REPORTS.md",
+      "bytes": 4450,
+      "sha256": "af2e5a5911b5f738e7415ee3675a5af2ba0946857a623ebbed008a13bc1ec95e",
+      "gitBlob": "9c29792172bfeb43dfa3803631d9de9d41448ef1"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
+      "bytes": 18440,
+      "sha256": "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2",
+      "gitBlob": "6558650406cefbc627eb0ecca69c8fa28da4a9e6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/SOURCE_HANDBACK.md",
+      "bytes": 12815,
+      "sha256": "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39",
+      "gitBlob": "1c6cd06aaf9ba0d4d614b7ff918a7b2c30cfa1de"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/SOURCE_RECONCILIATION.md",
+      "bytes": 18435,
+      "sha256": "71466ae7584023b896647b5cc13d6f2692f7c0c87f3de1fa7c0dc97b671c081c",
+      "gitBlob": "db961e1d10b9017fcc847bb3d7551980169e0859"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/benchmarks.mjs",
+      "bytes": 33585,
+      "sha256": "269b0fa7d2570325fa987c0b98f798859a04149bec2b073d95539e24be7c143a",
+      "gitBlob": "9d22434d74ea06bd18915499f62fe5b0dca03e20"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/chemistry.mjs",
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9",
+      "gitBlob": "47864baeb928c276922fc0cc179ea4979101d60b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/collections.mjs",
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
+      "gitBlob": "adb25cc272fcb0952b138329e41e4d2ece1303f0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/extension.mjs",
+      "bytes": 9427,
+      "sha256": "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e",
+      "gitBlob": "ea3d0da3904859f46acff3ca44b4139a129b527b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/flow_editions.css",
+      "gitBlob": "811f6dc6011e9aa60cbb636055705c0950da7461",
+      "bytes": 5204,
+      "sha256": "2518f7a55d2899d93a998ec844caa4e5beb731f60ef07596aee2ccc985763edf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/flow_editions.mjs",
+      "bytes": 32574,
+      "sha256": "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e",
+      "gitBlob": "a749e3313fe949cf983dcb7e1d92ee3265e14ff6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/flow_loads_ui.mjs",
+      "gitBlob": "7daab61860c5b037f05675dcf5c562d1b21ffc86",
+      "bytes": 46789,
+      "sha256": "3b89f94c0f9fba1196babd8b97d18c9c536fd87a5a209676ba9f21ed2b849a9b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/intake.mjs",
+      "bytes": 25206,
+      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb",
+      "gitBlob": "b0fe0cb113a434fba1f60f98f69676f4856dd030"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/large_files.mjs",
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b",
+      "gitBlob": "1a3d6520449b1c71b849680c513d215f7ce183d7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/offline_review.html",
+      "bytes": 27332,
+      "sha256": "78631fee7386737af39e6b5aa086fe57e59bfeec5c8a00f25736d8ed90ac7f51",
+      "gitBlob": "58b96c20f70109957af06eeee87e2d132c92566b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/results.mjs",
+      "bytes": 18023,
+      "sha256": "3648be3440bd7615c9cd271ac824fd1ccfffc1d919ae363a5113c77cbbb9746b",
+      "gitBlob": "fc6f72fe6ce20dc244958390d44f90d22b1039b6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/returned_reviews.mjs",
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
+      "gitBlob": "33448d111a2da68006d566c17cce76bb01277a16"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/source_handback.css",
+      "bytes": 5002,
+      "sha256": "64b1daf7518ba7a7d7abc42d36f1d63c16b1570f2cb279563afa81b618f0dce4",
+      "gitBlob": "d8f31870a740c9f2aa52d39d7829f358315c9375"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/source_handback.mjs",
+      "bytes": 37868,
+      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f",
+      "gitBlob": "faa44b8fba58accfc59903a5206f328a3bf3a5d2"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/source_reconciliation.css",
+      "bytes": 3655,
+      "sha256": "4e2f08e75ec8eb676ec1309df96562453e7c2967b87d39fb8f8021d8f3f677c9",
+      "gitBlob": "356cfce2781baf53fa9ba6cbaf58f0537ad4a998"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/source_reconciliation.mjs",
+      "bytes": 26138,
+      "sha256": "ea44cd53d2d07710dff71e92fa759a0d0ba4e319fd5440df3384c64ce78a2930",
+      "gitBlob": "7abe1752f925142231cc1a51a655be17d39f1816"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/workspace.css",
+      "bytes": 17087,
+      "sha256": "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0",
+      "gitBlob": "d8343e8946e3af25e7442b7f2dd299a205d84a26"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/workspace.js",
+      "bytes": 30009,
+      "sha256": "19ad95139b181e31289e6dc76d827d0ad81cfb247715133cb82ed6bda39bfca4",
+      "gitBlob": "71819f321034bbb125288a7162effab406a56762"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_data/wqp_eight_20261013/wqp_eight_native.csv",
+      "bytes": 3640,
+      "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/observed_loads.cjs",
+      "bytes": 27712,
+      "sha256": "89bbd274d5efb333855a2e79ab254928818813c721d7fe4e7354af22ae8f65b7"
+    }
+  ]
+}
