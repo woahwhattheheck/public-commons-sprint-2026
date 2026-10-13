@@ -1,0 +1,131 @@
+{
+  "schema": "strata.servicing-source.v1",
+  "edition": 1,
+  "source": {
+    "repository": "BootNodeDev/strata-vault-kit",
+    "commit": "400754230a3fecaa69385687ba8457f1c2250d13",
+    "tree": "4236846e85916d64db5b21330b512f2bc553999c"
+  },
+  "runtime": {
+    "node": ">=22.16",
+    "stellarSdk": "16.1.0",
+    "dependencyLock": "package-lock.json"
+  },
+  "files": [
+    {
+      "path": "app-lib/servicing/model.mjs",
+      "bytes": 39655,
+      "sha256": "79d9765cdf9c3dd3bba3ba6b45a151fb4f0b2b6045fd2d7cc00f032946c81c2f"
+    },
+    {
+      "path": "app-lib/servicing/model.d.mts",
+      "bytes": 5653,
+      "sha256": "d76c7e5718f00e282e1aff0cff13264afde4a88acb617de6badc2519cf2dfdc1"
+    },
+    {
+      "path": "scripts/servicing/files.mjs",
+      "bytes": 14291,
+      "sha256": "0cd9fd7e5186cddc8b4aa9ac361a2f52a77e3d54baf822080898dfa7f1fc26de"
+    },
+    {
+      "path": "scripts/servicing/store.mjs",
+      "bytes": 17334,
+      "sha256": "8a35b30c0c03c778d8e0f9dd93cf8a4a5c25df76253118c3f13e7165b88bce10"
+    },
+    {
+      "path": "scripts/servicing/cli.mjs",
+      "bytes": 4489,
+      "sha256": "18f4518c69ffaa170aae860dff76815b4af9598e370fa767b124b59651585299"
+    },
+    {
+      "path": "scripts/servicing/receiving.mjs",
+      "bytes": 8027,
+      "sha256": "a584ac76a0f7f1545363144b0af6f8f67ec2921e825dc5df101832c052127ec5"
+    },
+    {
+      "path": "scripts/servicing/exercise.mjs",
+      "bytes": 16868,
+      "sha256": "9a6c895b986bc88d92fe473abc1d338a45298160a5a68c9f354a0054e9da6ca9"
+    },
+    {
+      "path": "docs/SERVICING.md",
+      "bytes": 15474,
+      "sha256": "ba8c813acf9b3c3d349167f1bbef1e6854f3491785d10aefe9dfa766af058fd6"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 7017,
+      "sha256": "c7126255d5be4c3aa4fcdd377d108afcb8822f2e10096d151954f156d249e752"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "package.json",
+      "bytes": 978,
+      "sha256": "d779a299234f39d9cdf98456c887cbad86454dd54f63b3293ba0ad101740b3a9"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 504276,
+      "sha256": "467c41d597c045604f097ea1289595a9c69705d7b9dae20186df975543a2a7b2"
+    },
+    {
+      "path": "app-lib/package.json",
+      "bytes": 314,
+      "sha256": "055234c01e34032a198d9c3be671e31aaa01d15f4aed5976b029ac4ce952dd27"
+    },
+    {
+      "path": "contracts/async-vault/src/event.rs",
+      "bytes": 2585,
+      "sha256": "5ef24eb7a4363d5f94442f9c9de440e521b682f2a148380a80a3f6490f50dd33"
+    },
+    {
+      "path": "contracts/async-vault/src/keys.rs",
+      "bytes": 537,
+      "sha256": "1a4bffc7b8b03ad13e5e47f1f66d098715e7a2b06df2f6b958a898dde42eeeb3"
+    },
+    {
+      "path": "contracts/async-vault/src/state.rs",
+      "bytes": 5343,
+      "sha256": "5ffd1c07533ba7e551847f79a2a2b0707e0d4abc73d1e19fc59892d3bbb1d5a2"
+    },
+    {
+      "path": "contracts/nav-oracle/src/lib.rs",
+      "bytes": 7722,
+      "sha256": "44bb3b061b0868780638cc409820e1ed88eb91c4e4526a96512822d21caf5f00"
+    },
+    {
+      "path": "contracts/share-token/src/lib.rs",
+      "bytes": 124,
+      "sha256": "bb41af70ffe31ed79e5e54dcb5b5c4e885d00845a2532d26680836b04a053e9f"
+    },
+    {
+      "path": "OWNER_INSTRUCTIONS.md",
+      "bytes": 8673,
+      "sha256": "b8f8bc8c87839d22aa3f1b218ca5faa4f8256814efbb2ddb9262d598428decb4"
+    },
+    {
+      "path": "DERIVATIVE_NOTICE.md",
+      "bytes": 2224,
+      "sha256": "e8a7d96846c9af98533ba8b1762728d55f3f65cb58737582c655267cbc661e30"
+    },
+    {
+      "path": "UPSTREAM_SOURCE.json",
+      "bytes": 69215,
+      "sha256": "db4b5ad3f916c48fcf12241f0430b653b0115a1e516c72add180983a4f00f547"
+    },
+    {
+      "path": "docs/SERVICING_RECEIVING.md",
+      "bytes": 10795,
+      "sha256": "6659283bb10763b5daeebc3be71e7914a13086aacf5b946bbba45c86ed8305ce"
+    },
+    {
+      "path": "scripts/servicing/staging-binding.json",
+      "bytes": 726,
+      "sha256": "2c2acfa6a3035d82298b81354a3f822fadd82f5a86370fd23c0918f93a5e3f22"
+    }
+  ]
+}

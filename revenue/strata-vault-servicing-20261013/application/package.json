@@ -1,0 +1,37 @@
+{
+  "name": "strata-vault-kit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm start",
+    "prestart": "node scripts/dev-guard.mjs",
+    "start": "npm start --workspace app",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "build:clients": "npm run build:clients -w scripts/harness",
+    "seed": "npm run seed -w scripts/harness --",
+    "pretest": "node scripts/generate-addresses.mjs",
+    "test": "vitest run"
+  },
+  "workspaces": [
+    "app",
+    "app-lib",
+    "app-lib/clients/*",
+    "e2e",
+    "scripts/harness"
+  ],
+  "devDependencies": {
+    "@testing-library/react": "16.3.3",
+    "@theahaco/ts-config": "1.3.2",
+    "jsdom": "29.1.1",
+    "prettier": "^3.8.3",
+    "vitest": "4.1.11"
+  },
+  "prettier": "@theahaco/ts-config/prettier",
+  "overrides": {
+    "@stellar/stellar-sdk": "16.1.0",
+    "axios": "^1.18.0"
+  },
+  "packageManager": "npm@11.7.0"
+}
