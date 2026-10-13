@@ -26,9 +26,15 @@ export class GiveCreditWorkspace {
   apply(action:string,value:NativeRow,options:OperationOptions):Promise<OperationResult>;
   import(source:SourceEdition,label:string,options:OperationOptions):Promise<OperationResult&{edition:{id:string;label:string}&SourceSummary;alreadyPresent?:boolean}>;
   handover():Promise<Handover>;
-  saveCapture(kind:'registry'|'ledger',checkpoint:SourceEdition):Promise<void>;
+  saveCapture(kind:'registry'|'ledger',checkpoint:SourceEdition,options?:{phase?:string;provenance?:NativeRow}):Promise<import('./checkpoint.mjs').CheckpointStatus>;
+  captureStatus(kind:'registry'|'ledger'):Promise<import('./checkpoint.mjs').CheckpointStatus|NativeRow|null>;
+  exportCapture(kind:'registry'|'ledger',path:string):Promise<NativeRow>;
+  importCapture(kind:'registry'|'ledger',path:string):Promise<import('./checkpoint.mjs').CheckpointStatus>;
+  captureStore(kind:'registry'|'ledger'):Promise<import('./checkpoint.mjs').CaptureCheckpointStore>;
+  releaseCapture(kind:'registry'|'ledger'):Promise<void>;
   captureCheckpoint(kind:'registry'|'ledger'):Promise<SourceEdition|undefined>;
   close():Promise<void>;
 }
 export * from './archive.mjs';
 export * from './history.mjs';
+export * from './checkpoint.mjs';
