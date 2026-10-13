@@ -365,7 +365,7 @@
     "large_collection_receiving": {
       "operation_id": "CEDAR-10212-ECO-COLLECTION-RECEIVING-20261013",
       "original_claim": "1791921813.488809",
-      "source_base": "ffa1ace3923d4b22eb593aa22e9b00c0a0ef0e47",
+      "source_base": "a3d269e53cd5fc962aa3326a015b2bd93ac28b38",
       "collection_product_merge": "513c2582b169655b674e23393a1d931d41bb3996",
       "entry": "measurement_workspace/engine/reconciliation-receiving.mjs --chapter large-collections",
       "guide": "measurement_workspace/COLLECTION_RECEIVING.md",

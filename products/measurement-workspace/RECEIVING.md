@@ -2,6 +2,10 @@
 
 This guide receives a finished Measurements delivery through the existing native workspace and installed Applications/agent connection. Preserve the original package and continue in a separate recipient destination. The recipient uses the same scientific parser, calculation and validation modules as the sender.
 
+## Configured scientific operations
+
+The installed client and Merchant provider expose the original observation-edition, sediment study/model-comparison, Chiques, intake-comparison and flow-comparison families. Follow [SCIENTIFIC_OPERATIONS.md](SCIENTIFIC_OPERATIONS.md) for exact native identities, source-bound previews, save/retirement recovery, full artifacts and independent receiving. `artifact-info` and `artifact-download` materialize the original declared file from a complete successful HTTP response; ordinary `download` always retains the full raw HTTP body.
+
 ## Identify the complete delivery
 
 Retain the selected application source manifest and its complete installed files, the full native project/edition, its original source and companion files, and all reports intended for the recipient. Keep relevant transport request/response custody when an operation remains unfinished.
