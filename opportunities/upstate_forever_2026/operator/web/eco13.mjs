@@ -27,6 +27,7 @@ export function attachEco13(host){
   let node=null,workspace='',catalog=null,view=null,recordId='',kind='outcomes',offset=0,limit=100,total=0,nextOffset=null;
   let filter={scenario_id:'',metric:'',q:''},busy=0,recordToken=0,catalogToken=0,rowToken=0,debounce=null;
   let rowAbort=null,recordAbort=null,catalogAbort=null,recordLoadingId='',dirty=false,lastRows=[],issue='',uploadBusy=false;
+  let economicState=null,economicBusy=false,economicToken=0,economicAbort=null,economicError='';
   const drafts=new Map(),pending=new Map(),taskMarks=new Map(),watched=new Map();
   const state=()=>host.getState();
   const activeWorkspace=()=>String(state()?.workspace_key||'');
@@ -92,6 +93,63 @@ export function attachEco13(host){
     return '<p>'+esc(ranking.method||'Costs and physical outcomes are compared across the selected parameter population.')+'</p><p class="eco13-muted">'+(ranking.budget_cents==null?'No budget ceiling':esc(money(ranking.budget_cents))+' '+esc(ranking.currency)+' budget ceiling')+' · '+count(ranking.comparison_groups??groups.length)+' compatible groups</p><div class="eco13-scroll"><table><thead><tr><th>Alternative</th><th>Cost ('+esc(ranking.currency)+')</th><th>Coverage group</th><th>Saved comparison</th><th>Improvement across parameter sets</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+((ranking.excluded||[]).length?'<details><summary>Alternatives outside the saved cost screen</summary><ul>'+ranking.excluded.map(r=>'<li><strong>'+esc(labels.get(r.scenario_id)||r.scenario_id)+'</strong>: '+esc(reason[r.reason]||r.reason)+'</li>').join('')+'</ul></details>':'');
   }
 
+
+  function clearEconomicSources(){
+    economicAbort?.abort();economicToken++;economicState=null;economicBusy=false;economicError='';
+  }
+  function renderEconomicSources(){
+    const target=slot('economic-sources');if(!target)return;
+    const result=economicState,reports=result?.reports||[],canOpen=typeof host.openExtension==='function';
+    let html='<div class="eco13-title-row"><div><h2>Decision reports from these model runs</h2><p>Find saved decision reports that use these original native run pairs. Choose an original reporting zone to continue with its costs, valuation and common-cell coverage.</p></div><button type="button" data-action="eco13-economic-load"'+(economicBusy?' disabled':'')+'>'+(result?'Refresh matching reports':'Find matching reports')+'</button></div>';
+    if(economicError)html+='<p class="eco13-error" role="alert">'+esc(economicError)+'</p>';
+    if(economicBusy)html+='<p class="eco13-status" role="status">Reading the saved report catalogue…</p>';
+    if(!result){target.innerHTML=html;return;}
+    if(!result.adapter_available){target.innerHTML=html+'<p>'+esc(result.availability_message||'The decision-report companion is unavailable in this application.')+'</p>';return;}
+    html+='<p class="eco13-muted">'+count(result.scanned)+' of '+count(result.total_report_directories)+' saved reports checked · '+count(reports.length)+' matching reports.</p>';
+    if(!canOpen)html+='<p class="eco13-error">The installed operator host needs its existing cross-desk navigation update to open these reports.</p>';
+    if(!reports.length)html+='<p>'+(result.next_offset!==null?'No matching report in the pages read so far. Continue through the saved catalogue below.':'No saved decision report in this catalogue matches the original run pairs in this comparison.')+'</p>';
+    for(const report of reports){
+      const alternatives=(report.matched_alternatives||[]),zones=report.zones||[];
+      html+='<article class="eco13-economic-report"><h3>'+esc(report.title||report.report_id)+'</h3><p>'+count(alternatives.length)+' original alternatives · '+esc((report.pollutants||[]).join(', '))+' · '+count(report.ready_zones)+' zones with common support</p><div class="eco13-scroll"><table><thead><tr><th>Original reporting zone</th><th>Area (ha)</th><th>Common valid support</th><th>Continue</th></tr></thead><tbody>';
+      for(const zone of zones){
+        const support=Object.entries(zone.coverage||{}).map(([metric,coverage])=>'<div><strong>'+esc(metric)+'</strong>: '+count(coverage.common_valid_cells)+' cells · '+number(coverage.common_valid_area_ha)+' ha</div>').join('');
+        const reasons=(zone.reasons||[]).map(reason=>'<div>'+esc(reason)+'</div>').join('');
+        html+='<tr><th scope="row">'+esc(zone.title||zone.zone_id)+'<small>'+esc(zone.scope||'')+'</small></th><td>'+number(zone.area_ha)+'</td><td>'+(support||'—')+reasons+'</td><td><button type="button" data-action="eco13-economic-zone" data-report-id="'+esc(report.report_id)+'" data-zone-id="'+esc(zone.zone_id)+'"'+(canOpen&&zone.common_support_available?'':' disabled')+'>Open decision analysis</button></td></tr>';
+      }
+      html+='</tbody></table></div><details class="eco13-source"><summary>Original report and model selections</summary><dl><dt>Report</dt><dd><code>'+esc(report.report_id)+'</code></dd><dt>Source SHA256</dt><dd><code>'+esc(report.report_sha256)+'</code></dd><dt>Baseline run</dt><dd><code>'+esc(report.baseline_run_id)+'</code></dd></dl><ul>'+alternatives.map(a=>'<li><strong>'+esc(a.label||a.scenario_id)+'</strong><br>Run <code>'+esc(a.run_id)+'</code><br>Profile <code>'+esc(a.profile_id)+'</code><br>Scenario <code>'+esc(a.scenario_id)+'</code></li>').join('')+'</ul></details></article>';
+    }
+    if(result.issues?.length)html+='<details class="eco13-source"><summary>'+count(result.issues.length)+' source reports need attention</summary><ul>'+result.issues.map(item=>'<li><code>'+esc(item.report_id)+'</code>: '+esc(item.message)+'</li>').join('')+'</ul></details>';
+    const skipped=Object.entries(result.skipped||{});
+    if(skipped.length)html+='<details class="eco13-source"><summary>Other source selections</summary><ul>'+skipped.map(([reason,n])=>'<li>'+esc(reason.replaceAll('_',' '))+': '+count(n)+'</li>').join('')+'</ul></details>';
+    if(result.next_offset!==null)html+='<button type="button" data-action="eco13-economic-more"'+(economicBusy?' disabled':'')+'>Check next saved reports</button>';
+    html+='<p class="eco13-muted">'+esc(result.interpretation||'')+'</p>';target.innerHTML=html;
+  }
+  async function loadEconomicSources(reset=false){
+    if(!node||!view||(!reset&&economicBusy))return;
+    const selectedId=recordId,workspaceKey=workspace;
+    if(reset)clearEconomicSources();
+    if(!reset&&economicState?.next_offset===null)return;
+    const token=++economicToken;economicAbort?.abort();economicAbort=new AbortController();economicBusy=true;economicError='';renderEconomicSources();
+    const query={record_id:selectedId,offset:reset?0:(economicState?.next_offset||0),limit:25};
+    if(query.offset&&economicState?.listing_sha256)query.listing_sha256=economicState.listing_sha256;
+    try{
+      const result=await host.api(host.endpoint('/api/eco13/economic-sources',query),{signal:economicAbort.signal});
+      if(token!==economicToken||!node||recordId!==selectedId||workspace!==workspaceKey)return;
+      if(result.record_id!==selectedId)throw new Error('The returned decision sources belong to another comparison. Refresh matching reports.');
+      const previous=reset?null:economicState;
+      if(previous&&previous.listing_sha256!==result.listing_sha256)throw new Error('The saved report catalogue changed. Refresh matching reports to read its current population.');
+      const reports=new Map((previous?.reports||[]).map(report=>[report.report_id,report]));
+      for(const report of result.reports||[])reports.set(report.report_id,report);
+      const skipped={...(previous?.skipped||{})};for(const [reason,n] of Object.entries(result.skipped||{}))skipped[reason]=(skipped[reason]||0)+n;
+      economicState={...result,reports:[...reports.values()].sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''))||String(a.report_id).localeCompare(String(b.report_id))),scanned:(previous?.scanned||0)+(result.scanned||0),issues:[...(previous?.issues||[]),...(result.issues||[])],skipped};
+    }catch(error){
+      if(error?.name!=='AbortError'&&token===economicToken){
+        economicError=errorMessage(error);
+        if(error?.status===409||/SOURCE_COLLECTION_CHANGED|catalogue changed|collection changed/i.test(economicError)){economicState=null;economicError+=' Refresh matching reports to continue.';}
+      }
+    }finally{if(token===economicToken){economicBusy=false;renderEconomicSources();}}
+  }
+
   function renderView(){
     if(!node||!view)return;const r=view.record,c=r.counts||{},scenarios=view.scenarios||[],objectives=view.objectives||[];
     const draft=drafts.get(r.id),chosen=new Set(draft?.objectives||(view.settings?.objectives||[]).map(objectiveKey));
@@ -105,6 +163,8 @@ export function attachEco13(host){
     const economic=r.economic_report||view.economic_report;
     const economicButton=economic?.report_id&&typeof host.openExtension==='function'?'<button type="button" data-action="eco13-economic">Open decision analysis</button>':'';
     slot('main').innerHTML='<section class="eco13-panel eco13-record-head"><div class="eco13-title-row"><div><p class="eco13-eyebrow">'+esc(r.kind)+' edition · '+esc(r.status)+'</p><h2>'+esc(r.title||r.id)+'</h2><p class="eco13-muted">'+esc(r.created_at||'')+'</p></div><div class="eco13-actions">'+originalButton+economicButton+'<button type="button" data-action="eco13-export" data-queue>Export editable comparison</button></div></div><dl class="eco13-counts"><div><dt>Original cases</dt><dd>'+count(c.original_cases)+'</dd></div><div><dt>Native runs planned</dt><dd>'+count(c.planned_native_runs)+'</dd></div><div><dt>Alternative outcomes</dt><dd>'+count(c.paired_records)+'</dd></div><div><dt>Parameter outcomes</dt><dd>'+count(c.parameter_records)+'</dd></div><div><dt>Unfinished results</dt><dd>'+count(c.incomplete_records)+'</dd></div></dl><p>Selected models: '+esc((r.selected_models||[]).map(v=>String(v).toUpperCase()).join(', ')||'See original result')+' · Currency: '+esc(r.currency)+'</p>'+renderDownloads(view._downloads)+'<details class="eco13-source"><summary>Original source and edition identity</summary><dl><dt>Comparison</dt><dd><code>'+esc(r.id)+'</code></dd><dt>Original experiment</dt><dd><code>'+esc(r.original_experiment_id||'—')+'</code></dd><dt>Original workspace</dt><dd><code>'+esc(r.source_workspace_id||'—')+'</code></dd><dt>Source edition</dt><dd><code>'+esc(r.source_record_id||'—')+'</code></dd><dt>Retained plan</dt><dd><code>'+esc(r.plan_sha256||'—')+'</code></dd></dl></details></section><section class="eco13-panel"><h2>Native outcomes</h2><div class="eco13-tabs" role="tablist" aria-label="Result types">'+[['outcomes','Land-cover alternatives',c.paired_records],['parameters','Parameter sensitivity',c.parameter_records],['incomplete','Unfinished cases',c.incomplete_records]].map(([id,label,n])=>'<button type="button" role="tab" id="eco13-tab-'+id+'" data-action="eco13-kind" data-kind="'+id+'" aria-controls="eco13-outcome-panel" aria-selected="'+(kind===id)+'" tabindex="'+(kind===id?'0':'-1')+'">'+esc(label)+' <span>'+count(n)+'</span></button>').join('')+'</div><div class="eco13-filters"><label>Alternative<select data-filter="scenario_id"><option value="">All alternatives</option>'+scenarios.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.label||s.id)+'</option>').join('')+'</select></label><label>Outcome<select data-filter="metric"><option value="">All outcomes</option>'+[...new Set(objectives.map(o=>o.metric))].map(metric=>'<option value="'+esc(metric)+'">'+esc(metric.replaceAll('_',' '))+'</option>').join('')+'</select></label><label class="eco13-search">Search results<input type="search" data-filter="q" placeholder="Scenario, parameter or result" value="'+esc(filter.q)+'"></label><label>Rows<select data-page-size><option value="50">50</option><option value="100">100</option><option value="250">250</option></select></label><button type="button" data-action="eco13-clear-filters">Clear filters</button></div><div id="eco13-outcome-panel" role="tabpanel" aria-labelledby="eco13-tab-'+kind+'"><p class="eco13-status" data-slot="row-status" aria-live="polite"></p><div class="eco13-scroll" data-slot="rows" aria-label="Original result table" tabindex="0"></div></div><div class="eco13-pager"><button type="button" data-action="eco13-page" data-step="first">First</button><button type="button" data-action="eco13-page" data-step="previous">Previous</button><span data-slot="page"></span><button type="button" data-action="eco13-page" data-step="next">Next</button><button type="button" data-action="eco13-page" data-step="last">Last</button></div><p class="eco13-muted">Each outcome retains its native units and paired grid-cell coverage. Positive improvement means less exported nutrient or sediment mass. Parameter effects remain separate from land-cover alternatives.</p></section><section class="eco13-panel"><h2>Saved cost comparison</h2>'+renderRanking(view.ranking)+'</section><section class="eco13-panel"><h2>Save a planning edition</h2><p>Set intervention estimates and the outcomes that matter to this decision. Each save creates an independent edition of these retained model results.</p><form data-form="planning"><label>New edition title<input name="title" maxlength="180" value="'+esc(draft?.title||r.title+' — planning update')+'" required></label><div class="eco13-planning-grid"><div><h3>Intervention costs ('+esc(r.currency)+')</h3><div class="eco13-scroll"><table class="eco13-cost-inputs"><thead><tr><th>Alternative</th><th>Cost</th></tr></thead><tbody>'+costInputs+'</tbody></table></div><p class="eco13-muted">Leave a field empty to keep its current value. An unspecified cost remains unknown. Enter zero only for an intended zero-cost intervention.</p></div><div><h3>Selected outcomes</h3><div class="eco13-objectives">'+(checkboxes||'<p class="eco13-muted">Complete paired outcomes will become selectable when they are received.</p>')+'</div><label>Budget ceiling ('+esc(r.currency)+')<input name="budget" inputmode="decimal" value="'+esc(draft?.budget??money(view.settings?.budget_cents))+'" placeholder="No ceiling"'+(chosen.size?'':' disabled')+'></label><p class="eco13-muted">The cost screen compares every selected parameter set within compatible grid-cell and baseline groups. Leave the budget empty for no ceiling.</p></div></div><div class="eco13-actions"><button type="submit" data-queue>Save new edition</button><button type="button" data-action="eco13-reset-planning" data-queue>Restore original planning choices</button><span class="eco13-muted" data-slot="draft-status">'+(dirty?'Unsaved planning changes':'')+'</span></div></form></section>';
+    const economics=document.createElement('section');economics.className='eco13-panel';economics.dataset.slot='economic-sources';
+    slot('main').insertBefore(economics,node.querySelector('[data-form="planning"]').closest('section'));renderEconomicSources();
     const scenario=node.querySelector('[data-filter="scenario_id"]'),metric=node.querySelector('[data-filter="metric"]');
     scenario.value=filter.scenario_id;metric.value=filter.metric;node.querySelector('[data-page-size]').value=String(limit);
     setBusy(0);
@@ -112,7 +172,7 @@ export function attachEco13(host){
   async function loadRecord(id){
     if(!node||!workspace||!id)return;captureDraft();recordId=id;keepSelection();
     if(!drafts.has(id)){const saved=stored('eco13:draft:'+workspace+':'+id,null);if(saved&&Array.isArray(saved.objectives)&&saved.costs)drafts.set(id,saved);}
-    dirty=drafts.has(id);view=null;recordLoadingId=id;
+    dirty=drafts.has(id);view=null;recordLoadingId=id;clearEconomicSources();
     const token=++recordToken;recordAbort?.abort();recordAbort=new AbortController();rowAbort?.abort();rowToken++;
     slot('main').setAttribute('aria-busy','true');slot('main').inert=true;setIssue('');
     try{const result=await host.api(host.endpoint('/api/eco13/record',{record_id:id}),{signal:recordAbort.signal});
@@ -246,6 +306,14 @@ export function attachEco13(host){
       filter={scenario_id:'',metric:'',q:''};offset=0;for(const input of node.querySelectorAll('[data-filter]'))input.value='';await loadRows();
     }else if(action==='eco13-export'){if(view)await submitAction('eco13.comparison.export',{record_id:recordId});}
     else if(action==='eco13-reset-planning'){if(view)await submitAction('eco13.report.save',{record_id:recordId,reset_report_options:true,clear_budget:true});}
+    else if(action==='eco13-economic-load')await loadEconomicSources(true);
+    else if(action==='eco13-economic-more')await loadEconomicSources(false);
+    else if(action==='eco13-economic-zone'){
+      const report=economicState?.reports?.find(value=>value.report_id===button.dataset.reportId);
+      const zone=report?.zones?.find(value=>value.zone_id===button.dataset.zoneId);
+      if(!report||!zone?.common_support_available||typeof host.openExtension!=='function')throw new Error('Refresh the saved decision report sources before opening this zone.');
+      captureDraft();await host.openExtension('economic-desk','openReport',{report_id:report.report_id,zone_id:zone.zone_id});
+    }
     else if(action==='eco13-economic'){
       const report=view?.record?.economic_report||view?.economic_report;
       if(report?.report_id&&typeof host.openExtension==='function')await host.openExtension('economic-desk','openReport',{report_id:report.report_id,zone_id:report.zone_id});
@@ -274,7 +342,7 @@ export function attachEco13(host){
     event.preventDefault();event.stopPropagation();target.focus();target.click();
   }
   function restoreWorkspace(){
-    captureDraft();workspace=activeWorkspace();catalog=null;view=null;recordLoadingId='';dirty=false;drafts.clear();pending.clear();watched.clear();taskMarks.clear();
+    captureDraft();clearEconomicSources();workspace=activeWorkspace();catalog=null;view=null;recordLoadingId='';dirty=false;drafts.clear();pending.clear();watched.clear();taskMarks.clear();
     recordId=stored('eco13:selected:'+workspace,'');if(typeof recordId!=='string')recordId='';
     for(const item of stored('eco13:pending:'+workspace,[]))if(Array.isArray(item)&&item[1]?.workspace===workspace)pending.set(item[0],item[1]);
     for(const item of stored('eco13:watched:'+workspace,[]))if(Array.isArray(item))watched.set(item[0],item[1]);
@@ -305,7 +373,7 @@ export function attachEco13(host){
     if(node)detach();node=element;node.addEventListener('click',onClick);node.addEventListener('submit',onSubmit);node.addEventListener('input',onInput);node.addEventListener('change',onChange);node.addEventListener('keydown',onKeydown);restoreWorkspace();update(nextState);
   }
   function detach(){
-    captureDraft();clearTimeout(debounce);rowAbort?.abort();recordAbort?.abort();catalogAbort?.abort();recordToken++;catalogToken++;rowToken++;
+    captureDraft();clearEconomicSources();clearTimeout(debounce);rowAbort?.abort();recordAbort?.abort();catalogAbort?.abort();recordToken++;catalogToken++;rowToken++;
     if(node){node.removeEventListener('click',onClick);node.removeEventListener('submit',onSubmit);node.removeEventListener('input',onInput);node.removeEventListener('change',onChange);node.removeEventListener('keydown',onKeydown);}node=null;
   }
   return {mount,update,detach,dispatch,taskActions};
