@@ -135,6 +135,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         path = directory / (kind + ".ndjson")
         write_record_file(workspace, kind, path)
         files.append(path.name)
+    files.extend(write_case_reports(workspace, directory, source_revision=source_revision))
     review_path = directory / "review.html"
     with PublishedText(review_path) as report:
         report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + cell(title) + "</title><style>" + STYLE + "</style></head><body>")
@@ -142,6 +143,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         if note:
             report.write("<p class=\"note\">" + cell(note) + "</p>")
         report.write("<p>This handover retains original inputs, reviewed mapping editions, migration-round selections and the current correction queue. Field results concern the supplied evidence. Review the selected population and coverage before interpreting a count.</p>")
+        report.write("<h2>Case and document migration</h2><p><a href=\"case-review.html\">Open the complete selected case policy, relationships, rehearsals, review decisions and cutover record</a>. All original projections/results are included as complete NDJSON and CSV.</p>")
         report.write("<h2>Actions and current correction decisions</h2>")
         table_start(report, "Current correction queue at the selected revision", ("Correction", "State", "Owner", "Finding", "Latest review note"))
         count = 0
@@ -210,3 +212,163 @@ def build_reports(workspace, directory, *, source_revision, title, note):
     if workspace.project["revision"] != source_revision:
         raise ValueError("Workspace revision changed during the frozen report capture")
     return sorted(set(files))
+
+CASE_KINDS = ("dataset", "plan", "rehearsal", "review", "cutover")
+CASE_PAGE_READS = {"dataset": "case.dataset.rows", "plan": "case.plan.items",
+                   "rehearsal": "case.rehearsal.items"}
+
+
+def case_pages(workspace, operation, payload):
+    """Read every original occurrence at one owned revision; reject an incomplete page."""
+    from migration_store import MigrationError
+    selected_revision = workspace.project["revision"]
+    offset, declared, seen = 0, None, set()
+    while True:
+        result = workspace.dispatch(operation, {**payload, "offset": offset, "limit": PAGE})
+        total, records = result.get("total"), result.get("rows")
+        if (isinstance(total, bool) or not isinstance(total, int) or total < 0 or
+                not isinstance(records, list) or len(records) > PAGE or
+                result.get("offset") != offset):
+            raise MigrationError("CASE_EXPORT_PAGE", "Original case reader returned an invalid complete page")
+        if declared is None:
+            declared = total
+        if total != declared or offset + len(records) > total:
+            raise MigrationError("CASE_EXPORT_PAGE", "Original case population changed during export")
+        for record in records:
+            if not isinstance(record, dict) or not isinstance(record.get("id"), str):
+                raise MigrationError("CASE_EXPORT_PAGE", "Original case reader must retain a complete record ID")
+            if record["id"] in seen:
+                raise MigrationError("CASE_EXPORT_PAGE", "Original case reader repeated a record")
+            seen.add(record["id"])
+            yield record
+        offset += len(records)
+        if workspace.project["revision"] != selected_revision:
+            raise MigrationError("CASE_EXPORT_REVISION", "Workspace changed during its selected complete export")
+        if offset == total:
+            return
+        if not records:
+            raise MigrationError("CASE_EXPORT_PAGE", "Original case reader ended before its complete count")
+
+
+def case_records(workspace, kind):
+    if kind not in CASE_KINDS:
+        raise ValueError("Choose an original case entity kind")
+    yield from case_pages(workspace, "case.list", {"kind": kind})
+
+
+def _case_csv_text(value):
+    # Complete original JSON remains unchanged in the final column. The other
+    # individual text columns are safe to open directly in a spreadsheet.
+    value = "" if value is None else str(value)
+    if value.startswith(("=", "+", "-", "@", "\t", "\r", "\n")):
+        return "'" + value
+    return value
+
+
+def iter_case_export(workspace, kind, entity_id, *, format="ndjson"):
+    """Complete selected descriptor plus every original projection/result; no second store."""
+    from migration_store import MigrationError, identifier
+    if kind not in tuple("case." + item for item in CASE_KINDS):
+        raise MigrationError("EXPORT_KIND", "Choose case.dataset, case.plan, case.rehearsal, case.review or case.cutover")
+    if format not in ("ndjson", "csv"):
+        raise MigrationError("EXPORT_FORMAT", "Choose ndjson or csv")
+    identifier(entity_id)
+    bare = kind.split(".", 1)[1]
+    revision = workspace.project["revision"]
+    descriptor = workspace.dispatch(kind + ".get", {"id": entity_id})
+    if descriptor.get("id") != entity_id:
+        raise MigrationError("CASE_EXPORT_ID", "The selected original entity identity differs")
+    def records():
+        yield {"schema": "commons.case-migration-export/v1", "type": "selection",
+               "workspace_id": workspace.project["id"], "workspace_revision": revision,
+               "kind": kind, "entity_id": entity_id, "record": descriptor}
+        if bare in CASE_PAGE_READS:
+            for row in case_pages(workspace, CASE_PAGE_READS[bare], {"id": entity_id}):
+                yield {"schema": "commons.case-migration-export/v1", "type": "record",
+                       "kind": kind, "entity_id": entity_id, "record": row}
+    if format == "csv":
+        output = io.StringIO(newline="")
+        csv.writer(output, lineterminator="\r\n", quoting=csv.QUOTE_ALL).writerow(
+            ("record_type", "entity_id", "record_id", "kind", "status",
+             "key_json", "destinations_json", "complete_original_record_json"))
+        yield output.getvalue().encode("utf-8")
+    for wrapped in records():
+        if format == "ndjson":
+            yield (canonical(wrapped) + "\n").encode("utf-8")
+        else:
+            record = wrapped["record"]
+            values = (wrapped["type"], entity_id, record.get("id"), record.get("kind", bare),
+                      record.get("status", record.get("decision")),
+                      canonical(record.get("key")), canonical(record.get("expected_destinations")),
+                      canonical(wrapped))
+            output = io.StringIO(newline="")
+            csv.writer(output, lineterminator="\r\n", quoting=csv.QUOTE_ALL).writerow(
+                [_case_csv_text(value) for value in values[:-1]] + [values[-1]])
+            yield output.getvalue().encode("utf-8")
+    if workspace.project["revision"] != revision:
+        raise MigrationError("CASE_EXPORT_REVISION", "Workspace changed while exporting original case evidence")
+
+
+def write_case_reports(workspace, directory, *, source_revision):
+    """Render the actual selected policy, independent results and all decisions."""
+    from migration_store import identifier
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Case report must retain the selected original revision")
+    files, counts = [], {}
+    for kind in CASE_KINDS:
+        path = directory / ("case-" + kind + ".ndjson")
+        count = 0
+        with PublishedText(path) as stream:
+            for record in case_records(workspace, kind):
+                stream.write(canonical(record) + "\n")
+                count += 1
+        files.append(path.name)
+        counts[kind] = count
+    path = directory / "case-review.html"
+    with PublishedText(path) as report:
+        report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Case migration review</title><style>" + STYLE + "</style></head><body>")
+        report.write("<header><p class=\"subtle\">Case and document migration / Original evidence</p><h1>Case migration review</h1><p>Workspace <code>" + cell(workspace.project["id"]) + "</code> · Selected revision " + str(source_revision) + "</p></header>")
+        report.write("<p>This report retains the selected case/document relationships, original lifecycle values and explicit cutoff/destination policy. Supplied loader receipts remain separate from independent target inventory. A recorded cutover decision does not send data or confer target-system authority.</p>")
+        table_start(report, "Complete selected entity inventory", ("Kind", "Count", "Complete records"))
+        for kind in CASE_KINDS:
+            table_row(report, (kind, counts[kind], "case-" + kind + ".ndjson"))
+        table_end(report)
+        for kind in CASE_KINDS:
+            report.write("<h2>" + cell(kind.capitalize() + " editions") + "</h2>")
+            for record in case_records(workspace, kind):
+                entity_id = identifier(record["id"])
+                descriptor = workspace.dispatch("case." + kind + ".get", {"id": entity_id})
+                report.write("<section><h3>" + cell(descriptor.get("title", entity_id)) + "</h3><p><code>" + cell(entity_id) + "</code></p>")
+                if kind == "dataset":
+                    report.write("<p>Kind: " + cell(descriptor.get("kind")) + " · Side: " + cell(descriptor.get("side")) + " · Destination: " + cell(descriptor.get("destination")) + " · Original occurrences: " + cell(descriptor.get("row_count")) + " · Interpretation issues: " + cell(descriptor.get("issue_count")) + ".</p>")
+                    report.write(json_detail("Complete original source, explicit field selectors and value maps", descriptor))
+                elif kind == "plan":
+                    report.write(json_detail("Exact selected source editions, cutoff and destination policy", descriptor))
+                elif kind == "rehearsal":
+                    report.write("<p>Plan <code>" + cell(descriptor.get("plan_id")) + "</code>. Counts retain selected occurrences, including repeated, missing and ambiguous identities.</p>")
+                    table_start(report, "Independent target reconciliation results", ("Result", "Occurrences"))
+                    for status, count in (descriptor.get("summary") or {}).get("counts", {}).items():
+                        table_row(report, (status, count))
+                    table_end(report)
+                    report.write(json_detail("Full frozen plan, selected target and separate receipt datasets", descriptor))
+                elif kind == "review":
+                    report.write("<p>Disposition: " + cell(descriptor.get("disposition")) + " · Assigned to: " + cell(descriptor.get("assigned_to")) + ".</p>")
+                    report.write(json_detail("Original finding, explicit response and selected evidence", descriptor))
+                else:
+                    report.write("<p>Recorded decision: " + cell(descriptor.get("decision")) + " · Owner: " + cell(descriptor.get("owner")) + ".</p>")
+                    report.write(json_detail("Full window, rollback, task evidence, review selection and unresolved findings", descriptor))
+                for extension in ("ndjson", "csv"):
+                    target = directory / (entity_id + "." + extension)
+                    with PublishedText(target) as output:
+                        for chunk in iter_case_export(workspace, "case." + kind, entity_id, format=extension):
+                            output.write(chunk.decode("utf-8"))
+                    files.append(target.name)
+                report.write("<p>Complete original selection and all rows: <a href=\"" + cell(entity_id) + ".ndjson\">NDJSON</a> · <a href=\"" + cell(entity_id) + ".csv\">CSV</a>.</p></section>")
+            if not counts[kind]:
+                report.write("<p>No " + cell(kind) + " edition has been supplied or recorded. No migration result is inferred.</p>")
+        report.write("<h2>Continue the same editable project</h2><p>The portable handover contains the complete original SQLite database and source objects. Open <code>application/CASE_MIGRATION.md</code> for CLI and browser use. Retain earlier source, plan, rehearsal and decision editions; record explicit successors against the actual current revision.</p>")
+        report.write("<p><a href=\"review.html\">Original migration review and full evidence inventory</a></p></body></html>\n")
+    files.append(path.name)
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Case report changed from its selected original revision")
+    return files
