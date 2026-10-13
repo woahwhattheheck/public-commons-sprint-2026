@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "5",
+  "version": "6",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -11,7 +11,8 @@
     "implementation.css",
     "implementation_workbench.html",
     "implementation_lab.mjs",
-    "implementation_results.mjs"
+    "implementation_results.mjs",
+    "implementation_dispatch.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -32,7 +33,8 @@
       "implementation.source.import",
       "implementation.selection.import",
       "implementation.observations.import",
-      "implementation.lab.import"
+      "implementation.lab.import",
+      "implementation.lab.dispatch"
     ],
     "invoke": {
       "handler": "invoke",
@@ -294,6 +296,71 @@
         ],
         "path": "/api/implementation/lab-import",
         "operation": "lab-import",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/dispatch-preview",
+        "operation": "dispatch-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/dispatches",
+        "operation": "dispatches",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/dispatch-detail",
+        "operation": "dispatch-detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/dispatch-reconcile",
+        "operation": "dispatch-reconcile",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/dispatch",
+        "operation": "dispatch",
         "handler": "queue",
         "args": [
           "workspace_key",

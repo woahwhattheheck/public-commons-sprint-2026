@@ -1042,6 +1042,14 @@ class PublishedStudyStore:
                     "source_collection_id": record["source_collection_id"],
                     "source_id": record["source_entries"][raw_path],
                 }
+            for reference in row.get("metadata_source_records", {}).values():
+                metadata_path = reference["source_file"]
+                if metadata_path not in record["source_entries"]:
+                    raise ValueError("An original observation metadata source is not registered.")
+                reference["source_selector"] = {
+                    "source_collection_id": record["source_collection_id"],
+                    "source_id": record["source_entries"][metadata_path],
+                }
         summary = _json(original(WQP_SUMMARY)) if WQP_SUMMARY in record["source_entries"] else {}
         methods_name = next((name for name in (FLOW_METHODS, FLOW_METHODS_PUBLIC)
                              if name in record["source_entries"]), None)
@@ -1330,15 +1338,44 @@ class PublishedStudyStore:
                 "original_source_url": selected_rows[0].get("original_source_url", ""),
                 "record_count": len(selected_rows),
                 "rows": [{"selected_csv_row": number, "original_csv_row": row["source_csv_row"],
-                          "record_id": row["record_id"], "activity_id": row["activity_id"]}
+                          "record_id": row["record_id"], "activity_id": row["activity_id"],
+                          "original_result_identifier": row.get("original_result_identifier", ""),
+                          "metadata_source_records": {
+                              role: {key: value for key, value in reference.items() if key != "raw_cells"}
+                              for role, reference in row.get("metadata_source_records", {}).items()}}
                          for number, row in enumerate(selected_rows, 2)],
+            })
+        metadata_rows = {}
+        for selected_rows in registered_rows.values():
+            for row in selected_rows:
+                for reference in row.get("metadata_source_records", {}).values():
+                    metadata_rows.setdefault(reference["source_file"], {})[reference["source_csv_row"]] = reference
+        selected_metadata = []
+        for source_file, references in sorted(metadata_rows.items()):
+            source, descriptor = self.source_file(study_id, source_file, context["record"]["version_id"])
+            headers = csv.DictReader(io.StringIO(source.read_text(encoding="utf-8-sig"))).fieldnames or []
+            references = [reference for number, reference in sorted(references.items())]
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=headers, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(reference["raw_cells"] for reference in references)
+            filename = "selected-activities/metadata/" + _name(source_file)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+            selected_metadata.append({
+                "path": filename, "original_source_path": source_file,
+                "original_source_sha256": references[0]["sha256"],
+                "record_count": len(references),
+                "rows": [{"selected_csv_row": number,
+                          **{key: value for key, value in reference.items() if key != "raw_cells"}}
+                         for number, reference in enumerate(references, 2)],
             })
         if selected_sources:
             filename = "selected-activities/index.json"
             _atomic(destination / filename, _json_bytes({
                 "schema": "upstate.selected-original-observations/v1",
                 "study_id": study_id, "version_id": context["record"]["version_id"],
-                "sources": selected_sources,
+                "sources": selected_sources, "metadata_sources": selected_metadata,
             }))
             written.append(filename)
 
@@ -1361,6 +1398,7 @@ class PublishedStudyStore:
             "series_key", "sample_fraction", "method_authority", "method_id",
             "result_value_type", "result_weight_basis", "result_time_basis",
             "result_temperature_basis", "result_particle_size_basis", "support_unit",
+            "method_specification_name",
         )
         interval_columns = (
             "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
@@ -1560,6 +1598,8 @@ class PublishedStudyStore:
             ("activity_type", "Original activity type"), ("parameter_original", "Source parameter"),
             ("sample_fraction", "Sample fraction"), ("result_value_type", "Original result type"),
             ("method_authority", "Method authority"), ("method_id", "Method identifier"),
+            ("method_specification_name", "Method specification"),
+            ("original_result_identifier", "Original result identifier"),
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),

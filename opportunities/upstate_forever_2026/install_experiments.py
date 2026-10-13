@@ -33,7 +33,8 @@ KNOWN_PRIOR = {
     "c02476827809d17025db050fb553ed944def0aade6c70d350c2f342d74676257",
     "b23afe5b52c269753b5ba8723a1848df17fd41136358d546ca2f9aaa3611dc30",
     "9628308bd9af5295aa668ab5959ee4081c4c20bb8c05c0131338df633d28cab2",
-    "f4d491ee4dce0ce8c54b75f45aa556970be426c73ccc7f3632672ffcffd99286"
+    "f4d491ee4dce0ce8c54b75f45aa556970be426c73ccc7f3632672ffcffd99286",
+    "b87a8b6f7239e4b4729f3070d18c09d21689d3a4e69b1b4409fc36ec52f2f898"
   ],
   "operator/web/experiments.mjs": [
     "5a1b52d75c6b86c33cac38e415c09dafccbdaacd918e07ae096460b1f3c6c99f",
@@ -63,7 +64,8 @@ KNOWN_PRIOR = {
   "install_experiments.py": [
     "b385281038af1d8501df5c15bc6d9b0dec5f59320113c7e5a6839850921c5442",
     "9b318ac5ed09a7c5f3e731685dd232b5416ecf8344d6ce226b026bfd9eb90791",
-    "e63e45591b52603ac7f4074710c3937b910a0a1f77650c60a65809bd3c337e01"
+    "e63e45591b52603ac7f4074710c3937b910a0a1f77650c60a65809bd3c337e01",
+    "159db071f2da1a9b661daf1c169355ffb9515fa61c514590bf3037a29a9e4bd2"
   ],
   "model/programme_experiments.py": [
     "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
@@ -84,6 +86,7 @@ LEAVES = (
     "model/EXPERIMENT_PROGRAMME_CONTINUATION.md",
     "operator/experiment_operator.py", "operator/web/experiments.mjs",
     "operator/web/experiments.css", "operator/EXPERIMENTS.md",
+    "integration/experiment_native_source_report_composition.json",
     "source/experiment-methods-20261012.json",
 )
 JOINED = ("operator/server.py", "operator/web/app.mjs",

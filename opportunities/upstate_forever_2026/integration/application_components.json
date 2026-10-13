@@ -70,7 +70,10 @@
     "observed-station-studies",
     "gauge-support",
     "observed-context",
-    "workspace-finder"
+    "workspace-finder",
+    "monitoring-report",
+    "parameter-studies",
+    "utility-source-receiving"
   ],
   "components": {
     "core": {
@@ -78,6 +81,7 @@
       "paths": [
         "audit.py",
         "delivery_snapshot.py",
+        "docs/COMPLETE_APPLICATION_RECEIVING.md",
         "install_extensions.py",
         "integration/a74f-component-inventory-20261013.json",
         "integration/application_components.json",
@@ -124,6 +128,7 @@
         "install_economic_desk.py",
         "install_experiments.py",
         "install_gis_projects.py",
+        "install_implementation.py",
         "install_intelligence.py",
         "install_intelligence_operator.py",
         "install_landcover.py",
@@ -131,8 +136,8 @@
         "install_published_studies.py",
         "install_source_refresh.py",
         "install_terrain.py",
-        "operator/install_diagnostics.py",
-        "operator/install_conservation.py"
+        "operator/install_conservation.py",
+        "operator/install_diagnostics.py"
       ],
       "requires": [
         "core"
@@ -159,7 +164,31 @@
     "calibration": {
       "title": "calibration",
       "paths": [
+        "model/CALIBRATION.md",
+        "model/CALIBRATION_MAPS.md",
+        "model/CALIBRATION_REPORT_SOURCE.md",
+        "model/CALIBRATION_REVIEW.md",
+        "model/CALIBRATION_UNCERTAINTY.md",
+        "model/calibration.py",
+        "model/calibration_maps.py",
+        "model/calibration_report_source.py",
+        "model/calibration_review.py",
+        "model/calibration_uncertainty.py",
+        "model/observed_context.py",
+        "model/scientific_figures.py",
+        "operator/CALIBRATION.md",
+        "operator/CALIBRATION_DESIGN.md",
+        "operator/calibration.py",
+        "operator/calibration_design_patch.json",
         "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "operator/install_calibration_design.py",
+        "operator/web/calibration.css",
+        "operator/web/calibration.mjs",
+        "operator/web/calibration_design.mjs",
+        "operator/web/calibration_maps.mjs",
+        "operator/web/calibration_review.mjs",
+        "source/calibration-design/upper-savannah-reference-support.json",
         "source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md",
         "source/hydrology-huc05-07-20261013/README.md",
         "source/hydrology-huc05-07-20261013/calibration-inputs.json",
@@ -179,6 +208,10 @@
         "source/hydrology-huc05-07-20261013/flow-support/selected-reference-binding.json",
         "source/hydrology-huc05-07-20261013/flow-support/source-period-selection.json",
         "source/hydrology-huc05-07-20261013/flow-support/station-date-support.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/capture.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/openapi.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/process.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/request-plan.json",
         "source/hydrology-huc05-07-20261013/nldi/README.md",
         "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
         "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
@@ -225,7 +258,10 @@
         "source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs",
         "source/hydrology-huc05-07-20261013/reference-support-inputs.json",
         "source/hydrology-huc05-07-20261013/reference-support.sources.json",
-        "source/hydrology-huc05-07-20261013/source-manifest.json"
+        "source/hydrology-huc05-07-20261013/source-manifest.json",
+        "source_tools/NLDI_SPLIT_CAPTURE.md",
+        "source_tools/calibration_assembly.py",
+        "source_tools/capture_nldi_split.py"
       ],
       "requires": [
         "core"
@@ -234,17 +270,22 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_discharge_sources",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_catchments",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_reference_flow_support",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "original_gauge_split_capture",
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -656,6 +697,7 @@
         "model/ensemble_operations.py",
         "model/ensemble_references.py",
         "model/ensemble_report.py",
+        "model/ensemble_scientific_source.py",
         "model/ensembles.py",
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
         "operator/ensemble_service.py",
@@ -672,17 +714,17 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_parameter_studies",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_study_consumers",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "complete_operating_guide",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -824,7 +866,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "paired_raster_studies",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -860,7 +902,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "source_profile_intake",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -900,7 +942,11 @@
     "project-transfer": {
       "title": "Original incremental transfer and restore",
       "paths": [
+        "model/PARAMETER_STUDY_RECEIVING.md",
         "model/PROJECT_TRANSFER.md",
+        "model/portable_acquisitions.py",
+        "model/portable_implementation.py",
+        "model/portable_parameter_studies.py",
         "model/project_transfer.py",
         "model/project_transfer_cli.py",
         "model/project_transfer_desk.py",
@@ -1109,7 +1155,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_soil_preparation",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -1325,10 +1371,12 @@
         "integration/watershed_completed_receiving.json",
         "model/WATERSHED_BRIEF.md",
         "model/WATERSHED_CONTEXT.md",
+        "model/utility_observed_context.py",
         "model/utility_watershed_context.py",
         "model/watershed_brief.py",
         "model/watershed_context.py",
         "model/watershed_context_cli.py",
+        "observations/observed_hydrology_20261013/derived/daily_flow.csv",
         "operator/WATERSHED_CONTEXT.md",
         "operator/extensions/watershed-context.json",
         "operator/install_watershed_context.py",
@@ -1340,7 +1388,50 @@
         "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
         "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
         "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+        "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+        "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+        "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+        "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+        "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+        "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/source-inputs.json",
+        "source/ecoli_utility_context/20261013/source-manifest.json",
+        "source/ecoli_utility_context/20261013/station-membership.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
         "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/utility-observed-context/20261013/README.md",
+        "source/utility-observed-context/20261013/inputs.json",
+        "source/utility-observed-context/20261013/regional-nutrient-series.csv",
+        "source/utility-observed-context/20261013/regional-stream-geography.csv",
+        "source/utility-observed-context/20261013/report.html",
+        "source/utility-observed-context/20261013/utility-observed-context.json",
+        "source/utility-observed-context/20261013/utility-original-record-index.csv",
+        "source/utility-observed-context/20261013/utility-station-coverage.csv",
+        "source/utility-observed-context/20261013/utility-station-year-method.csv",
+        "source/utility-observed-context/20261013/utility-year-coverage.csv",
+        "source/utility-source-context/20261013/utility-source-context.json",
         "source/water_context/20261013/classified-full-domain-query.json",
         "source/water_context/20261013/classified-reaches.csv",
         "source/water_context/20261013/complete-native-sources.json",
@@ -1357,13 +1448,17 @@
         "source/water_context/20261013/source-context-run.json",
         "source_tools/NATIVE_NETWORK_SOURCE.md",
         "source_tools/WATERSHED_SOURCE_IMPORT.md",
+        "source_tools/build_utility_observed_context.mjs",
         "source_tools/prepare_watershed_context.py",
         "source_tools/prepare_watershed_manifest.py",
         "source_tools/prepare_watershed_network.py",
+        "source_tools/receive_utility_source_context.py",
         "source_tools/receive_watershed_context.py",
         "source_tools/receive_watershed_edition.py",
+        "source_tools/utility_observed_context.mjs",
         "source_tools/watershed_source_entry.py",
-        "source_tools/watershed_source_validation.py"
+        "source_tools/watershed_source_validation.py",
+        "utility_observed_context.sources.json"
       ],
       "requires": [
         "core"
@@ -1372,8 +1467,11 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "watershed_source_reporting",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
+      ],
+      "source_manifests": [
+        "utility_observed_context.sources.json"
       ]
     },
     "utility-microbial-study": {
@@ -1905,9 +2003,39 @@
       }
     },
     "implementation": {
-      "title": "Implementation & fieldwork",
+      "title": "Implementation, original fieldwork evidence, native reports and receiving",
       "paths": [
-        "operator/extensions/implementation.json"
+        "build_implementation_offline.py",
+        "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
+        "docs/IMPLEMENTATION_LAB_RESULTS.md",
+        "docs/IMPLEMENTATION_NATIVE_RECEIVING.md",
+        "docs/IMPLEMENTATION_OBSERVATIONS.md",
+        "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
+        "docs/implementation-native-guide.md",
+        "docs/implementation-operator-guide.md",
+        "install_implementation.py",
+        "model/implementation.py",
+        "model/implementation_cli.py",
+        "model/implementation_economics.py",
+        "model/implementation_lab_results.py",
+        "model/implementation_observations.py",
+        "model/implementation_reporting.py",
+        "model/implementation_schema.py",
+        "model/implementation_sources.py",
+        "model/portable_implementation.py",
+        "operator/extensions/implementation.json",
+        "operator/implementation_operator.py",
+        "operator/web/implementation.css",
+        "operator/web/implementation.mjs",
+        "operator/web/implementation_catalog.json",
+        "operator/web/implementation_core.mjs",
+        "operator/web/implementation_forms.mjs",
+        "operator/web/implementation_lab.mjs",
+        "operator/web/implementation_workbench.html",
+        "source/implementation/20261013/greenwood-review-plan.json",
+        "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+        "source/keowee-native-receiving-20261013/source-interval-journey.json",
+        "source_tools/receive_implementation.py"
       ],
       "requires": [
         "core"
@@ -1915,20 +2043,31 @@
       "source_reference": {
         "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
         "git_blob": "4309452cb20771a86169b201a109e851ac6c889a"
-      }
+      },
+      "family_source_references": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "native_receiving_merge": "316402c267178b08a40b196ba4b08503ab80dda0",
+          "installer_closure_merge": "ba1d0e55590d444ad1fe472add589c0197d29d6d"
+        }
+      ]
     },
     "monitoring": {
       "title": "Monitoring design and complete original native receiving package",
       "paths": [
+        "eighteenmile_monitoring_context.sources.json",
         "integration/completed_component_adoption.json",
+        "integration/monitoring_observed_sources.json",
         "integrations/monitoring/API.md",
         "integrations/monitoring/HANDOFF.md",
         "integrations/monitoring/MANIFEST.json",
         "integrations/monitoring/PREDECESSORS.json",
         "integrations/monitoring/README.md",
         "integrations/monitoring/RECEIVING.md",
+        "integrations/monitoring/current_application_files.json",
         "integrations/monitoring/install_monitoring.py",
         "integrations/monitoring/install_native_monitoring.py",
+        "integrations/monitoring/install_observed_context.py",
         "integrations/monitoring/requirements-monitoring.txt",
         "integrations/monitoring/source_adoption.json",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/MONITORING.md",
@@ -1957,29 +2096,19 @@
         "integrations/monitoring/tests/test_monitoring.py",
         "integrations/monitoring/tests/test_native_contract.py",
         "model/MONITORING.md",
+        "model/MONITORING_FIELDWORK.md",
+        "model/MONITORING_OBSERVED_CONTEXT.md",
         "model/monitoring_actions.py",
         "model/monitoring_campaign.py",
         "model/monitoring_cli.py",
         "model/monitoring_common.py",
         "model/monitoring_design.py",
+        "model/monitoring_implementation.py",
         "model/monitoring_network.py",
+        "model/monitoring_observed_context.py",
         "model/monitoring_sources.py",
         "model/monitoring_workspace.py",
         "model/requirements-monitoring.txt",
-        "operator/MONITORING_API.md",
-        "operator/extensions/monitoring.json",
-        "operator/monitoring.py",
-        "operator/monitoring_native.py",
-        "operator/monitoring_receiving.py",
-        "operator/static/monitoring.js",
-        "operator/web/monitoring-component.mjs",
-        "operator/web/monitoring.css",
-        "operator/web/monitoring.mjs",
-        "eighteenmile_monitoring_context.sources.json",
-        "integration/monitoring_observed_sources.json",
-        "integrations/monitoring/install_observed_context.py",
-        "model/MONITORING_OBSERVED_CONTEXT.md",
-        "model/monitoring_observed_context.py",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
@@ -1990,7 +2119,17 @@
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
         "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+        "operator/MONITORING_API.md",
+        "operator/extensions/monitoring.json",
+        "operator/monitoring.py",
+        "operator/monitoring_native.py",
+        "operator/monitoring_receiving.py",
+        "operator/static/monitoring.js",
+        "operator/web/monitoring-component.mjs",
         "operator/web/monitoring-observed.mjs",
+        "operator/web/monitoring.css",
+        "operator/web/monitoring.mjs",
+        "operator/web/monitoring_fieldwork.mjs",
         "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
         "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
         "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
@@ -2034,7 +2173,14 @@
         "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv"
       ],
       "requires": [
-        "core"
+        "core",
+        "implementation"
+      ],
+      "family_source_references": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "campaign_fieldwork_merge": "80a0b3fd5394e2726df049aa718319ad156c5150"
+        }
       ]
     },
     "portfolio-pairing": {
@@ -2788,6 +2934,7 @@
     "gauge-support": {
       "title": "Gauge support",
       "paths": [
+        "model/gauge_report_context.py",
         "model/gauge_support.py",
         "operator/GAUGE_SUPPORT.md",
         "operator/extensions/gauge-support.json",
@@ -2806,7 +2953,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_gauge_support",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -3278,6 +3425,82 @@
         "core"
       ],
       "source_reference": "ES-20261013-WORKSPACE-FINDER: existing operator navigation, original retained core item routes and tasks."
+    },
+    "monitoring-report": {
+      "title": "Retained Monitoring designs and campaign revisions in ordered scientific reports",
+      "paths": [
+        "model/MONITORING_REPORT_SOURCE.md",
+        "model/monitoring_report_cli.py",
+        "model/monitoring_report_source.py",
+        "operator/extensions/monitoring-report.json",
+        "operator/monitoring_report_native.py",
+        "operator/web/monitoring-report.mjs"
+      ],
+      "requires": [
+        "monitoring",
+        "observed-context"
+      ]
+    },
+    "parameter-studies": {
+      "title": "Native parameter studies, paired results and complete GIS/report suite exports",
+      "paths": [
+        "model/parameter_studies.py",
+        "model/parameter_pair_cache.py",
+        "model/parameter_exports.py",
+        "model/PARAMETER_PAIR_RESULTS.md",
+        "model/PARAMETER_GIS_RESULTS.md",
+        "operator/parameter_study_api.py",
+        "operator/PARAMETER_STUDIES.md",
+        "operator/parameter-study-integration.json",
+        "operator/web/parameter_studies.css",
+        "operator/web/parameter_studies.mjs",
+        "source_tools/receive_gura_studies.py",
+        "model/parameter_suite_exports.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "import_roots": [
+        "source_tools"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "paired_results_merge": "a68d6acc6852752cc4792d006546e605ddbcc472",
+        "gis_results_merge": "0833c8fef3f9ba8e9c0a79966c6aa4157b3efd04",
+        "native_continuation_merge": "13f2d109ed3db0b7ddb1a725f67f47a637a2d6c0",
+        "suite_exports_merge": "5ee4ab267fc691d77611c31f5b52715599135b2e"
+      }
+    },
+    "utility-source-receiving": {
+      "title": "Original utility-source and observation context with complete native receiving packets",
+      "paths": [
+        "source_tools/receive_utility_source_context.py",
+        "source_tools/utility_source_context.mjs",
+        "source_tools/utility_source_context_cli.mjs",
+        "source_tools/utility_observed_context.mjs",
+        "source_tools/build_utility_observed_context.mjs",
+        "model/utility_observed_context.py",
+        "model/utility_watershed_context.py",
+        "model/watershed_brief.py",
+        "utility_observed_context.sources.json",
+        "source/utility-source-context-20261013.json",
+        "source/utility-source-context/20261013/inputs.json",
+        "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/utility-observed-context/20261013/inputs.json"
+      ],
+      "source_manifests": [
+        "utility_observed_context.sources.json",
+        "source/utility-source-context-20261013.json"
+      ],
+      "requires": [
+        "watershed-context",
+        "utility-microbial-study"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "native_receiving_merge": "8d1bc0396aa8e281bf4430828e9cb01c02ed6e02",
+        "complete_observed_packet_merge": "5c5be94df794257a4ef5ffed663ad96d8296f14a"
+      }
     }
   }
 }

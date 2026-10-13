@@ -29,6 +29,14 @@ The Python environment needs the original application's existing Playwright inst
 
 The output directory includes `receiving.json`, original inspection and before/after summary JSON, original downloaded reports, three screenshots, and optional video. The capability is redacted from retained diagnostics. Report generation timestamps and report-file digests can change on summary refresh; scientific results and case identities must remain equal.
 
+## Retained original native runs
+
+A completed original run can carry an older requested version while its actual producing models use the supported native version. The Conservation baseline picker uses each model's retained execution metadata. The experiment keeps that selected original run ID, selection and output descriptors through its frozen source bindings.
+
+When the selected experiment contains adopted originals, this course checks its complete source-run set against the saved case bindings and reopens each exact original run through the existing operator item reader. It compares the selected model families, original selection and artifact descriptors, then checks the producing versions against the same per-model metadata displayed by Conservation. The receiving result records these bindings and complete original run records under `adopted_native_sources`. Canonical experiments without adopted bindings continue with an empty source register.
+
+The entire scientific case rows, pairs, selections and quantities still compare exactly before and after summary refresh and browser reopening. A run-level observation does not replace a retained completed model-stage version.
+
 ## Resume the same receiving operation
 
 Run the same command with the same output directory after a process or connection interruption. The first pre-refresh scientific summary is saved and its file identity is recorded before any report action. A retry verifies and reopens that same snapshot, preserving the original comparison even when the previous summary task already completed. `receiving.json` retains `summary_operation`, the original action body and `operation_id`, before the browser receives its queue response. If the accepted task ID is missing, the command sends that exact retained request to the original idempotent action endpoint and continues its returned task. Once a task ID is known, polling verifies its Workspace, action and selected experiment; an interrupted task uses the existing task-resume endpoint once. The original summary action refreshes the saved reports without starting the native model cases.

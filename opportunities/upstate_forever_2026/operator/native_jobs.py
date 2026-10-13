@@ -231,7 +231,11 @@ class NativeJobs:
                  "ended_at": now(), "returncode": returncode}
         if error:
             value["error"] = error
-        atomic_json(execution["directory"] / "supervision.json", value)
+        try:
+            atomic_json(execution["directory"] / "supervision.json", value)
+        finally:
+            with self.lock:
+                self.processes.pop(request["execution_id"], None)
 
     def _mark_interrupted(self, execution, message):
         """Only reconcile a dead worker; never edit a run held by another process."""
@@ -317,8 +321,6 @@ class NativeJobs:
                         process.wait(timeout=3)
                 returncode = process.poll() if process else None
                 self._record_exit(execution, "complete", returncode=returncode)
-                with self.lock:
-                    self.processes.pop(request["execution_id"], None)
                 return complete
             worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
             if worker.get("identity"):
@@ -398,8 +400,6 @@ class NativeJobs:
             if self.operator.closing:
                 # Let Operator.close finish while the detached native worker continues.
                 self._record_exit(execution, "detached")
-                with self.lock:
-                    self.processes.pop(request["execution_id"], None)
                 raise NativeJobDetached("NATIVE_DETACHED",
                                         "The operator closed while its native calculation continued. Reopen this task to reconnect to the same worker.")
             time.sleep(0.4)

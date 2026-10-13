@@ -1,12 +1,15 @@
 """Parameter-study operations and result-table reads for the local operator."""
 from __future__ import annotations
 
+import json
+
 from model import parameter_studies as experiments
+from model import parameter_calibration
 from model.common import identifier, read_json, verify_file
 from model.model_selection import selected
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
-READS = {"catalog", "results"}
+READS = {"catalog", "results", "calibration"}
 
 
 class ParameterStudyAPI:
@@ -41,8 +44,17 @@ class ParameterStudyAPI:
         workspace = self.operator.ws(workspace_id)
         if operation == "catalog":
             return experiments.catalog(workspace, identifier(payload.get("baseline_run_id")))
+        if operation == "calibration":
+            run_ids = payload.get("candidate_run_ids")
+            if isinstance(run_ids, str):
+                try:
+                    run_ids = json.loads(run_ids)
+                except (TypeError, ValueError) as error:
+                    raise self.fault("PARAMETER_STUDY_CANDIDATES", "Select the completed original study cases.") from error
+            return parameter_calibration.candidates(
+                workspace, identifier(payload.get("id")), candidate_run_ids=run_ids)
         if operation != "results":
-            raise self.fault("PARAMETER_STUDY_READ", "Choose the parameter catalog or results.")
+            raise self.fault("PARAMETER_STUDY_READ", "Choose the parameter catalog, completed results or calibration candidates.")
 
         experiment_id = identifier(payload.get("id"))
         state = experiments.inspect(workspace, experiment_id)

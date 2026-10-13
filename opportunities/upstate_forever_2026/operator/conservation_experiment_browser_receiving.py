@@ -186,6 +186,53 @@ def main():
                     raise TimeoutError("The retained summary operation remains active: " + key)
                 time.sleep(1)
 
+        def adopted_sources(summary, available):
+            frozen = {}
+            for row in summary["rows"]:
+                for field, run_field in (("native_source", "run_id"),
+                                         ("native_baseline_source", "baseline_run_id")):
+                    source = row.get(field)
+                    if source is None:
+                        continue
+                    key = source.get("run_id") if isinstance(source, dict) else None
+                    require(isinstance(key, str) and len(key) == 64
+                            and all(character in "0123456789abcdef" for character in key)
+                            and source.get("schema") == "upstate.experiment-native-source/v1"
+                            and key == row.get(run_field)
+                            and source.get("models") == summary.get("models"),
+                            "Retain the original adopted run identity and selected native models.")
+                    require(key not in frozen or frozen[key] == source,
+                            "The experiment repeats an original run with different frozen source bindings.")
+                    frozen[key] = source
+            selected = summary.get("selection", {}).get("source_run_ids", [])
+            require(isinstance(selected, list) and len(selected) == len(set(selected))
+                    and set(selected) == set(frozen),
+                    "The completed cases must retain every original selected source run.")
+            current = {row["id"]: row for row in available.get("runs", [])}
+            records = {}
+            for key, source in sorted(frozen.items()):
+                original = get("/api/item", kind="runs", id=key)
+                artifacts = source.get("artifacts")
+                require(original.get("id") == key and original.get("state") == "complete"
+                        and original.get("selection") == source.get("selection")
+                        and isinstance(artifacts, dict)
+                        and set(artifacts) == set(summary.get("pollutants", []))
+                        and all(original.get("artifacts", {}).get(name) == value
+                                for name, value in artifacts.items()),
+                        "An adopted source differs from its original completed run or output descriptors.")
+                execution = current.get(key, {}).get("execution") or {}
+                versions = execution.get("model_versions") or {}
+                require(execution.get("supported") is True
+                        and source.get("producing_versions") == {
+                            model: versions.get(model, {}).get("comparison_version")
+                            for model in source["models"]},
+                        "The adopted source differs from its original producing-model version metadata.")
+                records[key] = {
+                    "binding": source, "execution": execution,
+                    "original_run": save_json("native-original-" + key + ".json", original),
+                }
+            return records
+
         def photograph(name):
             path = output / name
             page.screenshot(path=str(path), full_page=True, animations="disabled")
@@ -306,6 +353,7 @@ def main():
             require(primary_pairs and primary_pairs <= actual_pairs,
                     "The native summary must contain the saved Conservation bridge baseline/alternative pair.")
             report["primary_native_pairs"] = [list(pair) for pair in sorted(primary_pairs)]
+            report["adopted_native_sources"] = adopted_sources(summary, overview.get("available", {}))
             report["summary"] = save_json("native-summary.json", summary)
             report["pairs"] = summary["pairs"]
             report["models"] = summary.get("models")

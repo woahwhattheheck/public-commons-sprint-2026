@@ -14,7 +14,7 @@ python -B operator/server.py \
   --source-manifest /absolute/original-capture/source-manifest.json
 ```
 
-Omit `--create` when opening a retained workspace. Repeat `--source-manifest` for additional original source editions. The server prints its actual loopback operator URL; open that complete URL in the local browser. The initial capability is held in the URL fragment, copied into the tab's session storage and removed from the address. Every API call requires the same operator capability.
+Omit `--create` when opening a retained workspace. Repeat `--source-manifest` for additional original source editions. The server prints its actual loopback operator URL; open that complete URL in the local browser. The initial capability is held in the URL fragment, copied into the tab's session storage and removed from the address. Named people can connect with their assigned private access link. The startup capability remains local installation-owner access. See [TEAM_ACCESS.md](TEAM_ACCESS.md) for project roles, credential management and installation recovery.
 
 The default listener binds `127.0.0.1` on an available port. The interface, styles and scripts are local files. The scientific model is the existing `model.workspace.Workspace`; the operator does not implement another model, grid engine, coefficient table or calibration procedure.
 
@@ -93,7 +93,7 @@ Defaults:
 
 Select actual storage capacity with `--upload-limit-mib` and `--source-extraction-limit-mib`. Set `--operator-state` and `--restore-directory` when the receiver uses separate storage. These limits govern original data intake; they do not change scientific parameters.
 
-After the authenticated tab opens, a separate HttpOnly, SameSite Strict cookie is scoped to the exact file-download route. It supports native browser streaming and byte ranges for large archives/PDFs without putting credentials in query strings or loading an entire ZIP into browser memory. A download ticket identifies a retained workspace file by its expected byte length and SHA256. Changed files fail readback.
+After the authenticated tab opens, a separate installation-specific HttpOnly, SameSite Strict session cookie supports file downloads. It is accepted only for file reads and rechecks the current person's project access. It supports native browser streaming and byte ranges for large archives/PDFs without putting credentials in query strings or loading an entire ZIP into browser memory. A download ticket identifies a retained workspace file by its expected byte length and SHA256. Changed files fail readback.
 
 Source ZIPs accept ordinary unencrypted relative file paths and original sidecars. The receiver rejects traversal, duplicate file names and link/special-file members. Native workspace restore continues to use the original portable archive verifier.
 
@@ -125,3 +125,7 @@ The native CLI remains available for reproducible source acquisition, original a
 ### Original land-cover classes and source inspection
 
 Raster cell size follows the original land-cover reference. Spatial land-cover legends and point inspection show descriptions from retained original biophysical tables, including the Gura sources, while physical outputs keep their native numeric scales. The original profile table remains available from the profile detail during a native calculation. Guided Step 7 opens the scenario report desk as well as full regional delivery generation.
+
+## Named people and project access
+
+Open **Manage team access** in the sidebar to assign administrators and project viewers/analysts. The complete operating and receiving guide is [TEAM_ACCESS.md](TEAM_ACCESS.md). Keep the operator-state directory outside application source and every scientific workspace.

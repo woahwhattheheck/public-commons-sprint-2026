@@ -24,3 +24,11 @@
 .source-reports-panel [data-source-report-archive-status] small{display:block}
 @media(max-width:700px){.source-reports-heading{display:block}.source-reports-heading .inline-actions{margin-top:12px}.source-report-frame-shell iframe{min-height:420px;height:70vh}}
 @media print{.source-reports-panel{display:none}}
+
+.source-report-editions { margin-block: 1.25rem 2rem; padding-block: 1rem; border-top: 1px solid #aaa; border-bottom: 1px solid #aaa; }
+.source-report-editions h3 { margin: 0 0 .5rem; }
+.source-report-editions td { vertical-align: top; }
+.source-report-editions td:last-child { min-width: 10rem; }
+.source-report-editions ul { margin: .5rem 0; padding-left: 1.25rem; }
+.source-report-editions li + li { margin-top: .4rem; }
+.source-report-editions .inline-actions { align-items: flex-start; flex-direction: column; }

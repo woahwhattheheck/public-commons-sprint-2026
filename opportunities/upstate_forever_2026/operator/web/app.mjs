@@ -47,6 +47,7 @@ const fragment=new URLSearchParams(location.hash.slice(1));
 let capability=fragment.get('token')||sessionStorage.getItem(keyName);
 if(fragment.get('token')){sessionStorage.setItem(keyName,capability);history.replaceState(null,'','#overview');}
 let workspace=sessionStorage.getItem('upstate-selected-workspace')||null;
+let teamPerson=null,connectionEpoch=0;
 let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'overview',poll=null,refreshing=false,refreshQueued=false;
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
@@ -55,11 +56,13 @@ const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#de
 const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});
 
 async function api(path,{method='GET',body,raw,filename,signal}={}){
-  const headers={Authorization:'Bearer '+capability};
+  const epoch=connectionEpoch;
+  const headers={Authorization:'Bearer '+capability,...(workspace?{'X-Workspace':workspace}:{})};
   if(body!==undefined)headers['Content-Type']='application/json';
   if(filename)headers['X-Upload-Filename']=encodeURIComponent(filename);
   const response=await fetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal});
   const text=await response.text();
+  if(epoch!==connectionEpoch)throw Error('The connection changed while this request was running.');
   let value;try{value=JSON.parse(text);}catch{value={error:{message:'The operator returned an unreadable response (HTTP '+response.status+').'}};}
   if(!response.ok){const error=new Error(value.error?.message||'HTTP '+response.status);error.code=value.error?.code;error.status=response.status;throw error;}
   return value;
@@ -76,7 +79,7 @@ async function rehearsalOpenControl(control){
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
-const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true})});
+const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args)});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection)});
@@ -89,10 +92,11 @@ const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,subm
 let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({
+ openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
- openForm,submitAction,detail,fileList,uploadFile,
+ openForm,submitAction,detail,fileList,uploadFile,sourceForm,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
  openDelivery:selection=>deliveryForm(undefined,selection),
  openReceivingPlan:id=>receivingWaters.openPlan(id),
@@ -146,12 +150,17 @@ async function refresh({force=false}={}){
     try{data=await api('/api/state?compact=1'+(requestedWorkspace?'&workspace='+encodeURIComponent(requestedWorkspace):''));}
     catch(error){
       if(workspace!==requestedWorkspace)return;
-      if(error.status!==404||!requestedWorkspace)throw error;
+      if(![403,404].includes(error.status)||!requestedWorkspace)throw error;
       data=await api('/api/state?compact=1');
     }
     if(workspace!==requestedWorkspace)return;
     state=data;workspace=data.workspace_key;sessionStorage.setItem('upstate-selected-workspace',workspace);
-    $('#connection-state').textContent='';
+    teamPerson=data.person||teamPerson;
+    const access=data.workspaces.find(x=>x.id===workspace)?.access_role||'administrator';
+    $('#connection-state').textContent=access==='viewer'?'Viewer access · Inspect retained results and download available files.':'';
+    $('#team-person').textContent=(teamPerson?.display_name||'Local installation owner')+' · '+access;
+    $('#team-manage').hidden=!teamPerson?.administrator;
+    $('#team-sign-out').hidden=false;
     const options=data.workspaces.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===workspace?'selected':'')+' '+(!x.available?'disabled':'')+'>'+esc(x.title)+(x.received?' · restored copy':'')+'</option>').join('');
     $('#workspace-select').innerHTML=options;
     for(const task of data.tasks){
@@ -167,7 +176,10 @@ async function refresh({force=false}={}){
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
     if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(kind==='deliveries'?deliveryChanged(row,detailContext):row.state!==detailContext.state))await openItem(kind,row.id,false);}
   }catch(error){
-    if(workspace===requestedWorkspace){$('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);}
+    if(workspace===requestedWorkspace){
+      if(error.status===401){showConnection(error.message);return;}
+      $('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);
+    }
   }finally{
     refreshing=false;clearTimeout(poll);
     if(refreshQueued){refreshQueued=false;poll=setTimeout(()=>refresh({force:true}),0);}
@@ -512,9 +524,13 @@ function bindCollection(name,targets,chosenValues={}){
 }
 function sourceForm(options={}){
  sourcePreview=null;
- const registered=state.registered_sources||[];
+ const registered=[...(state.registered_sources||[])];
+ if(options.registeredManifest&&!registered.some(row=>row.id===options.registeredManifest.id))
+  registered.push(options.registeredManifest);
+ if(options.registeredId&&!registered.some(row=>row.id===options.registeredId))
+  throw Error('Refresh and choose an available registered source edition.');
  openForm('Import original source data','Preview the original metadata and file selection, then retain the edition in the native workspace.',
- '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':registered.length?'registered':'archive'))+
+ '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
@@ -543,7 +559,7 @@ function sourceForm(options={}){
    formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
-   $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources'])),'',true):
+   $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources']),options.registeredId||registered[0]?.id),'',true):
     '<div class="form-grid">'+field(mode==='archive'?'Original source ZIP':'Original source file',input('source_file','file','','required '+(mode==='archive'?'accept=".zip"':'')),'Files are uploaded as their original bytes.',true)+
     (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member','text',options.manifestMember||''),'Optional. Use the exact original relative path.',true):
      field('Title',input('source_title','text','','required'))+field('Original source URI',input('source_uri','url','','required'))+field('Source vintage',input('source_vintage','text','','required'),'Edition, release date or actual observation period.')+field('Kind',select('source_kind',[['table','Table'],['raster','Raster'],['vector','Vector'],['document','Document']],'table'))+field('Units',input('source_units'))+field('Role',input('source_role'),'Optional original source role.')+field('Layer',input('source_layer'))+field('Source notes',area('source_notes'),'One note per line.',true))+'</div>';
@@ -1194,9 +1210,37 @@ form.addEventListener('submit',async event=>{
 formDialog.addEventListener('cancel',event=>{if(formContext?.busy)event.preventDefault();else formContext=null;});
 detailDialog.addEventListener('close',()=>{if(detailDialog.open||itemRequest!==detailRequest)return;itemRequest++;deliveryInspection.detach();detailContext=null;});
 $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.target.value).catch(globalError));
-window.addEventListener('hashchange',()=>{const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);});
+window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);});
 window.addEventListener('online',()=>refresh({force:true}));
+function showConnection(message='Open your private access link or paste it below.'){
+ connectionEpoch++;itemRequest++;
+ nativeJobs.detach();rehearsal.detach();extensions.detach();spatialWorkspace.suspend();
+ programmes.detach();community.detach();customerReviews.detach();experiments.detach();
+ receivingWaters.detach();portfolio.detach();parameterStudies.detach();deliveryInspection.detach();
+ capability=null;teamPerson=null;state=null;workspace=null;clearTimeout(poll);
+ lastTaskStates.clear();lastRendered='';refreshQueued=false;taskPanel=false;
+ sessionStorage.removeItem(keyName);sessionStorage.removeItem('upstate-selected-workspace');
+ if(formDialog.open)formDialog.close();if(detailDialog.open)detailDialog.close();formContext=null;detailContext=null;
+ $('#task-panel').hidden=true;$('#task-list').replaceChildren();$('#task-count').textContent='0';
+ $('#workspace-select').replaceChildren();$('#team-person').textContent='Disconnected';$('#team-manage').hidden=true;$('#team-sign-out').hidden=true;
+ $('#connection-state').textContent='';
+ $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><form id="team-connect-form"><label for="team-access-link">Private access link</label><input id="team-access-link" type="password" required autocomplete="off"><button type="submit">Connect</button></form></div>';
+ $('#team-connect-form').addEventListener('submit',event=>{
+   event.preventDefault();const supplied=$('#team-access-link').value.trim();let selected;
+   try{selected=new URL(supplied,location.origin).hash;selected=new URLSearchParams(selected.slice(1)).get('token');}catch{}
+   if(!selected){globalError(Error('Paste the complete private access link supplied by your administrator.'));return;}
+   sessionStorage.setItem(keyName,selected);location.replace('/');location.reload();
+ });
+}
+$('#team-sign-out').addEventListener('click',async()=>{
+ try{await api('/api/logout',{method:'POST',body:{}});}catch{}
+ finally{showConnection('Signed out. Open a current private access link to reconnect.');}
+});
 if(capability){
- try{await api('/api/session',{method:'POST',body:{}});try{await extensions.load();const requested=location.hash.slice(1);if(extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}await refresh({force:true});}
- catch(error){globalError(error);$('#connection-state').textContent='Open the current operator URL printed by the local server.';}
-}else $('#connection-state').textContent='Open the complete operator URL printed by the local server to access this workspace.';
+ try{
+  const session=await api('/api/session',{method:'POST',body:{}});teamPerson=session.person;
+  if(!session.workspaces.some(row=>row.id===workspace))workspace=session.default_workspace;
+  try{await extensions.load();const requested=location.hash.slice(1);if(extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}
+  await refresh({force:true});
+ }catch(error){showConnection(error.message);}
+}else showConnection();

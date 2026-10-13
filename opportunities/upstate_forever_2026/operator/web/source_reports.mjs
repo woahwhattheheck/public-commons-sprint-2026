@@ -44,7 +44,7 @@ function download(url,label){
 }
 
 export function attachSourceReports(host) {
-  let panel=null,currentWorkspace=null,currentCatalogKey=null,reports=[],selected=null,selectedMember=null;
+  let panel=null,currentWorkspace=null,currentCatalogKey=null,reports=[],editions=[],discoveryIssues=[],selected=null,selectedMember=null;
   let generation=0,detailGeneration=0,active=false,loading=null,query='',catalogError=null;
   const request = (path,values={}) => host.api(host.endpoint(path,values));
   const valid = (workspace,ticket) => generation===ticket&&host.getWorkspace()===workspace;
@@ -57,12 +57,14 @@ export function attachSourceReports(host) {
       panel=document.createElement('section');panel.id='source-reports-panel';panel.className='source-reports-panel';
       panel.setAttribute('aria-label','Retained source reports');
       panel.innerHTML='<div class="source-reports-heading"><div><h2>Source reports and regional context</h2>'+
-        '<p>Open a retained report with its original files, or import a complete report archive into this Workspace.</p></div>'+
-        '<div class="inline-actions"><button type="button" data-source-report-action="import">Import report ZIP</button>'+
-        '<button type="button" data-source-report-action="regional" hidden>Open Regional watersheds</button></div></div>'+
+        '<p>Preview an available source edition, or open a retained report with its original files.</p></div>'+
+        '<div class="inline-actions"><button type="button" data-source-report-action="refresh">Refresh available editions</button>'+
+        '<button type="button" data-source-report-action="import">Import report ZIP</button>'+
+        '<button type="button" data-source-report-action="regional" hidden>Open Regional watersheds</button>'+
+        '<button type="button" data-source-report-action="stations" hidden>Open Station geography</button></div></div>'+
         '<p class="source-reports-regional" hidden></p>'+
-        '<label class="source-reports-search">Find a retained report<input type="search" data-source-report-search placeholder="Title, source ID, edition or report type"></label>'+
-        '<div data-source-report-status role="status"></div><div data-source-report-catalog></div>'+
+        '<label class="source-reports-search">Find a source edition or report<input type="search" data-source-report-search placeholder="Title, source ID, edition or report type"></label>'+
+        '<div data-source-report-status role="status"></div><div data-source-report-editions></div><div data-source-report-catalog></div>'+
         '<section data-source-report-detail hidden aria-label="Selected retained report"></section>';
       panel.addEventListener('click',event=>{
         const button=event.target.closest('[data-source-report-action]');
@@ -87,6 +89,7 @@ export function attachSourceReports(host) {
     panel.querySelector('[data-source-report-status]').textContent=error.message||String(error);
   }
   function renderRegional(){
+    panel.querySelector('[data-source-report-action="stations"]').hidden=!host.hasView('station-geography');
     const enabled=host.hasView('watershed-context'),button=panel.querySelector('[data-source-report-action="regional"]');
     button.hidden=!enabled;
     const reports=host.getState()?.data?.watershed_context_reports||[];
@@ -96,8 +99,42 @@ export function attachSourceReports(host) {
       ?reports.length.toLocaleString()+' saved regional report'+(reports.length===1?'':'s')+' available in the original Regional watersheds desk. Open it to inspect programme context, native network selections and saved regional views.'
       :'Regional watersheds uses the retained regional source edition and its native network. Open the desk to select original sources or reopen an analysis.';
   }
+  function renderEditions(){
+    const words=String(query).trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    const visible=editions.filter(row=>{
+      const text=[row.title,row.manifest_name,row.origin,...row.source_ids,...row.vintages,
+        ...row.reports.flatMap(report=>[report.title,report.source_id,report.role])].join(' ').toLocaleLowerCase();
+      return words.every(word=>text.includes(word));
+    });
+    panel.querySelector('[data-source-report-editions]').innerHTML=
+      '<section class="source-report-editions" aria-label="Available source editions"><h3>Available source editions</h3>'+
+      '<p>Preview original source metadata, then import the chosen edition into this Workspace. Existing reports appear below after the import completes.</p>'+
+      (visible.length?'<div class="table-scroll"><table><thead><tr><th>Source edition</th><th>Original contents</th><th>Workspace status</th><th></th></tr></thead><tbody>'+
+      visible.map(row=>{
+        const retained=row.retained_collections||[],linked=row.retained_reports||[];
+        const status=retained.length?'Retained in this Workspace':row.ready?'Ready to preview':'Source files need attention';
+        const actions=linked.length?linked.map(report=>'<button type="button" data-source-report-action="open" data-report-key="'+
+          esc(rowKey(report))+'">Open '+esc(report.title)+'</button>').join(''):
+          retained.length?'<button type="button" data-source-report-action="retained-edition" data-collection-id="'+esc(retained[0].id)+'">Inspect retained edition</button>':'';
+        return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.vintages.join(' · '))+'</small><small>'+
+          esc(row.origin)+' · '+esc(row.manifest_name)+'</small></td><td>'+row.entry_count.toLocaleString()+
+          ' original sources · '+row.member_count.toLocaleString()+' files'+
+          (row.reports.length?'<ul>'+row.reports.map(report=>'<li>'+esc(report.title)+'<small>'+esc(report.vintage)+
+            ' · '+esc(labels[report.role]||report.role||report.kind)+'</small></li>').join('')+'</ul>':'')+
+          (row.regional_context?'<small>Regional watershed source context</small>':'')+'</td><td>'+esc(status)+
+          (row.problems.length?'<details><summary>'+row.problems.length+' source file issue'+(row.problems.length===1?'':'s')+
+            '</summary><ul>'+row.problems.map(item=>'<li><span class="mono">'+esc(item.member)+'</span>: '+esc(item.reason)+'</li>').join('')+'</ul></details>':'')+
+          '</td><td><div class="inline-actions">'+actions+
+          (row.ready?'<button type="button" data-source-report-action="preview-edition" data-registered-id="'+esc(row.registered_id)+'">'+
+            (retained.length?'Review import metadata':'Preview and import')+'</button>':'')+'</div></td></tr>';
+      }).join('')+'</tbody></table></div>':'<p class="note">'+(editions.length?'No available edition matches this search.':
+        'No bundled report edition is available here. Import a report ZIP, or register its original source manifest when starting this operator.')+'</p>')+
+      (discoveryIssues.length?'<details><summary>Source discovery details</summary><ul>'+
+        discoveryIssues.map(item=>'<li>'+esc(item.manifest)+': '+esc(item.reason)+'</li>').join('')+'</ul></details>':'')+'</section>';
+  }
   function renderCatalog(){
     if(!panel)return;
+    renderEditions();
     const filtered=filterSourceReports(reports,query);
     panel.querySelector('[data-source-report-status]').textContent=catalogError||
       (loading?'Reading retained report metadata…':filtered.length+' of '+reports.length+' retained reports');
@@ -110,7 +147,7 @@ export function attachSourceReports(host) {
         row.member_count.toLocaleString()+'</td><td><button type="button" data-source-report-action="open" data-report-key="'+
         esc(rowKey(row))+'">'+(selected&&rowKey(selected)===rowKey(row)?'Return to report':'Open report')+'</button></td></tr>').join('')+
       '</tbody></table></div>':loading?'':'<p class="note">'+(reports.length?'No retained report matches this search.':
-        'Import a report ZIP or a source edition with an HTML report. Reports can be primary documents or companions of an original scientific table.')+'</p>';
+        'Preview an available edition above, or import a report ZIP. Reports can be primary documents or companions of an original scientific table.')+'</p>';
   }
   async function catalog(force=false){
     const workspace=host.getWorkspace();
@@ -120,10 +157,10 @@ export function attachSourceReports(host) {
     const ticket=generation;
     loading=(async()=>{
       try{
-        const value=await request('/api/source-reports/catalog');
+        const value=await request('/api/source-reports/catalog',force?{refresh:'1'}:{});
         if(!valid(workspace,ticket))return;
         if(value.workspace_key!==workspace)throw Error('The report catalogue belongs to another Workspace.');
-        reports=value.reports||[];currentCatalogKey=key;catalogError=null;
+        reports=value.reports||[];editions=value.available_editions||[];discoveryIssues=value.discovery_issues||[];currentCatalogKey=key;catalogError=null;
         if(selected&&!reports.some(row=>rowKey(row)===rowKey(selected)))clearSelection();
       }catch(error){
         if(valid(workspace,ticket)){catalogError=error.message||String(error);currentCatalogKey=null;}
@@ -212,8 +249,17 @@ export function attachSourceReports(host) {
   }
   async function dispatch(button){
     const action=button.dataset.sourceReportAction;
+    if(action==='refresh')return catalog(true);
+    if(action==='preview-edition'){
+      const row=editions.find(item=>item.registered_id===button.dataset.registeredId);
+      if(!row?.ready)throw Error('Refresh and choose an available original source edition.');
+      return host.openSourceImport({mode:'registered',registeredId:row.registered_id,
+        registeredManifest:{id:row.registered_id,title:row.title,entries:row.entry_count}});
+    }
+    if(action==='retained-edition')return host.openItem('sources',button.dataset.collectionId);
     if(action==='import')return host.openSourceImport({mode:'archive',manifestMember:'sources.json'});
     if(action==='regional')return host.navigate('watershed-context');
+    if(action==='stations')return host.navigate('station-geography');
     if(action==='open')return open(button.dataset.reportKey);
     if(action==='close'){detailGeneration++;clearSelection();renderCatalog();return;}
     if(action==='edition'&&selected)return host.openItem('sources',selected.collection_id);
@@ -226,7 +272,7 @@ export function attachSourceReports(host) {
   }
   function detach(){active=false;if(panel)panel.hidden=true;}
   function reset(){
-    generation++;detailGeneration++;loading=null;currentCatalogKey=null;reports=[];selected=null;selectedMember=null;query='';catalogError=null;
+    generation++;detailGeneration++;loading=null;currentCatalogKey=null;reports=[];editions=[];discoveryIssues=[];selected=null;selectedMember=null;query='';catalogError=null;
     if(panel){panel.remove();panel=null;}currentWorkspace=null;active=false;
   }
   function focus(){if(panel&&active){panel.scrollIntoView({block:'start'});panel.querySelector('[data-source-report-search]').focus();}}
