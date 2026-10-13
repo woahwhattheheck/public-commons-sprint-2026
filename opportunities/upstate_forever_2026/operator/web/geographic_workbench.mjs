@@ -23,6 +23,7 @@ export function readGeographicForm(form) {
 
 export function createGeographicWorkbench(host) {
   let container=null,workspace=null,version=0,catalog=null,preview=null,previewKey=null,previewBusy=false,abort=null,openedCase=null,choiceRevision=0,importGeneration=0,caseGeneration=0,topologyTimer=null,allocationGeneration=0,allocationResult=null,allocationChoice={},activeAllocationId=null;
+  let programmePreview=null,programmeLoading=false,programmeError="",programmeSubmitting=false,programmeGeneration=0,programmeDelivery="";
   const active=(key,own)=>container&&workspace===key&&version===own&&host.getWorkspace()===key;
   const body=()=>readGeographicForm(container?.querySelector("[data-sp-form]"));
   const status=(message,error=false)=>{const node=container?.querySelector("[data-geo-notice]");if(node){node.textContent=message;node.classList.toggle("geo-error",error);}};
@@ -186,9 +187,109 @@ export function createGeographicWorkbench(host) {
       '<div data-geo-allocation-body>'+(editions.length?'<p role="status">Opening the saved local allocation…</p>':
       '<p>The saved geographic case has no completed allocation report yet. Its existing native receiving course will publish these results here after the original scenario outputs are complete.</p>')+'</div></section>';
   }
+
+  function programmeTasks(){
+    const id=openedCase?.case?.id;
+    const rows=new Map(list(openedCase?.programme_operations).map(task=>[task.id,task]));
+    for(const task of list(host.getState()?.tasks).filter(task=>task.action==="geography.adopt-programme"&&
+      task.payload?.case_id===id&&(!task.workspace||task.workspace===workspace)))rows.set(task.id,{...rows.get(task.id),...task,restored:false});
+    return [...rows.values()].sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  }
+  function programmeSection(){
+    const deliveries=list(host.getState()?.data?.deliveries);
+    return '<section class="geo-programme"><h3>Continue in a run programme</h3>'+
+      '<p>Keep the completed baseline, restoration and matched control together. The saved Programme provides annual results, model history, maps and Update sources controls for the next source edition.</p>'+
+      '<label>Map and report choices<select data-geo-programme-delivery><option value="">Use this geographic case and its original utility areas</option>'+
+      deliveries.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title||x.name||x.id)+'</option>').join("")+'</select></label>'+
+      '<p class="geo-small">An existing delivery must use this same geographic case. Its selected sources, maps and report choices are retained.</p>'+
+      '<div class="geo-actions"><button type="button" data-geo-programme-refresh>Refresh original run states</button></div>'+
+      '<div data-geo-programme-body role="region" aria-label="Geographic Programme"></div></section>';
+  }
+  function renderProgramme(){
+    const target=container?.querySelector("[data-geo-programme-body]");if(!target||!openedCase?.case)return;
+    const tasks=programmeTasks(),current=tasks.filter(x=>(x.payload?.delivery_id||"")===programmeDelivery);
+    const selected=container.querySelector("[data-geo-programme-delivery]");
+    if(selected){selected.value=programmeDelivery;selected.disabled=programmeSubmitting;}
+    const refresh=container.querySelector("[data-geo-programme-refresh]");
+    if(refresh)refresh.disabled=programmeLoading||programmeSubmitting;
+    let content=programmeLoading?'<p role="status">Reading original source bindings and native run states…</p>':"";
+    if(programmeError)content+='<p class="geo-error" role="alert">'+esc(programmeError)+'</p>';
+    if(programmePreview){
+      const p=programmePreview;
+      content+=table(["Original reference case","Native state","Completed"],list(p.runs).map(run=>[
+        run.title||run.key,run.state||"Unknown",run.completed_at||"—"]));
+      if(list(p.issues).length)content+='<p>Continue these original native operations, then refresh the states:</p><ul>'+
+        p.issues.map(x=>'<li>'+esc(x.key)+': '+esc(x.message)+'</li>').join("")+'</ul>';
+      const accepted=current.some(x=>["queued","running","complete","interrupted","failed","cancelled"].includes(x.state));
+      const enabled=p.ready&&!programmeLoading&&!programmeSubmitting&&!accepted;
+      content+='<div class="geo-actions"><button type="button" data-geo-programme-adopt'+(enabled?"":" disabled")+'>'+
+        (programmeSubmitting?"Saving original Programme…":"Save completed runs as a Programme")+'</button></div>'+
+        '<p class="geo-small">Uses the three original NDR and SDR results. The parameter study keeps its own progress. Annual N/P quantities are kg/year and sediment is metric tonnes/year delivered to streams.</p>';
+    }else if(!programmeLoading&&!programmeError)content+='<p>Refresh the original run states to inspect this case.</p>';
+    if(tasks.length)content+='<div class="geo-programme-tasks"><h4>Saved Programme operations</h4>'+tasks.map(task=>{
+      const id=task.result?.programme_id;
+      return '<p><strong>'+esc(task.state)+'</strong> · '+esc(task.result?.programme_state||task.created_at||"")+
+        (task.error?.message?' · '+esc(task.error.message):"")+'</p><div class="geo-actions">'+
+        (task.restored?list(task._downloads).filter(file=>String(file.url).startsWith("/api/file/")).map(file=>'<a href="'+esc(file.url+(file.url.includes("?")?"&":"?")+"download=1")+'" download>Download original operation</a>').join(""):'<button type="button" data-geo-programme-task="'+esc(task.id)+'">Open original operation</button>')+
+        (id?'<button type="button" data-action="programme-open" data-id="'+esc(id)+'">Open saved Programme</button>':"")+
+        (!task.restored&&["failed","interrupted","cancelled"].includes(task.state)?'<button type="button" data-geo-programme-resume="'+esc(task.id)+'">Resume original operation</button>':"")+'</div>';
+    }).join("")+'</div>';
+    target.innerHTML=content;
+  }
+  async function loadProgramme(){
+    if(!openedCase?.case)return;
+    const key=workspace,own=version,caseId=openedCase.case.id,caseOwn=caseGeneration,delivery=programmeDelivery,generation=++programmeGeneration;
+    programmeLoading=true;programmePreview=null;programmeError="";renderProgramme();
+    try{
+      const result=await read("programme-preview",{case_id:caseId,...(delivery?{delivery_id:delivery}:{})},key);
+      if(!active(key,own)||caseGeneration!==caseOwn||programmeGeneration!==generation||openedCase?.case.id!==caseId)return;
+      if(result.binding?.geographic_id!==caseId||result.binding?.project_id!==catalog?.project_id)
+        throw new Error("The returned Programme preview belongs to another geographic study.");
+      programmePreview=result;
+    }catch(error){
+      if(active(key,own)&&caseGeneration===caseOwn&&programmeGeneration===generation)programmeError=error.message;
+    }finally{
+      if(active(key,own)&&caseGeneration===caseOwn&&programmeGeneration===generation){programmeLoading=false;renderProgramme();}
+    }
+  }
+  async function adoptProgramme(){
+    if(programmeSubmitting||programmeLoading||!programmePreview?.ready||!openedCase?.case)return;
+    const key=workspace,own=version,caseId=openedCase.case.id,caseOwn=caseGeneration,p=programmePreview;
+    if(p.binding?.geographic_id!==caseId)throw new Error("Refresh the selected geographic Programme.");
+    const payload={case_id:caseId,expected_preview_id:p.id,...(programmeDelivery?{delivery_id:programmeDelivery}:{})};
+    const storage=KEY+":programme-request:"+key+":"+p.id;
+    let request;const previous=localStorage.getItem(storage);
+    if(previous){request=JSON.parse(previous);if(request.workspace!==key||request.action!=="geography.adopt-programme"||canonical(request.payload)!==canonical(payload))
+      throw new Error("The retained Programme request belongs to different source choices.");}
+    else{
+      request={workspace:key,action:"geography.adopt-programme",payload,operation_id:"geo-programme-"+crypto.randomUUID()};
+      const exact=JSON.stringify(request);localStorage.setItem(storage,exact);
+      if(localStorage.getItem(storage)!==exact)throw new Error("Save the original Programme request before continuing.");
+    }
+    programmeSubmitting=true;programmeError="";renderProgramme();
+    try{
+      const task=await host.api("/api/actions",{method:"POST",body:request});
+      localStorage.setItem(storage+":task",JSON.stringify({workspace:key,operation_id:request.operation_id,task_id:task.id}));
+      if(!active(key,own)||caseGeneration!==caseOwn||openedCase?.case.id!==caseId)return;
+      await host.refresh({force:true});
+      if(active(key,own)&&caseGeneration===caseOwn)status("The original geographic Programme operation is "+task.state+". Open its result here when complete.");
+    }catch(error){
+      if(active(key,own)&&caseGeneration===caseOwn)programmeError=error.message+" The same saved request is retained for continuation.";
+    }finally{
+      if(active(key,own)&&caseGeneration===caseOwn){programmeSubmitting=false;renderProgramme();}
+    }
+  }
+  async function resumeProgramme(id){
+    const task=programmeTasks().find(x=>x.id===id);if(!task)throw new Error("Open an original Programme operation from this geographic case.");
+    const key=workspace,own=version,caseOwn=caseGeneration;
+    await host.api("/api/task/resume",{method:"POST",body:{id}});
+    if(active(key,own)&&caseGeneration===caseOwn)await host.refresh({force:true});
+  }
+
   async function openCase(id){
     const key=workspace,own=version,generation=++caseGeneration;
     allocationGeneration++;allocationResult=null;activeAllocationId=null;
+    programmeGeneration++;programmePreview=null;programmeLoading=false;programmeSubmitting=false;programmeError="";programmeDelivery="";openedCase=null;
     const pendingDetail=container.querySelector("[data-geo-case-detail]");
     pendingDetail.innerHTML='<p role="status">Opening the saved geographic case…</p>';pendingDetail.hidden=false;
     let result;
@@ -200,13 +301,18 @@ export function createGeographicWorkbench(host) {
     const target=container.querySelector("[data-geo-case-detail]");
     target.innerHTML='<h3>'+esc(result.case.selection.title)+'</h3><p>The full original selection, input receipts and declared assumptions are available below.</p>'+
       '<div class="geo-actions">'+list(result._downloads).filter(f=>String(f.url).startsWith("/api/file/")).map(f=>'<a href="'+esc(f.url+(f.url.includes("?")?"&":"?")+"download=1")+'" download>'+esc(f.label||f.filename)+'</a>').join("")+'</div>'+
-      '<details><summary>Complete prepared case</summary><pre>'+esc(JSON.stringify(result.case,null,2))+'</pre></details>'+allocationSection(result);
+      '<details><summary>Complete prepared case</summary><pre>'+esc(JSON.stringify(result.case,null,2))+'</pre></details>'+programmeSection()+allocationSection(result);
     target.hidden=false;target.scrollIntoView({block:"start"});
-    if(list(result.allocation_editions).length)await loadAllocation(result.allocation_editions[0].id);
+    renderProgramme();
+    await Promise.all([loadProgramme(),...(list(result.allocation_editions).length?[loadAllocation(result.allocation_editions[0].id)]:[])]);
   }
   async function click(event){
     const button=event.target.closest("button");if(!button||!container?.contains(button))return;
     try{
+      if(button.hasAttribute("data-geo-programme-refresh"))return await loadProgramme();
+      if(button.hasAttribute("data-geo-programme-adopt"))return await adoptProgramme();
+      if(button.dataset.geoProgrammeTask)return host.showTask(button.dataset.geoProgrammeTask);
+      if(button.dataset.geoProgrammeResume)return await resumeProgramme(button.dataset.geoProgrammeResume);
       if(button.hasAttribute("data-geo-preview-button"))return await previewCurrent();
       if(button.hasAttribute("data-geo-save")){
         const payload=body();download({schema:"upstate.geographic-operator-selection/v1",workspace_key:workspace,project_id:catalog?.project_id,payload,preview:previewKey===canonical(payload)?preview:null},"geographic-selection.json");status("Complete source choices and current matching preview downloaded.");return;
@@ -217,7 +323,7 @@ export function createGeographicWorkbench(host) {
       if(button.dataset.geoEdit){const c=list(catalog?.native_cases).find(c=>c.id===button.dataset.geoEdit);if(!c)throw new Error("Refresh the saved geographic cases.");applyPayload(payloadFromSelection(c.selection));container.querySelector("[data-sp-form]").scrollIntoView({block:"start"});return;}
       if(button.dataset.geoItem)return host.openItem(button.dataset.geoItem,button.dataset.geoId);
       if(button.hasAttribute("data-geo-recovery")){
-        const retained=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith(KEY+":request:"+workspace+":"))retained.push({key,value:JSON.parse(localStorage.getItem(key))});}
+        const retained=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if((key?.startsWith(KEY+":request:"+workspace+":")||key?.startsWith(KEY+":programme-request:"+workspace+":")))retained.push({key,value:JSON.parse(localStorage.getItem(key))});}
         download({schema:"upstate.geographic-operator-recovery/v1",workspace_key:workspace,requests:retained},"geographic-operation-history.json");return;
       }
     }catch(error){status(error.message,true);}
@@ -235,6 +341,7 @@ export function createGeographicWorkbench(host) {
     target.addEventListener("click",click,{signal});
     target.addEventListener("change",event=>{
       const node=event.target;
+      if(node.hasAttribute("data-geo-programme-delivery")){programmeDelivery=node.value;void loadProgramme();return;}
       if(node.hasAttribute("data-geo-allocation-edition")){allocationChoice={};void loadAllocation(node.value);return;}
       const names={scope:"scope",group:"group",region:"region",physical:"physicalClass"};
       for(const [attribute,key] of Object.entries(names)){
@@ -274,7 +381,7 @@ export function createGeographicWorkbench(host) {
     },{signal});
     original.mount(target.querySelector("[data-geo-original]"),current);renderPreview();renderCases();
   }
-  function update(current=host.getState()){if(!container||workspace!==host.getWorkspace())return;original.update(current);renderCases();renderTopology();}
-  function suspend(){clearTimeout(topologyTimer);topologyTimer=null;importGeneration++;caseGeneration++;allocationGeneration++;allocationResult=null;allocationChoice={};activeAllocationId=null;original.suspend();abort?.abort();abort=null;container=null;workspace=null;catalog=null;openedCase=null;version++;previewBusy=false;}
+  function update(current=host.getState()){if(!container||workspace!==host.getWorkspace())return;original.update(current);renderCases();renderTopology();renderProgramme();}
+  function suspend(){clearTimeout(topologyTimer);topologyTimer=null;importGeneration++;caseGeneration++;allocationGeneration++;programmeGeneration++;programmePreview=null;programmeLoading=false;programmeSubmitting=false;programmeError="";programmeDelivery="";allocationResult=null;allocationChoice={};activeAllocationId=null;original.suspend();abort?.abort();abort=null;container=null;workspace=null;catalog=null;openedCase=null;version++;previewBusy=false;}
   return {mount,update,suspend};
 }

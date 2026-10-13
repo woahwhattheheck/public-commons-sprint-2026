@@ -22,7 +22,9 @@
       "requires": [
         "source-preparation",
         "retained-application-source",
-        "geographic-native-receiving"
+        "geographic-native-receiving",
+        "geographic-programme",
+        "programme-source-updates"
       ]
     }
   },
