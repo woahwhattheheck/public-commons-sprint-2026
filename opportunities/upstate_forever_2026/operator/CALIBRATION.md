@@ -386,3 +386,10 @@ retained report IDs from that study.
 The completed comparison now includes **Complete calibration reviews**. Use **Prepare review package** to choose the exact saved error/map editions, title and notes. The existing queue builds one immutable report with all original tables, source records, catchment companions and map artifacts. Open it through **Read report**, or extract its complete ZIP and open `index.html` offline. Its print layout and full source links travel together.
 
 The same calibration extension owns the `calibration.review.prepare` action, `calibration-reviews` item and authenticated nested report-member route. Current source-error and map records keep their original identities. Review selection enforces an exact map/error pairing when a map contains error bands. The full producer, API, restart and source-preservation contract is [Complete calibration review](../model/CALIBRATION_REVIEW.md).
+
+
+### Complete review receiving and authenticated links
+
+The full workspace archive retains saved `calibration-reviews` plus all files under `calibration-review-exports`, including the independent offline ZIP and copied source/map members. The restored operator calls the registered calibration `verify_workspace` hook before registration; it delegates to the original review inspector. Open the original calibration in the received workspace and select its saved review. Scientific IDs remain unchanged, while file URLs use the new local workspace key.
+
+The report viewer preserves the operator origin so relative CSV, map and source links carry the existing HttpOnly `SameSite=Strict` download cookie. Both the iframe and member response retain a sandbox without scripts, forms, popups or top navigation. The complete native transfer/receive commands and exact member checks are in [CALIBRATION_REVIEW.md](../model/CALIBRATION_REVIEW.md#reopen-the-complete-review-after-a-project-transfer).
