@@ -43,7 +43,7 @@ Browser storage capacity varies. When it cannot save a complete workspace, the o
 
 **Saved projects** uses the original shared Stellar Forge draft database. It lists the existing saved application and review records, unfinished library receiving work, and earlier receiving history. Select complete records, download their archive, inspect an incoming archive and explicitly choose receiving outcomes. The store applies the selected record comparison and receipt together in its original IndexedDB transaction.
 
-A receiving request retains its operation identity for recovery. Selective restoration checks the current full record against the recorded receiving result and keeps concurrent work. The original single-record save, load, list and delete methods remain byte-identical.
+A receiving request retains its operation identity for recovery. Selective restoration checks the current full record against the recorded receiving result and keeps concurrent work. The original single-record save, load and delete methods remain byte-identical. The maintained metadata listing uses the same store's forward cursor, retaining all metadata and the original timestamp/tie ordering without materializing every complete saved input at once.
 
 This shared archive covers merchant setup, CoCart and grant drafts/reviews. Companion reading workspaces and Source Desk use their original separate stores and complete exports.
 
@@ -72,3 +72,54 @@ The independent B41A/7737 Source workspace and 81CF/F2A6 original Operating plan
 The four publication outputs remain `dist/grant.html`, `dist/grant-data/application.md`, `dist/grant-data/product-and-finance.md` and `dist/grant-data/source-index.json`. The publication uses the existing companion edition/return implementation, 5403's original Saved projects model, existing Atlas catalog review/search, and the original financial walkthrough.
 
 The public browser manifest includes every new module and source route. The grant-reviewer contribution exposes the original companion, catalog and publication interfaces and includes this guide. Future canonical chapters and registered product selections remain owned by the existing manuscript and cumulative publisher.
+
+## Continue unfinished reviews and record Required content
+
+The public editor and named-review workspace now use the maintained working-copy and Required content implementations. They share the existing browser store with Saved projects.
+
+### Keep a review in progress
+
+Open **Review prepared draft** and choose a full saved application. Record a review, or leave a decision, requested change, reply, supporting reference or carry-forward choice unfinished. **Save working copy now** retains every raw value together with the complete original review and selected incoming draft. A reload or another window opens an independent working identity. **Download complete working copy** transfers that whole state; **Open working package** validates it before switching and preserves the preceding local work.
+
+A working package and a recorded-review export serve different purposes. The working package keeps unfinished values, including invalid text awaiting correction. An explicit recorded action continues the original review journal. Sender-local browser record IDs are cleared when another operator receives a working package, while the logical review, source editions and recorded history remain intact. See [Complete working copies](./GRANT_REVIEW_ROUNDS.md#complete-working-copies) for conflict recovery and original-context navigation.
+
+### Review the selected submission wording
+
+In **Prepare submission → Required content**, select the complete canonical answers or actual issuer fields reviewed, name the reviewer, enter a supporting location or reason, and explicitly record the decision. Pending decisions stay in the original application draft and its full save/export. Recording retains the preceding full version.
+
+The decision retains its exact text basis: selected answer and field bodies, field prompts and limits, associated source answers, form context and the published criteria edition. Editing one of those values shows the complete previous/current comparison. Older decisions without an exact basis remain historical. New handover preparations freeze coverage for their selected output; an answer-only review does not silently cover issuer-field output. Reopening verifies that coverage against the original immutable snapshot.
+
+Use [Required content review](./GRANT_REQUIRED_CONTENT_REVIEW.md) for the complete selection, comparison, re-review and prepared-report journey. Existing prepared editions keep their original bodies and remain readable.
+
+### Receiving in the original installed case
+
+Continue the existing saved application and review operation with these public modules. Open the full retained draft; record a named content review, edit one selected answer, inspect its changed basis, and prepare/download/reopen the exact handover. Then leave a reviewer decision and revision choice unfinished, save/download its working package, reopen independently and continue the same logical review. Retain the original record alongside the received copy. The current source and models are published together; the equipped owner records the actual browser and IndexedDB result in the existing case.
+
+## Current review source and memory continuity
+
+The complete review port also selects the maintained one-pass submission counter, bounded review edition/descriptor caches, complete working-copy codec and coalesced autosave, and cursor-based saved-record metadata listing. These are the original implementations; draft, review and working-copy schemas, full source retention, unrecorded fields, recorded action history and revision checks remain unchanged. See [Complete review memory and receiving](./GRANT_REVIEW_MEMORY.md) for the exact operating and interrupted-save behavior. Full library inventory and archive receiving continue to load their original complete records.
+
+This source edition completes the existing public review port. It preserves the current 523-record public source catalogue and its original manuscript, budget and companion. Later maintained manuscript/source editions remain selections for the original cumulative publisher; installing review code does not silently replace them. The source-function course and its earlier original receiving artifacts are distinct from the equipped owner's pending browser, IndexedDB and all-attachments operation. Follow the original saved application and existing receiving operation when selecting this complete source edition.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->
