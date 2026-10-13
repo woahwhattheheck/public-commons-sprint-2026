@@ -1,5 +1,5 @@
 /** Current operator reference, composed with the existing Guided journey. */
-export const referenceEdition='2026-10-13.1';
+export const referenceEdition='2026-10-13.2';
 export const referenceSections=[
   {
     "id": "start",
@@ -110,6 +110,47 @@ export const referenceSections=[
       "Prepare the run, then choose Run native models for that exact saved run. Read the task state and native stage rather than repeatedly submitting the form. A completed native case and the completion of its enclosing programme are separate states.",
       "If a response is interrupted, open the original task or Recover original request. Resume original task continues that task and its retained stages. Open the retained log and selected sources when correcting a failure; preserve completed results.",
       "Open the completed maps and results. Read the actual quantity, units, valid-cell coverage and source/profile selection. Reused stages retain their original origin and timestamps; current task duration is not their historical compute duration."
+    ]
+  },
+  {
+    "id": "calibration-cycle",
+    "title": "Compare observations and develop parameter profiles",
+    "paragraphs": [
+      "Use Calibration and validation to compare completed baseline profiles with original annual-load observations on compatible catchments and periods. Keep the uncalibrated baseline, every original source edition and earlier evaluations. A completed calculation is not evidence that its inputs are measured or that its prediction is accurate.",
+      "Whole upstream gauge basins, the model domain and the reporting boundary describe different support. A nearby station, a HUC label or a clipped reporting total does not establish the load at a gauge. The retained regional example uses actual geography with simulated physical inputs; preserve that description when inspecting its results."
+    ],
+    "steps": [
+      "Retain the original observation table and basin files in the selected workspace. In Calibration and validation, inspect Original annual-load observations and Original source before choosing a table. Read the original station and catchment IDs, constituent, annual-load unit, period, method, qualifiers and exclusion reasons. Import original observations if a suitable original edition is not yet present; a concentration sample is not an annual mass.",
+      "If a new basin edition is needed from the actual prepared model DEM, choose Prepare gauge catchments. Select the saved model grid, original observation edition, coordinate carrier, longitude and latitude fields, original basin source/layer and catchment ID field. Confirm the actual WGS84 coordinate datum. Keep original coordinates and basin geometry; select native snapping settings only when scientifically appropriate. When snapping is selected, Stream initiation area is entered in hectares and Stream search window in grid cells.",
+      "Choose Inspect original outlets and terrain. Review finite-cell coverage, the original basin's coverage inside the DEM, original and prepared DEM identities, and every selected outlet. Resolve out-of-grid or NoData findings before Run native delineation. Open source and map afterwards; inspect the original and D8 basins, actual outlet movement, stream membership and edge diagnostics. Use these catchments in calibration carries the original observation subset and the actual new source edition into the form.",
+      "Choose New calibration, or continue the source-bound form. Select the Native grid and unchanged baseline and the completed candidate runs/profiles. Choose the original observation edition and polygon source/layer/ID field. Review observation period weighting, pollutant weights, annual mass scales and their sources, and any separately supported delivered external loads. Candidate profiles compared together must retain compatible native model outputs, grid and baseline.",
+      "Choose Inspect original catchments. Assign Calibration and validation groups before selecting a profile from its scores, then choose Save calibration selection. Review Source support for this evaluation and original reference-reuse explanations. Previously inspected holdout records do not become fresh independent evidence by changing their group label; preserve the earlier training/validation history.",
+      "Open the saved selection and choose Analyze selection. Use its original task and Resume analysis after a recoverable failure. Open Results to inspect the chosen profile, observed and modeled annual loads, candidate outcomes, units, valid support, calibration loss and reserved-group performance. No eligible candidate is a retained scientific outcome with source/support reasons, not a reason to hide excluded rows.",
+      "Choose Continue selected profile to populate Parameter studies from the exact selected native profile and its original Calibration context. In Working designs and recovery, use Save working revision to preserve named unfinished controls; use Save as new branch when exploring a different design. Download unfinished form and history retains raw controls and any pending original save request. Open working designs and Review history reopen the saved ancestry. When a named design is scientifically ready, save its changed raw fields before the ordinary preview and preparation, then run the chosen new Parameter cases through their existing native tasks.",
+      "Return the completed Parameter candidates to Calibration. Inspect the carried original observations, catchments, records, weights and training/validation groups before making any scientific changes. In a followed-up result, open Selected-profile history, choose an earlier evaluation and constituent, and inspect actual annual loads, errors and partition changes. Pairing uses the original reference support; changed or incomplete sources remain separately labelled. Native-load changes and delivered external-load changes are distinct.",
+      "Use Export complete results and Export selected-profile history for readable results and original source packages. From a saved Calibration design or evaluation, choose Share editable Study; the existing Studies form opens with that exact record selected. Inspect Preview contents, choose Export editable study and use Transfer archive to receive it in a separate destination. In the received study, Open original evaluation reopens the saved scientific result, Open editable design opens its source-bound selection, and Open selected native run opens the retained selected calculation. Reopen original observations, catchments, native cases and linked evaluation history before editing. Keep readable report/source ZIPs distinct from the editable Study and retain all original archive members."
+    ],
+    "rows": [
+      [
+        "Same-DEM catchments",
+        "DelineateIt derives D8 basins from the chosen DEM. NDR/SDR uses its own native routing; sharing the DEM does not establish identical routing support. Original outlet coordinates and basin files remain retained. A finite outlet cell or a successful delineation alone does not establish complete upstream terrain coverage."
+      ],
+      [
+        "Calibration loss and validation",
+        "Profile selection uses the declared training objective. Held-out results describe the selected profile on the reserved groups. Review prior use of those references and actual support before making an accuracy claim."
+      ],
+      [
+        "Physical history",
+        "Compare annual quantities and physical errors only where original reference support matches. Each evaluation keeps its own objective and partition; a lower score under changed weights is not the same as a lower error on unchanged evidence."
+      ],
+      [
+        "Working design, prepared study and result",
+        "A named working copy can retain unfinished or invalid controls. Preparation validates a scientific selection; Run executes that selected case. Earlier completed results remain available while later work is prepared or runs."
+      ],
+      [
+        "Calibration study selections",
+        "Studies provides Calibration designs, Calibration evaluations, Calibration source-error reviews, Calibration residual maps, Calibration scientific reviews and Calibration report sources. Choose the retained record whose work you want to continue; Preview contents shows its selected dependencies before export. A received editable design preserves its original scientific source context."
+      ]
     ]
   },
   {
