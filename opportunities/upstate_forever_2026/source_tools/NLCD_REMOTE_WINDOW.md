@@ -134,3 +134,43 @@ The maintained HTTP runner's plan mode can compose already-registered manifests 
 - The publisher metadata and DOI above supply the original NLCD scientific grid and class contract.
 
 The field result to retain is the real probe mode plus completed native preparation, source ID, output window, class counts, received/reused bytes and current Workspace import. Keep those outputs with the original source operation.
+
+## Operate from the existing source desk
+
+The source catalogue method `nlcd-range` appears as **Annual NLCD from original byte ranges**. Select the complete upstream domain from an existing source collection, a registered source root or an uploaded original. The original static-product metadata defaults to the installed `nlcd-metadata` bundle; its complete XML and manifest are snapshotted together. An optional **Existing immutable original archive prefix** comes from the same archive capture. The operator derives its exact byte count and SHA256 from the selected saved input.
+
+Use **Stored or indexed SOZip** for the ordinary preparation. The native reader inspects the original member before choosing the access path. If that member is ordinary Deflate, **Also measure ordinary Deflate** enables its real decompression and transfer work. Enter the receiving allowance before starting: the default is 536870912 bytes; the complete compressed original is 1457983950 bytes. The native 1000 m buffer, exact attribute selection, optional expected feature count and local-window capacity remain explicit controls.
+
+The request uses the existing `source.prepare` action, existing task identity and normal source import. Its progress panel shows the actual stage, original bytes received, reused reads, prefix reads, completed ranges and provider requests. The byte meter shows retained source storage relative to the selected allowance; it is not a percentage of scientific completion. All preparation, bank and import stages continue on that same task.
+
+Resume a failed or interrupted task to use its existing inputs and retained ranges. If the actual source requires a larger receiving allowance or the explicit ordinary-Deflate option, create the revised request in the same study. Before any provider read, the adapter reuses completed ranges from previous requests with the same original domain, metadata, attribute selection, buffer and TIFF member. It checks every adopted range against its declared original entity and byte hash. Different regional windows keep their own receiving allowance. A committed reuse record travels with the new source bank. The original task and its capture remain available.
+
+The finished task uses the ordinary `upstate.source-preparation-result/v1` result. With source import selected, `source_collection_id` names the retained Workspace collection and `source_id` names its actual NLCD raster. The normal result panel exposes the native source entry, selection, manifest and prepared-file bank. Existing authenticated source-preparation download tickets provide the selected files; source composition can include the completed `prepared_task_ids` or imported `source_collection_ids`. Whole-Workspace transfer retains the same bank and restored result links.
+
+A direct queue request has this shape; replace the two source identifiers with the catalogue's actual retained entries:
+
+~~~json
+{
+  "action": "source.prepare",
+  "workspace": "ACTUAL_WORKSPACE_KEY",
+  "payload": {
+    "method": "nlcd-range",
+    "title": "Original Upper Savannah land cover",
+    "inputs": {
+      "domain": {"collection_id": "ACTUAL_COLLECTION_ID", "source_id": "ACTUAL_DOMAIN_SOURCE_ID"},
+      "metadata_manifest": {"builtin_id": "nlcd-metadata"}
+    },
+    "options": {
+      "compression_mode": "seekable",
+      "maximum_source_bytes": 536870912,
+      "timeout": 60,
+      "buffer_m": 1000,
+      "expected_features": 217,
+      "maximum_clip_pixels": 200000000
+    },
+    "import_sources": true
+  }
+}
+~~~
+
+The existing `operator_source_intake.py plan` client can use the same method, inputs and options in a normal preparation step. Its dependent DEM or soil steps can bind `from_step` to that actual imported NLCD source. The common source-composition queue supplies the final source edition; all numeric land-cover work stays in the original reader and clipping helpers.
