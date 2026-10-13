@@ -215,7 +215,17 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       '<label><span class="sr-only">Value</span><input data-spatial-filter-value value="'+esc(draft?.text??(value===null?'':String(value)))+'"></label>'+button('filter-remove','Remove','class="small" aria-label="Remove field filter"')+'</div>';
   }
 
-  function dirty(c){c.model.dirty=true;c.root.querySelector('[data-spatial-save-status]').textContent='Unsaved view changes.';}
+  function invalidateMapTarget(c){
+    const pending=pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison';
+    const reading=Boolean(c.targetControl);
+    c.targetVersion=(c.targetVersion||0)+1;stopGroup(c,'targetControl');
+    if(pending)pendingTarget=null;
+    if(reading)status(c,'Map comparison request canceled; your current view is retained.');
+  }
+  function dirty(c,preserveTarget=false){
+    if(!preserveTarget)invalidateMapTarget(c);
+    c.model.dirty=true;c.root.querySelector('[data-spatial-save-status]').textContent='Unsaved view changes.';
+  }
   function updateTool(c){
     for(const node of c.root.querySelectorAll('[data-spatial-action^="tool-"]'))node.setAttribute('aria-pressed',String(node.dataset.spatialAction==='tool-'+c.model.tool));
     for(const node of c.root.querySelectorAll('[data-spatial-map]'))node.dataset.tool=c.model.tool;
@@ -262,6 +272,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     renderExports(c);dirty(c);
   }
   async function applyTarget(c,target){
+    stopGroup(c,'reviewControl');
     const targetVersion=(c.targetVersion||0)+1;c.targetVersion=targetVersion;
     stopGroup(c,'targetControl');
     if(target.kind==='receiving-water-plan-comparison'){
@@ -277,7 +288,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
         c.model.exportOptions.review_id='';
         c.root.querySelector('[data-spatial-input="title"]').value=c.model.title;
         c.root.querySelector('[data-spatial-input="notes"]').value=c.model.notes;
-        renderExports(c);dirty(c);return;
+        renderExports(c);dirty(c,true);return;
       }finally{release(c,control);if(c.targetControl===control)c.targetControl=null;}
     }
     if(target.kind==='atlas-panel')return applyAtlasTarget(c,target);
@@ -539,6 +550,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     m.view={crs:m.view.crs,bounds:[left+dx*w,bottom+dy*h,right+dx*w,top+dy*h]};dirty(c);scheduleDraw(c);
   }
   async function fit(c,clearMarkers=false){
+    invalidateMapTarget(c);
     const control=controller(c);
     try{
       const value=await describe(c,c.model.reference,control.signal),crs=value.native?.crs;
@@ -553,6 +565,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     return {title:m.title.trim(),reference:clone(m.reference),primary:clone(m.primary),comparison:clone(m.comparison),mode:m.mode,swipe:m.swipe,view:clone(m.view),scale:clone(m.scale),overlays:m.overlays.map(item=>({selection:clone(item.selection),label:item.label||'',visible:item.visible,style:item.style,width:item.width,opacity:item.opacity})),markers:clone(m.markers),notes:m.notes,...(m.atlas_review?{atlas_review:clone(m.atlas_review)}:{}),...(m.previous_review_id?{previous_review_id:m.previous_review_id}:{})};
   }
   async function save(c){
+    if(c.targetControl||(pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison'))throw Error('Wait for the selected receiving-water boundaries to finish loading before saving this review.');
     if(c.saving)return;
     const m=c.model;reconcileAtlasReview(m);const payload=reviewPayload(m);
     if(!payload.title)throw Error('Give the review a title before saving.');
@@ -585,6 +598,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     }finally{c.saving=false;if(alive(c))saveButton.disabled=false;}
   }
   async function loadReview(c,id){
+    invalidateMapTarget(c);
     stopGroup(c,'reviewControl');const control=controller(c);c.reviewControl=control;
     try{
       const value=await request('/api/item?'+new URLSearchParams({workspace:c.key,kind:'spatial_reviews',id}),{signal:control.signal});
@@ -653,6 +667,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   async function action(c,node){
     clearError(c);const name=node.dataset.spatialAction,index=Number(node.dataset.index),m=c.model;
+    if(name!=='save')invalidateMapTarget(c);
     if(name.startsWith('tool-')){m.tool=name.slice(5);updateTool(c);return;}
     if(name==='refresh-catalog'){await catalog(c);return draw(c);}
     if(name==='zoom-in')return zoom(c,0.65);
@@ -746,11 +761,13 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       event.preventDefault();action(c,node).catch(error=>fail(c,error));
     },options);
     c.root.addEventListener('change',event=>{
+      invalidateMapTarget(c);
       const node=event.target.closest('[data-spatial-input]');if(node)change(c,node).catch(error=>fail(c,error));
     },options);
-    c.root.addEventListener('input',event=>{const node=event.target.closest('[data-spatial-input]');if(node)edit(c,node);},options);
+    c.root.addEventListener('input',event=>{invalidateMapTarget(c);const node=event.target.closest('[data-spatial-input]');if(node)edit(c,node);},options);
     c.root.addEventListener('pointerdown',event=>{
       const map=event.target.closest('[data-spatial-map]');if(!map||event.button!==0||c.busy||!validView(c.model.view))return;
+      invalidateMapTarget(c);
       event.preventDefault();map.focus();map.setPointerCapture(event.pointerId);
       c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,start:eventPoint(c,event,map),tool:c.model.tool,view:clone(c.model.view),moved:false};
     },options);
