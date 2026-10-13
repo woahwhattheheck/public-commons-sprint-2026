@@ -22,6 +22,9 @@ const help=[
   'Persistent SDK/MCP clients may use operator_open with allowStart to own the native serve process.',
   'Use the same saved acquisition operation ID after an interrupted reply. The native operator owns polling and provider Retry-After.',
   'Conformance actions use the same call/value/download flow: directory_conformance_plan, assess, review, compare, findings, finding, rows and file.',
+  'Operating Plans use directory_operating_plan_preview/create/save/receive/copy/compare/export plus directory_operating_document/draft/input/basis/catalog.',
+  'Save the exact reviewed previewRecordId; full value responses and exported JSON/Markdown/HTML retain the original model history.',
+  'Use the native Directory CLI for complete inputs above the connected inline limit. Existing input_apply retains its separately declared host-input limit.',
   'download receives every complete original file and resumes its existing directory; reopen verifies local completion.',
 ].join('\n');
 export async function main(argv=process.argv.slice(2),{environment=process.env,signal,write=value=>process.stdout.write(value)}={}){
