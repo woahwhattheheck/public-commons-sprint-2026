@@ -47,6 +47,114 @@ def _read_json(path: Path, *, maximum=MAX_JSON_BYTES) -> dict:
     return value
 
 
+def _model_identity(model, add, summary):
+    """Inspect declared versions without flattening retained per-model evidence."""
+    if not model.get('name'):
+        add('FAIL', 'model.identity', 'Model name missing')
+    structured = ('versions' in model or 'native_version_provenance' in model)
+    if not structured:
+        if not model.get('version'):
+            add('FAIL', 'model.identity', 'Model name and version missing')
+        else:
+            add('INFO', 'model.version', 'Legacy declared model version: ' + str(model['version']))
+        return
+
+    def version(value, label):
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            raise ValueError(label + ' must be a nonempty version string or null')
+        return value
+
+    try:
+        provenance = model.get('native_version_provenance')
+        if not isinstance(provenance, dict):
+            raise ValueError('Retain the original native version provenance object')
+        policy = provenance.get('policy')
+        if not isinstance(policy, str) or not policy.strip():
+            raise ValueError('Retain the native version resolution policy')
+        models = provenance.get('models')
+        if (not isinstance(models, list) or not models
+                or not all(isinstance(name, str) and name for name in models)
+                or len(set(models)) != len(models)
+                or not set(models) <= {'ndr', 'sdr'}):
+            raise ValueError('Retain the selected NDR/SDR model names once each')
+        versions = model.get('versions')
+        if not isinstance(versions, dict) or set(versions) != set(models):
+            raise ValueError('Per-model versions differ from the retained model selection')
+        versions = {name: version(versions[name], name) for name in models}
+        if provenance.get('versions') != versions:
+            raise ValueError('Manifest and provenance baseline versions differ')
+        baseline = model.get('baseline_run_id')
+        alternatives = model.get('scenario_run_ids')
+        if (not isinstance(baseline, str) or not baseline
+                or not isinstance(alternatives, list)
+                or not all(isinstance(key, str) and key for key in alternatives)):
+            raise ValueError('Retain the original baseline and scenario run identities')
+        selected = [baseline, *alternatives]
+        if len(set(selected)) != len(selected):
+            raise ValueError('Retain each selected baseline/scenario run once')
+        runs = provenance.get('runs')
+        if not isinstance(runs, dict) or set(runs) != set(selected):
+            raise ValueError('Version provenance must bind exactly the selected native runs')
+        values, fallback = [], []
+        for run_id in selected:
+            entries = runs[run_id]
+            if not isinstance(entries, dict) or set(entries) != set(models):
+                raise ValueError('Retain every selected model version for run ' + run_id)
+            for name in models:
+                info = entries[name]
+                if not isinstance(info, dict) or info.get('model') != name:
+                    raise ValueError('Version evidence differs from its model binding')
+                for key in ('comparison_version', 'observed_stage_version',
+                            'observed_run_version', 'requested_version', 'basis'):
+                    if key not in info:
+                        raise ValueError('Version evidence is missing ' + key)
+                effective = version(info['comparison_version'], name + ' comparison')
+                stage = version(info['observed_stage_version'], name + ' completed stage')
+                observed = version(info['observed_run_version'], name + ' observed run')
+                requested = version(info['requested_version'], name + ' requested')
+                basis = info['basis']
+                if basis == 'completed_stage_runtime':
+                    if not stage or not info.get('stage_completed_at') or effective != stage:
+                        raise ValueError('Completed-stage version evidence is inconsistent')
+                elif basis in ('observed_run_fallback', 'observed_runtime'):
+                    if stage or not observed or effective != observed:
+                        raise ValueError('Observed-run version evidence is inconsistent')
+                elif basis == 'requested_legacy':
+                    if stage or observed or not requested or effective != requested:
+                        raise ValueError('Legacy requested version evidence is inconsistent')
+                    fallback.append(run_id + '/' + name + ': requested legacy ' + requested)
+                elif basis == 'unavailable':
+                    if any(value is not None for value in (effective, stage, observed, requested)):
+                        raise ValueError('Unavailable version evidence declares a version')
+                    fallback.append(run_id + '/' + name + ': version unavailable')
+                else:
+                    raise ValueError('Unsupported retained version evidence basis: ' + str(basis))
+                if info.get('differs_from_requested') is not bool(
+                        effective and requested and effective != requested):
+                    raise ValueError('Requested-version difference flag is inconsistent')
+                if run_id == baseline and versions[name] != effective:
+                    raise ValueError('Per-model baseline version differs from its original run')
+                values.append(effective)
+        common = values[0] if values and values[0] and all(
+            value == values[0] for value in values) else None
+        if version(model.get('version'), 'Combined model') != common:
+            raise ValueError('Combined version must match every selected run/model or be null')
+        summary['model_versions'] = {
+            'version': common, 'versions': versions, 'policy': policy,
+            'run_ids': selected,
+            'unobserved': fallback,
+        }
+        add('INFO', 'model.version',
+            'Retained per-model versions across ' + str(len(selected)) + ' original runs'
+            + ('; common version ' + common if common else '; no single common version'))
+        if fallback:
+            add('REVIEW', 'model.version.observation',
+                'Retained requested or unavailable versions need execution-source review: '
+                + '; '.join(fallback))
+    except (ValueError, TypeError, KeyError) as error:
+        add('FAIL', 'model.version', str(error))
+
+
 def _retained_grid(data, model, child, add, summary):
     if 'grid' not in data:
         summary['audit_scope'] = 'regional-30m'
@@ -187,8 +295,7 @@ def inspect(manifest_path: Path, *, max_manifest_bytes=MAX_JSON_BYTES) -> dict:
             add('FAIL', 'final_report', exc)
 
     model = data.get('model') if isinstance(data.get('model'), dict) else {}
-    if not model.get('name') or not model.get('version'):
-        add('FAIL', 'model.identity', 'Model name and version missing')
+    _model_identity(model, add, summary)
     expected_grid = _retained_grid(data, model, child, add, summary)
     native_grid = expected_grid is not None and summary['audit_scope'] == 'source-native'
     buffer = model.get('upstream_buffer_m')

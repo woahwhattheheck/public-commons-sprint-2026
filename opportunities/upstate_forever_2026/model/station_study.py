@@ -28,6 +28,8 @@ ATLAS_URI = "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_
 PUBLISHED_WQP_TWO_SHA = "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd"
 PUBLISHED_STUDY_ID = "upper-savannah-published-assessments-2024-2026-159"
 PUBLISHED_TITLE = "Upper Savannah published assessments — 159 monitoring stations"
+ALL_STUDY_ID = "upper-savannah-assessments-all-editions-164"
+ALL_TITLE = "Upper Savannah assessment editions — 164 monitoring stations"
 PUBLISHED_ASSESSMENT_SHA = "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7"
 PUBLISHED_ASSESSMENT_URI = "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf"
 TMDL_URI = "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf"
@@ -115,7 +117,8 @@ def _domain(workspace, rows):
 
 
 
-def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems):
+def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems, *,
+                     with_inventory=False):
     """Reuse the original station sources for the complete published 159-site study."""
     from .station_inventory import published_inventory
     inventory_item = _by_hash(rows, [PUBLISHED_ASSESSMENT_SHA], {"table"})
@@ -187,7 +190,7 @@ def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems
         records = [record for record in inventory if record["source_vintage"] == vintage]
         editions.append({"source_vintage": vintage, "record_count": len(records),
                          "station_count": len({record["site"] for record in records})})
-    return {"id": PUBLISHED_STUDY_ID, "title": PUBLISHED_TITLE, "ready": not missing,
+    study = {"id": PUBLISHED_STUDY_ID, "title": PUBLISHED_TITLE, "ready": not missing,
             "missing": missing, "selection": selection,
             "source_summary": {"assessment_rows": len(inventory),
                                "station_count": len({record["site"] for record in inventory}),
@@ -200,6 +203,47 @@ def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems
                              {"title": "Retained WQP point supplement", "uri": SUPPLEMENT_URI},
                              {"title": "Published 2024 assessment", "uri": PUBLISHED_ASSESSMENT_URI},
                              {"title": "TMDL status July 28, 2026", "uri": TMDL_URI}]}
+    return (study, inventory) if with_inventory else study
+
+
+def _all_editions_study(draft, published, draft_records, published_records):
+    """Join retained source selections; never collapse distinct cause/use editions."""
+    missing = list(dict.fromkeys([*draft["missing"], *published["missing"]]))
+    draft_sites = {record["site"] for record in draft_records}
+    published_sites = {record["site"] for record in published_records}
+    sites = sorted(draft_sites | published_sites)
+    records = [*published_records, *draft_records]
+    selection = json.loads(json.dumps(published["selection"]))
+    selection["title"] = ALL_TITLE
+    selection["sites"] = sites
+    for field in ("sources", "site_tables", "watersheds"):
+        merged = {}
+        for reference in [*published["selection"][field], *draft["selection"][field]]:
+            merged.setdefault(canonical(reference), reference)
+        selection[field] = json.loads(json.dumps(list(merged.values())))
+    if not missing and (len(records) != 293 or len(sites) != 164):
+        missing.append("The retained all-editions study requires 293 records at 164 original stations.")
+    editions = [*published["source_summary"]["assessment_editions"],
+                {"source_vintage": "2026 draft", "record_count": len(draft_records),
+                 "station_count": len(draft_sites)}]
+    publisher_hucs = {record.get("huc12") for record in records if record.get("huc12")}
+    links = {}
+    for reference in [*published["source_links"], *draft["source_links"]]:
+        links.setdefault(reference["uri"], reference)
+    return {
+        "id": ALL_STUDY_ID, "title": ALL_TITLE, "ready": not missing,
+        "missing": missing, "selection": selection,
+        "source_summary": {
+            "assessment_rows": len(records), "station_count": len(sites),
+            "watershed_count": published["source_summary"]["watershed_count"],
+            "publisher_huc12_count": len(publisher_hucs), "assessment_editions": editions,
+            "shared_draft_published_stations": len(draft_sites & published_sites),
+            "draft_only_sites": sorted(draft_sites - published_sites),
+            "inventory_format": "retained_published_and_draft_inventories",
+            "source_study_ids": [PUBLISHED_STUDY_ID, STUDY_ID],
+        },
+        "source_links": list(links.values()),
+    }
 
 
 def prepared_studies(workspace):
@@ -234,6 +278,7 @@ def prepared_studies(workspace):
                              source_crs="EPSG:4326", format="csv")
         selection["sources"].append(reference)
     assessment_count = station_count = 0
+    inventory = []
     if assessment is not None:
         try:
             inventory = _assessment_rows(workspace, assessment)
@@ -244,14 +289,17 @@ def prepared_studies(workspace):
             missing.append("Retained assessment inventory: " + str(problem))
     if domain is not None:
         selection["watersheds"].append(domain)
-    return [{"id": STUDY_ID, "title": TITLE, "ready": not missing, "missing": missing,
+    draft = {"id": STUDY_ID, "title": TITLE, "ready": not missing, "missing": missing,
              "selection": selection,
              "source_summary": {"assessment_rows": assessment_count, "station_count": station_count,
                                 "watershed_count": domain_count},
              "source_links": [{"title": "Original monitoring layer", "uri": ATLAS_URI},
                               {"title": "Original WQP eight-station CSV", "uri": SUPPLEMENT_URI},
-                              {"title": "Original assessment source", "uri": ASSESSMENT_URI}]},
-            _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems)]
+                              {"title": "Original assessment source", "uri": ASSESSMENT_URI}]}
+    published, published_records = _published_study(
+        workspace, rows, atlas, wqp, domain, domain_count, problems, with_inventory=True)
+    combined = _all_editions_study(draft, published, inventory, published_records)
+    return [draft, published, combined]
 
 
 def _import_once(workspace, manifest):
@@ -377,8 +425,8 @@ def main(argv=None):
     parser.add_argument("--source-manifest", action="append", default=[],
                         help="Existing original sources.json; repeat for monitoring, WQP and domain sources")
     parser.add_argument("--assessment-csv", help="The retained original 101-row assessment inventory")
-    parser.add_argument("--study-id", choices=(STUDY_ID, PUBLISHED_STUDY_ID), default=STUDY_ID,
-                        help="Choose the original draft study or the published 159-site assessment study")
+    parser.add_argument("--study-id", choices=(STUDY_ID, PUBLISHED_STUDY_ID, ALL_STUDY_ID), default=STUDY_ID,
+                        help="Choose the original draft, published159 or complete all-editions164 study")
     args = parser.parse_args(argv)
     if args.create_receiving_workspace and not args.receive_workspace:
         parser.error("--create-receiving-workspace requires --receive-workspace")

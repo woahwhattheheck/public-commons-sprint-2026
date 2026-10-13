@@ -74,3 +74,19 @@ export function sourceCalendarMarkup(calendar){
  }
  return html+'<p class="note">'+esc(calendar.interpretation)+'</p>';
 }
+
+/* The server supplies these exact typed blocks; the browser does not recompute fit. */
+export function observationDiagnosticsMarkup(comparison){
+ const review=comparison.diagnostics;
+ if(!review||!Array.isArray(review.blocks))return '<p class="note">This saved comparison predates the cohort review. A current scientific delivery derives the review from its retained rows; a newly saved comparison also carries the review here.</p>';
+ const block=item=>{
+  if(typeof item==='string')return '<p>'+esc(item)+'</p>';
+  if(item&&item.kind==='table'&&Array.isArray(item.columns)&&Array.isArray(item.rows)){
+   return table(item.columns,item.rows.map(row=>row.map(value=>esc(value))))+
+    (item.caption?'<p class="note">'+esc(item.caption)+'</p>':'');
+  }
+  return '';
+ };
+ return '<details class="observation-diagnostics"><summary>Annual-load cohorts and catchment weighting</summary>'+
+  review.blocks.map(block).join('')+'</details>';
+}

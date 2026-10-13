@@ -1,6 +1,8 @@
 """MIT. Original-byte HSDS correction workbench, derived editions and full receiving."""
 from __future__ import annotations
 from collections import defaultdict
+from contextlib import ExitStack
+import directory_index as directory_index
 import csv
 import io
 import json
@@ -96,38 +98,46 @@ class DirectoryCorrections:
             earlier=self.directory_record("corrections",value["predecessorId"])
             if earlier["editionId"]!=edition["id"]:
                 raise ConflictError("The correction successor must start from its exact accepted predecessor edition")
-        unique={};paths=defaultdict(list)
-        for edit in value["edits"]:
-            key=(edit["sourceId"],edit["recordId"])
-            if edit["sourceId"]not in edition["sourceIds"]:raise InputError("Select a row from this exact frozen edition")
-            row=self.directory_edition_row(edition["id"],*key)
-            if row["protocol"]!="hsds":raise InputError("This workbench corrects explicitly selected HSDS rows")
-            for name in ("rowSha256","resourceSha256","memberSha256"):
-                if row[name]!=edit[name]:raise ConflictError("The selected original "+name+" differs")
-            is_csv="cells"in row
-            if is_csv!=(edit["action"].startswith("csv-")):
-                raise InputError("Use physical cell edits for CSV and lexical JSON edits for JSON rows")
-            if edit["action"]=="csv-cell"and edit["column"]>=max(len(row["headers"]),len(row["cells"])):
-                raise InputError("Choose an original physical column; use complete row replacement for explicit new cells")
-            if key in unique:continue
-            root=row;seen=set()
-            while root.get("rawRange")is None:
-                if not root.get("parentRecordId")or root["recordId"]in seen or len(seen)>128:
-                    raise InputError("The selected JSON row lacks an original complete byte-range ancestor")
-                seen.add(root["recordId"])
-                root=self.directory_source_row(key[0],root["parentRecordId"])
-            span=root["rawRange"]
-            if not isinstance(span,list)or len(span)!=2 or any(type(n)is not int for n in span)or not 0<=span[0]<span[1]<=MAX_BYTES:
-                raise InputError("The original selected row byte range is invalid")
-            if span[1]-span[0]>MAX_RECORD:raise InputError("One original complete correction row exceeds16MiB")
-            root_path=tokens(root["pointer"]);row_path=tokens(row["pointer"])
-            if row_path[:len(root_path)]!=root_path:raise InputError("The selected descendant has another original parent")
-            target={"sourceId":key[0],"recordId":key[1],"originalRow":descriptor_ref(row,key[0]),
-                "memberName":row["memberName"],"pointer":row["pointer"],"table":row["table"],
-                "rootRecordId":root["recordId"],"rootPointer":root["pointer"],"rawRange":span,
-                "rootRowSha256":root["rowSha256"],"rootResourceSha256":root["resourceSha256"],
-                "representation":"csv"if is_csv else"json"}
-            unique[key]=target;paths[(key[0],row["memberName"])].append((tuple(row_path),key[1]))
+        unique={};paths=defaultdict(list);by_source=defaultdict(list)
+        for edit in value["edits"]:by_source[edit["sourceId"]].append(edit)
+        # Verify/open the frozen edition once for the complete batch. Each source
+        # ancestor index is opened at most once and closed before the next source.
+        with self.directory_open_index("editions",edition["id"])as edition_db:
+            for source_edits in by_source.values():
+                with ExitStack()as opened:
+                    source_db=None
+                    for edit in source_edits:
+                        key=(edit["sourceId"],edit["recordId"])
+                        if edit["sourceId"]not in edition["sourceIds"]:raise InputError("Select a row from this exact frozen edition")
+                        row=directory_index.one(edition_db,key[1],key[0])
+                        if row["protocol"]!="hsds":raise InputError("This workbench corrects explicitly selected HSDS rows")
+                        for name in ("rowSha256","resourceSha256","memberSha256"):
+                            if row[name]!=edit[name]:raise ConflictError("The selected original "+name+" differs")
+                        is_csv="cells"in row
+                        if is_csv!=(edit["action"].startswith("csv-")):
+                            raise InputError("Use physical cell edits for CSV and lexical JSON edits for JSON rows")
+                        if edit["action"]=="csv-cell"and edit["column"]>=max(len(row["headers"]),len(row["cells"])):
+                            raise InputError("Choose an original physical column; use complete row replacement for explicit new cells")
+                        if key in unique:continue
+                        root=row;seen=set()
+                        while root.get("rawRange")is None:
+                            if not root.get("parentRecordId")or root["recordId"]in seen or len(seen)>128:
+                                raise InputError("The selected JSON row lacks an original complete byte-range ancestor")
+                            seen.add(root["recordId"])
+                            if source_db is None:source_db=opened.enter_context(self.directory_open_index("sources",key[0]))
+                            root=directory_index.one(source_db,root["parentRecordId"],output_source_id=key[0])
+                        span=root["rawRange"]
+                        if not isinstance(span,list)or len(span)!=2 or any(type(n)is not int for n in span)or not 0<=span[0]<span[1]<=MAX_BYTES:
+                            raise InputError("The original selected row byte range is invalid")
+                        if span[1]-span[0]>MAX_RECORD:raise InputError("One original complete correction row exceeds16MiB")
+                        root_path=tokens(root["pointer"]);row_path=tokens(row["pointer"])
+                        if row_path[:len(root_path)]!=root_path:raise InputError("The selected descendant has another original parent")
+                        target={"sourceId":key[0],"recordId":key[1],"originalRow":descriptor_ref(row,key[0]),
+                            "memberName":row["memberName"],"pointer":row["pointer"],"table":row["table"],
+                            "rootRecordId":root["recordId"],"rootPointer":root["pointer"],"rawRange":span,
+                            "rootRowSha256":root["rowSha256"],"rootResourceSha256":root["resourceSha256"],
+                            "representation":"csv"if is_csv else"json"}
+                        unique[key]=target;paths[(key[0],row["memberName"])].append((tuple(row_path),key[1]))
         for group in paths.values():
             ordered=sorted(group)
             for (before,bid),(after,aid)in zip(ordered,ordered[1:]):
@@ -145,10 +155,18 @@ class DirectoryCorrections:
                 **value,"targets":targets,"files":{"input":file},"summary":{"edits":len(value["edits"]),
                 "rows":len(targets),"sources":len({r["sourceId"]for r in targets})}})
 
-    def _correction_root(self,plan,source_id,root_id,selected,scratch,changes,serial):
-        source=self.directory_source(source_id)
-        root=self.directory_source_row(source_id,root_id)
-        member_path,member=self.directory_source_file(source_id,root["memberName"])
+    def _correction_root(self,plan,source_id,root_id,selected,scratch,changes,serial,context=None):
+        if context is None:
+            source=self.directory_source(source_id)
+            root=self.directory_source_row(source_id,root_id)
+            member_path,member=self.directory_source_file(source_id,root["memberName"])
+        else:
+            source=context["source"]
+            root=directory_index.one(context["index"],root_id,output_source_id=source_id)
+            name=root["memberName"]
+            if name not in context["members"]:
+                context["members"][name]=self.directory_source_file(source_id,name)
+            member_path,member=context["members"][name]
         start,end=root["rawRange"]
         with member_path.open("rb")as stream:stream.seek(start);original=stream.read(end-start)
         if len(original)!=end-start or sha(original)!=root["rowSha256"]:
@@ -201,10 +219,15 @@ class DirectoryCorrections:
 
     def _correction_source(self,plan,source_id,groups,scratch,changes,serial,verify_pair=None):
         source=self.directory_source(source_id);patches=defaultdict(list)
-        for root_id,selected in groups.items():
-            serial+=1
-            name,patch=self._correction_root(plan,source_id,root_id,selected,scratch,changes,serial)
-            patches[name].append(patch)
+        # Original files are immutable within this workspace operation. Verify
+        # their index and each complete member once; every edited row still
+        # checks its exact original byte range before creating a replacement.
+        with self.directory_open_index("sources",source_id)as source_db:
+            context={"source":source,"index":source_db,"members":{}}
+            for root_id,selected in groups.items():
+                serial+=1
+                name,patch=self._correction_root(plan,source_id,root_id,selected,scratch,changes,serial,context)
+                patches[name].append(patch)
         files={};declarations=[];changed=[]
         for member in source["members"]:
             path=self._file_path(member["file"]);old_file=member["file"]

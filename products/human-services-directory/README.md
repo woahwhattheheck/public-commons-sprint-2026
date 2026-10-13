@@ -46,3 +46,9 @@ Receive full OperatingPlan histories, review divergent choices in the existing D
 The industrial operator now includes a complete original-row correction workflow. Exact original hashes bind ordered JSON-pointer or physical CSV changes; complete derived source files, an immutable candidate edition and full comparison are reviewed before explicit acceptance. Original files, lexical values and all historical editions remain available.
 
 The same feature is exposed through native CLI/HTTP, typed SDK and MCP, with full change/file receiving and complete editable customer restoration. See [SOURCE_CORRECTIONS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_CORRECTIONS.md) [CORRECTIONS_OPERATING.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTIONS_OPERATING.md), and [CORRECTION_CLIENTS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_CLIENTS.md). Published source and actual operated results remain separate evidence; no publisher write or live availability is inferred.
+
+## Customer correction worksheets
+
+Select complete original rows, send a self-contained offline customer worksheet, receive the unchanged returned file and review every typed field/presence change. The review prepares the existing correction plan; preview and acceptance remain separate operator actions. Complete source files, offline editor assets, original reasons, explicit decisions and accepted editions survive cold customer receiving.
+
+[Worksheet workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS.md), [native course](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS_OPERATING.md), and [operator/customer/Merchant course](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_CLIENTS.md) cover the complete installed feature.

@@ -1,9 +1,12 @@
+// ES-SUPERVISION-20261012
+import {attachNativeJobs} from './jobs.mjs';
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {mountObservedSeries} from './observed_series.mjs';
+import {mountObservedReports} from './observed_reports.mjs';
 import {observedValueMarkup} from './observed_series.mjs';
-import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup} from './observation_support.mjs';
+import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup,observationDiagnosticsMarkup} from './observation_support.mjs';
 import {createDeliveryReview,deliveryRevision,deliveryChanged} from './delivery_review.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
@@ -83,7 +86,9 @@ const experiments=attachExperiments({navigate,closeDetail:()=>{detailDialog.clos
 const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});
 let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
-const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
+const extensions=createExtensionHost({
+ openNativeProgramme:options=>experiments.openForInvestigation(options),
+getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
@@ -106,6 +111,7 @@ const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
  setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
  beginDetailRequest:()=>++itemRequest,isDetailRequest:request=>request===itemRequest&&detailDialog.open});
+const nativeJobs=attachNativeJobs({api,endpoint,detail,refresh,getWorkspace:()=>workspace,getDetailContext:()=>detailContext,openItem,toast,getState:()=>state});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -306,6 +312,7 @@ async function openItem(kind,id,focus=true){
     content+=table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>'));
     content+=completedModelOrigins(row);
     content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+id+'"'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
+    content+=nativeJobs.runActions(row);
   }else if(kind==='comparisons'){
     content=defs({baseline:runTitle(row.baseline_run_id),direction:row.direction,compared_outputs:row.common_artifacts||Object.keys(row.alternatives?.[0]?.artifacts||{})})+table(['Alternative','Export','Annual change','Valid cells','Profile also changes'],row.alternatives.flatMap(alt=>Object.entries(alt.artifacts).map(([name,item])=>'<tr><td>'+esc(runTitle(alt.run_id))+'</td><td>'+esc(human(name))+'</td><td>'+number(item.sum_change)+' '+esc((item.units||'').replace('/pixel',''))+'</td><td>'+number(item.valid_cells)+'</td><td>'+esc(alt.profile_changed?'Yes':'No')+'</td></tr>')));
   }else if(kind==='observations'){
@@ -314,8 +321,9 @@ async function openItem(kind,id,focus=true){
      content='<p class="note">'+esc(row.interpretation)+'</p>'+defs({run:runTitle(row.run_id),observations:named('observations',row.observation_id),catchment_source:row.catchment_source,model_period:row.model_period||'Review original source vintages',selected_models:row.model_scope?.selected_models||'Review the retained run selection'});
      content+='<p class="note">'+esc(row.metrics_basis||'This retained comparison predates the complete-catchment coverage check. Create a comparison on the same retained run and observations to calculate current coverage.')+'</p>';
      content+=table(['Parameter',row.comparison_version>=2?'Complete comparisons':'Retained comparisons','Mean bias','RMSE','Nash–Sutcliffe efficiency','Catchments / periods'],Object.entries(row.metrics).map(([name,m])=>'<tr><td>'+esc(name)+'<br><small>'+esc(m.units)+'</small></td><td>'+m.n+'</td><td>'+number(m.mean_bias)+'</td><td>'+number(m.rmse)+'</td><td>'+number(m.nash_sutcliffe_efficiency)+'</td><td>'+number(m.unique_catchments??m.n)+' catchments<br><small>'+esc(m.repeated_catchments?'Includes repeated station periods':'Distinct catchments')+'</small></td></tr>'));
+     content+=observationDiagnosticsMarkup(row);
      content+='<div class="filters"><label>Parameter<select id="comparison-parameter"></select></label><label>Station / catchment<select id="comparison-station"></select></label><label>Coverage<select id="comparison-coverage"><option value="">Every retained comparison</option><option value="complete">Complete catchments</option><option value="partial">Partial or legacy coverage</option></select></label></div><div id="observation-comparison-view"></div>';
-     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+'</div>';
+     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+(row.diagnostics?button('observation-diagnostics-json','Download complete cohort review'): '')+'</div>';
      if(row.exclusions.length)content+='<details class="technical"><summary>'+row.exclusions.length+' original context or excluded rows</summary><pre class="json-view">'+esc(pretty(row.exclusions))+'</pre></details>';
    }else if(kind==='spatial_exports'){
     content='<div class="meta">'+badge(row.state)+'</div>'+defs({saved_review:row.review_id,paper:row.selection?.paper,resolution_dpi:row.selection?.dpi,created_at:row.created_at});
@@ -380,6 +388,13 @@ function renderObservationComparison(){
    return '<tr><td>'+esc(r.station_id||r.catchment_id)+'<br><small>'+esc(r.catchment_id)+'</small></td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+number(r.observed_annual_mass)+'<br><small>'+esc(r.units)+'</small></td><td>'+number(r.modeled_annual_mass)+(r.included_in_metrics===false?'<small>Partial native total</small>':'')+'</td><td>'+(r.included_in_metrics===true?number(r.residual):'—')+'</td><td>'+badge(legacy?'legacy':r.coverage_status||'partial')+'<small>'+esc(extent)+'</small><small>'+esc(grid)+'</small>'+(support?'<small>'+esc(support)+'</small>':'')+'<small>'+esc((c.coverage_issues||[]).join('; '))+'</small></td><td>'+observationMethod(r)+'</td></tr>';
  }))+observationContextMarkup(detailContext.observationComparison.context_rows||[]);
 }
+function downloadObservationDiagnostics(){
+ const comparison=detailContext?.observationComparison;
+ if(!comparison?.diagnostics)return;
+ const payload={comparison_id:comparison.id,diagnostics:comparison.diagnostics};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json;charset=utf-8'})),a=document.createElement('a');
+ a.href=url;a.download='annual-load-cohort-review-'+short(comparison.id)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function downloadObservationComparison(){
  const selected=comparisonRows(),fields=['observation_id','station_id','catchment_id','parameter','measurement_support','species','support_origin','period_start','period_end','period_days','observed_annual_mass','modeled_annual_mass','units','residual','relative_residual','partial_catchment_difference','included_in_metrics','coverage_status','method','uncertainty','source_records','observed_value_text','observed_source_unit','observed_qualifier','spatial_coverage'];
  const cell=value=>'"'+String(value===undefined||value===null?'':typeof value==='object'?JSON.stringify(value):value).replaceAll('"','""')+'"';
@@ -394,7 +409,7 @@ async function showTask(id,focus=true){
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }
@@ -956,8 +971,7 @@ async function deliveryForm(id,initialSelection){
  const roles=[['PROTECTED_LANDS','Protected-lands source'],['PARCEL','Original parcel source'],['NHD','National Hydrography Dataset source'],['NWI','National Wetlands Inventory source']];
  const overlays=[['drinking_water','Critical drinking-water source boundaries',true],['high_quality_waters','Designated high-quality waters',true],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
  const settings=row?.map_settings||{},weights=settings.weights||{};
- const observedReportChoices=[['','Use modeled results and selected load comparisons'],...state.data.sources.flatMap(collection=>collection.entries.filter(entry=>entry.kind==='document'&&entry.metadata?.report_schema==='upstate.observed-report/v1').map(entry=>[JSON.stringify({source_collection_id:collection.id,source_id:entry.id}),entry.title+' · '+entry.vintage]))];
- const observedReportSelected=row?.source_roles?.OBSERVED_CONTEXT?JSON.stringify({source_collection_id:row.source_roles.OBSERVED_CONTEXT.source_collection_id,source_id:row.source_roles.OBSERVED_CONTEXT.source_id}):'';
+ let observedReports;
  const attachedAnalysis=row?.source_scenario_analysis_id?{id:row.source_scenario_analysis_id,sha256:row.source_scenario_analysis_sha256,title:row.source_scenario_analysis_title||row.title||'Saved scenario analysis'}:null;
  openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery','Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
  '<div class="form-grid">'+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
@@ -966,7 +980,7 @@ async function deliveryForm(id,initialSelection){
  receivingWaters.deliveryFields(row||{})+
  '<h3 class="subheading full">Actual supporting source editions</h3><p class="note full">The five modeled raster sources and computed LS factor come from the selected original run. Choose these additional original sources for the delivery lineage.</p>'+
  roles.map(([key,label])=>deliverySource('role_'+key,label,row?.source_roles?.[key])).join('')+
- field('Observed science context',select('observed_report_source',observedReportChoices,observedReportSelected),'Include retained lake measurements, observed flows, source quantities and their scientific figures in this report.',true)+
+ '<div class="full" id="delivery-observed-reports"></div>'+
  '<h3 class="subheading full">Source-backed cartography and parcel priority</h3>'+
  overlays.map(([key,label,requiredField])=>deliverySource('overlay_'+key,label,row?.overlays?.[key],requiredField,true)).join('')+
  '<h3 class="subheading full">Combined export priority</h3><p class="note full">The original engine normalizes actual export values against each pollutant’s positive-cell 95th percentile unless an explicit cap is supplied. Weights are recorded in the retained delivery.</p>'+
@@ -984,7 +998,7 @@ async function deliveryForm(id,initialSelection){
   const alternatives=retainedDeliveryCohort(row,val('baseline'),chosen('alternatives'));if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
   const source_roles={...(row?.source_roles||{})},selectedOverlays={...(row?.overlays||{})},weights={},caps={};
   for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
-  const observedReportSource=val('observed_report_source');if(observedReportSource)source_roles.OBSERVED_CONTEXT=JSON.parse(observedReportSource);else delete source_roles.OBSERVED_CONTEXT;
+  const observedReportSources=observedReports.selection();if(observedReportSources.length)source_roles.OBSERVED_CONTEXT=observedReportSources[0];else delete source_roles.OBSERVED_CONTEXT;
   for(const [key,,requiredField]of overlays){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
    if(x)selectedOverlays[key]=x;else delete selectedOverlays[key];
@@ -998,8 +1012,9 @@ async function deliveryForm(id,initialSelection){
   if(Object.values(weights).every(x=>x===0))throw Error('At least one pollutant weight must be positive.');
   const map_settings={...(row?.map_settings||{}),weights,dpi:num('dpi')};delete map_settings.caps;delete map_settings.title;if(Object.keys(caps).length)map_settings.caps=caps;if(val('map_title').trim())map_settings.title=val('map_title').trim();
   const sourceBinding={...(row?.economic_edition_id?{economic_edition_id:row.economic_edition_id,...(row.economic_edition_sha256?{economic_edition_sha256:row.economic_edition_sha256}:{})}:{}),...(row?.source_report_id?{source_report_id:row.source_report_id,...(row.source_report_sha256?{source_report_sha256:row.source_report_sha256}:{})}:{}),...(attachedAnalysis?{source_scenario_analysis_id:attachedAnalysis.id,...(attachedAnalysis.sha256?{source_scenario_analysis_sha256:attachedAnalysis.sha256}:{})}:{})};
-  return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
+  return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,...(observedReportSources.length>1?{observed_context_sources:observedReportSources}:{}),overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
  },()=>{
+  observedReports=mountObservedReports($('#delivery-observed-reports'),state.data.sources,row||{});
   for(const [key]of roles)bindDeliverySource('role_'+key,true,false);
   for(const [key,,requiredField]of overlays)bindDeliverySource('overlay_'+key,requiredField,true);
   let initial=row?.scenario_run_ids||[];
@@ -1071,6 +1086,7 @@ async function navigate(next){
  view=next;operatingJourney?.updateRail(next);history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
 }
 async function selectWorkspace(id){
+ nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
  rehearsal.detach();
@@ -1080,6 +1096,7 @@ async function selectWorkspace(id){
 }
 async function dispatch(button){
  const action=button.dataset.action,id=button.dataset.id;
+ if(action?.startsWith('native-job-'))return nativeJobs.dispatch(button);
  if(await extensions.dispatch(button))return;
  if(action?.startsWith('delivery-inspection-'))return deliveryInspection.dispatch(button);
  if(action?.startsWith('parameter-study-'))return parameterStudies.dispatch(button);
@@ -1113,6 +1130,7 @@ async function dispatch(button){
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
  if(action==='observation-comparison-csv')return downloadObservationComparison();
+ if(action==='observation-diagnostics-json')return downloadObservationDiagnostics();
  if(['delivery-report','delivery-client-report','delivery-report-refresh','delivery-revise'].includes(action))return deliveryReview.handle(action,id);
  if(action==='delivery-new')return deliveryForm();
  if(action==='delivery-resume'){const row=await api(endpoint('/api/item',{kind:'deliveries',id}));return executeAction('delivery.build',row.selection);}

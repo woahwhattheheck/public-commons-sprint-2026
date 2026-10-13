@@ -1,0 +1,805 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile 2023 physical water-quality context",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "original_records": 832,
+    "selected_original_records": 521,
+    "original_physical_records": 276,
+    "activities": 51,
+    "routine_activities": 49,
+    "separate_pfas_activities": 2,
+    "distinct_physical_dates": 35,
+    "paired_activity_dates": 16,
+    "paired_characteristic_contrasts": 180,
+    "physical_contrasts": 84,
+    "daily_flow": 365
+  },
+  "entries": [
+    {
+      "id": "eighteenmile-physical-context-physical-water-quality-study",
+      "title": "Physical water quality, nutrients, and sampling context",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
+      "bytes": 76705,
+      "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e",
+      "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+      "vintage": "2023 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "eighteenmile.physical-activity-context/v1",
+        "stations": 5,
+        "routine_activities": 49,
+        "separate_pfas_activities": 2,
+        "original_physical_results": 276,
+        "gauge": "02186702",
+        "paired_station_comparison": "SV-376 minus SV-268; earlier SV-376 clocks retained"
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/analysis_core.mjs",
+          "bytes": 15793,
+          "sha256": "27832b7a7eb96cb1332a65f1ba9169259f658bd917923d89e55d2b6002bc5003"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/figures.mjs",
+          "bytes": 5175,
+          "sha256": "4faf6d30b0d58f8cbc60fd7fcd6704cad6aa9792c72769f49ec5e175eec7fb74"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/report.mjs",
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/outputs.mjs",
+          "bytes": 2580,
+          "sha256": "120a198140f4b4d91b5144c1f1181bf6eaf0fa69d8e42e1abcb4642644920e73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/build_study.mjs",
+          "bytes": 2417,
+          "sha256": "015d01423a316b777f3de6805b63270faedca33c9e4a5ad292476eaaedb94615"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/README.md",
+          "bytes": 9917,
+          "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/input-manifest.json",
+          "bytes": 2603,
+          "sha256": "e298da220be3255b6f5158022956838732b2a83892d243cb1c7525d1f6ed6469"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-result-index.csv",
+          "bytes": 287045,
+          "sha256": "d449ece8bdadf6a48e05b48a508d1e38fe256632abba73c8d93facdef243d588"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
+          "bytes": 76334,
+          "sha256": "d54b003cab3ae1d8bddccbf65a8d187c56f77d672c936df91c2c306e7780e526"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-activity-dates.csv",
+          "bytes": 2060,
+          "sha256": "bd58bf36f3acfdad1b0e5da98f7dff93057160f19d12c21761d25c0e7b2f7de8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-characteristic-contrasts.csv",
+          "bytes": 64007,
+          "sha256": "734f38766a21eadf64e3927e6a6dc1cda0b74647a91c9c57ffb266ffaa58e556"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-cohort-summaries.csv",
+          "bytes": 4322,
+          "sha256": "ef66621a5495f243298bf6e131de6d6b943a4c359b82036f31a0cb2202901590"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/station-season-summaries.csv",
+          "bytes": 31118,
+          "sha256": "5e14a5a1951f5b0cef071ee1128ad33d3a485e530215ba79fd4fa260e33269f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
+          "bytes": 5753,
+          "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/single-observation-influence.csv",
+          "bytes": 3235,
+          "sha256": "b7d3232c0a68fb8fd76f92b82afae5f52162f1eab7214e08236dd53b78bed5df"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/june-12-original-activity-context.csv",
+          "bytes": 4758,
+          "sha256": "b87ba5d8ee328752b2c697c88d3803264f0c6f258f0bcb7c9bbcaf2e92a6a8eb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/daily-gauge-flow-2023.csv",
+          "bytes": 77513,
+          "sha256": "66df865b7d361e4a0d53cf6e8ec88aaa60f24034b68b59ecc7510cf9fb1c189c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/study-summary.json",
+          "bytes": 190210,
+          "sha256": "75b4defed0b116fda4a0a7a6d21a57c25bb77cc320d1208e45a0672382a3e8ab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/temperature-oxygen.svg",
+          "bytes": 16905,
+          "sha256": "5d348cd17d9c621e0ca546998408f96c630592a5bf8c6ff3819f590f305b77c7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-physical-contrasts.svg",
+          "bytes": 8181,
+          "sha256": "fa2376c043dd9cd50d419fc829e736fb9f53c65201cbb2c53703adac46b284e2"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-physical-context-activity-physical-context",
+      "title": "51 physical activities with exact nutrient and flow context",
+      "kind": "table",
+      "role": "PHYSICAL_ACTIVITY_CONTEXT",
+      "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
+      "bytes": 76334,
+      "sha256": "d54b003cab3ae1d8bddccbf65a8d187c56f77d672c936df91c2c306e7780e526",
+      "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+      "vintage": "2023 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "eighteenmile.physical-activity-context/v1",
+        "stations": 5,
+        "routine_activities": 49,
+        "separate_pfas_activities": 2,
+        "original_physical_results": 276,
+        "gauge": "02186702",
+        "paired_station_comparison": "SV-376 minus SV-268; earlier SV-376 clocks retained"
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/analysis_core.mjs",
+          "bytes": 15793,
+          "sha256": "27832b7a7eb96cb1332a65f1ba9169259f658bd917923d89e55d2b6002bc5003"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/figures.mjs",
+          "bytes": 5175,
+          "sha256": "4faf6d30b0d58f8cbc60fd7fcd6704cad6aa9792c72769f49ec5e175eec7fb74"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/report.mjs",
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/outputs.mjs",
+          "bytes": 2580,
+          "sha256": "120a198140f4b4d91b5144c1f1181bf6eaf0fa69d8e42e1abcb4642644920e73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/build_study.mjs",
+          "bytes": 2417,
+          "sha256": "015d01423a316b777f3de6805b63270faedca33c9e4a5ad292476eaaedb94615"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/README.md",
+          "bytes": 9917,
+          "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/input-manifest.json",
+          "bytes": 2603,
+          "sha256": "e298da220be3255b6f5158022956838732b2a83892d243cb1c7525d1f6ed6469"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-result-index.csv",
+          "bytes": 287045,
+          "sha256": "d449ece8bdadf6a48e05b48a508d1e38fe256632abba73c8d93facdef243d588"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-activity-dates.csv",
+          "bytes": 2060,
+          "sha256": "bd58bf36f3acfdad1b0e5da98f7dff93057160f19d12c21761d25c0e7b2f7de8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-characteristic-contrasts.csv",
+          "bytes": 64007,
+          "sha256": "734f38766a21eadf64e3927e6a6dc1cda0b74647a91c9c57ffb266ffaa58e556"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-cohort-summaries.csv",
+          "bytes": 4322,
+          "sha256": "ef66621a5495f243298bf6e131de6d6b943a4c359b82036f31a0cb2202901590"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/station-season-summaries.csv",
+          "bytes": 31118,
+          "sha256": "5e14a5a1951f5b0cef071ee1128ad33d3a485e530215ba79fd4fa260e33269f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
+          "bytes": 5753,
+          "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/single-observation-influence.csv",
+          "bytes": 3235,
+          "sha256": "b7d3232c0a68fb8fd76f92b82afae5f52162f1eab7214e08236dd53b78bed5df"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/june-12-original-activity-context.csv",
+          "bytes": 4758,
+          "sha256": "b87ba5d8ee328752b2c697c88d3803264f0c6f258f0bcb7c9bbcaf2e92a6a8eb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/daily-gauge-flow-2023.csv",
+          "bytes": 77513,
+          "sha256": "66df865b7d361e4a0d53cf6e8ec88aaa60f24034b68b59ecc7510cf9fb1c189c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/study-summary.json",
+          "bytes": 190210,
+          "sha256": "75b4defed0b116fda4a0a7a6d21a57c25bb77cc320d1208e45a0672382a3e8ab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/temperature-oxygen.svg",
+          "bytes": 16905,
+          "sha256": "5d348cd17d9c621e0ca546998408f96c630592a5bf8c6ff3819f590f305b77c7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-physical-contrasts.svg",
+          "bytes": 8181,
+          "sha256": "fa2376c043dd9cd50d419fc829e736fb9f53c65201cbb2c53703adac46b284e2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-physical-context-paired-characteristic-contrasts",
+      "title": "180 same-date interval-aware station contrasts",
+      "kind": "table",
+      "role": "PHYSICAL_PAIRED_CONTRASTS",
+      "path": "observations/eighteenmile_2023/physical_context/paired-characteristic-contrasts.csv",
+      "bytes": 64007,
+      "sha256": "734f38766a21eadf64e3927e6a6dc1cda0b74647a91c9c57ffb266ffaa58e556",
+      "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+      "vintage": "2023 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "eighteenmile.physical-activity-context/v1",
+        "stations": 5,
+        "routine_activities": 49,
+        "separate_pfas_activities": 2,
+        "original_physical_results": 276,
+        "gauge": "02186702",
+        "paired_station_comparison": "SV-376 minus SV-268; earlier SV-376 clocks retained"
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/analysis_core.mjs",
+          "bytes": 15793,
+          "sha256": "27832b7a7eb96cb1332a65f1ba9169259f658bd917923d89e55d2b6002bc5003"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/figures.mjs",
+          "bytes": 5175,
+          "sha256": "4faf6d30b0d58f8cbc60fd7fcd6704cad6aa9792c72769f49ec5e175eec7fb74"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/report.mjs",
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/outputs.mjs",
+          "bytes": 2580,
+          "sha256": "120a198140f4b4d91b5144c1f1181bf6eaf0fa69d8e42e1abcb4642644920e73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/build_study.mjs",
+          "bytes": 2417,
+          "sha256": "015d01423a316b777f3de6805b63270faedca33c9e4a5ad292476eaaedb94615"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/README.md",
+          "bytes": 9917,
+          "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/input-manifest.json",
+          "bytes": 2603,
+          "sha256": "e298da220be3255b6f5158022956838732b2a83892d243cb1c7525d1f6ed6469"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-result-index.csv",
+          "bytes": 287045,
+          "sha256": "d449ece8bdadf6a48e05b48a508d1e38fe256632abba73c8d93facdef243d588"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
+          "bytes": 76334,
+          "sha256": "d54b003cab3ae1d8bddccbf65a8d187c56f77d672c936df91c2c306e7780e526"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-activity-dates.csv",
+          "bytes": 2060,
+          "sha256": "bd58bf36f3acfdad1b0e5da98f7dff93057160f19d12c21761d25c0e7b2f7de8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-cohort-summaries.csv",
+          "bytes": 4322,
+          "sha256": "ef66621a5495f243298bf6e131de6d6b943a4c359b82036f31a0cb2202901590"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/station-season-summaries.csv",
+          "bytes": 31118,
+          "sha256": "5e14a5a1951f5b0cef071ee1128ad33d3a485e530215ba79fd4fa260e33269f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
+          "bytes": 5753,
+          "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/single-observation-influence.csv",
+          "bytes": 3235,
+          "sha256": "b7d3232c0a68fb8fd76f92b82afae5f52162f1eab7214e08236dd53b78bed5df"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/june-12-original-activity-context.csv",
+          "bytes": 4758,
+          "sha256": "b87ba5d8ee328752b2c697c88d3803264f0c6f258f0bcb7c9bbcaf2e92a6a8eb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/daily-gauge-flow-2023.csv",
+          "bytes": 77513,
+          "sha256": "66df865b7d361e4a0d53cf6e8ec88aaa60f24034b68b59ecc7510cf9fb1c189c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/study-summary.json",
+          "bytes": 190210,
+          "sha256": "75b4defed0b116fda4a0a7a6d21a57c25bb77cc320d1208e45a0672382a3e8ab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/temperature-oxygen.svg",
+          "bytes": 16905,
+          "sha256": "5d348cd17d9c621e0ca546998408f96c630592a5bf8c6ff3819f590f305b77c7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-physical-contrasts.svg",
+          "bytes": 8181,
+          "sha256": "fa2376c043dd9cd50d419fc829e736fb9f53c65201cbb2c53703adac46b284e2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-physical-context-within-station-associations",
+      "title": "Within-station exact-pair associations and coverage",
+      "kind": "table",
+      "role": "PHYSICAL_WITHIN_STATION_ASSOCIATIONS",
+      "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
+      "bytes": 5753,
+      "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b",
+      "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+      "vintage": "2023 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "eighteenmile.physical-activity-context/v1",
+        "stations": 5,
+        "routine_activities": 49,
+        "separate_pfas_activities": 2,
+        "original_physical_results": 276,
+        "gauge": "02186702",
+        "paired_station_comparison": "SV-376 minus SV-268; earlier SV-376 clocks retained"
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/analysis_core.mjs",
+          "bytes": 15793,
+          "sha256": "27832b7a7eb96cb1332a65f1ba9169259f658bd917923d89e55d2b6002bc5003"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/figures.mjs",
+          "bytes": 5175,
+          "sha256": "4faf6d30b0d58f8cbc60fd7fcd6704cad6aa9792c72769f49ec5e175eec7fb74"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/report.mjs",
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/outputs.mjs",
+          "bytes": 2580,
+          "sha256": "120a198140f4b4d91b5144c1f1181bf6eaf0fa69d8e42e1abcb4642644920e73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/build_study.mjs",
+          "bytes": 2417,
+          "sha256": "015d01423a316b777f3de6805b63270faedca33c9e4a5ad292476eaaedb94615"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/README.md",
+          "bytes": 9917,
+          "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/input-manifest.json",
+          "bytes": 2603,
+          "sha256": "e298da220be3255b6f5158022956838732b2a83892d243cb1c7525d1f6ed6469"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-result-index.csv",
+          "bytes": 287045,
+          "sha256": "d449ece8bdadf6a48e05b48a508d1e38fe256632abba73c8d93facdef243d588"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
+          "bytes": 76334,
+          "sha256": "d54b003cab3ae1d8bddccbf65a8d187c56f77d672c936df91c2c306e7780e526"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-activity-dates.csv",
+          "bytes": 2060,
+          "sha256": "bd58bf36f3acfdad1b0e5da98f7dff93057160f19d12c21761d25c0e7b2f7de8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-characteristic-contrasts.csv",
+          "bytes": 64007,
+          "sha256": "734f38766a21eadf64e3927e6a6dc1cda0b74647a91c9c57ffb266ffaa58e556"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-cohort-summaries.csv",
+          "bytes": 4322,
+          "sha256": "ef66621a5495f243298bf6e131de6d6b943a4c359b82036f31a0cb2202901590"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/station-season-summaries.csv",
+          "bytes": 31118,
+          "sha256": "5e14a5a1951f5b0cef071ee1128ad33d3a485e530215ba79fd4fa260e33269f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/single-observation-influence.csv",
+          "bytes": 3235,
+          "sha256": "b7d3232c0a68fb8fd76f92b82afae5f52162f1eab7214e08236dd53b78bed5df"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/june-12-original-activity-context.csv",
+          "bytes": 4758,
+          "sha256": "b87ba5d8ee328752b2c697c88d3803264f0c6f258f0bcb7c9bbcaf2e92a6a8eb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/daily-gauge-flow-2023.csv",
+          "bytes": 77513,
+          "sha256": "66df865b7d361e4a0d53cf6e8ec88aaa60f24034b68b59ecc7510cf9fb1c189c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/study-summary.json",
+          "bytes": 190210,
+          "sha256": "75b4defed0b116fda4a0a7a6d21a57c25bb77cc320d1208e45a0672382a3e8ab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/temperature-oxygen.svg",
+          "bytes": 16905,
+          "sha256": "5d348cd17d9c621e0ca546998408f96c630592a5bf8c6ff3819f590f305b77c7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-physical-contrasts.svg",
+          "bytes": 8181,
+          "sha256": "fa2376c043dd9cd50d419fc829e736fb9f53c65201cbb2c53703adac46b284e2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-physical-context-physical-result-index",
+      "title": "521 original physical and nutrient result records",
+      "kind": "table",
+      "role": "PHYSICAL_ORIGINAL_RESULT_INDEX",
+      "path": "observations/eighteenmile_2023/physical_context/physical-result-index.csv",
+      "bytes": 287045,
+      "sha256": "d449ece8bdadf6a48e05b48a508d1e38fe256632abba73c8d93facdef243d588",
+      "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+      "vintage": "2023 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "eighteenmile.physical-activity-context/v1",
+        "stations": 5,
+        "routine_activities": 49,
+        "separate_pfas_activities": 2,
+        "original_physical_results": 276,
+        "gauge": "02186702",
+        "paired_station_comparison": "SV-376 minus SV-268; earlier SV-376 clocks retained"
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/analysis_core.mjs",
+          "bytes": 15793,
+          "sha256": "27832b7a7eb96cb1332a65f1ba9169259f658bd917923d89e55d2b6002bc5003"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/figures.mjs",
+          "bytes": 5175,
+          "sha256": "4faf6d30b0d58f8cbc60fd7fcd6704cad6aa9792c72769f49ec5e175eec7fb74"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/report.mjs",
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/outputs.mjs",
+          "bytes": 2580,
+          "sha256": "120a198140f4b4d91b5144c1f1181bf6eaf0fa69d8e42e1abcb4642644920e73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/build_study.mjs",
+          "bytes": 2417,
+          "sha256": "015d01423a316b777f3de6805b63270faedca33c9e4a5ad292476eaaedb94615"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/README.md",
+          "bytes": 9917,
+          "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/input-manifest.json",
+          "bytes": 2603,
+          "sha256": "e298da220be3255b6f5158022956838732b2a83892d243cb1c7525d1f6ed6469"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
+          "bytes": 76334,
+          "sha256": "d54b003cab3ae1d8bddccbf65a8d187c56f77d672c936df91c2c306e7780e526"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-activity-dates.csv",
+          "bytes": 2060,
+          "sha256": "bd58bf36f3acfdad1b0e5da98f7dff93057160f19d12c21761d25c0e7b2f7de8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-characteristic-contrasts.csv",
+          "bytes": 64007,
+          "sha256": "734f38766a21eadf64e3927e6a6dc1cda0b74647a91c9c57ffb266ffaa58e556"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-cohort-summaries.csv",
+          "bytes": 4322,
+          "sha256": "ef66621a5495f243298bf6e131de6d6b943a4c359b82036f31a0cb2202901590"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/station-season-summaries.csv",
+          "bytes": 31118,
+          "sha256": "5e14a5a1951f5b0cef071ee1128ad33d3a485e530215ba79fd4fa260e33269f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
+          "bytes": 5753,
+          "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/single-observation-influence.csv",
+          "bytes": 3235,
+          "sha256": "b7d3232c0a68fb8fd76f92b82afae5f52162f1eab7214e08236dd53b78bed5df"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/june-12-original-activity-context.csv",
+          "bytes": 4758,
+          "sha256": "b87ba5d8ee328752b2c697c88d3803264f0c6f258f0bcb7c9bbcaf2e92a6a8eb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/daily-gauge-flow-2023.csv",
+          "bytes": 77513,
+          "sha256": "66df865b7d361e4a0d53cf6e8ec88aaa60f24034b68b59ecc7510cf9fb1c189c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/study-summary.json",
+          "bytes": 190210,
+          "sha256": "75b4defed0b116fda4a0a7a6d21a57c25bb77cc320d1208e45a0672382a3e8ab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/temperature-oxygen.svg",
+          "bytes": 16905,
+          "sha256": "5d348cd17d9c621e0ca546998408f96c630592a5bf8c6ff3819f590f305b77c7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/paired-physical-contrasts.svg",
+          "bytes": 8181,
+          "sha256": "fa2376c043dd9cd50d419fc829e736fb9f53c65201cbb2c53703adac46b284e2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
+        }
+      ]
+    }
+  ]
+}

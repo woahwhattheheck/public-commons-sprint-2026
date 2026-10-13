@@ -640,3 +640,142 @@ to the existing 217-HUC domain and its reporting, upstream and utility selection
 HUC8 catalog membership remains source context; the original polygon geometry
 determines the spatial relationship. See the source edition's complete README
 and capture manifest for all request URLs, original dates and geometry details.
+
+## 15. Regional gauge support through the same Workspace
+
+Open **Gauge support** in the shared operator after receiving the complete
+regional watershed and station-geography components. Select the saved regional
+report, original HUC12 polygon source and identity field, original gauge points
+or saved station edition, original whole-catchment source and retained daily-flow
+coverage. Select the reporting HUC12s and any original utility polygon sources.
+Each utility retains its own source and native identity field.
+
+The saved report joins exact original station/series identities to the regional
+HUC geometry. It shows point membership, the point's relationship to its supplied
+whole catchment, individual catchment/HUC intersections, full regional and
+selected reporting support, and original calendar coverage. Nested catchments
+are combined by geometric union when reporting covered area. Original approved,
+estimated and provisional counts remain attached to the observed days. All
+reported areas use EPSG:5070.
+
+Select a gauge to inspect its original point, catchment outline, HUC intersections
+and annual coverage. Download its HTML report, complete CSVs, GeoJSONs and
+original-source ZIP from the same result. The linked original station and
+regional editions remain available through the current Workspace.
+
+The complete source intake, build and independent receiving sequence runs from
+the selected application with the original regional report already present:
+
+```sh
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gauge_support \\
+  --workspace "$UPSTATE_WORKSPACE" \\
+  --report-id "$UPSTATE_REGIONAL_REPORT_ID" \\
+  --huc-manifest "$UPSTATE_ORIGINAL_DOMAIN_MANIFEST" \\
+  --huc-source-id upstate-wbd-upstream-domain-20261012 \\
+  --huc-id-field huc12 \\
+  --output "$UPSTATE_GAUGE_RECEIVING_OUTPUT"
+```
+
+Set the output directory outside the application and Workspace. The command
+retains and verifies the original discharge and NLDI source families, imports
+the selected original HUC polygons, saves the exact analysis selection, builds
+the report, backs up the same scientific Workspace and reopens it independently.
+Use repeated `--reporting-huc12` arguments for an explicit subset and
+`--utility-selection` for the original utility source-reference array. The
+existing `--huc-collection` route selects an already imported original domain.
+`--prepare-only` completes source intake; repeating without it continues the
+same saved selection into computation.
+
+For component receiving into an existing complete application, apply the full
+eight-file component:
+
+```sh
+"$UPSTATE_PYTHON" -B operator/install_gauge_support.py \\
+  --application "$APPLICATION" --source-root "$COMPONENT_ROOT" --apply
+```
+
+Restart the operator to register its descriptor. The complete installation, exact source
+selection schema, commands and interpretation are in
+[operator/GAUGE_SUPPORT.md](GAUGE_SUPPORT.md).
+
+## 16. Exact daily-flow support for the original annual-reference dates
+
+The maintained hydrology source now accepts the original annual-reference
+binding directly. It intersects each record's exclusive-end period with the
+captured daily-flow dates and retains the original declared flow gauge and
+time-series identity. The complete source family includes the original daily
+records, original gauge/catchment responses, unchanged source-author calendar
+summaries, full reference-period results and a native source manifest.
+
+Save the original annual-reference catalog and choose the existing import:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" annual-references \\
+  > "$UPSTATE_OPERATION/annual-references.json"
+
+node source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs \\
+  --source-root source/hydrology-huc05-07-20261013 \\
+  --binding "$UPSTATE_OPERATION/annual-references.json" \\
+  --import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+  --output "$UPSTATE_OPERATION/annual-reference-flow-support"
+
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \\
+  source-import "$UPSTATE_OPERATION/annual-reference-flow-support/reference-support.sources.json"
+```
+
+The record table distinguishes the full requested period, captured overlap,
+outside-source days, absent dates and original nonnumeric observations. Approved,
+estimated, provisional and revised flags remain independent. The covered-days
+volume integrates only original numeric daily means; complete-period volume is
+available when the entire requested period has numeric coverage. Each retained
+row preserves its source reference even when its declared gauge is outside this
+captured edition.
+
+The command verifies all retained members and reproduces the six existing
+calendar outputs against their original hashes before writing the selected
+period support. An identical output directory can be reused. Choose a distinct
+output directory for another reference binding or source edition. The full
+replay, interpretation, import and API guide is
+[source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md](../source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md).
+
+## 17. Prepare and evaluate flow context in the annual-reference workflow
+
+In the existing Scenario sensitivity evaluation form, select the imported
+annual-reference edition, then choose **Original daily-flow context**. Use
+**Prepare original flow context** to queue the source replay and inspect its
+retained JSON, CSV and printable report. Reopen the evaluation form to select
+that source, or choose **Prepare original support and evaluate** to prepare
+and evaluate within the same saved task.
+
+The completed result displays the exact original observation and flow stations,
+record periods, numeric/requested days, outside-source days, source qualifiers
+and covered-days volume beside its calibration. Downloads include the complete
+original support, date availability and original reference binding. The saved
+scientific handoff retains the support source and the subset of admitted records
+selected by the actual positive-weight objectives.
+
+The same source preparation and evaluation are available through the CLI:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" flow-support \\
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID"
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" flow-support-sources
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" calibration \\
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \\
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+  --prepare-flow-support
+```
+
+The receiving runtime supplies Node.js for the original producer. Preparation
+retains its command, stdout/stderr and resumable state in the same Workspace.
+Original import, observation, preparation, record, station, constituent, method
+and period identities must match when the support is linked. Existing
+`--prepare-only`, `--standard-errors` and `calibration-resume` continue to use
+the saved handoff. The complete Workspace backup carries the source collections,
+flow operation, readable report and calibration result into independent receiving.

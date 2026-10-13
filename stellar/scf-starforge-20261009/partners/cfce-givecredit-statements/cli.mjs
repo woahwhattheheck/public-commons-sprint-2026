@@ -15,6 +15,7 @@ import {captureRegistry} from './capture.mjs';
 import {captureLedger,captureTransaction} from './ledger.mjs';
 import {captureLedgerInterval,selectLedgerInterval,captureLedgerSelection} from './history.mjs';
 import {createGiveCreditServer} from './server.mjs';
+import {writeJSONFile} from './native-json.mjs';
 export const HELP=String.raw`GiveCredit donor and initiative statements
 
   givecredit-statements init --directory NEW_DIR --name NAME
@@ -28,6 +29,9 @@ export const HELP=String.raw`GiveCredit donor and initiative statements
   givecredit-statements capture-registry --directory DIR --file OPTIONS.json --label LABEL [--resume]
   givecredit-statements capture-ledger --directory DIR --file OPTIONS.json --label LABEL [--registry-edition ID] [--resume]
   givecredit-statements capture-transaction --directory DIR --hash ORIGINAL_HASH --label LABEL [--file OPTIONS.json]
+  givecredit-statements checkpoint-status --directory DIR --kind ledger|registry
+  givecredit-statements checkpoint-import --directory DIR --kind ledger|registry --file ORIGINAL_CHECKPOINT.json
+  givecredit-statements checkpoint-export --directory DIR --kind ledger|registry --out NEW_CHECKPOINT.json
 
   givecredit-statements capture-history --file NATIVE_HISTORY_OPTIONS.json [--resume] [--sdk-module EXISTING_SDK.mjs]
   givecredit-statements select-history --file NATIVE_HISTORY_OPTIONS.json [--fetch-closures] [--sdk-module EXISTING_SDK.mjs]
@@ -67,7 +71,12 @@ The native reader preserves original envelope/result/meta and provider provenanc
 when the live indexes have pruned an older transaction. Whole retained sources can
 be prepared with the companion carbon-native-receiving/prepare-ledger-inputs.mjs.
 --registry-edition adds every original Stellar receipt payment hash in that edition.
-A failed acquisition saves its exact native checkpoint for --resume.
+A failed acquisition saves its exact native checkpoint for --resume. Original response
+and XDR strings are retained once beside a small atomic progress manifest. Existing
+ledger-capture.json/registry-capture.json files reopen automatically and remain intact.
+checkpoint-import receives a saved original file; checkpoint-export writes a complete
+ordinary source checkpoint usable independently of the local storage layout.
+checkpoint-status reports the last committed source/progress and physical writes.
 
 Native history options select sourceRoot/output, SDK module, public archive URL,
 accounts, contractIds and additional source addresses. capture-history includes
@@ -108,7 +117,7 @@ async function originalRegistryDirectory(directory){
   }
   return files;
 }
-async function writeNew(path,value){path=resolve(required(path,'a new output path'));await writeFile(path,typeof value==='string'?value:JSON.stringify(value,null,2)+'\n',{flag:'wx',mode:0o600});return path;}
+async function writeNew(path,value){path=resolve(required(path,'a new output path'));if(typeof value==='string')await writeFile(path,value,{flag:'wx',mode:0o600});else await writeJSONFile(path,value);return path;}
 export async function main(args=process.argv.slice(2)){
   const {command,options}=parse(args);
   if(['help','--help','-h'].includes(command)||options.help){process.stdout.write(HELP);return;}
@@ -137,6 +146,9 @@ export async function main(args=process.argv.slice(2)){
       donorAddress:options.donor,fromDate:options.from,beforeDate:options.before,offset:options.offset||0,limit:options.limit||50,
       search:options.search,address:options.address,kind:options.kind,contractId:options.contract};
     if(command==='state')print(workspaceOverview(workspace.state));
+    else if(command==='checkpoint-status')print(await workspace.captureStatus(required(options.kind,'ledger or registry')));
+    else if(command==='checkpoint-import')print(await workspace.importCapture(required(options.kind,'ledger or registry'),required(options.file,'the original checkpoint file')));
+    else if(command==='checkpoint-export')print(await workspace.exportCapture(required(options.kind,'ledger or registry'),required(options.out,'a new complete checkpoint file')));
     else if(command==='import')print(await workspace.import(await readJSONFile(required(options.file,'the complete source edition file')),required(options.label,'the source edition label'),operation));
     else if(command==='import-registry'){
       const source=receiveRegistryFiles(await originalRegistryDirectory(options.source),options.metadata?await readJSONFile(options.metadata):{origin:'original-registry-export'});
@@ -152,11 +164,12 @@ export async function main(args=process.argv.slice(2)){
       if(options['registry-edition'])input.registrySource=editionFor(workspace.state,options['registry-edition'],'registry');
       if(options.hash)input.hash=options.hash;
       if(options.resume)input.checkpoint=await workspace.captureCheckpoint(kind);
-      input.onProgress=async value=>{if(value.checkpoint)await workspace.saveCapture(kind,value.checkpoint);};
+      input.checkpointMode='borrowed';
+      input.onProgress=async value=>{if(value.checkpoint){const saved=await workspace.saveCapture(kind,value.checkpoint,{phase:value.phase});process.stderr.write(JSON.stringify({phase:value.phase,checkpoint:saved})+'\n');}};
       try{
         const source=await (command==='capture-registry'?captureRegistry:command==='capture-transaction'?captureTransaction:captureLedger)(input);
         print(await workspace.import(source,required(options.label,'the source edition label'),operation));
-      }catch(error){if(error.checkpoint)await workspace.saveCapture(kind,error.checkpoint);throw error;}
+      }catch(error){if(error.checkpoint)await workspace.saveCapture(kind,error.checkpoint,{phase:'interrupted'});throw error;}
     }else if(['payment-link','allocation','bridge','statement','settings','carry-payment-links'].includes(command))
       print(await workspace.apply(command,await readJSONFile(required(options.file,'the complete operation value file')),operation));
     else if(command==='preview'){

@@ -50,6 +50,11 @@ PACKAGE_FILES = (
     "source/scientific-setup-integration-20261013.json",
     "operator/web/scientific-setup.mjs", "operator/web/scientific-setup.css",
     "operator/extensions/scientific-setup.json", "operator/SCIENTIFIC_SETUP_DESK.md",
+    "source_tools/keowee_interval_receiving.mjs",
+    "source/keowee-native-receiving-20261013/source-interval-journey.json",
+    "source_tools/gura_setup_review.py", "source_tools/GURA_SETUP_REVIEW.md",
+    "source/gura-scientific-setup-request.json", "source/gura-setup-integration-20261013.json",
+    "source_tools/receive_first_gura_case.py", "source_tools/FIRST_GURA_RECEIVING.md",
 )
 PROFILE_NAMES = (
     "lake-keowee-methodology.json", "keowee-evaluator.mjs", "keowee-evaluator.d.mts",
@@ -64,7 +69,8 @@ HOST_FILES = (
     "operator/watershed_context.py", "source/keowee-priority-methods-20261013.json",
     "operator/server.py", "operator/extension_registry.py", "operator/web/app.mjs",
     "model/reviews.py", "model/model_selection.py", "model/scenario_footprint.py",
-    "operator/customer_reviews.py",
+    "operator/customer_reviews.py", "source_tools/gura_comparison.py",
+    "source_tools/gura_workflow.py", "source_tools/receive_gura.py",
 )
 
 
@@ -130,13 +136,14 @@ def validate_host(application):
     for name, body in bodies.items():
         validate_body(name, body)
     required = (
-        ("model/workspace.py", "Workspace", {"import_sources", "source_file", "get_grid", "_get", "_save", "_list"}),
+        ("model/workspace.py", "Workspace", {"import_sources", "source_file", "get_grid", "save_scenario", "_get", "_save", "_list"}),
         ("model/conservation.py", None, {"prepare", "build", "inspect", "save_plan", "get_plan"}),
         ("model/portable.py", None, {"backup", "restore", "inspect_archive"}),
         ("model/reviews.py", None, {"create_review", "show_review", "history", "export_review",
                                     "describe_export", "response_template", "validate_workspace"}),
         ("model/model_selection.py", None, {"grid_models", "selected", "required_roles"}),
         ("model/scenario_footprint.py", None, {"validate_destination_codes"}),
+        ("source_tools/gura_comparison.py", None, {"catalog", "make_plan", "_check_plan"}),
         ("operator/watershed_context.py", "WatershedContextActions", {"read", "invoke", "_export"}),
     )
     for name, class_name, needed in required:
@@ -231,7 +238,28 @@ def package(source_root):
     profiles = manifest.get("required_profile", {}).get("files", [])
     if (len(profiles) != len(PROFILE_NAMES)
             or {row.get("path") for row in profiles} != {PROFILE_ROOT + name for name in PROFILE_NAMES}):
-        raise ValueError("The exact nine-file Keowee 1.0.2 source profile is required")
+        raise ValueError("The complete nine-member Keowee methodology and evaluator edition is required")
+    profile_rows = {row["path"]: row for row in profiles}
+    profile_bodies = {name: checked_body(source_root, row) for name, row in profile_rows.items()}
+    profile_manifest = json.loads(profile_bodies[PROFILE_ROOT + "keowee-sources-manifest.json"])
+    entries = profile_manifest.get("entries", [])
+    if len(entries) != 1 or entries[0].get("path") != "lake-keowee-methodology.json":
+        raise ValueError("Expected the original Keowee methodology source entry")
+    entry = entries[0]
+    declared = [entry] + entry.get("companions", [])
+    expected_names = set(PROFILE_NAMES) - {"keowee-sources-manifest.json"}
+    if len(declared) != len(expected_names) or {row.get("path") for row in declared} != expected_names:
+        raise ValueError("The Keowee import manifest must retain every exact evaluator companion")
+    for member in declared:
+        body = profile_bodies[PROFILE_ROOT + member["path"]]
+        if sha(body) != member.get("sha256") or member.get("bytes", len(body)) != len(body):
+            raise ValueError("The Keowee import companion differs from this source edition: " + member["path"])
+    binding = json.loads(sources["source/keowee-native-binding-20261013.json"])
+    for key in ("profile", "evaluator"):
+        member = binding.get(key, {})
+        body = profile_bodies.get(member.get("path"))
+        if body is None or sha(body) != member.get("sha256") or member.get("bytes", len(body)) != len(body):
+            raise ValueError("The native Keowee binding differs from the retained " + key)
     recipes = manifest.get("joins", [])
     if len(recipes) != len(ENTRYPOINTS) or {row.get("path") for row in recipes} != set(ENTRYPOINTS):
         raise ValueError("Expected the three maintained source join ledgers")
@@ -249,7 +277,9 @@ def package(source_root):
             or setup_descriptor.get("assets") != ["scientific-setup.mjs", "scientific-setup.css"]
             or setup_descriptor.get("backend", {}).get("module") != "scientific_setup"
             or setup_descriptor.get("backend", {}).get("actions") != ["scientific.setup.create"]
-            or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]):
+            or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]
+            or setup_descriptor.get("client", {}).get("module") != "/web/scientific-setup.mjs"
+            or setup_descriptor.get("client", {}).get("styles") != ["/web/scientific-setup.css"]):
         raise ValueError("Expected the original scientific setup action and view registration")
     sources[MANIFEST] = raw
     return manifest, rows, profiles, recipes, sources
@@ -311,21 +341,24 @@ def install(application, source_root, *, dry_run=False):
         fcntl.flock(lock, fcntl.LOCK_EX)
         host = validate_host(application)
         pending, original, policies, recognized = {}, {}, {}, {}
-        # The published profile is an immutable input. Copy verified originals
-        # from the checkout only for missing members; retain exact existing ones.
+        # Methodology bytes stay immutable. Executable companions can advance
+        # only from an explicitly retained, byte-identified owner predecessor.
         for row in profiles:
             name = row["path"]
             before = read_optional(application, name)
             original[name] = before
-            if before is not None:
-                if len(before) != row["bytes"] or sha(before) != row["sha256"]:
-                    raise ValueError("The installed Keowee source-profile member differs: " + name)
-                validate_body(name, before)
-                pending[name] = before
-                policies[name] = "retained original profile"
+            wanted = checked_body(source_root, row)
+            if before == wanted:
+                pending[name] = wanted
+                policies[name] = "retained source edition"
+            elif before is None:
+                pending[name] = wanted
+                policies[name] = "copy source edition"
+            elif sha(before) in row.get("previous_sha256", []):
+                pending[name] = wanted
+                policies[name] = "upgrade recorded executable companion"
             else:
-                pending[name] = checked_body(source_root, row)
-                policies[name] = "copy original profile"
+                raise ValueError("The installed Keowee source member has an unrecognized edition: " + name)
 
         for name in PACKAGE_FILES:
             before = read_optional(application, name)
@@ -395,6 +428,19 @@ def install(application, source_root, *, dry_run=False):
                 "--workspace /actual/existing/scientific-workspace "
                 "--selection /actual/owned/receiving/setup-selection.json "
                 "--output-dir /actual/owned/receiving/scientific-setup",
+                "cd " + shlex.quote(str(application))
+                + " && " + shlex.quote(sys.executable)
+                + " -B -m source_tools.gura_setup_review "
+                "--workspace /actual/existing/gura-workspace "
+                "--receiving /actual/original/receiving.json --catalog "
+                "--output-dir /actual/owned/receiving/gura-catalog",
+                "cd " + shlex.quote(str(application))
+                + " && node source_tools/keowee_interval_receiving.mjs",
+                shlex.quote(sys.executable) + " -B "
+                + shlex.quote(str(application / "source_tools/receive_first_gura_case.py"))
+                + " --application " + shlex.quote(str(application))
+                + " --operation-root /actual/original-gura-operation"
+                + " --python " + shlex.quote(sys.executable),
             ],
         }
         if dry_run or not changed:

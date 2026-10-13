@@ -25,6 +25,8 @@ export class GiveCreditClient {
   capture(kind:'registry'|'ledger',value:NativeRow,label:string,options:OperationOptions):Promise<NativeRow>;
   stopCapture(kind:'registry'|'ledger'):Promise<NativeRow>;
   captureStatus(kind:'registry'|'ledger'):Promise<NativeRow>;
+  importCheckpoint(kind:'registry'|'ledger',source:SourceEdition,options:OperationOptions):Promise<NativeRow>;
+  checkpointURL(kind:'registry'|'ledger'):string;
   statement(id:string,version?:number|string):Promise<Statement>;
   compare(beforeId:string,afterId:string):Promise<Comparison>;
   statementFileURL(id:string,filename:string,version?:number|string):string;

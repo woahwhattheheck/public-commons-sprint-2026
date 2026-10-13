@@ -4,7 +4,7 @@ A complete native operator for the original GiveCredit registry, Stellar payment
 
 Operation: **SCF-CFCE-GIVECREDIT-8D45-20261012**.
 
-[Complete operator guide](../../../../products/cfce-givecredit-statements/README.md) · [Command interface](./cli.mjs) · [Typed core](./core.d.mts) · [Native capture](./ledger.mjs)
+[Complete operator guide](../../../../products/cfce-givecredit-statements/README.md) · [Command interface](./cli.mjs) · [Typed core](./core.d.mts) · [Native capture](./ledger.mjs) · [Large checkpoint storage and recovery](./CHECKPOINT_STORAGE.md)
 
 ## Original source contract
 

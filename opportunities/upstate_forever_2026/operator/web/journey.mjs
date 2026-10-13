@@ -15,8 +15,10 @@ const nativeModels=record=>{const chosen=record?.models??['ndr','sdr'];return ['
 const modelLabel=record=>nativeModels(record).map(name=>name.toUpperCase()).join(' + ')||'Choose native models';
 const sameModels=(a,b)=>canonical(nativeModels(a))===canonical(nativeModels(b));
 const commonModels=(a,b)=>nativeModels(a?.selection).filter(name=>nativeModels(b?.selection).includes(name));
-const fields={baseline_run_id:'runs',grid_id:'grids',profile_id:'profiles',scenario_id:'scenarios',run_id:'runs',comparison_id:'comparisons',spatial_review_id:'spatial_reviews',spatial_export_id:'spatial_exports',delivery_id:'deliveries'};
+const fields={baseline_run_id:'runs',grid_id:'grids',profile_id:'profiles',scenario_id:'scenarios',run_id:'runs',comparison_id:'comparisons',spatial_review_id:'spatial_reviews',spatial_export_id:'spatial_exports',delivery_id:'deliveries',calibration_review_id:'calibration_reviews'};
 const resultFields={'scenario.save':'scenario_id','profile.save':'profile_id','grid.prepare':'grid_id','run.prepare':'run_id','run.compare':'comparison_id','delivery.build':'delivery_id','spatial.review.save':'spatial_review_id','spatial.review.export':'spatial_export_id'};
+const journeyRows=(state,kind)=>list(kind==='calibration_reviews'?state?.data?.calibration?.calibration_reviews:state?.data?.[kind]);
+const reviewContext=record=>record?Object.fromEntries(['id','calibration_id','plan_id','uncertainty_id','map_id','selected_run_id','selected_profile_id'].map(key=>[key,record[key]??null])):null;
 export const journeySteps=[
  {id:'study',title:'Choose a prepared study',view:'overview',do:'Choose the saved baseline you want to explain. Open its result before changing any inputs.',see:'The selected source grid, parameter profile, baseline scenario and actual run state.',meaning:'This fixes the starting point for every change and comparison in this journey.',say:'This is our saved starting point, and every result stays linked to the inputs that produced it.'},
  {id:'inputs',title:'Explain inputs and geography',view:'sources',do:'Open the source edition, model grid and parameter profile. Inspect the reporting boundary in Spatial review.',see:'Original source editions and references, the coordinate system, resolution, upstream context and model period.',meaning:'The reporting area determines where quantities are summarized; the wider model domain supplies hydrologic context.',say:'We retain the original data and show exactly which geography and assumptions the model uses.'},
@@ -25,7 +27,8 @@ export const journeySteps=[
  {id:'compare',title:'Compare physical results',view:'comparisons',do:'Compare the completed baseline and alternative on the same grid. Open the difference map and inspect its quantities.',see:'Alternative-minus-baseline changes, physical units, valid-cell coverage and any changed parameter profile.',meaning:'A negative difference means the alternative has a smaller modeled export for that quantity on the compared cells.',say:'This shows the modeled change from the same baseline, with the units and assumptions visible.'},
  {id:'maps',title:'Inspect and explain the maps',view:'spatial',do:'Open the selected result or comparison in Spatial review. Inspect the legend, extent, source layers and saved annotations, then save a view or map pack.',see:'Actual mapped outputs, saved geographic views and the original printable map files.',meaning:'Map colors and priorities need the physical units, legend and selected geography beside them.',say:'I can move from a numerical result to the actual map and retain the view we discussed.'},
  {id:'delivery',title:'Build and open the delivery',view:'deliveries',do:'Build the original seven-map delivery from completed runs and actual supporting sources. Open its report, maps and working package.',see:'The native delivery state, selected runs, map PDFs, metadata and original authenticated downloads.',meaning:'The delivery packages the analysis with its supporting source editions and restorable working project.',say:'The handover includes both the readable report and the working analysis behind it.'},
- {id:'reopen',title:'Save, reopen and transfer',view:'overview',do:'Save your view, open Project continuity and create a complete project with its operation history. Receive its archive or incremental edition, open the received workspace and continue the retained work.',see:'The original project identity, saved selections and notes, completed results, receiving workspace and unfinished original operations.',meaning:'Project continuity carries the scientific workspace and the selected operating history together. Scientific backups and separate journey downloads remain available.',say:'We can reopen the project, explain the saved analysis and continue its unfinished work.'}
+ {id:'reopen',title:'Save, reopen and transfer',view:'overview',do:'Save your view, open Project continuity and create a complete project with its operation history. Receive its archive or incremental edition, open the received workspace and continue the retained work.',see:'The original project identity, saved selections and notes, completed results, receiving workspace and unfinished original operations.',meaning:'Project continuity carries the scientific workspace and the selected operating history together. Scientific backups and separate journey downloads remain available.',say:'We can reopen the project, explain the saved analysis and continue its unfinished work.'},
+ {id:'review',optional:true,title:'Review calibration evidence (optional)',view:'calibration',do:'Select a completed calibration review. Open its readable report, nominal analysis, chosen observation-error sensitivity and original catchment maps. Save this view before handover.',see:'One exact saved dossier, its source observation and plan identities, original selected native run, and explicitly chosen supplements.',meaning:'This dossier explains how original annual observations compare with the retained native candidates. Its scientific selection is independent of the scenario comparison selected in the other journey steps.',say:'This is the complete observation-based review behind the selected calibration, with the report and original supporting files kept together.'}
 ];
 export const journeyVocabulary=[
  ['Source edition','The retained version of an original dataset, with its references and original files.'],
@@ -63,9 +66,13 @@ export function validateJourneyImport(value,state){
  const selection={};
  for(const [key,collection]of Object.entries(fields)){
   const id=value.selection?.[key]||'';
-  if(typeof id!=='string'||(id&&!list(state.data[collection]).some(row=>row.id===id)))throw Error('This project does not contain the selected '+human(key)+'. Open the complete matching workspace archive.');
+  if(typeof id!=='string'||(id&&!journeyRows(state,collection).some(row=>row.id===id)))throw Error('This project does not contain the selected '+human(key)+'. Open the complete matching workspace archive.');
   selection[key]=id;
  }
+ const review=journeyRows(state,'calibration_reviews').find(row=>row.id===selection.calibration_review_id);
+ if(review&&review.state!=='complete')throw Error('Choose a completed original calibration review.');
+ const retainedReview=value.recorded_context?.calibration_review;
+ if(retainedReview!==undefined&&retainedReview!==null&&canonical(retainedReview)!==canonical(reviewContext(review)))throw Error('The saved review context belongs to a different original dossier. Open the matching workspace.');
  const base=list(state.data.runs).find(x=>x.id===selection.baseline_run_id),run=list(state.data.runs).find(x=>x.id===selection.run_id);
  const requested=value.selection?.models;
  if(requested!==undefined&&(!Array.isArray(requested)||requested.some(name=>!['ndr','sdr'].includes(name))||new Set(requested).size!==requested.length))throw Error('The journey native model selection is invalid.');
@@ -84,7 +91,7 @@ export function attachOperatingJourney(host){
  const state=()=>snapshot||host.getState();
  const hostView=()=>typeof host.getView==='function'?host.getView():currentView;
  const workspace=()=>state()?.workspace_key||host.getWorkspace();
- const rows=kind=>list(state()?.data?.[kind]);
+ const rows=kind=>journeyRows(state(),kind);
  const row=(kind,id)=>rows(kind).find(x=>x.id===id);
  const selected=key=>row(fields[key],preferences?.selection[key]);
  const title=(kind,id)=>{const item=row(kind,id);return item?.title||item?.spec?.title||item?.selection?.title||item?.metadata?.title||short(id)||'Choose a saved item';};
@@ -398,6 +405,21 @@ export function attachOperatingJourney(host){
   else html+=notice('The original delivery form selects the supporting sources, water designations, observations, map settings and contact details.');
   return html;
  }
+ function review(){
+  const records=rows('calibration_reviews').filter(item=>item.state==='complete');
+  const chosen=selected('calibration_review_id'),context=reviewContext(chosen);
+  let html=notice('Optional scientific evidence: this review preserves its own original native selection. Choosing it does not change the scenario comparison or delivery selected in the original eight steps.');
+  if(!state()?.data?.calibration)return html+notice('The complete calibration component is not installed in this application. Receive it with the current source package to open original observation-based reviews.');
+  html+='<div class="page-actions">'+action('view','Open calibration and validation','data-view-name="calibration"')+'</div>';
+  if(!records.length)return html+notice('Complete a calibration analysis and prepare its review package in Calibration and validation. The resulting retained review will be available here.');
+  html+=select('calibration_review_id','Completed scientific review',records,item=>(item.title||short(item.id))+' · '+short(item.calibration_id));
+  if(!chosen)return html+notice('Choose the exact review edition to carry with this saved project view.');
+  html+=facts([['Review',chosen.title||chosen.id],['Calibration',context.calibration_id],['Original plan',context.plan_id],['Selected native run',context.selected_run_id],['Selected parameter profile',context.selected_profile_id],['Source-error edition',context.uncertainty_id||'Not selected'],['Catchment map edition',context.map_id||'Not selected'],['Retained files',number(chosen.file_count)]]);
+  html+='<div class="page-actions">'+action('review-open','Open complete review','',true)+action('review-read','Read report')+open('calibrations',context.calibration_id,'Open nominal results')+open('calibration-uncertainties',context.uncertainty_id,'Open source-error sensitivity')+open('calibration-maps',context.map_id,'Open original catchment maps')+'</div>';
+  const nativeSession=Object.hasOwn(state()?.data||{},'operator_session');
+  if(nativeSession)html+='<div class="page-actions">'+action('save-view','Save review selection and notes')+(state()?.data?.project_continuity?action('handoff','Save view and transfer project','',true):'')+'</div>';
+  return html+notice('The saved selection contains one dossier ID. Its calibration, plan, native run, error edition and map edition are derived from that original record and checked again when the saved view is opened or transferred.');
+ }
  function reopen(){
   const backup=latestTask('workspace.backup'),restore=latestTask('workspace.restore');
   const nativeSession=Object.hasOwn(state()?.data||{},'operator_session');
@@ -431,7 +453,7 @@ export function attachOperatingJourney(host){
   if(workspace()!==originalWorkspace)return;
   acceptTask(task,pending.operation_id);await host.refresh({force:true});return host.showTask(task.id);
  }
- const renderers={study,inputs,change,calculate,compare,maps,delivery,reopen};
+ const renderers={study,inputs,change,calculate,compare,maps,delivery,reopen,review};
  function render(){
   const step=journeySteps.find(x=>x.id===preferences.step)||journeySteps[0],index=journeySteps.indexOf(step);
   return '<div class="operating-journey"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH</p><h1>Guided operating journey</h1><p>Use the saved project, original calculations and actual delivery controls.</p></div><div class="page-actions">'+action('export','Download selections')+action('notes','Operating notes')+'</div></header>'+
@@ -495,11 +517,12 @@ export function attachOperatingJourney(host){
  }
  function exportValue(){
   const taskIds=new Set(Object.values(preferences.pending).map(x=>x?.task_id).filter(Boolean));
-  return {schema:SCHEMA,project_id:state().data.project.id,step:preferences.step,started_at:preferences.started_at,selection:{...preferences.selection},regional:regional.capture(),notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:new Date().toISOString(),recorded_context:{project_title:state().data.project.title,workspace_key:workspace(),tasks:list(state().tasks).filter(task=>taskIds.has(task.id)).map(task=>({id:task.id,operation_id:task.operation_id,action:task.action,state:task.state,created_at:task.created_at,started_at:task.started_at??null,ended_at:task.ended_at??null})),selected_run_timing:nativeTiming(matchingRun(),matchingRun()?latestTask('run.start',matchingRun().id):null)}};
+  return {schema:SCHEMA,project_id:state().data.project.id,step:preferences.step,started_at:preferences.started_at,selection:{...preferences.selection},regional:regional.capture(),notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:new Date().toISOString(),recorded_context:{calibration_review:reviewContext(selected('calibration_review_id')),project_title:state().data.project.title,workspace_key:workspace(),tasks:list(state().tasks).filter(task=>taskIds.has(task.id)).map(task=>({id:task.id,operation_id:task.operation_id,action:task.action,state:task.state,created_at:task.created_at,started_at:task.started_at??null,ended_at:task.ended_at??null})),selected_run_timing:nativeTiming(matchingRun(),matchingRun()?latestTask('run.start',matchingRun().id):null)}};
  }
  function operatingNotes(){
   const value=exportValue(),base=selected('baseline_run_id'),run=matchingRun(),lines=['# Upper Savannah — operating notes','',state().data.project.title,'','Recorded: '+value.observed_at,'Project: '+value.project_id,'','## Selected analysis',''];
   for(const [key,collection]of Object.entries(fields))if(value.selection[key])lines.push('- '+human(key)+': '+title(collection,value.selection[key])+' ('+value.selection[key]+')');
+  if(value.recorded_context.calibration_review){lines.push('','## Original calibration review','');for(const [key,id]of Object.entries(value.recorded_context.calibration_review))if(id)lines.push('- '+human(key)+': '+id);}
   const regionalNotes=regional.notes();if(regionalNotes)lines.push('',regionalNotes);
   lines.push('','## Operating journey','');
   journeySteps.forEach((step,i)=>lines.push('### '+(i+1)+'. '+step.title,'','Do: '+step.do,'','See: '+step.see,'','Meaning: '+step.meaning,'','Say: '+step.say,''));
@@ -567,6 +590,14 @@ export function attachOperatingJourney(host){
   if(name==='home'){preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
   if(name==='step'){if(!journeySteps.some(x=>x.id===button.dataset.step))return;preferences.step=button.dataset.step;preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
   if(name==='view')return host.navigate(button.dataset.viewName);
+  if(name==='review-open'||name==='review-read'){
+   const selectedWorkspace=workspace(),generation=preferences.generation,id=preferences.selection.calibration_review_id;
+   if(!id||!selected('calibration_review_id'))throw Error('Choose a completed review from this workspace.');
+   if(typeof host.openExtension!=='function')throw Error('Receive the maintained extension host to open the original review controller.');
+   await host.navigate('calibration');
+   if(workspace()!==selectedWorkspace||preferences.generation!==generation||preferences.selection.calibration_review_id!==id)throw Error('The workspace or review selection changed. Open the selected review again.');
+   return host.openExtension('calibration','openForReview',{workspace_key:selectedWorkspace,review_id:id,preview:name==='review-read'});
+  }
   if(name==='item')return host.openItem(button.dataset.kind,button.dataset.id);
   if(name==='map')return host.openMap(button.dataset.kind,button.dataset.id);
   if(name==='task')return host.showTask(button.dataset.id);

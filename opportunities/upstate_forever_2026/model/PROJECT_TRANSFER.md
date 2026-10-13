@@ -239,3 +239,14 @@ Original integration references: `model/portable.py` Git blob
 `720dd74b35352c09e0248e87ce2c604052d0f476`, original Workspace/common schema
 `upstate.scientific-workbench/v1`, and the existing operator's
 `Operator.submit`, `_invoke`, `_ticket`, `register` and customer-review decoration.
+
+
+## Original file modes in a received edition
+
+A current scientific archive records each member's original mode as `100644` or `100755`. Incremental reconstruction now writes those exact modes into the ZIP member metadata, and native archive verification compares them with the retained manifest. The direct directory receiver applies the same modes and verifies them on POSIX systems, so executable application entry files remain executable after receiving.
+
+Original snapshot and block IDs still bind the same source bytes and metadata. Archives from the earlier format that did not declare a mode remain supported. No original Workspace member is excluded by file type or by a calibration-specific directory list.
+
+The native adapter uses `<snapshot_id>.received-modes-v2.zip` for its owned reconstructed archive cache. This lets the same retained restore operation resume after an earlier reconstruction omitted modes, while keeping that earlier cache file intact. A manually selected existing reconstruction with mismatched modes is rejected with a request to choose a new archive path; an unrelated existing output is never overwritten.
+
+Full project captures include complete saved calibration review records and `calibration-review-exports` members. A new review in a later edition adds its original files to the snapshot and reuses only receiver blocks with matching bytes. Both `project.transfer.restore` and Project continuity's receiving path invoke the installed extension validators before the received workspace is registered.

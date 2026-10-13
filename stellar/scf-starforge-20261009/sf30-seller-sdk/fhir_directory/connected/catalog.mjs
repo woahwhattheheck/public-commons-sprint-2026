@@ -10,6 +10,7 @@ export const directorySourceContract=JSON.parse(readFileSync(new URL('../directo
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingReturnsContract=JSON.parse(readFileSync(new URL('../directory-operating-returns-schema.json',import.meta.url),'utf8'));
+export const directoryCorrectionWorksheetsContract=JSON.parse(readFileSync(new URL('../directory-correction-worksheets-schema.json',import.meta.url),'utf8'));
 export const directoryCorrectionsContract=JSON.parse(readFileSync(new URL('../directory-corrections-schema.json',import.meta.url),'utf8'));
 export const directoryForeignKeyQueries=Object.freeze([
   {
@@ -127,7 +128,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns',...directoryCorrectionsContract.collections
+  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns',...directoryCorrectionsContract.collections,...directoryCorrectionWorksheetsContract.collections
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -138,6 +139,24 @@ function tool(action,description,properties={},required=[],options={}){
 }
 const originalId=str('Exact original record or operation ID.',{pattern:'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$'});
 const added=[
+  tool('directory_correction_worksheet_rows','Read complete selected worksheet rows, original returned differences or explicit review decisions with exact immutable row keys.',{
+    collection:str('Exact worksheet collection.',{enum:directoryCorrectionWorksheetsContract.collections}),
+    recordId:hash('Exact immutable worksheet record.'),offset:page.offset,limit:page.limit,
+    rowKey:hash('Optional exact worksheet row key.'),state:str('Optional exact original, proposed or reviewed change state.',{enum:['original','proposed','accept','keep-original']})
+  },['collection','recordId']),
+  tool('directory_correction_worksheet_file','Receive the entire original worksheet, rows, returned file, changes or decisions. Full files remain available when one change exceeds the page budget.',{
+    collection:str('Exact worksheet collection.',{enum:directoryCorrectionWorksheetsContract.collections}),
+    recordId:hash('Exact immutable worksheet record.'),
+    fileKind:str('Original complete file kind.',{enum:['input','rows','worksheet','original','changes','decisions']})
+  },['collection','recordId','fileKind']),
+  tool('directory_correction_worksheet_document','Read the complete immutable original worksheet document, including exact original values and physical CSV cells.',{
+    worksheetId:hash('Exact prepared worksheet ID.')
+  },['worksheetId']),
+  tool('directory_correction_worksheet_receive','Receive the complete original customer returned file through its already saved immutable intake record.',{
+    importId:hash('Exact saved worksheet import ID.'),input:alias,
+    expectedSha256:hash('Complete unchanged returned-file SHA-256.')
+  },['importId','input'],{mutates:true}),
+
   tool('directory_correction_rows','Read every retained ordered edit or original before/after change for the selected immutable correction record.',{
     collection:str('Exact native correction collection.',{enum:directoryCorrectionsContract.collections}),
     recordId:hash('Exact immutable correction record ID.'),offset:page.offset,limit:page.limit
@@ -282,8 +301,9 @@ const inherited=gravityReferralMerchantTools.map(original=>{
   row.description='Original Gravity/eLTSS workspace: '+row.description;
   if(action==='input_apply')row.inputSchema.properties.action.enum=Object.keys(nativeInputActions);
   if(action==='receive_export'){
-    row.inputSchema.properties.kind.enum.push('directory-source','directory-handoff');
+    row.inputSchema.properties.kind.enum.push('directory-source','directory-handoff','directory-correction-worksheet-return');
     row.inputSchema.properties.importProfileId=hash('Required saved native import profile for a directory-source receive.');
+    row.inputSchema.properties.importId=hash('Required saved worksheet import for a directory-correction-worksheet-return receive.');
   }
   if(action==='workspace_packet'||action==='workspace_import')
     row.description+=' This directory provider selects its complete directory-plus-Gravity archive.';
@@ -339,5 +359,7 @@ export function validateHumanServicesDirectoryArguments(name,args={}){
   validate(args,row.inputSchema,action);
   if(action==='receive_export'&&args.kind==='directory-source')
     validate(args.importProfileId,{type:'string',pattern:SHA},action+'.importProfileId');
+  if(action==='receive_export'&&args.kind==='directory-correction-worksheet-return')
+    validate(args.importId,{type:'string',pattern:SHA},action+'.importId');
   return action;
 }

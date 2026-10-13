@@ -31,7 +31,10 @@ REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
             "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
             "operator/web/calibration_review.mjs", "operator/web/calibration.css",
             "operator/extensions/calibration.json", "operator/extension_registry.py",
-            "operator/web/extension_host.mjs", "install_extensions.py")
+            "operator/web/extension_host.mjs", "install_extensions.py",
+            "operator/web/calibration_design.mjs", "operator/CALIBRATION_DESIGN.md",
+            "operator/calibration_design_patch.json", "operator/install_calibration_design.py",
+            "source/calibration-design/upper-savannah-reference-support.json")
 
 
 def _tool(name, path):

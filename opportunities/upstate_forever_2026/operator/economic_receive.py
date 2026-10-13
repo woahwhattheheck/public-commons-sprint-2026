@@ -220,7 +220,7 @@ def receive_operator(args, original_url, origin, token, journal):
         def capture(name):
             page.screenshot(path=str(output / name), full_page=True)
 
-        def wait_task(task, action):
+        def wait_task(task, action, *, refresh_economics=True):
             key = task["id"]
             record["tasks"].append({"action": action, "id": key, "state": task["state"]})
             journal.save()
@@ -240,7 +240,8 @@ def receive_operator(args, original_url, origin, token, journal):
                 task = get("/api/task", id=key)
             record["tasks"][-1].update(state="complete", result_id=task["result"].get("id"))
             journal.save()
-            page.locator('[data-econ="refresh-saved"]').click()
+            if refresh_economics:
+                page.locator('[data-econ="refresh-saved"]').click()
             return task
 
 
@@ -252,6 +253,161 @@ def receive_operator(args, original_url, origin, token, journal):
             response = pending.value
             check_response(response, "Original queue action " + action)
             return wait_task(response.json(), action)
+
+        def receive_implementation(edition, chosen, workspace, source_report_id, zone_id):
+            def is_action(response, action):
+                return (urlsplit(response.url).path == "/api/actions"
+                        and response.request.method == "POST"
+                        and json.loads(response.request.post_data or "{}").get("action") == action)
+
+            def close_details():
+                close = page.locator('#detail-dialog button[data-action="detail-close"]')
+                if close.is_visible():
+                    close.click()
+
+            def download(ticket, target):
+                relative = ticket.get("url", "")
+                require(isinstance(relative, str) and relative.startswith("/") and not relative.startswith("//"),
+                        "The retained implementation download must use the original operator")
+                response = context.request.get(origin + relative,
+                                               headers={"Authorization": "Bearer " + token},
+                                               max_redirects=0)
+                check_response(response, "Retained implementation file " + target.name)
+                target.write_bytes(response.body())
+                return target.read_bytes()
+
+            with journal.stage("choose_original_scenario_for_implementation") as step:
+                page.locator('[data-econ="implementation-choose"][data-id="' + edition["id"] + '"]').first.click()
+                page.locator("[data-implementation-run]").wait_for(state="visible")
+                require(page.locator("[data-implementation-run]").input_value() == "",
+                        "Implementation choice must begin with explicit scenario selection")
+                page.locator("[data-implementation-run]").select_option(chosen["run_id"])
+                capture("06-original-scenario-implementation-review.png")
+                page.locator('[data-econ="implementation-open"]').click()
+                page.locator('[aria-label="Economic scenario handoff"]').wait_for(state="visible")
+                step.update(edition_id=edition["id"], run_id=chosen["run_id"], zone_id=zone_id)
+                journal.save()
+
+            with journal.stage("create_native_plan_and_import_original_scenario") as step:
+                timeout = args.task_timeout_seconds * 1000
+                with page.expect_response(lambda response: is_action(response, "implementation.source.import"),
+                                          timeout=timeout) as imported_response:
+                    with page.expect_response(lambda response: is_action(response, "implementation.plan.create"),
+                                              timeout=timeout) as created_response:
+                        page.locator('[data-impl="economic-new"]').click()
+                    response = created_response.value
+                    check_response(response, "Original implementation plan creation")
+                    created = wait_task(response.json(), "implementation.plan.create", refresh_economics=False)
+                response = imported_response.value
+                check_response(response, "Original economic scenario source import")
+                imported = wait_task(response.json(), "implementation.source.import", refresh_economics=False)
+                plan_id = imported["result"]["plan_id"]
+                revision = imported["result"]["revision"]
+                require(plan_id == created["result"]["plan_id"],
+                        "The economic scenario was imported into another plan")
+                detail = get("/api/implementation/detail", workspace=workspace, id=plan_id, revision=revision)
+                plan = detail["plan"]
+                require(plan["id"] == plan_id and plan["revision"] == revision,
+                        "The reopened implementation plan differs from the completed original task")
+                require(len(plan["candidates"]) == 1, "The chosen whole scenario must remain one candidate")
+                candidate = plan["candidates"][0]
+                link = next(item for item in plan["source_links"]
+                            if item["id"] == candidate["source"]["source_link_id"])
+                snapshot = link["snapshot"]
+                binding = snapshot["binding"]
+                expected_binding = {"edition_id": edition["id"], "run_id": chosen["run_id"],
+                                    "report_id": source_report_id,
+                                    "report_sha256": record["source_report_sha256"], "zone_id": zone_id}
+                require(binding == expected_binding,
+                        "The native plan lost the original edition, scenario, report, source hash or zone")
+                require(snapshot["economic_report"] == edition["report"],
+                        "The plan's retained economic source differs from the selected original edition")
+                original_row = candidate["source"]["row_snapshot"]
+                require(original_row["original_alternative"] == chosen,
+                        "The native plan changed the original complete scenario")
+                physical = {item["metric"]: item["output"] for item in candidate["modeled_benefits"]}
+                require(physical == chosen["outputs"],
+                        "The native plan changed the original signed modeled quantities or spatial support")
+                original_cost = next((item for item in edition["input"]["selection"].get("costs", [])
+                                      if item["run_id"] == chosen["run_id"]), None)
+                require(original_row["original_cost"] == original_cost,
+                        "The plan changed the original estimate or its source footprint")
+                page.wait_for_function(
+                    "(id) => document.querySelector('.iw-footer span')?.textContent===id && "
+                    "document.querySelector('[aria-label=\"Economic scenario handoff\"] h3')?.textContent==='Economic source imported'",
+                    arg=plan_id, timeout=timeout)
+                record["implementation"] = {"plan_id": plan_id, "revision": revision,
+                                             "binding": binding, "create_task_id": created["id"],
+                                             "source_import_task_id": imported["id"]}
+                journal.save()
+                (output / "implementation-native-plan.json").write_text(
+                    json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                step.update(plan_id=plan_id, revision=revision, source_link_id=link["id"])
+                close_details()
+                capture("07-saved-native-scenario-plan.png")
+
+            with journal.stage("export_original_implementation_plan") as step:
+                close_details()
+                with page.expect_download() as pending:
+                    page.locator('[data-impl="export-json"]').first.click()
+                exported = pending.value
+                require(not exported.failure(), "The original implementation plan export failed")
+                path = output / "implementation-portable-plan.json"
+                exported.save_as(str(path))
+                require(json.loads(path.read_text(encoding="utf-8-sig")) == plan,
+                        "Portable implementation JSON differs from the saved source-linked native revision")
+                step.update(plan_id=plan_id, revision=revision, file=path.name)
+
+            with journal.stage("receive_original_implementation_report") as step:
+                page.locator('[data-impl="tab"][data-tab="handover"]').click()
+                with page.expect_response(lambda response: is_action(response, "implementation.plan.report"),
+                                          timeout=args.task_timeout_seconds * 1000) as pending:
+                    page.locator('[data-impl="native-report"]').click()
+                response = pending.value
+                check_response(response, "Original native implementation report action")
+                reported = wait_task(response.json(), "implementation.plan.report", refresh_economics=False)
+                result = reported["result"]
+                require(result["plan_id"] == plan_id and result["revision"] == revision,
+                        "The native implementation report selected another plan revision")
+                tickets = {item["filename"]: item
+                           for item in reported.get("_downloads", result.get("_downloads", []))}
+                require("manifest.json" in tickets, "The original task has no retained implementation report manifest")
+                directory = output / "implementation-report"
+                directory.mkdir()
+                manifest = json.loads(download(tickets["manifest.json"], directory / "manifest.json"))
+                require(manifest["schema"] == "upstate.implementation-report/v1"
+                        and manifest["plan_id"] == plan_id and manifest["revision"] == revision,
+                        "The retained implementation manifest names another plan or revision")
+                names = set()
+                for item in manifest["files"]:
+                    name = item["name"]
+                    require(isinstance(name, str) and PurePosixPath(name).name == name
+                            and name not in {"", ".", ".."} and "\\" not in name and name not in names,
+                            "The retained implementation report member name is invalid")
+                    names.add(name)
+                    require(name in tickets, "The original report task is missing its " + name + " download")
+                    data = download(tickets[name], directory / name)
+                    require(len(data) == item.get("size_bytes", item.get("bytes"))
+                            and hashlib.sha256(data).hexdigest() == item["sha256"],
+                            "The retained implementation report member changed: " + name)
+                require(json.loads((directory / "plan.json").read_text(encoding="utf-8")) == plan,
+                        "The report package changed its original saved implementation plan")
+                report_page = context.new_page()
+                report_page.goto((directory / "report.html").as_uri(), wait_until="load")
+                require(report_page.locator("h1").inner_text() == plan["title"],
+                        "The native implementation report opened another plan")
+                require(report_page.get_by_role("heading", name="Selected economic scenarios", exact=True).count() == 1,
+                        "The report is missing its readable original economic scenario section")
+                report_page.screenshot(path=str(output / "08-native-implementation-report.png"), full_page=True)
+                report_page.pdf(path=str(output / "implementation-report.pdf"),
+                                prefer_css_page_size=True, print_background=True)
+                report_page.close()
+                require((output / "implementation-report.pdf").read_bytes().startswith(b"%PDF"),
+                        "The native implementation report did not produce its PDF")
+                record["implementation"].update(report_task_id=reported["id"], report_directory=directory.name,
+                                                 report_document_digest=manifest["document_digest"])
+                step.update(plan_id=plan_id, revision=revision, verified_members=len(names),
+                            document_digest=manifest["document_digest"])
 
         try:
             with journal.stage("open_original_operator") as step:
@@ -429,7 +585,9 @@ def receive_operator(args, original_url, origin, token, journal):
                         "The verified complete package belongs to another economic report")
                 step.update(bytes=len(data), sha256=expected["sha256"],
                             verified_members=len(manifest["members"]))
-                return destination
+            if args.implementation:
+                receive_implementation(edition, chosen, workspace, report_id, zone["zone_id"])
+            return destination
         except Exception:
             if page is not None:
                 try:
@@ -454,6 +612,8 @@ def parser():
     result.add_argument("--zone-id")
     result.add_argument("--selection", help="Original economic selection; supplied costs include explicit footprint scope")
     result.add_argument("--run-id")
+    result.add_argument("--implementation", action="store_true",
+                        help="Carry the selected original scenario through a new native implementation plan and report")
     result.add_argument("--notes", default="Reviewed in the original operator receiving walkthrough.")
     result.add_argument("--browser-executable")
     result.add_argument("--timeout-seconds", type=float, default=30)
@@ -520,6 +680,8 @@ def main(argv=None):
                   "edition_id": record.get("edition_id"), "report_id": record.get("report_id"),
                   "journey": str(directory / "operator-journey.json"), "archive": str(archive_path),
                   "browser_error_count": len(record["browser_errors"]), "resume_command": record["resume_command"]}
+        if record.get("implementation"):
+            result["implementation"] = record["implementation"]
         print(json.dumps(journal.clean(result), indent=2), flush=True)
         return code
     except Exception as error:

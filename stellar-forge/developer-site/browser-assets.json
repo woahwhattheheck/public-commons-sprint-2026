@@ -659,6 +659,41 @@
         "woo.html",
         "text/html; charset=utf-8"
       ]
+    ],
+    [
+      "/grant-product-authoring-core.mjs",
+      [
+        "grant-product-authoring-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-product-authoring-source.mjs",
+      [
+        "grant-product-authoring-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-product-authoring-workspace.mjs",
+      [
+        "grant-product-authoring-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-product-authoring.css",
+      [
+        "grant-product-authoring.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-product-sources-core.mjs",
+      [
+        "grant-product-sources-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

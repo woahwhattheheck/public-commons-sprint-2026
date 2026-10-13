@@ -24,6 +24,19 @@ def _selection(filename):
     return value
 
 
+def _reuse_runs(filename):
+    if filename is None:
+        return None
+    if filename == "-":
+        value = json.load(sys.stdin)
+    else:
+        with Path(filename).open("r", encoding="utf-8-sig") as stream:
+            value = json.load(stream)
+    if not isinstance(value, list):
+        raise ValueError("The retained reuse-run selection must be a JSON array of run IDs")
+    return value
+
+
 def _parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--workspace", type=Path, default=argparse.SUPPRESS,
@@ -47,6 +60,11 @@ def _parser():
             command.add_argument(
                 "--run-models", action="store_true",
                 help="Resume original native NDR/SDR runs and analyze their completed outputs")
+            command.add_argument(
+                "--workers", type=int, default=1,
+                help="Explicit native process count; preparation and analysis remain serial")
+            command.add_argument(
+                "--reuse-runs", help="Optional JSON array of original native donor run IDs")
     command = commands.add_parser("result", parents=[common])
     command.add_argument("result_id")
     return parser
@@ -68,7 +86,9 @@ def main(argv=None):
         elif args.command == "show":
             value = get_plan(workspace, args.plan_id)
         elif args.command == "apply":
-            value = apply_plan(workspace, args.plan_id, run_models=args.run_models)
+            value = apply_plan(
+                workspace, args.plan_id, run_models=args.run_models,
+                workers=args.workers, reuse_source_run_ids=_reuse_runs(args.reuse_runs))
         elif args.command == "analyze":
             value = analyze_plan(workspace, args.plan_id)
         elif args.command == "result":

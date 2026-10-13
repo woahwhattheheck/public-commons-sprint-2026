@@ -264,3 +264,28 @@ A preparation interrupted after copying its pinned report but before writing the
 In **Scientific interpretation**, open a saved report and choose **Prepare Decision study**. The registered Decision studies desk receives the original workspace, diagnostic ID and exact report SHA. It opens the existing editable draft for that revision when available; otherwise it reads the saved common-support configuration. Enter explicit costs, capacity, metric scales and weights, then choose **Save native decision study** to prepare the study through the original operation queue.
 
 Opening this view creates no study and runs no ecological model. If the saved report advanced since it was displayed, reopen the analysis before preparing its new revision. Temporary catalogue failures leave retained draft economics, current studies and completed operation results recoverable. **Refresh** retries the affected reads. The existing experiment preparation entry and regional saved-view workflow remain available in the same desk.
+
+## Send a saved decision to maps and a client delivery
+
+Open a retained calculation in **Decision studies**, then choose **Prepare native delivery**. The handoff uses that calculation's saved study revision, even when a newer revision or an unsaved editor draft is visible. For a budget frontier, choose the exact retained point first. The point must contain a feasible native selection; an unfinished point stays unavailable.
+
+Select the native parameter profile explicitly. The profile list reports whether the original paired baseline and selected alternative are available, their run and grid identities, and any concrete preparation issue. The choice determines which original model realization is mapped. It does not change the solver's multi-profile decision or replace the complete cross-profile performance evidence.
+
+The native package path requires the calculation to select one whole original candidate. The handoff uses that candidate's original scenario and its same-profile baseline; it does not combine alternative rasters or build a scenario from a list of independent actions. Additive-action studies retain their existing implementation-selection export workflow.
+
+Opening the map draft preserves the original workspace and native run IDs. Review the atlas's reporting details, contact, titles and existing delivery settings, then use its normal queued build. The build revalidates the pinned decision source and retains the original decision report, study/project and implementation-selection evidence alongside the native maps and client report. Earlier revisions and calculations remain unchanged. A receiver can inspect the same saved source binding after a complete project transfer.
+
+### Original operator API
+
+Both endpoints use the original registered-workspace authorization and return `workspace_key` with the native helper's result:
+
+| Read | Required fields | Optional choice | Result |
+| --- | --- | --- | --- |
+| `/api/robust-workbench/delivery-options` | `study_id`, `run_id` | `point_index` | Bound revision and result hashes, explicit frontier points, selected candidate, profile availability and issues |
+| `/api/robust-workbench/delivery-release` | `study_id`, `run_id`, `profile_id` | `point_index` | Validated original atlas `selection` with pinned `source_decision`, or a concrete unavailable response |
+
+GET and POST are supported. `point_index` is zero based and is never inferred. Read operations open the native saved calculation without constructing the mutable Store. They do not submit work or rewrite the source database. The atlas remains responsible for the existing `delivery.build` queue action.
+
+The `source_decision` pin identifies `study_id`, `revision`, `study_sha256`, `run_id`, `result_sha256`, `profile_id`, `candidate_id`, `point_index`, `selected_study_sha256` and `selected_result_sha256`. Parent frontier and explicitly selected point identities are retained separately. The browser passes the server-returned selection unchanged to the registered `map-atlas` controller's `create({workspace_key, selection})` method.
+
+The registered Decision studies client requires the original host's `openExtension` capability to open the same workspace's atlas. Native producing-stage versions are compared through the maintained `model/native_versions.py` helper, including resumed runs whose model stages completed under separate original runtime records.
