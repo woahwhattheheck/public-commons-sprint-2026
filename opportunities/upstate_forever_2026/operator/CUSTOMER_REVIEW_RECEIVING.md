@@ -67,6 +67,16 @@ If later responses have already been retained, inspect the original response his
 
 Use **Engineering handbacks** to assign requested changes, select the actual revised work, prepare an engineering response, and export its complete handback. The ordinary package receiver leaves those engineering editions in their existing workflow.
 
+## Import a response while keeping unfinished work
+
+In an offline or received customer desk, **Import response** reads the selected JSON against that desk's original project, review and included response generation. The reading message offers **Cancel import**. Selecting another file makes only the newest selection eligible to complete; an older read or its error cannot replace the newer response or clear its file selection.
+
+You can continue writing while the file is being read. If the draft changes, or another window has a saved draft that needs attention, the incoming response is kept as an imported reference under **Responses**. Your current wording and decisions remain in place. Choose **Inspect imported response** to read its complete record or download it. **Use as starting point** remains an explicit draft replacement, creates a response against the packet's included generation and clears the reviewer identity for the new author. The imported reference remains local to this open desk; download its full record or retain the original JSON before closing it.
+
+A response from a different predecessor is also offered as a reference. A matching response can replace the draft immediately only when that draft stayed unchanged during the read and no other saved draft is awaiting reconciliation. The existing **Undo draft replacement** action restores the prior working draft. Invalid or unreadable files leave that draft in place, and cancellation leaves the chosen native review and response history unchanged.
+
+The offline **Import response** action edits browser-local work. The operator's **Receive response** action is the separate step that retains the finished response in the original workspace. Continue to export the completed response JSON and receive it against its exact predecessor.
+
 ## Operate and inspect the exact outgoing edition
 
 Before describing a customer-facing application, review desk, report, presentation or export as ready, the producing author must open or run the exact outgoing version, look at its rendered screen or real screenshots, and operate the important controls. This applies to current and future local and cloud workers across providers. Inspect the actual screenshare width and a narrow/mobile width where relevant, populated and empty/loading/error states, downloads, exports and independent reopening. Capturing screenshots without looking at them is insufficient. Source review, DOM counts, HTTP success, unit checks and another author's approval do not replace seeing the actual product.
