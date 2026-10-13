@@ -41,6 +41,7 @@ def browser(args, application, receipt, output, mode, attempt):
         "resume_failed_tasks": args.resume_failed_tasks, "source_revision": args.source_revision,
         "context": json.loads(args.context.read_text()) if args.context else {},
         "mapped_plan": args.mapped_plan, "mapped_report": args.mapped_report,
+        "archive_input": getattr(args, "archive_input", None),
     })
     try:
         return run_command([str(args.node), str(application / "operator/community_receiving.mjs"),
@@ -49,6 +50,51 @@ def browser(args, application, receipt, output, mode, attempt):
     finally:
         control.unlink(missing_ok=True)
 
+
+def verify_archive_receiving(received_workspace, stage, original):
+    """Verify the full actual archive-derived source in the independently restored Workspace."""
+    from model.common import verify_file
+    from model import community_report_handover, scientific_report_editions
+    selected = original["selection"]
+    if stage.get("archive_selection") != selected:
+        raise ValueError("The browser changed the original report archive selection")
+    destination = Workspace(received_workspace)
+    retained = stage.get("archive_native_records")
+    if not retained or retained["project_id"] != destination.project["id"]:
+        raise ValueError("Retain the actual receiving Workspace and its original editable records")
+    for kind, values in retained["collections"].items():
+        if kind not in ("community_tables", "community_plans", "community_reports"):
+            raise ValueError("Unexpected original Community collection")
+        for value in values:
+            if destination._get(kind.replace("_", "-"), value["id"]) != value:
+                raise ValueError("The archived-report course changed an original editable Community record")
+    scientific = stage.get("community_scientific")
+    if (not scientific or scientific.get("mode") != "original-report-archive"
+            or scientific["project_id"] != destination.project["id"]
+            or scientific["original_input"] != selected):
+        raise ValueError("Retain the complete archived-report scientific composer result")
+    report_archive = scientific["archive"]
+    actual_archive = record(Path(report_archive["path"]))
+    if any(actual_archive[key] != report_archive[key] for key in ("bytes", "sha256")):
+        raise ValueError("The complete scientific report ZIP changed")
+    original_source = scientific["received_source"]
+    collection = destination._get("sources", original_source["source"]["source_collection_id"])
+    if collection != original_source["collection"]:
+        raise ValueError("The received Workspace changed the complete original report source")
+    cold_record, _directory, _result = scientific_report_editions.inspect(destination, scientific["scientific_report_id"])
+    if cold_record != scientific["report"]["edition"]:
+        raise ValueError("The independent Workspace changed the full scientific report edition")
+    handover = scientific["handover"]
+    actual = community_report_handover.inspect_archive(
+        verify_file(destination.root, handover["original"]["file"]),
+        expected_sha256=original["handover"]["sha256"])
+    for name in ("original_project_id", "report_id", "report_sha256", "plan_id", "table_id"):
+        if actual[name] != selected[name]:
+            raise ValueError("The received source handover changed its original " + name)
+    if any(actual[key] != original["handover_summary"][key] for key in actual):
+        raise ValueError("The independent handover differs from the complete original metadata")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
@@ -56,6 +102,8 @@ def main():
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--mapped-plan", help="Existing original plan to receive through explicit remapped CSV columns")
     parser.add_argument("--mapped-report", help="Existing original report of --mapped-plan; its intervention values are preserved")
+    parser.add_argument("--community-package", type=Path,
+                        help="The exact original 33-member Community report-result ZIP; receive it as scientific source in --workspace")
     parser.add_argument("--context", type=Path,
                         help="Existing original source/grid/run/delivery selection for this same workspace")
     parser.add_argument("--node", required=True, type=Path)
@@ -65,7 +113,10 @@ def main():
     parser.add_argument("--resume-failed-tasks", action="store_true",
                         help="Resume the same retained task after its concrete source/input repair")
     args = parser.parse_args()
+    archive_course = args.community_package is not None
     mapping_course = bool(args.mapped_plan or args.mapped_report)
+    if archive_course and (mapping_course or args.workspace is None):
+        raise ValueError("Select the actual receiving Workspace and archived-report course separately from the genuine mapped-plan course")
     if mapping_course:
         args.mapped_plan = identifier(args.mapped_plan)
         args.mapped_report = identifier(args.mapped_report)
@@ -85,7 +136,7 @@ def main():
     if not manifest.is_file():
         raise ValueError("Select the complete original Communities application and source")
     workspace_path = (args.workspace or output / "workspace").resolve()
-    workspace = Workspace(workspace_path, create=not mapping_course,
+    workspace = Workspace(workspace_path, create=not (mapping_course or archive_course),
                           title="Upper Savannah utility and community work program")
     if mapping_course:
         from model import communities
@@ -94,15 +145,23 @@ def main():
         if original_report["plan_id"] != original_plan["id"]:
             raise ValueError("Choose the original saved report of the selected Community plan")
         verify_plan_context(workspace, original_plan)
-    browser_stem = "community-mapping-browser" if mapping_course else "community-browser"
-    result_path = output / ("community-mapping-receiving-result.json" if mapping_course else "community-receiving-result.json")
+    browser_stem = "community-archive-browser" if archive_course else "community-mapping-browser" if mapping_course else "community-browser"
+    result_path = output / ("community-archive-receiving-result.json" if archive_course else
+                            "community-mapping-receiving-result.json" if mapping_course else "community-receiving-result.json")
     with held(output / ".community-receiving.lock", blocking=False):
+        args.archive_input = None
+        if archive_course:
+            archive_module = module(APP / "operator/community_archive_inputs.py", "upstate_community_archive_inputs")
+            args.archive_input = archive_module.prepare_archive_input(workspace, args.community_package, output)
         previous = json.loads(result_path.read_text()) if result_path.exists() else None
         if previous and previous["workspace_id"] != workspace.project["id"]:
             raise ValueError("The retained receiving belongs to another original workspace")
         mapping_selection = {"plan_id": args.mapped_plan, "report_id": args.mapped_report} if mapping_course else None
         if previous and previous.get("mapping_selection") != mapping_selection:
             raise ValueError("Continue the same original mapped Community plan and report")
+        archive_selection = args.archive_input["selection"] if archive_course else None
+        if previous and previous.get("archive_selection") != archive_selection:
+            raise ValueError("Continue the same complete original archived Community report selection")
         attempts = list(previous.get("attempts", [])) if previous else []
         attempt_number = max((row["number"] for row in attempts), default=0) + 1
         attempt = output / ("attempt-" + str(attempt_number).zfill(3))
@@ -116,7 +175,8 @@ def main():
         result = {"schema": "upstate.community-receiving/v1", "complete": False,
                   "source_revision": args.source_revision, "workspace_id": workspace.project["id"],
                   "workspace_path": str(workspace.root), "source_manifest": record(manifest),
-                  "attempts": attempts, "mapping_selection": mapping_selection}
+                  "attempts": attempts, "mapping_selection": mapping_selection,
+                  "archive_selection": archive_selection, "archive_input": args.archive_input}
         atomic(result_path, result)
         server = None
         original_thread = None
@@ -139,8 +199,9 @@ def main():
                 original_thread.start()
                 browser(args, APP, receipt, output, "operate", attempt)
                 stage = json.loads(progress_path.read_text())
-            operated = {name: identifier(stage.get(name + "_id") or stage.get(name, {}).get("id"))
-                        for name in ("table", "initial_plan", "revised_plan", "report")}
+            operated = None if archive_course else {
+                name: identifier(stage.get(name + "_id") or stage.get(name, {}).get("id"))
+                for name in ("table", "initial_plan", "revised_plan", "report")}
             received = stage["received"]
             archive = stage["workspace_archive"]
             archive_path = Path(archive["path"])
@@ -156,6 +217,7 @@ def main():
                 "model/COMMUNITIES.md", "operator/web/community.mjs", "operator/web/community.css",
                 "operator/community_receiving.py", "operator/community_receiving.mjs", "operator/server.py",
                 "operator/community_scientific_receiving.mjs",
+                *(["operator/community_archive_inputs.py"] if archive_course else []),
                 "model/community_report_context.py", "model/community_report_handover.py",
                 "model/scientific_report_editions.py", "model/COMMUNITY_REPORT_CONTEXT.md",
                 "operator/community_report_context.py", "operator/source_report_editions.py",
@@ -183,70 +245,82 @@ def main():
             overview = json.loads(cli_log.read_text())
             if overview["project"]["id"] != workspace.project["id"]:
                 raise ValueError("The delivered original CLI opened another workspace")
-            def selected(kind, key):
-                value = next((row for row in overview[kind] if row["id"] == key), None)
-                if value is None:
-                    raise ValueError("The received application lost its operated " + kind + " / " + key)
-                return value
-            table = selected("community_tables", operated["table"])
-            if (table["source"]["source_id"] != "RFP_COMMUNITIES_2024_ACS"
-                    or table["source"]["collection_id"] != stage["source"]["collection_id"]):
-                raise ValueError("The delivered table differs from the operated original source edition")
-            initial_plan = selected("community_plans", operated["initial_plan"])
-            revised_plan = selected("community_plans", operated["revised_plan"])
-            report = selected("community_reports", operated["report"])
-            if mapping_course:
-                if initial_plan["id"] != args.mapped_plan or initial_plan != original_plan:
-                    raise ValueError("The received mapped course changed its original saved plan")
-                for name in ("table_id", "title", "purpose", "selection", "context", "interventions", "cost_summary", "notes"):
-                    if revised_plan[name] != initial_plan[name]:
-                        raise ValueError("The mapped intake changed original plan data: " + name)
-                imported = revised_plan["intervention_import"]
-                if (report["format_version"] < 7 or imported["column_mapping"] != stage["mapping_input"]["column_mapping"]
-                        or imported["source"]["text"] != stage["mapping_input"]["text"]
-                        or imported["source"]["sha256"] != stage["mapping_input"]["sha256"]):
-                    raise ValueError("The delivered mapped report lost its original CSV or source-column provenance")
-                from model.common import verify_file
-                if verify_file(Workspace(received_workspace).root, report["files"]["received-interventions.csv"]).read_bytes() != imported["source"]["text"].encode("utf-8"):
-                    raise ValueError("The cold receiving report changed the exact mapped original CSV")
-            if mapping_course:
-                scientific = stage.get("community_scientific")
-                if not scientific or scientific["project_id"] != workspace.project["id"]:
-                    raise ValueError("Retain the complete original mapped report/source/composer course")
-                from model import community_report_handover, scientific_report_editions
-                report_archive = scientific["archive"]
-                actual_archive = record(Path(report_archive["path"]))
-                if any(actual_archive[key] != report_archive[key] for key in ("bytes", "sha256")):
-                    raise ValueError("The complete scientific report archive changed")
-                destination = Workspace(received_workspace)
-                for selected_source in (scientific["original_source"], scientific["received_source"]):
-                    collection = destination._get("sources", selected_source["source"]["source_collection_id"])
-                    if collection != selected_source["collection"]:
-                        raise ValueError("The independent Workspace changed an original source collection")
-                cold_record, cold_directory, cold_result = scientific_report_editions.inspect(
-                    destination, scientific["scientific_report_id"])
-                if cold_record != scientific["report"]["edition"]:
-                    raise ValueError("The independent Workspace changed the complete scientific report edition")
-                original_handover = scientific["handover"]["original"]
-                retained_handover = verify_file(destination.root, original_handover["file"])
-                inspected_handover = community_report_handover.inspect_archive(
-                    retained_handover, expected_sha256=scientific["handover"]["archive"]["sha256"])
-                if (inspected_handover["report_id"] != report["id"]
-                        or inspected_handover["original_project_id"] != workspace.project["id"]
-                        or inspected_handover["report_sha256"] != report["files"]["community-report.json"]["sha256"]):
-                    raise ValueError("The independent Workspace changed the retained Community source handover")
-            if (initial_plan["table_id"] != table["id"] or revised_plan["table_id"] != table["id"]
-                    or revised_plan["previous_plan_id"] != initial_plan["id"]
-                    or report["table_id"] != table["id"] or report["plan_id"] != revised_plan["id"]):
-                raise ValueError("The delivered source/plan/revision/report lineage differs")
-            total = table["summaries"]["all"]
-            expected_totals = {"geoid_count": 17, "population_total": 27448, "households_total": 11001,
-                               "poverty_households_total": 1014, "below_state_median_count": 10}
-            if any(total[name] != value for name, value in expected_totals.items()):
-                raise ValueError("The received RFP table totals differ from the complete original rows")
-            restored = Workspace(received_workspace)
-            for plan in (initial_plan, revised_plan):
-                verify_plan_context(restored, plan)
+            if archive_course:
+                verify_archive_receiving(received_workspace, stage, args.archive_input)
+                expected_totals = args.archive_input["payload"]["original_table"]["summaries"]["all"]
+                course_result = {"archive_selection": archive_selection, "archive_input": args.archive_input,
+                                 "original_project_id": archive_selection["original_project_id"],
+                                 "original_report_ids": [archive_selection["report_id"]],
+                                 "original_plan_ids": [archive_selection["plan_id"]]}
+            else:
+                def selected(kind, key):
+                    value = next((row for row in overview[kind] if row["id"] == key), None)
+                    if value is None:
+                        raise ValueError("The received application lost its operated " + kind + " / " + key)
+                    return value
+                table = selected("community_tables", operated["table"])
+                if (table["source"]["source_id"] != "RFP_COMMUNITIES_2024_ACS"
+                        or table["source"]["collection_id"] != stage["source"]["collection_id"]):
+                    raise ValueError("The delivered table differs from the operated original source edition")
+                initial_plan = selected("community_plans", operated["initial_plan"])
+                revised_plan = selected("community_plans", operated["revised_plan"])
+                report = selected("community_reports", operated["report"])
+                if mapping_course:
+                    if initial_plan["id"] != args.mapped_plan or initial_plan != original_plan:
+                        raise ValueError("The received mapped course changed its original saved plan")
+                    for name in ("table_id", "title", "purpose", "selection", "context", "interventions", "cost_summary", "notes"):
+                        if revised_plan[name] != initial_plan[name]:
+                            raise ValueError("The mapped intake changed original plan data: " + name)
+                    imported = revised_plan["intervention_import"]
+                    if (report["format_version"] < 7 or imported["column_mapping"] != stage["mapping_input"]["column_mapping"]
+                            or imported["source"]["text"] != stage["mapping_input"]["text"]
+                            or imported["source"]["sha256"] != stage["mapping_input"]["sha256"]):
+                        raise ValueError("The delivered mapped report lost its original CSV or source-column provenance")
+                    from model.common import verify_file
+                    if verify_file(Workspace(received_workspace).root, report["files"]["received-interventions.csv"]).read_bytes() != imported["source"]["text"].encode("utf-8"):
+                        raise ValueError("The cold receiving report changed the exact mapped original CSV")
+                if mapping_course:
+                    scientific = stage.get("community_scientific")
+                    if not scientific or scientific["project_id"] != workspace.project["id"]:
+                        raise ValueError("Retain the complete original mapped report/source/composer course")
+                    from model import community_report_handover, scientific_report_editions
+                    report_archive = scientific["archive"]
+                    actual_archive = record(Path(report_archive["path"]))
+                    if any(actual_archive[key] != report_archive[key] for key in ("bytes", "sha256")):
+                        raise ValueError("The complete scientific report archive changed")
+                    destination = Workspace(received_workspace)
+                    for selected_source in (scientific["original_source"], scientific["received_source"]):
+                        collection = destination._get("sources", selected_source["source"]["source_collection_id"])
+                        if collection != selected_source["collection"]:
+                            raise ValueError("The independent Workspace changed an original source collection")
+                    cold_record, cold_directory, cold_result = scientific_report_editions.inspect(
+                        destination, scientific["scientific_report_id"])
+                    if cold_record != scientific["report"]["edition"]:
+                        raise ValueError("The independent Workspace changed the complete scientific report edition")
+                    original_handover = scientific["handover"]["original"]
+                    retained_handover = verify_file(destination.root, original_handover["file"])
+                    inspected_handover = community_report_handover.inspect_archive(
+                        retained_handover, expected_sha256=scientific["handover"]["archive"]["sha256"])
+                    if (inspected_handover["report_id"] != report["id"]
+                            or inspected_handover["original_project_id"] != workspace.project["id"]
+                            or inspected_handover["report_sha256"] != report["files"]["community-report.json"]["sha256"]):
+                        raise ValueError("The independent Workspace changed the retained Community source handover")
+                if (initial_plan["table_id"] != table["id"] or revised_plan["table_id"] != table["id"]
+                        or revised_plan["previous_plan_id"] != initial_plan["id"]
+                        or report["table_id"] != table["id"] or report["plan_id"] != revised_plan["id"]):
+                    raise ValueError("The delivered source/plan/revision/report lineage differs")
+                total = table["summaries"]["all"]
+                expected_totals = {"geoid_count": 17, "population_total": 27448, "households_total": 11001,
+                                   "poverty_households_total": 1014, "below_state_median_count": 10}
+                if any(total[name] != value for name, value in expected_totals.items()):
+                    raise ValueError("The received RFP table totals differ from the complete original rows")
+                restored = Workspace(received_workspace)
+                for plan in (initial_plan, revised_plan):
+                    verify_plan_context(restored, plan)
+                course_result = {"community_table_id": table["id"],
+                                 "source_collection_id": stage["source"]["collection_id"],
+                                 "original_plan_ids": [initial_plan["id"], revised_plan["id"]],
+                                 "original_report_ids": ([args.mapped_report, report["id"]] if mapping_course else [report["id"]])}
             reopened = original_receiving.OperatorProcess(
                 application, received_workspace, private / "received-operator",
                 output / "received-again", attempt, "delivered", 1024)
@@ -256,10 +330,7 @@ def main():
                 raise ValueError("The delivered original browser did not complete its reopening")
             result.update(
                 complete=True, completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                original_totals=expected_totals, community_table_id=table["id"],
-                source_collection_id=stage["source"]["collection_id"],
-                original_plan_ids=[initial_plan["id"], revised_plan["id"]],
-                original_report_ids=([args.mapped_report, report["id"]] if mapping_course else [report["id"]]),
+                original_totals=expected_totals, **course_result,
                 received=received, workspace_archive=archive,
                 browser_result=record(browser_result_path), browser_progress=record(progress_path),
                 community_scientific=final_browser.get("community_scientific"),

@@ -87,18 +87,28 @@ export function communityScientificReceiving(h){
   const frame=page.frameLocator('[data-scientific-report-document-host] iframe:not([hidden])');
   await frame.locator('body').waitFor();
   const rendered=await frame.locator('body').innerText();
-  assert.ok(rendered.includes('Original intervention intake and field mapping'),
-   'Read the actual mapped-CSV section in the rendered scientific report.');
-  for(const field of saved.revised_plan.intervention_import.field_provenance){
-   if(field.source_column)assert.ok(rendered.includes(field.source_column),'Show the original mapped heading: '+field.source_column);
+  if(saved.archive_selection){
+   assert.ok(rendered.includes('Community planning context'),'Read the original Community source in the rendered scientific report.');
+   for(const value of [saved.archive_selection.report_id,saved.archive_selection.report_sha256,
+      saved.archive_selection.plan_id]){
+    assert.ok(rendered.includes(value),'Display the complete original report/plan/source identity: '+value);
+   }
+   assert.ok(rendered.includes('Ordered intervention programme'),'Keep the original intervention programme readable.');
+  }else{
+   assert.ok(rendered.includes('Original intervention intake and field mapping'),
+    'Read the actual mapped-CSV section in the rendered scientific report.');
+   for(const field of saved.revised_plan.intervention_import.field_provenance){
+    if(field.source_column)assert.ok(rendered.includes(field.source_column),'Show the original mapped heading: '+field.source_column);
+   }
+   assert.ok(rendered.includes(saved.mapping_input.sha256),'The report must expose the exact retained CSV identity.');
   }
-  assert.ok(rendered.includes(saved.mapping_input.sha256),'The report must expose the exact retained CSV identity.');
   await screenshot('scientific-report-complete-desktop');
   await page.setViewportSize({width:390,height:844});
   await screenshot('scientific-report-complete-narrow');
   await page.setViewportSize({width:1440,height:1080});
-  const observations={characters:rendered.length,csv_sha256:saved.mapping_input.sha256,
-   fields:saved.revised_plan.intervention_import.field_provenance.map(row=>({field:row.field,source_column:row.source_column,source_column_number:row.source_column_number}))};
+  const observations=saved.archive_selection?{characters:rendered.length,original:copy(saved.archive_selection)}:
+   {characters:rendered.length,csv_sha256:saved.mapping_input.sha256,
+    fields:saved.revised_plan.intervention_import.field_provenance.map(row=>({field:row.field,source_column:row.source_column,source_column_number:row.source_column_number}))};
   if(value.archive){
    files.push({role:'complete_report_zip',name:'complete-report.zip',
     ...await download(value.archive,path.join(directory,'complete-report.zip'))});
@@ -259,7 +269,7 @@ export function communityScientificReceiving(h){
  async function verify(){
   const expected=saved.community_scientific;assert.ok(expected,'Retain the complete original source/composer course.');
   assert.equal((await getState()).data.project.id,expected.project_id);
-  for(const source of [expected.original_source,expected.received_source]){
+  for(const source of [expected.original_source,expected.received_source].filter(Boolean)){
    const actual=await item('sources',source.source.source_collection_id);
    assert.deepEqual(publicItem(actual),source.collection,'Cold receiving retains the complete original source collection.');
   }
@@ -275,5 +285,99 @@ export function communityScientificReceiving(h){
   await screenshot(stem+'-scientific-report-reloaded');
   return {scientific_report_id:expected.scientific_report_id,selection:copy(expected.selection),files:downloads};
  }
- return {operate,verify};
+
+ async function operateArchive({edition,stageName,directory,input:original}){
+  assert.ok(saved.archive_selection&&original?.selection,'Use the complete retained original report archive.');
+  assert.deepEqual(original.selection,saved.archive_selection);
+  const selected=original.selection,target=path.join(directory,'scientific-report');
+  await fs.mkdir(target,{recursive:true,mode:0o700});
+  const initialDraft=await draft();
+  if(!edition.scientific_prior_draft){
+   edition.scientific_prior_draft=await retainedJSON(path.relative(h.output,path.join(target,'prior-scientific-draft.json')),
+    {workspace_key:h.workspace(),draft:initialDraft});await checkpoint();
+  }
+  const received=await retainedStage(stageName('archive-handover-receive'),'community.report.handover.receive',async()=>{
+   await openCommunityTab('reports');
+   await page.locator('[data-action="community-handover-receive"]').first().click();
+   await form().locator('[name="community_handover_file"]').setInputFiles(original.handover.path);
+   const previewResponse=page.waitForResponse(r=>r.url().includes('/api/community-report-context/handover-preview')&&
+    r.request().method()==='GET',{timeout});
+   await form().locator('[data-community-handover-review]').click();
+   const response=await previewResponse,value=await response.json();assert.ok(response.ok());
+   assert.equal(value.workspace_key,h.workspace());
+   assert.equal(value.upload.sha256,original.handover.sha256);assert.equal(value.upload.bytes,original.handover.bytes);
+   for(const name of ['report_id','report_sha256','original_project_id','plan_id','table_id'])
+    assert.equal(value.handover[name],selected[name],'Inspect the actual original '+name);
+   await page.waitForFunction(()=>!document.querySelector('#form-submit').disabled,null,{timeout});
+   await screenshot('archive-original-source-preview');
+   await page.setViewportSize({width:390,height:844});await screenshot('archive-original-source-preview-narrow');
+   await page.setViewportSize({width:1440,height:1080});
+   await form().locator('[name="community_handover_delivery"]').selectOption('');
+  });
+  assert.equal(received.request.payload.archive_sha256,original.handover.sha256);
+  const handover=received.result.handover;
+  for(const name of ['report_id','report_sha256','original_project_id','plan_id','table_id'])
+   assert.equal(handover[name],selected[name],'Retain the actual original '+name);
+  assert.equal(handover.file.sha256,original.handover.sha256);assert.equal(handover.file.bytes,original.handover.bytes);
+  const source=selectedSources(received.result);
+  const retainedSource=await sourceSnapshot(source,path.relative(h.output,path.join(target,'received-source')));
+  assert.ok(retainedSource.inventory.some(row=>row.name.endsWith('community-report.zip')&&row.sha256===original.report_archive.sha256));
+  const receivedFiles=await originalFiles(received,path.join(target,'source-receiving'));
+  const renderName=stageName('archive-scientific-render');
+  if(saved.stages[renderName]?.request&&!saved.stages[renderName].result)
+   await retainedStage(renderName,'source-reports.render',async()=>{throw Error('Resume the retained original scientific render.');},()=>{});
+  await scientificDesk();
+  const prior=await draft();
+  const one=await fromTask(received,'community-report-source-scientific',[source]);
+  assert.deepEqual(one.contact,prior?.contact||{name:'',organization:'',email:''});
+  const title=original.report.title+' — retained Community planning context';
+  await page.locator('[data-scientific-report-field="title"]').fill(title);
+  const edited=await draft(),contact=copy(edited.contact),order=[source];
+  const appended=await fromTask(received,'community-report-source-append',order);
+  assert.equal(appended.title,title);assert.deepEqual(appended.contact,contact);
+  const repeated=await fromTask(received,'community-report-source-append',order);
+  assert.deepEqual(repeated,appended,'Repeated source append preserves one original source and the complete entered draft.');
+  await screenshot('archive-scientific-working-desktop');
+  await page.setViewportSize({width:390,height:844});await screenshot('archive-scientific-working-narrow');
+  await page.setViewportSize({width:1440,height:1080});
+  await page.reload({waitUntil:'domcontentloaded'});await scientificDesk();
+  const reopened=await waitDraft(order);assert.equal(reopened.title,title);assert.deepEqual(reopened.contact,contact);
+  const previewResponse=page.waitForResponse(r=>r.url().includes('/api/source-reports/scientific-preview')&&
+   r.request().method()==='POST',{timeout});
+  await button('preview').click();
+  const response=await previewResponse,preview=await response.json();assert.ok(response.ok());
+  assert.equal(preview.workspace_key,h.workspace());assert.deepEqual(preview.sources.map(pair),order);
+  const selection={sources:order,title,contact};
+  let scientificId;
+  if(saved.stages[renderName]?.request||!preview.existing){
+   const rendered=await retainedStage(renderName,'source-reports.render',async()=>{},()=>button('render').click());
+   scientificId=rendered.result.scientific_report_edition_id;
+   assert.deepEqual(rendered.request.payload,{...selection,preview_id:preview.id});
+  }else{
+   scientificId=preview.id;assert.equal((await reportDetail(scientificId)).edition.state,'complete');
+  }
+  assert.match(scientificId,hash);
+  await scientificDesk();await page.locator('[data-scientific-report-action="open"][data-id="'+scientificId+'"]').click();
+  await page.locator('[data-scientific-report-detail]:not([hidden])').waitFor();
+  const exported=await retainedStage(stageName('archive-scientific-export'),'source-reports.export',async()=>{},()=>button('export').click());
+  assert.equal(exported.result.scientific_report_edition_id,scientificId);
+  const report=await scientificFiles(scientificId,path.join(target,'complete-report'));
+  assert.deepEqual(report.edition.sources.map(pair),order);
+  const exports=await originalFiles(exported,path.join(target,'complete-export'));assert.equal(exports.length,1);
+  const state={schema:'upstate.community-scientific-receiving/v1',mode:'original-report-archive',
+   project_id:saved.project_id,original_report_id:selected.report_id,original_project_id:selected.original_project_id,
+   original_source:null,received_source:retainedSource,
+   handover:{archive:copy(original.handover),receive_task:received.task_id,original:copy(handover),files:receivedFiles},
+   scientific_report_id:scientificId,selection,report,archive:exports[0],original_input:copy(selected)};
+  if(edition.community_scientific){
+   const previous=edition.community_scientific;
+   assert.equal(previous.scientific_report_id,state.scientific_report_id);
+   assert.deepEqual(previous.selection,state.selection);assert.deepEqual(previous.report.edition,state.report.edition);
+   assert.equal(previous.archive.sha256,state.archive.sha256);
+  }
+  edition.community_scientific=state;saved.community_scientific=state;await checkpoint();
+  return state;
+ }
+
+ return {operate,operateArchive,verify};
 }
