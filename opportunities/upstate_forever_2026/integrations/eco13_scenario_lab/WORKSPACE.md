@@ -6,11 +6,11 @@ Use this entrypoint for the current Ecosystem Sciences product. Existing stand-a
 
 ## Install into the assembled source
 
-The complete original ECO13 package is preserved under:
+The complete current package is installed under:
 
     integrations/eco13_scenario_lab/
 
-Place these additive leaves in that package:
+The Workspace entrypoint consists of these leaves within that complete package:
 
 - eco_scenario_lab/workspace_driver.py
 - eco_scenario_lab/workspace_cli.py
@@ -18,7 +18,7 @@ Place these additive leaves in that package:
 - examples/workspace-selection.template.json
 - examples/workspace-runs.template.json
 
-Keep the original 15-file cohort present. The model package remains the assembled application's current model/ package. The bridge imports the existing Workspace, common, profiles, native and rasters modules directly. It does not require changes to the shared model core, the original workbench engine, or either existing CLI.
+Install the complete current source package, including current ECO13 0.1.2, the Workspace bridge and the retention integration. The complete carrier preserves original files omitted by the upstream 17-file upgrade and supplies all maintained postimages and Workspace/storage additions. The model package remains the assembled application's current model/ package. The bridge imports its existing Workspace, common, profiles, native and rasters modules directly. [RETENTION.md](RETENTION.md) describes input copying, complete native objects and portable receiving; [UPSTATE_RECEIVING.md](UPSTATE_RECEIVING.md) documents the current original Workspace experiment route; [EXPERIMENT_INTAKE.md](EXPERIMENT_INTAKE.md) retains the legacy NativeJobsEngine inspection route.
 
 Run from the assembled application root, with its existing equipped interpreter:
 
@@ -151,11 +151,13 @@ For a revised native scenario or case, create a new plan with this integration c
 Operation: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012.
 Integration edition: ED6E-WORKSPACE-BRIDGE-20261013-2.
 
-The preserved original ECO13 cohort is the 15-file eco_scenario_lab 0.1.0 source, original JSON SHA256 4bc4aba0767a8f64cd9c5fbf26b674703661ac7656ba1cf26b3a27604454acd7:
+The retained historical base is the 15-file eco_scenario_lab 0.1.0 source, original JSON SHA256 4bc4aba0767a8f64cd9c5fbf26b674703661ac7656ba1cf26b3a27604454acd7:
 
 https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8Q0H2XM0
 
-The current selected-model core reference is the complete postimage overlay at commit 8174e0503c6429cec6086eca37bb757e79c6c1e8:
+The original 0.1.1 update (19 upstream leaves) was recovered from F0C9JBY73J4, patch SHA256 36cb3cb1542ad3c8eca8d605c4b963a79020edfa39ef93b124a5a8377387a439. Its complete 24-file composition with Workspace bridge edition2 was merged in public PR2750, commit 77b65a741c84c812ff78a6d7eb63c8e9cd74a974. The storage edition carries the complete current postimages and original identities in one source bank.
+
+The selected-model base reference is the complete postimage overlay at commit 8174e0503c6429cec6086eca37bb757e79c6c1e8:
 
 https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8174e0503c6429cec6086eca37bb757e79c6c1e8/opportunities/upstate_forever_2026/integration/selected-model-core-overlay.json
 
