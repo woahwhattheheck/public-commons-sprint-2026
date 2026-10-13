@@ -53,6 +53,7 @@ export function attachReviewReconciliation(host) {
   function setBusy(value,message=null) {
     busy=value;
     for(const node of qa('[data-recon-action="stage"],[data-recon-action="commit"],[data-recon-action="refresh"],[data-recon-action="open"],[data-recon-action="received"],[data-recon-action="resume"]'))node.disabled=value;
+    for(const node of qa('[data-recon-choice],[data-recon-seed],[data-recon-field],[data-recon-actor],[data-recon-final-disposition],[data-recon-note]'))node.disabled=value;
     const node=q('[data-recon-progress]');if(node&&message!==null)node.textContent=message;
     updateCount();
   }
@@ -357,11 +358,13 @@ export function attachReviewReconciliation(host) {
     if(busy)return;
     if(!active)throw Error('Open a returned response first.');
     if(stale)throw Error('Refresh the comparison to include the current response.');
-    const generation=epoch,key=workspace(),payload=resolutionPayload();
+    const generation=epoch,key=workspace(),comparison=active,payload=copy(resolutionPayload()),selected=pretty(payload);
     setBusy(true,'Preparing the selected response…');notice('');
     try {
       await request('/api/review-reconciliation/validate',{method:'POST',body:payload});
       if(!alive(generation,key))return;
+      if(active!==comparison||stale||pretty(resolutionPayload())!==selected)
+        throw Error('The selected comparison or resolutions changed during validation. Your draft is retained. Review the current choices and retain the response again.');
       const task=await runTask('customer.review.response.reconcile',payload);
       if(alive(generation,key))await afterTask(task,generation,key);
     } catch(error) {
