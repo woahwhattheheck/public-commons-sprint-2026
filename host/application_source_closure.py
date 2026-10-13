@@ -54,6 +54,11 @@ def selection(value):
         fail("APPLICATION_SELECTION", "Retain the original complete JavaScript selection.")
     if not isinstance(js.get("paths"), list) or not js["paths"]:
         fail("APPLICATION_SELECTION", "Select the original Node/browser entry files.")
+    for key in ("paths", "resources"):
+        if not isinstance(js.get(key, []), list) or any(not isinstance(name, str) for name in js.get(key, [])):
+            fail("APPLICATION_SELECTION", "Use original JavaScript relative path lists.", {"field": key})
+        for name in js.get(key, []):
+            portable(name)
     for key in ("resources", "directories"):
         rows = value.get(key, [])
         if not isinstance(rows, list) or any(not isinstance(p, str) for p in rows):
@@ -148,7 +153,7 @@ def expand(part, files):
     names = part["members"]
     if not isinstance(part["analysis"], dict) or "files" in part["analysis"]:
         fail("APPLICATION_COMPONENT", "Original analysis must use the common whole-file table.")
-    if not isinstance(names, list) or len(set(names)) != len(names) or any(name not in files for name in names):
+    if not isinstance(names, list) or any(not isinstance(name, str) for name in names) or len(set(names)) != len(names) or any(name not in files for name in names):
         fail("APPLICATION_COMPONENT", "Original component members are missing or duplicated.")
     return {**part["analysis"], "files": [files[name] for name in names]}
 
