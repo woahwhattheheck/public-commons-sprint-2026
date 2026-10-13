@@ -105,7 +105,8 @@
     "/api/profile-workbench/biophysical/ranges-preview",
     "/api/profile-workbench/biophysical/ranges-inspect",
     "/api/map-atlas/coefficient-evidence-catalog",
-    "/api/published-studies/report-preview"
+    "/api/published-studies/report-preview",
+    "/api/source-reports/scientific-source-preview"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

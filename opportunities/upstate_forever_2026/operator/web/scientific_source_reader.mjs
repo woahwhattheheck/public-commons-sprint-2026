@@ -1,3 +1,4 @@
+import {createPublishedOriginalReports} from './published_original_reports.mjs';
 /** Inspect original scientific source bytes inside the existing report composer. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const choice=value=>({source_collection_id:value.source_collection_id,source_id:value.source_id});
@@ -9,7 +10,7 @@ const PAGE=50;
 export function attachScientificSourceReader(host){
   let panel=null,workspace=null,active=false,generation=0,requestId=0,opened=null,error='',busy=false;
   let query='',pages=new Map(),documentPath=null,readingTitle='';
-  const frames=new Map();
+  const frames=new Map(),viewers=new Map();
   const valid=(ws,turn)=>active&&workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   function ensure(container){
     if(!panel){
@@ -43,7 +44,7 @@ export function attachScientificSourceReader(host){
       throw Error('Choose an exact retained scientific source.');
     const ws=workspace,turn=generation,ticket=++requestId;
     const current=()=>valid(ws,turn)&&ticket===requestId&&(typeof isCurrent!=='function'||isCurrent());
-    busy=true;error='';readingTitle=String(source.title||source.source_id);panel.hidden=false;
+    busy=true;for(const row of viewers.values())row.viewer.suspend();error='';readingTitle=String(source.title||source.source_id);panel.hidden=false;
     if(!opened)panel.querySelector('[data-source-reader-heading]').innerHTML=
       '<div class="source-reports-heading"><div><h3>Read original scientific study</h3><p>'+esc(readingTitle)+
       '</p></div><button type="button" data-source-reader-action="close">Return to report selection</button></div>';
@@ -95,8 +96,39 @@ export function attachScientificSourceReader(host){
     const target=panel.querySelector('[data-source-reader-document]');
     const file=opened?.files.find(row=>row.path===documentPath&&(row.kind==='html'||row.kind==='svg'));
     for(const frame of target.children)frame.hidden=true;
+    for(const retained of viewers.values())retained.viewer.suspend();
     if(!file)return;
     const frameKey=key(opened.source)+':'+file.path+':'+file.sha256;
+    if(file.kind==='html'){
+      let retained=viewers.get(frameKey);
+      if(!retained){
+        const captured={...opened.source},ws=workspace,turn=generation,path=file.path;
+        const element=document.createElement('section');element.className='ps-original-report';
+        const viewer=createPublishedOriginalReports({...host,toast:host.toast||(()=>{})},{
+          context:()=>({workspace:ws,study_id:captured.source_id,version_id:captured.body_sha256,view:turn}),
+          isCurrent:()=>valid(ws,turn)&&!busy&&!panel.hidden&&opened&&key(opened.source)===key(captured)&&documentPath===path,
+          previewPrefix:'/api/file/scientific-source-preview/',
+          scopeNote:'This document keeps its exact original scientific source. Its own filters are independent of the recipe table search and ordered report selection.',
+          loadPreview:async(mark,member,signal)=>{
+            const value=await host.api('/api/source-reports/scientific-source-preview',{
+              method:'POST',body:{workspace:ws,...choice(captured),body_sha256:captured.body_sha256,path:member},signal});
+            if(value.schema!=='upstate.scientific-source-preview/v1'||value.workspace!==ws||
+               value.source_collection_id!==captured.source_collection_id||value.source_id!==captured.source_id||
+               value.body_sha256!==captured.body_sha256)
+              throw Error('The document preview belongs to another original scientific source.');
+            return {...value,study_id:captured.source_id,version_id:captured.body_sha256};
+          }
+        });
+        viewer.mount(element);retained={element,viewer};viewers.set(frameKey,retained);
+      }
+      if(retained.element.parentNode!==target)target.append(retained.element);
+      retained.element.hidden=false;
+      const expectedSource=key(opened.source),ws=workspace,turn=generation;
+      if(!retained.viewer.resume())retained.viewer.open(file.path).catch(reason=>{
+        if(valid(ws,turn)&&opened&&key(opened.source)===expectedSource&&documentPath===file.path){error=reason.message||String(reason);status();}
+      });
+      return;
+    }
     let frame=frames.get(frameKey);
     if(!frame){
       frame=document.createElement('iframe');frame.title=opened.source.title+' — '+file.path;
@@ -130,7 +162,7 @@ export function attachScientificSourceReader(host){
   }
   async function dispatch(button){
     const action=button.dataset.sourceReaderAction;
-    if(action==='close'){requestId++;busy=false;panel.hidden=true;host.returnToSelection?.();return;}
+    if(action==='close'){requestId++;busy=false;panel.hidden=true;for(const row of viewers.values())row.viewer.suspend();host.returnToSelection?.();return;}
     if(!opened||busy)throw Error('Finish reading the selected original source first.');
     if(action==='page'){pages.set(button.dataset.table,Math.max(0,Number(button.dataset.page)||0));renderSections();return;}
     const original=opened,ws=workspace,turn=generation,ticket=requestId;
@@ -151,7 +183,7 @@ export function attachScientificSourceReader(host){
     if(workspace!==ws){reset();workspace=ws;}
     active=true;ensure(container);
   }
-  function detach(){active=false;requestId++;busy=false;if(panel)panel.hidden=true;}
-  function reset(){detach();generation++;frames.clear();panel?.remove();panel=null;workspace=null;opened=null;error='';query='';pages.clear();documentPath=null;readingTitle='';}
+  function detach(){active=false;requestId++;busy=false;for(const row of viewers.values())row.viewer.suspend();if(panel)panel.hidden=true;}
+  function reset(){detach();generation++;for(const row of viewers.values())row.viewer.detach();viewers.clear();frames.clear();panel?.remove();panel=null;workspace=null;opened=null;error='';query='';pages.clear();documentPath=null;readingTitle='';}
   return {mount,open,detach,reset};
 }
