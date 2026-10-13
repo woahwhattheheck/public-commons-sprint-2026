@@ -11,6 +11,7 @@ import tempfile
 
 FILES = (
     "model/observed_station_studies.py",
+    "source_tools/receive_observed_station_studies.py",
     "model/station_wbd_context.py",
     "operator/observed_station_wbd_hooks.json",
     "observations/wbd_station_join_20261013/station-context.sources.json",
@@ -163,7 +164,7 @@ def _manifest_members(name, body):
             yield (parent / relative).as_posix(), member
 
 
-def install(application, source_root, *, dry_run=False):
+def install(application, source_root, *, dry_run=False, include_hydrology_report=True):
     application = Path(application).resolve(strict=True)
     source_root = Path(source_root).resolve(strict=True)
     target_catalogue = application / "model/station_geography.py"
@@ -181,8 +182,9 @@ def install(application, source_root, *, dry_run=False):
     source_manifests = [name for name in FILES if name.endswith(".sources.json")]
     report_pair = ("observed_hydrology_context.report.json",
                    "observed_hydrology_context.sources.json")
-    if any((source_root / name).is_file() or (application / name).is_file()
-           for name in report_pair):
+    if include_hydrology_report and any(
+            (source_root / name).is_file() or (application / name).is_file()
+            for name in report_pair):
         for name in report_pair:
             # Use the source edition as one pair. Falling back to a separately
             # installed report could retain its earlier calibration binding.
@@ -219,7 +221,8 @@ def install(application, source_root, *, dry_run=False):
               "dry_run": dry_run, "changed": changed, "study_count": len(spec["studies"]),
               "original_source_count": len(spec["sources"]),
               "retained_source_members": len(references),
-              "native_source_manifests": source_manifests}
+              "native_source_manifests": source_manifests,
+              "include_hydrology_report": include_hydrology_report}
     if dry_run:
         return result
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -251,8 +254,11 @@ def main(argv=None):
     parser.add_argument("--application", required=True)
     parser.add_argument("--source-root", default=str(Path(__file__).resolve().parent.parent))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--without-hydrology-report", action="store_true",
+                        help="Install the complete station studies while preserving the existing separate hydrology report edition")
     args = parser.parse_args(argv)
-    print(json.dumps(install(args.application, args.source_root, dry_run=args.dry_run), indent=2))
+    print(json.dumps(install(args.application, args.source_root, dry_run=args.dry_run,
+                             include_hydrology_report=not args.without_hydrology_report), indent=2))
 
 if __name__ == "__main__":
     main()

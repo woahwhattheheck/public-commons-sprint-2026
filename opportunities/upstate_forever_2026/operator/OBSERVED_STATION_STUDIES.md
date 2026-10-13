@@ -119,3 +119,78 @@ The additive installer validates and installs every primary body and companion i
 ## Original WBD coordinate context
 
 Import `observations/wbd_station_join_20261013/station-context.sources.json` alongside the three study manifests. All nine choices retain their original site and measurement selections and attach the 197-row source table through the existing `site_tables` selection. Saved CSV, GeoJSON, printable report and portable receiving distinguish exact selected native coordinates from alternative original coordinates. The complete source and executed join are described in `observations/wbd_station_join_20261013/STATION_CONTEXT.md`.
+
+
+## Complete original nine-study receiving
+
+The original regional operation uses project `b9d5d257-c6bb-4f07-b975-8e8c63705db3` and the nine selections already declared in `model/observed_station_studies.json`. Its station counts are 67, 17, 5, 10, 10, 13, 13, 29 and 30 in the original recipe order. The complete 197-point WBD source retains every original coordinate variant and all nine selected-coordinate matches.
+
+Use the maintained installer with the complete original four-manifest station source edition:
+
+```sh
+python -B SOURCE_ROOT/operator/install_observed_station_studies.py --application APPLICATION --source-root SOURCE_ROOT --without-hydrology-report
+```
+
+`--without-hydrology-report` selects the complete station installation and leaves the separately installed `observed_hydrology_context.report.json` / `.sources.json` edition intact. All original station sources, companions, authored source upgrades, shared hooks, syntax checks, backups and concurrent-write checks remain active. The default retains the existing optional hydrology-report refresh behavior. The explicit station-only option avoids importing that unrelated report's older companion source versions into this receiving course.
+
+The complete station input closure consists of the three original station/calibration/regional manifests and their retained original data, plus the original WBD station-context manifest. The original report refresh has a different source closure; including it is a separate deliberate installation choice.
+
+After installation, run the original study course with the actual application, original Workspace and an owned output directory:
+
+```sh
+python -B SOURCE_ROOT/source_tools/receive_observed_station_studies.py --application APPLICATION --workspace ORIGINAL_WORKSPACE --source-root SOURCE_ROOT --output OWNED_OUTPUT
+```
+
+The receiver retains the full original prepared selections, executes each study in a fresh child process using the same interpreter, builds its ordinary report and geography ZIP, and reopens that archive in the separate receiving Workspace through the existing `operate` API. Source imports use the explicitly supplied complete source root; no geometry, station, observation or WBD context is recreated by the receiver. Existing native builders retain and reuse completed editions on interruption.
+
+The producing native worker must open, LOOK at and operate the actual outgoing Station Geography reports and every attachment as their recipient would: readable maps/tables at desktop/screenshare and 390px, the original source downloads, complete geography archives, and their independently received editions. Inspect the actual exported pages and contents, fix observed faults, and retain actual result identities in the original receiving thread. A saved screenshot that nobody viewed is insufficient. Keep this focused on completing the product.
+
+## Current owner direction carried with this receiving operation
+
+The following is the complete `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`. Its native model priority and October 13, 2026 14:00 UTC cutoff govern this complementary receiving course.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
