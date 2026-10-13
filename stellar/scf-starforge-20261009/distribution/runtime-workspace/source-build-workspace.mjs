@@ -199,7 +199,9 @@ export function validateSourceBuildReview(value, id) {
   return value;
 }
 export async function readSourceBuildReview(root, id) {
-  const base = await initializeSourceBuildWorkspace(root);
+  const base = join(await privateDirectory(root), 'source-builds');
+  await privateDirectory(base);
+  await privateDirectory(join(base, 'reviews'));
   return validateSourceBuildReview(await readJSON(reviewPath(base, id)), id);
 }
 export async function reviewSourceBuild(root, input) {
@@ -219,8 +221,17 @@ export async function reviewSourceBuild(root, input) {
   return saved;
 }
 export async function sourceBuildWorkspaceState(root) {
-  const base = await initializeSourceBuildWorkspace(root);
-  const names = (await readdir(join(base, 'reviews'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
+  const base = join(await privateDirectory(root), 'source-builds');
+  let entries;
+  try {
+    await privateDirectory(base);
+    await privateDirectory(join(base, 'reviews'));
+    entries = await readdir(join(base, 'reviews'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    return { builds: [] };
+  }
+  const names = entries.filter(name => /^[a-f0-9]{24}\.json$/.test(name));
   const builds = await Promise.all(names.map(async name => {
     const id = name.slice(0, -5), review = await readSourceBuildReview(root, id);
     const state = await optionalRecord(join(jobPath(root, review.requestId), 'state.json'));
@@ -356,7 +367,7 @@ export async function openSourceBuildArchive(root, id) {
   const review = await readSourceBuildReview(root, id), output = join(buildPath(join(root, 'source-builds'), id), 'output');
   const receipt = await recoverCompletedDistribution(output, review.sourceCommit, review.selection);
   need(receipt, 'SOURCE_BUILD_ARCHIVE_NOT_READY');
-  checkReceipt(review, receipt, await readJSON(join(output, 'package', 'manifest.json')));
+  validateSourceBuildOutput(review, receipt, await readJSON(join(output, 'package', 'manifest.json')));
   const handle = await open(receipt.archive, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const before = await handle.stat();
