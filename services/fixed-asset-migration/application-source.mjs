@@ -33,6 +33,9 @@ export const APPLICATION_SOURCE_PATHS=Object.freeze([
   "services/fixed-asset-migration/integrations/business-central/prepare-master.mjs",
   "services/fixed-asset-migration/integrations/business-central/prepare-work-orders-cli.mjs",
   "services/fixed-asset-migration/integrations/business-central/prepare-work-orders.mjs",
+  "services/fixed-asset-migration/integrations/business-central/source-preparation-ui.mjs",
+  "services/fixed-asset-migration/integrations/business-central/source-preparation-receiving.mjs",
+  "services/fixed-asset-migration/integrations/business-central/SOURCE_PREPARATION_OPERATING.md",
   "services/fixed-asset-migration/integrations/business-central/work-order-capture-example.json",
   "services/fixed-asset-migration/issuer-annex.mjs",
   "services/fixed-asset-migration/issuer-ui.mjs",
@@ -81,7 +84,7 @@ export function createApplicationSource({sha256Utf8}){
  }
  function assertRuntime(bundle,boot){
   const checked=verify(bundle),by=new Map(checked.files.map(f=>[f.path,f.text]));
-  const bindings={engineSource:'engine.mjs',shaSource:'sha256.mjs',appSource:'app.mjs',issuerSource:'issuer-annex.mjs',issuerUISource:'issuer-ui.mjs',workOrderSource:'work-orders.mjs',workOrderUISource:'work-orders-ui.mjs',applicationSourceModule:'application-source.mjs'};
+  const bindings={engineSource:'engine.mjs',shaSource:'sha256.mjs',appSource:'app.mjs',issuerSource:'issuer-annex.mjs',issuerUISource:'issuer-ui.mjs',workOrderSource:'work-orders.mjs',workOrderUISource:'work-orders-ui.mjs',applicationSourceModule:'application-source.mjs',masterPreparationSource:'integrations/business-central/prepare-master.mjs',workOrderPreparationSource:'integrations/business-central/prepare-work-orders.mjs',sourcePreparationUISource:'integrations/business-central/source-preparation-ui.mjs'};
   for(const [key,path]of Object.entries(bindings))need(boot[key]===by.get('services/fixed-asset-migration/'+path),'The operating module differs from its retained source: '+path);
   return checked;
  }
@@ -98,6 +101,7 @@ export function createApplicationSource({sha256Utf8}){
    rebuild:'services/fixed-asset-migration/build-standalone.mjs',
    cli:'services/fixed-asset-migration/cli.mjs',
    sourcePreparation:'services/fixed-asset-migration/integrations/business-central/prepare-work-orders-cli.mjs',
+   browserSourcePreparation:'services/fixed-asset-migration/integrations/business-central/SOURCE_PREPARATION_OPERATING.md',
    guide:'services/fixed-asset-migration/APPLICATION_DELIVERY.md'
   }};
   const manifestText=JSON.stringify(sourceManifest,null,2)+'\n';

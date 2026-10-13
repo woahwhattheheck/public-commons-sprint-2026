@@ -105,3 +105,7 @@ The producing worker must actually open/run/render and LOOK at this changed appl
 ## Work orders and costs
 
 Open the added Work orders and costs desk for the complete operational source-to-target workflow. Its source selection, mapping, exact allocations, returned rows, review and history use this same workspace. [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md) covers the whole sequence and bulk schedules. Save working HTML retains both modules and all work-order drafts; Handover includes their original CSVs, event history, expected allocations and actual returned comparisons.
+
+## Prepare retained native responses in this workspace
+
+Choose **Prepare native sources** to open an existing capture or assemble the actual retained response files and company context. Review every prepared row, original/native field, mapping and source finding, then adopt all originals and the explicit mapping through the existing journals. Unfinished choices remain in Save working HTML. Follow integrations/business-central/SOURCE_PREPARATION_OPERATING.md for original API meanings, actual/expected/LCY distinctions, source scope and full receiving.
