@@ -10,7 +10,9 @@ The two source parts contain **40 complete UTF-8 files / 418,891 source bytes**:
 - The complete native receiving script and its guide. These two files are staged for direct execution and need not be copied into the running application.
 - The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 37 other installed paths in the maintained 0.3 source edition.
 
-The separate bootstrap directory contains the complete unchanged original application source assembler. The stager checks its exact declared byte count and SHA before loading it; the installed base need not supply a matching staging helper. Every source part and every complete member is verified before the original assembler publishes any staged source.
+The separate bootstrap directory contains the complete unchanged original application source assembler and its matching component reader from the same source edition. The stager verifies both complete bodies, loads them together as a private Python package, and delegates source decoding and publication to those original modules. Its imports do not depend on an assembler or component reader installed in the base application. Every source part and every complete member is verified before the first staged source file is published.
+
+The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
 Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). Receiving script pin: `5a8c02a05f2c45c758d361c44c624479bfa157b4`. Each file's source commit and complete identity appear in `manifest.json`.
 
@@ -36,6 +38,31 @@ OUTPUT=/actual/chemistry-compound-course
 python -B "$BANK/stage.py" --application "$APP" --source-root "$STAGE"
 python -B "$STAGE/operator/install_chemistry.py" --application "$APP" --source-root "$STAGE" --dry-run
 python -B "$STAGE/operator/install_chemistry.py" --application "$APP" --source-root "$STAGE"
+python - "$APP" "$STAGE" <<'PY'
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+application, stage = (Path(value).resolve(strict=True) for value in sys.argv[1:])
+target = application / "AGENTS.md"
+if target.is_symlink():
+    raise ValueError("Retain the application's instructions as an ordinary file")
+current = target.read_text(encoding="utf-8") if target.exists() else ""
+instruction = (stage / "AGENTS.md").read_text(encoding="utf-8")
+if instruction not in current:
+    merged = current.rstrip() + ("\n\n" if current.strip() else "") + instruction
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=application,
+                                     prefix=".instructions-", delete=False) as stream:
+        pending = Path(stream.name)
+        stream.write(merged)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(pending, target)
+if instruction not in target.read_text(encoding="utf-8"):
+    raise ValueError("The installed application did not retain its current instructions")
+print("Current owner instruction retained:", target)
+PY
 python -B "$STAGE/source/run_chemistry_compound_receiving.py" --application "$APP" --workspace "$WORKSPACE" --output "$OUTPUT"
 ```
 
