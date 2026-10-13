@@ -9,6 +9,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const FORMAT = "commons.audit-exchange.browser-commissioning.v1";
 const OPERATION = "AUDIT-EXCHANGE-NATIVE-6804-20261012";
@@ -74,7 +75,7 @@ function timeout(promise, milliseconds, message) {
 class Journey {
   constructor(input) {
     this.input = input;
-    need(input.format === "commons.audit-exchange.browser-input.v1" && input.operation === OPERATION,
+    need(["commons.audit-exchange.browser-input.v1", "commons.audit-exchange.rendered-input.v1", "commons.audit-exchange.colleague-browser-input.v1"].includes(input.format) && input.operation === OPERATION,
       "Use the original complete browser commissioning input.");
     need(input.workspaceId && input.instanceId && input.operator, "Keep the actual workspace, listener and operator identities.");
     this.root = path.resolve(input.directory);
@@ -83,7 +84,8 @@ class Journey {
     atomic(path.join(this.root, "original-input.json"), bytes(stable));
     this.connection = { url: new URL(url).href, workspaceId: input.workspaceId, instanceId };
     atomic(path.join(this.root, "connections", sha(bytes(this.connection)) + ".json"), bytes(this.connection));
-    for (const [name, file] of [["shared", input.sharedFixture], ["weather", input.weather]]) {
+    for (const [name, file] of input.format === "commons.audit-exchange.browser-input.v1" ?
+      [["shared", input.sharedFixture], ["weather", input.weather]] : []) {
       const body = fs.readFileSync(file.path);
       need(sha(body) === file.sha256 && (file.bytes === undefined || body.length === file.bytes),
         "The complete original " + name + " input changed.");
@@ -543,11 +545,507 @@ class Journey {
     atomic(path.join(this.root, "logs", sha(bytes(log)) + ".json"), bytes(log));
   }
 }
+
+/**
+ * Continue the same completed case through its final rendered product.
+ * This uses read actions and existing retained-download controls only. The resulting
+ * captures require direct producer viewing; they are not a visual approval.
+ */
+class RenderedJourney extends Journey {
+  constructor(input) {
+    super(input);
+    this.captures = []; this.downloads = []; this.opened = [];
+    this.sequence = 0; this.role = input.role;
+    need(Number.isSafeInteger(input.controllerFD)&&input.controllerFD>=3,"Retain the original case controller descriptor.");
+    const inherited=fs.fstatSync(input.controllerFD),original=fs.statSync(input.controllerLock);
+    need(inherited.isFile()&&inherited.dev===original.dev&&inherited.ino===original.ino,
+      "The rendered native readers must inherit this same original case lock.");
+    need(["author", "recipient-one"].includes(this.role) && input.sourceSha256 && input.servedSourceSha256,
+      "Bind final rendering to the original producer or received application source.");
+  }
+  async capture(label, page = this.page, subject = {}) {
+    const basename = String(++this.sequence).padStart(4, "0") + "-" + label.replace(/[^a-zA-Z0-9_.-]/g, "-");
+    const root = this.viewRoot || this.root;
+    const view = page.viewportSize();
+    const png = await page.screenshot({ fullPage: true, animations: "disabled", timeout: 120000 });
+    const file = path.join(root, "views", basename + ".png"); atomic(file, png);
+    const screen = await page.evaluate(() => ({
+      title: document.title, url: location.href, viewport: { width: innerWidth, height: innerHeight },
+      document: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
+      busy: document.body.getAttribute("aria-busy"),
+      scrollableRegions: [...document.querySelectorAll(".table-wrap,pre,textarea,.navigation")].filter(el => {
+        const box=el.getBoundingClientRect(); return box.width && box.height;
+      }).map(el => ({tag:el.tagName,id:el.id,classes:el.className,clientWidth:el.clientWidth,
+        scrollWidth:el.scrollWidth,clientHeight:el.clientHeight,scrollHeight:el.scrollHeight}))
+    }));
+    const entry = {label, path:path.relative(root,file),bytes:png.length,sha256:sha(png),
+      viewport:view,subject,screen,review:"awaiting-producer-view"};
+    this.captures.push(entry); atomic(path.join(root,"screens",basename+".json"),bytes(entry));
+    return entry;
+  }
+  async connect() {
+    if (!this.initialConnectionCaptured) {
+      this.initialConnectionCaptured = true;
+      await this.capture("desktop-disconnected");
+      await this.page.locator("#server-url").fill(this.connection.url);
+      await this.page.locator("#workspace-pin").fill("deliberately-mismatched-original-workspace");
+      await this.page.locator("#connect-form button[type=submit]").click(); await this.idle();
+      need((await this.page.locator("#notice").textContent()).includes("AUDIT_WORKSPACE_CHANGED"),
+        "The deliberate read-only wrong-workspace connection did not show its real error.");
+      await this.capture("desktop-real-connection-error");
+    }
+    await super.connect();
+  }
+  async loading(width) {
+    let arrived, release;
+    const seen = new Promise(resolve => {arrived=resolve;});
+    const gate = new Promise(resolve => {release=resolve;});
+    const pattern = new URL("/api/state",this.connection.url).href;
+    const handler = async route => {arrived();await gate;await route.continue();};
+    await this.context.route(pattern,handler);
+    try {
+      await this.page.locator("#refresh").click();
+      await timeout(seen,30000,"The actual workspace refresh did not reach its read request.");
+      await this.page.waitForFunction(()=>document.body.getAttribute("aria-busy")==="true");
+      await this.capture(width+"-actual-read-loading");
+    } finally {release();await this.context.unroute(pattern,handler);}
+    await this.idle();
+  }
+  async tableButton(container,label) {
+    const target=this.page.locator(container);
+    let pages=0;
+    while(true){
+      const button=target.getByRole("button",{name:label,exact:true});
+      if(await button.count()){await button.first().click();await this.idle();return;}
+      const next=target.getByRole("button",{name:"Next",exact:true});
+      need(await next.count()&&await next.isEnabled(),"The actual retained row is missing: "+label);
+      await next.click();await this.idle();need(++pages<10000,"The existing table paging did not advance.");
+    }
+  }
+  async tableRowAt(container,index) {
+    need(Number.isSafeInteger(index)&&index>=0,"Select one actual retained table row.");
+    await this.firstTablePage(container);let offset=0;
+    while(true){
+      const rows=this.page.locator(container+" tbody tr"),count=await rows.count();
+      if(index<offset+count)return rows.nth(index-offset);
+      const next=this.page.locator(container).getByRole("button",{name:"Next",exact:true});
+      need(count>0&&await next.count()&&await next.isEnabled(),"The exact original table row is missing.");
+      offset+=count;await next.click();await this.idle();
+    }
+  }
+  async firstTablePage(container) {
+    const previous=this.page.locator(container).getByRole("button",{name:"Previous",exact:true});
+    while(await previous.count()&&await previous.isEnabled()){await previous.click();await this.idle();}
+  }
+  async allTablePages(container,label,subject={}) {
+    await this.firstTablePage(container);let index=0;
+    while(true){
+      await this.capture(label+"-page-"+(++index),this.page,subject);
+      const next=this.page.locator(container).getByRole("button",{name:"Next",exact:true});
+      if(!await next.count()||!await next.isEnabled())break;
+      await next.click();await this.idle();need(index<10000,"The actual complete table did not finish.");
+    }
+    await this.firstTablePage(container);
+  }
+  async inspect(width,state) {
+    await this.page.setViewportSize(width==="desktop"?{width:1440,height:1000}:{width:390,height:844});
+    await this.section("overview");await this.capture(width+"-workspace");
+    await this.loading(width);
+    for(const source of state.sources){
+      const detail=await this.read("source.get",{sourceId:source.id});
+      await this.openSource(source.id,detail.revision.id);
+      await this.page.locator('[data-inspector="entities"]').click();
+      await this.page.locator("#entity-kind").selectOption("building");
+      await this.capture(width+"-"+source.id+"-buildings",this.page,{sourceId:source.id,revisionId:detail.revision.id});
+      const first=this.page.locator("#entities-table tbody button").first();
+      if(await first.count()){await first.click();await this.idle();await this.capture(width+"-"+source.id+"-building-detail");}
+      await this.page.locator("#entity-query").fill("no-native-entity-matches-this-explicit-filter");
+      need(await this.page.locator("#entities-table .empty").isVisible(),"The real empty entity filter did not render.");
+      await this.capture(width+"-"+source.id+"-empty-filter");
+      await this.page.locator("#entity-query").fill("");await this.page.locator("#entity-kind").selectOption("");
+      for(const panel of ["references","series","validation","xml"]){
+        await this.page.locator('[data-inspector="'+panel+'"]').click();
+        await this.capture(width+"-"+source.id+"-"+panel,this.page,{sourceId:source.id,revisionId:detail.revision.id});
+      }
+      await this.section("revisions");
+      const before=detail.revisions[0],after=detail.revision;
+      await this.page.locator("#compare-before").selectOption(before.id);
+      await this.page.locator("#compare-after").selectOption(after.id);
+      await this.page.locator("#compare-form button[type=submit]").click();await this.idle();
+      await this.capture(width+"-"+source.id+"-comparison",this.page,{before:before.id,after:after.id});
+      if(before.id!==after.id){
+        await this.openSource(source.id,before.id);await this.capture(width+"-"+source.id+"-historical-revision");
+        await this.page.locator("#open-current").click();await this.idle();
+      }
+    }
+    await this.section("editions");
+    for(const [editionIndex,edition] of state.editions.entries()){
+      const row=await this.tableRowAt("#editions-table",editionIndex);
+      await row.getByRole("button",{name:edition.number+" · "+edition.name,exact:true}).click();await this.idle();
+      need((await this.page.locator("#edition-summary").textContent()).includes(edition.id),
+        "Open the exact retained edition even when received copies share their original display name.");
+      await this.page.locator("#edition-detail details").evaluate(el=>{el.open=true;});
+      await this.page.locator("#edition-title").scrollIntoViewIfNeeded();
+      await this.capture(width+"-edition-"+edition.id,this.page,{editionId:edition.id});
+      const first=this.page.locator("#edition-sources tbody button").first();
+      if(await first.count()){await first.click();await this.idle();await this.capture(width+"-edition-source-"+edition.id);await this.section("editions");}
+    }
+    await this.section("reviews");await this.page.locator("#review-filter").selectOption("accepted");
+    await this.capture(width+"-accepted-reviews");
+    await this.page.locator("#review-filter").selectOption("");
+    await this.section("links");await this.capture(width+"-source-bound-related-work");
+    need(await this.page.locator('[data-section="corrections"]').count(),
+      "The final served source must include its complete colleague corrections controls.");
+    await this.section("corrections");await this.capture(width+"-colleague-return-intake");
+    await this.page.locator("#correction-file").focus();await this.page.keyboard.press("Tab");
+    await this.capture(width+"-colleague-keyboard-navigation");
+    await this.section("analysis");
+    for(const run of state.analysisRuns){
+      await this.firstTablePage("#analysis-runs-table");
+      await this.tableButton("#analysis-runs-table",run.analysisId||run.id);
+      await this.page.locator("#analysis-result").scrollIntoViewIfNeeded();
+      await this.page.locator("#analysis-result details").evaluate(el=>{el.open=true;});
+      await this.capture(width+"-native-"+(run.analysisId||run.id),this.page,
+        {analysisId:run.analysisId||run.id,status:run.status,outputCount:(run.outputs||[]).length});
+    }
+    const shared=state.sources.find(source=>source.id===this.input.sharedSourceId);
+    need(shared&&shared.originalSha256===this.input.sharedOriginalSha256&&
+      shared.currentRevisionId===this.input.sharedRevisionId,
+      "Keep the exact corrected shared-system source binding selected by the original receiving.");
+    const sharedDetail=await this.read("source.get",{sourceId:shared.id,revisionId:this.input.sharedRevisionId});
+    await this.openSource(shared.id,sharedDetail.revision.id);await this.section("projection");
+    const entities=sharedDetail.model.entities;
+    const assets=entities.filter(row=>["building","system"].includes(row.semanticKind)).map(row=>row.key);
+    const documents=entities.filter(row=>row.semanticKind==="root").map(row=>row.key);
+    need(assets.length===5&&documents.length===1,"Keep both actual buildings and all three original physical systems.");
+    await this.page.locator("#projection-assets").selectOption(assets);
+    await this.page.locator("#projection-documents").selectOption(documents);
+    await this.page.locator("#projection-requirements").selectOption([]);
+    await this.page.locator("#projection-preview-form button[type=submit]").click();await this.idle();
+    const tables=this.page.locator("#projection-tables > article");need(await tables.count()===8,"Open all eight complete native tables.");
+    for(let index=0;index<8;index++){
+      const article=tables.nth(index),name=await article.locator("h4").textContent();
+      await article.scrollIntoViewIfNeeded();
+      await this.allTablePages('#projection-tables > article:nth-child('+(index+1)+')',"turnover-"+width+"-"+name,
+        {sourceId:shared.id,revisionId:sharedDetail.revision.id,table:name});
+    }
+    await this.section("exports");
+    for(const kind of ["xml","review","workspace","application"]){
+      await this.page.locator("#export-kind").selectOption(kind);
+      if(kind!=="xml"&&state.editions.length)await this.page.locator("#export-edition").selectOption(state.editions.at(-1).id);
+      await this.capture(width+"-existing-exports-"+kind);
+    }
+    // Reload the actual installed application, reopening the same retained workspace.
+    await this.page.reload({waitUntil:"domcontentloaded"});await this.idle();await super.connect();
+    await this.section("overview");await this.capture(width+"-reopened-workspace");
+  }
+  async downloadExisting(record) {
+    await this.section("exports");await this.firstTablePage("#exports-table");
+    const index=this.renderState.exports.findIndex(item=>item.id===record.id);
+    need(index>=0,"Keep the exact retained export identifier.");
+    const row=await this.tableRowAt("#exports-table",index);
+    need((await row.textContent()).includes(record.sha256)&&
+      await row.getByRole("button",{name:record.name,exact:true}).count(),
+      "The selected original export row changed.");
+    const arriving=this.page.waitForEvent("download",{timeout:120000});
+    await row.getByRole("button",{name:record.name,exact:true}).click();
+    const download=await arriving,failed=await download.failure();need(!failed,"The real operator download failed: "+failed);
+    const temporary=await download.path();need(temporary,"The real downloaded bytes were not retained.");
+    const body=fs.readFileSync(temporary);
+    need(body.length===record.bytes&&sha(body)===record.sha256,"The operator download differs from its complete retained export: "+record.id);
+    const file=path.join(this.root,"downloads",record.id,path.basename(download.suggestedFilename()));
+    atomic(file,body);await this.idle();
+    const retained={...record,path:file,suggestedFilename:download.suggestedFilename()};
+    this.downloads.push(retained);atomic(path.join(this.root,"downloads",record.id,"record.json"),bytes(retained));
+    return retained;
+  }
+  async artifactPage(label,raw,contentType,subject) {
+    const origin="https://retained-audit-artifact.invalid/"+crypto.randomUUID();
+    const page=await this.context.newPage();
+    await page.route("**/*",async route=>{
+      if(route.request().url()===origin)await route.fulfill({status:200,body:raw,contentType,
+        headers:{"Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'"}});
+      else await route.abort("blockedbyclient");
+    });
+    try{
+      await page.goto(origin,{waitUntil:"load"});
+      for(const width of ["desktop","narrow"]){
+        await page.setViewportSize(width==="desktop"?{width:1440,height:1000}:{width:390,height:844});
+        if(await page.locator("#artifact-first").count()&&await page.locator("#artifact-first").isEnabled())await page.locator("#artifact-first").click();
+        let index=0;
+        while(true){
+          await this.capture("attachment-"+label+"-"+width+"-"+(++index),page,subject);
+          const next=page.locator("#artifact-next");
+          if(!await next.count()||!await next.isEnabled())break;
+          await next.click();need(index<10000,"The complete attachment table did not finish.");
+        }
+      }
+    }finally{await page.close();}
+  }
+  async openArtifact(record,body=fs.readFileSync(record.path),depth=0) {
+    need(depth<=3,"Keep recursive package viewing within its actual delivered closure.");
+    const extension=path.extname(record.name).toLowerCase(),label=record.id+"-"+path.basename(record.name);
+    const opened={id:record.id,name:record.name,bytes:body.length,sha256:sha(body),method:null,capturesStart:this.captures.length};
+    need(sha(body)===record.sha256&&body.length===record.bytes,"Open the complete original retained artifact.");
+    if(extension===".zip"){
+      const folder=path.join(this.root,"opened",record.id);fs.mkdirSync(folder,{recursive:true});
+      const script=String.raw`
+import hashlib,importlib.util,json,pathlib,sys
+spec=importlib.util.spec_from_file_location("audit_original_course",sys.argv[1])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+raw=pathlib.Path(sys.argv[2]).read_bytes()
+manifest,members=module.package(raw)
+root=pathlib.Path(sys.argv[3])
+rows=[]
+for name,body in members.items():
+ row={"name":name,"bytes":len(body),"sha256":hashlib.sha256(body).hexdigest()}
+ if name.startswith("registers/") and name.endswith(".csv") or name.endswith(".html"):
+  target=root/module.safe_name(name);module.atomic(target,body);row["path"]=str(target)
+ rows.append(row)
+result={"manifest":manifest,"members":rows}
+module.atomic(root/"opened-package.json",module.raw_json(result))
+print(module.canonical(result))
+`;
+      const observation=runNative(this.input.pythonExecutable,[ "-c",script,this.input.pythonCourse,record.path,folder],folder,"open-package",this.input.controllerFD);
+      const index=JSON.parse(observation.stdout);opened.method="complete-native-package-inventory-and-received-application";
+      opened.packageIndex=path.relative(this.root,path.join(folder,"opened-package.json"));
+      await this.artifactPage(label,artifactHtml(record.name,index,"json"),"text/html",record);
+      for(const [i,member] of index.members.entries())if(member.path)
+        await this.openArtifact({...member,id:record.id+"-member-"+i},fs.readFileSync(member.path),depth+1);
+    }else if(extension===".pdf"){
+      const folder=path.join(this.root,"opened",record.id);fs.mkdirSync(folder,{recursive:true});
+      const command=process.env.AUDIT_PDF_RENDERER||"pdftoppm";
+      runNative(command,["-r","100","-png",record.path,path.join(folder,"page")],folder,"render-pdf",this.input.controllerFD);
+      const pages=fs.readdirSync(folder).filter(name=>/^page-\d+\.png$/.test(name)).sort((a,b)=>Number(a.match(/\d+/)[0])-Number(b.match(/\d+/)[0]));
+      need(pages.length,"The original PDF did not render any pages.");opened.method="complete-original-pdf-pages";opened.pages=pages;
+      for(const name of pages){
+        const image=fs.readFileSync(path.join(folder,name));
+        const html=artifactShell(record.name+" · "+name,'<img alt="Rendered original PDF page" style="max-width:100%;height:auto" src="data:image/png;base64,'+image.toString("base64")+'">');
+        await this.artifactPage(label+"-"+name,Buffer.from(html),"text/html",{...record,page:name});
+      }
+    }else if(extension===".rds"){
+      const folder=path.join(this.root,"opened",record.id);fs.mkdirSync(folder,{recursive:true});
+      const r=process.env.AUDIT_RSCRIPT||"Rscript";
+      const code='x <- readRDS(commandArgs(TRUE)[1]); cat("Class:", paste(class(x), collapse=", "), "\\n"); cat("Dimensions:", paste(dim(x), collapse=" x "), "\\n"); str(x, max.level=3, list.len=100, give.attr=TRUE)';
+      const result=runNative(r,["--vanilla","-e",code,record.path],folder,"open-original-r-object",this.input.controllerFD);
+      opened.method="native-R-readRDS";opened.nativeOutcome=path.relative(this.root,result.outcomePath);
+      await this.artifactPage(label,artifactHtml(record.name,result.stdout,"text"),"text/html",record);
+    }else if(extension===".html"||extension===".htm"){
+      opened.method="original-HTML-bytes";await this.artifactPage(label,body,"text/html",record);
+    }else if(extension===".csv"){
+      const rows=parseCsv(body.toString("utf8").replace(/^\uFEFF/,""));opened.method="complete-CSV-table";opened.rows=Math.max(0,rows.length-1);
+      await this.artifactPage(label,artifactHtml(record.name,rows,"csv"),"text/html",record);
+    }else if([".png",".jpg",".jpeg",".webp",".svg"].includes(extension)){
+      const mime=extension===".svg"?"image/svg+xml":extension===".jpg"?"image/jpeg":"image/"+extension.slice(1);
+      opened.method="original-image";await this.artifactPage(label,body,mime,record);
+    }else{
+      const text=new TextDecoder("utf-8",{fatal:true}).decode(body);
+      const value=extension===".json"?JSON.parse(text):text;opened.method=extension===".json"?"complete-JSON":"complete-original-text";
+      await this.artifactPage(label,artifactHtml(record.name,value,extension===".json"?"json":"text"),"text/html",record);
+    }
+    opened.capturesEnd=this.captures.length;
+    this.opened.push(opened);atomic(path.join(this.root,"opened",record.id,"opened.json"),bytes(opened));
+    emit({stage:"ORIGINAL_ATTACHMENT_OPENED",role:this.role,id:record.id,name:record.name,method:opened.method,sha256:record.sha256});
+  }
+  async run() {
+    await this.start();const state=await this.state();
+    need(state.workspaceId===this.input.workspaceId&&state.version===this.input.version,
+      "Retain the selected final workspace state before rendering.");
+    atomic(path.join(this.root,"workspace-state.json"),bytes(state));
+    this.renderState=state;
+    for(const width of ["desktop","narrow"])await this.inspect(width,state);
+    await this.page.setViewportSize({width:1440,height:1000});
+    for(const record of this.input.exports){
+      const retained=state.exports.find(row=>row.id===record.id);
+      need(retained&&retained.sha256===record.sha256&&retained.bytes===record.bytes,
+        "A final selected retained export changed before opening.");
+      await this.openArtifact(await this.downloadExisting(retained));
+    }
+    const after=await this.state();
+    need(after.version===state.version,"The final rendered continuation must preserve the original business version.");
+    const result={format:"commons.audit-exchange.rendered-capture.v1",operation:OPERATION,
+      role:this.role,workspaceId:state.workspaceId,version:state.version,
+      sourceSha256:this.input.sourceSha256,servedSourceSha256:this.input.servedSourceSha256,
+      status:"captured-awaiting-producer-view",captures:this.captures,downloads:this.downloads,opened:this.opened,
+      instructions:"Open every listed screen and outgoing attachment, operate the retained application, inspect desktop and narrow layout, and repair defects before calling this exact version ready."};
+    atomic(path.join(this.root,"rendered-capture.json"),bytes(result));
+    const links=this.captures.map(row=>'<li><a href="'+escapeHtml(row.path)+'">'+escapeHtml(row.label)+'</a> · '+escapeHtml(JSON.stringify(row.subject))+'</li>').join("");
+    const artifacts=this.downloads.map(row=>'<li><a href="'+escapeHtml(path.relative(this.root,row.path))+'">'+escapeHtml(row.name)+'</a> · '+escapeHtml(row.sha256)+'</li>').join("");
+    atomic(path.join(this.root,"OPEN.html"),Buffer.from(artifactShell("Audit Exchange · "+this.role+" · direct viewing",
+      "<h2>Captured; producer viewing remains required</h2><p>"+escapeHtml(result.instructions)+"</p><p>Workspace "+escapeHtml(state.workspaceId)+" · version "+state.version+"</p><h2>Actual outgoing files</h2><ul>"+artifacts+"</ul><h2>Actual rendered screens</h2><ol>"+links+"</ol>")));
+    emit({stage:"ORIGINAL_RENDERED_CASE_CAPTURED",role:this.role,workspaceId:state.workspaceId,
+      directory:this.root,captures:this.captures.length,opened:this.opened.length,review:result.status});
+    return result;
+  }
+}
+const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+function artifactShell(title,body){
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeHtml(title)+'</title><style>body{font:15px/1.5 Arial,sans-serif;color:#202226;background:#fff;margin:0;padding:24px}h1{font-size:22px;overflow-wrap:anywhere}p,li{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #bfc3c7;padding:16px;max-height:80vh;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #c7cace;padding:8px;text-align:left;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}button{font:inherit;background:white;border:1px solid #777;padding:8px 12px;margin:8px 8px 8px 0}a{color:inherit}@media(max-width:600px){body{padding:12px}}</style><h1>'+escapeHtml(title)+'</h1>'+body+'</html>';
+}
+function artifactHtml(title,value,kind){
+  if(kind!=="csv")return Buffer.from(artifactShell(title,"<pre>"+escapeHtml(kind==="json"?JSON.stringify(value,null,2):value)+"</pre>"));
+  const data=JSON.stringify(value).replace(/</g,"\\u003c"),script=String.raw`
+const rows=DATA,head=rows[0]||[];let page=0;const size=100;
+function render(){const start=page*size,items=rows.slice(1+start,1+start+size),table=document.querySelector("table");table.replaceChildren();
+ const tr=document.createElement("tr");for(const value of head){const th=document.createElement("th");th.textContent=value;tr.append(th);}table.append(tr);
+ for(const row of items){const line=document.createElement("tr");for(const value of row){const td=document.createElement("td");td.textContent=value;line.append(td);}table.append(line);}
+ document.querySelector("#range").textContent=(rows.length-1)+" complete data rows; showing "+(items.length?start+1:0)+"–"+(start+items.length);
+ document.querySelector("#artifact-first").disabled=page===0;document.querySelector("#artifact-previous").disabled=page===0;document.querySelector("#artifact-next").disabled=start+items.length>=rows.length-1;}
+document.querySelector("#artifact-first").onclick=()=>{page=0;render();};document.querySelector("#artifact-previous").onclick=()=>{page--;render();};document.querySelector("#artifact-next").onclick=()=>{page++;render();};render();
+`;
+  return Buffer.from(artifactShell(title,'<p id="range"></p><button id="artifact-first">First</button><button id="artifact-previous">Previous</button><button id="artifact-next">Next</button><div class="table"><table></table></div><script>'+script.replace("DATA",data)+'</script>'));
+}
+function parseCsv(text){
+  const rows=[];let row=[],cell="",quoted=false,afterQuote=false;
+  for(let index=0;index<text.length;index++){
+    const char=text[index];
+    if(quoted){if(char==='"'){if(text[index+1]==='"'){cell+='"';index++;}else{quoted=false;afterQuote=true;}}else cell+=char;}
+    else if(char==='"'&&cell===""&&!afterQuote)quoted=true;
+    else if(char===","){row.push(cell);cell="";afterQuote=false;}
+    else if(char==="\r"||char==="\n"){if(char==="\r"&&text[index+1]==="\n")index++;row.push(cell);rows.push(row);row=[];cell="";afterQuote=false;}
+    else{need(!afterQuote,"The original CSV has content after a closed quoted field.");cell+=char;}
+  }
+  need(!quoted,"The original CSV contains an unfinished quoted field.");
+  if(cell!==""||row.length||afterQuote){row.push(cell);rows.push(row);}
+  return rows;
+}
+function runNative(command,args,directory,label,controllerFD){
+  const stdio=Array.from({length:controllerFD+1},()=> "ignore");stdio[1]="pipe";stdio[2]="pipe";stdio[controllerFD]=controllerFD;
+  const result=spawnSync(command,args,{cwd:directory,encoding:"utf8",stdio,maxBuffer:128*1024*1024,timeout:600000});
+  const outcome={command,args,status:result.status,signal:result.signal,error:result.error?.message||null,
+    stdout:result.stdout||"",stderr:result.stderr||""};
+  const target=path.join(directory,label+"-outcome.json");atomic(target,bytes(outcome));
+  need(result.status===0&&!result.error,"Open the complete actual artifact with its installed native reader: "+target);
+  return {...outcome,outcomePath:target};
+}
+
+
+class ReturnJourney extends Journey {
+  constructor(input){
+    const {captureDirectory,sourceSha256,servedSourceSha256,controllerFD,controllerLock,version,...original}=input;
+    super(original);this.input=input;this.role="author";this.viewRoot=path.resolve(captureDirectory);
+    this.captures=[];this.sequence=0;
+    need(Number.isSafeInteger(controllerFD)&&controllerFD>=3,"Keep the original colleague-return controller descriptor.");
+    const inherited=fs.fstatSync(controllerFD),lock=fs.statSync(controllerLock);
+    need(inherited.isFile()&&inherited.dev===lock.dev&&inherited.ino===lock.ino,"Continue this same original case lock.");
+    const archive=fs.readFileSync(input.returnedArchive.path);
+    need(archive.length===input.returnedArchive.bytes&&sha(archive)===input.returnedArchive.sha256,
+      "Choose the complete retained colleague project.");
+  }
+  async capture(label,subject={}){
+    return await RenderedJourney.prototype.capture.call(this,label,this.page,subject);
+  }
+  async both(label,subject={}){
+    for(const [width,viewport] of [["desktop",{width:1440,height:1000}],["narrow",{width:390,height:844}]]){
+      await this.page.setViewportSize(viewport);await this.capture(width+"-"+label,subject);
+    }
+    await this.page.setViewportSize({width:1440,height:1000});
+  }
+  async openSelectedSource(preview){
+    const row=preview.sources.find(item=>item.sourceId===this.input.original.sourceId&&item.returnedSourceId===this.input.colleague.sourceId);
+    need(row&&row.baseline.id===this.input.original.baselineRevisionId&&
+      row.current.id===this.input.original.revisionId&&row.returned.id===this.input.colleague.revisionId,
+      "The native three-way comparison must retain the deliberately selected original revisions.");
+    await this.page.locator("#correction-sources").getByRole("button",{name:row.name,exact:true}).click();await this.idle();
+    return row;
+  }
+  async run(){
+    const existing=path.join(this.root,"result.json");
+    if(fs.existsSync(existing)){
+      const saved=readJson(existing),record=readJson(this.actionPath("07-reviewed-colleague-return","request.json"));
+      const observed=await this.receipt(record.envelope);
+      need(observed&&same(observed.result,saved.applied),"The complete original colleague application result changed.");
+      emit({stage:"ORIGINAL_COLLEAGUE_EXCHANGE_REUSED",workspaceId:this.input.workspaceId,result:saved});return saved;
+    }
+    await this.start();
+    const applied=await this.mutation("07-reviewed-colleague-return","return.apply",async()=>{
+      const observed=await this.state();need(observed.version===this.input.version,"Review the selected original workspace version.");
+      await this.section("corrections");await this.both("colleague-return-intake");
+      await this.page.locator("#correction-file").setInputFiles(this.input.returnedArchive.path);await this.idle();
+      const raw=fs.readFileSync(this.input.returnedArchive.path);
+      const preview=await this.read("return.preview",{contentBase64:raw.toString("base64"),name:path.basename(this.input.returnedArchive.path)});
+      const row=await this.openSelectedSource(preview);
+      need(row.structuralSummary.compatible&&row.changedFields.length===2,
+        "Keep the two explicit author/colleague native scalar corrections in the same original structure.");
+      await this.page.locator("#correction-sources").getByRole("checkbox",{name:"Include "+row.name,exact:true}).check();await this.idle();
+      await this.page.locator("#correction-baseline select").selectOption(row.baseline.id);await this.idle();
+      await this.page.locator("#correction-mode select").selectOption("fields");await this.idle();
+      for(const field of row.changedFields){
+        const returned=field.path===this.input.colleague.field.path&&field.kind===this.input.colleague.field.kind;
+        const original=field.path===this.input.original.field.path&&field.kind===this.input.original.field.kind;
+        need(returned!==original,"Choose the two deliberately retained original source fields.");
+        need(returned?field.status==="returned-change":field.status==="author-change",
+          "The real three-way field classification differs from the original native edits.");
+        await this.page.getByRole("combobox",{name:"Decision for "+field.path,exact:true}).selectOption(returned?"returned":"current");
+        await this.idle();
+      }
+      const review=row.reviews.find(item=>item.id===this.input.colleague.reviewId);
+      need(review&&review.entityKey===this.input.colleague.reviewEntityKey,"Keep the actual shared cooling review binding.");
+      await this.page.locator("#correction-reviews").getByRole("checkbox",{name:"Receive "+review.title,exact:true}).check();await this.idle();
+      await this.page.locator("#correction-source-note").fill("Preserve the author's second-building name; accept the colleague's first-building name and original shared-cooling review.");
+      await this.page.locator("#correction-source-note").dispatchEvent("change");await this.idle();
+      await this.both("explicit-three-way-decisions",{sourceId:row.sourceId,returnedSourceId:row.returnedSourceId,baselineRevisionId:row.baseline.id});
+      const arriving=this.page.waitForEvent("download",{timeout:120000});
+      await this.page.locator("#correction-save-draft").click();const download=await arriving;
+      need(!await download.failure(),"Download the full retained correction review.");
+      const draftBody=fs.readFileSync(await download.path()),draft=JSON.parse(draftBody.toString("utf8"));
+      need(draft.workspaceId===this.input.workspaceId&&draft.selections.length===1&&
+        draft.selections[0].decisions.length===2&&draft.selections[0].reviewIds[0]===review.id&&
+        sha(Buffer.from(draft.contentBase64,"base64"))===this.input.returnedArchive.sha256,
+        "The downloaded correction review must contain its complete archive and explicit decisions.");
+      atomic(path.join(this.root,"downloaded-review",sha(draftBody)+".json"),draftBody);await this.idle();
+      await this.page.reload({waitUntil:"domcontentloaded"});await this.idle();await this.connect();await this.section("corrections");
+      await this.openSelectedSource(preview);
+      for(const field of row.changedFields){
+        const expected=field.path===this.input.colleague.field.path?"returned":"current";
+        need(await this.page.getByRole("combobox",{name:"Decision for "+field.path,exact:true}).inputValue()===expected,
+          "Reopening the same tab must retain each original field decision.");
+      }
+      need(await this.page.locator("#correction-reviews").getByRole("checkbox",{name:"Receive "+review.title,exact:true}).isChecked(),
+        "The original returned review selection was lost on reopen.");
+      await this.page.locator("#correction-prepare").click();await this.idle();
+      const plan=JSON.parse(await this.page.locator("#correction-plan > details pre").textContent());
+      need(plan.sources.length===1&&plan.sources[0].reviewCount===1&&plan.sources[0].result.changed,
+        "The native complete correction plan must join both edits and the actual returned review.");
+      await this.page.locator("#correction-plan article details").first().evaluate(el=>{el.open=true;});
+      await this.both("complete-native-correction-plan",{planSha256:plan.planSha256});
+      await this.page.locator("#correction-accept-diagnostics").check();
+      await this.page.locator("#correction-apply").click();
+    });
+    need(applied.sources.length===1&&applied.sources[0].sourceId===this.input.original.sourceId&&
+      applied.sources[0].changed&&applied.sources[0].reviewIds.length===1&&applied.edition?.editionId,
+      "Save the reviewed native edits and selected returned review together in the original author workspace.");
+    const detail=await this.read("source.get",{sourceId:applied.sources[0].sourceId,revisionId:applied.sources[0].revisionId});
+    for(const selected of [this.input.original.field,this.input.colleague.field]){
+      const actual=detail.model.fields.find(item=>item.path===selected.path&&item.kind===selected.kind&&
+        (item.attributeName??null)===(selected.attributeName??null));
+      need(actual&&actual.value===selected.value,"The applied complete XML lost one deliberately selected original correction.");
+    }
+    const state=await this.state(),review=state.reviews.find(item=>item.id===applied.sources[0].reviewIds[0]);
+    need(review&&review.original?.returnedReview?.id===this.input.colleague.reviewId&&
+      review.revisionId===detail.revision.id,"The accepted review must retain its full original colleague record and new local source binding.");
+    await this.section("corrections");await this.both("saved-colleague-return",{revisionId:detail.revision.id,editionId:applied.edition.editionId});
+    const result={format:"commons.audit-exchange.colleague-exchange.v1",operation:OPERATION,status:"passed",
+      workspaceId:this.input.workspaceId,applied,source:detail.source,revision:detail.revision,
+      review,archive:this.input.returnedArchive,captureDirectory:this.viewRoot,captures:this.captures,
+      visualStatus:"captured-awaiting-producer-view"};
+    const links=this.captures.map(row=>'<li><a href="'+escapeHtml(row.path)+'">'+escapeHtml(row.label)+'</a></li>').join("");
+    atomic(path.join(this.viewRoot,"OPEN.html"),Buffer.from(artifactShell("Actual colleague-return workflow",
+      "<p>Open and directly inspect these actual desktop and narrow screens before readiness.</p><ol>"+links+"</ol>")));
+    atomic(existing,bytes(result));emit({stage:"ORIGINAL_COMPLETE_COLLEAGUE_EXCHANGE",workspaceId:this.input.workspaceId,applied});
+    return result;
+  }
+}
+
 const argv = process.argv.slice(2);
-need(argv.length === 2 && argv[0] === "--input", "Usage: node BROWSER_COMMISSIONING.mjs --input ORIGINAL_INPUT.json");
+need(argv.length === 2 && ["--input", "--render", "--return"].includes(argv[0]),
+  "Usage: node BROWSER_COMMISSIONING.mjs --input ORIGINAL_INPUT.json | --return SAME_CASE_RETURN_INPUT.json | --render SAME_CASE_RENDERED_INPUT.json");
 let journey;
 try {
-  journey = new Journey(readJson(path.resolve(argv[1])));
+  const input = readJson(path.resolve(argv[1]));
+  need(input.format === (argv[0] === "--render" ? "commons.audit-exchange.rendered-input.v1" : argv[0] === "--return" ? "commons.audit-exchange.colleague-browser-input.v1" : "commons.audit-exchange.browser-input.v1"),
+    "Use the selected original business or final rendered continuation input.");
+  journey = argv[0] === "--render" ? new RenderedJourney(input) : argv[0] === "--return" ? new ReturnJourney(input) : new Journey(input);
   await journey.run();
 } catch (error) {
   const failure = { format: FORMAT, operation: OPERATION, at: now(), error: error.message, stack: error.stack };
