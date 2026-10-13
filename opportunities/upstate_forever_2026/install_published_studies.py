@@ -35,6 +35,7 @@ CODE_FILES = (
     "operator/web/published_studies.css",
     "PUBLISHED_STUDIES.md",
     "published_studies_family.json",
+    "integration/component_fragments/published-study-reviews.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
