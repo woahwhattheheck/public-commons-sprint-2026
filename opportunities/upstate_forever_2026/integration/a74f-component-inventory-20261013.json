@@ -3,9 +3,9 @@
   "operation_id": "UPSTATE-SOIL-ENSEMBLES-A74F-20261012",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_prefix": "opportunities/upstate_forever_2026",
-  "base_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
-  "base_app_tree": "d96ca3d2501007310b89432179a68d7612ee102b",
-  "created_at": "2026-10-13T05:08:41Z",
+  "base_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+  "base_app_tree": "106d3e8a5affdf17b54ea32b2a1cf4e7f3cfae0c",
+  "created_at": "2026-10-13T05:45:16Z",
   "components": {
     "saved_parameter_studies": {
       "paths": [
@@ -34,9 +34,10 @@
         "operator/extensions/ensembles.json",
         "operator/web/ensembles.mjs",
         "operator/web/annual_reference.mjs",
-        "model/ensemble_flow_support.py"
+        "model/ensemble_flow_support.py",
+        "model/ensemble_scientific_source.py"
       ],
-      "files": 13
+      "files": 14
     },
     "source_profile_intake": {
       "paths": [
@@ -129,9 +130,58 @@
         "source_tools/watershed_source_entry.py",
         "source/water_context/20261013/complete-native-sources.json",
         "model/utility_watershed_context.py",
-        "source/receptor-topology/20261013/utility-focus-profile.json"
+        "source/receptor-topology/20261013/utility-focus-profile.json",
+        "utility_observed_context.sources.json",
+        "model/utility_observed_context.py",
+        "source_tools/utility_observed_context.mjs",
+        "source_tools/build_utility_observed_context.mjs",
+        "source_tools/receive_utility_source_context.py",
+        "source/utility-observed-context/20261013/utility-observed-context.json",
+        "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+        "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+        "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+        "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+        "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+        "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+        "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/source-inputs.json",
+        "source/ecoli_utility_context/20261013/source-manifest.json",
+        "source/ecoli_utility_context/20261013/station-membership.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        "source/utility-observed-context/20261013/inputs.json",
+        "source/utility-observed-context/20261013/README.md",
+        "source/utility-observed-context/20261013/regional-nutrient-series.csv",
+        "source/utility-observed-context/20261013/regional-stream-geography.csv",
+        "source/utility-observed-context/20261013/report.html",
+        "source/utility-observed-context/20261013/utility-original-record-index.csv",
+        "source/utility-observed-context/20261013/utility-station-coverage.csv",
+        "source/utility-observed-context/20261013/utility-station-year-method.csv",
+        "source/utility-observed-context/20261013/utility-year-coverage.csv",
+        "source/utility-source-context/20261013/utility-source-context.json"
       ],
-      "files": 44
+      "files": 93
     },
     "original_discharge_sources": {
       "paths": [
@@ -224,9 +274,10 @@
         "operator/web/gauge_support.mjs",
         "source_tools/receive_gauge_support.py",
         "operator/GAUGE_SUPPORT.md",
-        "operator/install_gauge_support.py"
+        "operator/install_gauge_support.py",
+        "model/gauge_report_context.py"
       ],
-      "files": 8
+      "files": 9
     },
     "original_reference_flow_support": {
       "paths": [
@@ -298,24 +349,55 @@
         "source/hydrology-huc05-07-20261013/source-manifest.json"
       ],
       "files": 66
+    },
+    "original_gauge_split_capture": {
+      "paths": [
+        "source_tools/capture_nldi_split.py",
+        "source/hydrology-huc05-07-20261013/nldi-split/request-plan.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/process.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/openapi.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/capture.json",
+        "source_tools/NLDI_SPLIT_CAPTURE.md"
+      ],
+      "files": 6
     }
   },
   "files": [
     {
-      "path": "checks/paired_ensemble_journey.py",
-      "git_blob_sha": "a5543a1aeb9a968dd7403eb2c7aab727cc3c87c0",
-      "bytes": 13856,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "path": "PAIRED_ENSEMBLES.md",
+      "git_blob_sha": "417ebbd5ad1ff96711797cba5a6db765d67b40fc",
+      "bytes": 19704,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "paired_raster_studies"
       ]
     },
     {
+      "path": "checks/paired_ensemble_journey.py",
+      "git_blob_sha": "a5543a1aeb9a968dd7403eb2c7aab727cc3c87c0",
+      "bytes": 13856,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "integration/WATERSHED_CONTEXT_RECEIVING.md",
+      "git_blob_sha": "6161771cac3d2d6917cb8124bb8e514c7e9bb9b6",
+      "bytes": 12102,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
       "path": "integration/run_watershed_context_operator.py",
       "git_blob_sha": "50da7a55d2e96cd0de4eab29984d975bf0dd9935",
       "bytes": 26491,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -325,87 +407,27 @@
       "path": "integration/watershed_completed_receiving.json",
       "git_blob_sha": "f6f0b85a313b614ecf6cdcb254a6c863f6f8b93d",
       "bytes": 14975,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
       ]
     },
     {
-      "path": "integration/WATERSHED_CONTEXT_RECEIVING.md",
-      "git_blob_sha": "6161771cac3d2d6917cb8124bb8e514c7e9bb9b6",
-      "bytes": 12102,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "model/decision_analysis.py",
-      "git_blob_sha": "d1fc4cd9b3da88938e27fd82474f8d871b125937",
-      "bytes": 88282,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/decision_cli.py",
-      "git_blob_sha": "f6a74c42aedd392869fd8a620b2bbdf4f3740056",
-      "bytes": 8908,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/ensemble_cli.py",
-      "git_blob_sha": "e65e037c41c2a48e1498916e497db90aa5ba3686",
-      "bytes": 8184,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "path": "model/ENSEMBLES.md",
+      "git_blob_sha": "a87f27e78c342aac99424e324e68162a386118d5",
+      "bytes": 17419,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "saved_parameter_studies"
       ]
     },
     {
-      "path": "model/ensemble_consumers_cli.py",
-      "git_blob_sha": "698d6ad0e4c4932d76d670655a45ec5aee7a4908",
-      "bytes": 7162,
-      "source_ref": "authored-native-annual-flow-support-20261013",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
       "path": "model/ENSEMBLE_CONSUMERS.md",
-      "git_blob_sha": "506cb493fe31e52ad370c5950e482617dab5fc8d",
-      "bytes": 29080,
-      "source_ref": "authored-native-annual-flow-support-20261013",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/ensemble_consumers.py",
-      "git_blob_sha": "dd705d79bf14ce0efbac2a075ce7e9a866cd59be",
-      "bytes": 25015,
-      "source_ref": "authored-native-annual-flow-support-20261013",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/ensemble_flow_support.py",
-      "git_blob_sha": "bed5e25f68f64f870217248f505417015fe3b923",
-      "bytes": 16192,
-      "source_ref": "authored-native-annual-flow-support-20261013",
+      "git_blob_sha": "a85ca9a3ce60937e5330fbea0b0aab13f171129c",
+      "bytes": 35751,
+      "source_ref": "authored-scientific-report-delivery-20261013",
       "blob_available": true,
       "components": [
         "saved_study_consumers"
@@ -415,238 +437,27 @@
       "path": "model/ENSEMBLE_OPERATIONS.md",
       "git_blob_sha": "2113a7fdb77c1c85aa3c3825a63985b3904bc432",
       "bytes": 12142,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "saved_parameter_studies"
-      ]
-    },
-    {
-      "path": "model/ensemble_operations.py",
-      "git_blob_sha": "85a35e65b55ec7ad35f1ce50df2e3253e6cd05c7",
-      "bytes": 14597,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_parameter_studies"
-      ]
-    },
-    {
-      "path": "model/ensemble_references.py",
-      "git_blob_sha": "a42f60503f748916a639b7d2d436adec99877abc",
-      "bytes": 8724,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/ensemble_report.py",
-      "git_blob_sha": "6d2d598ae963809ae19ea92e9e2e187597096860",
-      "bytes": 26288,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_parameter_studies",
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "model/ensemble-design.schema.json",
-      "git_blob_sha": "5354d607a2235e7534f080e9e9ba2b73b22a4a46",
-      "bytes": 3675,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_parameter_studies"
-      ]
-    },
-    {
-      "path": "model/ENSEMBLES.md",
-      "git_blob_sha": "a87f27e78c342aac99424e324e68162a386118d5",
-      "bytes": 17419,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_parameter_studies"
-      ]
-    },
-    {
-      "path": "model/ensembles.py",
-      "git_blob_sha": "a59d1aefa5d2d9ccba4293fee45043339c2e827b",
-      "bytes": 48981,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_parameter_studies"
-      ]
-    },
-    {
-      "path": "model/experiment_profiles.py",
-      "git_blob_sha": "9330b13ec32a6d75325368ef4ba3dd4faca4a800",
-      "bytes": 28764,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "model/gauge_support.py",
-      "git_blob_sha": "030beffd2b8a7e9556e932a176442ca5bf60fc52",
-      "bytes": 33201,
-      "source_ref": "authored-regional-gauge-support-20261013",
-      "blob_available": true,
-      "components": [
-        "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/__init__.py",
-      "git_blob_sha": "ff1646f04c9c2a346debc7912ebc079ea1d2255a",
-      "bytes": 163,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/designs.py",
-      "git_blob_sha": "70a4a489890d2b9452f83c93da84857360882b5e",
-      "bytes": 4001,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_cli.py",
-      "git_blob_sha": "f7810a119734a919305af1c005f4d6e949138426",
-      "bytes": 6080,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_portable.py",
-      "git_blob_sha": "94a455e245bf11d9a861cb12c4816bf37bd6baf0",
-      "bytes": 9066,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_rasters.py",
-      "git_blob_sha": "d04a0a3dd89219646e457a5d6f186639144913ee",
-      "bytes": 32356,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_report.py",
-      "git_blob_sha": "6e15c0e037eb239c2145a111cfea69f72487473c",
-      "bytes": 20252,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_store.py",
-      "git_blob_sha": "533f2fc4c3c03e9e3d1ac7e2144dfdc78d16e968",
-      "bytes": 3478,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/paired_ensemble/ensemble_workspace.py",
-      "git_blob_sha": "15d76cc1cc2b1599254b286b4a84af9f642cf109",
-      "bytes": 15317,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "model/profile_comparison_cli.py",
-      "git_blob_sha": "d37072c4ed8a3412987b5dbba68fad60bc798373",
-      "bytes": 1699,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
       ]
     },
     {
       "path": "model/PROFILE_COMPARISON.md",
       "git_blob_sha": "a69b1287dba785d6c1471bf2b17910a69f83d8ae",
       "bytes": 9607,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "source_profile_intake"
-      ]
-    },
-    {
-      "path": "model/profile_comparison.py",
-      "git_blob_sha": "7e7aec09b9389c6a2bc754cfa4134973f16d7d3c",
-      "bytes": 26594,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "model/utility_watershed_context.py",
-      "git_blob_sha": "2a34c1eaf9de125cf18d39bdd84a7015927ee976",
-      "bytes": 7663,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
       ]
     },
     {
       "path": "model/WATERSHED_BRIEF.md",
-      "git_blob_sha": "6efb9a38198e84b966d7da01dd80e90f908f5a75",
-      "bytes": 11274,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "model/watershed_brief.py",
-      "git_blob_sha": "fea746576b4ea282e41e6a157cbe6835ce6c201e",
-      "bytes": 34001,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "model/watershed_context_cli.py",
-      "git_blob_sha": "9ee3b694ef55d48f1823042ae863318b95370c08",
-      "bytes": 394,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "git_blob_sha": "bb6dbbc27972761def729c78d1abdd2409033c5f",
+      "bytes": 13323,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -656,7 +467,288 @@
       "path": "model/WATERSHED_CONTEXT.md",
       "git_blob_sha": "f777b034270ec31e1197560c6e3f8335747df25b",
       "bytes": 14094,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "model/decision_analysis.py",
+      "git_blob_sha": "d1fc4cd9b3da88938e27fd82474f8d871b125937",
+      "bytes": 88282,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/decision_cli.py",
+      "git_blob_sha": "f6a74c42aedd392869fd8a620b2bbdf4f3740056",
+      "bytes": 8908,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble-design.schema.json",
+      "git_blob_sha": "5354d607a2235e7534f080e9e9ba2b73b22a4a46",
+      "bytes": 3675,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_parameter_studies"
+      ]
+    },
+    {
+      "path": "model/ensemble_cli.py",
+      "git_blob_sha": "e65e037c41c2a48e1498916e497db90aa5ba3686",
+      "bytes": 8184,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_parameter_studies"
+      ]
+    },
+    {
+      "path": "model/ensemble_consumers.py",
+      "git_blob_sha": "dd705d79bf14ce0efbac2a075ce7e9a866cd59be",
+      "bytes": 25015,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble_consumers_cli.py",
+      "git_blob_sha": "a5a170362d6ac23fdeca2088bcee8e4db9cf7d5e",
+      "bytes": 8832,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble_flow_support.py",
+      "git_blob_sha": "bed5e25f68f64f870217248f505417015fe3b923",
+      "bytes": 16192,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble_operations.py",
+      "git_blob_sha": "85a35e65b55ec7ad35f1ce50df2e3253e6cd05c7",
+      "bytes": 14597,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_parameter_studies"
+      ]
+    },
+    {
+      "path": "model/ensemble_references.py",
+      "git_blob_sha": "a42f60503f748916a639b7d2d436adec99877abc",
+      "bytes": 8724,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble_report.py",
+      "git_blob_sha": "6d2d598ae963809ae19ea92e9e2e187597096860",
+      "bytes": 26288,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_parameter_studies",
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensemble_scientific_source.py",
+      "git_blob_sha": "f699275ac0df81b964f42059185a9e6144003ddf",
+      "bytes": 31452,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "model/ensembles.py",
+      "git_blob_sha": "a59d1aefa5d2d9ccba4293fee45043339c2e827b",
+      "bytes": 48981,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_parameter_studies"
+      ]
+    },
+    {
+      "path": "model/experiment_profiles.py",
+      "git_blob_sha": "9330b13ec32a6d75325368ef4ba3dd4faca4a800",
+      "bytes": 28764,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "model/gauge_report_context.py",
+      "git_blob_sha": "610c71c4a4b0a11c994a9a3dbf3d5f5711c91b94",
+      "bytes": 26197,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "model/gauge_support.py",
+      "git_blob_sha": "030beffd2b8a7e9556e932a176442ca5bf60fc52",
+      "bytes": 33201,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/__init__.py",
+      "git_blob_sha": "ff1646f04c9c2a346debc7912ebc079ea1d2255a",
+      "bytes": 163,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/designs.py",
+      "git_blob_sha": "70a4a489890d2b9452f83c93da84857360882b5e",
+      "bytes": 4001,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_cli.py",
+      "git_blob_sha": "f7810a119734a919305af1c005f4d6e949138426",
+      "bytes": 6080,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_portable.py",
+      "git_blob_sha": "94a455e245bf11d9a861cb12c4816bf37bd6baf0",
+      "bytes": 9066,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_rasters.py",
+      "git_blob_sha": "d04a0a3dd89219646e457a5d6f186639144913ee",
+      "bytes": 32356,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_report.py",
+      "git_blob_sha": "6e15c0e037eb239c2145a111cfea69f72487473c",
+      "bytes": 20252,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_store.py",
+      "git_blob_sha": "533f2fc4c3c03e9e3d1ac7e2144dfdc78d16e968",
+      "bytes": 3478,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_workspace.py",
+      "git_blob_sha": "15d76cc1cc2b1599254b286b4a84af9f642cf109",
+      "bytes": 15317,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "model/profile_comparison.py",
+      "git_blob_sha": "7e7aec09b9389c6a2bc754cfa4134973f16d7d3c",
+      "bytes": 26594,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "model/profile_comparison_cli.py",
+      "git_blob_sha": "d37072c4ed8a3412987b5dbba68fad60bc798373",
+      "bytes": 1699,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "model/utility_observed_context.py",
+      "git_blob_sha": "a744d3fba6848217822b7e22ffaa270fd1c3e232",
+      "bytes": 12944,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "model/utility_watershed_context.py",
+      "git_blob_sha": "2a34c1eaf9de125cf18d39bdd84a7015927ee976",
+      "bytes": 7663,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "model/watershed_brief.py",
+      "git_blob_sha": "115d835e66003cedd1d9e661e9056d3296c24732",
+      "bytes": 34304,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -666,77 +758,28 @@
       "path": "model/watershed_context.py",
       "git_blob_sha": "f0bef988a02c4914ba8a6fc527f3197994cd7196",
       "bytes": 48397,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
       ]
     },
     {
-      "path": "operator/ensemble_service.py",
-      "git_blob_sha": "26ae55efd8ff3aa9cdc75d21a873682596f2944c",
-      "bytes": 15357,
-      "source_ref": "authored-native-annual-flow-support-20261013",
+      "path": "model/watershed_context_cli.py",
+      "git_blob_sha": "9ee3b694ef55d48f1823042ae863318b95370c08",
+      "bytes": 394,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
-        "saved_study_consumers"
+        "watershed_source_reporting"
       ]
     },
     {
-      "path": "operator/extensions/ensembles.json",
-      "git_blob_sha": "8feb2a07361e9a17bb37c7bf211ce9b3d62beb8b",
-      "bytes": 3330,
-      "source_ref": "authored-native-annual-flow-support-20261013",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "operator/extensions/gauge-support.json",
-      "git_blob_sha": "d85c927eb38a3f7bda36300978ef42a77859f6fa",
-      "bytes": 2535,
-      "source_ref": "authored-regional-gauge-support-20261013",
-      "blob_available": true,
-      "components": [
-        "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "operator/extensions/paired-ensemble.json",
-      "git_blob_sha": "8e88c6553ef5634dc99d51be14b55b091333b8a9",
-      "bytes": 5017,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/extensions/profile-comparison.json",
-      "git_blob_sha": "1269756ed0c3903edc4d427108613ead12fa774d",
-      "bytes": 3231,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "operator/extensions/regional-soil.json",
-      "git_blob_sha": "00e3e20c7962f62d1a0ad3b38b156cb577692ce1",
-      "bytes": 2402,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "operator/extensions/watershed-context.json",
-      "git_blob_sha": "88e0550e1a8183890b0485932095236935416db5",
-      "bytes": 2873,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+      "git_blob_sha": "06569434c4e95be66408fd60b534a40c8bc53621",
+      "bytes": 2273280,
+      "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -744,129 +787,19 @@
     },
     {
       "path": "operator/GAUGE_SUPPORT.md",
-      "git_blob_sha": "34f3a22a1972944283e70963703f36625152d6e2",
-      "bytes": 13195,
-      "source_ref": "authored-regional-gauge-support-20261013",
+      "git_blob_sha": "06aea32020c58888c76a27ab411261ce5267a493",
+      "bytes": 18383,
+      "source_ref": "authored-scientific-report-delivery-20261013",
       "blob_available": true,
       "components": [
         "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "operator/gauge_support.py",
-      "git_blob_sha": "40ade6fc686b7989fca00771bce7391da166c73a",
-      "bytes": 2943,
-      "source_ref": "authored-regional-gauge-support-20261013",
-      "blob_available": true,
-      "components": [
-        "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "operator/install_gauge_support.py",
-      "git_blob_sha": "4c9701a06fd35dfbfba414ad130a679eab111c2f",
-      "bytes": 5499,
-      "source_ref": "authored-regional-gauge-support-20261013",
-      "blob_available": true,
-      "components": [
-        "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "operator/install_paired_ensemble.py",
-      "git_blob_sha": "12d4f793f31de8face7540089267099b82192d8d",
-      "bytes": 10586,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/install_watershed_context.py",
-      "git_blob_sha": "23e90bd9a80c30b8ad98dfb1f3649a05de1c17b3",
-      "bytes": 10017,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "operator/integrate_ensembles.py",
-      "git_blob_sha": "7fb78d6e4827c601c73061ec9e86c6bf27c39054",
-      "bytes": 10904,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "saved_study_consumers"
-      ]
-    },
-    {
-      "path": "operator/integrate_paired_ensemble.py",
-      "git_blob_sha": "9f58ef469b9dd8d67262b6a611e84baf04994b18",
-      "bytes": 10178,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/paired_ensemble_provider.py",
-      "git_blob_sha": "0256e1c964a8f59b8e3e08c42ce832dc147092a9",
-      "bytes": 10147,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/paired_ensemble_service.py",
-      "git_blob_sha": "7e3f76b3662db8e4d681dac5b6d5999fc28e1ea6",
-      "bytes": 18841,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/paired_ensemble.py",
-      "git_blob_sha": "76073aadf1c2b7b21d2bd6df1fab9ae2eb96f5b9",
-      "bytes": 9997,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/profile_comparison_service.py",
-      "git_blob_sha": "99227942d8011f59ce142f6d39f0d8a48a542795",
-      "bytes": 5403,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "operator/receive_watershed_context.py",
-      "git_blob_sha": "9e0757f47d24af83ee37b02eaf5e378d7e9b30cb",
-      "bytes": 21876,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
       ]
     },
     {
       "path": "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
-      "git_blob_sha": "b80708e45f4ba63006fe0295b3604cec4651002f",
-      "bytes": 70152,
-      "source_ref": "authored-native-annual-flow-support-20261013",
+      "git_blob_sha": "cd4c194c48f0ca00ae93e57d4ac25ee00f0beff0",
+      "bytes": 76975,
+      "source_ref": "authored-scientific-report-delivery-20261013",
       "blob_available": true,
       "components": [
         "complete_operating_guide"
@@ -876,17 +809,7 @@
       "path": "operator/REGIONAL_SOIL_DESK.md",
       "git_blob_sha": "c58f66e69af61b83ca2a8a554d75a89cc5121e29",
       "bytes": 7306,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "operator/regional_soil.py",
-      "git_blob_sha": "84c67f0261b7074129a0407283370704dc411eb7",
-      "bytes": 32200,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_soil_preparation"
@@ -894,19 +817,209 @@
     },
     {
       "path": "operator/WATERSHED_CONTEXT.md",
-      "git_blob_sha": "4c19b2f8b929c4af859593d30fcda68ec357a1fa",
-      "bytes": 35194,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "git_blob_sha": "762eba6ba9b4e1f04832903f822f758fd974040c",
+      "bytes": 37298,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
       ]
     },
     {
+      "path": "operator/ensemble_service.py",
+      "git_blob_sha": "798969330d7423c3304883dddd23e8cb08dab544",
+      "bytes": 17227,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "operator/extensions/ensembles.json",
+      "git_blob_sha": "95f819554482635b50f6649e9d34bd04a60f492c",
+      "bytes": 3689,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "operator/extensions/gauge-support.json",
+      "git_blob_sha": "da88c0541405616fbb41770438114234b2f23902",
+      "bytes": 2587,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "operator/extensions/paired-ensemble.json",
+      "git_blob_sha": "8e88c6553ef5634dc99d51be14b55b091333b8a9",
+      "bytes": 5017,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/extensions/profile-comparison.json",
+      "git_blob_sha": "1269756ed0c3903edc4d427108613ead12fa774d",
+      "bytes": 3231,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "operator/extensions/regional-soil.json",
+      "git_blob_sha": "00e3e20c7962f62d1a0ad3b38b156cb577692ce1",
+      "bytes": 2402,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "operator/extensions/watershed-context.json",
+      "git_blob_sha": "1ccf2b666428a33f15e4b8c912dce8dd06412759",
+      "bytes": 2873,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "operator/gauge_support.py",
+      "git_blob_sha": "44fd6520387aadd43a367196db4cbe35fa0ce734",
+      "bytes": 3796,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "operator/install_gauge_support.py",
+      "git_blob_sha": "c3b3224935a894770608211aca364b130f7c23cd",
+      "bytes": 5599,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "operator/install_paired_ensemble.py",
+      "git_blob_sha": "12d4f793f31de8face7540089267099b82192d8d",
+      "bytes": 10586,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/install_watershed_context.py",
+      "git_blob_sha": "38fb33bea307df2ceedf66fe03729a074385932d",
+      "bytes": 10261,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "operator/integrate_ensembles.py",
+      "git_blob_sha": "7fb78d6e4827c601c73061ec9e86c6bf27c39054",
+      "bytes": 10904,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "saved_study_consumers"
+      ]
+    },
+    {
+      "path": "operator/integrate_paired_ensemble.py",
+      "git_blob_sha": "9f58ef469b9dd8d67262b6a611e84baf04994b18",
+      "bytes": 10178,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/paired_ensemble.py",
+      "git_blob_sha": "76073aadf1c2b7b21d2bd6df1fab9ae2eb96f5b9",
+      "bytes": 9997,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/paired_ensemble_provider.py",
+      "git_blob_sha": "0256e1c964a8f59b8e3e08c42ce832dc147092a9",
+      "bytes": 10147,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/paired_ensemble_service.py",
+      "git_blob_sha": "7e3f76b3662db8e4d681dac5b6d5999fc28e1ea6",
+      "bytes": 18841,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/profile_comparison_service.py",
+      "git_blob_sha": "99227942d8011f59ce142f6d39f0d8a48a542795",
+      "bytes": 5403,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "operator/receive_watershed_context.py",
+      "git_blob_sha": "9e0757f47d24af83ee37b02eaf5e378d7e9b30cb",
+      "bytes": 21876,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "operator/regional_soil.py",
+      "git_blob_sha": "84c67f0261b7074129a0407283370704dc411eb7",
+      "bytes": 32200,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
       "path": "operator/watershed_context.py",
-      "git_blob_sha": "ba651f898b3354293cb1bbbb98b2567b492d4551",
-      "bytes": 36593,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "git_blob_sha": "726454a85ca43e8417011c540ab0f119c947e3fd",
+      "bytes": 37798,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -916,7 +1029,7 @@
       "path": "operator/web/annual_reference.mjs",
       "git_blob_sha": "7f0addd4eb736b2ff0bfd7baee0d826e227e1f33",
       "bytes": 24513,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "saved_study_consumers"
@@ -924,9 +1037,9 @@
     },
     {
       "path": "operator/web/ensembles.mjs",
-      "git_blob_sha": "b4004b13f15c224f7cbfc34ad45a0c2552b19482",
-      "bytes": 55473,
-      "source_ref": "authored-native-annual-flow-support-20261013",
+      "git_blob_sha": "0cc43c00e6cf8777ceb754af17286abf17fdac6f",
+      "bytes": 58262,
+      "source_ref": "authored-scientific-report-delivery-20261013",
       "blob_available": true,
       "components": [
         "saved_study_consumers",
@@ -937,7 +1050,7 @@
       "path": "operator/web/gauge_support.css",
       "git_blob_sha": "3e73d9361aad42f93e1433aec9259af2754dff1f",
       "bytes": 2801,
-      "source_ref": "authored-regional-gauge-support-20261013",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_gauge_support"
@@ -945,59 +1058,19 @@
     },
     {
       "path": "operator/web/gauge_support.mjs",
-      "git_blob_sha": "d08e3f65b77f7ea625337f10841b57dbfaebe50b",
-      "bytes": 25119,
-      "source_ref": "authored-regional-gauge-support-20261013",
+      "git_blob_sha": "eb80da0a27077673206cc7230fe789449158052b",
+      "bytes": 29310,
+      "source_ref": "authored-scientific-report-delivery-20261013",
       "blob_available": true,
       "components": [
         "regional_gauge_support"
       ]
     },
     {
-      "path": "operator/web/paired_ensemble_desk.css",
-      "git_blob_sha": "eccc4abab687086c4821aba65cee91af0c17f756",
-      "bytes": 4791,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/web/paired_ensemble_desk.mjs",
-      "git_blob_sha": "7ee4da27f7552842456077d5c5faac8e4a50aff9",
-      "bytes": 45612,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/web/paired_ensemble_host.css",
-      "git_blob_sha": "ce97bf6c7dae2ecb5b0831ce52433de20a050d79",
-      "bytes": 2686,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
-      "path": "operator/web/paired_ensemble_host.mjs",
-      "git_blob_sha": "469c5c6debc60656a0ff6d6ee0042018d7fc82d7",
-      "bytes": 18989,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
       "path": "operator/web/paired_ensemble.css",
       "git_blob_sha": "12b05dbc2fb7f2ff9e3b5ec0f9475c4e39916b7c",
       "bytes": 1679,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "paired_raster_studies"
@@ -1007,7 +1080,7 @@
       "path": "operator/web/paired_ensemble.html",
       "git_blob_sha": "f624b8993f878eefd03da14af5ad620d764d6283",
       "bytes": 3524,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "paired_raster_studies"
@@ -1017,7 +1090,47 @@
       "path": "operator/web/paired_ensemble.mjs",
       "git_blob_sha": "2976a84b0f16472caa72860f5388b5425d22c2cd",
       "bytes": 23659,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/web/paired_ensemble_desk.css",
+      "git_blob_sha": "eccc4abab687086c4821aba65cee91af0c17f756",
+      "bytes": 4791,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/web/paired_ensemble_desk.mjs",
+      "git_blob_sha": "7ee4da27f7552842456077d5c5faac8e4a50aff9",
+      "bytes": 45612,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/web/paired_ensemble_host.css",
+      "git_blob_sha": "ce97bf6c7dae2ecb5b0831ce52433de20a050d79",
+      "bytes": 2686,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "operator/web/paired_ensemble_host.mjs",
+      "git_blob_sha": "469c5c6debc60656a0ff6d6ee0042018d7fc82d7",
+      "bytes": 18989,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "paired_raster_studies"
@@ -1027,7 +1140,7 @@
       "path": "operator/web/profile_comparison.css",
       "git_blob_sha": "af5534427582caf3733d57ef00c570955e333a38",
       "bytes": 3235,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "source_profile_intake"
@@ -1037,7 +1150,7 @@
       "path": "operator/web/profile_comparison.mjs",
       "git_blob_sha": "5c4d0870b0c6a60ff8d27c9a816137f6b0514554",
       "bytes": 20064,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "source_profile_intake"
@@ -1047,7 +1160,7 @@
       "path": "operator/web/regional_soil.mjs",
       "git_blob_sha": "de9d8174c621ed3de84a6b31ead8c180552c3963",
       "bytes": 627,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_soil_preparation"
@@ -1057,7 +1170,7 @@
       "path": "operator/web/source_workbench.mjs",
       "git_blob_sha": "264bfd0f65598fc5c6b91b106f67ae8797b70e6a",
       "bytes": 56713,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_soil_preparation"
@@ -1067,7 +1180,7 @@
       "path": "operator/web/watershed_context.css",
       "git_blob_sha": "d328eb52d91a81acb994f8291589d5834718cbd8",
       "bytes": 8316,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -1075,19 +1188,9 @@
     },
     {
       "path": "operator/web/watershed_context.mjs",
-      "git_blob_sha": "3bf6f817c9f785c4627704d04d71ea0412600267",
-      "bytes": 43552,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
-      "git_blob_sha": "0c5e9cfbf7e38a7fc7b1868221020b663758bd1d",
-      "bytes": 1611,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "git_blob_sha": "05a762659ead53b09f1ff488f34b1fcf253e5ac1",
+      "bytes": 44540,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -1097,7 +1200,17 @@
       "path": "outputs/watershed-connectivity-20261013/WATERSHED_CONNECTIVITY.md",
       "git_blob_sha": "61784ad848a2ed8f2b12c295ca00c7a7564856db",
       "bytes": 9026,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
+      "git_blob_sha": "0c5e9cfbf7e38a7fc7b1868221020b663758bd1d",
+      "bytes": 1611,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -1107,7 +1220,7 @@
       "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
       "git_blob_sha": "c17828bd87b1a1ad350577c14026f04f2028e06a",
       "bytes": 111728,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -1117,27 +1230,17 @@
       "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
       "git_blob_sha": "9ae9cec381b60023160205c975564da6d1c4f768",
       "bytes": 36440,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
       ]
     },
     {
-      "path": "PAIRED_ENSEMBLES.md",
-      "git_blob_sha": "417ebbd5ad1ff96711797cba5a6db765d67b40fc",
-      "bytes": 19704,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "paired_raster_studies"
-      ]
-    },
-    {
       "path": "requirements-ensemble.txt",
       "git_blob_sha": "593c06349e50c44223740bf66a7032a6996acc68",
       "bytes": 123,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "saved_parameter_studies"
@@ -1147,209 +1250,392 @@
       "path": "requirements-paired-ensemble.txt",
       "git_blob_sha": "593c06349e50c44223740bf66a7032a6996acc68",
       "bytes": 123,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "paired_raster_studies"
       ]
     },
     {
-      "path": "source_tools/NATIVE_NETWORK_SOURCE.md",
-      "git_blob_sha": "67da15d8defacc1c6f76697af344529a28c8d68e",
-      "bytes": 8334,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/prepare_watershed_context.py",
-      "git_blob_sha": "15ec8d0c46c9197f5bf43bb4b3492c7f4fb22d64",
-      "bytes": 39550,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/prepare_watershed_manifest.py",
-      "git_blob_sha": "4dbc211fe2eac025ef0bdd356ae74a5e95829e31",
-      "bytes": 9619,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/prepare_watershed_network.py",
-      "git_blob_sha": "89f17b2c9d5dbe8216b3984f23c1be65a026ac25",
-      "bytes": 5202,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/receive_gauge_support.py",
-      "git_blob_sha": "f35a92a563c827d315eec5490b196bfe464e5c21",
-      "bytes": 12674,
-      "source_ref": "authored-regional-gauge-support-20261013",
-      "blob_available": true,
-      "components": [
-        "regional_gauge_support"
-      ]
-    },
-    {
-      "path": "source_tools/RECEIVE_PROFILE_COMPARISON.md",
-      "git_blob_sha": "462af9b151c3e87224181bc48191fe97da1c29ff",
-      "bytes": 11078,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "source_tools/receive_profile_comparison.py",
-      "git_blob_sha": "816005aa6f75e5902df3cd51f1796aa5089d421c",
-      "bytes": 15032,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "source_profile_intake"
-      ]
-    },
-    {
-      "path": "source_tools/receive_watershed_context.py",
-      "git_blob_sha": "3cffb3849b001e27e7b8722cf2eb510cee61f517",
-      "bytes": 14072,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/receive_watershed_edition.py",
-      "git_blob_sha": "38751ed5762b1750a2b5f35cc03ac1f6ac9cf7a6",
-      "bytes": 25845,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/SOIL_COVERAGE.md",
-      "git_blob_sha": "11db70ca676b38bffd0faafb48e2c20cb956f47c",
-      "bytes": 9074,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/soil_coverage.py",
-      "git_blob_sha": "888a1e8f88e6b9a6b76d985e3a24f85b9c7e73bb",
-      "bytes": 28565,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/SOIL_REGION.md",
-      "git_blob_sha": "f6bebead9ae1b1460927700c2bd9f0c96d59db32",
-      "bytes": 12074,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/soil_region.py",
-      "git_blob_sha": "53239559f75bae8995358c58c9614aa1ce4b2161",
-      "bytes": 43611,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/SOIL_SOURCE.md",
-      "git_blob_sha": "1b77d1efbd87ed76bb24cfcff62827873c3d2cf3",
-      "bytes": 7657,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/soil_sources.py",
-      "git_blob_sha": "2a1ba997feffaa07ee71458433d86f3554ead5ef",
-      "bytes": 42721,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "regional_soil_preparation"
-      ]
-    },
-    {
-      "path": "source_tools/watershed_source_entry.py",
-      "git_blob_sha": "dbbc816fc5a99865ce2a30aec7cf01b8419e8e86",
-      "bytes": 13175,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/WATERSHED_SOURCE_IMPORT.md",
-      "git_blob_sha": "f6898ba22c5485a220c5d3532bf3ea4583f86192",
-      "bytes": 6533,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
-      "path": "source_tools/watershed_source_validation.py",
-      "git_blob_sha": "45375083c5e07e4ecbe17ddfe3808044a9a6dab0",
-      "bytes": 40046,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "watershed_source_reporting"
-      ]
-    },
-    {
       "path": "source/biophysical-regional-20261012/working-profile-intake.json",
       "git_blob_sha": "468a30c430124afaa4d79f422c443a3c0051e4d7",
       "bytes": 1758,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "source_profile_intake"
       ]
     },
     {
-      "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
-      "git_blob_sha": "692ae9b6f58b580cbd3727ca63b09eafe248c5ee",
-      "bytes": 22656,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+      "git_blob_sha": "a9fa2235acd598560805100067204dfe4dc3d3d4",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+      "git_blob_sha": "216df52828905b267f98dd1cc58cb0a0500e75b2",
+      "bytes": 183656,
+      "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+      "git_blob_sha": "271bfa9ca4e725ec5ae272266dacc65a75206b09",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+      "git_blob_sha": "1fa04f69fdbeabba0cd0ef836e1fe8eb77ba8910",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+      "git_blob_sha": "2e76934db8e0b95cc99a48879cbb8b67242d484f",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+      "git_blob_sha": "5410c0ce61ad03008f821b91d614653889badeb4",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+      "git_blob_sha": "76bec4023d2a6d6dfc0f155941ec375cc3190fbd",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+      "git_blob_sha": "97bb6ba7dd45589a0ae2caf373ef783160563a73",
+      "bytes": 59535,
+      "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+      "git_blob_sha": "c232ec580b92a6a5fd23063507cc803606c6f794",
+      "bytes": 21317,
+      "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+      "git_blob_sha": "25a9c15278bbb0f1bb7532de2b82f10d536ed9e4",
+      "bytes": 46598,
+      "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+      "git_blob_sha": "d6389f0c50d2c9f4e1167d8d1aa9e0f5148176c0",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+      "git_blob_sha": "60a8a4a40b610711b70e04cae30074b440261381",
+      "bytes": 8731,
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "git_blob_sha": "0333099ba74752683c8f661ada5f80a13ccd44a9",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-inputs.json",
+      "git_blob_sha": "c96b4360cfc99f1846b181fb61d1b617d57a6bfb",
+      "bytes": 8181,
+      "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-manifest.json",
+      "git_blob_sha": "e0d52ba3bf634f5e952de7f465fb666c3c6cd940",
+      "bytes": 24008,
+      "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "git_blob_sha": "9e0d58bcbd49bb82dfc22b598f66a9ead79d388d",
+      "bytes": 6909,
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+      "git_blob_sha": "0618b06c962d30ebc1bd215535c588251d9b9e2f",
+      "bytes": 199318,
+      "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+      "git_blob_sha": "9a563ee06f5c5e157d6749fca4417c7c6e2157e6",
+      "bytes": 2297,
+      "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+      "git_blob_sha": "bc6d40b3839d1af74a428e9d9f750085e73e1fab",
+      "bytes": 7980,
+      "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+      "git_blob_sha": "ef7c96b73a56124bd13ef0387e1548adbaf6d3bc",
+      "bytes": 6447,
+      "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+      "git_blob_sha": "2ca695359f24ba519edd59822f81f87bd01de29f",
+      "bytes": 22552,
+      "sha256": "530a7f75775c28669516d46e7b4a60bc8c4f1feaa6fc6100d16270d15f0430f9",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+      "git_blob_sha": "53b5d3daa6c9c0bf2ff921d3aacf588e83199371",
+      "bytes": 368719,
+      "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+      "git_blob_sha": "ad05a3ddc7288355ef3f05b9ca82747e3dfc9001",
+      "bytes": 601,
+      "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+      "git_blob_sha": "d6cc65143aaf8a1864dfd40baaeb2c16411cf377",
+      "bytes": 727,
+      "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+      "git_blob_sha": "ee9f76af76b06a759e038c20d1b9967ba668d898",
+      "bytes": 725,
+      "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+      "git_blob_sha": "7b91512aa1fe4fe24664287ac9673b154b00790b",
+      "bytes": 723,
+      "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+      "git_blob_sha": "5dd36b2e88889cce9596eec50ac24e671a73d586",
+      "bytes": 720,
+      "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+      "git_blob_sha": "cdc7490a7131a5454d4d191d9a098f2f68e8a243",
+      "bytes": 3746,
+      "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+      "git_blob_sha": "57b560df2f884f965b16d8a1b7cdfd261054ee71",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+      "git_blob_sha": "3da4b26cbd93746c8261bf371d69cee323aaaf5c",
+      "bytes": 69221,
+      "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+      "git_blob_sha": "b64ddbf2fe5fe3ea4d9fead5249f224b183a71ee",
+      "bytes": 153018,
+      "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "git_blob_sha": "fb8c33e7bc25a4965081fbff5bc029cbff340295",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md",
+      "git_blob_sha": "d2e4087af6aa7f98d448aa66960d5b7a865d65e0",
+      "bytes": 8228,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "original_reference_flow_support"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/README.md",
+      "git_blob_sha": "efba6c1eb60b9ec69400c9dd5a4072c05f5812cd",
+      "bytes": 5914,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "original_discharge_sources",
         "original_reference_flow_support"
       ]
     },
@@ -1357,7 +1643,17 @@
       "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
       "git_blob_sha": "8b852ebcc379fec7081799f8b06d621445e8c936",
       "bytes": 1786,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "original_reference_flow_support"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+      "git_blob_sha": "692ae9b6f58b580cbd3727ca63b09eafe248c5ee",
+      "bytes": 22656,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1367,7 +1663,7 @@
       "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
       "git_blob_sha": "db2771b2837b4edef6e71ea4a07fd8a71f5f3b64",
       "bytes": 8245,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1378,7 +1674,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
       "git_blob_sha": "5c7975f8b1176fb02d1a5d8263b6781089443108",
       "bytes": 4027,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1388,7 +1684,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
       "git_blob_sha": "d8ec0a07ff2b74e35015ff3b2eaddeb120f199fc",
       "bytes": 348121,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1398,17 +1694,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
       "git_blob_sha": "f7257651d457d581cad9ff91237a34d1bfd488a3",
       "bytes": 33415,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "original_reference_flow_support"
-      ]
-    },
-    {
-      "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
-      "git_blob_sha": "0b2f093f9aa0b16e50d34d80df924d9d06db514f",
-      "bytes": 30153,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1418,7 +1704,17 @@
       "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
       "git_blob_sha": "ecc76625666471de23d36ef32ec7f74921372259",
       "bytes": 3824,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "original_reference_flow_support"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+      "git_blob_sha": "0b2f093f9aa0b16e50d34d80df924d9d06db514f",
+      "bytes": 30153,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1428,7 +1724,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
       "git_blob_sha": "08a9abe201a3a3cf23a024bf8bbcb6854b0289c6",
       "bytes": 2399079,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1439,7 +1735,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
       "git_blob_sha": "a2798f2938207a31fb0bd982e83fe985bbe2db7d",
       "bytes": 9682,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1450,7 +1746,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
       "git_blob_sha": "418954ac76adbecc2dca910310e39b48b3a6f47f",
       "bytes": 65562,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1461,17 +1757,7 @@
       "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
       "git_blob_sha": "1c3e51baa7cbaea7109f49bff3694c55477f4174",
       "bytes": 5904,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "original_reference_flow_support"
-      ]
-    },
-    {
-      "path": "source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md",
-      "git_blob_sha": "d2e4087af6aa7f98d448aa66960d5b7a865d65e0",
-      "bytes": 8228,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1481,7 +1767,7 @@
       "path": "source/hydrology-huc05-07-20261013/flow-support/reference-period-support.csv",
       "git_blob_sha": "57bdb7b9990f186c825f4b35c9002f299832f99d",
       "bytes": 7202,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1491,7 +1777,7 @@
       "path": "source/hydrology-huc05-07-20261013/flow-support/reference-period-support.json",
       "git_blob_sha": "0a767094a5d470aa1620b28188eca70f3dd1fbe5",
       "bytes": 150068,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1501,7 +1787,7 @@
       "path": "source/hydrology-huc05-07-20261013/flow-support/selected-reference-binding.json",
       "git_blob_sha": "96921291327e4299ccd38ac8b89c3bdb12304413",
       "bytes": 6253,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1511,7 +1797,7 @@
       "path": "source/hydrology-huc05-07-20261013/flow-support/source-period-selection.json",
       "git_blob_sha": "96921291327e4299ccd38ac8b89c3bdb12304413",
       "bytes": 6253,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -1521,9 +1807,60 @@
       "path": "source/hydrology-huc05-07-20261013/flow-support/station-date-support.json",
       "git_blob_sha": "cf29f8719538cbd9b54b3dd65e467ae20a03826a",
       "bytes": 45633,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
+        "original_reference_flow_support"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/nldi-split/original/capture.json",
+      "git_blob_sha": "3fc52498ec2dba236357fccb5e9ac02267e3a37c",
+      "bytes": 1008,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/nldi-split/original/openapi.json",
+      "git_blob_sha": "ef04b79cf8a28fd09ca55e701ba2ce30b0fd87ae",
+      "bytes": 46209,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/nldi-split/original/process.json",
+      "git_blob_sha": "ce555e1f45118be072f7a3a4a2471fd410cabae0",
+      "bytes": 6822,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/nldi-split/request-plan.json",
+      "git_blob_sha": "cc6b345245a705afa078d9e3941a7d7d41cae67c",
+      "bytes": 10652,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+      "git_blob_sha": "c250cb9fae34c2d8063387ca7f0a7eeeae9c235e",
+      "bytes": 6637,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "original_gauge_catchments",
         "original_reference_flow_support"
       ]
     },
@@ -1531,7 +1868,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
       "git_blob_sha": "402fd34b2de59674dd0bdfa54b243ebc49568bb4",
       "bytes": 45027,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1542,7 +1879,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
       "git_blob_sha": "c3b2fa471f8f3f248ef54e135c36e4a938cf6629",
       "bytes": 8749,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1553,7 +1890,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
       "git_blob_sha": "03e35b59ec4bbfaec417a940b463b2c538c2a234",
       "bytes": 10633,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1564,7 +1901,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
       "git_blob_sha": "948b5c203daebfb187fc2159bb5d4658a475ddd4",
       "bytes": 24197,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1575,7 +1912,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
       "git_blob_sha": "5f13a0b1de36abda4e8d5583d2c0e00586e60608",
       "bytes": 21927,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1586,7 +1923,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
       "git_blob_sha": "7002eb420d3be68f1b00831c89a40f16dd28a406",
       "bytes": 838639,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1597,7 +1934,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
       "git_blob_sha": "dc7349b32c36cf19fdc8b440f25a48438ad5bf6f",
       "bytes": 19991,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1608,7 +1945,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
       "git_blob_sha": "50ed998268a644b0f7ace9f6096f085837b75c85",
       "bytes": 596,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1619,7 +1956,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
       "git_blob_sha": "6a324f657f61180fcdf80a0d52233b58e3e4ba69",
       "bytes": 9132,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1630,7 +1967,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
       "git_blob_sha": "0725791b9de86ca00f47f9e700a72c7f51aaf41d",
       "bytes": 595,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1641,7 +1978,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
       "git_blob_sha": "d79e1792deb1138a57dce3f81dd8122438439546",
       "bytes": 25562,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1652,7 +1989,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
       "git_blob_sha": "95aa5814cdb7ceff494bff02a0e842e4ce7c00d3",
       "bytes": 604,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1663,7 +2000,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
       "git_blob_sha": "d5de1b72959bc775a33a03de13f351707cf7cf66",
       "bytes": 15832,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1674,7 +2011,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
       "git_blob_sha": "1ff7cde11b47c22c572aa9c3b4190707898ed5e6",
       "bytes": 605,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1685,7 +2022,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
       "git_blob_sha": "b1eab8cdf52bac2987acb7459ded828551b43bfa",
       "bytes": 13947,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1696,7 +2033,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
       "git_blob_sha": "01f66e343540ec22b44cc67e43efb307b6ba2ac0",
       "bytes": 595,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1707,7 +2044,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
       "git_blob_sha": "f5efbee8d8ec91665dafb815788fd194105dab56",
       "bytes": 36821,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1718,7 +2055,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
       "git_blob_sha": "765467622922676df513fc2b3b2861861206e81d",
       "bytes": 563,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1729,7 +2066,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
       "git_blob_sha": "a9b7ce05d1139bcbcfbd6e54da58581dbda7bdf5",
       "bytes": 154777,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1740,7 +2077,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
       "git_blob_sha": "bfe29a1f62707876f445c36c75348bdf722d9917",
       "bytes": 593,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1751,7 +2088,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
       "git_blob_sha": "3126188bf99f4a34bf35a4a5ce10f1115f15f152",
       "bytes": 18675,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1762,7 +2099,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
       "git_blob_sha": "1576cb8e559780d4c2ba1bb8358c84bc6968f0a2",
       "bytes": 615,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1773,7 +2110,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
       "git_blob_sha": "3610677818fe49eaca258d87d8a8504dcd49e650",
       "bytes": 4530,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1784,7 +2121,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
       "git_blob_sha": "cc75f2134dc3065c686c396a29e9d5a8cece2576",
       "bytes": 618,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1795,7 +2132,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
       "git_blob_sha": "6b183f33e65b4cf91d496f5ed1dab818cb1450cd",
       "bytes": 5534,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1806,7 +2143,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
       "git_blob_sha": "36bc79fcb8ad1eb994c510d0afd691baad51a40d",
       "bytes": 596,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1817,7 +2154,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
       "git_blob_sha": "d0f55a6859443ad4476d208978f36c2d65157b4a",
       "bytes": 163278,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1828,7 +2165,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
       "git_blob_sha": "5863320bbb72bc76930179e57ee07adaac19c182",
       "bytes": 606,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1839,7 +2176,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
       "git_blob_sha": "8c6ea954c8201d73d520069fba1bfcaa0ffeda57",
       "bytes": 7565,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1850,7 +2187,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
       "git_blob_sha": "27c2c89023b1bdc1087be7d6bbc04549f64dfb5e",
       "bytes": 605,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1861,7 +2198,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
       "git_blob_sha": "2f34aeea0e0af50b4ba91c1e0b8c0ada37bbadb4",
       "bytes": 177165,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1872,7 +2209,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
       "git_blob_sha": "582f23830d9084d2f4166079ba4942ac8858e6f8",
       "bytes": 615,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1883,18 +2220,7 @@
       "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
       "git_blob_sha": "4a9f5ae3c26031bf527a71510bbedd10b386dd8b",
       "bytes": 191118,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "original_gauge_catchments",
-        "original_reference_flow_support"
-      ]
-    },
-    {
-      "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
-      "git_blob_sha": "c250cb9fae34c2d8063387ca7f0a7eeeae9c235e",
-      "bytes": 6637,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_gauge_catchments",
@@ -1905,7 +2231,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
       "git_blob_sha": "64ad2cc7d9b57f03faac810aeff8c7a8e4b1b5ab",
       "bytes": 17523,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1916,7 +2242,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
       "git_blob_sha": "8ca5a28cf99bd5dfc49e18370fc605b89d7cfb54",
       "bytes": 133043,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1927,7 +2253,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
       "git_blob_sha": "76f63d68ad918b41ce0781c94c020c6a7147c86d",
       "bytes": 140830,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1938,7 +2264,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
       "git_blob_sha": "4925b5eece632edf8279615e6e9c8de44d2244c8",
       "bytes": 150441,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1949,7 +2275,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
       "git_blob_sha": "1b0aa72a43de8a2d19e6558e4a5c5fa6a00a7837",
       "bytes": 158068,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1960,7 +2286,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
       "git_blob_sha": "2b68702557f0fbeac4dd4f1217cf7f3a202ffdb4",
       "bytes": 156274,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1971,7 +2297,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
       "git_blob_sha": "7de3f0aba6b1a66a4a53abd6880ba948a6cb823b",
       "bytes": 147925,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -1982,18 +2308,7 @@
       "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
       "git_blob_sha": "53d91d3aff951ea82c1d5bc317cfc94b51e99774",
       "bytes": 22544,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
-      "blob_available": true,
-      "components": [
-        "original_discharge_sources",
-        "original_reference_flow_support"
-      ]
-    },
-    {
-      "path": "source/hydrology-huc05-07-20261013/README.md",
-      "git_blob_sha": "efba6c1eb60b9ec69400c9dd5a4072c05f5812cd",
-      "bytes": 5914,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -2004,7 +2319,7 @@
       "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
       "git_blob_sha": "5df5ed614cf4d96df42590e68415da5a68eb82df",
       "bytes": 2975,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -2014,7 +2329,7 @@
       "path": "source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs",
       "git_blob_sha": "56eba4a75061b25d1afd082c5606ad1e21aa5fd9",
       "bytes": 10023,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -2024,7 +2339,7 @@
       "path": "source/hydrology-huc05-07-20261013/reference-support-inputs.json",
       "git_blob_sha": "c3a277355b646ef36aa2d65d256c36d0165e21a7",
       "bytes": 11564,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -2034,7 +2349,7 @@
       "path": "source/hydrology-huc05-07-20261013/reference-support.sources.json",
       "git_blob_sha": "ceb52732e26020368241d5eae583245cc536d98f",
       "bytes": 35007,
-      "source_ref": "1e393eb649f9858476fb5d1a603e612e57419125",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_reference_flow_support"
@@ -2044,7 +2359,7 @@
       "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
       "git_blob_sha": "8400738c2a70ac3d078b08f99de5a75034239225",
       "bytes": 19443,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "original_discharge_sources",
@@ -2055,7 +2370,8 @@
       "path": "source/receptor-topology/20261013/utility-focus-profile.json",
       "git_blob_sha": "d6389f0c50d2c9f4e1167d8d1aa9e0f5148176c0",
       "bytes": 2169,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2065,7 +2381,7 @@
       "path": "source/soil-interpretation-20261012/soil-erodibility-rule-form.body",
       "git_blob_sha": "8088d26e736f133a352e3a769f46e6fbec139ccb",
       "bytes": 22972,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_soil_preparation"
@@ -2075,17 +2391,138 @@
       "path": "source/soil-interpretation-20261012/soil-erodibility-rule-form.capture.json",
       "git_blob_sha": "cd22d254923367f30116f293542553c13964695e",
       "bytes": 913,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "regional_soil_preparation"
       ]
     },
     {
+      "path": "source/utility-observed-context/20261013/README.md",
+      "git_blob_sha": "86f726450b49b6c89276e6f79ffb7d4cf813fc56",
+      "bytes": 7901,
+      "sha256": "1b89b882095208f49827df868aae14ba6d3e429be14260e26c2963d203b793b1",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/inputs.json",
+      "git_blob_sha": "7957b2457e75a2fca90dcace1e63a604ab393e80",
+      "bytes": 5551,
+      "sha256": "d63395ef719a03cfdbe027f915fcfdaabaf0b7479f4e0428a80d2dceb0049a35",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/regional-nutrient-series.csv",
+      "git_blob_sha": "5bb91374925370c8d5dd6101fb7caa2a97414280",
+      "bytes": 4722,
+      "sha256": "2badfc6ef72471e2a49af55fc0f450e68b374e941b57576cd870c4446326e561",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/regional-stream-geography.csv",
+      "git_blob_sha": "c93b4961a4e5bdba10537e712474548c777e4b6c",
+      "bytes": 2674,
+      "sha256": "882a086e77fc22e172dd8610241192399e513058ff02dc47c7a769570ea91e4c",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/report.html",
+      "git_blob_sha": "1b4311493d061276c860dccc7b35005330b91c94",
+      "bytes": 35765,
+      "sha256": "80c088419bddc560e8237858c7d8eb983c20e45ed969cc65c9933ef6a9519045",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/utility-observed-context.json",
+      "git_blob_sha": "b7a7fc59ec52b8fc31d9ca738e9973e58d9b2fe3",
+      "bytes": 631125,
+      "sha256": "0317c37409447b84fae7db2ff2a32b14c35b32c7552c90c2141579c53a7fb317",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/utility-original-record-index.csv",
+      "git_blob_sha": "050a3a3335f6f2efe8640eda852713c043fb3ea6",
+      "bytes": 101844,
+      "sha256": "4a9fb7b6118f3a33b3df642acdc94367dd58f923d039efe5f32b9f87872673b9",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/utility-station-coverage.csv",
+      "git_blob_sha": "8f399352425f65f4c51634bb974b18a2d171ea1d",
+      "bytes": 20865,
+      "sha256": "7bf29ef77588e15d1f8d586b4057907d3edae593f0b903b4c0b536f5b2560a17",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/utility-station-year-method.csv",
+      "git_blob_sha": "108210a7ef5f8f325012803c66b7411441bedae9",
+      "bytes": 21113,
+      "sha256": "b0082b5b23d5fe66ebbe185a065175b755c2586af046ca55596f437cbe254700",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-observed-context/20261013/utility-year-coverage.csv",
+      "git_blob_sha": "e417fc7da14260236f1774c1ed2abde05ca1baa5",
+      "bytes": 3347,
+      "sha256": "503d9ccc5d5edda2cd0aa8d155f0c506e8bb00e4cb99450da2369223baa1992b",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source/utility-source-context/20261013/utility-source-context.json",
+      "git_blob_sha": "6ab6079a713bb25b68f8be2802afd3b0cafaa8ea",
+      "bytes": 82733,
+      "sha256": "e00bdbe451cbf504c877fe11d1f1016b35c3c5025026c46040b16a470af95d62",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
       "path": "source/water_context/20261013/classified-full-domain-query.json",
       "git_blob_sha": "1ca8c529a979cd0637881f6dd56e6c7ece736e4d",
       "bytes": 8603,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2095,7 +2532,7 @@
       "path": "source/water_context/20261013/classified-reaches.csv",
       "git_blob_sha": "fbb46256317f2fba1e167879b0dc1e91043fa1a7",
       "bytes": 168811,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2105,7 +2542,7 @@
       "path": "source/water_context/20261013/complete-native-sources.json",
       "git_blob_sha": "9c17f7819a4b8cb8144ba29ab4f84958dc8b6ff7",
       "bytes": 11759,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2115,7 +2552,7 @@
       "path": "source/water_context/20261013/complete-sources.json",
       "git_blob_sha": "aa24539b793e2d47b4995b9546174843108c3d6f",
       "bytes": 7793,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2125,7 +2562,7 @@
       "path": "source/water_context/20261013/completed-run.package.json",
       "git_blob_sha": "fed7b72c34e82fa944c4b042de8abaf63e42f50a",
       "bytes": 161836,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2135,7 +2572,7 @@
       "path": "source/water_context/20261013/domain-huc12s.json",
       "git_blob_sha": "368cb8615afe07b9adbaecb8fb1ab981dc6d7897",
       "bytes": 3256,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2145,7 +2582,7 @@
       "path": "source/water_context/20261013/full-domain-water-context.json",
       "git_blob_sha": "80e9447b1e49c2de479fd24a6a38f766932a903b",
       "bytes": 152659,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2155,7 +2592,7 @@
       "path": "source/water_context/20261013/native-network-source.json",
       "git_blob_sha": "08b35940a88ece75f6a291659ce49b42285d8b85",
       "bytes": 1881,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2165,7 +2602,7 @@
       "path": "source/water_context/20261013/native-network.json",
       "git_blob_sha": "2329bb919837ca0e44135734a3069e72d85b8e8f",
       "bytes": 71787,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2175,7 +2612,7 @@
       "path": "source/water_context/20261013/nrcs-domain-fy26.csv",
       "git_blob_sha": "3a2177e0541f3c7c8ec5b1564d930127ecf72dd8",
       "bytes": 24474,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2185,7 +2622,7 @@
       "path": "source/water_context/20261013/scdes-domain217-source-coverage.json",
       "git_blob_sha": "ba26d1b5aed92a354c5bcff11750218278489763",
       "bytes": 7043,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2195,7 +2632,7 @@
       "path": "source/water_context/20261013/scdes-huc8-03060104-to-07-target-class-count.json",
       "git_blob_sha": "95a2b163c5340354d0d5a554ded3ddae471cdbcf",
       "bytes": 11,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2205,7 +2642,7 @@
       "path": "source/water_context/20261013/scdes-original-domain217-classified-objectids.json",
       "git_blob_sha": "89acb950052d9a035d0c921ab6d4d081b649607b",
       "bytes": 13248,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
@@ -2215,14 +2652,254 @@
       "path": "source/water_context/20261013/source-context-run.json",
       "git_blob_sha": "4f929c2fc076f5848e642973140a954401924171",
       "bytes": 6868,
-      "source_ref": "4d3bad6db89a63632a8861e33d9188572eaed6b3",
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/NATIVE_NETWORK_SOURCE.md",
+      "git_blob_sha": "67da15d8defacc1c6f76697af344529a28c8d68e",
+      "bytes": 8334,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/NLDI_SPLIT_CAPTURE.md",
+      "git_blob_sha": "c799b606fe5fad8b7c70547427a524fba1fb56c8",
+      "bytes": 9318,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source_tools/RECEIVE_PROFILE_COMPARISON.md",
+      "git_blob_sha": "462af9b151c3e87224181bc48191fe97da1c29ff",
+      "bytes": 11078,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "source_tools/SOIL_COVERAGE.md",
+      "git_blob_sha": "11db70ca676b38bffd0faafb48e2c20cb956f47c",
+      "bytes": 9074,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/SOIL_REGION.md",
+      "git_blob_sha": "f6bebead9ae1b1460927700c2bd9f0c96d59db32",
+      "bytes": 12074,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/SOIL_SOURCE.md",
+      "git_blob_sha": "1b77d1efbd87ed76bb24cfcff62827873c3d2cf3",
+      "bytes": 7657,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/WATERSHED_SOURCE_IMPORT.md",
+      "git_blob_sha": "f6898ba22c5485a220c5d3532bf3ea4583f86192",
+      "bytes": 6533,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/build_utility_observed_context.mjs",
+      "git_blob_sha": "6787a6c363c887b25b283b48dbc5d09388fd9fca",
+      "bytes": 2681,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/capture_nldi_split.py",
+      "git_blob_sha": "399e1b9ff8a718bbca1364544e7982ae810a91ed",
+      "bytes": 34498,
+      "source_ref": "authored-scientific-report-delivery-20261013",
+      "blob_available": true,
+      "components": [
+        "original_gauge_split_capture"
+      ]
+    },
+    {
+      "path": "source_tools/prepare_watershed_context.py",
+      "git_blob_sha": "15ec8d0c46c9197f5bf43bb4b3492c7f4fb22d64",
+      "bytes": 39550,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/prepare_watershed_manifest.py",
+      "git_blob_sha": "4dbc211fe2eac025ef0bdd356ae74a5e95829e31",
+      "bytes": 9619,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/prepare_watershed_network.py",
+      "git_blob_sha": "89f17b2c9d5dbe8216b3984f23c1be65a026ac25",
+      "bytes": 5202,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/receive_gauge_support.py",
+      "git_blob_sha": "f35a92a563c827d315eec5490b196bfe464e5c21",
+      "bytes": 12674,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_gauge_support"
+      ]
+    },
+    {
+      "path": "source_tools/receive_profile_comparison.py",
+      "git_blob_sha": "816005aa6f75e5902df3cd51f1796aa5089d421c",
+      "bytes": 15032,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "source_profile_intake"
+      ]
+    },
+    {
+      "path": "source_tools/receive_utility_source_context.py",
+      "git_blob_sha": "f643d0465db7b0163351f79c49b7d862c4699982",
+      "bytes": 8497,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/receive_watershed_context.py",
+      "git_blob_sha": "3cffb3849b001e27e7b8722cf2eb510cee61f517",
+      "bytes": 14072,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/receive_watershed_edition.py",
+      "git_blob_sha": "38751ed5762b1750a2b5f35cc03ac1f6ac9cf7a6",
+      "bytes": 25845,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/soil_coverage.py",
+      "git_blob_sha": "888a1e8f88e6b9a6b76d985e3a24f85b9c7e73bb",
+      "bytes": 28565,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/soil_region.py",
+      "git_blob_sha": "53239559f75bae8995358c58c9614aa1ce4b2161",
+      "bytes": 43611,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/soil_sources.py",
+      "git_blob_sha": "2a1ba997feffaa07ee71458433d86f3554ead5ef",
+      "bytes": 42721,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "regional_soil_preparation"
+      ]
+    },
+    {
+      "path": "source_tools/utility_observed_context.mjs",
+      "git_blob_sha": "61f0d3fff808be4697cde82e864f0e16d83b0c83",
+      "bytes": 23185,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/watershed_source_entry.py",
+      "git_blob_sha": "dbbc816fc5a99865ce2a30aec7cf01b8419e8e86",
+      "bytes": 13175,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "source_tools/watershed_source_validation.py",
+      "git_blob_sha": "45375083c5e07e4ecbe17ddfe3808044a9a6dab0",
+      "bytes": 40046,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
+      "blob_available": true,
+      "components": [
+        "watershed_source_reporting"
+      ]
+    },
+    {
+      "path": "utility_observed_context.sources.json",
+      "git_blob_sha": "3154f858aa7860269518b4afc4e07d54878fbf65",
+      "bytes": 12005,
+      "source_ref": "4d7415ebdb4ed3ed522b419349aac0178aa37476",
       "blob_available": true,
       "components": [
         "watershed_source_reporting"
       ]
     }
   ],
-  "composition": "These are the complete A74F component families and their original source companions, reconciled with the selected current main source. Compose later successors with their owning agents; the maintained application assembler owns schema adoption, descriptor closure and the final installed edition.",
+  "composition": "Complete A74F source families reconciled with the selected current application tree. The regional93 family includes all current watershed peers, mandatory utility-observation producer dependencies and every physical member of the original native utility source manifest. The complete calibration and gauge scientific-report components, original seven-gauge split capture and prior original source companions are retained together. Compose complete families with the maintained cumulative installer and its current component catalogue; preserve the selected current shared application.",
   "publication": {
     "merged_prs": [
       2806,
@@ -2235,16 +2912,28 @@
       3089,
       3124,
       3172,
-      3183
+      3183,
+      3204
     ],
     "authored_continuation_paths": [
-      "model/ensemble_flow_support.py",
-      "model/ensemble_consumers.py",
+      "operator/gauge_support.py",
+      "operator/extensions/gauge-support.json",
+      "operator/web/gauge_support.mjs",
+      "operator/GAUGE_SUPPORT.md",
+      "operator/install_gauge_support.py",
+      "model/gauge_report_context.py",
+      "model/ensemble_scientific_source.py",
       "model/ensemble_consumers_cli.py",
       "model/ENSEMBLE_CONSUMERS.md",
       "operator/ensemble_service.py",
       "operator/extensions/ensembles.json",
       "operator/web/ensembles.mjs",
+      "source_tools/capture_nldi_split.py",
+      "source/hydrology-huc05-07-20261013/nldi-split/request-plan.json",
+      "source/hydrology-huc05-07-20261013/nldi-split/original/process.json",
+      "source/hydrology-huc05-07-20261013/nldi-split/original/openapi.json",
+      "source/hydrology-huc05-07-20261013/nldi-split/original/capture.json",
+      "source_tools/NLDI_SPLIT_CAPTURE.md",
       "operator/REGIONAL_MODEL_AND_ENSEMBLE.md"
     ],
     "pending_blob_paths": []

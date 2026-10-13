@@ -29,6 +29,7 @@ ALLOWED = frozenset({
     "operator/MAP_ATLAS.md",
     "model/decision_study_transfer.py",
     "model/study_transfer.py",
+    "model/study_delivery_transfer.py",
     "operator/STUDY_TRANSFER.md",
     "model/robust_decisions/eco_robust/store.py",
     "model/robust_decisions/eco_robust/diagnostics.py",
@@ -58,6 +59,7 @@ REQUIRED = ALLOWED - {
     "operator/MAP_ATLAS.md",
     "model/decision_study_transfer.py",
     "model/study_transfer.py",
+    "model/study_delivery_transfer.py",
     "operator/STUDY_TRANSFER.md",
     "source/install_robust_workbench.py",
     "source/ROBUST_RECEIVING.md",
@@ -228,6 +230,12 @@ def verify_composition(application, pending):
                  "operator/extension_registry.py", "operator/web/app.mjs",
                  "operator/web/extension_host.mjs"):
         assembled_data(application, pending, name)
+    transfer = pending.get("model/study_transfer.py")
+    if transfer is None:
+        transfer = read_existing(application, "model/study_transfer.py")
+    if transfer is not None and b"study_delivery_transfer" in transfer:
+        assembled_data(application, pending, "model/study_delivery_transfer.py")
+        assembled_data(application, pending, PACKAGE_ROOT + "eco_robust/decision_delivery.py")
     server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
     client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
     if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:

@@ -5,7 +5,7 @@ Application: opportunities/upstate_forever_2026
 
 This guide joins the retained Upper Savannah sources, regional soil preparation, the original InVEST calculation pipeline, saved-profile ensemble work and the existing operator receiving process. It is for the host operator and scientific integrator. The in-application guided journey and meeting desk consume this same Workspace and its actual results.
 
-Use ECD1’s complete cumulative application F0C8KFCT3S9 (edition 3, 586 files) or its maintained successor, with the current whole components listed below. Preserve the cumulative application’s own source manifest when composing later components. The original source collections, native model and Workspace remain the calculation basis. The retained regional result, source-profile comparisons, soil preparation, native studies and paired raster products open in the same operator.
+Use the maintained cumulative application and its current component catalogue, with the complete source families listed below. Preserve the cumulative application’s own source manifest when composing later components. The original source collections, native model and Workspace remain the calculation basis. The retained regional result, source-profile comparisons, soil preparation, native studies and paired raster products open in the same operator.
 
 The selected source identity passed to the commands below comes from the delivered source package. Keep that identity with the prepared plan, Workspace, model handoff and received package.
 
@@ -15,7 +15,7 @@ Run from the directory containing model/, operator/, source_tools/ and source/. 
 
 The demonstrated paired receiving operation uses application root `/workspace/scratch/790ee23f7efd/ensemble-recovery-operation` and interpreter `/workspace/scratch/790ee23f7efd/ensemble-recovery-venv/bin/python`. Its completed archive receive, inspect, export and independent reopen retained 51 files and 36 original GeoTIFF identities. Use the paths supplied by the currently accepting process when continuing on another host.
 
-The native InVEST operation and its actual prepared grid remain on the existing GURA-NATIVE-01 continuation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
+The native InVEST operation and its actual prepared grid remain on the existing GURA-NATIVE-01 continuation. Gura is the separate original Kenya model case used for native pipeline commissioning. Upper Savannah calibration selects its actual regional grid, native runs, observation catchments and source periods; its USGS annual references belong to that regional cohort. The completed profile-only receiver establishes profile/source receiving for its selected inputs. Regional model outputs and physical calibration results come from the corresponding regional native operation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
 
 Continue these existing operations:
 - Paired/source operator receiving: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791857208632589
@@ -667,12 +667,12 @@ The complete source intake, build and independent receiving sequence runs from
 the selected application with the original regional report already present:
 
 ```sh
-"$UPSTATE_PYTHON" -B -m source_tools.receive_gauge_support \\
-  --workspace "$UPSTATE_WORKSPACE" \\
-  --report-id "$UPSTATE_REGIONAL_REPORT_ID" \\
-  --huc-manifest "$UPSTATE_ORIGINAL_DOMAIN_MANIFEST" \\
-  --huc-source-id upstate-wbd-upstream-domain-20261012 \\
-  --huc-id-field huc12 \\
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gauge_support \
+  --workspace "$UPSTATE_WORKSPACE" \
+  --report-id "$UPSTATE_REGIONAL_REPORT_ID" \
+  --huc-manifest "$UPSTATE_ORIGINAL_DOMAIN_MANIFEST" \
+  --huc-source-id upstate-wbd-upstream-domain-20261012 \
+  --huc-id-field huc12 \
   --output "$UPSTATE_GAUGE_RECEIVING_OUTPUT"
 ```
 
@@ -687,10 +687,10 @@ existing `--huc-collection` route selects an already imported original domain.
 same saved selection into computation.
 
 For component receiving into an existing complete application, apply the full
-eight-file component:
+nine-file component, including its saved-edition scientific report source:
 
 ```sh
-"$UPSTATE_PYTHON" -B operator/install_gauge_support.py \\
+"$UPSTATE_PYTHON" -B operator/install_gauge_support.py \
   --application "$APPLICATION" --source-root "$COMPONENT_ROOT" --apply
 ```
 
@@ -710,17 +710,17 @@ summaries, full reference-period results and a native source manifest.
 Save the original annual-reference catalog and choose the existing import:
 
 ```sh
-"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
-  --workspace "$UPSTATE_WORKSPACE" annual-references \\
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" annual-references \
   > "$UPSTATE_OPERATION/annual-references.json"
 
-node source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs \\
-  --source-root source/hydrology-huc05-07-20261013 \\
-  --binding "$UPSTATE_OPERATION/annual-references.json" \\
-  --import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+node source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs \
+  --source-root source/hydrology-huc05-07-20261013 \
+  --binding "$UPSTATE_OPERATION/annual-references.json" \
+  --import-id "$UPSTATE_ANNUAL_IMPORT_ID" \
   --output "$UPSTATE_OPERATION/annual-reference-flow-support"
 
-"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \\
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \
   source-import "$UPSTATE_OPERATION/annual-reference-flow-support/reference-support.sources.json"
 ```
 
@@ -758,17 +758,17 @@ selected by the actual positive-weight objectives.
 The same source preparation and evaluation are available through the CLI:
 
 ```sh
-"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
-  --workspace "$UPSTATE_WORKSPACE" flow-support \\
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" flow-support \
   --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID"
 
-"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
   --workspace "$UPSTATE_WORKSPACE" flow-support-sources
 
-"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
-  --workspace "$UPSTATE_WORKSPACE" calibration \\
-  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \\
-  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" calibration \
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID" \
   --prepare-flow-support
 ```
 
@@ -779,3 +779,120 @@ and period identities must match when the support is linked. Existing
 `--prepare-only`, `--standard-errors` and `calibration-resume` continue to use
 the saved handoff. The complete Workspace backup carries the source collections,
 flow operation, readable report and calibration result into independent receiving.
+
+
+## 18. Carry saved calibration and gauge results into the scientific report
+
+The saved calibration and Gauge support desks now prepare typed scientific
+sources for the existing ordered report-source picker. Both preserve the saved
+analysis and its original companions. The report collector carries the selected
+sources in their requested order through the current scientific/client delivery.
+
+### Saved calibration
+
+Open **Scenario sensitivity**, choose a completed saved calibration, then choose
+**Prepare scientific report**. The existing task queue registers the original
+source and renders its PDF, offline HTML, Markdown, structured data and complete
+report ZIP. Reopen the same saved result for downloads and **Include in delivery**.
+
+The standalone report uses the completed calibration's actual native candidates;
+it can render before the full baseline-and-alternative map delivery is available:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" scientific-source --consumer-id "$UPSTATE_CONSUMER_ID"
+```
+
+Use `--source-only` to register the complete document before rendering. Repeating
+the original command completes rendering from the retained source. Report output
+identity includes the bound source and the actual collector and formatter source
+hashes, so current formatting can be applied to the same saved scientific result.
+
+The report retains the candidate ranking, declared objective, constituent units,
+physical residuals, original annual-load records and periods, spatial holdouts,
+candidate failures and source-error sensitivity. Exact daily-flow context carries
+its original gauge/series, requested dates, numeric and qualified days, and
+covered-days/complete-period volumes. Full original results, comparisons,
+observations, annual-import documents, catchment and biophysical source bodies
+and companions remain in the package.
+
+To append this source to an existing delivery selection:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" scientific-selection --consumer-id "$UPSTATE_CONSUMER_ID" --selection "$UPSTATE_EXISTING_DELIVERY_SELECTION" --output "$UPSTATE_COMPOSED_DELIVERY_SELECTION"
+```
+
+The existing selection and source order are preserved, the exact new source is
+appended once, and the normal delivery builder binds the completed selection.
+See [model/ENSEMBLE_CONSUMERS.md](../model/ENSEMBLE_CONSUMERS.md) for the saved
+source, original numerical interpretation and extension continuation.
+
+### Saved Gauge support
+
+Open the saved Gauge support edition and choose **Use in scientific report**.
+Choose an existing delivery to preserve its original runs, overlays, map settings,
+contact fields and other scientific sources, or start a new report selection.
+The completed operation offers **Open prepared report form**.
+
+The same preparation and source import are available from the command line:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.gauge_report_context --workspace "$UPSTATE_WORKSPACE" --edition-id "$UPSTATE_GAUGE_EDITION_ID"
+```
+
+Add `--delivery-id "$UPSTATE_SAVED_DELIVERY_ID"` to append to an explicit saved
+delivery, or `--prepare-only` to retain the complete report source before import.
+Use the original Gauge receiving result's `phases.support_build.edition_id`
+when continuing the existing build.
+
+The typed tables contain source station/series identities, original point
+membership, whole-catchment area, HUC intersections, reporting/upstream/utility
+coverage, annual flow coverage and overlapping catchment relationships. The
+complete original source package, station geography, regional report, CSVs and
+GeoJSONs travel with the report. Source-bound SVG maps and a self-contained map
+HTML use the saved geometries; numerical areas retain the original EPSG:5070
+results.
+
+Both components use the existing Operations queue, native source importer,
+verified download transport and Workspace backup. Continue the original
+regional9874/station7436 and calibration7208/4610 receiving operations. Restore
+their completed Workspace archive and reopen the same saved source and report
+identities. The maintained report engine and full-model delivery retain their
+original run and source requirements.
+
+## 19. Continue the seven original gauge-split requests
+
+The original NLDI capture operation4959 now has an executable source receiver
+that uses the seven complete-flow gauges and their original coordinates, station
+IDs, series, COMIDs, reachcodes and measures. Its complete six-file component
+includes the original publisher process description, OpenAPI document, request
+plan and capture guide.
+
+Run the current publisher process from the equipped application environment:
+
+```sh
+"$UPSTATE_PYTHON" -B -m source_tools.capture_nldi_split --output "$UPSTATE_NLDI_SPLIT_OUTPUT" --route process --timeout 600 --wait-seconds 600
+```
+
+The current captured API declares `Prefer: respond-sync`; the producer retains
+actual returned job locations and resumes their status/results if the publisher
+returns an asynchronous job. Empty-body responses with a job Location retain
+the same continuation. The output directory holds every original request,
+HTTP status, error body, returned basin and job identity. Repeating the command
+resumes that operation and its completed source editions.
+
+The alternative `--route basin` requests the original indexed-gauge basin with
+`simplified=false&splitCatchment=true` in its own persistent output directory.
+Coordinate delineation and indexed-gauge retrieval keep distinct source methods.
+Each actual returned basin has its original request and response attached.
+
+The source receiver freezes a native manifest when an actual returned basin is
+available. Import the exact manifest path in its result through the existing
+source importer. The saved whole-catchment Gauge support edition keeps its own
+source selection and geometry. Continue the new geometry's scientific adoption
+with the annual-reference and regional owners using the actual source method and
+returned station relationship.
+
+See [source_tools/NLDI_SPLIT_CAPTURE.md](../source_tools/NLDI_SPLIT_CAPTURE.md) for
+all seven requests, journal recovery, native source import and the existing4959
+operation. The current native worker continues these requests alongside the
+original scientific report, source and archive receiving.

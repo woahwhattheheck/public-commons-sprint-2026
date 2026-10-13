@@ -55,11 +55,84 @@ A companion table gives each run's quantity-adapter contract and selected-model 
 
 Presentation reads the study's resolved `native_execution` map, or the execution metadata already bound to a newly prepared native study. It performs no additional version resolution, source acquisition or scientific run. Existing scientific quantities, candidate ordering, score methods, selected geometries and source presentation stay intact. The report implementation hash creates a new presentation edition while the original study, plan and earlier report remain retained.
 
-## Experiment baseline compatibility
+## Continue an original native cohort as an experiment
 
-The maintained experiment engine currently uses the requested InVEST version in its generated case identity and original reference validation. Conservation's scenario bridge therefore retains that requested-version requirement when preparing an experiment. It additionally checks the effective execution version for every selected model with the same maintained resolver used by Conservation quantities.
+The Conservation scenario bridge can carry an original completed baseline and
+alternative into the maintained experiment engine even when their historical
+requested version differs from the compatible completed-stage execution.
+Every selected NDR/SDR model still uses the shared execution resolver and the
+3.20.0 quantity contract. The original run selection, requested version, stage
+provenance and run ID remain unchanged.
 
-A completed stage executed under an incompatible version is rejected even if its original request names the current version. Ready or interrupted references retain their original resume path: already completed stages are checked, while unfinished stages execute through the original engine and its requested-version selection. A supported observed execution paired with another requested version can be used by Conservation's study quantity adapter, but experiment admission also needs the experiment engine's retained case-selection contract. The bridge preserves that distinction and never rewrites the original baseline selection or run ID.
+The bridge first resolves the selected grid, profile and model families. An
+explicit `baseline_run_id` remains the chosen original reference. Otherwise it
+uses the native study's matching retained baseline before preparing a current
+reference. For the alternative, it prefers an explicitly supplied source run
+for that exact grid/profile/scenario/model case, then the run already retained
+by the conservation scenario. A newly selected logical case uses the ordinary
+native preparation path. Two explicit source runs for the same primary
+alternative are rejected so the choice remains unambiguous.
+
+The existing experiment-preparation payload accepts optional
+`source_run_ids`: a list of actual retained native run IDs. Use this to supply
+the original runs for additional selected profiles or scenarios, or to select
+the original primary alternative explicitly. The bridge passes the exact
+chosen baseline and alternative with that list to the original experiment
+preview. Preview validates the originals and retains any necessary adoption
+binding with the programme. Canonical source IDs add no selection fields when
+they already identify the ordinary native case, preserving prior programme
+and conservation-handoff identities.
+
+A noncanonical original is admitted only after it has completed with
+compatible producing stages. Current-requested ready or interrupted cases
+keep their original resume path: completed stages are checked and remaining
+stages run through the maintained native engine. A historical noncurrent
+request that is still incomplete must finish through its original supported
+operation before it can be selected as a completed source cohort. The bridge
+does not change its request or manufacture another ID for its existing output.
+
+The returned Conservation handoff retains the actual baseline and alternative
+IDs in `primary_pair`, the original portfolio footprint and source reference,
+and the engine's normalized selection. Reopening that handoff follows the same
+saved experiment and original cases. A changed source choice creates its own
+retained selection; earlier programme history and native artifacts remain
+available. Continue the saved experiment through the original programme,
+comparison, report and archive controls.
+
+## Receive the same saved study and original programme
+
+The normal operator action remains `conservation.experiment.prepare`. Its
+`spec` contains the existing `conservation_scenario_id`, optional explicit
+`baseline_run_id`, selected profiles/scenarios and optional
+`source_run_ids`. The provider forwards that complete selection to the
+maintained bridge. The existing command-line entry accepts the same JSON:
+
+```sh
+"$PYTHON" -B -m model.conservation_scenarios \
+  --workspace "$WORKSPACE" --experiment "$SELECTION_JSON"
+```
+
+Use the returned `experiment_id` in the existing Run programmes view and
+continue that saved operation. The original source runs stay attached to
+their frozen case identities. Once its summary is complete, the existing
+Conservation browser continuation opens that exact handoff, refreshes its
+report through the original queue, downloads HTML/CSV/JSON, reloads the
+browser and checks the same baseline/alternative pair:
+
+```sh
+"$PYTHON" -B operator/conservation_experiment_browser_receiving.py \
+  --operator-receipt "$OPERATOR_RECEIPT" \
+  --conservation-receiving "$CONSERVATION_RECEIVING_JSON" \
+  --experiment-id "$EXPERIMENT_ID" --output "$RECEIVING_DIRECTORY" \
+  --chromium "$CHROMIUM"
+```
+
+These variables refer to the accepting host's actual retained Workspace,
+startup receipt, completed Conservation receiving record and original
+experiment. Reuse an existing receiving directory only for that same saved
+study and experiment. The complete Workspace archive carries the original
+source run trees and saved programme; reopen that archive through the
+existing receiving flow before continuing its retained cases.
 
 ## Receiving and current source composition
 

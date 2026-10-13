@@ -1,0 +1,299 @@
+{
+  "schema": "upstate.nldi-split-source-plan/v1",
+  "operation_id": "UPSTATE-NLDI-GAUGE-SPLIT-1791864959",
+  "source_operation": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791864959123639",
+  "title": "Original seven complete-flow gauge upstream split-source acquisition",
+  "period": {
+    "start": "2020-01-01",
+    "end": "2025-12-31",
+    "calendar_days": 2192
+  },
+  "original_source_manifest_sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+  "source_bindings_sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4",
+  "process_uri": "https://api.water.usgs.gov/nldi/pygeoapi/processes/nldi-splitcatchment/execution?f=json",
+  "process_description_uri": "https://api.water.usgs.gov/nldi/pygeoapi/processes/nldi-splitcatchment?f=json",
+  "process_description_sha256": "dee2cb675f931a418c693266cf199d666b995cd643abe5e13f623e879529df32",
+  "openapi_uri": "https://api.water.usgs.gov/nldi/pygeoapi/openapi?f=json",
+  "openapi_sha256": "4a118e1f2199da0d2df024fe99ad921780d9c35984cb938e88712a3dddb8b3da",
+  "stations": [
+    {
+      "station_id": "USGS-02193340",
+      "site_no": "02193340",
+      "ts_id": "34493",
+      "comid": 6289497,
+      "reachcode": "03060105000056",
+      "measure": 31.4872,
+      "longitude": -82.8585,
+      "latitude": 33.68266667,
+      "feature_original_path": "original/02193340.feature.json",
+      "feature_original_sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6",
+      "whole_basin_original_path": "original/02193340.whole-basin.geojson",
+      "whole_basin_original_sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02193340/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.68266667",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-82.8585",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02193500",
+      "site_no": "02193500",
+      "ts_id": "324274",
+      "comid": 6289757,
+      "reachcode": "03060105000033",
+      "measure": 88.313,
+      "longitude": -82.7425,
+      "latitude": 33.61277778,
+      "feature_original_path": "original/02193500.feature.json",
+      "feature_original_sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086",
+      "whole_basin_original_path": "original/02193500.whole-basin.geojson",
+      "whole_basin_original_sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02193500/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.61277778",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-82.7425",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02195320",
+      "site_no": "02195320",
+      "ts_id": "324277",
+      "comid": 22720339,
+      "reachcode": "03060106000313",
+      "measure": 5.8999,
+      "longitude": -82.2326111,
+      "latitude": 33.6011111,
+      "feature_original_path": "original/02195320.feature.json",
+      "feature_original_sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c",
+      "whole_basin_original_path": "original/02195320.whole-basin.geojson",
+      "whole_basin_original_sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02195320/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.6011111",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-82.2326111",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02196000",
+      "site_no": "02196000",
+      "ts_id": "126801",
+      "comid": 11730030,
+      "reachcode": "03060107000204",
+      "measure": 88.347,
+      "longitude": -82.1817873,
+      "latitude": 33.72929717,
+      "feature_original_path": "original/02196000.feature.json",
+      "feature_original_sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be",
+      "whole_basin_original_path": "original/02196000.whole-basin.geojson",
+      "whole_basin_original_sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02196000/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.72929717",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-82.1817873",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02197000",
+      "site_no": "02197000",
+      "ts_id": "126852",
+      "comid": 22724061,
+      "reachcode": "03060106000206",
+      "measure": 1.4036,
+      "longitude": -81.9420833,
+      "latitude": 33.37252778,
+      "feature_original_path": "original/02197000.feature.json",
+      "feature_original_sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389",
+      "whole_basin_original_path": "original/02197000.whole-basin.geojson",
+      "whole_basin_original_sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02197000/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.37252778",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-81.9420833",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02197020",
+      "site_no": "02197020",
+      "ts_id": "34530",
+      "comid": 22725411,
+      "reachcode": "03060106000430",
+      "measure": 79.2738,
+      "longitude": -82.1391944,
+      "latitude": 33.37366667,
+      "feature_original_path": "original/02197020.feature.json",
+      "feature_original_sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381",
+      "whole_basin_original_path": "original/02197020.whole-basin.geojson",
+      "whole_basin_original_sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02197020/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "33.37366667",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-82.1391944",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    },
+    {
+      "station_id": "USGS-02197500",
+      "site_no": "02197500",
+      "ts_id": "127079",
+      "comid": 22726585,
+      "reachcode": "03060106002090",
+      "measure": 83.8922,
+      "longitude": -81.5025278,
+      "latitude": 32.93644444,
+      "feature_original_path": "original/02197500.feature.json",
+      "feature_original_sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e",
+      "whole_basin_original_path": "original/02197500.whole-basin.geojson",
+      "whole_basin_original_sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668",
+      "basin_url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02197500/basin?simplified=false&splitCatchment=true&f=json",
+      "process_request": {
+        "inputs": [
+          {
+            "id": "lat",
+            "value": "32.93644444",
+            "type": "text/plain"
+          },
+          {
+            "id": "lon",
+            "value": "-81.5025278",
+            "type": "text/plain"
+          },
+          {
+            "id": "upstream",
+            "value": "True",
+            "type": "text/plain"
+          },
+          {
+            "id": "simplified",
+            "value": "False",
+            "type": "text/plain"
+          }
+        ]
+      }
+    }
+  ],
+  "interpretation": [
+    "The original linked-data request uses the indexed NWIS feature and splitCatchment=true.",
+    "The alternate process request uses the original retained NLDI WGS84 point and the current published process contract; its coordinate-delineated output retains a distinct method identity.",
+    "Original whole-catchment polygons remain separate retained source geometry.",
+    "The process description advertises sync/async, while captured OpenAPI currently advertises Prefer respond-sync only; default execution uses the observed declared preference and retains any actual returned job identity."
+  ]
+}

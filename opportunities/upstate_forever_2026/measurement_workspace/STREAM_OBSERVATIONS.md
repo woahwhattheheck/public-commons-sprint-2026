@@ -143,3 +143,98 @@ Daily gauge flow is shared basin context. Whole-catchment membership does not es
 Selected original-observation exports retain every source column in a separate CSV for each original response. The accompanying index binds every selected row to its original response hash, physical CSV row, activity identifier and source record ID. The complete agency responses remain unchanged in the complete study export.
 
 The concentration-support CSV preserves each series key, sample fraction, method authority and identifier, result value type, original weight/time/temperature/particle-size basis, and support-unit spelling alongside its station, project, activity type and interval statistics. These fields keep different analytical series distinct outside the application.
+
+## Sampling coverage and original network context
+
+The same stream builtin also adopts the installed original
+`eighteenmile_stream_flow_coverage.sources.json` from the source author's
+PR3167. Open the sampling and flow-coverage report by its original source title
+beside the nutrient/gauge-flow study. This companion retains all 589 original
+nutrient records, 153 activities, 106 distinct sampling dates and the 2,192-day
+reference-gauge period. Its original outputs describe 65 annual-P95 episodes,
+58 without a sampling date, station/year/month sampling coverage, flow-stratum
+concentrations and original nitrogen component consistency.
+
+The two authored reports retain their own methods and cohorts. The nutrient
+study uses midrank reference-flow percentiles; the coverage companion uses
+its documented empirical nearest-rank thresholds with ties included. Their
+original results are displayed and exported unchanged. Neither report's
+full-study outputs are recalculated by a station/month filter in this desk.
+
+The original source station table retains two separate spatial fields.
+All four points lie in the original unsplit basin. Original USGS NLDI
+hydrolocations and upstream-index identities classify SV-233 as downstream
+on the same reach (measure 17.172927977358476 versus gauge 53.4049), and SV-245,
+SV-375 and SV-376 as indexed upstream reaches. These classifications keep
+their original station/reach identifiers, indexed coordinates and response
+filenames. The sampling station's original WQP coordinates remain unchanged.
+
+Both complete root manifests and every declared member share the retained
+`application-context/stream-nutrients/` application layout. Their shared
+original bodies must agree byte for byte. This preserves relative HTML/SVG,
+CSV, source and rebuild links without flattening duplicate filenames.
+The native source registry retains each original entry ID and both original
+manifest bodies. Selected-report ZIPs and complete-study archives carry
+the same full dependency tree; the portable application contains both root
+manifests and all original source directories.
+
+To receive this edition, run the existing Published studies installer from
+the complete family checkout against the existing application. Import the
+same stream builtin in its original Workspace, then open both retained reports,
+export the selected study and complete study, and reopen the complete-study
+archive. An older immutable study version remains its original edition;
+importing the installed complete source creates or reuses the new source-bound
+version. Saved source-cohort records retain original qualifiers and comments.
+
+Queued source imports and exports retain their original task and operation
+identities when the desk is left. Late task responses cannot open a task,
+show an error or update controls in a remounted or different Workspace.
+
+## Paired sampling sensitivity in the retained study
+
+The same stream import includes the original
+`eighteenmile_paired_sensitivity.sources.json` when installed. Open
+**Eighteenmile paired sampling sensitivity** in the original-studies section.
+The report preserves 116 analyte comparisons, 58 station-pair/date combinations
+on 36 dates, six station-pair/analyte cohorts and all 148 retained selections.
+Its original paired subset covers 2023–2025 within the complete 2020–2025
+parent study.
+
+Use the report's station/analyte and scenario controls to inspect the complete
+cohort, individual years, omitted years, omitted sampling dates and the
+documented lower-reference-flow selection. The two empty selections retain
+their explicit state. Original censored interval endpoints, endpoint openness,
+exact scaled sums, included/excluded source-row IDs and sampling clocks travel
+with each selection. The original difference is station B minus station A
+in mg/L; the retained station order and original network classifications supply
+separate spatial context. Reference-gauge flow remains its declared regional
+context.
+
+The registry keeps this report, its JSON/CSV and complete parent study under
+the existing `application-context/stream-nutrients/` root. Its declared
+parent `eighteenmile_stream_nutrient_analysis.sources.json` is admitted as an
+exact application-root path. Both original manifest bodies and all shared
+source bodies remain unchanged; any conflicting declaration fails the
+existing source-byte check.
+
+The original report's five local links resolve inside that retained tree:
+parent nutrient report, complete sensitivity JSON, scenario CSV, original
+paired-source CSV and author method guide. Existing native report preview,
+selected-report ZIP, complete-study ZIP and portable Workspace reopen use
+the same source collection and original entry ID
+`eighteenmile-paired-sensitivity`. Re-import the current stream builtin to
+create or reuse the complete source-bound edition; older immutable versions
+retain their original source scope.
+
+After extracting the selected-report ZIP, the original full rebuild runs from
+`original-sources/application-context/stream-nutrients/`:
+
+```sh
+node observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_paired_sensitivity.mjs --output NEW_APPLICATION_DIRECTORY
+```
+
+The original builder verifies the paired CSV, rebuilds the complete parent
+study and carries all source/method/report members into the new directory.
+The source author's
+[PAIRED_SENSITIVITY.md](../observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md)
+documents the exact interval arithmetic, source pin and retained selections.

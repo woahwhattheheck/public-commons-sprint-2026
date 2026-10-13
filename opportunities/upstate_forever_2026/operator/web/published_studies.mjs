@@ -40,7 +40,7 @@ function link(url, title) {
 
 export function createPublishedStudiesDesk(host) {
   let node = null, workspace = null, events = null, catalog = null, complete = null, selected = null;
-  let request = 0, catalogRequest = 0, busy = false, taskStamp = "", tab = "seasonal";
+  let request = 0, catalogRequest = 0, viewGeneration = 0, busy = false, taskStamp = "", tab = "seasonal";
   let selection = {site_ids: [], parameters: [], strata: [], year: null, months: []};
   const requests = new Set(), operationIds = new Map(), pending = new Map();
 
@@ -435,23 +435,27 @@ export function createPublishedStudiesDesk(host) {
 
   async function queue(action, payload) {
     if (busy) return;
-    const expectedWorkspace = workspace;
+    const expectedWorkspace = workspace, expectedView = viewGeneration;
+    const active = () => Boolean(node) && workspace === expectedWorkspace &&
+      viewGeneration === expectedView && host.getWorkspace() === expectedWorkspace;
     const key = canonical({workspace,action,payload});
     if (!operationIds.has(key)) operationIds.set(key, "published-study-" + crypto.randomUUID());
     busy = true; renderCatalog(); status("Queueing study task…");
     try {
       const task = await host.api("/api/actions", {method:"POST",body:{workspace,action,payload,operation_id:operationIds.get(key)}});
       pending.set(task.id,{action,key});
-      if (!node || workspace !== expectedWorkspace) return;
+      if (!active()) return;
       if (task.state === "complete" || task.state === "completed") {
         pending.delete(task.id); operationIds.delete(key); await refreshCatalog(task.result);
+        if (!active()) return;
       }
       await host.refresh({force:true});
+      if (!active()) return;
       host.showTask(task.id);
       status("Study task " + task.id + " is " + task.state + ".");
       update(host.getState());
-    } catch (error) { showError(error); }
-    finally { if (workspace === expectedWorkspace) { busy = false; if (node) renderCatalog(); } }
+    } catch (error) { if (active()) showError(error); }
+    finally { if (active()) { busy = false; renderCatalog(); } }
   }
   function detail(id) {
     const rows = [...Object.values(complete?.tables || {}).flat(), ...arr(complete?.observation_rows), ...arr(complete?.original_measurements), ...arr(complete?.wqp_coverage), ...arr(complete?.flow_rows)];
@@ -532,7 +536,7 @@ export function createPublishedStudiesDesk(host) {
   }
   function detach() {
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
-    ++request; ++catalogRequest;
+    ++request; ++catalogRequest; ++viewGeneration;
     if (node) node.classList.remove("published-studies-desk");
     node = null; events = null;
   }

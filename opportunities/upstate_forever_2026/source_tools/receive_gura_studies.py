@@ -389,13 +389,13 @@ def main(argv=None):
                         item.pop("error", None)
                         if current["state"] != "complete":
                             failures.append(item_key)
-                        if storage_exhausted(error):
-                            raise
                     except Exception as error:
                         item.update(state="failed", error={
                             "type": type(error).__name__, "message": str(error),
                             "traceback": traceback.format_exc()})
                         failures.append(item_key)
+                        if storage_exhausted(error):
+                            raise
                         logging.exception("Gura parameter study needs recovery: %s", item_key)
                     # Keep the completed reports usable while remaining native cases continue.
                     state["state"] = "running"

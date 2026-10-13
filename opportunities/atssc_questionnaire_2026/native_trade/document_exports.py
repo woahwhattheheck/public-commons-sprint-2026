@@ -110,7 +110,7 @@ def _question_context(question, language="en"):
     context = []
     section = question.get("section")
     if isinstance(section, str) and section:
-        context.append("Worksheet " + _text(section))
+        context.append(("Feuille " if language == "fr" else "Worksheet ") + _text(section))
     if heading and _text(heading) != label:
         context.append(_text(heading))
     prompt = question.get("original_french_text") if language == "fr" else None
@@ -470,13 +470,15 @@ def _word(model):
             doc.add_paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "Heading 2")
             values = [summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]
             if summary["answered"] == "0": values[1] = labels["no_public_answers" if model["edition"] == "public" else "not_answered"]
-            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [0.75, 1.8, 1.8, 1.375, 1.375])
+            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [0.95, 1.7, 1.7, 1.375, 1.375])
     if model["view_sections"]:
         from document_charts import append_word_chart, chart_panels
         for view, navigation in zip(model["view_sections"], reading["views"]):
             heading(_text(view["title"]), "Heading 1", navigation)
-            if view.get("note"): doc.add_paragraph(_text(view["note"]))
-            for note in navigation["notes"]: reference_line(note)
+            if view.get("note"):
+                doc.add_paragraph(_text(view["note"])).paragraph_format.keep_with_next = view["kind"] != "text"
+            for note in navigation["notes"]:
+                reference_line(note).paragraph_format.keep_with_next = view["kind"] != "text"
             if view["kind"] == "text": continue
             table([labels["statistic"],labels["value"]],[[labels[x],_metric(view["summary"].get(x), labels)] for x in view["statistics"]],[2.1,5.0])
             doc.add_paragraph(labels["observations"].format(answered=view["summary"]["answered"], observations=view["summary"]["observations"]))
@@ -499,10 +501,11 @@ def _word(model):
                     doc.add_paragraph(value).paragraph_format.keep_with_next = True
             previous_context = context
             heading(question["label"], "Heading 2", question_navigation)
-            for note in question_navigation["notes"]: reference_line(note)
+            for note in question_navigation["notes"]:
+                reference_line(note).paragraph_format.keep_with_next = True
             for label, wording in question_navigation["wordings"]:
                 doc.add_paragraph(label, "Heading 3")
-                doc.add_paragraph(wording)
+                doc.add_paragraph(wording).paragraph_format.keep_with_next = True
             disclosure = doc.add_paragraph(labels[question["classification"]] + (". " + labels["unit"] + " " + question["unit"] if question["unit"] else ""))
             disclosure.paragraph_format.keep_with_next = True
             if question["kind"] == "table":
@@ -518,20 +521,20 @@ def _word(model):
                 else:
                     doc.add_paragraph(labels["withheld" if question["empty_state"] == "withheld" else "no_rows"])
             else:
-                doc.add_paragraph(display_answer(question, labels))
+                doc.add_paragraph(display_answer(question, labels)).paragraph_format.keep_with_next = bool(question["alternative"])
             if question["alternative"]:
                 doc.add_paragraph(labels["alternative"], "Heading 3")
                 doc.add_paragraph(question["alternative"])
     heading(labels["references"], "Heading 1", reading["reference_entry"])
-    doc.add_paragraph(labels["source_note"])
+    doc.add_paragraph(labels["source_note"]).paragraph_format.keep_with_next = bool(reading["references"] or reading["selected_sources"])
     if reading["references"]:
         table([labels["reference"], labels["value"]], [[a,b] for a,b in reading["references"]], [2.1,5.0])
     if reading["selected_sources"]:
         doc.add_paragraph(labels["selected_sources"], "Heading 2")
         table([labels["response"], labels["reference"]], [[row["title"], "\n".join(row["metadata"])] for row in reading["selected_sources"]], [2.1,5.0])
-    for source in reading["workbooks"]:
+    for number, source in enumerate(reading["workbooks"], 1):
         if source["name"]: doc.add_paragraph(labels["source_workbook"] + ": " + source["name"], "Heading 2")
-        reference_line(labels["workbook_sha256"] + ": " + source["sha256"])
+        reference_line(labels["workbook_sha256"] + ": " + source["sha256"]).paragraph_format.keep_with_next = number == len(reading["workbooks"])
     doc.add_paragraph(labels["word_note"])
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -594,8 +597,11 @@ def _pdf(model):
     page_size = landscape(letter) if model["orientation"] == "landscape" else letter
     full_width = page_size[0] - 100.8
     width = (full_width - 18*(model["columns"]-1))/model["columns"]
-    def paragraph(text, kind="body"):
-        return Paragraph(escape(text).replace("\n", "<br/>"), styles[kind])
+    def paragraph(text, kind="body", keep=False):
+        result = Paragraph(escape(text).replace("\n", "<br/>"), styles[kind])
+        if keep:
+            result.keepWithNext = True
+        return result
     story = [paragraph(model["title"], "title"), paragraph(labels["questionnaire_edition"].format(edition=labels[model["edition"]].lower())), paragraph(intro_text(model)), paragraph(reading["state_label"]), paragraph(reading["state_note"]), paragraph(reading["scope_note"])]
     if model["record_id"]:
         story.append(paragraph(labels["report_id"] + ": " + model["record_id"], "reference"))
@@ -646,14 +652,14 @@ def _pdf(model):
             story.append(paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "question"))
             values = [summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]
             if summary["answered"] == "0": values[1] = labels["no_public_answers" if model["edition"] == "public" else "not_answered"]
-            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [54, 129.6, 129.6, 99, 99])
+            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [68.4, 122.4, 122.4, 99, 99])
     if model["view_sections"]:
         from document_charts import chart_panels, pdf_chart
         for view, navigation in zip(model["view_sections"], reading["views"]):
             story.append(pdf_heading(_text(view["title"]), styles["heading"], navigation))
             if view.get("note"):
                 story.append(paragraph(_text(view["note"]), "metadata" if view["kind"] != "text" else "body"))
-            story.extend(paragraph(note, "reference") for note in navigation["notes"])
+            story.extend(paragraph(note, "reference", keep=view["kind"] != "text") for note in navigation["notes"])
             if view["kind"] == "text": continue
             table([labels["statistic"],labels["value"]],[[labels[x],_metric(view["summary"].get(x), labels)] for x in view["statistics"]],[151.2,360])
             story.append(paragraph(labels["observations"].format(answered=view["summary"]["answered"], observations=view["summary"]["observations"])))
@@ -668,14 +674,15 @@ def _pdf(model):
         story.extend(paragraph(value, "metadata") for value in navigation["metadata"])
         previous_context = None
         for question, question_navigation in zip(response["questions"], navigation["questions"]):
+            question_start = len(story)
             context = tuple(question["context"])
             if context and context != previous_context:
                 story.extend(paragraph(value, "metadata") for value in context)
             previous_context = context
             story.append(pdf_heading(question["label"], styles["question"], question_navigation))
-            story.extend(paragraph(note, "reference") for note in question_navigation["notes"])
+            story.extend(paragraph(note, "reference", keep=True) for note in question_navigation["notes"])
             for label, wording in question_navigation["wordings"]:
-                story.extend([paragraph(label, "record"), paragraph(wording)])
+                story.extend([paragraph(label, "record", keep=True), paragraph(wording, keep=True)])
             story.append(paragraph(labels[question["classification"]] + (". " + labels["unit"] + " " + question["unit"] if question["unit"] else ""), "metadata"))
             if question["kind"] == "table":
                 if question["rows"]:
@@ -688,12 +695,21 @@ def _pdf(model):
                 else:
                     story.append(paragraph(labels["withheld" if question["empty_state"] == "withheld" else "no_rows"]))
             else:
-                story.append(paragraph(display_answer(question, labels)))
+                story.append(paragraph(display_answer(question, labels), keep=bool(question["alternative"])))
             if question["alternative"]:
                 story.append(paragraph(labels["alternative"], "question"))
                 story.append(paragraph(question["alternative"]))
+                if question["kind"] != "table":
+                    # Keep a scalar's disclosure and public alternative with
+                    # its original question. Long prose can still paginate.
+                    prefix_start = question_start
+                    while prefix_start and story[prefix_start-1].getKeepWithNext():
+                        prefix_start -= 1
+                    minimum = sum(item.wrap(width, 1000000)[1] + item.getSpaceBefore() + item.getSpaceAfter()
+                                  for item in story[prefix_start:])
+                    story.insert(prefix_start, CondPageBreak(min(minimum, page_size[1]-110)))
     story.append(pdf_heading(labels["references"], styles["heading"], reading["reference_entry"]))
-    story.append(paragraph(labels["source_note"]))
+    story.append(paragraph(labels["source_note"], keep=bool(reading["references"] or reading["selected_sources"])))
     if reading["references"]:
         table([labels["reference"], labels["value"]], [[a,b] for a,b in reading["references"]], [151.2,360])
     if reading["selected_sources"]:

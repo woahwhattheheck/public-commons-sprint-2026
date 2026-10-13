@@ -1,6 +1,6 @@
 # Published field-study workspace
 
-The ECSA extension turns the existing Eighteenmile 2023 companion into a retained, filterable study. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
+The ECSA extension retains the original lake, stream-nutrient and utility-microbial source cohorts as separate filterable studies. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
 
 ## Included study
 
@@ -320,6 +320,7 @@ The installed source context now includes the complete physical water-quality st
 | --- | --- | --- |
 | Nutrient and gauge-flow analysis, 2020–2025 | Stream cohort | `application-context/stream-nutrients/` |
 | Sampling calendar and flow coverage, 2020–2025 | Stream cohort | `application-context/stream-nutrients/` |
+| Paired sampling sensitivity, original 2023–2025 paired subset | Stream cohort | `application-context/stream-nutrients/` |
 | Physical water quality and sampling context, 2023 | Lake or stream cohort | `application-context/physical-water-quality/` |
 
 The original source manifests supply the report titles shown in the desk. Each report keeps its stated full source scope when the observations table is filtered. Adding the physical report does not replace the selected cohort's original activities or observation index. Its 51 activities, including 49 routine activities and two separately identified PFAS activities, remain the scope of that report.
@@ -339,3 +340,13 @@ node original-sources/application-context/physical-water-quality/observations/ei
 ```
 
 The complete study ZIP preserves the same immutable source edition for native re-import. The current Workspace source registration and portable project archive retain these additional source families with the original collection/source identifiers and declared bytes.
+
+## Study task continuity (1.7.1)
+
+Queued imports and exports keep their task and operation identities when the desk closes. The visible task response belongs to the Workspace and mounted view that submitted it: late responses, refreshes and errors leave a remounted or different Workspace unchanged. Reopen the accepted task from the existing task list to inspect its retained result.
+
+The [stream observations guide](measurement_workspace/STREAM_OBSERVATIONS.md#sampling-coverage-and-original-network-context) describes the original nutrient and sampling-coverage reports, their separate percentile methods, upstream/downstream source identities and complete export/reopen path. Original report titles, the physical study, all current source registrations and the complete scientific companion tree remain part of this edition.
+
+## Paired sensitivity companion (1.8.1)
+
+The original stream study now retains its complete paired-sampling sensitivity report through the same context registry. Its 116 comparisons and 148 selections preserve station/analyte cohorts, source-row membership, censored interval bounds and the original parent report. Open **Eighteenmile paired sampling sensitivity**, inspect an original selection, then use the existing report/complete-study exports. The complete rebuilding layout and both original source manifests reopen together. See the [stream guide](measurement_workspace/STREAM_OBSERVATIONS.md#paired-sampling-sensitivity-in-the-retained-study) for the exact source and offline command.

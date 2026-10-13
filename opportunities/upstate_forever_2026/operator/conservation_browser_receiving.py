@@ -126,6 +126,23 @@ def main():
         say()
         return
 
+    action_names = {
+        "catalog": "conservation.catalog.prepare",
+        "catalog_selection": "conservation.catalog.select",
+        "plan": None,
+        "export": "conservation.export",
+    }
+    operations = report.setdefault("operations", {})
+    require(isinstance(operations, dict), "Retain the original receiving action records.")
+    for key, value in operations.items():
+        expected = action_names.get(key)
+        allowed = ("conservation.plan.save", "conservation.catalog.plan.save") if key == "plan" else (expected,)
+        require(key in action_names and isinstance(value, dict)
+                and value.get("workspace") == workspace and value.get("action") in allowed
+                and isinstance(value.get("payload"), dict)
+                and isinstance(value.get("operation_id"), str) and value["operation_id"].strip(),
+                "The retained receiving request identifies another original operation.")
+
     from playwright.sync_api import sync_playwright, expect
 
     if report.get("error") or report.get("page_errors") or report.get("console_errors"):
@@ -155,6 +172,22 @@ def main():
 
         page.on("console", console)
         page.on("pageerror", lambda error: report["page_errors"].append(clean(error)))
+        pending_action = {}
+
+        def record_action(request):
+            if (not pending_action or request.method != "POST"
+                    or urlsplit(request.url).path != "/api/actions"):
+                return
+            value = request.post_data_json
+            if (isinstance(value, dict) and value.get("workspace") == workspace
+                    and value.get("action") == pending_action["action"]):
+                require(isinstance(value.get("payload"), dict)
+                        and isinstance(value.get("operation_id"), str) and value["operation_id"].strip(),
+                        "The original queued action needs its complete request and operation identity.")
+                operations[pending_action["key"]] = value
+                persist()
+
+        page.on("request", record_action)
 
         def get(path, **query):
             query.setdefault("workspace", workspace)
@@ -164,12 +197,24 @@ def main():
             require(response.ok, value.get("error", {}).get("message", "Operator read failed."))
             return value
 
-        def task(task_id):
+        def task(task_id, expected_action, payload=None):
             deadline = time.monotonic() + args.task_timeout
+            resumed = False
             while True:
                 value = get("/api/task", id=task_id)
+                require(value.get("id") == task_id and value.get("workspace") == workspace
+                        and value.get("action") == expected_action
+                        and (payload is None or value.get("payload") == payload),
+                        "The retained task identifies another original Workspace action.")
                 if value.get("state") == "complete":
                     return value
+                if value.get("state") == "interrupted" and not resumed:
+                    response = context.request.post(
+                        origin + "/api/task/resume", data={"id": task_id},
+                        headers={"Authorization": "Bearer " + capability}, timeout=45000)
+                    require(response.ok, "The original interrupted task could not resume.")
+                    resumed = True
+                    continue
                 if value.get("state") in ("failed", "cancelled", "interrupted"):
                     raise ValueError("Workspace task " + task_id + ": " +
                                      json.dumps(value.get("error") or value.get("state")))
@@ -184,38 +229,65 @@ def main():
                                      if item["path"] != str(path)] + [file_record(path)]
             persist()
 
-        def action(control, expected_action, report_key):
-            existing = report["task_ids"].get(report_key)
-            if existing:
-                retained_task = task(existing)
-                require(retained_task.get("action") == expected_action,
-                        "The retained browser task belongs to another action.")
-                return retained_task
-            with page.expect_response(lambda response:
-                    urlsplit(response.url).path == "/api/actions"
-                    and response.request.method == "POST") as pending:
-                control.click()
-            response = pending.value
+        def remember_response(response, expected_action, report_key):
             submitted = response.json()
             require(response.status == 202 and submitted.get("id"),
                     json.dumps(submitted.get("error") or submitted))
             require(submitted.get("action") == expected_action,
-                    "The browser submitted a different workspace action.")
+                    "The browser submitted a different Workspace action.")
             report["task_ids"][report_key] = submitted["id"]
             persist()
-            return task(submitted["id"])
+            return submitted["id"]
+
+        def saved_action(expected_action, report_key):
+            original = operations.get(report_key)
+            if original is not None:
+                require(original["action"] == expected_action,
+                        "The retained request belongs to another original receiving phase.")
+            existing = report["task_ids"].get(report_key)
+            if not existing and original is not None:
+                response = context.request.post(
+                    origin + "/api/actions", data=original,
+                    headers={"Authorization": "Bearer " + capability}, timeout=45000)
+                existing = remember_response(response, expected_action, report_key)
+            if existing:
+                return task(existing, expected_action,
+                            original["payload"] if original is not None else None)
+            return None
+
+        def action(control, expected_action, report_key):
+            retained_task = saved_action(expected_action, report_key)
+            if retained_task is not None:
+                return retained_task
+            pending_action.update(key=report_key, action=expected_action)
+            try:
+                with page.expect_response(lambda response:
+                        urlsplit(response.url).path == "/api/actions"
+                        and response.request.method == "POST"
+                        and isinstance(response.request.post_data_json, dict)
+                        and response.request.post_data_json.get("action") == expected_action) as pending:
+                    control.click()
+                response = pending.value
+                require(report_key in operations,
+                        "Retain the original action request before accepting its queue response.")
+                task_id = remember_response(response, expected_action, report_key)
+            finally:
+                pending_action.clear()
+            return task(task_id, expected_action, operations[report_key]["payload"])
 
         def open_retained_task(task_id):
             # A resumed task may already be complete without an open task dialog.
             control = page.locator('[data-action="task-open"][data-id=' +
                                    json.dumps(task_id) + "]")
             if not control.is_visible():
-                page.locator('[data-action="tasks"]').first.click()
+                page.locator('.top-actions [data-action="tasks"]').click()
             expect(control).to_be_visible()
             control.click()
             expect(page.locator("#detail-dialog[open]")).to_be_visible()
 
         try:
+            for key, original in list(operations.items()):
+                saved_action(original["action"], key)
             page.goto(operator_url, wait_until="domcontentloaded")
             expect(page.locator("#workspace-select")).to_have_value(workspace)
             page.locator('[data-view="conservation"]').click()
@@ -378,7 +450,7 @@ def main():
                 task_id = report["task_ids"]["export"]
                 button = page.locator('[data-action="task-open"][data-id=' + json.dumps(task_id) + "]")
                 if not button.is_visible():
-                    page.locator('[data-action="tasks"]').first.click()
+                    page.locator('.top-actions [data-action="tasks"]').click()
                 expect(button).to_be_visible()
                 button.click()
             download_link = page.locator("#detail-dialog a[href=" +
