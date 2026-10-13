@@ -11,7 +11,9 @@
     "economic_cost_worksheet.mjs",
     "economic_lifecycle.mjs",
     "economic_implementation.mjs",
-    "economic_comparison.mjs"
+    "economic_comparison.mjs",
+    "economic_quantity_estimate.mjs",
+    "economic_quantity_editor.mjs"
   ],
   "backend": {
     "module": "economic_workbench",
@@ -104,6 +106,19 @@
         ],
         "path": "/api/economic-desk/preview",
         "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-desk/quantity-source",
+        "operation": "quantity-source",
         "handler": "read",
         "args": [
           "workspace_key",

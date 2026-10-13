@@ -1,0 +1,602 @@
+{
+  "schema": "upstate.conservation-cost-catalogue/v1",
+  "id": "forestry-gross-costs-2024",
+  "retrieved_date": "2026-10-13",
+  "currency": "USD",
+  "sources": [
+    {
+      "id": "aces-for-2190-2024",
+      "title": "Costs & Trends of Southern Forestry Practices 2024",
+      "publisher": "Alabama Cooperative Extension System; Auburn University",
+      "url": "https://www.aces.edu/blog/topics/forestry/costs-trends-of-southern-forestry-practices-2024/",
+      "pdf_url": "https://www.aces.edu/wp-content/uploads/2025/11/FOR-2190_CostsandTrendsofSouthernForestryPractices2024_112125dL.pdf",
+      "edition": "FOR-2190; published 2025-11-24; survey year 2024",
+      "basis": "Reported southern forestry practice costs",
+      "source_tables": [
+        2,
+        4
+      ],
+      "missing_value_policy": "Unreported regional cells remain absent.",
+      "context": "Pine planting prices include seedlings and oversight. Survey prices are editable planning benchmarks; habitat-specific restoration applicability is chosen explicitly."
+    }
+  ],
+  "rows": [
+    {
+      "id": "aces-2024-pine-hand-southern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by hand — southern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 18390,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 18390
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "southern_coastal_plain",
+      "source_table": 2,
+      "source_page": 2,
+      "reported_acres": 15975,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-hand-northern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by hand — northern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 20823,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 20823
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "northern_coastal_plain",
+      "source_table": 2,
+      "source_page": 2,
+      "reported_acres": 15975,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-hand-piedmont",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by hand — piedmont",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 18720,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 18720
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "piedmont",
+      "source_table": 2,
+      "source_page": 2,
+      "reported_acres": 15975,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-hand-overall",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by hand — overall",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 20064,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 20064
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "overall",
+      "source_table": 2,
+      "source_page": 2,
+      "reported_acres": 15975,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-machine-southern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by machine — southern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 19890,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 19890
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "southern_coastal_plain",
+      "source_table": 2,
+      "source_page": 3,
+      "reported_acres": 11820,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-machine-northern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by machine — northern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 20768,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 20768
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "northern_coastal_plain",
+      "source_table": 2,
+      "source_page": 3,
+      "reported_acres": 11820,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-pine-machine-overall",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Pine planting by machine — overall",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 19034,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 19034
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "overall",
+      "source_table": 2,
+      "source_page": 3,
+      "reported_acres": 11820,
+      "scope": "Pine survey; bundled seedlings and oversight.",
+      "includes_components": [
+        "planting_labour",
+        "seedlings",
+        "planting_oversight"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-chemical-preparation-ground-southern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Ground chemical site preparation — southern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 10787,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 10787
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "southern_coastal_plain",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 17664,
+      "scope": "Site preparation by ground application.",
+      "includes_components": [
+        "chemical_site_preparation"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-chemical-preparation-ground-northern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Ground chemical site preparation — northern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 11925,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 11925
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "northern_coastal_plain",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 17664,
+      "scope": "Site preparation by ground application.",
+      "includes_components": [
+        "chemical_site_preparation"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-chemical-preparation-ground-piedmont",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Ground chemical site preparation — piedmont",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 8925,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 8925
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "piedmont",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 17664,
+      "scope": "Site preparation by ground application.",
+      "includes_components": [
+        "chemical_site_preparation"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-chemical-preparation-ground-overall",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Ground chemical site preparation — overall",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 10535,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 10535
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "overall",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 17664,
+      "scope": "Site preparation by ground application.",
+      "includes_components": [
+        "chemical_site_preparation"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-invasive-control-piedmont",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Invasive plant control — piedmont",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 12200,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 12200
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "piedmont",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 3039,
+      "scope": "Combined reported application methods.",
+      "includes_components": [
+        "invasive_plant_control"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-invasive-control-overall",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Invasive plant control — overall",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 9813,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 9813
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "overall",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 3039,
+      "scope": "Combined reported application methods.",
+      "includes_components": [
+        "invasive_plant_control"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-herbaceous-control-northern_coastal_plain",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Herbaceous weed control — northern coastal plain",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 5964,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 5964
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "northern_coastal_plain",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 173621,
+      "scope": "Combined reported application methods.",
+      "includes_components": [
+        "herbaceous_weed_control"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    },
+    {
+      "id": "aces-2024-herbaceous-control-overall",
+      "source_id": "aces-for-2190-2024",
+      "price_kind": "observed_survey_gross",
+      "title": "Herbaceous weed control — overall",
+      "quantity_unit": "acre",
+      "currency": "USD",
+      "rate_cents": 6677,
+      "pricing": {
+        "type": "linear",
+        "rate_cents": 6677
+      },
+      "recurrence": null,
+      "price_year": 2024,
+      "geography": "overall",
+      "source_table": 4,
+      "source_page": 4,
+      "reported_acres": 173621,
+      "scope": "Combined reported application methods.",
+      "includes_components": [
+        "herbaceous_weed_control"
+      ],
+      "exclusions": "Local applicability and timing require the analyst's selection. No automatic annual recurrence, subsidy, inflation, or avoided-load valuation."
+    }
+  ],
+  "component_bindings": [
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-01",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-02",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-03",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-04",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-05",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-06",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-07",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-08",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-09",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-10",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-11",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-12",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-13",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-14",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-15",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-16",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-17",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-18",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-19",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-20",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-21",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-22",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-23",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-24",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "scfc-seedling-25",
+      "includes_components": [
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "nrcs-sc-fy25-391-1",
+      "includes_components": [
+        "planting_labour",
+        "seedlings"
+      ]
+    },
+    {
+      "catalogue_id": "sc-conservation-costs-20261013",
+      "row_id": "nrcs-sc-fy25-391-2",
+      "includes_components": [
+        "planting_labour",
+        "seedlings"
+      ]
+    }
+  ],
+  "quantity_policy": {
+    "default": null,
+    "source_reference_required": true,
+    "modelled_pollutant_mass_is_not_implementation_quantity": true,
+    "assistance_not_implementation_cost": true,
+    "source_page_numbering": "1-based PDF page number",
+    "recurrence": "Explicit analyst choice",
+    "rounding": "Convert exact quantities and unit prices; round each complete cost line once to cents.",
+    "overlap": "A shared scope with overlapping components requires explicit allocation reasons on both lines."
+  }
+}
