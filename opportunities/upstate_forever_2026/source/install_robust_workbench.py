@@ -21,6 +21,41 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/report_review_study_receiving.py",
+    "model/study_receiving.py",
+    "operator/study_receiving.py",
+    "model/gauge_study_receiving.py",
+    "model/ensemble_study_receiving.py",
+    "model/observed_landcover_receiving.py",
+    "operator/gauge_receiving.py",
+    "operator/ensemble_receiving.py",
+    "operator/observed_landcover_receiving.py",
+    "operator/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.css",
+    "operator/web/study_report_navigation.mjs",
+    "operator/web/received_studies.mjs",
+    "operator/web/gauge_received_studies.mjs",
+    "operator/web/ensemble_received_studies.mjs",
+    "operator/web/observed_landcover_received.mjs",
+    "operator/web/observed_landcover_received.css",
+    "model/observed_landcover.py",
+    "model/landcover_report_source.py",
+    "model/observation_comparability_study_transfer.py",
+    "model/observation_comparability_store.py",
+    "measurement_workspace/__init__.py",
+    "measurement_workspace/observation_comparability.py",
+    "measurement_workspace/observation_comparability_delivery.py",
+    "measurement_workspace/OBSERVATION_COMPARABILITY.md",
+    "measurement_workspace/observation_comparability.html",
+    "operator/observation_comparability_operator.py",
+    "operator/extensions/observation-comparability.json",
+    "operator/web/observation_comparability.mjs",
+    "operator/web/observation_comparability.css",
+    "operator/web/comparability_received_studies.mjs",
+    "integration/component_fragments/observation-comparability.json",
+    "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+    "integration/component_fragments/report-review-study-receiving.json",
     "integration/scientific_report_capture_patch.json",
     "model/scientific_report_capture.py",
     "model/scientific_report_editions.py",
@@ -150,6 +185,41 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/report_review_study_receiving.py",
+    "model/study_receiving.py",
+    "operator/study_receiving.py",
+    "model/gauge_study_receiving.py",
+    "model/ensemble_study_receiving.py",
+    "model/observed_landcover_receiving.py",
+    "operator/gauge_receiving.py",
+    "operator/ensemble_receiving.py",
+    "operator/observed_landcover_receiving.py",
+    "operator/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.css",
+    "operator/web/study_report_navigation.mjs",
+    "operator/web/received_studies.mjs",
+    "operator/web/gauge_received_studies.mjs",
+    "operator/web/ensemble_received_studies.mjs",
+    "operator/web/observed_landcover_received.mjs",
+    "operator/web/observed_landcover_received.css",
+    "model/observed_landcover.py",
+    "model/landcover_report_source.py",
+    "model/observation_comparability_study_transfer.py",
+    "model/observation_comparability_store.py",
+    "measurement_workspace/__init__.py",
+    "measurement_workspace/observation_comparability.py",
+    "measurement_workspace/observation_comparability_delivery.py",
+    "measurement_workspace/OBSERVATION_COMPARABILITY.md",
+    "measurement_workspace/observation_comparability.html",
+    "operator/observation_comparability_operator.py",
+    "operator/extensions/observation-comparability.json",
+    "operator/web/observation_comparability.mjs",
+    "operator/web/observation_comparability.css",
+    "operator/web/comparability_received_studies.mjs",
+    "integration/component_fragments/observation-comparability.json",
+    "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+    "integration/component_fragments/report-review-study-receiving.json",
     "integration/scientific_report_capture_patch.json",
     "model/scientific_report_capture.py",
     "model/scientific_report_editions.py",
@@ -426,7 +496,103 @@ def assembled_data(application, pending, name):
     return data
 
 
+def verify_received_study_dependencies(application, pending):
+    """Keep the original received-record readers and their native routes together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    def require(names):
+        for name in names:
+            assembled_data(application, pending, name)
+
+    reader = source("model/study_receiving.py")
+    provider = source("operator/study_transfer.py")
+    view = source("operator/web/received_studies.mjs")
+    selector = source("operator/web/extensions/study_transfer.mjs")
+    has_navigation = any(data is not None and b"study_report_navigation.mjs" in data
+                         for data in (view, selector))
+    if has_navigation:
+        require((
+            "model/report_review_study_receiving.py", "model/study_receiving.py",
+            "model/customer_review_study_transfer.py", "model/scientific_report_review.py",
+            "model/scientific_report_editions.py", "operator/study_receiving.py",
+            "operator/study_transfer.py", "operator/extensions/study-transfer.json",
+            "operator/web/study_report_navigation.mjs", "operator/web/received_studies.mjs",
+            "operator/web/extensions/study_transfer.mjs", "operator/web/extensions/study_transfer.css",
+            "operator/web/reviews.mjs", "operator/web/source_reports.mjs",
+            "operator/web/source_report_editions.mjs", "operator/web/app.mjs",
+            "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+            "integration/component_fragments/report-review-study-receiving.json"))
+        if reader is None or b"report_review_study_receiving" not in reader:
+            raise ValueError("Receive the original saved-report and Customer review reader with its navigation")
+        if provider is None or b"import study_receiving" not in provider:
+            raise ValueError("Receive the original Study provider's retained-record read routes")
+        descriptor = json.loads(assembled_data(
+            application, pending, "operator/extensions/study-transfer.json"))
+        routes = {(row.get("path"), row.get("operation"))
+                  for row in descriptor.get("backend", {}).get("routes", [])
+                  if "GET" in row.get("methods", [])}
+        if not {("/api/study-transfer/received", "received"),
+                ("/api/study-transfer/received-detail", "received-detail")}.issubset(routes):
+            raise ValueError("Receive both original received-Study catalogue and detail routes")
+        if "study_report_navigation.mjs" not in descriptor.get("assets", []):
+            raise ValueError("Declare the original saved-record navigation asset in the Study descriptor")
+        app = assembled_data(application, pending, "operator/web/app.mjs")
+        if any(name not in app for name in
+               (b"openSavedScientificReport", b"openSavedCustomerReview")):
+            raise ValueError("Receive the original operator's saved-report and Customer review openers")
+    if reader is not None:
+        groups = {
+            b"report_review_study_receiving": (
+                "model/report_review_study_receiving.py", "model/customer_review_study_transfer.py",
+                "model/scientific_report_review.py", "model/scientific_report_editions.py"),
+            b"gauge_study_receiving": ("model/gauge_study_receiving.py",),
+            b"ensemble_study_receiving": ("model/ensemble_study_receiving.py",),
+            b"observed_landcover_receiving": (
+                "model/observed_landcover_receiving.py", "model/observed_landcover.py",
+                "model/landcover_report_source.py", "model/reuse.py"),
+            b"observation_comparability_study_transfer": (
+                "model/observation_comparability_study_transfer.py",
+                "model/observation_comparability_store.py",
+                "measurement_workspace/__init__.py",
+                "measurement_workspace/observation_comparability.py",
+                "measurement_workspace/observation_comparability_delivery.py",
+                "operator/observation_comparability_operator.py",
+                "operator/extensions/observation-comparability.json",
+                "operator/web/observation_comparability.mjs",
+                "operator/web/observation_comparability.css",
+                "operator/web/comparability_received_studies.mjs"),
+        }
+        for marker, names in groups.items():
+            if marker in reader:
+                require(names)
+        for module in ("scientific_report_study_transfer", "implementation_report_transfer",
+                       "portable_implementation", "study_report_transfer"):
+            if module.encode("ascii") in reader:
+                require(("model/" + module + ".py",))
+    ticket_reader = source("operator/study_receiving.py")
+    if ticket_reader is not None:
+        require(("model/study_receiving.py",))
+        for module in ("gauge_receiving", "ensemble_receiving", "observed_landcover_receiving"):
+            if module.encode("ascii") in ticket_reader:
+                require(("operator/" + module + ".py",))
+    assets = {
+        b"study_report_navigation.mjs": ("operator/web/study_report_navigation.mjs",),
+        b"gauge_received_studies.mjs": ("operator/web/gauge_received_studies.mjs",),
+        b"ensemble_received_studies.mjs": ("operator/web/ensemble_received_studies.mjs",),
+        b"observed_landcover_received.mjs": (
+            "operator/web/observed_landcover_received.mjs", "operator/web/observed_landcover_received.css"),
+        b"comparability_received_studies.mjs": ("operator/web/comparability_received_studies.mjs",),
+    }
+    for data in (view, selector):
+        if data is not None:
+            for marker, names in assets.items():
+                if marker in data:
+                    require(names)
+
+
 def verify_composition(application, pending):
+    verify_received_study_dependencies(application, pending)
     for name in REQUIRED:
         assembled_data(application, pending, name)
     for name in ("model/workspace.py", "model/experiments.py", "model/native_versions.py",
