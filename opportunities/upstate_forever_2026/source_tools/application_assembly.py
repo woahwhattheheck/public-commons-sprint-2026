@@ -21,6 +21,10 @@ source validation, atomic fresh-directory receiving, and the original native
 workspace remain part of the existing receiving course. A patch group already
 pins its original preimage; omit a duplicate file-level predecessor when the
 same declared installation must also be able to add that member if absent.
+A declaration may also retain an explicitly listed compatible successor whose
+complete UTF-8 body, byte count, SHA256 and original published Git blob agree.
+These are exact installed-body alternatives, never substitute installation
+bodies or permission to accept an unknown newer file.
 """
 from __future__ import annotations
 
@@ -1187,7 +1191,7 @@ def _joined_composition(documents):
             return selected[0]
         raise ValueError("Source-bank blocks have different composition declarations")
     paths = {"delta_paths": set(), "supporting_exact_paths": set()}
-    patches = {}
+    patches, successors = {}, {}
     for document in documents:
         value = document.get("composition")
         if value is None:
@@ -1210,11 +1214,26 @@ def _joined_composition(documents):
             if name in patches and canonical(patches[name]) != canonical(row):
                 raise ValueError("Source-bank blocks have different source patches: " + name)
             patches[name] = row
+        rows = value.get("compatible_successors", [])
+        if not isinstance(rows, list):
+            raise ValueError("Compatible source successors must be a list")
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError("Invalid compatible source successor")
+            name = source_member_name(row.get("path"), prefix)
+            row = {**row, "path": name}
+            key = (name, row.get("sha256"))
+            if not isinstance(key[1], str):
+                raise ValueError("Compatible source successor needs its SHA256")
+            if key in successors and canonical(successors[key]) != canonical(row):
+                raise ValueError("Source-bank blocks disagree on a compatible successor: " + name)
+            successors[key] = row
     if paths["delta_paths"] & paths["supporting_exact_paths"]:
         raise ValueError("Source-bank blocks disagree on delta and support membership")
     return {"schema": DECLARED_COMPOSITION_SCHEMA,
             **{key: sorted(values) for key, values in paths.items()},
-            "patches": [patches[name] for name in sorted(patches)]}
+            "patches": [patches[name] for name in sorted(patches)],
+            "compatible_successors": [successors[key] for key in sorted(successors)]}
 
 
 def _source_occurrences(text, anchor):
@@ -1294,7 +1313,48 @@ def declared_composition(layer):
             raise ValueError("Source patch replay differs from complete postimage: " + name)
         patches[name] = {key: row[key] for key in ("preimage_sha256", "postimage_sha256")}
         patches[name]["edits"] = checked
-    return {**partitions, "patches": patches,
+    successors, successor_bytes = {}, 0
+    rows = value.get("compatible_successors", [])
+    if not isinstance(rows, list) or len(rows) > MAX_FILES:
+        raise ValueError("Invalid compatible source successor inventory")
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Invalid compatible source successor")
+        name = source_member_name(row.get("path"), layer.document.get("prefix"))
+        if name not in delta:
+            raise ValueError("Compatible successors must select a changed source member: " + name)
+        content = row.get("content")
+        if not isinstance(content, str) or "\0" in content:
+            raise ValueError("Compatible successor needs its complete UTF-8 source: " + name)
+        body = content.encode("utf-8")
+        check_identity(body, row.get("bytes"), row.get("sha256"), name)
+        successor_bytes += len(body)
+        if successor_bytes > MAX_BYTES:
+            raise ValueError("Compatible source successors exceed the source-byte limit")
+        reference = row.get("source_reference")
+        if not isinstance(reference, dict):
+            raise ValueError("Compatible successor needs its original published source reference: " + name)
+        repository = reference.get("repository")
+        if (not isinstance(repository, str)
+                or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository)):
+            raise ValueError("Compatible successor needs its original repository: " + name)
+        source_path = source_member_name(reference.get("path"))
+        if source_path != name and not source_path.endswith("/" + name):
+            raise ValueError("Compatible successor source path differs: " + name)
+        git_blob = reference.get("git_blob")
+        actual_blob = hashlib.sha1(b"blob " + str(len(body)).encode("ascii") + b"\0" + body).hexdigest()
+        if (not isinstance(git_blob, str) or not re.fullmatch(r"[0-9a-f]{40}", git_blob)
+                or git_blob != actual_blob):
+            raise ValueError("Compatible successor published Git body differs: " + name)
+        if "commit" in reference and (not isinstance(reference["commit"], str)
+                or not re.fullmatch(r"[0-9a-f]{40}", reference["commit"])):
+            raise ValueError("Compatible successor has an invalid published commit: " + name)
+        known = successors.setdefault(name, {})
+        if row["sha256"] in known:
+            raise ValueError("Repeated compatible source successor identity: " + name)
+        known[row["sha256"]] = {"content": content, "bytes": len(body),
+                                "sha256": row["sha256"], "source_reference": dict(reference)}
+    return {**partitions, "patches": patches, "compatible_successors": successors,
             "sha256": sha256(canonical(value))}
 
 
@@ -1400,7 +1460,22 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
             guarded = None
             patch = selected["patches"].get(name) if selected is not None else None
-            if previous is not None and patch is not None:
+            compatible = (selected["compatible_successors"].get(name, {}).get(previous["sha256"])
+                          if selected is not None and previous is not None else None)
+            if compatible is not None:
+                if previous.get("encoding", "utf-8") != "utf-8" or files[name] != compatible["content"]:
+                    raise ValueError("Installed compatible source differs from its full original body: " + name)
+                content = files[name]
+                item.update(bytes=compatible["bytes"], sha256=compatible["sha256"],
+                            mode=previous["mode"], git_blob=compatible["source_reference"]["git_blob"])
+                guarded = {"state": "retained_compatible_successor", "edits": [],
+                           "composition_sha256": selected["sha256"],
+                           "declared_postimage_sha256": layer.metadata[name]["sha256"],
+                           "retained_sha256": compatible["sha256"],
+                           "source_reference": compatible["source_reference"]}
+                if patch is not None:
+                    guarded["declared_preimage_sha256"] = patch["preimage_sha256"]
+            elif previous is not None and patch is not None:
                 if previous.get("encoding", "utf-8") != "utf-8":
                     raise ValueError("Current source is not UTF-8 for guarded composition: " + name)
                 content, guarded = compose_guarded_source(files[name], content, patch, name)
