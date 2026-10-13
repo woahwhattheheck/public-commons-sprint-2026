@@ -155,9 +155,6 @@ def perform(args):
         verify(geometry_manifest, {"sha256": args.geometry_manifest_sha256})
         original_pages, capture_inventory = reach_sources(bank, geometry_manifest, args.geometry_root)
         capture_inventory_path = output / "original-geometry-inventory.json"
-        atomic_json(capture_inventory_path, capture_inventory)
-        original_pages[0]["companions"] = [{"path": str(capture_inventory_path),
-                                              **fingerprint(capture_inventory_path)}]
         domain_path, domain_entry = workspace.source_file(args.domain_collection, args.domain_source)
         if domain_entry.get("kind") != "vector":
             raise ValueError("Select the retained original HUC polygon source")
@@ -189,6 +186,9 @@ def perform(args):
             "schema": "upstate.ga-assessment-receiving/v1", "binding": binding}
         if state["binding"] != binding:
             raise ValueError("This operation directory already belongs to a different original selection")
+        atomic_json(capture_inventory_path, capture_inventory)
+        original_pages[0]["companions"] = [{"path": str(capture_inventory_path),
+                                              **fingerprint(capture_inventory_path)}]
         configuration = {
             "assessment_schema": bank["schema"], "jurisdiction": "GA",
             "record_collection": "records",
@@ -230,7 +230,9 @@ def perform(args):
         normalized_key = digest({"geography": geo_key,
                                  "relations_sha256": fingerprint(relations)["sha256"],
                                  "producer_sha256": fingerprint(producer)["sha256"],
-                                 "receiving_source_sha256": fingerprint(__file__)["sha256"]})
+                                 "receiving_source_sha256": fingerprint(__file__)["sha256"],
+                                 "edition_composer_sha256": fingerprint(application / "source_tools" /
+                                     "receive_north_carolina_assessment.py")["sha256"]})
         normalized_dir = output / ("assessment-" + normalized_key[:20])
         normalized_manifest = normalized_dir / "sources.json"
         original_selection = member(manifest_path.parent, "originals/selection.json")
