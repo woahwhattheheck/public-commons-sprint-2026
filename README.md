@@ -5,7 +5,7 @@ Durable, openly reusable public-good assets generated during a focused 48-hour s
 **Goal**: Convert remaining SuperGrok Heavy allowance into GitHub-first, human-auditable, maintainable resources for underserved communities (low-connectivity educators, small nonprofits, Global South researchers, disability communities, local resilience groups, civic technologists).
 
 ## License
-MIT for code and most technical assets. CC-BY-4.0 or CC0 for educational content, prompts, and documentation where noted in individual folders. See LICENSE and per-folder notes.
+CC-BY-4.0 or CC0 for educational content, prompts, and documentation where noted in individual folders. See per-folder license notices.
 
 ## Structure (initial)
 - `/prompts/` — Reusable public-goods prompt library (Top priority asset)
