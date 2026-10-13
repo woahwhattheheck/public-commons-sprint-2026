@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import logging
 import math
@@ -161,7 +162,7 @@ def main(argv=None):
     sys.path.insert(0, str(application))
     sys.path.insert(0, str(application / "source_tools"))
     import receive_gura_native as receiver
-    from model.common import held
+    from model.common import atomic_bytes, describe_file, held
     from model.model_selection import run_models
     from model.planning_inventory import build as build_inventory
     from model.portfolios import save_portfolio, prepare_scenario, build_report
@@ -182,6 +183,18 @@ def main(argv=None):
         receiver.atomic(state_path, state)
         receiver.emit("gura-planning-" + stage, state_path=str(state_path), **values)
     with held(receiving / ".planning-driver.lock", blocking=False):
+        # Keep the exact completed or interrupted edition before this explicit
+        # continuation updates the active pointer (for example 95% to 90%).
+        # The snapshot must succeed before any original state is overwritten.
+        if state_path.exists():
+            prior_bytes = state_path.read_bytes()
+            prior = json.loads(prior_bytes)
+            if prior.get("schema") != state["schema"] or prior.get("scope") != state["scope"]:
+                raise ValueError("The saved planning journal belongs to another original operation")
+            prior_path = receiving / "planning-report-continuations" / (
+                hashlib.sha256(prior_bytes).hexdigest() + ".json")
+            atomic_bytes(prior_path, prior_bytes, immutable=True)
+            state["previous_planning_state"] = describe_file(root, prior_path)
         try:
             checkpoint("original-inputs")
             if args.baseline_run_id is None:
@@ -302,7 +315,8 @@ def main(argv=None):
             })
             checkpoint("evaluated", evaluation_run_id=selected_run["id"],
                        comparison_id=comparison["id"], report_id=report["id"],
-                       report_files=report["files"])
+                       report_files=report["files"],
+                       treatment_footprint=report.get("evaluation", {}).get("treatment_footprint"))
             if args.archive:
                 destination = args.archive.resolve()
                 if destination.is_relative_to(root):
