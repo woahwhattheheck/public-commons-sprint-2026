@@ -90,6 +90,7 @@ BUNDLED_REPORT_MANIFESTS = (
     "results/assessment-source-scope-review-20261013/sources.json",
     "results/assessment-association-review-20261013/observed-sources.json",
     "results/assessment-source-scope-review-20261013/observed-sources.json",
+    "results/native-assessment-delivery-20261013/sources.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json",
     "source/water_context/sources-20261013.json",
@@ -536,5 +537,10 @@ class SourceReports:
 
     def scientific_member(self, workspace, key, name):
         ticket, path = self.scientific.member(workspace, key, name)
+        policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
+        return ticket, policy
+
+    def briefing_member(self, workspace, key, name):
+        ticket, path = self.scientific.briefing_member(workspace, key, name)
         policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
         return ticket, policy

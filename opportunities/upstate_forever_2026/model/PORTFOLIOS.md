@@ -434,3 +434,42 @@ cells. A caller may supply a different --min-coverage. The previous 95%
 threshold excluded the three agricultural subwatersheds in the actual original
 Gura data (94.11–94.67% common valid coverage) while admitting unchanged forest
 units. No missing cell is filled or counted as a modeled value.
+
+
+## Actual selected treatment in a completed portfolio
+
+The native portfolio evaluation now carries the original run's retained
+land-cover accounting into its existing HTML report, evaluation JSON,
+`treatment-footprint.json` and `treatment-footprint.csv`. These files travel
+in the same portfolio report ZIP and appear in its ordinary file catalogue.
+Building this report reads the saved stage and verifies its retained categorical
+raster; it does not compile another scenario or execute NDR/SDR.
+
+For each ordered patch, the report shows the original mask source, source and
+destination classes, valid mask cells, eligible cells, actual changed assignments,
+hectares and final-owned cells. Eligibility uses the values after preceding
+patches. Changed assignments may overlap; only final-owned cells sum to unique
+final differences from the baseline. Area uses the retained grid's affine pixel
+area. The original source selection, patch transitions and complete retained
+edit records remain in the JSON.
+
+A zero result distinguishes a mask with no valid model-grid pixel centres,
+a mask containing none of the declared source classes, and a patch assigning
+its existing destination value. A final net count of zero explicitly says the
+selected treatment left the categorical inputs unchanged. Missing accounting
+in an older stage stays unavailable; the report does not infer a footprint
+from annual exports or add overlapping patch areas. Native annual export
+changes retain their original common-valid comparison support and units.
+
+Report content includes this footprint in its immutable identity, so a newly
+built report keeps an earlier report edition intact. The Gura planning receiver
+also saves the byte-exact prior planning journal under
+`gura-receiving/planning-report-continuations/<sha256>.json` before updating
+its active state. The new state points to that original snapshot. Thus the
+explicit 90% coverage continuation preserves the historical 95% report,
+original selections, completed native runs and their earlier saved outcome.
+
+Use the existing `portfolio-report` CLI or **Build report** action with the
+saved portfolio and evaluation run to expose its actual retained treatment;
+use the current original Gura operation to continue the corrected planning
+selection. Existing completed stages remain reusable by the native engine.

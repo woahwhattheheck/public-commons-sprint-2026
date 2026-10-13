@@ -1,0 +1,76 @@
+{
+  "schema": "commons.artifacts/v1",
+  "source_id": "assessment-association-report-b2477e904ac6f635a95c",
+  "files": [
+    {
+      "path": "assessment-native-identity.csv",
+      "bytes": 152915,
+      "sha256": "edb21a1f9de63caa71cf4a3786c7414f3e5ea21b80c32980132bc78f68484aff"
+    },
+    {
+      "path": "publisher-huc-differences.csv",
+      "bytes": 5550,
+      "sha256": "eb7970663ae3fb80a7a2b56fb104d57d90049bd7b02e9c6ba15b398a39bc83f1"
+    },
+    {
+      "path": "identity-summary.json",
+      "bytes": 2077,
+      "sha256": "2b767119426e61835b0944702f0fa813c9ca7d949254d5581b3f315c0f7dbc4f"
+    },
+    {
+      "path": "inputs/assessment-records-domain217.csv",
+      "bytes": 111624,
+      "sha256": "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7"
+    },
+    {
+      "path": "inputs/assessment159-native-identity-crosswalk.csv",
+      "bytes": 42751,
+      "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+    },
+    {
+      "path": "inputs/source-priority-assessment-domain217.json",
+      "bytes": 629194,
+      "sha256": "5474827855ed902441d4cf0f65b17a606fefe715d902dc0c3c5fa0855f17b61f"
+    },
+    {
+      "path": "inputs/assessment-native-huc-context.json",
+      "bytes": 441989,
+      "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+    },
+    {
+      "path": "assessment-associations.json",
+      "bytes": 2074677,
+      "sha256": "b2477e904ac6f635a95ce5d67dd771590184d8ea69c83c034cb9fe5332bba3d2"
+    },
+    {
+      "path": "assessment-associations.csv",
+      "bytes": 285925,
+      "sha256": "78d8bd6ea60fe3201d0db7d091432ddaf8a795c374939165eb44dedccfdca5df"
+    },
+    {
+      "path": "publisher-differences-and-priorities.csv",
+      "bytes": 9717,
+      "sha256": "803990850b0fec8cc910026786d56cce65502f3cc7ab35e3cac74ef3baea125d"
+    },
+    {
+      "path": "watershed-membership-comparison.csv",
+      "bytes": 130493,
+      "sha256": "30192b215c5a1c605233c18748f9f06afd3cb2be771e01268cb2ff17294a8bb9"
+    },
+    {
+      "path": "assessment-edition-summary.csv",
+      "bytes": 685,
+      "sha256": "bd483f918882910e9fa7af1a8b1199c953f3d2db3c9201a7c6372bd44b6dfee4"
+    },
+    {
+      "path": "inputs/annual-reference-assessment-summary.json",
+      "bytes": 36973,
+      "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+    },
+    {
+      "path": "OPEN_ASSESSMENT_ASSOCIATIONS.html",
+      "bytes": 1978335,
+      "sha256": "23ec6c05afd0ccdf28af62d5e68b3357fb7602948f541d0173ff18579fe0d959"
+    }
+  ]
+}

@@ -128,6 +128,42 @@ node source/run_monitoring_browser.mjs \
 
 Use `--resume` on this direct browser command only when that same output retains its original `request-state.json`. The earlier host's browser journal remains attached to its original operator key. This receiving operation starts with the actual received directory and keeps the original scientific IDs.
 
+## Reopen completed Chemistry analyses from the received project
+
+The same full native Workspace retains the original chemical case and its completed analyses. Use `--chemistry-restored-selection` when the intended receiving course is to inspect, download and transfer those existing results.
+
+The completed four-reach authored reference case in the Upper Savannah receiving archive uses this exact selection:
+
+```json
+{
+  "schema": "upstate.chemistry-browser-selection/v1",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "case_id": "ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb",
+  "run_ids": [
+    "59d4b738620b469249bb297fa05626012de72a1cdd4e5135a9f6dc4b7f9c8a53",
+    "6742a178dfe5c7dc69ea3c7b9cebfb1477bb3074db98f1c8990c5686569bc58d",
+    "2296638a0531acf18d172955d3da5e7845dc71ccaf76189b36b0217565c40a5a",
+    "9e2e96abc6dcdbb799c00a106e50fb93c98298ea8c44fccd2282e12ac202a044"
+  ]
+}
+```
+
+Those original runs are simulation, calibration, uncertainty and monitoring analysis, respectively. Their original reference inputs and source collection `73e15c1f654b2943e437a5abe173b1d00ed58cbb9f1abab37ce6ac71308a1443` remain separate from the project's actual regional observations and Monitoring geometry. Select other completed analyses by their own retained case and run IDs.
+
+Add the following argument to the same regional progression command:
+
+```text
+--chemistry-restored-selection ACTUAL_CHEMISTRY_SELECTION.json
+```
+
+This mode is mutually exclusive with `--chemistry-selection`. The progression freezes the exact selection file, validates the actual scientific project, reopens the original case through its native source/project verification, checks every selected completed run's case and project fingerprint, and verifies all original result artifact bytes. It pins full case/run record hashes in an immutable adoption record before the browser opens the retained results.
+
+The browser reopens each selected analysis, operates its native result paging, downloads every retained result file, and exports the original editable chemical project with the selected completed analyses. The progression requests the original editable-project receive by default; add `"receive": false` to the selection JSON to inspect/export without that case receive. The regional progression owns the final complete Workspace transfer, so it does not ask the Chemistry child browser to make a second full-project archive.
+
+This mode keeps the original case and run identities. It queues neither case editing nor new scientific calculation. The existing `--chemistry-selection` mode continues to perform its explicit edit/calculation course. Each mode has its own exact request identity; the original mode's fingerprint remains unchanged when the new option is omitted.
+
+On resume, the adoption record checks the same native full records and original artifacts again. A completed child browser is reused only when its exact selected-file hash, receiving operator key, project, case, ordered run IDs and receive/transfer choices match. Keep the same output to continue the original native requests. Select a new output directory for a deliberately different receiving selection.
+
 ## Use an installed browser
 
 `--browser-executable /absolute/path/to/chromium` selects an existing Chromium executable for the original Profile, Source updates, Chemistry, Monitoring and saved-view browser drivers. Use the current application containing the matching option in each driver. It is an execution setting and does not change the retained scientific request or selection fingerprint. The existing `--browser-channel`, `--headed` and `--video` options remain available.

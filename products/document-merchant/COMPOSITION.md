@@ -662,3 +662,107 @@ After receiving the original PDFs, use the same Document production browser's Or
 ## Assemble PDFs that already exist
 
 Use **Bundle existing PDFs** in the same Document production application to upload complete invoices or reports, choose their order, review the original assembly price, receive the paid volumes and export the complete customer bundle. It also receives the original whole assembly source plan from an upload or a declared local file. [Existing PDF intake](ASSEMBLY.md#existing-pdf-intake-in-the-customer-browser) covers complete source and export continuation, limits, original payment units and the installed API. The same customer owner and Resource library remain in use.
+
+
+## Correct selected documents or order an unchanged repeat
+
+A saved source set can contain many customer records and several documents per record. Use the selected-document workflow when a customer needs a corrected invoice, updated report or another unchanged rendering. It creates a new source set for only the chosen documents. The original source, merchant requests, paid jobs and PDFs retain their existing identities.
+
+### Browser workflow
+
+Open the original saved set in **Document production**. Select the affected documents using the checkboxes in **Documents and receiving**. **Select this page** selects every document on the current page; selection is retained when you move through further pages of that same source. **Clear selection** clears the whole selection. The selected count covers all pages.
+
+Choose **Edit selected documents** or **Repeat selected documents**. The editor loads complete original records and the selected template bodies. CSV line items have already been grouped by the original recipe, so the selected record includes all its original line items. Selecting an invoice for one order and a greeting for another produces those two documents; it does not render the other record/template combinations.
+
+Give the new set a distinct ID, name and reason. For a correction, edit the fields under **Selected record**. Numeric fields retain their numeric type, and CSV strings remain strings. **Complete record JSON** includes every nested field and line item; use **Apply complete record** after editing that view. Each selected template has its full editable source. Keep the selected record keys and original business task references. A different order or business task belongs in a new document set.
+
+An unchanged repeat loads the same source with record/template editing disabled. It preserves every selected generated-source hash. Repeat is an explicit new rendering request; its provider response and resulting PDF may reflect the provider's current rendering environment.
+
+Choose **Download editable draft** whenever work needs to continue later. This file includes all selected editable records and templates, the original source SHA256, exact selected document IDs, mode, new ID/name and reason. Open the original source set and use **Continue a saved correction draft** to reload it. The original source is checked again when the derived source is saved. A draft is limited to 32 MiB.
+
+Choose **Prepare selected source documents**. The resulting saved set includes the complete edited records, templates, generated HTML/Markdown, original task references and parent source relationship. Its heading identifies the original set and reason, with **Open original document set** returning to the earlier results. Download the generated source documents or the complete source review before purchasing.
+
+The remaining controls are the original production workflow:
+
+1. **Prepare merchant price** prepares only the new set's selected document requests.
+2. Review the exact network, asset, recipient, payment flow, document count and amount.
+3. **Render at this saved price** purchases those requests through the original customer checkout.
+4. **Receive existing jobs** continues accepted requests and receives their complete PDF/source/request/render files.
+5. **Export received documents** produces the complete original Collection and source plan.
+
+A selected replacement remains under its original business task reference and has a new document-set ID, native request and reviewed price. The operator retains the original and replacement files in their respective saved sets.
+
+### CLI workflow
+
+First read the original saved source and record its exact returned SHA256:
+
+~~~sh
+starforge document-merchant compose source \
+  --directory /absolute/private/documents/original-orders
+~~~
+
+The complete source plan lists each document's ID, record key, template and original task reference. Write a selection file using the actual IDs from that plan:
+
+~~~json
+{
+  "id": "orders-corrected-20261013",
+  "name": "Corrected customer invoices",
+  "mode": "correction",
+  "reason": "Correct the line-item description requested by the customer.",
+  "documentIds": ["ACTUAL_ORIGINAL_DOCUMENT_ID"]
+}
+~~~
+
+Create the complete editable draft:
+
+~~~sh
+starforge document-merchant compose correction-draft \
+  --directory /absolute/private/documents/original-orders \
+  --sha256 ACTUAL_ORIGINAL_SOURCE_SHA256 \
+  --selection /absolute/private/correction-selection.json \
+  --out /absolute/private/correction-draft.json
+~~~
+
+The command returns the full draft's path, byte count and SHA256. Edit its complete `records` and `templates` fields. Retain its original `parent` and selected `documentIds`. Set `mode` to `repeat` for an unchanged repeat and retain the original records and template contents.
+
+Review the generated result and optionally save the complete portable plan:
+
+~~~sh
+starforge document-merchant compose review-correction \
+  --parent-directory /absolute/private/documents/original-orders \
+  --draft /absolute/private/correction-draft.json \
+  --out /absolute/private/correction-plan.json
+~~~
+
+Save and materialize the corrected source using the original receiver:
+
+~~~sh
+starforge document-merchant compose correct \
+  --parent-directory /absolute/private/documents/original-orders \
+  --draft /absolute/private/correction-draft.json \
+  --directory /absolute/private/documents/orders-corrected-20261013
+~~~
+
+The returned source receipt includes the exact source SHA256, generated document counts, full source/preview paths and the original batch directory. Repeating the command with identical source reopens the same saved result. Changed bytes cannot replace an already saved derived source under that ID.
+
+Continue with the original commands:
+
+~~~sh
+starforge document-merchant compose prepare \
+  --directory /absolute/private/documents/orders-corrected-20261013 \
+  --workspace-options /absolute/private/customer-options.json
+
+starforge document-merchant compose run \
+  --directory /absolute/private/documents/orders-corrected-20261013 \
+  --workspace-options /absolute/private/customer-options.json \
+  --approve-plan ACTUAL_RETURNED_NATIVE_PLAN_SHA256 \
+  --out /absolute/private/corrected-orders-receiving
+~~~
+
+The original `receive`, `review-batch`, `open`, `export`, `receive-source` and `receive-collection` commands operate on that same saved derived set. A partial native run keeps its original requests and can be continued with the original saved price. The full exported source retains the exact parent source ID/SHA and each selected original document's ID, source SHA and business task reference.
+
+### Source contract
+
+The optional `correction` member of a composition request carries `stellar-forge.document-correction.v1`, mode, reason, parent source ID/SHA and the exact selected record/template pairs. Older requests omit it and retain their previous normalization and source bytes. The source compiler requires every selected pair to generate exactly one document; a changed condition cannot silently remove a selected replacement. It also requires the original task reference to remain equal. An unchanged repeat must preserve every selected generated-source hash.
+
+The helper `documentCorrectionDraft` loads complete grouped records and templates from a saved composition receipt. `composeDocumentCorrection` regenerates selected source without touching native requests. `stageDocumentCorrection` reads the original saved source and saves the derived plan through the existing composition receiver. Browser operations use the original authenticated host and its background-operation lifetime. Payment and complete file receiving stay in the original batch.

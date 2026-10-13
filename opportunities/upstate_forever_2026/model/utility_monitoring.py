@@ -332,7 +332,10 @@ def _prepare(workspace, value, include, progress):
                   "recommended_excluded_ids": expected_excluded,
                   "original_domain_notes": notes,
                   "files": {name: describe_file(directory, directory / name)
-                            for name in ("intent.json", "method.json", "sources.json", "utility-footprint.geojson")}}
+                            for name in ("intent.json", "method.json", "sources.json", "utility-footprint.geojson",
+                                         "original/utility-watershed-packet.zip",
+                                         "original/selected-watersheds.json", "original/original-utility-profile.json",
+                                         "original/export.json")}}
         if stations:
             result["files"]["original-stations.geojson"] = describe_file(directory, directory / "original-stations.geojson")
         result["record_sha256"] = digest(result)
