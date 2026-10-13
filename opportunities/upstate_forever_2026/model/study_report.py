@@ -11,6 +11,8 @@ import json
 import math
 from pathlib import Path
 
+from . import study_comparison_view
+
 POLLUTANTS = {
     "nitrogen_export": "Nitrogen export",
     "phosphorus_export": "Phosphorus export",
@@ -505,7 +507,8 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
         "<option value=\"\">All exports</option></select></label>"
         "<label for=\"search\">Find <input id=\"search\" type=\"search\" placeholder=\"Filter rows\"></label>"
         "<button id=\"reset\" type=\"button\">Reset filters</button></div>"
-        "<p id=\"visible\" role=\"status\" aria-live=\"polite\"></p>"
+        + study_comparison_view.MARKUP
+        + "<p id=\"visible\" role=\"status\" aria-live=\"polite\"></p>"
         "<div class=\"table-wrap\"><table id=\"comparisons\"><thead><tr>"
         + "".join("<th scope=\"col\">" + name + "</th>" for name in
                   ["Profile", "Alternative", "Export", "Baseline", "Alternative",
@@ -566,9 +569,9 @@ button{cursor:pointer}button:hover{background:#eee}select:focus,input:focus,butt
 #visible{font-size:12px;color:#555}details{margin-top:16px}summary{cursor:pointer;font-weight:bold}dd{margin:5px 0 12px}
 @media(max-width:760px){main{padding:18px}.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-grid>div:nth-child(2){border-right:0}h1{font-size:24px}.controls label{width:100%}select,input{max-width:none;width:100%}}
 @media print{main{padding:0}.controls{display:none}section{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9px}a{color:#000}}
-</style></head><body><main>""" + "".join(sections) + """</main>
+""" + study_comparison_view.STYLES + """</style></head><body><main>""" + "".join(sections) + """</main>
 <script type="application/json" id="study-data">""" + data + """</script>
-<script>
+""" + study_comparison_view.SCRIPT + """<script>
 "use strict";
 const payload=JSON.parse(document.getElementById("study-data").textContent);
 const rows=payload.rows, labels=payload.pollutants;
@@ -594,8 +597,10 @@ function render(){
   fragment.append(tr);
  }
  body.replaceChildren(fragment);
+ renderStudyComparison(chosen,labels);
  document.getElementById("visible").textContent=chosen.length+" of "+rows.length+" completed export comparisons";
 }
+document.getElementById("study-comparison-measure").addEventListener("change",render);
 document.getElementById("search").addEventListener("input",render);
 document.getElementById("reset").addEventListener("click",()=>{for(const field of fields)document.getElementById(field).value="";document.getElementById("search").value="";render();});
 render();
