@@ -61,7 +61,8 @@
     "merchant-provider-client-exports",
     "merchant-provider-dataset",
     "merchant-provider-facilitators",
-    "merchant-provider-tools"
+    "merchant-provider-tools",
+    "runtime-workspace-backup"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/public",
