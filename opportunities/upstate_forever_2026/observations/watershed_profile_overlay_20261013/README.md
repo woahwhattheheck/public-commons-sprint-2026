@@ -29,3 +29,13 @@ node observations/watershed_profile_overlay_20261013/rebuild.mjs --source-dir ob
 ```
 
 The rebuild reuses the maintained profile CSV reader, checks the original input identities, rejects missing/duplicate HUCs or a changed geometry contract, joins every scalar value, and requires the complete output to match the published GeoJSON hash. This exact rebuild has been executed in the live V8 runtime; every original coordinate and scalar profile value matches.
+
+## Receive on a host with the original project domain
+
+The active project already retains the exact original 217-feature domain. Receive the small CSV, binding, core, rebuild script, field guide and manifest from this source directory, and use that existing original JSON or gzip directly:
+
+```sh
+node observations/watershed_profile_overlay_20261013/rebuild.mjs --source-dir observations/watershed_profile_overlay_20261013 --original-domain ACTUAL_RETAINED_ORIGINAL_DOMAIN_JSON_OR_GZIP --output observations/watershed_profile_overlay_20261013/watershed-profiles.geojson
+```
+
+The script decompresses a gzip input when present, verifies the complete original decoded SHA256, retains its exact body as the companion and generates the full GeoJSON locally. It accepts only byte-identical retained outputs on repetition. This uses the existing project geometry and the 115 KB profile table; the native host can complete the vector source even when its public network cannot download the two large repository bodies.

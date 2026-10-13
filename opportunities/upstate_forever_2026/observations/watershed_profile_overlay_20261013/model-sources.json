@@ -74,8 +74,8 @@
         },
         {
           "path": "rebuild.mjs",
-          "bytes": 1883,
-          "sha256": "7cf6a9b9f5c313121e1e2c5152374a7ae34f73191ad9f798bf4b2316c6728c71"
+          "bytes": 2775,
+          "sha256": "b1f4a840625b3a105bb2053db0b7df38aeac9d37c0a656e285f6d6de46cfccc5"
         },
         {
           "path": "overlay-binding.json",
@@ -89,8 +89,8 @@
         },
         {
           "path": "README.md",
-          "bytes": 3211,
-          "sha256": "5158078fc09cebb18e7d2ac0c8ae501e6e006c3981dba78c472f3b3158ce06d0"
+          "bytes": 4223,
+          "sha256": "d0d10b76556321e60d57b69d7ea90b164ca1392a1574f5762ac45736366d37c2"
         }
       ]
     }
