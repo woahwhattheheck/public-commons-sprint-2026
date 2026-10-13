@@ -1,0 +1,102 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "multivariate-control-outcomes",
+  "components": {
+    "multivariate-control-outcomes": {
+      "title": "Saved native outcomes for explicit matched-control placements",
+      "paths": [
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py"
+      ]
+    },
+    "multivariate-control": {
+      "paths": [
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py"
+      ]
+    }
+  },
+  "required_components": [
+    "multivariate-control-outcomes"
+  ]
+}
