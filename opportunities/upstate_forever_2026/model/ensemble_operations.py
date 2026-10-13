@@ -269,7 +269,16 @@ def operation(workspace, ensemble_id, *, run_native=False, continue_on_error=Tru
         except BaseException as exc:
             record["errors"].append({"phase": record["state"], "type": type(exc).__name__,
                                      "message": str(exc)})
-            save("failed" if isinstance(exc, Exception) else "interrupted")
+            try:
+                save("failed" if isinstance(exc, Exception) else "interrupted")
+            except OSError as receipt_error:
+                exc.operation_receipt_error = {
+                    "type": type(receipt_error).__name__,
+                    "message": str(receipt_error), "errno": receipt_error.errno,
+                }
+                if hasattr(exc, "add_note"):
+                    exc.add_note("Could not retain the ensemble-operation failure record: "
+                                 + str(receipt_error))
             raise
 
 

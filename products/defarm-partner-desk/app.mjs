@@ -1,5 +1,5 @@
 import {csv,input,escape as E,returnedDfids,assess} from "./core.mjs";
-const $=s=>document.querySelector(s);let config=null,current=null,source=null,mapping=[],tab="overview",sourceRead=0,caseRead=0,catalogRead=0,busy=false;
+const $=s=>document.querySelector(s);const noteDrafts=new Map();let config=null,current=null,source=null,mapping=[],tab="overview",sourceRead=0,caseRead=0,catalogRead=0,busy=false;
 const status=message=>{$("#status").textContent=message;};
 async function api(path,body){const r=await fetch(path,{method:body===undefined?"GET":"POST",headers:body===undefined?{}:{"Content-Type":"application/json","X-Desk-Token":config.token},body:body===undefined?undefined:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.error||"Desk request failed");return j;}
 function json(x){return "<pre>"+E(JSON.stringify(x,null,2))+"</pre>";}
@@ -44,7 +44,7 @@ $("#receive").onchange=async e=>{
 };
 function summary(c){const last=[...c.events].reverse().find(e=>e.assessment);return last?.assessment;}
 function render(){
- if(!current)return;const c=current,s=summary(c),last=c.events.at(-1),committed=c.events.some(e=>["commit","reconcile"].includes(e.kind));
+ if(!current)return;const c=current,draft=noteDrafts.get(c.id)||{note:"",recovered:"",recoveryNote:""},s=summary(c),last=c.events.at(-1),committed=c.events.some(e=>["commit","reconcile"].includes(e.kind));
  $("#detail").innerHTML='<h1>'+E(c.title)+'</h1><p><span class="badge">'+E(c.state)+'</span> Original source '+E(c.source.name)+'</p><div class="metrics"><div><strong>'+c.items.length+'</strong>Source items</div><div><strong>'+returnedDfids(c).length+'</strong>Returned DFIDs</div><div><strong>'+c.events.length+'</strong>Retained operations</div><div><strong>'+c.verifications.length+'</strong>Public report reads</div></div><div class="identity">Source SHA256 '+c.source.sha256+'<br>Selected payload SHA256 '+c.payload.sha256+'<br>Case '+c.id+'</div><div class="actions"><button data-action="preview" '+(busy||committed||!config.key_configured?"disabled":"")+'>Preview exact batch</button><button class="primary" data-action="commit" '+(busy||c.state!=="preview-ready"||!config.key_configured?"disabled":"")+'>Commit reviewed batch</button><button data-action="verify" '+(busy||!returnedDfids(c).length?"disabled":"")+'>Read returned DFIDs</button><button data-action="export">Download complete case</button><button data-action="report">Open report</button><button data-action="rows">Download source row table</button><button data-action="source">Download original file</button><button data-action="payload">Download selected request</button></div><p class="muted">Gateway '+E(c.identity.gateway)+' · SDK '+E(c.identity.sdk.name+"@"+c.identity.sdk.version)+'. The API key selects its partner circuit. The network label does not change the gateway or select its anchoring network.</p><div class="tabs" role="tablist">'+[["overview","Gateway review"],["source","Source & selected items"],["history","Request history"],["verification","Public verification"],["notes","Notes & recovery"]].map(([id,label])=>'<button role="tab" aria-selected="'+(id===tab)+'" data-tab="'+id+'">'+label+'</button>').join("")+'</div><div id="panel"></div>';
  const panel=$("#panel");
  if(tab==="overview"){
@@ -56,10 +56,11 @@ function render(){
  }else if(tab==="verification"){
   panel.innerHTML='<h2>Returned DFIDs</h2><p>Each read uses the original SDK public gateway aggregator. It retains the raw report. The SDK timestamp and commitment fields are best-effort extraction, separate from independent Stellar/IPFS verification.</p>'+json(returnedDfids(c))+c.verifications.map(v=>'<details><summary>'+E(v.dfid)+' · '+E(v.read_at)+'</summary>'+(v.error?json(v.error):"")+(v.wire?'<pre>'+E(v.wire.text)+'</pre>':json(v.result))+'</details>').join("");
  }else{
-  panel.innerHTML='<h2>Operating notes</h2>'+json(c.notes)+'<label>New note<textarea id="note"></textarea></label><button data-action="note">Save note</button>';
-  if(c.state==="commit-unknown")panel.innerHTML+='<h2>Continue an interrupted ingestion</h2><p>The original request may have reached the gateway. Retain that operation and recover its original response from the partner workspace or receiving log. This action records that returned body and its provenance; it sends no new ingestion request.</p><label>Recovered original gateway response JSON<textarea id="recovered"></textarea></label><label>Where the response was recovered<textarea id="recovery-note"></textarea></label><button data-action="reconcile">Receive recovered response</button>';
+  panel.innerHTML='<h2>Operating notes</h2>'+json(c.notes)+'<label>New note<textarea id="note">'+E(draft.note)+'</textarea></label><button data-action="note">Save note</button>';
+  if(c.state==="commit-unknown")panel.innerHTML+='<h2>Continue an interrupted ingestion</h2><p>The original request may have reached the gateway. Retain that operation and recover its original response from the partner workspace or receiving log. This action records that returned body and its provenance; it sends no new ingestion request.</p><label>Recovered original gateway response JSON<textarea id="recovered">'+E(draft.recovered)+'</textarea></label><label>Where the response was recovered<textarea id="recovery-note">'+E(draft.recoveryNote)+'</textarea></label><button data-action="reconcile">Receive recovered response</button>';
  }
 }
+$("#detail").oninput=e=>{if(!current)return;const key=({note:"note",recovered:"recovered","recovery-note":"recoveryNote"})[e.target.id];if(key){const d=noteDrafts.get(current.id)||{note:"",recovered:"",recoveryNote:""};d[key]=e.target.value;noteDrafts.set(current.id,d);}};
 $("#detail").onclick=async e=>{
  const b=e.target.closest("button");if(!b||!current)return;
  if(b.dataset.tab){tab=b.dataset.tab;render();return;}
@@ -77,6 +78,7 @@ $("#detail").onclick=async e=>{
   if(action==="reconcile"){data.text=$("#recovered").value;data.note=$("#recovery-note").value;}
   busy=true;acquired=true;render();status("Running "+action+" for "+c.title+"…");
   const updated=await api("/api/cases/"+c.id+"/"+action,data);
+  const draft=noteDrafts.get(c.id);if(action==="note"&&draft?.note===data.note)draft.note="";if(action==="reconcile"&&draft?.recovered===data.text&&draft?.recoveryNote===data.note){draft.recovered="";draft.recoveryNote="";}
   if(current?.id===c.id){current=updated;render();status(action+" completed. Original response and source history are retained.");}
   await catalogue();
  }catch(error){status(error.message);}finally{if(acquired){busy=false;if(current)render();}}

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation-qc",
   "title": "Sample quality control",
-  "version": "3",
+  "version": "3.1",
   "order": 72,
   "assets": [
     "implementation_qc.mjs",
@@ -301,6 +301,20 @@
       "args": [
         "task"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/implementation-qc/{workspace_key}/{kind}/{plan_id}/{report_id}/{member_path...}",
+        "handler": "member",
+        "args": [
+          "route.workspace_key",
+          "route.kind",
+          "route.plan_id",
+          "route.report_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   }
 }

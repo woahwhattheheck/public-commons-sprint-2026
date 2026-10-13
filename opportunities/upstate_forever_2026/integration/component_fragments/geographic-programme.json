@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-programme",
+  "components": {
+    "geographic-programme": {
+      "title": "Completed geographic native cases in the original Programmes workflow",
+      "paths": [
+        "model/geographic_programme.py",
+        "source_tools/adopt_geographic_headwaters_programme.py",
+        "source_tools/GEOGRAPHIC_PROGRAMME.md"
+      ],
+      "requires": [
+        "geographic-native-receiving",
+        "programme-activity"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-programme"
+  ]
+}

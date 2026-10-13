@@ -15,6 +15,15 @@ def main():
     parser.add_argument("--domain-archive", type=Path)
     parser.add_argument("--domain-collection")
     parser.add_argument("--domain-source-id", default="upstate-wbd-upstream-domain-20261012")
+    report_input = parser.add_mutually_exclusive_group()
+    report_input.add_argument("--annual-report-manifest", type=Path,
+                              help="Original completed annual report sources.json to import.")
+    report_input.add_argument("--annual-report-collection",
+                              help="Already retained source collection for the annual report.")
+    parser.add_argument("--annual-report-source-id",
+                        default="native-assessment-observed-bef411c2954fc3e7deb6-microbial-f53df7b5a31d-annual-yields-basin-maps-v1")
+    parser.add_argument("--annual-report-title",
+                        default="Original annual references and five-basin geographic support")
     args = parser.parse_args()
     ROOT = args.output.resolve()
     APP = args.application.resolve()
@@ -27,16 +36,48 @@ def main():
         raise ValueError("Keep operation outputs outside the retained workspace.")
     sys.path[:0] = [str(APP / "operator"), str(APP)]
     from server import Operator
-    from model.common import atomic_json, file_digest, read_json
+    from model.common import atomic_json, digest, file_digest, read_json
 
     ROOT.mkdir(parents=True, exist_ok=True)
     PROGRESS = ROOT / "working-project-progress.json"
     progress = read_json(PROGRESS) if PROGRESS.exists() else {"schema": "upstate.scientific-context-operation/v1", "tasks": [], "views": []}
     def write_progress():
         atomic_json(PROGRESS, progress)
+    # A supplied report is an additive continuation of this original operation.
+    # Its stable request survives lost queue responses and moved source folders.
+    annual_report = progress.get("annual_report")
+    if args.annual_report_manifest is not None or args.annual_report_collection is not None:
+        request = {"source_id": args.annual_report_source_id,
+                   "title": args.annual_report_title.strip()}
+        manifest_path = None
+        if args.annual_report_manifest is not None:
+            manifest_path = args.annual_report_manifest.resolve()
+            request["manifest_sha256"] = file_digest(manifest_path)
+        else:
+            request["source_collection_id"] = args.annual_report_collection
+        if annual_report is not None and annual_report.get("request") != request:
+            raise ValueError("This annual continuation retains another report source/title; use its original selection.")
+        if annual_report is None:
+            annual_report = {"request": request, "request_id": digest(request)}
+            progress["annual_report"] = annual_report
+        if manifest_path is not None:
+            annual_report["manifest_path"] = str(manifest_path)
+        write_progress()
+    if annual_report is not None:
+        if (not isinstance(annual_report, dict)
+                or annual_report.get("request_id") != digest(annual_report.get("request"))):
+            raise ValueError("The original annual report request identity changed.")
+        from model import observed_context, scientific_report_editions as editions
+
     def opening():
         print(json.dumps({"stage": "opening maintained operator", "workspace": str(WORKSPACE)}), flush=True)
-        return Operator(WORKSPACE, STATE, source_manifests=(MANIFEST, MICROBIAL_MANIFEST))
+        manifests = [MANIFEST, MICROBIAL_MANIFEST]
+        if annual_report is not None and annual_report.get("manifest_path"):
+            selected_manifest = Path(annual_report["manifest_path"])
+            if (selected_manifest.is_file()
+                    and file_digest(selected_manifest) == annual_report["request"]["manifest_sha256"]):
+                manifests.append(selected_manifest)
+        return Operator(WORKSPACE, STATE, source_manifests=tuple(manifests))
     operator = opening()
     receiver = None
     key = operator.primary
@@ -286,6 +327,64 @@ def main():
                                  "export-" + row["key"])
             row["export"] = export_task["result"]
             write_progress()
+        if annual_report is not None:
+            request = annual_report["request"]
+            suffix = "annual-report-" + annual_report["request_id"][:20]
+            collection_id = request.get("source_collection_id")
+            if collection_id is None:
+                known = existing(suffix + "-source")
+                if known:
+                    source_task = queued("source.import", known["payload"], suffix + "-source")
+                else:
+                    manifest_path = Path(annual_report.get("manifest_path", "")).resolve()
+                    if not manifest_path.is_file():
+                        raise ValueError("Restore the original annual report manifest, or resume its retained source-import task.")
+                    if file_digest(manifest_path) != request["manifest_sha256"]:
+                        raise ValueError("The selected annual report manifest changed before source import.")
+                    registered = next((rid for rid, item in operator.registered.items()
+                                       if Path(item["path"]).resolve() == manifest_path), None)
+                    if registered is None:
+                        raise ValueError("Register the selected original annual report manifest.")
+                    source_preview = operator.preview_source({"registered_id": registered})
+                    source_task = queued("source.import", {"preview_id": source_preview["id"]},
+                                         suffix + "-source")
+                collection_id = source_task["result"]["id"]
+                annual_report["source_task_id"] = source_task["id"]
+            choices = [{"source_collection_id": collection_id,
+                        "source_id": request["source_id"]}]
+            annual_report["sources"] = choices
+            write_progress()
+            render_request = {"sources": choices, "title": request["title"]}
+            known = existing(suffix + "-render")
+            if known:
+                payload = known["payload"]
+                if any(payload.get(name) != value for name, value in render_request.items()):
+                    raise ValueError("The retained annual report task changed its selected source/title.")
+            else:
+                preview_path = ROOT / ("annual-report-preview-" + annual_report["request_id"] + ".json")
+                if preview_path.is_file():
+                    prepared = read_json(preview_path)
+                    if (observed_context.source_choices(prepared.get("selection", {})) != choices
+                            or prepared.get("title") != request["title"]):
+                        raise ValueError("The retained annual report preview belongs to another original selection.")
+                else:
+                    prepared = editions.preview(workspace, render_request)
+                    atomic_json(preview_path, prepared, immutable=True)
+                payload = {**render_request, "preview_id": prepared["id"]}
+            report_task = queued("source-reports.render", payload, suffix + "-render")
+            report_id = report_task["result"]["scientific_report_edition_id"]
+            report_record, report_directory, report_operation = editions.inspect(workspace, report_id)
+            export_task = queued("source-reports.export", {"id": report_id}, suffix + "-export")
+            export_record = editions.export(workspace, report_id)
+            annual_report.update(
+                report_task_id=report_task["id"], export_task_id=export_task["id"],
+                scientific_report_edition_id=report_id, state="complete",
+                files=report_record["files"], report_directory=str(report_directory),
+                report_archive=export_record["file"])
+            write_progress()
+            print(json.dumps({"stage": "annual scientific report rendered and exported",
+                              "annual_report": annual_report}), flush=True)
+
         result = {"schema": "upstate.scientific-context-working-project/v1",
                   "project": workspace.project, "workspace": str(workspace.root),
                   "workspace_key": key, "operator_state": str(STATE),
@@ -295,12 +394,23 @@ def main():
                   "assessment_source": context_task["result"],
                   "microbial_source": microbial_task["result"],
                   "microbial_source_commit": "cd4604708d689740e0486ef69a6eb541c3c14e96"}
+        if annual_report is not None:
+            result["annual_report"] = annual_report
+            previous_path = ROOT / "working-project-native-result.json"
+            if previous_path.is_file():
+                previous = read_json(previous_path)
+                if previous.get("annual_report", {}).get("scientific_report_edition_id") != annual_report["scientific_report_edition_id"]:
+                    saved_previous = ROOT / "completed-editions"
+                    saved_previous.mkdir(parents=True, exist_ok=True)
+                    atomic_json(saved_previous / (digest(previous) + ".json"), previous, immutable=True)
         atomic_json(ROOT / "working-project-native-result.json", result)
         selected_task_ids = list(progress["tasks"])
-        prior_capture = existing("snapshot-with-microbial")
+        capture_suffix = ("snapshot-with-microbial" if annual_report is None else
+                          "snapshot-with-microbial-report-" + annual_report["scientific_report_edition_id"][:20])
+        prior_capture = existing(capture_suffix)
         capture_payload = prior_capture["payload"] if prior_capture else {
             "transport": "archive", "task_ids": selected_task_ids}
-        capture_task = queued("workspace.snapshot", capture_payload, "snapshot-with-microbial")
+        capture_task = queued("workspace.snapshot", capture_payload, capture_suffix)
         result["capture"] = capture_task["result"]
         result["capture_task_id"] = capture_task["id"]
         result["task_ids"] = list(progress["tasks"])
@@ -308,10 +418,14 @@ def main():
         # Restore this exact exported edition into an independently reopened
         # operator. Stable upload/task identities let the same command continue
         # after interruption without producing another receiving project.
-        receiver_directory = ROOT / "archive-receiver" / "workspace"
-        receiver_state = ROOT / "archive-receiver" / "operator"
+        receiver_root = (ROOT / "archive-receiver" if annual_report is None else
+                         ROOT / "archive-receiver-with-report" / annual_report["scientific_report_edition_id"])
+        receiver_directory = receiver_root / "workspace"
+        receiver_state = receiver_root / "operator"
         transfer_id = capture_task["result"]["transfer_id"]
-        receiving = progress.setdefault("receiving", {
+        receiving_progress = progress if annual_report is None else progress.setdefault("report_receiving", {})
+        receiving_name = "receiving" if annual_report is None else annual_report["scientific_report_edition_id"]
+        receiving = receiving_progress.setdefault(receiving_name, {
             "transfer_id": transfer_id, "project_id": workspace.project["id"],
             "workspace_directory": str(receiver_directory),
             "operator_directory": str(receiver_state)
@@ -333,7 +447,9 @@ def main():
             declared = capture_task["result"].get(field)
             if declared is not None and declared != actual:
                 raise ValueError("The completed snapshot archive differs from its original " + field + ".")
-        known_receive = existing("receive-with-microbial", engine=receiver, workspace_key=receiver_key)
+        receive_suffix = ("receive-with-microbial" if annual_report is None else
+                          "receive-with-microbial-report-" + annual_report["scientific_report_edition_id"][:20])
+        known_receive = existing(receive_suffix, engine=receiver, workspace_key=receiver_key)
         if known_receive:
             receive_payload = known_receive["payload"]
             if receive_payload["transfer_id"] != transfer_id:
@@ -354,7 +470,7 @@ def main():
             raise ValueError("The retained receiving upload differs from the exact project archive.")
         receiving.update(upload_id=upload_id, archive_bytes=archive_bytes, archive_sha256=archive_sha256)
         write_progress()
-        receive_task = queued("workspace.receive", receive_payload, "receive-with-microbial",
+        receive_task = queued("workspace.receive", receive_payload, receive_suffix,
                               engine=receiver, workspace_key=receiver_key, track_tasks=False)
         received = receive_task["result"]
         receiving.update(task_id=receive_task["id"], received_workspace_key=received["workspace_key"],
@@ -389,6 +505,9 @@ def main():
             if original_task["action"] in {"source.import", "spatial.review.save"}:
                 if restored_task["result"]["id"] != original_task["result"]["id"]:
                     raise ValueError("Receiving changed an original source collection or saved review identity.")
+            if original_task["action"] in {"source-reports.render", "source-reports.export"}:
+                if restored_task["result"]["scientific_report_edition_id"] != original_task["result"]["scientific_report_edition_id"]:
+                    raise ValueError("Receiving changed an original annual scientific report identity.")
             retained_tasks.append({"source_task_id": source_task_id, "received_task_id": restored_task["id"],
                                    "operation_id": original_task["operation_id"], "state": restored_task["state"]})
         reopened_views = []
@@ -403,6 +522,23 @@ def main():
             reopened_views.append({"key": row["key"], "review_id": row["review_id"],
                                    "selected_count": overlay["returned"],
                                    "source_sha256": overlay["source_sha256"], "validation": validation})
+        if annual_report is not None:
+            report_record, report_directory, report_operation = editions.inspect(
+                restored_ws, annual_report["scientific_report_edition_id"])
+            if (report_record["files"] != annual_report["files"]
+                    or [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
+                        for row in report_record["sources"]] != annual_report["sources"]):
+                raise ValueError("The received annual scientific report changed its original files or source selection.")
+            received_archive = editions.export(restored_ws, annual_report["scientific_report_edition_id"])
+            if received_archive["file"] != annual_report["report_archive"]:
+                raise ValueError("The received annual scientific report ZIP changed.")
+            result["annual_report"]["receiving"] = {
+                "scientific_report_edition_id": report_record["id"],
+                "directory": str(report_directory), "files": report_record["files"],
+                "report_archive": received_archive["file"],
+                "source_count": report_record["source_count"],
+                "section_count": report_record["section_count"],
+                "figure_count": report_record["figure_count"]}
         result["receiving"] = {
             "transfer_id": transfer_id, "task_id": receive_task["id"], "result": received,
             "workspace_key": restored_key, "workspace": str(restored_ws.root),
