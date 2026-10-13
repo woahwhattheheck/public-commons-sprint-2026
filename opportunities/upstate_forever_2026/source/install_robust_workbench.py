@@ -712,6 +712,10 @@ def verify_composition(application, pending):
                            "model/reviews.py", "model/scientific_report_editions.py",
                            "model/scientific_report_review.py"):
             assembled_data(application, pending, dependency)
+        if b"report_changes_review" in review_receiver:
+            for dependency in ("model/report_changes_review.py", "model/report_changes.py",
+                               "model/report_changes_study_transfer.py"):
+                assembled_data(application, pending, dependency)
         if b"def continue_selected_review(" in review_receiver:
             if transfer is None or b"customer_review_study_transfer" not in transfer:
                 raise ValueError("Receive the original Customer review Study transfer before its selected receiver")
