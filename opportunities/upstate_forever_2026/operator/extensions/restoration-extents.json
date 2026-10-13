@@ -1,0 +1,118 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "restoration-extents",
+  "title": "Restoration extents",
+  "version": "20261013.1",
+  "order": 46,
+  "assets": [
+    "restoration_extents.mjs",
+    "restoration_extents.css"
+  ],
+  "backend": {
+    "module": "restoration_extent_operator",
+    "actions": [
+      "restoration-extent.prepare",
+      "restoration-extent.report"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/restoration-extents/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/restoration-extents/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/restoration-extents/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/restoration-extents/source-fields",
+        "operation": "source-fields",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/restoration_extents.mjs",
+    "factory": "createRestorationExtents",
+    "requires": [
+      "api",
+      "getState",
+      "getWorkspace"
+    ],
+    "styles": [
+      "/web/restoration_extents.css"
+    ],
+    "view": {
+      "id": "restoration-extents",
+      "title": "Restoration extents",
+      "after": "scenario-footprint"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
