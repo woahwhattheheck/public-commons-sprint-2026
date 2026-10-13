@@ -27,6 +27,7 @@ from . import monitoring_study_transfer as monitoring_transfer, study_report_tra
 from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
 from . import report_changes_study_transfer as report_changes_transfer
+from . import multivariate_control_study_transfer as control_transfer
 from . import calibration_study_transfer as calibration_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
@@ -48,7 +49,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
-              *report_changes_transfer.ROOT_KINDS)
+              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
@@ -59,7 +60,7 @@ DOCUMENTS = {
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS, **paired_transfer.DOCUMENTS,
-    **report_changes_transfer.DOCUMENTS,
+    **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS,
     **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
@@ -67,7 +68,7 @@ LOCKS = {
     "experiments": ".experiment.lock", "experiment-diagnostics": ".diagnostics.lock",
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
-    **report_editions.LOCKS,
+    **report_editions.LOCKS, **control_transfer.LOCKS,
     **receptor_transfer.LOCKS, **conservation_transfer.LOCKS,
 }
 LABELS = {
@@ -80,7 +81,7 @@ LABELS = {
     **delivery_transfer.LABELS,
     **monitoring_transfer.LABELS,
     **report_editions.LABELS, **paired_transfer.LABELS,
-    **report_changes_transfer.LABELS,
+    **report_changes_transfer.LABELS, **control_transfer.LABELS,
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
@@ -487,7 +488,9 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if customer_review_transfer.visit(self, kind, key, value):
+        if control_transfer.visit(self, kind, key, value):
+            pass
+        elif customer_review_transfer.visit(self, kind, key, value):
             pass
         elif report_editions.visit(self, kind, key, value):
             pass
@@ -693,7 +696,7 @@ def _capture_locks(stack, closure, already):
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure), *receptor_transfer.lock_paths(closure),
                      *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
                      *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
-                     *report_changes_transfer.lock_paths(closure)):
+                     *report_changes_transfer.lock_paths(closure), *control_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
