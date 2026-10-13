@@ -364,3 +364,10 @@ result verifies the original descriptors before the UI uses it for authoring.
 The workflow adds no new top-level Workspace collection or parallel job service.
 
 Changing from the area editor to a native inventory or experiment first applies the pending area edits. If an anchor or source reference is invalid, the desk keeps the original watershed mode open and displays the specific error. The matching native selection receives the corrected, fully applied receptor profile.
+
+
+## Prepared original areas and intervention scenarios
+
+Saved watershed studies now offer **Prepare scenario areas**. The operation retains exact original polygon subsets as Workspace vector sources and produces the maintained `upstate.scenario-source-areas/v1` handoff. The prepared result opens Scenario analysis with its complete origin, creates explicit ordered land-cover scenarios, and prepares native runs through the existing application form and queue. Saved scenarios and their runs remain visible from the prepared-area page.
+
+See [`../model/RECEPTOR_SCENARIOS.md`](../model/RECEPTOR_SCENARIOS.md) for the complete operator journey, original geometry and source contracts, explicit land-cover choices, CLI, overlap semantics and retained output. This version requires the current Scenario analysis extension's `createForSourceAreas` method and the standard host form/refresh/item capabilities. Shared application and server files are unchanged.
