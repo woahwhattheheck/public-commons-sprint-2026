@@ -104,30 +104,45 @@ class Course:
             proposed["operation_id"] = "milestone-" + self.native["digest"]([self.args.operation, name])[:64]
         self.keep_json(relative, proposed)
         request = self.native["read_json"](path)
-        if name in self.state["steps"]:
-            task = self.get("/api/task", id=self.state["steps"][name]["id"])
-        else:
-            # Exact original request is durable before the first dispatch.
-            task = self.read("/api/actions", request)
-        while True:
+        expected_hash = self.native["digest"]({key: request[key] for key in ("workspace", "action", "payload")})
+        accepted = self.state["steps"].get(name, {}).get("id")
+
+        def retain(task):
+            nonlocal accepted
             if (task.get("workspace") != request["workspace"] or task.get("action") != action
-                    or task.get("operation_id") != request["operation_id"] or task.get("payload") != payload):
-                raise ValueError("The original task returned another request")
+                    or task.get("payload") != payload or task.get("request_sha256") != expected_hash
+                    or not isinstance(task.get("id"), str) or (accepted is not None and task["id"] != accepted)):
+                raise ValueError("The original task returned another request or accepted task identity")
+            # Original Operator may alias this requested operation to an already
+            # active task with the SAME exact request hash. Keep both identities.
+            accepted = task["id"]
             self.state["steps"][name] = task
             self.checkpoint()
+            self.keep_json("accepted/" + name + ".json", {
+                "requested_operation_id": request["operation_id"], "task_id": accepted,
+                "task_operation_id": task["operation_id"], "request_sha256": expected_hash})
+            return task
+
+        if accepted is None:
+            retain(self.read("/api/actions", request))
+        # POST and resume return raw tasks. Only task_view supplies the current
+        # original verified downloads and recipient-desk descriptor.
+        task = retain(self.get("/api/task", id=accepted))
+        while True:
             if task["state"] == "complete":
                 return task
             if task["state"] in ("failed", "cancelled", "interrupted"):
                 if not self.args.resume_task:
                     raise ValueError("Original task " + task["id"] + " is " + task["state"] +
                                      ". Inspect its retained error; --resume-task resumes this SAME task after repair.")
-                task = self.read("/api/task/resume", {"id": task["id"]})
+                retain(self.read("/api/task/resume", {"id": accepted}))
                 self.args.resume_task = False
+                task = retain(self.get("/api/task", id=accepted))
                 continue
             if self.stop:
                 raise KeyboardInterrupt
             time.sleep(.5)
-            task = self.get("/api/task", id=task["id"])
+            task = retain(self.get("/api/task", id=accepted))
 
     def download(self, prefix, ticket):
         name = ticket["filename"]
@@ -182,7 +197,7 @@ class Course:
             stat_path = Path("/proc") / str(old["pid"]) / "stat"
             if stat_path.exists() and stat_path.read_text().split(") ", 1)[1].split()[19] == old["start_ticks"]:
                 raise ValueError("The original browser process is still alive; retain its original course")
-        script = self.app / "operations/receive_milestone_handoff_browser.mjs"
+        script = self.app / "source_tools/receive_milestone_handoff_browser.mjs"
         command = [self.args.node, str(script), "--config", str(config_path),
                    "--playwright", self.args.playwright, "--browser", self.args.browser_executable]
         with (folder / "browser.log").open("ab") as log:
@@ -215,6 +230,7 @@ class Course:
         members = {}
         selected = [self.root / row["file"] for row in outputs]
         selected += sorted((self.root / "inputs").glob("*")) + sorted((self.root / "requests").glob("*"))
+        selected += sorted((self.root / "accepted").glob("*"))
         selected += [folder / "result.json"]
         for path in selected:
             if path.is_file():
@@ -337,7 +353,9 @@ class Course:
         received = self.native["engine"].snapshot(received_ws, review_id, response_id)
         if received != native:
             raise ValueError("Cold receiving changed the original milestone, response or handback history")
-        self.keep_json(stage + "/Cold_Receiving.json", {"receiving": receiving, "milestones": verified,
+        stable_receiving = {key: value for key, value in receiving.items()
+                            if key != "reused_completed_output"}
+        self.keep_json(stage + "/Cold_Receiving.json", {"receiving": stable_receiving, "milestones": verified,
                                                       "same_complete_original_snapshot": True})
         outputs.append({"file": stage + "/Cold_Receiving.json", **identity(self.root / stage / "Cold_Receiving.json")})
         browser_result = None
