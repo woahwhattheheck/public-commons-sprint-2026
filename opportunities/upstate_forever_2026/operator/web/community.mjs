@@ -289,7 +289,7 @@ export function validateCommunityView(value,state){
     utility_id:utility,watershed_id:watershed,query:string('query'),sort,compare_geoids:[...compare],plan_id:planId,report_id:reportId};
 }
 
-export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery}){
+export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery,openScientificReport}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null,validatedView=null;
   let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
@@ -1012,7 +1012,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
         });
       });
   }
-  async function openPreparedReport(taskId,{sourceOnly=false}={}){
+  async function openPreparedReport(taskId,{sourceOnly=false,scientific=false}={}){
     const requestedWorkspace=workspace(),task=await api(endpoint('/api/task',{id:taskId}));
     if(workspace()!==requestedWorkspace)return;
     if(task.workspace!==requestedWorkspace||task.action!=='community.report.source.prepare'||task.state!=='complete')
@@ -1021,6 +1021,12 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(!source?.source_collection_id||!source?.source_id||!list(selection?.observed_context_sources).some(
       row=>row.source_collection_id===source.source_collection_id&&row.source_id===source.source_id))
       throw Error('The completed operation has no matching retained report source selection.');
+    if(scientific){
+      if(typeof openScientificReport!=='function')throw Error('Open this report in the current scientific report workspace.');
+      return openScientificReport({workspace_key:requestedWorkspace,
+        sources:selection.observed_context_sources.map(row=>({source_collection_id:row.source_collection_id,source_id:row.source_id})),
+        ...(typeof result.title==='string'?{title:result.title}:{})});
+    }
     document.getElementById('detail-dialog')?.close();
     if(sourceOnly)return openItem('sources',source.source_collection_id);
     await refreshState({force:true});
@@ -1030,7 +1036,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   function taskActions(task){
     if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
-      button('report-source-edition','Open retained report source','data-id="'+e(task.id)+'"','primary')+
+      (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
+      button('report-source-edition','Open retained report source','data-id="'+e(task.id)+'"')+
       button('report-source-open','Open prepared delivery form','data-id="'+e(task.id)+'"')+'</div>';
   }
   async function reportDetail(id,{preview=false}={}){
@@ -1071,6 +1078,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='report-new')return reportForm(node.dataset.id);
     if(action==='report-open')return reportDetail(node.dataset.id);
     if(action==='report-source')return reportSourceForm(node.dataset.id);
+    if(action==='report-source-scientific')return openPreparedReport(node.dataset.id,{scientific:true});
     if(action==='report-source-open')return openPreparedReport(node.dataset.id);
     if(action==='report-source-edition')return openPreparedReport(node.dataset.id,{sourceOnly:true});
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
