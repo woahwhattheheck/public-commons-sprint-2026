@@ -87,6 +87,14 @@ During normal SIGTERM or SIGINT shutdown, the original operator sets its closing
 
 Stopping begins with an interrupt, then escalates for that owned group after the retained grace period. The selected run keeps completed native stages and their original artifacts. A worker that ends unexpectedly leaves its process log and retained source selection; the supervisor reconciles a stale running record only after it can acquire the original native run lock.
 
+### Memory and native-cache observations
+
+The existing execution record, worker record and heartbeat include a `resources` snapshot from the actual calculating process. Native failures retain `resources_at_failure`, and original-reference start events include the same snapshot. These fields record process resident/high-water memory, the resolved cgroup v2 memory usage and limits, memory events, selected memory-stat counters, and the explicit GDAL/BLAS thread and cache settings inherited by that process. If GDAL is already loaded, the snapshot reads its cache usage and usable-memory value; it reads the cache maximum only once actual cached blocks show that GDAL has initialized the cache.
+
+Compare the latest heartbeat with the execution's recorded timestamp when recovering an interrupted calculation. Cgroup event counts cover the selected group and its descendants; `memory.events.local` retains the local counters. The `shmem` value is included in `file`, so do not add those two memory figures. A missing optional kernel field remains absent, and read failures are recorded without aborting the model.
+
+These observations stay outside native runtime fingerprints and scientific stage signatures. They preserve reuse of the same completed stages while making inherited cache limits and shared memory pressure visible. See the [Linux cgroup v2 memory interface](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html) and [GDAL cache API](https://gdal.org/en/stable/api/raster_c_api.html).
+
 ## Native receiving
 
 Receive this increment into the current cumulative source and retain the same actual input Workspace. Complete the ordinary prepared-run → console → native result journey on the selected existing case. On an appropriate new calculation for that same prepared data, use the console's stop/resume operation and reconnect the same worker after reopening the operator. Retain the actual task ID, native run ID, execution IDs, worker records, native stage identities and visible screenshots with the original product handoff.
