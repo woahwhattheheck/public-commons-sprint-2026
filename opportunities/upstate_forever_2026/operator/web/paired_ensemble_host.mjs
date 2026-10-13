@@ -5,6 +5,32 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=value=>JSON.parse(JSON.stringify(value));
 const P=['nitrogen_export','phosphorus_export','sediment_export'];
+
+// All views consume the same retained per-model catalogue as the Python binder.
+const producingModel = output => output === 'sediment_export' ? 'sdr' : 'ndr';
+function nativeOutputIssue(runs, output) {
+  const model=producingModel(output);
+  if(!runs.length)return 'Select original native pairs.';
+  if(runs.some(run=>!run?.available_pollutants?.includes(output)))
+    return 'The output is absent from a selected original run.';
+  const versions=runs.map(run=>run.native_model_versions?.[model]?.comparison_version);
+  if(versions.some(version=>!version))
+    return model.toUpperCase()+' producing version is unavailable in a selected run.';
+  const distinct=[...new Set(versions)];
+  return distinct.length===1?'':model.toUpperCase()+' producing versions differ: '+distinct.join(' versus ')+'.';
+}
+function nativeRunLabel(run) {
+  const bases={completed_stage_runtime:'completed stage',observed_run_fallback:'observed run fallback',
+    requested_legacy:'requested legacy'};
+  return Object.entries(run?.native_model_versions||{}).map(([model,info])=>
+    model.toUpperCase()+' '+(info.comparison_version||'unavailable')+
+    ' ('+(bases[info.basis]||'basis unavailable')+')').join('; ')||'Producing runtime unavailable';
+}
+function selectedNativeRuns(runs, pairs) {
+  const byId=new Map(runs.map(run=>[run.id,run]));
+  return pairs.flatMap(pair=>[byId.get(pair.baseline_run_id),byId.get(pair.alternative_run_id)]);
+}
+
 export function attachPairedEnsemble({getState,api,endpoint,toast,navigate}){
   let root=null,key=null,catalog=null,pairs=[],included=new Set(),extra={},pending=null,request=null,incoming=null,lastSelection=null;
   let listeners=null,generation=0,timer=null,refreshing=false,seenTerminal=null,preparedRevision=0;
@@ -26,10 +52,33 @@ export function attachPairedEnsemble({getState,api,endpoint,toast,navigate}){
   function retain(){if(!root)return;try{localStorage.setItem(storageKey(),JSON.stringify({draft:draft(),pending,request,lastSelection}));}catch{note('Browser draft storage is unavailable. The original queued task and result remain retained by the operator.');}}
   function restore(d){if(!d)return;for(const n of ['title','purpose','grid','baseline','alternative','planned','support','quantiles','memory'])if(d[n]!==undefined)field(n).value=d[n];for(const el of root.querySelectorAll('[name="pollutant"]'))el.checked=(d.pollutants||P).includes(el.value);if(d.pairs){pairs=clone(d.pairs);included=new Set(d.included||pairs.map(p=>p.profile_id));extra=clone(d.extra||{});renderPairs();}}
   function options(name,kind){const prior=field(name).value;field(name).innerHTML=(catalog[kind]||[]).map(row=>`<option value="${esc(row.id)}">${esc(row.title||row.spec?.title||row.id.slice(0,14))}</option>`).join('');if([...field(name).options].some(o=>o.value===prior))field(name).value=prior;}
-  function choosePairs(){const baseline=field('baseline').value,alternative=field('alternative').value,grid=field('grid').value;const grouped=new Map(),planned=new Set();for(const run of catalog?.runs||[]){const s=run.selection||{};if(s.grid_id!==grid||![baseline,alternative].includes(s.scenario_id))continue;planned.add(s.profile_id);if(run.state!=='complete')continue;const row=grouped.get(s.profile_id)||{};row[s.scenario_id]=run;grouped.set(s.profile_id,row);}
-    pairs=[];if(baseline!==alternative)for(const [profile,row]of grouped)if(row[baseline]&&row[alternative])pairs.push({profile_id:profile,baseline_run_id:row[baseline].id,alternative_run_id:row[alternative].id,scenario_id:alternative});pairs.sort((a,b)=>a.profile_id.localeCompare(b.profile_id));included=new Set(pairs.map(p=>p.profile_id));extra={};field('planned').value=Math.max(1,planned.size);renderPairs();find('[data-pair-note]').textContent+=` ${Math.max(0,planned.size-pairs.length)} additional profiles have incomplete pairs for this contrast.`;}
-  function renderPairs(){find('[data-pair-note]').textContent=`${pairs.length} explicitly paired profiles; each baseline and alternative uses the same original parameter profile.`;find('[data-pairs]').innerHTML=pairs.length?`<table><thead><tr><th>Include</th><th>Parameter profile</th><th>Baseline run</th><th>Alternative run</th></tr></thead><tbody>${pairs.map(row=>`<tr><td><input type="checkbox" data-profile="${esc(row.profile_id)}" ${included.has(row.profile_id)?'checked':''} aria-label="Include ${esc(workspaceName('profiles',row.profile_id))}"></td><th>${esc(workspaceName('profiles',row.profile_id))}<br><code>${esc(row.profile_id)}</code></th><td><code>${esc(row.baseline_run_id)}</code></td><td><code>${esc(row.alternative_run_id)}</code></td></tr>`).join('')}</tbody></table>`:'<p>Select distinct scenarios with completed profile-matched runs, or open the paired effect directly from the native experiment desk.</p>';}
-  function selection(){const quantiles=field('quantiles').value.split(',').map(x=>Number(x.trim()));if(!quantiles.length||quantiles.some(q=>!Number.isFinite(q)||q<0||q>1))throw Error('Enter finite quantiles between zero and one.');const chosen=pairs.filter(p=>included.has(p.profile_id));if(!chosen.length)throw Error('Choose at least one complete profile-matched pair.');const pollutants=[...root.querySelectorAll('[name="pollutant"]:checked')].map(x=>x.value);if(!pollutants.length)throw Error('Choose a physical quantity.');return {...clone(extra),title:field('title').value,purpose:field('purpose').value,pairs:clone(chosen),pollutants,quantiles,support:field('support').value,planned_member_count:Number(field('planned').value),memory_mb:Number(field('memory').value)};}
+  function choosePairs(){
+    const baseline=field('baseline').value,alternative=field('alternative').value,grid=field('grid').value;
+    const outputs=[...root.querySelectorAll('[name="pollutant"]:checked')].map(node=>node.value);
+    const grouped=new Map(),planned=new Set();
+    for(const run of catalog?.runs||[]){
+      const selection=run.selection||{};
+      if(selection.grid_id!==grid||![baseline,alternative].includes(selection.scenario_id))continue;
+      planned.add(selection.profile_id);
+      if(run.state!=='complete')continue;
+      const row=grouped.get(selection.profile_id)||{before:[],after:[]};
+      row[selection.scenario_id===baseline?'before':'after'].push(run);
+      grouped.set(selection.profile_id,row);
+    }
+    pairs=[];
+    if(outputs.length&&baseline!==alternative)for(const [profile,row] of grouped){
+      row.before.sort((a,b)=>a.id.localeCompare(b.id));row.after.sort((a,b)=>a.id.localeCompare(b.id));
+      for(const before of row.before){
+        const after=row.after.find(candidate=>outputs.every(output=>!nativeOutputIssue([before,candidate],output)));
+        if(after){pairs.push({profile_id:profile,baseline_run_id:before.id,alternative_run_id:after.id,scenario_id:alternative});break;}
+      }
+    }
+    pairs.sort((a,b)=>a.profile_id.localeCompare(b.profile_id));included=new Set(pairs.map(p=>p.profile_id));extra={};
+    field('planned').value=Math.max(1,planned.size);renderPairs();
+    find('[data-pair-note]').textContent+=` ${Math.max(0,planned.size-pairs.length)} additional profiles need complete pairs with matching producing versions for the selected outputs.`;
+  }
+  function renderPairs(){find('[data-pair-note]').textContent=`${pairs.length} explicitly paired profiles; each baseline and alternative uses the same original parameter profile. `+[...new Set(selectedNativeRuns(catalog?.runs||[],pairs).map(nativeRunLabel))].join(' / ');find('[data-pairs]').innerHTML=pairs.length?`<table><thead><tr><th>Include</th><th>Parameter profile</th><th>Baseline run</th><th>Alternative run</th></tr></thead><tbody>${pairs.map(row=>`<tr><td><input type="checkbox" data-profile="${esc(row.profile_id)}" ${included.has(row.profile_id)?'checked':''} aria-label="Include ${esc(workspaceName('profiles',row.profile_id))}"></td><th>${esc(workspaceName('profiles',row.profile_id))}<br><code>${esc(row.profile_id)}</code></th><td><code>${esc(row.baseline_run_id)}</code></td><td><code>${esc(row.alternative_run_id)}</code></td></tr>`).join('')}</tbody></table>`:'<p>Select distinct scenarios with completed profile-matched runs, or open the paired effect directly from the native experiment desk.</p>';}
+  function selection(){const quantiles=field('quantiles').value.split(',').map(x=>Number(x.trim()));if(!quantiles.length||quantiles.some(q=>!Number.isFinite(q)||q<0||q>1))throw Error('Enter finite quantiles between zero and one.');const chosen=pairs.filter(p=>included.has(p.profile_id));if(!chosen.length)throw Error('Choose at least one complete profile-matched pair.');const pollutants=[...root.querySelectorAll('[name="pollutant"]:checked')].map(x=>x.value);if(!pollutants.length)throw Error('Choose a physical quantity.');const originals=selectedNativeRuns(catalog?.runs||[],chosen);for(const output of pollutants){const issue=nativeOutputIssue(originals,output);if(issue)throw Error(issue);}return {...clone(extra),title:field('title').value,purpose:field('purpose').value,pairs:clone(chosen),pollutants,quantiles,support:field('support').value,planned_member_count:Number(field('planned').value),memory_mb:Number(field('memory').value)};}
   async function refresh(){if(!root||refreshing)return;refreshing=true;const epoch=generation,workspace=key,d=draft();try{const value=await api(endpoint('/api/paired-ensemble/catalog'));if(epoch!==generation||workspace!==key||!root)return;catalog=value;for(const [name,kind]of [['grid','grids'],['baseline','scenarios'],['alternative','scenarios']])options(name,kind);if(field('baseline').value===field('alternative').value&&field('alternative').options.length>1)field('alternative').selectedIndex=1;choosePairs();if(d?.pairs?.length)restore(d);renderEditions();if(incoming){const incomingValue=incoming;incoming=null;applySelection(incomingValue);}retain();}finally{refreshing=false;}}
   function applySelection(value){if(!value||!Array.isArray(value.pairs)||!value.pairs.length)throw Error('Pass the complete original paired-run selection.');extra=clone(value);pairs=clone(value.pairs);included=new Set(pairs.map(p=>p.profile_id));field('title').value=value.title||'Retained experiment effect';field('purpose').value=value.purpose||'Inspect the original experiment’s paired physical outputs';field('planned').value=value.planned_member_count||pairs.length;field('support').value=value.support||'all_pairs';field('quantiles').value=(value.quantiles||[.1,.5,.9]).join(',');field('memory').value=value.memory_mb||256;for(const el of root.querySelectorAll('[name="pollutant"]'))el.checked=(value.pollutants||P).includes(el.value);const b=catalog?.runs?.find(r=>r.id===pairs[0].baseline_run_id),a=catalog?.runs?.find(r=>r.id===pairs[0].alternative_run_id);if(b){field('grid').value=b.selection.grid_id;field('baseline').value=b.selection.scenario_id;}if(a)field('alternative').value=a.selection.scenario_id;renderPairs();retain();note('Original experiment pairing is selected. Inspect or build its complete multi-pollutant ensemble.');}
   function prepare(value){if(!value||!Array.isArray(value.pairs)||!value.pairs.length)throw Error('Pass complete original paired runs from the experiment.');preparedRevision++;incoming=clone(value);if(root&&catalog){const original=incoming;incoming=null;applySelection(original);}if(typeof navigate==='function')navigate('paired-ensemble');return {prepared:true};}
@@ -44,7 +93,7 @@ export function attachPairedEnsemble({getState,api,endpoint,toast,navigate}){
   async function dispatch(name){if(name==='refresh')return refresh();if(name==='preview'){const value=selection(),result=await api(endpoint('/api/paired-ensemble/preview'),{method:'POST',body:{workspace:key,selection:value}});if(!root)return;const target=find('[data-preview]');target.hidden=false;target.open=true;target.querySelector('pre').textContent=JSON.stringify(result,null,2);return;}if(name==='pause'){if(!lastSelection?.pairs)throw Error('There is no saved paired selection in this workspace.');await api(endpoint('/api/paired-ensemble/pause'),{method:'POST',body:{workspace:key,selection:lastSelection}});note('Pause requested after the current durable tile.');return;}if(name==='resume'){if(!lastSelection?.pairs)throw Error('There is no saved paired selection in this workspace.');const value=clone(lastSelection);if(pending&&['queued','running'].includes(pending.state))throw Error('The current task is still active; its pause record is processed after the current tile.');return submit('paired_ensemble.resume',value);}}
   function detach(){generation++;clearTimeout(timer);timer=null;listeners?.abort();listeners=null;root=null;refreshing=false;}
   function mount(container){if(root===container&&key===getState()?.workspace_key){observe().catch(e=>note(e.message,true));return;}detach();root=container;key=getState()?.workspace_key;catalog=null;pairs=[];included=new Set();extra={};pending=null;request=null;lastSelection=null;seenTerminal=null;root.classList.add('paired-ensemble-extension');root.innerHTML=controls();listeners=new AbortController();const on=(target,event,handler)=>target.addEventListener(event,handler,{signal:listeners.signal});let saved;try{saved=JSON.parse(localStorage.getItem(storageKey())||'null');}catch{}pending=saved?.pending||null;request=saved?.request||null;lastSelection=saved?.lastSelection||(request?.payload?.pairs?clone(request.payload):null);
-    on(root,'input',retain);on(root,'change',event=>{const el=event.target;if(['grid','baseline','alternative'].includes(el.name)&&catalog)choosePairs();if(el.dataset.profile){if(el.checked)included.add(el.dataset.profile);else included.delete(el.dataset.profile);}if(el.name==='archive'&&el.files[0])upload(el.files[0]).catch(e=>note(e.message,true));retain();});
+    on(root,'input',retain);on(root,'change',event=>{const el=event.target;if(['grid','baseline','alternative','pollutant'].includes(el.name)&&catalog)choosePairs();if(el.dataset.profile){if(el.checked)included.add(el.dataset.profile);else included.delete(el.dataset.profile);}if(el.name==='archive'&&el.files[0])upload(el.files[0]).catch(e=>note(e.message,true));retain();});
     on(root.querySelector('form'),'submit',event=>{event.preventDefault();const button=root.querySelector('[type="submit"]');button.disabled=true;Promise.resolve().then(()=>submit('paired_ensemble.build',selection())).catch(e=>note(e.message,true)).finally(()=>{button.disabled=false;});});
     on(root,'click',event=>{const b=event.target.closest('button');if(!b)return;let work;if(b.dataset.action)work=dispatch(b.dataset.action);else if(b.dataset.open)work=openEdition(b.dataset.open);else if(b.dataset.export)work=submit('paired_ensemble.export',{ensemble_id:b.dataset.export});Promise.resolve(work).catch(e=>note(e.message,true));});
     const supplied=incoming,prepareBefore=preparedRevision;refresh().then(()=>{if(!current())return;if(saved?.draft&&!supplied&&preparedRevision===prepareBefore)restore(saved.draft);retain();observe().catch(e=>note(e.message,true));schedule();}).catch(e=>note(e.message,true));

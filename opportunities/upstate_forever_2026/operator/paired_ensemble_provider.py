@@ -16,6 +16,7 @@ import zipfile
 from urllib.parse import unquote
 
 from model.paired_ensemble import EnsembleWorkspace
+from model.paired_ensemble.designs import catalog_run
 from model.paired_ensemble.ensemble_store import digest, fingerprint, identifier, read as read_json, verify
 from model.paired_ensemble.ensemble_portable import _manifest, receive_project
 
@@ -153,7 +154,8 @@ def read(operator, workspace_key, operation, payload):
     if operation == 'catalog':
         data = app.workspace.overview()
         return {'schema': 'upstate.paired-ensemble-catalog/v1', 'workspace_id': app.workspace.project['id'],
-                'runs': data.get('runs', []), 'profiles': data.get('profiles', []),
+                'runs': [catalog_run(app.workspace.inspect_run(identifier(row['id'])))
+                         for row in data.get('runs', [])], 'profiles': data.get('profiles', []),
                 'scenarios': data.get('scenarios', []), 'grids': data.get('grids', []),
                 'editions': overview(operator, workspace_key)}
     if operation == 'edition':

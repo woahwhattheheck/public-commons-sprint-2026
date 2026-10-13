@@ -148,3 +148,27 @@ state that separate producing-stage provenance was not retained.
 The paired component's append-only source fragment includes the maintained
 `model/native_versions.py` and `model/model_selection.py` dependencies. The
 shared-host installer also requires both files before applying its registration.
+
+
+## Original-run selection in the operator
+
+The shared desk lists every retained native run for the selected grid and
+scenarios. Run labels identify each producing model version and whether it came
+from a completed stage, an observed run fallback, or a requested legacy record.
+The requested version alone does not hide or pair a run.
+
+Each quantity is available only when every included baseline and alternative
+contains that quantity and agrees on its producing model version. Nitrogen and
+phosphorus use NDR; sediment uses SDR. A differing SDR version therefore leaves
+an otherwise compatible NDR comparison available. The desk names unavailable
+quantities and their reasons alongside the original run choices. Choose another
+retained run or change the explicitly included profiles to select a different
+compatible cohort. The backend validates the same roster before computation.
+
+Loading a saved design uses the same per-model rule and retains its omitted
+quantity reasons in the saved input description. If no output is compatible,
+the design stays unavailable for analysis and supplies its exact reasons.
+Reopening an existing analysis preserves its requested quantity roster; it
+reports incompatibility instead of silently changing that original selection.
+The older operator views use the same native catalogue for automatic pairing
+and validate the whole selected roster before submitting their original task.
