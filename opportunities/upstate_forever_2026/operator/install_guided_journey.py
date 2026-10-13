@@ -26,7 +26,7 @@ OWNED = frozenset({
     MANIFEST,
 })
 SHARED = ("operator/server.py", "operator/web/app.mjs")
-OPTIONAL_SHARED = ("install_extensions.py",)
+OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
 
 
 def now():
