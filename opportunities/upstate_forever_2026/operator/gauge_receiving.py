@@ -13,7 +13,7 @@ def decorate(operator, workspace_key, result):
             path = verify_file(workspace.root, item)
             label = item.get("label") or Path(path).name
             ticket = operator._ticket(workspace_key, path,
-                {**item, "filename": Path(label).name}, label)
+                {**item, "filename": item.get("filename") or Path(label).name}, label)
             result.append(ticket)
         return result
 
