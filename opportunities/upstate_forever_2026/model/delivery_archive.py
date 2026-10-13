@@ -110,7 +110,8 @@ def inspect_archive(path, *, expected_package_sha256=None, verify=True, limits=N
             info = archive.getinfo(name)
             if (not isinstance(expected, dict) or type(expected.get("bytes")) is not int
                     or expected["bytes"] < 0 or not isinstance(expected.get("sha256"), str)
-                    or len(expected["sha256"]) != 64):
+                    or len(expected["sha256"]) != 64
+                    or any(char not in "0123456789abcdef" for char in expected["sha256"])):
                 raise ValueError("Delivery carrier has an invalid member descriptor: " + name)
             if info.file_size != expected["bytes"]:
                 raise ValueError("Delivery carrier member size changed: " + name)
