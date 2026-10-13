@@ -42,8 +42,8 @@ that produced those runs. The version label distinguishes completed-stage
 runtime evidence, observed run runtime and the requested version retained by
 an older run.
 
-If the selected completed cohort has incompatible native versions, models,
-grids or physical output units, the preview shows the actual compatibility
+If the selected completed cohort has incompatible native versions, models
+or physical output units, the preview shows the actual compatibility
 reason beside these controls. Select a compatible profile/scenario subgroup
 and preview again. Each selected profile keeps its original baseline. Building
 rechecks the current selection before queueing it; the engine repeats strict
