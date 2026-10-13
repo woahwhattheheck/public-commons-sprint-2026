@@ -21,8 +21,8 @@ fn setup()->Course {
     e.ledger().with_mut(|l| { l.timestamp=1_000; l.protocol_version=26; });
     let admin=Address::generate(&e); let user=Address::generate(&e); let peer=Address::generate(&e);
     let sac=e.register_stellar_asset_contract_v2(admin.clone());
-    sac.issuer().set_flag(IssuerFlags::AuthRevocableFlag);
-    sac.issuer().set_flag(IssuerFlags::AuthClawbackEnabledFlag);
+    sac.issuer().set_flag(IssuerFlags::RevocableFlag);
+    sac.issuer().set_flag(IssuerFlags::ClawbackEnabledFlag);
     let asset=sac.address();
     let permission=e.register(PERMISSION,(admin.clone(),));
     let risk=e.register(RISK,(admin.clone(),1_000*SCALE,86_400u64));
