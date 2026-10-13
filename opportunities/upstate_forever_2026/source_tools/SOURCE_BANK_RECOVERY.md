@@ -55,6 +55,23 @@ For ordinary input, `--sha256` checks the supplied file bytes. With `--base64`, 
 
 Source-bank paths are preserved relative to the chosen destination. The bank's `source_root`, `base_path`, or `commons.source-map/1` `prefix` is returned as provenance metadata and is not prepended silently. A project-relative bank can therefore be recovered into a new project staging directory and installed through its existing source-specific workflow.
 
+## Receive native Slack Canvas responses
+
+The same receiver accepts the exact JSON returned by `slack_read_canvas`, including its single-text MCP result wrapper. Save the complete provider response, preserving its `canvas_id` and `markdown_content`, and inspect or extract it directly:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect delivery-source-canvas-response.json
+node source_tools/source_bank_cli.mjs extract delivery-source-canvas-response.json received-delivery-source
+```
+
+For [the six-file delivery and portable source carrier](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KMMH8DT), all six original files recover to 114,891 bytes. The retained source JSON is 121,369 bytes, SHA-256 `db241e9512cee077075969fe165b961931b8819e4e98ebcab600a8ff916e580c`. Its files preserve the original coherent repository commit and each Git blob.
+
+A `commons.source-bank-envelope/v1` declares `encoding: "base64+gzip"`, `data`, decoded `bytes`/`sha256`, and `gzip_bytes`/`gzip_sha256`. All four identity fields are required. The receiver checks the compressed identity before decompression, caps expansion at the declared decoded length, then verifies decoded identity and every source member. It retains both envelope identities in the inventory.
+
+Native Canvas responses can add Markdown escaping inside JSON fences. The receiver removes one such transport layer only within an identified Canvas response; ordinary Markdown keeps strict JSON parsing. The inventory also records the Canvas ID and exact returned Markdown identity. The original provider response remains in `.source-bank-recovery/input`.
+
+Provider error responses, multiple text results and excessive wrapper nesting fail explicitly. A single source cohort is required throughout, including numbered packet collections. This lets an equipped receiver use the original result directly without manually rewriting source or stripping transport escaping.
+
 ## Receive the complete cumulative application
 
 The same commands accept the current [ECD1 edition 3 application carrier](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KFCT3S9). Save its complete Markdown, including all 148 JSON packet fences:
@@ -92,7 +109,7 @@ const originalFile = result.files.find(
 // originalFile.data is the exact Uint8Array; inventory contains metadata without file bodies.
 ```
 
-`decode` accepts a `Uint8Array` or UTF-8 text. For a Slack file read, pass the returned `structuredContent.text_content` directly. For an already parsed original bank or packet array, use `sourceBank(bank)` or `packets(parts)`.
+`decode` accepts a `Uint8Array` or UTF-8 text. For a Slack file read, pass the returned `structuredContent.text_content` directly. For a native Canvas read, pass `JSON.stringify(readCanvasResult)` or its complete returned JSON text. Both the Canvas record and its original single-text MCP wrapper are recognized. For an already parsed original bank or packet array, use `sourceBank(bank)` or `packets(parts)`.
 
 Environments that evaluate a trusted host script instead of loading ES modules can bundle these two reviewed modules at build time. Keep the resulting functions in the host's ordinary source and pass archive bytes as data. The toolkit contains no `eval`, dynamic source compilation, shell calls or fetches.
 
@@ -120,6 +137,8 @@ Passing an object to `encodeSourceBank` creates a new JSON serialization; passin
 | Cumulative source maps | `commons.source-map/1`; UTF-8 `files` mapping plus a matching `file_metadata` mapping with mandatory byte length, SHA-256 and regular-file mode; complete original descriptors retained |
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
 | Carriers | One supported JSON bank/envelope fence, or one complete cohort of `upstate.application-source-part/v1` gzip+base64 packets |
+| Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities |
+| Native Canvas results | Original `canvas_id`/`markdown_content` JSON, optionally in one text MCP result; Canvas transport escaping and original carrier identity retained |
 
 Unsupported ZIP variants fail explicitly: encryption, ZIP64, multiple disks, alternate compression methods, symlinks/special files, executable archive preambles and unaccounted local data. Empty directory records are checked and counted; extraction creates the directories needed by files. The complete original archive retains every directory record.
 
@@ -155,6 +174,8 @@ The pure decoder was exercised on the actual retained originals:
 | Same ZIP in its original Markdown artifact envelope | Same 17 complete member identities |
 | Six-part ECO-SOURCE12 carrier | All 19 files; 573,918 source bytes; decoded JSON SHA-256 `0e79fb406d92a517f294e8be89f8ea143c23ac91096b952779bb06e63662622f` |
 | ECD1 edition 3, 148 packets, 10,018,711-byte JSON | All 586 files and 9,132,400 source bytes matched; every original descriptor retained; 11 executable-marked members recorded |
+| Actual six-file Canvas, its native MCP response, unescaped Markdown and original source JSON | All four input forms recovered the same six paths and hashes, totaling 114,891 bytes |
+| Changed source-envelope gzip identity or excessive provider wrapper nesting | Rejected before source recovery |
 | Changed source-map byte count/hash, missing or orphan metadata, unsupported file mode | Rejected at the source-map descriptor check |
 | Actual ZIP/gzip with lower output limits, altered local ZIP name, mixed packet editions and traversal path | Rejected at the corresponding size, identity or path check |
 
