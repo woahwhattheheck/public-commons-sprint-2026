@@ -90,6 +90,14 @@ The operator now reads compact derived view summaries during its repeated state 
 
 Opening, revising and receiving an assessment still read and verify the original immutable calculation. The summary index under workspace/decision-view-summaries/ supplies labels and revision links; the full physical rows remain in decision-views/. A read-only workspace continues to list original views when it cannot write a derived summary.
 
+## Continue selected native runs in Scenario analysis
+
+The workbench now includes a complete continuation into the existing Scenario analysis form. It shows the current native availability of the selected assessment cases, then opens the original fixed-scale form with those original baseline and alternative run IDs. The target desk keeps its actual selected-model output intersection, model-version and grid requirements. A valid baseline-only analysis is available. When nutrient and sediment alternatives form separate compatible groups, the workbench presents explicitly named group actions with their native alternative counts; the operator chooses the intended group.
+
+Each group opens the existing form to choose fixed-baseline scales, planning weights and retained vector-source planning areas. The assessment's cohort normalization and reporting-scope identifiers remain attached to the saved workbench view. The current target analysis uses its own original model and retained outputs. A queued assessment save that completes while another desk is open persists its saved parent and reopens that exact saved record when the workbench is revisited.
+
+The current decisions descriptor includes scenario_handoff.mjs and the shared host's existing openExtension capability. The complete current selected-model producer and desk are carried in the same source overlay; the host and original scientific action queue remain the existing implementation. See SCENARIO_HANDOFF.md for the exact native intake contract.
+
 
 ## Continue the same submission after reopening the browser
 
@@ -109,7 +117,7 @@ Receive this complete source edition together:
 - operator/extensions/decisions.json
 - operator/SCENARIO_DECISIONS.md
 
-The version 3 Decisions manifest adds decision_submission.mjs to the existing explicit asset inventory. The full source receiver copies all five files into the actual application. Run the maintained extension installer against that composed application; no additional server is required.
+The version 4 Decisions manifest retains scenario_handoff.mjs and adds decision_submission.mjs to the existing explicit asset inventory. The full source receiver copies all five files into the actual application. Run the maintained extension installer against that composed application; no additional server is required.
 
 For the original operating journey, use the existing completed native comparison or common-mask watershed report. Save one actual assessment, reload while the existing task is still being received, and return to its original result. Switch to another existing workspace while its response is pending, then return and reopen the same assessment. Edit the draft while that save completes and confirm the edited draft stays in place. Continue a failed original save through its task resume control after its concrete source or input correction. The original task IDs, saved view IDs and complete result downloads identify the operation throughout.
 
