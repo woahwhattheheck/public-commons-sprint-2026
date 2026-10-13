@@ -89,3 +89,28 @@ The transport check used 6,070,945 bytes of explicitly labeled test JSON. It con
 The operator now reads compact derived view summaries during its repeated state updates. Saving warms the summary immediately; existing assessments are indexed the first time they are listed. Each summary tracks the original view file size and modification time. Restoring, changing or removing an original view updates the listing naturally. Removing a derived summary simply rebuilds it from the content-verified original on the next read.
 
 Opening, revising and receiving an assessment still read and verify the original immutable calculation. The summary index under workspace/decision-view-summaries/ supplies labels and revision links; the full physical rows remain in decision-views/. A read-only workspace continues to list original views when it cannot write a derived summary.
+
+
+## Continue the same submission after reopening the browser
+
+The Decisions panel retains each save or native comparison request before it is sent. A compact browser journal records the workspace, a SHA-256 identity of the complete request, its original operation ID, the accepted task ID and its current result ID. Calculated assessments keep their existing authenticated multipart transport. A separate browser IndexedDB record retains the exact pending API request, including its original assessment transfer reference or direct assessment, until the original result has been received. These browser records contain no access capability.
+
+When this page reopens, it reads the existing original task before continuing. A response lost during submission retains the same payload-bound operation ID and exact request; the panel reconciles that original operation through the operator's idempotent queue. This uses the stored request without recalculating the assessment or choosing another compression format. Repeating the same choice uses that same retained operation. Changing the chosen cases, title, purpose or calculation produces a different explicit request. Switching workspaces preserves each workspace's own pending operation. A late response updates its original workspace record.
+
+A completed save reopens its original assessment and source snapshot. If the analyst changed the draft while the earlier task ran, that draft stays in place; the saved assessment remains available in the saved-assessment selector. The normal saved revision link is retained. A failed original task continues through **Resume interrupted task**, using its original task ID.
+
+The operator's existing state and task APIs remain the source of task outcomes. A retained task ID uses GET /api/task?id=ID; a lost acknowledgement first checks the workspace's original task list. If the core coalesces an identical active request, the panel verifies the complete returned payload and binds that existing native operation/task identity. The panel uses the existing authenticated queue and its workspace identity. Browser storage failures keep the current session usable and show a concrete message to keep the page open until the task appears.
+
+Receive this complete source edition together:
+
+- operator/web/decision_bridge.mjs
+- operator/web/decision_transfer.mjs
+- operator/web/decision_submission.mjs
+- operator/extensions/decisions.json
+- operator/SCENARIO_DECISIONS.md
+
+The version 3 Decisions manifest adds decision_submission.mjs to the existing explicit asset inventory. The full source receiver copies all five files into the actual application. Run the maintained extension installer against that composed application; no additional server is required.
+
+For the original operating journey, use the existing completed native comparison or common-mask watershed report. Save one actual assessment, reload while the existing task is still being received, and return to its original result. Switch to another existing workspace while its response is pending, then return and reopen the same assessment. Edit the draft while that save completes and confirm the edited draft stays in place. Continue a failed original save through its task resume control after its concrete source or input correction. The original task IDs, saved view IDs and complete result downloads identify the operation throughout.
+
+The displayed InVEST version now comes from each completed run's runtime.version. Any version declared in its selection remains separate source context. This carries the execution record into the comparison and its exports.

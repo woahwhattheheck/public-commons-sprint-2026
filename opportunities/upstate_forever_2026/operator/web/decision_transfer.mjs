@@ -84,3 +84,11 @@ export function operationId(){
   }
   return 'decision_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2);
 }
+
+export async function submissionIdentity(action,payload){
+  const json=JSON.parse(JSON.stringify({action,payload}));
+  const ordered=value=>Array.isArray(value)?value.map(ordered):
+    value&&typeof value==='object'?
+      Object.fromEntries(Object.keys(value).sort().map(key=>[key,ordered(value[key])])):value;
+  return digest(new TextEncoder().encode(JSON.stringify(ordered(json))));
+}
