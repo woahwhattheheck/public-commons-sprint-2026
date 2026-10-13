@@ -60,3 +60,13 @@
 
 /* Supplier delivery retains the catalog's neutral industrial controls. */
 #cat-panel-supplier fieldset{border:1px solid #bdbdbd;padding:12px;margin:0}#cat-panel-supplier legend{font-weight:600;padding:0 6px}#sup-bindings table{min-width:640px}#sup-bindings td:first-child{width:32%}#sup-bindings td:nth-child(2){width:56%}.sup-finding{padding:12px 0;border-bottom:1px solid #d0d0d0}.sup-finding p{margin:5px 0}.sup-finding a{margin-left:12px}#sup-patches td{max-width:420px;overflow-wrap:anywhere}#sup-product{border-top:1px solid #bdbdbd;margin-top:20px;padding-top:12px}#sup-product pre{max-height:360px;overflow:auto}
+
+/* Supplier-document source review uses the original catalog layout. */
+#cat-document-preparation{border:1px solid #bdbdbd;padding:14px;margin:18px 0}
+#cat-document-preparation h3{margin-top:0}
+#cat-document-preparation pre{max-height:440px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+#cat-document-preparation .table-wrap table{min-width:720px}
+#cat-document-preparation .table-wrap td{max-width:330px;white-space:normal;overflow-wrap:anywhere}
+#doc-editor{border-top:1px solid #bdbdbd;padding-top:12px;margin-top:16px}
+#doc-downloads a{display:inline-block;padding:7px 9px;border:1px solid #999;color:inherit;text-decoration:underline}
+@media(max-width:700px){#cat-document-preparation{padding:10px}#doc-downloads{align-items:stretch}#doc-downloads a{max-width:100%;overflow-wrap:anywhere}}

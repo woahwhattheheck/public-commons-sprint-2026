@@ -27,7 +27,7 @@ const button = (action,label,extra='',style='') => '<button type="button" class=
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
 const viewLabels={portfolios:'Conservation portfolios',conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
 const actionLabels={'portfolio.inventory.build':'Build native planning inventory','portfolio.preview':'Analyze conservation choices','portfolio.save':'Save conservation portfolio','portfolio.scenario.prepare':'Prepare portfolio scenario','portfolio.run.prepare':'Prepare portfolio model run','portfolio.run.start':'Run portfolio native models','portfolio.report.build':'Build portfolio report','portfolio.decision.build':'Build portfolio economic comparison','conservation.catalog.export':'Export complete candidate rows','conservation.catalog.plan.save':'Save retained candidate plan','conservation.catalog.select':'Retain candidate selection','conservation.catalog.prepare':'Prepare candidate search','conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
-Object.assign(actionLabels,{"workspace.snapshot":"Create complete project","workspace.receive":"Receive complete project","workspace.recovery.resume":"Resume received work","project.transfer.capture":"Create incremental project","project.transfer.accept":"Receive project manifest","project.transfer.receive":"Receive project part","project.transfer.parts":"Prepare requested project parts","project.transfer.archive":"Build complete project archive","project.transfer.restore":"Restore incremental project","project.transfer.report":"Export project inventory","project.transfer.inspect":"Inspect received project","project.transfer.diff":"Compare project editions"});
+Object.assign(actionLabels,{"workspace.snapshot":"Create complete project","workspace.receive":"Receive complete project","workspace.recovery.resume":"Resume received work","project.transfer.capture":"Create incremental project","project.transfer.capture-study":"Capture completed study","project.transfer.accept":"Receive project manifest","project.transfer.receive":"Receive project part","project.transfer.parts":"Prepare requested project parts","project.transfer.archive":"Build complete project archive","project.transfer.restore":"Restore incremental project","project.transfer.report":"Export project inventory","project.transfer.inspect":"Inspect received project","project.transfer.diff":"Compare project editions"});
 const mapFamilies=['future_sediment_loss','future_nutrient_runoff','critical_drinking_water','high_quality_waters','current_nutrient_export','current_sediment_export','combined_pollutant_export'];
 const mapTitles={future_sediment_loss:'Future sediment loss',future_nutrient_runoff:'Future nutrient runoff',critical_drinking_water:'Critical drinking-water sources',high_quality_waters:'Designated high-quality waters',current_nutrient_export:'Current nutrient export',current_sediment_export:'Current sediment export',combined_pollutant_export:'Combined pollutant export'};
 const keyName='upstate-operator-capability';
@@ -144,7 +144,7 @@ function render(){
   if(view!=='portfolios')portfolio.detach();
   mountPortfolioDetail();
   if(view==='rehearsal'){
-    for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+    for(const node of $('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
     if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
     if(typeof community!=='undefined')community.detach();
     if(typeof customerReviews!=='undefined')customerReviews.detach();
@@ -568,6 +568,30 @@ async function profileForm(id){
   return submitAction('profile.save',{title:val('title'),source_collection_id:val('collection'),biophysical_source_id:val('biophysical_source'),references:lines(val('references')),...modelFields,...parameters,model_period:val('model_period'),notes:lines(val('notes'))});
  },()=>{bindCollection('collection',[['biophysical_source','table']],{biophysical_source:row?.biophysical_source_id});bindNativeModelFields();});
 }
+function bindGridResolution(original){
+ const context=formContext,selectedWorkspace=workspace;
+ let revision=0;
+ const readReference=async()=>{
+  const turn=++revision,collection=val('collection'),source=val('raster_NLCD'),node=form.elements.namedItem('resolution'),note=$('#grid-native-reference');
+  context.nativeReferenceLoading=false;
+  if(!collection||!source){note.textContent='Choose the original land-cover raster to read its native cell size.';return;}
+  context.nativeReferenceLoading=true;note.textContent='Reading the selected original land-cover grid…';
+  const current=()=>formContext===context&&workspace===selectedWorkspace&&turn===revision&&val('collection')===collection&&val('raster_NLCD')===source;
+  try{
+   const header=await api(endpoint('/api/source-info',{collection,source}));
+   if(!current())return;
+   const resolution=header.native_resolution_m;
+   if(!Number.isFinite(resolution)||resolution<=0){note.textContent='This reference is not a square, north-up projected metre grid. Select the original model reference or inspect its source details.';return;}
+   const unchanged=original?.spec?.source_collection_id===collection&&original?.spec?.input_sources?.NLCD===source;
+   if(!unchanged)node.value=String(resolution);
+   note.textContent='Original land cover: '+number(resolution)+' m cells; '+number(header.width)+' × '+number(header.height)+'; '+(header.crs||'CRS not supplied')+'.'+(unchanged?' The saved grid selection is preserved.':' The cell-size field now matches this source.');
+  }catch(error){if(current())note.textContent='Read the original source header to confirm cell size: '+error.message;}
+  finally{if(current())context.nativeReferenceLoading=false;}
+ };
+ form.elements.namedItem('collection').addEventListener('change',readReference);
+ form.elements.namedItem('raster_NLCD').addEventListener('change',readReference);
+ readReference();
+}
 async function gridForm(id){
  requireSources();const original=id?await api(endpoint('/api/item',{kind:'grids',id})):null,row=original?.spec,collection=collectionDefault(row);
  const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
@@ -575,12 +599,14 @@ async function gridForm(id){
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
  '<div class="form-grid">'+field('Grid title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Source edition',select('collection',sources(),collection))+
  field('Native models',select('models',nativeModelOptions(),nativeModels(row).join(',')),'NDR requires elevation, land cover and precipitation. SDR requires elevation, land cover, rainfall erosivity and soil erodibility.',true)+
- field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell, matching the original projected land-cover grid. The Upper Savannah production maps require 30 × 30 m cells (RFP p. 2). Gura source editions retain their original grids: the legacy demonstration uses 300 m cells and the 3.20.0 release-data receiver uses 15 m cells.')+
+ field('Native cell size',input('resolution','number',row?(row.resolution_m??originalResolution):'','required min="0" step="any"'),'Metres per square cell, read from the selected original land-cover raster. The Upper Savannah production maps require 30 × 30 m cells (RFP p. 2). Each demonstration retains its source edition’s actual grid.')+
+ '<p id="grid-native-reference" class="note full" role="status"></p>'+
  (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original cell size, geometry, source selections and context buffer to reuse them. Clear this choice when changing the physical grid. New input roles are prepared in the new grid.</small></label>':'')+
  rasterRoles.map(([key,label,models])=>field(label,select('raster_'+key,sourceRows(collection,'raster'),row?.input_sources?.[key])).replace('<label','<label data-native-models="'+models+'"')).join('')+
  field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0" max="999999" step="any"'),'Metres added around the selected hydrologic model domain. Zero retains that domain unchanged; a positive value expands it. Retain the catchment-specific rationale. Upper Savannah production requires an external modeling buffer without fixing its distance.')+
  vectorSelection('reporting','Reporting boundary',collection,row?.reporting_area)+vectorSelection('domain','Hydrologic model domain',collection,row?.model_domain)+'</div>',
  'Prepare original grid',()=>{
+  if(formContext.nativeReferenceLoading)throw Error('The selected original raster header is still loading.');
   const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={},resolution=num('resolution');
   if(resolution<=0)throw Error('Enter a positive native cell size in metres that matches the original land-cover grid.');
   for(const [key,,models]of rasterRoles)if(models.split(' ').some(name=>active.includes(name)))input_sources[key]=val('raster_'+key);
@@ -591,7 +617,7 @@ async function gridForm(id){
    selection.base_grid_id=original.id;
   }
   return submitAction('grid.prepare',selection);
- },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();});
+ },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();bindGridResolution(original);});
 }
 function patchRow(collection,row={}){
  return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+

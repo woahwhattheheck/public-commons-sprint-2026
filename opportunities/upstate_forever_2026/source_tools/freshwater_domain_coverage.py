@@ -266,9 +266,112 @@ def _read_features(root, pages, metadata, oid, expected):
     return seen, references, native_sr
 
 
+def _retain_reused_sources(manifests, root, metadata, oid):
+    """Reuse complete native FW source manifests, including their original companions."""
+    queries, pages, companions, identities = [], [], [], []
+    reused_ids = set()
+    for manifest_name in manifests:
+        manifest_path = Path(manifest_name).resolve(strict=True)
+        document = _json(manifest_path)
+        if document.get("schema") != "upstate.sources/v1":
+            raise ValueError("A reused freshwater source must use upstate.sources/v1")
+        manifest_sha = _file_sha(manifest_path)
+        prefix = "reused/" + manifest_sha[:20] + "/"
+        manifest_member = _copy(manifest_path, root, prefix + "sources.json")
+        companions.append(manifest_member)
+        retained, json_documents = {}, {}
+        def retain(record):
+            name = record["path"]
+            source_path = _path(manifest_path.parent, name)
+            if not record.get("sha256") or _file_sha(source_path) != record["sha256"]:
+                raise ValueError("Reused original source differs from its manifest: " + name)
+            if record.get("bytes") is not None and source_path.stat().st_size != record["bytes"]:
+                raise ValueError("Reused original source length differs: " + name)
+            if name not in retained:
+                retained[name] = _copy(source_path, root, prefix + name)
+                companions.append(retained[name])
+                if name.endswith((".json", ".json.gz")):
+                    json_documents[name] = _json(source_path)
+            return retained[name]
+        for entry in document.get("entries", []):
+            retain(entry)
+            for record in entry.get("companions", []):
+                retain(record)
+        index_entries = {}
+        for name, value in json_documents.items():
+            if isinstance(value, dict) and value.get("schema") == "upstate.original-query-index/v1":
+                for query in value.get("queries", []):
+                    if query.get("path") in retained:
+                        index_entries[query["path"]] = (name, query.get("source_url"))
+        def query_parameters(name):
+            if name not in index_entries:
+                raise ValueError("Reused native file needs its original query URL: " + name)
+            index_name, uri = index_entries[name]
+            parsed = urllib.parse.urlsplit(uri or "")
+            if parsed.scheme + "://" + parsed.netloc + parsed.path.rstrip("/") != LAYER + "/query":
+                raise ValueError("Reused native query points to another original layer")
+            return index_name, urllib.parse.parse_qs(parsed.query)
+        matched = 0
+        for entry in document.get("entries", []):
+            if entry.get("kind") != "vector" or entry.get("uri", "").rstrip("/") != LAYER:
+                continue
+            declared = entry.get("metadata") or {}
+            if declared.get("classification") != "FW" and entry.get("role") != "WATER_CLASSIFICATION_FW":
+                continue
+            page = json_documents.get(entry["path"])
+            if not isinstance(page, dict) or not isinstance(page.get("features"), list):
+                raise ValueError("Reused freshwater source needs its original Esri feature response")
+            if page.get("exceededTransferLimit"):
+                raise ValueError("Reused freshwater geometry is truncated")
+            values = [feature.get("attributes", {}).get(oid) for feature in page["features"]]
+            if any(type(value) is not int for value in values) or len(set(values)) != len(values):
+                raise ValueError("Reused freshwater geometry has invalid or duplicate native IDs")
+            expected = set(values)
+            index_name, page_parameters = query_parameters(entry["path"])
+            where = page_parameters.get("where")
+            ids_candidates, count_candidates = [], []
+            for name, value in json_documents.items():
+                if not isinstance(value, dict) or name not in index_entries:
+                    continue
+                candidate_uri = urllib.parse.urlsplit(index_entries[name][1] or "")
+                if candidate_uri.path.rstrip("/") != urllib.parse.urlsplit(LAYER).path + "/query":
+                    continue
+                _, parameters = query_parameters(name)
+                if parameters.get("where") != where:
+                    continue
+                if parameters.get("returnIdsOnly") == ["true"] and "objectIds" in value:
+                    selected = _ids(value, "Reused native freshwater IDs", expected_count=len(expected))
+                    if selected == expected:
+                        if value.get("objectIdFieldName", oid).casefold() != oid.casefold():
+                            raise ValueError("Reused freshwater source uses another native OID")
+                        ids_candidates.append(name)
+                if parameters.get("returnCountOnly") == ["true"] and type(value.get("count")) is int:
+                    if value["count"] == len(expected):
+                        count_candidates.append(name)
+            if len(ids_candidates) != 1 or len(count_candidates) != 1:
+                raise ValueError("Reused original geometry needs one matching native count and ID response")
+            member = retained[entry["path"]]
+            # This validates every native point/path and original CRS before reuse.
+            _read_features(root, [member], metadata, oid, expected)
+            queries.append({"count": retained[count_candidates[0]], "ids": retained[ids_candidates[0]],
+                            "request": retained[index_name],
+                            "selection": {"method": "Reused original source manifest selection",
+                                          "source_id": entry["id"], "source_manifest_sha256": manifest_sha}})
+            pages.append(member)
+            reused_ids.update(expected)
+            identities.append({"source_id": entry["id"], "manifest": manifest_member,
+                               "manifest_sha256": manifest_sha, "native_geometry": member,
+                               "native_geometry_sha256": entry["sha256"], "native_feature_count": len(expected),
+                               "original_scope": declared.get("scope"), "original_vintage": entry.get("vintage")})
+            matched += 1
+        if not matched:
+            raise ValueError("No explicitly declared native freshwater edition is present in " + str(manifest_path))
+    return queries, list(dict.fromkeys(pages)), list(dict.fromkeys(companions)), identities, reused_ids
+
+
 def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_count=217,
                       huc_field=None, batch_size=500, offline=False, timeout=60,
-                      edition=None, archive_output=None, workspace=None):
+                      edition=None, archive_output=None, workspace=None, reuse_sources=None):
     root = Path(output).absolute()
     root.mkdir(parents=True, exist_ok=True)
     (base_layer, metadata_member, metadata, oid, huc_member, hucs,
@@ -278,6 +381,18 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
     if type(batch_size) is not int or not 1 <= batch_size <= min(2000, metadata.get("maxRecordCount", 2000)):
         raise ValueError("Batch size must fit the original layer record limit")
     features, base_page_records, native_sr = _read_features(root, pages, metadata, oid, publisher_ids)
+    reuse_queries, reuse_pages, reuse_companions, reuse_identities, reuse_ids = _retain_reused_sources(
+        list(reuse_sources or []), root, metadata, oid)
+    reuse_records = []
+    if reuse_pages:
+        reuse_features, reuse_records, reuse_sr = _read_features(root, reuse_pages, metadata, oid, reuse_ids)
+        if not _same_crs(native_sr, reuse_sr):
+            raise ValueError("Reused freshwater originals use a different coordinate reference")
+        for identifier, feature in reuse_features.items():
+            if identifier in features and _encoded(features[identifier]) != _encoded(feature):
+                raise ValueError("Reused native feature conflicts with the original publisher capture: " + str(identifier))
+            features[identifier] = feature
+    reuse_key = _sha(_encoded(reuse_identities))[:16] if reuse_identities else None
     polygons, domain_identity = _original_domain(Path(domain_archive), root, hucs, huc_field)
     counts_by_huc, physical_by_huc = defaultdict(int), defaultdict(set)
     polygon_records, geometric_queries = [], []
@@ -314,10 +429,11 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
     missing_ids = physical_ids - publisher_ids
     native_huc_field = _field(metadata["fields"], "HUC_12")
     native_class_field = _field(metadata["fields"], "H2OCLASS")
+    download_ids = physical_ids - set(features)
     added_pages = []
-    for index, start in enumerate(range(0, len(missing_ids), batch_size)):
-        requested = sorted(missing_ids)[start:start + batch_size]
-        stem = "additional/page-%04d" % index
+    for index, start in enumerate(range(0, len(download_ids), batch_size)):
+        requested = sorted(download_ids)[start:start + batch_size]
+        stem = ("additional/reuse-" + reuse_key + "-page-%04d" if reuse_key else "additional/page-%04d") % index
         body = _post(root, stem, {
             "f": "json", "objectIds": ",".join(map(str, requested)), "outFields": "*",
             "returnGeometry": "true", "returnZ": "true", "returnM": "true",
@@ -327,11 +443,11 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
         if len(returned) != len(set(returned)) or set(returned) != set(requested):
             raise ValueError("Additional native geometry differs from the exact requested IDs")
         added_pages.append(stem + ".json")
-    all_pages = pages + added_pages
-    all_page_records = list(base_page_records)
+    all_pages = pages + reuse_pages + added_pages
+    all_page_records = list(base_page_records) + reuse_records
     if added_pages:
         added_features, added_records, added_sr = _read_features(
-            root, added_pages, metadata, oid, missing_ids)
+            root, added_pages, metadata, oid, download_ids)
         if not _same_crs(native_sr, added_sr):
             raise ValueError("Additional original pages use a different coordinate reference")
         features.update(added_features)
@@ -411,22 +527,40 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
         "captured_at": captured_at, "capture_time_status": capture_time_status,
         "receipts_without_capture_timestamp": recovered_receipts,
     }
-    _save(root / "comparison/coverage.json", _encoded(comparison))
-    all_companions = companions + [
+    comparison_member = ("comparison/coverage-reuse-" + reuse_key + ".json"
+                         if reuse_key else "comparison/coverage.json")
+    if reuse_identities:
+        comparison["reused_original_sources"] = reuse_identities
+        comparison["physical_features_reused_from_supplements"] = len(physical_ids & reuse_ids)
+        comparison["additional_native_features_downloaded"] = len(download_ids)
+    _save(root / comparison_member, _encoded(comparison))
+    all_companions = companions + reuse_companions + [
         "retained/original-capture.json", "domain/feature-bindings.json",
-        "comparison/coverage.json", "comparison/cohorts.json",
+        comparison_member, "comparison/cohorts.json",
         "comparison/native-object-huc-relationships.csv", "comparison/per-huc-coverage.csv",
     ]
     all_companions += [member.relative_to(root).as_posix() for folder in ("queries", "additional", "domain")
                       for member in sorted((root / folder).glob("*.json"))]
+    domain_body = json.loads(gzip.decompress((root / "domain/model-domain.esri.json.gz").read_bytes()))
+    native_huc_fields = [name for name in domain_body["features"][0]["attributes"]
+                         if name.casefold() in ("huc12", "huc_12")]
+    coverage_huc_field = huc_field or (native_huc_fields[0] if len(native_huc_fields) == 1 else None)
+    if not coverage_huc_field:
+        raise ValueError("Choose the exact original domain HUC12 field for parcel coverage")
     physical_layer = {
         "kind": "freshwater", "source_id": "sc-hydroclass-fw-physical-domain",
-        "uri": LAYER, "metadata": metadata_member, "queries": queries + geometric_queries,
+        "uri": LAYER, "metadata": metadata_member, "queries": queries + reuse_queries + geometric_queries,
         "pages": all_pages, "huc_ids": huc_member, "expected_huc_count": len(hucs),
         "huc_selection_mode": "geometry",
         "selected_ids": "comparison/physical-selected-ids.json",
         "selection_geometry": "domain/model-domain.esri.json.gz",
         "selection_method": comparison["method"],
+        "criteria_coverage": {
+            "method": "provider_intersects_each_original_domain_polygon",
+            "huc12_field": coverage_huc_field,
+            "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+            "vintage": "Original retained 217-HUC model-domain polygon edition",
+        },
         "companions": sorted(set(all_companions)),
         "scope": {"selection_basis": "Original physical model-domain intersection",
                   "domain": domain_identity, "cohort_counts": comparison["cohort_counts"],
@@ -438,13 +572,16 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
         "captured_at": captured_at, "capture_time_status": capture_time_status,
         "layers": [physical_layer], "complete_geometry": True,
     }
-    _save(root / "capture.json", _encoded(descriptor))
-    result = {"capture": str(root / "capture.json"),
-              "comparison": str(root / "comparison/coverage.json"),
+    # An earlier completed source may retain capture.json without the parcel binding.
+    # Publish an additive descriptor while reusing every original query/geometry byte.
+    descriptor_path = root / ("capture-criteria-reuse-" + reuse_key + ".json" if reuse_key else "capture-criteria.json")
+    _save(descriptor_path, _encoded(descriptor))
+    result = {"capture": str(descriptor_path),
+              "comparison": str(root / comparison_member),
               "cohort_counts": comparison["cohort_counts"],
               "new_geometry_pages": len(added_pages)}
     if edition:
-        result["edition"] = assemble(root / "capture.json", Path(edition))
+        result["edition"] = assemble(descriptor_path, Path(edition))
         if archive_output:
             result["archive"] = export_edition(Path(edition), Path(archive_output))
         if workspace:
@@ -481,12 +618,15 @@ def main(argv=None):
     parser.add_argument("--edition")
     parser.add_argument("--archive-output")
     parser.add_argument("--workspace")
+    parser.add_argument("--reuse-source", action="append", default=[],
+                        help="Original upstate.sources/v1 freshwater supplement; repeat for additional retained sources")
     args = parser.parse_args(argv)
     print(json.dumps(complete_coverage(
         args.capture, args.domain_archive, args.output,
         expected_huc_count=args.expected_huc_count, huc_field=args.huc_field,
         batch_size=args.batch_size, offline=args.offline, timeout=args.timeout,
         edition=args.edition, archive_output=args.archive_output, workspace=args.workspace,
+        reuse_sources=args.reuse_source,
     ), ensure_ascii=False, indent=2))
 
 

@@ -344,6 +344,24 @@ Applications prevents another retained run for the same data directory while an 
 
 After the runtime web server restarts, open its new URL and select the saved application. A live operation exposes its same original private application URL and ID. An ended URL remains historical and its Open link is disabled. A reviewed new start opens the same application data; it does not replay buyer work.
 
+### Receive the original managed outcome
+
+An operation's `SUCCEEDED` phase records completion of its worker or recovery. Read the retained command outcome separately. A recovered original command can have `RECONCILED` or `OUTCOME_UNAVAILABLE` with `exitCode: null`; those values preserve the absence of an observed exit code.
+
+Applications state, history and output, the original managed operation view, and repeated managed recovery expose the same fields:
+
+| Field | Original evidence |
+| --- | --- |
+| `result` | The complete `command-result.json` value when present; otherwise the original `state.json.result` only after phase `SUCCEEDED`; otherwise null |
+| `commandResult` | The original command receipt, or null when that file is absent |
+| `resultSource` | `command-result.json` when the command receipt exists; `state.json` when a SUCCEEDED state explicitly retains `result` (including null); otherwise null |
+
+These reads leave both original files unchanged. A later original command receipt takes precedence over an earlier recovery record. The command's recorded exit code, signal, message and outcome are returned intact. Repeating recovery of a completed operation returns its same retained result under the existing operation lease.
+
+The Applications overview displays `RECONCILED` or `OUTCOME_UNAVAILABLE` for those inactive recovered runs; their original operation phase remains `SUCCEEDED`. History shows the complete outcome and its receipt source. Output keeps the original logs alongside that outcome. Operators use the command's own operating procedure to decide whether a new reviewed start is appropriate.
+
+The terminal endpoint preserves its existing `result` from `terminal-exit.json`. Its additional `managedOutcome` contains the three fields above, so a terminal without a retained exit receipt can still show the original managed recovery. Terminal readiness, input delivery and active-lease checks keep their existing meanings.
+
 ## CLI
 
 The browser and CLI use the same model:

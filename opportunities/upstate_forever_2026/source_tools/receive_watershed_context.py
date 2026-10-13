@@ -13,6 +13,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import sys
+import stat
 import tempfile
 import zipfile
 
@@ -20,9 +21,10 @@ APPLICATION = Path(__file__).resolve().parents[1]
 if str(APPLICATION) not in sys.path:
     sys.path.insert(0, str(APPLICATION))
 
-from model.common import atomic_json, describe_file, held, read_json
+from model.common import atomic_bytes, atomic_json, describe_file, held, read_json, verify_file
 
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAX_MEMBER_BYTES = 256 * 1024 * 1024
 
 
 def _hash(body):
@@ -148,6 +150,42 @@ def _retain_connectivity(directory, record, connectivity):
     return joined
 
 
+def _retain_native_bundle(directory, record, bundle):
+    """Enrich a matching report with canonical inputs and complete native sources."""
+    edition = record.get("source_edition")
+    if edition is not None:
+        if (edition.get("model_input_fingerprint") != bundle["source_fingerprint"]
+                or record.get("source_fingerprint") != bundle["source_fingerprint"]):
+            raise ValueError("The completed native inputs differ from the bound source edition")
+    files = dict(record["files"])
+    for name, body in bundle["files"].items():
+        target = directory.joinpath(*_member(name).parts)
+        if target.is_symlink() or target.parent.is_symlink():
+            raise ValueError("Retain original regular native watershed files")
+        if target.exists() and target.read_bytes() != body:
+            raise ValueError("The saved original native member differs: " + name)
+        expected = files.get(name)
+        if expected and (expected.get("path") != name or expected.get("sha256") != _hash(body)
+                         or expected.get("bytes") != len(body)):
+            raise ValueError("The saved native member descriptor differs: " + name)
+        atomic_bytes(target, body, immutable=True)
+        files[name] = describe_file(directory, target)
+    joined = {
+        **record, "files": files,
+        "source_inputs": bundle["source_inputs"],
+        "source_fingerprint": bundle["source_fingerprint"],
+        "native_source_files": bundle["source_files"],
+        "source_validation": {
+            **record.get("source_validation", {}),
+            "native_source_bank_sha256": bundle["source"]["source_bank_sha256"],
+            "native_source_bank_archive_sha256": bundle["source_bank_archive_sha256"],
+        },
+    }
+    if joined != record:
+        atomic_json(directory / "operator-report.json", joined)
+    return joined
+
+
 def receive_completed(workspace, source, *, expected_sha256=None, title=None,
                       connectivity_root=None):
     """Use the existing adoption engine, then retain its source-bound graph edition."""
@@ -156,6 +194,18 @@ def receive_completed(workspace, source, *, expected_sha256=None, title=None,
     if expected_sha256 is not None and digest != expected_sha256:
         raise ValueError("The original completed watershed archive changed")
     with zipfile.ZipFile(io.BytesIO(body)) as package:
+        entries = package.infolist()
+        if len(entries) > 5000 or sum(entry.file_size for entry in entries) > MAX_MEMBER_BYTES:
+            raise ValueError("The completed members exceed the receiving capacity")
+        seen = set()
+        for entry in entries:
+            _member(entry.filename.rstrip("/") if entry.is_dir() else entry.filename)
+            if entry.filename in seen:
+                raise ValueError("Repeated completed watershed archive member")
+            seen.add(entry.filename)
+            mode = entry.external_attr >> 16
+            if stat.S_ISLNK(mode) or (not entry.is_dir() and stat.S_IFMT(mode) not in (0, stat.S_IFREG)):
+                raise ValueError("Receive original regular watershed source and report files")
         run = json.loads(package.read("run-receipt.json"))
     operation_id = run.get("operation_id")
     if not isinstance(operation_id, str) or not operation_id:
@@ -164,6 +214,20 @@ def receive_completed(workspace, source, *, expected_sha256=None, title=None,
     with tempfile.TemporaryDirectory(prefix="upstate-completed-watershed-") as temporary:
         archive = Path(temporary) / "original-native-result.zip"
         archive.write_bytes(body)
+        bundle = receiver.receive_bundle(archive, digest, operation_id)
+        directory = workspace.root / "watershed-context" / bundle["id"]
+        with held(workspace.root / ".workspace.lock"):
+            record_path = directory / "operator-report.json"
+            if record_path.is_file():
+                record = read_json(record_path)
+                if (record.get("id") != bundle["id"]
+                        or record.get("schema") != receiver.OPERATOR_SCHEMA
+                        or record.get("files", {}).get("watershed-context.json", {}).get("sha256")
+                        != _hash(bundle["files"]["watershed-context.json"])):
+                    raise ValueError("The completed native report differs from the saved result")
+                for descriptor in record["files"].values():
+                    verify_file(directory, descriptor)
+                _retain_native_bundle(directory, record, bundle)
         result = receiver.adopt(
             APPLICATION, workspace.root, archive, digest, operation_id=operation_id,
             expected_report_id=(run.get("result") or {}).get("id"))
