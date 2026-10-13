@@ -18,7 +18,8 @@ if str(_APPLICATION) not in sys.path:
     sys.path.insert(0, str(_APPLICATION))
 
 from model.common import (
-    atomic_json, describe_file, digest, file_digest, held, read_json, verify_file,
+    atomic_bytes, atomic_json, canonical, describe_file, digest, file_digest, held,
+    read_json, verify_file,
 )
 from source_tools.operator_source_intake import IntakeError
 from source_tools.domain_overlays import (
@@ -39,6 +40,12 @@ NID_DICTIONARY = (
     "https://usace-cwbi-prod-il2-nld2-docs.s3.us-gov-west-1.amazonaws.com/"
     "0f6b4388-dafb-4ae4-84b4-416ad30b08e5/"
     "NID%20Data%20Dictionary%20August%202023.pdf"
+)
+ASSESSED_NON_SFHA_ZONES = ("B", "C", "X")
+FEMA_CLASS_REFERENCES = (
+    "https://www.fema.gov/sites/default/files/documents/fema_rm-domain-tables-technical-reference-nov-2023.pdf",
+    "https://www.fema.gov/sites/default/files/documents/fema_firm-database-guidance.pdf",
+    "https://emilms.fema.gov/is_0273/groups/77.html",
 )
 SPECS = {
     "fema-flood-zones": {
@@ -155,12 +162,34 @@ def _view_entry(root, record):
     return entry
 
 
+def _flood_entries(root, record):
+    pointer = root / "flood-views.json"
+    if not pointer.is_file():
+        return []
+    value = read_json(pointer)
+    if (value.get("schema") != "upstate.fema-flood-views/v1"
+            or value.get("native_sha256") != record["sha256"]):
+        raise ValueError("Flood views belong to a different native edition")
+    entries = value["entries"]
+    if (len(entries) != 3 or
+            {entry.get("metadata", {}).get("hazard_view") for entry in entries}
+            != {"sfha", "classified_tf", "criterion_coverage"}):
+        raise ValueError("The retained flood views must include SFHA, designation and criterion coverage")
+    for entry in entries:
+        verify_file(root, entry)
+        for member in entry.get("companions", []):
+            verify_file(root, member)
+    return entries
+
+
 def _publish(root, plan, records, failures):
     entries = [_entry(root, key, records[key], plan) for key in SPECS if key in records]
     if "nid-dams" in records:
         view = _view_entry(root, records["nid-dams"])
         if view:
             entries.append(view)
+    if "fema-flood-zones" in records:
+        entries.extend(_flood_entries(root, records["fema-flood-zones"]))
     transfer = read_json(root / "domain" / "plan-transfer.json")
     context = [root / "hazard-plan.json", root / "domain" / "plan-transfer.json"]
     context.extend(root / "domain" / item["path"] for item in transfer["files"])
@@ -171,6 +200,18 @@ def _publish(root, plan, records, failures):
         "role": "SOURCE_CONTEXT", "vintage": "Retained upstream domain edition",
         **describe_file(root, context[0]),
         "companions": [describe_file(root, path) for path in context[1:]],
+    })
+    masks = root / "domain" / "masks.json"
+    entries.append({
+        "id": "hazard-upstream-masks-" + file_digest(masks)[:24],
+        "title": "Original upstream hazard acquisition masks",
+        "uri": "urn:sha256:" + file_digest(masks), "kind": "document",
+        "role": "SOURCE_COVERAGE", "vintage": "Retained upstream domain edition",
+        **describe_file(root, masks),
+        "metadata": {"hazard_source_key": "upstream-masks", "hazard_view": "source_mask",
+                     "scope": "upstream_model_domain", "group": "upstream",
+                     "capture_plan_sha256": digest(plan)},
+        "companions": [describe_file(root, path) for path in context if path != masks],
     })
     manifest = {
         "schema": "upstate.sources/v1",
@@ -196,6 +237,8 @@ def _publish(root, plan, records, failures):
         "completed_sources": list(records), "remaining_sources": pending,
         "dam_analysis_ready": any(entry.get("metadata", {}).get("hazard_view") == "analysis_xy"
                                   for entry in entries),
+        "flood_analysis_ready": any(entry.get("metadata", {}).get("hazard_view") == "sfha"
+                                    for entry in entries),
         "failures": failures,
     }
     atomic_json(root / "capture-progress.json", progress)
@@ -337,11 +380,145 @@ def prepare_dams(output):
         return _publish(root, plan, records, previous.get("failures", {}))
 
 
+def prepare_flood(output):
+    """Retain SFHA positives, designation coverage and assessed criterion coverage."""
+    from source.capture_upstream_network import esri_polygon
+
+    root = Path(output).resolve(strict=True)
+    with held(root / "hazard-capture.lock", blocking=False):
+        plan, _ = _plan(root)
+        records = _records(root)
+        record = records.get("fema-flood-zones")
+        if record is None:
+            raise ValueError("Capture the original FEMA all-zone layer before preparing its views")
+        native_entry = _entry(root, "fema-flood-zones", record, plan)
+        with gzip.open(verify_file(root, native_entry), "rt", encoding="utf-8") as stream:
+            native = json.load(stream)
+        if native.get("geometryType") != "esriGeometryPolygon":
+            raise ValueError("The retained FEMA flood source must contain native polygons")
+        source_crs = _crs(native.get("spatialReference") or record["source_crs"])
+        field = record["id_field"]
+        selected = {"sfha": [], "classified_tf": [], "criterion_coverage": []}
+        seen, unclassified, missing, empty, nonarea, corrections = set(), [], [], [], [], []
+        assessment_exclusions = []
+        for row in native["features"]:
+            attributes = row["attributes"]
+            oid = attributes[field]
+            if type(oid) is not int or oid in seen:
+                raise ValueError("FEMA requires unique native snapshot object IDs")
+            seen.add(oid)
+            if attributes.get("SFHA_TF") not in ("T", "F"):
+                unclassified.append(oid)
+                continue
+            geometry = row.get("geometry")
+            if geometry is None:
+                missing.append(oid)
+                continue
+            if geometry.get("spatialReference") and _crs(geometry["spatialReference"]) != source_crs:
+                raise ValueError("FEMA polygon CRS differs from its retained collection")
+            changes = []
+            planar = {**geometry, "rings": [
+                [coordinate[:2] for coordinate in ring] for ring in geometry.get("rings", [])
+            ]}
+            parsed = esri_polygon(planar, changes, str(oid))
+            if parsed.is_empty:
+                empty.append(oid)
+                continue
+            if parsed.area <= 0:
+                nonarea.append(oid)
+                continue
+            if changes:
+                corrections.append({"object_id": oid, "reader_corrections": changes})
+            selected["classified_tf"].append(row)
+            if attributes["SFHA_TF"] == "T":
+                selected["sfha"].append(row)
+                selected["criterion_coverage"].append(row)
+            else:
+                zone = attributes.get("FLD_ZONE")
+                compared_zone = zone.strip().upper() if isinstance(zone, str) else None
+                if compared_zone in ASSESSED_NON_SFHA_ZONES:
+                    selected["criterion_coverage"].append(row)
+                else:
+                    assessment_exclusions.append({
+                        "object_id": oid, "SFHA_TF": attributes["SFHA_TF"],
+                        "FLD_ZONE": zone, "ZONE_SUBTY": attributes.get("ZONE_SUBTY"),
+                    })
+        if len(seen) != record["feature_count"]:
+            raise ValueError("FEMA analysis views differ from the captured feature count")
+        folder = root / "views" / ("fema-" + record["sha256"][:24])
+        derivation = folder / "derivation.json"
+        atomic_json(derivation, {
+            "schema": "upstate.fema-flood-views/v1", "native_sha256": record["sha256"],
+            "native_feature_count": len(seen), "native_object_id_field": field,
+            "source_crs": native.get("spatialReference") or record["source_crs"],
+            "sfha_feature_count": len(selected["sfha"]),
+            "classified_feature_count": len(selected["classified_tf"]),
+            "criterion_coverage_feature_count": len(selected["criterion_coverage"]),
+            "criterion_coverage_rule": {
+                "positive_SFHA_TF": "T", "negative_SFHA_TF": "F",
+                "negative_zone_codes": list(ASSESSED_NON_SFHA_ZONES),
+                "zone_comparison": "Trim whitespace and uppercase; original values retained",
+                "references": list(FEMA_CLASS_REFERENCES),
+            },
+            "criterion_coverage_exclusions": assessment_exclusions,
+            "unclassified_object_ids": unclassified,
+            "source_geometry_absent_object_ids": missing,
+            "source_geometry_empty_object_ids": empty,
+            "source_geometry_no_area_object_ids": nonarea,
+            "reader_geometry_corrections": corrections,
+            "attribute_geometry_treatment": (
+                "Original selected rows retained unchanged; polygon usability checked "
+                "with the existing XY reader and its recorded corrections"
+            ),
+        }, immutable=True)
+        titles = {
+            "sfha": "FEMA mapped Special Flood Hazard Area polygons",
+            "classified_tf": "FEMA published SFHA designation coverage",
+            "criterion_coverage": "FEMA SFHA and assessed non-SFHA criterion coverage",
+        }
+        roles = {
+            "sfha": "FLOODPLAIN_ONE_PERCENT",
+            "classified_tf": "FLOOD_CLASSIFICATION_COVERAGE",
+            "criterion_coverage": "FLOOD_ASSESSMENT_COVERAGE",
+        }
+        entries = []
+        for view, rows in selected.items():
+            path = folder / (view + ".esri.json.gz")
+            atomic_bytes(path, gzip.compress(canonical({**native, "features": rows}), mtime=0),
+                         immutable=True)
+            entry = {
+                **native_entry, "id": "fema-" + view.replace("_", "-") + "-" + file_digest(path)[:24],
+                "title": titles[view], "role": roles[view],
+                **describe_file(root, path),
+                "metadata": {
+                    **native_entry["metadata"], "hazard_view": view,
+                    "native_source_id": native_entry["id"], "native_sha256": record["sha256"],
+                    "feature_count": len(rows), "native_feature_count": len(seen),
+                    "source_filter": {"SFHA_TF": ["T"] if view == "sfha" else ["T", "F"]},
+                    "geometry_absent_count": len(missing), "geometry_empty_count": len(empty),
+                    "geometry_no_area_count": len(nonarea),
+                    "criterion_coverage_excluded_count": len(assessment_exclusions),
+                    "criterion_coverage_negative_zone_codes": list(ASSESSED_NON_SFHA_ZONES),
+                },
+                "companions": [
+                    {key: native_entry[key] for key in ("path", "bytes", "sha256")},
+                    *native_entry["companions"], describe_file(root, derivation),
+                ],
+            }
+            entries.append(entry)
+        atomic_json(root / "flood-views.json", {
+            "schema": "upstate.fema-flood-views/v1",
+            "native_sha256": record["sha256"], "entries": entries,
+        }, immutable=True)
+        previous = read_json(root / "capture-progress.json")
+        return _publish(root, plan, records, previous.get("failures", {}))
+
+
 def bindings(manifest, collection):
     """Bind only read-back Workspace bodies to native selectors and meanings."""
     collection_id = collection["id"]
     actual = {entry["id"]: entry for entry in collection["entries"]}
-    choices = {}
+    choices, metadata_by_name = {}, {}
     for expected in manifest["entries"]:
         source = actual.get(expected["id"], {})
         if (source.get("kind") != expected["kind"] or source.get("role") != expected.get("role")
@@ -352,11 +529,19 @@ def bindings(manifest, collection):
         key = metadata.get("hazard_source_key")
         if key is None:
             continue
-        name = key + ("-points" if metadata.get("hazard_view") == "analysis_xy" else "")
+        suffix = {"analysis_xy": "-points", "sfha": "-sfha",
+                  "classified_tf": "-classified-tf",
+                  "criterion_coverage": "-criterion-coverage"}.get(metadata.get("hazard_view"), "")
+        name = key + suffix
+        if name in choices:
+            raise ValueError("Hazard source bindings repeat " + name)
         choices[name] = {
             "source_collection_id": collection_id, "source_id": expected["id"],
-            "id_field": expected["id_field"], "reference": expected["uri"],
+            "reference": expected["uri"],
         }
+        if expected.get("id_field"):
+            choices[name]["id_field"] = expected["id_field"]
+        metadata_by_name[name] = metadata
     result = {"schema": "upstate.hazard-source-bindings/v1", "sources": choices}
     if "fema-flood-zones" in choices:
         result["sfha"] = {
@@ -366,7 +551,7 @@ def bindings(manifest, collection):
         }
         result["mapped_non_sfha"] = {
             **choices["fema-flood-zones"], "where": {"SFHA_TF": "F"},
-            "meaning": "FEMA polygons explicitly classified outside the Special Flood Hazard Area",
+            "meaning": "Original FEMA rows carrying SFHA_TF=F; interpret FLD_ZONE/ZONE_SUBTY",
             "relation": "Polygon intersection on the selected equal-area analysis CRS",
         }
         result["flood_coverage"] = {
@@ -380,6 +565,31 @@ def bindings(manifest, collection):
             "meaning": "Published NID structure location",
             "relation": "Distance to a retained structure point in the selected projected CRS",
         }
+    criteria = {}
+    if "nid-dams-points" in choices:
+        dams = {
+            **choices["nid-dams-points"], "label_field": "NAME",
+            "meaning": "Published NID structure location",
+            "relation": "Original NID structure point intersects the retained reporting parcel",
+        }
+        if (metadata_by_name["nid-dams-points"].get("geometry_absent_count") == 0
+                and "upstream-masks" in choices):
+            dams["coverage"] = {"source": choices["upstream-masks"], "group": "upstream"}
+        criteria["dams"] = dams
+    if "fema-flood-zones-sfha" in choices:
+        floodplains = {
+            **choices["fema-flood-zones-sfha"],
+            "meaning": "Mapped FEMA Special Flood Hazard Area; criterion measures published SFHA designation overlap",
+            "relation": "Original FEMA SFHA polygon intersects the retained reporting parcel",
+        }
+        coverage_key = "fema-flood-zones-criterion-coverage"
+        # The current coverage reader requires a nonempty vector; an empty
+        # assessed edition supplies no known-negative area.
+        if (coverage_key in choices
+                and metadata_by_name[coverage_key].get("feature_count", 0) > 0):
+            floodplains["coverage"] = {"source": choices[coverage_key]}
+        criteria["floodplains"] = floodplains
+    result["parcel_criteria"] = {"sources": criteria}
     return result
 
 
@@ -470,6 +680,8 @@ def main(argv=None):
     grab.add_argument("--metadata-root")
     prepare = commands.add_parser("prepare-dams", help="Prepare original NID points for existing vector readers")
     prepare.add_argument("--output", required=True)
+    flood = commands.add_parser("prepare-flood", help="Prepare native SFHA, designation and assessed coverage views")
+    flood.add_argument("--output", required=True)
     receive = commands.add_parser("intake", help="Compose, import and bind the registered native source edition")
     receive.add_argument("--manifest", required=True, help="Exact immutable source-manifest file")
     receive.add_argument("--registered-manifest", required=True, help="Its current operator catalogue ID")
@@ -494,6 +706,8 @@ def main(argv=None):
                              retry_failed=args.retry_failed, metadata_root=args.metadata_root)
         elif args.command == "prepare-dams":
             result = prepare_dams(args.output)
+        elif args.command == "prepare-flood":
+            result = prepare_flood(args.output)
         else:
             values = (args.wait_seconds, args.poll_seconds, args.request_timeout)
             if (not all(math.isfinite(value) for value in values) or args.wait_seconds < 0

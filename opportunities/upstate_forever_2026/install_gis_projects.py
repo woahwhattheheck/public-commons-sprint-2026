@@ -77,7 +77,7 @@ def browser_source(text):
         return text
     text = "import {attachGISProjects} from './gis-projects.mjs';\n" + text
     text = once(text, 'const viewLabels={', "const viewLabels={'gis-projects':'Editable GIS projects',", 'view names')
-    text = once(text, 'const actionLabels={', "const actionLabels={'gis.project.export':'Build editable GIS project','gis.project.receive':'Receive editable GIS project',", 'action names')
+    text = once(text, 'const actionLabels={', "const actionLabels={'gis.project.export':'Build editable GIS project','gis.project.receive':'Receive editable GIS project','gis.project.adopt-sources':'Adopt received GIS sources',", 'action names')
     text = once(text, 'function toast(message){', "const gisProjects=attachGISProjects({getState:()=>state,api,refreshState:refresh,showTask,toast});\nfunction toast(message){", 'original UI factory')
     text = once(text, '    renderTasks();\n', '    renderTasks();\n    gisProjects.update(data);\n', 'retained state refresh')
     seam="  if(view==='spatial'){"
@@ -94,12 +94,90 @@ def index_source(text):
     return once(text,seam,seam+'\n    <button data-view="gis-projects">Editable GIS projects</button>','original navigation')
 
 
+
+def legacy_server_source(text):
+    """Remove only the exact former GIS-owned joins before shared registration."""
+    if MARKER not in text:
+        return text
+    text = once(text, MARKER + '\nfrom gis_projects import ACTIONS as GIS_ACTIONS, GISProjects\nACTIONS = set(ACTIONS) | GIS_ACTIONS\n\n', '', 'legacy GIS provider')
+    text = once(text, '        if action in GIS_ACTIONS:\n            return GISProjects(self).invoke(task)\n', '', 'legacy GIS dispatch')
+    text = once(text, '        task = GISProjects(self).decorate_task(task)\n', '', 'legacy GIS task decoration')
+    text = once(text, '''            if url.path.startswith("/api/file/gis-project/"):
+                self.authorized(file=True)
+                parts = url.path.removeprefix("/api/file/gis-project/").split("/", 3)
+                if len(parts) != 4:
+                    raise ValueError("Choose an original GIS project member")
+                ticket, policy = GISProjects(self.app).member(*[urllib.parse.unquote(x) for x in parts])
+                return self.send_file(ticket["id"], download=one("download") == "1", content_security_policy=policy)
+''', '', 'legacy GIS file route')
+    text = once(text, '                if url.path == "/api/gis/projects":\n                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n', '', 'legacy GIS catalogue')
+    return once(text, ', "gis-projects.mjs", "gis-projects.css"', '', 'legacy GIS static assets')
+
+
+def legacy_browser_source(text):
+    if "import {attachGISProjects}" not in text:
+        return text
+    labels = (
+        "const actionLabels={'gis.project.export':'Build editable GIS project','gis.project.receive':'Receive editable GIS project','gis.project.adopt-sources':'Adopt received GIS sources',",
+        "const actionLabels={'gis.project.export':'Build editable GIS project','gis.project.receive':'Receive editable GIS project',",
+    )
+    old_labels = next((value for value in labels if value in text), None)
+    if old_labels is None:
+        raise ValueError('Compose the current GIS action labels before shared registration')
+    for old, new, label in (
+        ("import {attachGISProjects} from './gis-projects.mjs';\n", '', 'legacy GIS import'),
+        ("const viewLabels={'gis-projects':'Editable GIS projects',", 'const viewLabels={', 'legacy GIS view'),
+        (old_labels, 'const actionLabels={', 'legacy GIS actions'),
+        ("const gisProjects=attachGISProjects({getState:()=>state,api,refreshState:refresh,showTask,toast});\n", '', 'legacy GIS controller'),
+        ('    gisProjects.update(data);\n', '', 'legacy GIS refresh'),
+        ("  if(view==='gis-projects'){community.detach();customerReviews.detach();spatialWorkspace.suspend();gisProjects.mount($('#content'),state);return;}\n  gisProjects.detach();\n", '', 'legacy GIS lifecycle'),
+    ):
+        text = once(text, old, new, label)
+    return text
+
+
+def legacy_index_source(text):
+    for old in ('\n  <link rel="stylesheet" href="/web/gis-projects.css">',
+                '\n    <button data-view="gis-projects">Editable GIS projects</button>'):
+        if old in text:
+            text = once(text, old, '', 'legacy GIS navigation or stylesheet')
+    return text
+
+
+def registration_plan(application):
+    """Use the receiving application's maintained host, with one active GIS owner."""
+    host = application / 'install_extensions.py'
+    if not host.is_file():
+        return ({'operator/server.py': server_source,
+                 'operator/web/app.mjs': browser_source,
+                 'operator/web/index.html': index_source}, None, 'legacy')
+    if host.is_symlink():
+        raise ValueError('The maintained extension installer is a symbolic link')
+    registry = application / 'operator/extension_registry.py'
+    if not registry.is_file():
+        raise ValueError('Receive the current complete extension host with install_extensions.py')
+    registry_body = registry.read_bytes()
+    if b'def file_reply(' not in registry_body or b'def _member_path(' not in registry_body:
+        raise ValueError('Receive the maintained extension host with nested member file routes')
+    body = host.read_bytes()
+    # This is an installed application module, never source supplied by a GIS ZIP.
+    namespace = {'__name__': '_upstate_gis_current_extension_installer', '__file__': str(host)}
+    exec(compile(body, str(host), 'exec'), namespace)
+    if not callable(namespace.get('patch_server')) or not callable(namespace.get('patch_app')):
+        raise ValueError('The current extension installer lacks its source composition API')
+    transform = {
+        'operator/server.py': lambda value: namespace['patch_server'](legacy_server_source(value)),
+        'operator/web/app.mjs': lambda value: namespace['patch_app'](legacy_browser_source(value)),
+        'operator/web/index.html': legacy_index_source,
+    }
+    return transform, {host: body, registry: registry_body}, 'registry'
+
+
 def install(application, source, dry_run=False):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
     if not (application / 'model/workspace.py').is_file():
         raise ValueError('Receive the original scientific application before this additive component')
-    transform={'operator/server.py':server_source, 'operator/web/app.mjs':browser_source,
-               'operator/web/index.html':index_source}
+    transform, dependencies, integration = registration_plan(application)
     before={};planned={}
     for name, fn in transform.items():
         path=application/name
@@ -115,6 +193,7 @@ def install(application, source, dry_run=False):
         if name.endswith('.py'): compile(data,str(application/name),'exec')
     changes=[name for name in planned if planned[name]!=before[name]]
     result={'schema':'upstate.gis-installation/v1','application':str(application),'dry_run':dry_run,
+            'integration':integration,
             'files':[{'path':name,'before_sha256':sha(before[name]) if before[name] is not None else None,
                       'sha256':sha(planned[name]),'bytes':len(planned[name])} for name in changes]}
     if dry_run or not changes:return result
@@ -130,6 +209,9 @@ def install(application, source, dry_run=False):
             with tempfile.NamedTemporaryFile(dir=path.parent,prefix='.gis-install-',delete=False) as out:
                 out.write(planned[name]);out.flush();os.fsync(out.fileno());staged[name]=Path(out.name)
         # Compare all predecessors immediately before committing any registration changes.
+        for dependency, expected in (dependencies or {}).items():
+            if dependency.read_bytes() != expected:
+                raise ValueError('Concurrent extension host change: ' + str(dependency))
         for name in changes:
             p=application/name
             actual=p.read_bytes() if p.exists() else None

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import gzip
 import hashlib
 import json
 import os
@@ -22,6 +23,8 @@ if __package__ in (None, ""):
 CONTEXT_NAME = "full-domain-water-context.json"
 COVERAGE_NAME = "scdes-domain217-source-coverage.json"
 NETWORK_NAME = "native-network.json"
+NETWORK_GZIP_NAME = "native-network.json.gz"
+NETWORK_NAMES = (NETWORK_NAME, NETWORK_GZIP_NAME)
 GEOMETRY_NAME = "scdes-classified-streams.esri.json"
 MANIFEST_NAME = "complete-sources.json"
 
@@ -182,9 +185,14 @@ def load_source_edition(directory):
         raise ValueError("Expected upstate.classification-source-coverage/v1 companion")
     inputs = [context_info, coverage_info]
     network = None
-    if _present(root, NETWORK_NAME):
-        network_info, network_body = _member(root, NETWORK_NAME)
-        network = _read_json(network_body, NETWORK_NAME)
+    network_names = [name for name in NETWORK_NAMES if _present(root, name)]
+    if len(network_names) > 1:
+        raise ValueError("Choose one retained native network source for this edition")
+    if network_names:
+        network_name = network_names[0]
+        network_info, network_body = _member(root, network_name)
+        decoded = gzip.decompress(network_body) if network_name == NETWORK_GZIP_NAME else network_body
+        network = _read_json(decoded, network_name)
         if not isinstance(network, (dict, list)):
             raise ValueError("Original native network must be a JSON object or list")
         inputs.append(network_info)
@@ -301,13 +309,15 @@ def prepare_source_edition(source_context, classification_coverage, output_dir, 
     if not isinstance(coverage, dict):
         raise ValueError("Choose the retained classification-coverage JSON object")
     if native_network is not None:
-        bodies[NETWORK_NAME] = Path(native_network).read_bytes()
+        network_body = Path(native_network).read_bytes()
+        network_name = NETWORK_GZIP_NAME if network_body.startswith(b"\x1f\x8b") else NETWORK_NAME
+        bodies[network_name] = network_body
     for selected, key in (
             (membership_response, "full_domain_id_response"),
             (additional_huc8_response, "additional_huc8_response")):
         if selected is not None:
             name = _name((coverage.get(key) or {}).get("path"))
-            if name in bodies or name in (NETWORK_NAME, GEOMETRY_NAME, MANIFEST_NAME):
+            if name in bodies or name in (*NETWORK_NAMES, GEOMETRY_NAME, MANIFEST_NAME):
                 raise ValueError("Original companion filename collides with another source")
             bodies[name] = Path(selected).read_bytes()
     if classified_geometry is not None:
@@ -323,8 +333,9 @@ def prepare_source_edition(source_context, classification_coverage, output_dir, 
         manifest = _manifest(edition, source_id=source_id, title=title, uri=uri, vintage=vintage)
         bodies[MANIFEST_NAME] = _json_bytes(manifest)
         target.mkdir(parents=True, exist_ok=True)
-        if NETWORK_NAME not in bodies and _present(target, NETWORK_NAME):
-            raise ValueError("Use a new source directory when changing its native network")
+        for network_name in NETWORK_NAMES:
+            if network_name not in bodies and _present(target, network_name):
+                raise ValueError("Use a new source directory when changing its native network")
         for name, body in bodies.items():
             selected = target / name
             if selected.exists() or selected.is_symlink():

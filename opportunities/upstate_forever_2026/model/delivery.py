@@ -9,13 +9,15 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import cartography, map_atlas, portable, rasters
+from . import atlas_browser, cartography, map_atlas, portable, rasters
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
+                  ("high_quality_waters", "Designated high-quality waters"))
 DELIVERY_FORMAT_VERSION = "native-grid-metadata-2"
 
 def _copy(source, target, expected=None):
@@ -36,7 +38,16 @@ def _source_records(workspace, selection, grid, baseline):
                          "vintage": entry["vintage"], "uri": entry["uri"],
                          "sha256": entry["body"]["sha256"], "units": entry.get("units"),
                          "conversion": entry.get("conversion")}
-    for role, choice in selection.get("source_roles", {}).items():
+    source_choices = dict(selection.get("source_roles", {}))
+    overlay_choices = selection.get("overlays", {})
+    for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
+                       ("drinking_water", "SOURCE_WATER_PROTECTION_AREAS"),
+                       ("protected_lands", "PROTECTED_LANDS_OVERLAY")):
+        if name in overlay_choices:
+            source_choices[role] = overlay_choices[name]
+        elif role == "PROTECTED_LANDS_OVERLAY":
+            source_choices.pop(role, None)
+    for role, choice in source_choices.items():
         _, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
         if role in records and records[role]["sha256"] != entry["body"]["sha256"]:
             raise ValueError("Delivery provenance cannot replace the actual modeled " + role + " input")
@@ -255,7 +266,8 @@ def build(workspace, selection):
     key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
                   "map_renderer": cartography.MAP_RENDERER_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
-                  "map_atlas": map_atlas.ATLAS_VERSION})
+                  "map_atlas": map_atlas.ATLAS_VERSION,
+                  "overlay_labels": OVERLAY_LABELS})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
@@ -315,8 +327,7 @@ def build(workspace, selection):
                 if name not in overlay_choices:
                     raise ValueError("Select the actual " + name.replace("_", " ") + " source overlay")
             overlays = {name: _overlay(workspace, overlay_choices[name], crs, reporting, label=label)
-                        for name, label in (("drinking_water", "Drinking-water source areas"),
-                                            ("high_quality_waters", "Designated high-quality waters"))}
+                        for name, label in OVERLAY_LABELS}
             if "protected_lands" in overlay_choices:
                 overlays["protected_lands"] = _overlay(workspace, overlay_choices["protected_lands"],
                     crs, reporting, label="Protected lands")
@@ -597,6 +608,8 @@ def build(workspace, selection):
                 manifest["source_report"] = report_link
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
+            atlas_browser.write(directory, state, manifest)
+            atomic_json(state_path, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
