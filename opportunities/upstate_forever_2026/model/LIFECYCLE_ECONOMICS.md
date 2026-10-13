@@ -113,6 +113,8 @@ The existing safe CSV writer protects text cells from spreadsheet formula interp
 
 ## Receive the actual product
 
+The installed Economic desk loads `operator/web/economic_lifecycle.css` through the original extension's asset and stylesheet declarations. Receive the module, stylesheet, current desk and complete `economic-desk.json` together. This preserves the operator's existing `style-src 'self'` policy: the editor and in-app results do not inject inline style elements. The standalone downloaded decision HTML retains its embedded styles and requires no adjacent stylesheet. In the same original receiving course, inspect the populated editor and lifecycle results at desktop and 390 pixels, then open the saved offline HTML independently and confirm both remain styled. Preserve current quantity-estimate and other Economic contributions when composing shared files.
+
 Carry CURRENT_OWNER_DIRECTION.md version 2026-10-13.4 and the current 52-order post-call campaign ECO-POSTCALL-20261013 into the existing native receiver. Preserve active processes, original completed projects, cost-worksheet ownership and all operator extensions.
 
 Operate this exact source in the populated scientific Workspace. Inspect the Economic desk and downloaded offline edition at the actual presentation width and 390 pixels. Enter a real sourced schedule, preview it, change a factor/cashflow, save, reopen, export and cold-reopen the downloaded package. Use the fields, error states, tables and unchanged annual comparison. View actual screenshots and every outgoing attachment as a recipient would. Repair observed defects. Source review alone does not establish product readiness; keep focused validation and disabled GitHub Actions.
