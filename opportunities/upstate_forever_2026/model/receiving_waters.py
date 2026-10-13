@@ -1161,7 +1161,8 @@ def analyze(workspace, selection, *, progress=None):
     """Build distinct water-specific priorities from original completed model runs.
 
     Input fields: plan_id, baseline_run_id, alternative_run_ids (optional),
-    quantity_scope ('reporting' or 'model_domain'), weights, normalization.
+    quantity_scope ('reporting' or 'model_domain'), weights, normalization,
+    and optional accounting.groups with original parent/upstream/reservoir IDs.
     No native model execution is started by this operation.
     """
     from pyproj import CRS
