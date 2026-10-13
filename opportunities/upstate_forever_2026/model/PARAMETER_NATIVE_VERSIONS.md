@@ -122,3 +122,47 @@ malformed-checkpoint recovery and CSV/JSON export functions. It confirmed exact
 historical reopening, rejection before raster work, and preservation of original
 records. The equipped original-data operation remains the route for numerical
 raster/model execution.
+
+## Continue completed cases into annual-load calibration
+
+Open the original saved parameter study and choose **Calibrate completed cases**.
+The handoff lists each retained native run once, with every original study case
+label that uses it. Choose the completed cases to compare, then select
+**Open calibration selection**. The registered calibration desk preserves the
+current observation and catchment draft while reviewing objective weights,
+admitted annual loads and calibration/validation groups.
+
+Admission uses the maintained calibration engine's producing-stage and physical
+output contract. The study's original requested version remains in its saved
+selection. For example, an original request for 3.19.0 whose completed stages
+record 3.20.0 can enter this handoff with those exact original identities.
+
+The case details show each selected model's recorded version and source,
+per-hectare raster units, annual-load units and original execution fingerprint.
+A requested legacy fallback remains labeled as a request with unavailable
+execution metadata. A completed run with an unsupported physical convention or
+a missing original output stays visible under **Remaining and excluded cases**
+with its own reason. Compatible completed siblings remain selectable.
+
+The next calibration form validates producing-version compatibility for the
+models used by its positive-weight objectives. An objective using nitrogen and
+phosphorus requires compatible NDR executions; a difference in otherwise
+supported, unused SDR execution versions does not impose a separate handoff
+restriction. Every model selected by a candidate still needs the supported
+physical output convention used by the original observation reducer.
+
+The adapter preserves the original study, case, profile and run IDs; its
+selection hash; the unchanged baseline scenario; original case ordering;
+shared pollutant parameters; and the original reference run when selected.
+Duplicate case labels remain associated with their one original run.
+Explicitly choosing an excluded or unrelated run is rejected.
+
+Programmatic receiving uses
+`model.parameter_calibration.candidates(workspace, study_id)`, optionally
+with `candidate_run_ids=[...]`. The returned eligible rows carry the
+calibration engine's exact `native_versions`, `native_version_labels`,
+`output_mass_basis`, `native_outputs` and `execution_fingerprint` beside
+the original `run_selection`. Execution-issue exclusions preserve the same
+available descriptors and their concrete reasons. This operation reads the
+original candidates; observations and the final objective are selected in the
+existing calibration desk.
