@@ -6,7 +6,8 @@ import {composeCustomerProgramme, programmeFiles} from '/installation-workorders
 import {createCommissioningReceivingDesk} from './operations_installation_commissioning.mjs';
 import {createSourceCollectionDesk, validateCollection} from './operations_installation_source_collection.mjs';
 import {createSourceEditionDesk, validateSourceEditionWork} from './operations_installation_source_editions.mjs';
-import {currentStaffContext, staffDeskStorageKey, assertStaffRequestActor} from './staff-session.mjs';
+import {currentStaffContext, staffDeskStorageKey, assertStaffRequestActor, resumeStaffSession} from './staff-session.mjs';
+import {createFlowableSourceDesk, validateFlowableSourceWork} from './operations_flowable_sources.mjs';
 
 const SCHEMA='stellar-forge.installation-source-desk.v1';
 const SELECTION='stellar-forge.installation-source-selection.v1';
@@ -168,6 +169,10 @@ export function mountInstallationSources(root,bridge){
     const link=document.createElement('link');link.rel='stylesheet';link.href='/operations_installation_sources.css';
     link.dataset.installationSourceStyle='true';document.head.append(link);
   }
+  if(!document.querySelector('link[data-flowable-source-style]')){
+    const link=document.createElement('link');link.rel='stylesheet';link.href='/operations_flowable_sources.css';
+    link.dataset.flowableSourceStyle='true';document.head.append(link);
+  }
   const context=bridge.context(),scope={caseId:context.caseId,planId:context.planId,createdAt:context.createdAt},caseId=scope.caseId,prefix='/api/operations/'+caseId+'/installation-sources';
   const staffContext=currentStaffContext(),legacyKey=caseId+':'+scope.planId+':'+scope.createdAt;
   const journalKey=staffDeskStorageKey(legacyKey,staffContext),pointerKey=staffDeskStorageKey('sf47.installation-source-copy:'+legacyKey,staffContext);
@@ -178,7 +183,7 @@ export function mountInstallationSources(root,bridge){
   activeCopies.set(pointerKey,copyId);
   const initial={schema:SCHEMA,scope,open:false,tab:'files',draftId:null,revision:null,work:null,note:'',newTitle:'',
     upload:{filename:'',mediaType:'application/json',sourceUrl:'',observedAt:''},
-    caseForm:null,pendingId:null,preparationId:null,profileWork:null,commissioningWork:null,collectionWork:null,editionWork:null,nativeDraftJSON:null,
+    caseForm:null,pendingId:null,preparationId:null,profileWork:null,commissioningWork:null,collectionWork:null,editionWork:null,flowableWork:null,nativeDraftJSON:null,
     inspectionFileId:null,notice:'',error:'',rejected:[],copyName:'Source working copy',rawFields:{},fieldErrors:{},historyRevisionText:null};
   let state=clone(initial),alive=true,busy=false,hostBusy=false,initialized=false;
   let saved=null,edition=null,heads=[],catalogue=null,prepared=null,inspection=null,request=null,chosenFile=null;
@@ -212,6 +217,41 @@ export function mountInstallationSources(root,bridge){
     downloadOriginal:(ref,file)=>download(prefix+'/'+encodeURIComponent(ref.draftId)+'/files/'+encodeURIComponent(file.id)+'?revision='+ref.revision+'&expectedSha256='+file.sha256,file),
     downloadOutput:(ref,id,file)=>download(prefix+'/'+encodeURIComponent(ref.draftId)+'/preparations/'+encodeURIComponent(id)+'/outputs/'+encodeURIComponent(file.filename)+'?expectedSha256='+file.sha256,file),
     api:(draftId,suffix,value)=>bridge.api(prefix+'/'+draftId+suffix,value)
+  });
+  const flowable=createFlowableSourceDesk({
+    state:()=>state,draft:()=>selectedDraft(),caseId,staffContext,editing,requireEdit,checkContext,
+    changed,persistNow,parkWorking,render,esc,header,table,hint,empty,download:downloadBlob,
+    verifyStaff:()=>resumeStaffSession(staffContext),context:current,caseData:()=>bridge.caseData?.(),api:(path,value,options)=>bridge.api(path,value,options),
+    refreshCase:()=>bridge.refreshCase(),receiveDraft:input=>bridge.receiveDraft(input),
+    notice:message=>{state.notice=message;status();},progress:message=>{state.notice=message;status();},
+    closeToInstallation:async()=>{state.open=false;changed();await persistNow();root.hidden=true;bridge.close?.();},
+    nativeWorkshares:async()=>{
+      requireEdit();const attachment=latestAttachment();
+      if(!attachment)throw new Error('Attach the complete original Workshare preparation to this case, or open its complete native seed and commissioning JSON in this tab.');
+      await bridge.refreshCase();
+      const selection={...clone(attachment.selection),expectedVersion:current().version};
+      const inventory=await bridge.api('/api/operations/'+caseId+'/installation-workshares',selection);
+      if(!Array.isArray(inventory.cases)||inventory.source?.caseId!==undefined&&inventory.source.caseId!==caseId)
+        throw new Error('The native Workshare inventory differs from the original case.');
+      const preparation=await bridge.api(prefix+'/'+state.draftId+'/preparations/'+attachment.preparationId);
+      const name=preparation.sourceRoles?.commissioning??'Supplier_Workshare_Commissioning.json';
+      const file=preparation.files.find(x=>x.filename===name);
+      if(!file||file.bytes>MAX_FILE)throw new Error('Retain the complete original commercial commissioning source.');
+      const response=await bridge.api(prefix+'/'+state.draftId+'/preparations/'+preparation.id+'/outputs/'+encodeURIComponent(name)+'?expectedSha256='+file.sha256,undefined,{download:true});
+      const bytes=new Uint8Array(await response.arrayBuffer());
+      if(bytes.length!==file.bytes||hash(bytes)!==file.sha256)throw new Error('The original commissioning source changed during readback.');
+      const commissioningText=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+      return {inventory,selection,commissioningText};
+    },
+    nativeSeed:async(selection,workshareCaseId)=>{
+      requireEdit();await bridge.refreshCase();
+      const value=await bridge.api('/api/operations/'+caseId+'/installation-workshare-seed',{
+        ...clone(selection),expectedVersion:current().version,workshareCaseId,installationId:null,expectedRevision:0});
+      if(value.source?.caseId!==caseId||value.source.version!==current().version||value.installationId!==null||
+        value.expectedRevision!==0||value.workshare?.caseId!==workshareCaseId)
+        throw new Error('The fresh original Workshare seed differs from this case and selected commercial scope.');
+      return value;
+    }
   });
   function snapshot(){return {
     schema:SCHEMA,workingCopySchema:WORKING_COPY,scope:clone(scope),staffContext:clone(staffContext),
@@ -291,7 +331,7 @@ export function mountInstallationSources(root,bridge){
     if(legacy&&!next.upload)next={...clone(initial),draftId:value.sourceDraftId??null,revision:value.selectedRevision??null,
       work:value.working??null,caseForm:value.caseForm??null,profileWork:value.profileWork??null,
       pendingId:value.pendingRequest?.body?.requestId??null};
-    if(!record(next)||!record(next.upload)||!['files','mapping','outputs','installation','commissioning','editions','history'].includes(next.tab)||
+    if(!record(next)||!record(next.upload)||!['files','mapping','outputs','installation','commissioning','editions','history','flowable'].includes(next.tab)||
       !['note','newTitle'].every(key=>typeof next[key]==='string')||!['filename','mediaType','sourceUrl','observedAt'].every(key=>typeof next.upload[key]==='string')||
       !(next.draftId===null||typeof next.draftId==='string')||!(next.pendingId===null||typeof next.pendingId==='string')||
       !(next.revision===null||Number.isSafeInteger(next.revision)&&next.revision>0))
@@ -330,6 +370,7 @@ export function mountInstallationSources(root,bridge){
         throw new Error('Keep the exact native draft JSON in its original source working copy.');
     }
     validateSourceEditionWork(next.editionWork,{caseId,draftId:next.draftId});
+    validateFlowableSourceWork(next.flowableWork);
     if(next.collectionWork!==null&&next.collectionWork!==undefined)
       validateCollection(next.collectionWork,{hash,checkedFile,draftId:next.draftId,requests:[...merged.values()]});
     return {...value,state:{...clone(initial),...next,rawFields:next.rawFields||{},fieldErrors:next.fieldErrors||{}},
@@ -463,8 +504,9 @@ export function mountInstallationSources(root,bridge){
     root.setAttribute('aria-busy',String(busy||hostBusy||copyLoading));
     for(const node of root.querySelectorAll('button,input,textarea,select')){
       const action=node.dataset.sourceAction;
-      if(action==='working-download'||action==='collection-download'||action?.startsWith('edition-download-')){node.disabled=false;continue;}
+      if(action==='working-download'||action==='collection-download'||action?.startsWith('edition-download-')||['flowable-working-download','flowable-request-download'].includes(action)){node.disabled=false;continue;}
       if(action==='collection-pause'){node.disabled=!collection.running();continue;}
+      if(node.hasAttribute('data-flowable-upload')&&state.flowableWork?.pending?.method==='import'&&state.flowableWork.pending.args.kind===node.dataset.flowableUpload){node.disabled=busy||hostBusy||copyLoading||readonly()||historic();continue;}
       const liveDisabled={
         'edition-preview':!editions.canPreview(),
         'edition-apply':!editions.canApply(),
@@ -1326,10 +1368,10 @@ export function mountInstallationSources(root,bridge){
     root.dataset.sourceCopyId=copyId;root.dataset.sourceDraftId=state.draftId||'';root.dataset.sourcePendingId=state.pendingId||'';
     root.dataset.sourceScope=JSON.stringify(scope);
     root.hidden=!state.open;
-    const tabs=[['files','1 · Original files'],['mapping','2 · Source mapping'],['outputs','3 · Complete package'],['installation','4 · Installation'],['commissioning','5 · Receive commissioning'],['editions','Customer editions'],['history','Saved history']];
+    const tabs=[['files','1 · Original files'],['mapping','2 · Source mapping'],['outputs','3 · Complete package'],['installation','4 · Installation'],['commissioning','5 · Receive commissioning'],['flowable','Flowable programmes'],['editions','Customer editions'],['history','Saved history']];
     let content;
     try{content=state.tab==='mapping'?mappingView():state.tab==='outputs'?outputsView():state.tab==='installation'?installationView():
-      state.tab==='commissioning'?commissioning.render():state.tab==='editions'?editions.render():state.tab==='history'?historyView():filesView();}
+      state.tab==='commissioning'?commissioning.render():state.tab==='flowable'?flowable.render():state.tab==='editions'?editions.render():state.tab==='history'?historyView():filesView();}
     catch(error){
       content=hint('Your complete fields remain retained. Correct their original JSON before opening the guided view: '+error.message)+
         (state.work?field('Full native selection JSON','work.selectionText',state.work.selectionText,{area:true,rows:18,wide:true}):'')+
@@ -1425,6 +1467,7 @@ export function mountInstallationSources(root,bridge){
       if(target.matches('[data-source-copy-name]')){state.copyName=target.value;changed();return;}
       if(target.matches('[data-source-revision]')){state.historyRevisionText=target.value;changed();return;}
       if(target.matches('[data-source-new-title]')){state.newTitle=target.value;changed();return;}
+      if(flowable.edit(target))return;
       if(editions.edit(target))return;
       if(collection.edit(target))return;
       if(target.matches('[data-source-binding]')){bindingEdit(target);return;}
@@ -1438,6 +1481,8 @@ export function mountInstallationSources(root,bridge){
       if(target.matches('[data-source-working-copy]')){selectedLocalCopy=target.value;controls();return;}
       if(target.matches('[data-source-working-file]')){const file=target.files?.[0];run(()=>openWorkingFile(file));return;}
       if(target.matches('[data-source-collection-files]')){const selected=Array.from(target.files||[]);run(()=>collection.readFiles(selected));return;}
+      if(target.matches('[data-flowable-upload]')){run(()=>flowable.chooseFile(target));return;}
+      if(flowable.edit(target)){render();return;}
       if(editions.edit(target)){render();return;}
       if(collection.edit(target)){render();return;}
       if(commissioning.edit(target))return;
@@ -1475,11 +1520,13 @@ export function mountInstallationSources(root,bridge){
     const target=event.target.closest('[data-source-action]');if(!target||!root.contains(target)||target.disabled)return;
     event.preventDefault();const action=target.dataset.sourceAction;
     if(action==='working-download'){snapshotDownload();status();return;}
+    if(['flowable-working-download','flowable-request-download'].includes(action)){own(Promise.resolve().then(()=>flowable.action(action,target))).catch(error=>{state.error=error.message;status();});return;}
     if(action==='collection-download'){own(Promise.resolve().then(()=>collection.action(action,target))).catch(error=>{state.error=error.message||String(error);status();});return;}
     if(action?.startsWith('edition-download-')){own(Promise.resolve().then(()=>editions.action(action,target))).catch(error=>{state.error=error.message||String(error);status();});return;}
     if(action==='collection-pause'){collection.pause();controls();status();return;}
     if(action==='close'){own(closeView()).catch(error=>{state.error=error.message;status();});return;}
     run(async()=>{
+      if(action.startsWith('flowable-'))return flowable.action(action,target);
       if(action.startsWith('edition-'))return editions.action(action,target);
       if(action.startsWith('collection-'))return collection.action(action,target);
       if(action==='working-refresh')return refreshCopies();
@@ -1561,7 +1608,7 @@ export function mountInstallationSources(root,bridge){
     });
   });
   const beforeUnload=event=>{
-    if(workingDirty()||editions.isDirty()||collection.collectionDirty()||pending()||storageError||persistedGeneration<generation){
+    if(workingDirty()||editions.isDirty()||collection.collectionDirty()||flowable.dirty()||flowable.pending()||pending()||storageError||persistedGeneration<generation){
       event.preventDefault();event.returnValue='';
     }
   };
@@ -1609,6 +1656,7 @@ export function mountInstallationSources(root,bridge){
       if(activeCopies.get(pointerKey)===copyId)activeCopies.delete(pointerKey);
       window.removeEventListener('beforeunload',beforeUnload);
       for(const controller of downloads)controller.abort();
+      flowable.dispose();
       closing=(async()=>{
         // Accepted requests own their full journal through their final receipt.
         while(owned.size)await Promise.allSettled([...owned]);

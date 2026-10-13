@@ -1,3 +1,5 @@
+import type {FlowableSourceInputs,FlowableSourceResponses} from './flowable-source-desk-agent.mjs';
+export * from './flowable-source-desk-agent.mjs';
 import type {InstallationSourceInputs,InstallationSourceResponses} from './installation-source-desk-agent.mjs';
 export * from './installation-source-desk-agent.mjs';
 // MIT. TypeScript declarations for the original SF47 client and its saved delivery workflow.
@@ -4372,6 +4374,8 @@ export function inspectGrantAgentBinding(input: GrantBindingInput): Promise<Gran
 export function readGrantAgentFile(filename: string, maximum?: number, privateOnly?: boolean): Promise<Buffer>;
 
 export class GrantWorkspaceClient {
+  /** Complete Flowable sidecar custody on this original authenticated case service. */
+  flowableSources<K extends keyof FlowableSourceInputs>(action:K,input:FlowableSourceInputs[K]):Promise<FlowableSourceResponses[K]>;
   /** Complete original Source Desk lifecycle using this client's existing owner and drain. */
   installationSources<K extends keyof InstallationSourceInputs>(action:K,input:InstallationSourceInputs[K]):Promise<InstallationSourceResponses[K]>;
   constructor(binding: GrantBinding);
