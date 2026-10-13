@@ -5,7 +5,7 @@ from pathlib import Path
 import textwrap
 from .common import finite
 
-MAP_RENDERER_VERSION = "shared-native-scales/v1"
+MAP_RENDERER_VERSION = "shared-native-scales/v2"
 
 LABELS = {
     "nitrogen_export": "Nitrogen export", "phosphorus_export": "Phosphorus export",
@@ -193,8 +193,16 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
         if page_number is not None:
             fig.text(.97, .018, str(page_number) + ((" / " + str(page_count)) if page_count else ""),
                      fontsize=7, ha="right", va="bottom")
-        fig.subplots_adjust(left=.07, right=.93, bottom=.19,
+        # Keep native scale notes above the independent overlay legend band.
+        fig.subplots_adjust(left=.07, right=.93, bottom=.23,
                             top=.815 if project_title else .86, wspace=.30)
+        if count == 1:
+            # Colorbar creation anchors an equal-aspect plot at the right edge.
+            # Center the actual native plot/bar pair without stretching its map.
+            plot_box, bar_box = ax.get_position(), colorbar.ax.get_position()
+            shift = .5 - (plot_box.x0 + bar_box.x1) / 2
+            for target_ax, box in ((ax, plot_box), (colorbar.ax, bar_box)):
+                target_ax.set_position([box.x0 + shift, box.y0, box.width, box.height])
         if path is not None:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             fig.savefig(path, format="pdf", dpi=dpi, metadata={"Title": title, "Subject": subtitle,
