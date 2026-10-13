@@ -1,6 +1,6 @@
-"""Conservation portfolios from retained parcel inventories and native scenarios.
+"""Conservation portfolios from retained planning unit inventories and native scenarios.
 
-The input is the application's actual parcel CSV. Preference analysis never
+The input is the application's actual planning unit CSV. Preference analysis never
 reruns or substitutes for NDR/SDR. A chosen treatment is materialized as real
 selected geometry and saved through the ordinary Workspace scenario API.
 """
@@ -22,6 +22,7 @@ from .common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, held,
     identifier, read_json, verify_file,
 )
+from .model_selection import normalize_selection, run_models
 
 KIND = "portfolios"
 REPORT_KIND = "portfolio-reports"
@@ -37,7 +38,7 @@ UNITS = {
     "sediment_export": "metric tonnes/year",
 }
 ACTIONS = {
-    "portfolio.preview", "portfolio.save", "portfolio.scenario.prepare",
+    "portfolio.inventory.build", "portfolio.preview", "portfolio.save", "portfolio.scenario.prepare",
     "portfolio.report.build", "portfolio.decision.build",
 }
 ANALYSIS_SCHEMA = "upstate.portfolio-analysis/v1"
@@ -170,6 +171,14 @@ def _weights(value):
 def _request(selection):
     if not isinstance(selection, dict):
         raise ValueError("Select a portfolio specification")
+    delivery_id = selection.get("delivery_id") or None
+    inventory_id = selection.get("inventory_id") or None
+    if bool(delivery_id) == bool(inventory_id):
+        raise ValueError("Choose either a retained delivery inventory or a native planning inventory")
+    if delivery_id:
+        delivery_id = identifier(delivery_id)
+    if inventory_id:
+        inventory_id = identifier(inventory_id)
     objective = selection.get("objective") or {}
     if not isinstance(objective, dict):
         raise ValueError("Objective must name its kind, basis and actual scenario")
@@ -210,7 +219,7 @@ def _request(selection):
         "budget_usd": _usd(budget),
         "area_ha": _number(raw_constraints.get("area_ha"), "Reporting area limit",
                            minimum=0, optional=True),
-        "max_count": _integer(raw_constraints.get("max_count"), "Parcel count limit", optional=True),
+        "max_count": _integer(raw_constraints.get("max_count"), "Planning unit count limit", optional=True),
     }
     raw_costs = selection.get("costs") or None
     costs = None
@@ -255,10 +264,10 @@ def _request(selection):
     if not isinstance(enabled, bool):
         raise ValueError("Stability enabled must be true or false")
     return {
-        "title": _text(selection.get("title") or "Parcel portfolio", "Portfolio title", required=True),
+        "title": _text(selection.get("title") or "Planning unit portfolio", "Portfolio title", required=True),
         "purpose": _text(selection.get("purpose") or "Compare selected conservation priorities and resource limits.",
                            "Portfolio purpose", required=True),
-        "delivery_id": identifier(selection.get("delivery_id")),
+        "delivery_id": delivery_id, "inventory_id": inventory_id,
         "objective": {"kind": kind, "basis": basis, "scenario_run_id": scenario_id},
         "weights": _weights(selection.get("weights")), "filters": filters,
         "constraints": constraints, "costs": costs, "solver": solver,
@@ -299,35 +308,46 @@ def _csv(path, required_fields, label):
 
 
 def _load_inputs(workspace, request):
-    delivery_id = request["delivery_id"]
-    directory = workspace.root / "deliveries" / delivery_id
-    state = read_json(directory / "delivery-state.json")
-    if state.get("id") != delivery_id or state.get("schema") != "upstate.delivery/v1":
-        raise ValueError("Select a retained scientific delivery")
-    inventory = state.get("parcel_priorities")
-    files = state.get("files", {})
-    if not inventory or "parcel_csv" not in files or "parcel_inventory" not in files:
-        raise ValueError("The selected delivery needs its completed parcel inventory")
-    csv_path = verify_file(directory, files["parcel_csv"])
-    inventory_path = verify_file(directory, files["parcel_inventory"])
-    if read_json(inventory_path) != inventory:
-        raise ValueError("The selected parcel inventory differs from its delivery record")
-    if inventory.get("schema") != "upstate.parcel-priorities/v1":
-        raise ValueError("Select the original parcel-priorities inventory")
+    delivery_id, inventory_id = request.get("delivery_id"), request.get("inventory_id")
+    if inventory_id:
+        from .planning_inventory import inspect
+        state = inspect(workspace, inventory_id)
+        csv_path = verify_file(workspace.root, state["files"]["csv"])
+        inventory_path = verify_file(workspace.root, state["files"]["inventory"])
+        inventory = read_json(inventory_path)
+        if inventory.get("schema") != "upstate.planning-unit-inventory/v1":
+            raise ValueError("Select the original native planning-unit inventory")
+        unit_kind = state["unit_kind"]
+    else:
+        directory = workspace.root / "deliveries" / delivery_id
+        state = read_json(directory / "delivery-state.json")
+        if state.get("id") != delivery_id or state.get("schema") != "upstate.delivery/v1":
+            raise ValueError("Select a retained scientific delivery")
+        inventory = state.get("parcel_priorities")
+        files = state.get("files", {})
+        if not inventory or "parcel_csv" not in files or "parcel_inventory" not in files:
+            raise ValueError("The selected delivery needs its completed planning unit inventory")
+        csv_path = verify_file(directory, files["parcel_csv"])
+        inventory_path = verify_file(directory, files["parcel_inventory"])
+        if read_json(inventory_path) != inventory:
+            raise ValueError("The selected planning unit inventory differs from its delivery record")
+        if inventory.get("schema") != "upstate.parcel-priorities/v1":
+            raise ValueError("Select the original parcel-priorities inventory")
+        unit_kind = "parcel"
     original_selection = inventory["source"]["selection"]
     collection_id = identifier(original_selection["source_collection_id"])
     _, parcel_entry = _source_entry(workspace, collection_id, original_selection["source_id"])
     if parcel_entry["kind"] != "vector" or parcel_entry["body"]["sha256"] != inventory["source"]["sha256"]:
-        raise ValueError("The parcel inventory differs from its original polygon source")
+        raise ValueError("The planning unit inventory differs from its original polygon source")
     baseline_id = identifier(state["selection"]["baseline_run_id"])
     baseline = workspace.inspect_run(baseline_id)
     if baseline["state"] != "complete":
-        raise ValueError("The retained parcel inventory needs its original completed baseline")
+        raise ValueError("The retained planning unit inventory needs its original completed baseline")
     scenario_id = request["objective"]["scenario_run_id"]
     alternative = None
     if scenario_id:
         if scenario_id not in state["selection"].get("scenario_run_ids", []):
-            raise ValueError("The selected scenario is not part of this parcel inventory")
+            raise ValueError("The selected scenario is not part of this planning unit inventory")
         alternative = workspace.inspect_run(scenario_id)
         if alternative["state"] != "complete":
             raise ValueError("Complete the selected native alternative before ranking its actual changes")
@@ -358,22 +378,23 @@ def _load_inputs(workspace, request):
         *MASS_FIELDS.values(),
     ]
     rows, seen = [], set()
-    for line, original in _csv(csv_path, required, "Parcel CSV"):
+    for line, original in _csv(csv_path, required, "Planning unit CSV"):
         feature_id = original["feature_id"]
         if not feature_id.strip() or feature_id in seen:
-            raise ValueError("Parcel IDs must be nonempty and unique; row " + str(line))
+            raise ValueError("Planning unit IDs must be nonempty and unique; row " + str(line))
         seen.add(feature_id)
-        attributes = _json(original["original_attributes"], "Original parcel attributes")
-        changes = _json(original["scenario_changes"], "Original parcel scenario changes")
+        attributes = _json(original["original_attributes"], "Original planning unit attributes")
+        changes = _json(original["scenario_changes"], "Original planning unit scenario changes")
         if not isinstance(attributes, dict) or not isinstance(changes, dict):
             raise ValueError("Original attributes and scenario changes must be JSON objects")
         row = {
             "feature_id": feature_id, "source_row": line,
             "original_attributes": attributes,
-            "original_area_ha": _number(original["area_ha"], "Original parcel area", minimum=0),
-            "area_ha": _number(original["reporting_area_ha"], "Reporting parcel area", minimum=0),
-            "coverage_fraction": _number(original["coverage_fraction"], "Parcel coverage", minimum=0, maximum=1),
-            "protected_fraction": _number(original["protected_fraction"], "Protected fraction", minimum=0, maximum=1),
+            "original_area_ha": _number(original["area_ha"], "Original planning unit area", minimum=0),
+            "area_ha": _number(original["reporting_area_ha"], "Reporting planning unit area", minimum=0),
+            "coverage_fraction": _number(original["coverage_fraction"], "Planning unit coverage", minimum=0, maximum=1),
+            "protected_fraction": _number(original["protected_fraction"], "Protected fraction",
+                                          minimum=0, maximum=1, optional=bool(inventory_id)),
             "valid_pixels": _integer(original["valid_pixels"], "Valid pixel count"),
             "priority_mean": _number(original["priority_mean"], "Original combined priority", optional=True),
             "cost_usd": _usd(cost_rows.get(feature_id)),
@@ -383,10 +404,10 @@ def _load_inputs(workspace, request):
             },
         }
         for name in ("source_water", "high_quality_context"):
-            flag = _integer(original[name], "Parcel " + name)
-            if flag not in (0, 1):
-                raise ValueError("Parcel " + name + " must preserve its 0/1 flag")
-            row[name] = bool(flag)
+            flag = _integer(original[name], "Planning unit " + name, optional=bool(inventory_id))
+            if flag not in (None, 0, 1):
+                raise ValueError("Planning-unit " + name + " must preserve its original 0/1 flag")
+            row[name] = None if flag is None else bool(flag)
         selected_changes = changes.get(scenario_id, {}) if scenario_id else {}
         if not isinstance(selected_changes, dict):
             raise ValueError("Each retained alternative must contain pollutant changes")
@@ -404,12 +425,21 @@ def _load_inputs(workspace, request):
         }
         rows.append(row)
     if not rows:
-        raise ValueError("The original parcel CSV contains no parcels")
+        raise ValueError("The original planning unit CSV contains no planning units")
     if inventory.get("features") != len(rows):
-        raise ValueError("The parcel CSV row count differs from its retained inventory")
+        raise ValueError("The planning unit CSV row count differs from its retained inventory")
     context = {
         "project_id": workspace.project["id"], "delivery_id": delivery_id,
-        "delivery_state": state["state"], "baseline_run_id": baseline_id,
+        "inventory_id": inventory_id, "unit_kind": unit_kind,
+        "delivery_state": state.get("state") if delivery_id else None,
+        "baseline_run_id": baseline_id,
+        "available_metrics": [metric for metric in METRICS
+                              if any(row["physical_metrics"][metric] is not None for row in rows)],
+        "coverage_method": (inventory.get("coverage_method") or
+                            (inventory.get("coverage", {}).get("support") if inventory_id else None) or
+                            ("Common valid native cells across selected runs and pollutants within the reporting-area feature"
+                             if inventory_id else
+                             "Baseline combined-priority valid pixel fraction within the reporting-area feature")),
         "grid_id": baseline["selection"]["grid_id"], "profile_id": baseline["selection"]["profile_id"],
         "scenario_run_id": scenario_id,
         "scenario_selection": deepcopy(alternative["selection"]) if alternative else None,
@@ -417,7 +447,7 @@ def _load_inputs(workspace, request):
         "parcel_source_selection": deepcopy(original_selection),
         "parcel_csv": describe_file(workspace.root, csv_path),
         "parcel_inventory": describe_file(workspace.root, inventory_path),
-        "inventory_coverage": deepcopy(inventory.get("parcel_coverage")),
+        "inventory_coverage": deepcopy(inventory.get("coverage", inventory.get("parcel_coverage"))),
         "inventory_overlap_handling": inventory.get("overlap_handling"),
         "cost_source": cost_identity,
         "cost_join": {
@@ -448,15 +478,20 @@ def _qualify(rows, request):
         if row["area_ha"] <= 0:
             reasons.append("No reporting-area footprint")
         if row["valid_pixels"] <= 0:
-            reasons.append("No valid priority pixels")
+            reasons.append("No valid inventory pixels")
         if row["coverage_fraction"] < filters["min_coverage_fraction"]:
-            reasons.append("Below minimum baseline priority coverage")
-        if row["protected_fraction"] > filters["max_protected_fraction"]:
+            reasons.append("Below minimum inventory coverage")
+        if row["protected_fraction"] is None:
+            if filters["max_protected_fraction"] < 1:
+                reasons.append("Protected-area context is unavailable for the selected limit")
+        elif row["protected_fraction"] > filters["max_protected_fraction"]:
             reasons.append("Above maximum protected fraction")
         for field, flag in (("source_water", "source_water"),
                             ("high_quality_water", "high_quality_context")):
             desired = filters[field]
-            if desired != "any" and row[flag] != (desired == "yes"):
+            if desired != "any" and row[flag] is None:
+                reasons.append("Unknown " + field.replace("_", " ") + " context")
+            elif desired != "any" and row[flag] != (desired == "yes"):
                 reasons.append("Outside " + field.replace("_", " ") + " selection")
         objective_values = {}
         for metric in METRICS:
@@ -464,7 +499,7 @@ def _qualify(rows, request):
             if value is not None and request["objective"]["basis"] == "per-reporting-hectare":
                 value = value / row["area_ha"] if row["area_ha"] > 0 else None
             if value is not None and not math.isfinite(value):
-                raise ValueError("A parcel objective is outside finite numeric range")
+                raise ValueError("A planning unit objective is outside finite numeric range")
             objective_values[metric] = value
             if value is None and request["weights"][metric] > 0:
                 reasons.append("Missing actual " + metric + " objective")
@@ -488,7 +523,7 @@ def _qualify(rows, request):
             for metric in METRICS
         }
     return {
-        "method": "Maximum absolute objective value across source-qualified parcels, before cost exclusions",
+        "method": "Maximum absolute objective value across source-qualified planning units, before cost exclusions",
         "scales": normalization, "basis": request["objective"]["basis"],
         "fixed_across_weight_profiles": True,
         "negative_values": "Retained adverse effects reduce the weighted objective",
@@ -537,7 +572,7 @@ def _area_capacity(limits):
 def _totals(items):
     known = [item["cost_cents"] for item in items if item["cost_cents"] is not None]
     return {
-        "count": len(items), "area_ha": _finite_sum((item["area_ha"] for item in items), "Selected parcel area"),
+        "count": len(items), "area_ha": _finite_sum((item["area_ha"] for item in items), "Selected planning unit area"),
         "known_cost_cents": sum(known),
         "unknown_cost_count": len(items) - len(known),
         "objective_score": _finite_sum((item["score"] for item in items), "Selected objective"),
@@ -652,7 +687,7 @@ def _deterministic(scored, constraints):
             chosen.pop()
         candidates.append((name, chosen))
     best_single = min(positive, key=lambda row: (-row["score"], row["feature_id"]))
-    candidates.append(("Best feasible individual parcel", [best_single]))
+    candidates.append(("Best feasible individual planning unit", [best_single]))
     name, chosen = min(candidates, key=lambda pair: (
         -_totals(pair[1])["objective_score"], tuple(sorted(row["feature_id"] for row in pair[1]))))
     score = _totals(chosen)["objective_score"]
@@ -660,7 +695,7 @@ def _deterministic(scored, constraints):
     gap = max(0.0, upper - score)
     return chosen, {
         "status": "optimal" if gap <= TOLERANCE * max(1.0, upper) else "feasible",
-        "algorithm": "Deterministic multi-order greedy with best individual parcel",
+        "algorithm": "Deterministic multi-order greedy with best individual planning unit",
         "selected_order": name, "upper_bound": upper, "objective_score": score,
         "absolute_gap": gap, "relative_gap": gap / upper if upper > 0 else 0.0, "bounds": bounds,
         "optimality_tolerance": TOLERANCE * max(1.0, upper),
@@ -760,15 +795,20 @@ def _optimize(scored, request):
 
 def _profile_set(request):
     nominal = request["weights"]
+    available = tuple(request.get("available_metrics", METRICS))
     profiles = [{"name": "Selected weights", "weights": nominal}]
     if not request["stability"]["enabled"]:
         return profiles
     supplied = request["stability"]["profiles"]
     if supplied:
+        for profile in supplied:
+            if any(profile["weights"][metric] > 0 for metric in METRICS if metric not in available):
+                raise ValueError("A sensitivity profile requires an unavailable native pollutant objective")
         profiles.extend(supplied)
-    else:
-        profiles.append({"name": "Equal pollutant weights", "weights": _weights(None)})
-        for metric in METRICS:
+    elif available:
+        profiles.append({"name": "Equal available pollutant weights",
+                         "weights": _weights({metric: 1 for metric in available})})
+        for metric in available:
             profiles.append({"name": metric + " only", "weights": _weights({metric: 1})})
             if nominal[metric] > 0:
                 for multiplier in (.5, 2):
@@ -843,13 +883,21 @@ def _selection_summary(chosen, rows):
         "unknown_cost_count": totals["unknown_cost_count"],
         "cost_usd": None if totals["unknown_cost_count"] else _usd(totals["known_cost_cents"]),
         "objective_score": totals["objective_score"], "physical_metrics": physical,
-        "aggregation": "Independent parcel reporting-area footprints in the selected original scenario",
+        "aggregation": "Independent planning unit reporting-area footprints in the selected original scenario",
     }
 
 
 def preview(workspace, selection):
     request = _request(selection)
     rows, context = _load_inputs(workspace, request)
+    request["available_metrics"] = list(context["available_metrics"])
+    if selection.get("weights") is None:
+        request["weights"] = _weights({metric: 1 for metric in request["available_metrics"]})
+    unavailable = [metric for metric, weight in request["weights"].items()
+                   if weight > 0 and metric not in request["available_metrics"]]
+    if unavailable:
+        raise ValueError("Positive weights require available native inventory outputs: " +
+                         ", ".join(unavailable))
     normalization = _qualify(rows, request)
     scored = _scored(rows, request["weights"])
     ranking = {item["feature_id"]: (index + 1, item["score"]) for index, item in enumerate(scored)}
@@ -875,16 +923,16 @@ def preview(workspace, selection):
         "optimization": optimization, "stability": stability,
         "methods": {
             "objective_direction": {
-                "restoration": "Benefit = baseline minus actual alternative parcel export",
-                "avoided-conversion": "Exposure = actual conversion alternative minus baseline parcel export",
-                "current-export": "Current parcel export footprint",
+                "restoration": "Benefit = baseline minus actual alternative planning unit export",
+                "avoided-conversion": "Exposure = actual conversion alternative minus baseline planning unit export",
+                "current-export": "Current planning unit export footprint",
             }[request["objective"]["kind"]],
-            "coverage": "Baseline combined-priority valid pixel fraction within the original reporting-area parcel",
+            "coverage": context["coverage_method"],
             "costs": "Supplied per-feature USD estimates; blanks and absent rows remain unknown",
             "score": "Weighted signed normalized objectives; zero and negative total scores are not selected",
-            "area": "Reporting-area parcel hectares; original overlapping parcels remain independent",
-            "combined_effect": "Selected parcel sums locate contributions in the saved scenario. Execute the saved portfolio land-cover scenario to obtain the combined treatment result.",
-            "current_priority": "Original priority_mean is retained separately; parcel objective weighting is a distinct decision calculation",
+            "area": "Reporting-area planning unit hectares; original overlapping planning units remain independent",
+            "combined_effect": "Selected planning unit sums locate contributions in the saved scenario. Execute the saved portfolio land-cover scenario to obtain the combined treatment result.",
+            "current_priority": "Original priority_mean is retained separately; planning unit objective weighting is a distinct decision calculation",
             "restoration_scope": "Avoided-conversion and restoration use different explicitly selected native alternatives",
             "numerics": "Budget arithmetic uses integer USD cents; ranking and area arithmetic use finite double precision",
         },
@@ -1021,7 +1069,7 @@ def _treatments(value, selected_ids):
             "to_code": target, "reason": _text(original.get("reason"), "Treatment reason", required=True),
         })
     if assigned != selected_ids:
-        raise ValueError("Every selected parcel needs an explicit land-cover treatment")
+        raise ValueError("Every selected planning unit needs an explicit land-cover treatment")
     return result
 
 
@@ -1029,7 +1077,7 @@ def prepare_scenario(workspace, selection):
     record = get_portfolio(workspace, identifier(selection.get("portfolio_id")), details=True)
     selected_ids = set(record["selection"]["feature_ids"])
     if not selected_ids:
-        raise ValueError("Save a portfolio with selected parcels before creating a land-cover scenario")
+        raise ValueError("Save a portfolio with selected planning units before creating a land-cover scenario")
     title = _text(selection.get("title") or record["title"] + " land-cover treatment", "Scenario title", required=True)
     reason = _text(selection.get("reason"), "Actual scenario assumptions", required=True)
     treatments = _treatments(selection, selected_ids)
@@ -1037,7 +1085,7 @@ def prepare_scenario(workspace, selection):
     native_selection = context["parcel_source_selection"]
     original, entry = workspace.source_file(native_selection["source_collection_id"], native_selection["source_id"])
     if entry["body"] != context["parcel_source"]["body"]:
-        raise ValueError("The selected parcel geometry differs from the portfolio's source edition")
+        raise ValueError("The selected planning unit geometry differs from the portfolio's source edition")
     import fiona
     import os
     import tempfile
@@ -1064,9 +1112,9 @@ def prepare_scenario(workspace, selection):
         if feature_id not in selected_ids:
             continue
         if feature_id in found:
-            raise ValueError("Selected original parcel identities are not unique")
+            raise ValueError("Selected original planning unit identities are not unique")
         if row["properties"] != original_candidates[feature_id]["original_attributes"]:
-            raise ValueError("Original selected parcel attributes differ from the retained inventory")
+            raise ValueError("Original selected planning unit attributes differ from the retained inventory")
         # Match priorities.parcel_inventory: clip in the retained grid CRS.
         # A boundary-only contact has no polygonal treatment area.
         clipped = row["geometry"].intersection(reporting)
@@ -1081,11 +1129,11 @@ def prepare_scenario(workspace, selection):
                 pending.extend(part.geoms)
         geometry = unary_union(parts)
         if geometry.is_empty or geometry.area <= 0:
-            raise ValueError("A selected parcel has no original reporting-area polygon")
+            raise ValueError("A selected planning unit has no original reporting-area polygon")
         if geometry.geom_type == "Polygon":
             geometry = MultiPolygon([geometry])
         if geometry.geom_type != "MultiPolygon":
-            raise ValueError("Selected parcel clipping must retain polygon geometry")
+            raise ValueError("Selected planning unit clipping must retain polygon geometry")
         found.add(feature_id)
         features.append({
             "type": "Feature", "id": feature_id, "geometry": mapping(geometry),
@@ -1106,18 +1154,18 @@ def prepare_scenario(workspace, selection):
     directory = workspace.root / "portfolio-sources" / source_key
     layer = "portfolio_selected_parcels"
     manifest = {
-        "schema": "upstate.sources/v1", "title": title + " selected original parcels",
+        "schema": "upstate.sources/v1", "title": title + " selected original planning units",
         "entries": [{
             "id": "portfolio-selected-parcels", "path": "selected-parcels.gpkg",
             "kind": "vector", "layer": layer,
             "title": title + " treatment geometry", "uri": "urn:upstate:portfolio-mask:" + source_key,
             "vintage": entry["vintage"],
-            "scope": "Selected original parcel geometry clipped to the retained reporting boundary",
+            "scope": "Selected original planning unit geometry clipped to the retained reporting boundary",
             "lineage": {
                 "portfolio_id": record["id"], "source": context["parcel_source"],
                 "original_selection": native_selection, "selected_feature_ids": sorted(selected_ids),
                 "reporting_grid_id": grid["id"], "reporting_area": grid["files"]["reporting_area"],
-                "coordinate_operation": "Original native parcel and reporting geometries intersected in the retained model grid CRS; selected coordinates retained in GeoPackage without a geographic round trip",
+                "coordinate_operation": "Original native planning unit and reporting geometries intersected in the retained model grid CRS; selected coordinates retained in GeoPackage without a geographic round trip",
                 "geometry_crs": grid_crs.to_wkt(), "treatments": treatments,
             },
         }],
@@ -1144,10 +1192,10 @@ def prepare_scenario(workspace, selection):
         } for row in retained]
         if (retained_crs != grid_crs
                 or any(not isinstance(feature["id"], str) for feature in retained_features)):
-            raise ValueError("The retained selected parcel source differs in grid CRS or feature identity")
+            raise ValueError("The retained selected planning unit source differs in grid CRS or feature identity")
         retained_features.sort(key=lambda feature: feature["id"])
         if canonical({"type": "FeatureCollection", "features": retained_features}) != canonical(body):
-            raise ValueError("The retained treatment mask differs from the original selected parcel geometry")
+            raise ValueError("The retained treatment mask differs from the original selected planning unit geometry")
         manifest["entries"][0]["sha256"] = file_digest(mask_path)
         atomic_json(directory / "sources.json", manifest, immutable=True)
         collection = workspace.import_sources(directory / "sources.json")
@@ -1162,7 +1210,7 @@ def prepare_scenario(workspace, selection):
                 "from_codes": treatment["from_codes"], "to_code": treatment["to_code"],
                 "reason": treatment["reason"],
             } for treatment in treatments],
-            "overlap_policy": "Original distinct parcel overlaps use the declared treatment order",
+            "overlap_policy": "Original distinct planning unit overlaps use the declared treatment order",
         }
         return workspace.save_scenario(scenario)
 
@@ -1187,33 +1235,29 @@ def _evaluation(workspace, record, selection):
               "scenario_id": scenario["id"], "artifacts": deepcopy(run.get("artifacts", {})),
               "baseline_run_id": baseline["id"],
               "baseline_artifacts": deepcopy(baseline.get("artifacts", {})),
-              "profile_changed": run["selection"]["profile_id"] != record["context"]["profile_id"]}
+              "profile_changed": run["selection"]["profile_id"] != record["context"]["profile_id"],
+              "selected_models": list(run_models(run)),
+              "ranking_baseline_run_id": baseline["id"],
+              "ranking_baseline_models": list(run_models(baseline)),
+              "models_changed": run_models(run) != run_models(baseline)}
     for artifact in run.get("artifacts", {}).values():
         verify_file(workspace.root / "runs" / run["id"], artifact)
     if comparison_id:
-        comparison_id = identifier(comparison_id)
-        directory = workspace.root / "comparisons" / comparison_id
-        comparison = read_json(directory / "comparison.json")
-        comparison_runs = [comparison.get("baseline_run_id")] + [
-            item["run_id"] for item in comparison.get("alternatives", [])]
-        if (comparison.get("schema") != "upstate.run-comparison/v1"
-                or comparison.get("id") != comparison_id
-                or comparison.get("direction") != "alternative minus baseline"
-                or digest({"runs": comparison_runs, "direction": comparison["direction"]}) != comparison_id):
-            raise ValueError("The retained evaluation comparison identity differs")
-        if comparison.get("baseline_run_id") != record["context"]["baseline_run_id"]:
-            raise ValueError("The evaluation comparison needs the portfolio's original baseline")
-        alternative = next((row for row in comparison.get("alternatives", []) if row["run_id"] == run["id"]), None)
-        if not alternative or run["state"] != "complete":
+        if run["state"] != "complete":
             raise ValueError("The comparison must contain the actual completed portfolio evaluation")
-        if alternative["selection"] != run["selection"]:
-            raise ValueError("The comparison differs from its original portfolio run selection")
-        for artifact in alternative["artifacts"].values():
-            verify_file(directory, artifact)
-        result["comparison"] = {
-            "id": comparison_id, "baseline_run_id": comparison["baseline_run_id"],
-            "direction": comparison["direction"], "alternative": deepcopy(alternative),
-        }
+        comparison, baseline = _decision_comparison(workspace, record, run, selection)
+        alternative = next(row for row in comparison["alternatives"] if row["run_id"] == run["id"])
+        for artifact in baseline.get("artifacts", {}).values():
+            verify_file(workspace.root / "runs" / baseline["id"], artifact)
+        result.update({
+            "baseline_run_id": baseline["id"],
+            "baseline_selection": deepcopy(baseline["selection"]),
+            "baseline_artifacts": deepcopy(baseline.get("artifacts", {})),
+            "comparison": {
+                "id": comparison["id"], "baseline_run_id": baseline["id"],
+                "direction": comparison["direction"], "alternative": deepcopy(alternative),
+            },
+        })
     return result
 
 
@@ -1303,7 +1347,7 @@ def _report_html(record, analysis, evaluation, title):
         "thead{display:table-header-group}tr{break-inside:avoid}a{text-decoration:none}}"
         "</style><header><p class=\"label\">UPPER SAVANNAH · CONSERVATION PORTFOLIO</p><h1>" + esc(title) +
         "</h1><p>" + esc(record["purpose"]) + "</p><p class=\"identity\">Portfolio " + esc(record["id"]) +
-        "</p></header><section class=\"summary\"><div><span class=\"label\">Selected parcels</span><strong>" +
+        "</p></header><section class=\"summary\"><div><span class=\"label\">Selected planning units</span><strong>" +
         esc(selection["count"]) + "</strong></div><div><span class=\"label\">Reporting hectares</span><strong>" +
         esc(_display(selection["area_ha"])) + "</strong></div><div><span class=\"label\">Supplied cost total</span><strong>" +
         esc(_display(selection["cost_usd"], money=True)) + "</strong><small>" +
@@ -1315,10 +1359,10 @@ def _report_html(record, analysis, evaluation, title):
         esc(json.dumps({"weights": record["request"]["weights"], "constraints": record["request"]["constraints"],
                         "filters": record["request"]["filters"]}, indent=2, ensure_ascii=False)) +
         "</pre><p>" + esc(record["optimization"]["algorithm"]) + ".</p></section>"
-        "<section><h2>Selected parcel contributions in the saved scenario</h2><table><thead><tr><th>Metric</th><th>Sum</th><th>Units</th><th>Coverage</th>"
+        "<section><h2>Selected planning unit contributions in the saved scenario</h2><table><thead><tr><th>Metric</th><th>Sum</th><th>Units</th><th>Coverage</th>"
         "</tr></thead><tbody>" + physical + "</tbody></table><p>" + esc(record["methods"]["combined_effect"]) +
         "</p><p>" + esc(context.get("inventory_overlap_handling") or record["methods"]["area"]) + "</p></section>"
-        "<section><h2>Selected parcels</h2><table><thead><tr><th>Original feature</th><th>Hectares</th><th>Supplied cost</th>"
+        "<section><h2>Selected planning units</h2><table><thead><tr><th>Original feature</th><th>Hectares</th><th>Supplied cost</th>"
         "<th>Score</th><th>Selected preferences</th><th>N kg/year</th><th>P kg/year</th><th>Sediment t/year</th></tr></thead><tbody>" +
         "".join(rows) + "</tbody></table></section><section><h2>Preference stability</h2><p>" +
         esc(analysis["stability"]["interpretation"]) + "</p><table><thead><tr><th>Weight profile</th><th>Selected</th>"
@@ -1326,8 +1370,10 @@ def _report_html(record, analysis, evaluation, title):
         "</tbody></table></section>" + evaluated +
         "<section><h2>Original inputs</h2><p>" + esc(context["parcel_source"]["title"]) + " · " +
         esc(context["parcel_source"]["vintage"]) + "</p><p class=\"identity\">" +
-        esc(context["parcel_source"]["uri"]) + "</p><p class=\"identity\">Delivery " + esc(context["delivery_id"]) +
-        " · Baseline " + esc(context["baseline_run_id"]) + "</p><p class=\"identity\">Parcel source SHA-256 " +
+        esc(context["parcel_source"]["uri"]) + "</p><p class=\"identity\">Source inventory " +
+        esc(context.get("inventory_id") or context.get("delivery_id")) + " · Unit kind " +
+        esc(context.get("unit_kind", "parcel")) +
+        " · Baseline " + esc(context["baseline_run_id"]) + "</p><p class=\"identity\">Planning unit source SHA-256 " +
         esc(context["parcel_source"]["body"]["sha256"]) +
         "</p><p>The complete report archive contains selected-parcels.csv, candidate-ranking.csv, "
         "analysis.json and source-manifest.json alongside this report.</p></section>"
@@ -1344,7 +1390,8 @@ def build_report(workspace, selection):
         if evaluation["state"] != "complete":
             raise ValueError("Complete the selected native portfolio evaluation before reporting its result")
         if not evaluation.get("comparison"):
-            comparison = workspace.compare_runs([record["context"]["baseline_run_id"], evaluation["run_id"]])
+            run = workspace.inspect_run(evaluation["run_id"])
+            comparison, _ = _decision_comparison(workspace, record, run, selection)
             evaluation = _evaluation(workspace, record, dict(selection, comparison_id=comparison["id"]))
     key = digest({"portfolio_id": record["id"], "title": title, "evaluation": evaluation, "version": 1})
     directory = workspace.root / "portfolio-reports" / key
@@ -1398,10 +1445,10 @@ def _decision_economics(record, run_id, value):
     selected_cost = record["selection"]["cost_usd"]
     if basis != "whole-scenario":
         if currency != "USD":
-            raise ValueError("Selected parcel estimates retain their original USD currency")
+            raise ValueError("Selected planning unit estimates retain their original USD currency")
         if selected_cost is None or record["selection"]["unknown_cost_count"]:
-            raise ValueError("Supply every selected parcel estimate or choose explicit whole-scenario costs")
-        selected_amount = _number(selected_cost, "Complete selected parcel estimate", minimum=0)
+            raise ValueError("Supply every selected planning unit estimate or choose explicit whole-scenario costs")
+        selected_amount = _number(selected_cost, "Complete selected planning unit estimate", minimum=0)
         # Reject a conversion that loses original cents in the companion's floats.
         if _money(selected_amount, "Decision capital/operating amount") != _money(selected_cost, "Selected estimate"):
             raise ValueError("Selected estimate exceeds the decision companion's exact-cent numeric range")
@@ -1447,7 +1494,9 @@ def _decision_comparison(workspace, record, run, value):
     original = workspace.inspect_run(record["context"]["baseline_run_id"])
     if original["selection"]["grid_id"] != run["selection"]["grid_id"]:
         raise ValueError("Portfolio economics needs the original reporting/model grid")
-    paired_selection = dict(original["selection"])
+    paired_selection, _ = normalize_selection({
+        **original["selection"], "models": list(run_models(run)),
+    })
     paired_selection["profile_id"] = run["selection"]["profile_id"]
     paired_selection["invest_version"] = run["selection"]["invest_version"]
     paired_id = digest(paired_selection)
@@ -1480,11 +1529,7 @@ def _decision_comparison(workspace, record, run, value):
             raise ValueError("The matching baseline selects native engine " +
                              str(paired_selection["invest_version"]) +
                              "; this application selects " + INVEST_VERSION) from error
-        baseline = workspace.prepare_run({
-            "grid_id": paired_selection["grid_id"],
-            "profile_id": paired_selection["profile_id"],
-            "scenario_id": paired_selection["scenario_id"],
-        })
+        baseline = workspace.prepare_run(paired_selection)
         if baseline["id"] != paired_id or baseline["selection"] != paired_selection:
             raise ValueError("The prepared baseline differs from the selected native evaluation context")
     if baseline["selection"]["scenario_id"] != original["selection"]["scenario_id"]:
@@ -1492,6 +1537,8 @@ def _decision_comparison(workspace, record, run, value):
     for name in ("grid_id", "profile_id", "invest_version"):
         if baseline["selection"].get(name) != run["selection"].get(name):
             raise ValueError("Portfolio economics needs a common baseline/evaluation " + name)
+    if run_models(baseline) != run_models(run):
+        raise ValueError("Portfolio economics needs the same selected native models for baseline and evaluation")
     if baseline["state"] != "complete":
         if not run_missing:
             raise ValueError("The original matching baseline is available in Runs as " +
@@ -1648,6 +1695,9 @@ def build_decision_report(workspace, selection):
 
 
 def invoke(workspace, action, payload):
+    if action == "portfolio.inventory.build":
+        from .planning_inventory import build
+        return build(workspace, payload)
     if action == "portfolio.preview":
         return preview(workspace, payload)
     if action == "portfolio.save":
