@@ -22,7 +22,7 @@ from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-decision-11"
+REPORT_EDITION = "2026-10-13-client-report-briefing-12"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -765,7 +765,7 @@ def render_markdown(report):
                       "", "Retained source SHA-256: " + RFP_SHA256, ""])
     return "\n".join(lines)
 
-def render_html(report):
+def render_html(report, *, briefing_href=None):
     esc = html.escape
     sections = []
     for section in report["sections"]:
@@ -798,6 +798,11 @@ def render_html(report):
                                  esc(item["title"] + " / " + file["role"]) + "</a></li>")
     nav = "".join('<a href="#' + esc(s["id"], quote=True) + '">' + esc(s["title"]) + "</a>"
                   for s in report["sections"])
+    if briefing_href is not None:
+        selected = _safe_path(briefing_href)
+        if selected is None:
+            raise ValueError("Customer briefing must remain in the same delivery")
+        nav = '<a href="' + esc(selected, quote=True) + '">Open customer briefing and meeting notes</a>' + nav
     style = """*{box-sizing:border-box}body{margin:0;background:#f4f5f6;color:#1d242b;font:15px/1.55 Arial,Helvetica,sans-serif}
 header,main,footer{max-width:1120px;margin:0 auto;padding:32px 36px;background:#fff}
 header{border-bottom:3px solid #333f4b}header .label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#59636e}
@@ -945,11 +950,14 @@ def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
             raise ValueError("pdf_name must be a simple relative filename")
     names = {"report": pdf_relative, "report_html": stem + ".html",
              "report_markdown": stem + ".md", "report_model": stem + "-model.json"}
-    (directory / names["report_html"]).write_text(render_html(report), encoding="utf-8")
+    (directory / names["report_html"]).write_text(
+        render_html(report, briefing_href=stem + "-briefing.html"), encoding="utf-8")
     (directory / names["report_markdown"]).write_text(render_markdown(report), encoding="utf-8")
     (directory / names["report_model"]).write_text(json.dumps(report, ensure_ascii=False,
                                                            indent=2, allow_nan=False) + "\n", encoding="utf-8")
     render_pdf(directory / names["report"], report)
+    from .client_briefing import write as write_briefing
+    names.update(write_briefing(directory, report, stem=stem))
     return {file_key_prefix + key: value for key, value in names.items()}
 
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
