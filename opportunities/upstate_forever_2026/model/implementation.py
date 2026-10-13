@@ -83,6 +83,39 @@ def _safe_output(path: str | Path, content: str, overwrite: bool) -> str:
     return str(path)
 
 
+@contextmanager
+def _file_lock(lock_path, *, blocking=True):
+    """Use the same advisory lock for native writes and portable capture."""
+    lock_path = Path(lock_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    if lock_path.is_symlink():
+        raise ImplementationError("Plan lock path must not be a symlink.")
+    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(lock_path, flags, 0o600)
+    handle = os.fdopen(descriptor, "r+b", buffering=0)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            if os.fstat(descriptor).st_size == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(descriptor, msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(descriptor, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                handle.seek(0)
+                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        handle.close()
+
+
 class ImplementationStore:
     """A process-safe local store. OS advisory locks release automatically on exit.
 
@@ -105,8 +138,11 @@ class ImplementationStore:
         if directory.is_symlink():
             raise ImplementationError(f"Plan directory is a symlink: {directory}")
         if create:
-            directory.mkdir(exist_ok=True)
-            _fsync_directory(self.base)
+            # Backup holds this bank lock before enumerating per-plan locks.
+            # Release it before waiting for the selected plan's own lock.
+            with _file_lock(self.base.parent / ".plans.lock"):
+                directory.mkdir(exist_ok=True)
+                _fsync_directory(self.base)
         if not directory.is_dir():
             raise ImplementationError(f"Plan does not exist: {plan_id}")
         return directory
@@ -114,33 +150,8 @@ class ImplementationStore:
     @contextmanager
     def _locked(self, plan_id: str, *, create: bool = False):
         directory = self._directory(plan_id, create=create)
-        lock_path = directory / ".lock"
-        if lock_path.is_symlink():
-            raise ImplementationError("Plan lock path must not be a symlink.")
-        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(lock_path, flags, 0o600)
-        handle = os.fdopen(descriptor, "r+b", buffering=0)
-        try:
-            if os.name == "nt":
-                import msvcrt
-                if os.fstat(descriptor).st_size == 0:
-                    handle.write(b"\0")
-                    handle.flush()
-                handle.seek(0)
-                msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(descriptor, fcntl.LOCK_EX)
-            try:
-                yield directory
-            finally:
-                if os.name == "nt":
-                    handle.seek(0)
-                    msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
-                else:
-                    fcntl.flock(descriptor, fcntl.LOCK_UN)
-        finally:
-            handle.close()
+        with _file_lock(directory / ".lock"):
+            yield directory
 
     def _revision_paths(self, directory: Path) -> list[Path]:
         revisions = directory / "revisions"
@@ -579,3 +590,52 @@ class ImplementationStore:
             )
         finally:
             shutil.rmtree(staging, ignore_errors=True)
+
+    def retain_report(self, directory: str | Path) -> dict:
+        """Copy a complete original report edition into its saved plan bank."""
+        from .portable_implementation import report_edition
+        original = Path(directory).expanduser().resolve(strict=True)
+        inspected = report_edition(self, original)
+        with self._locked(inspected["plan_id"]) as plan_directory:
+            reports = plan_directory / "reports"
+            if reports.is_symlink():
+                raise ImplementationError("The report bank must be an ordinary directory.")
+            reports.mkdir(exist_ok=True)
+            target = reports / inspected["id"]
+            if target.exists():
+                retained = report_edition(self, target)
+                if retained != {**inspected, "directory": str(target)}:
+                    raise ImplementationError("A retained report edition differs from its original.")
+                return retained
+            staging = Path(tempfile.mkdtemp(prefix=".pending-report-", dir=reports))
+            try:
+                for name in inspected["members"]:
+                    source = original / name
+                    destination = staging / name
+                    with source.open("rb") as incoming, destination.open("xb") as outgoing:
+                        shutil.copyfileobj(incoming, outgoing, 1024 * 1024)
+                        outgoing.flush()
+                        os.fsync(outgoing.fileno())
+                copied = report_edition(self, staging)
+                if copied != {**inspected, "directory": str(staging)}:
+                    raise ImplementationError("Report bytes changed during original capture.")
+                os.rename(staging, target)
+                staging = None
+                _fsync_directory(reports)
+                return {**inspected, "directory": str(target)}
+            finally:
+                if staging is not None:
+                    shutil.rmtree(staging, ignore_errors=True)
+
+    def list_reports(self, plan_id: str) -> list[dict]:
+        from .portable_implementation import report_edition
+        directory = self._directory(plan_id) / "reports"
+        if not directory.exists():
+            return []
+        if directory.is_symlink():
+            raise ImplementationError("The report bank must be an ordinary directory.")
+        rows = []
+        for folder in sorted(directory.iterdir()):
+            if re.fullmatch(r"[0-9a-f]{64}", folder.name):
+                rows.append(report_edition(self, folder))
+        return rows

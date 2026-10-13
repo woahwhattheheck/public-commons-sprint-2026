@@ -31,6 +31,8 @@ from model.workspace import Workspace
 from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# ES-SUPERVISION-20261012
+from native_jobs import NativeJobs, NativeJobError, NativeJobCancelled, NativeJobDetached
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
@@ -45,6 +47,7 @@ from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 from task_requests import TaskRequests
 from study_catalogues import StudyCatalogues
+from programme_activity import ProgrammeActivity
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -101,6 +104,8 @@ def json_body(data):
     return result
 
 def summary_error(error):
+    if isinstance(error, NativeJobError):
+        return {"code": error.code, "message": str(error)}, error.status
     implementation_detail = implementation_error(error)
     if implementation_detail is not None:
         return implementation_detail
@@ -137,6 +142,7 @@ class Operator:
         self.experiments = ExperimentOperator(self, Fault)
         self.parameter_studies = ParameterStudyAPI(self, Fault)
         self.programmes = Programmes(self, Fault)
+        self.programme_activity = ProgrammeActivity(self, Fault)
         self.verified = {}
         self.upload_limit = upload_limit
         self.extraction_limit = extraction_limit
@@ -144,6 +150,7 @@ class Operator:
         self.capability = secrets.token_urlsafe(36)
         self.download_cookie = secrets.token_urlsafe(36)
         self.closing = False
+        self.native_jobs = NativeJobs(self)
         self.origin = None
         self.registry_file = self.root / "workspaces.json"
         self.registry = read_json(self.registry_file) if self.registry_file.exists() else {}
@@ -166,7 +173,7 @@ class Operator:
                                     "title": value.get("title", p.name), "entries": len(value.get("entries", []))}
         self.extensions = ExtensionRegistry(self, Fault,
             builtin_actions=ACTIONS, builtin_kinds=KINDS,
-            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
+            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/native-job'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
             source_roots=source_roots).load()
         for path in (self.root / "tasks").glob("*.json"):
             task = read_json(path)
@@ -262,6 +269,13 @@ class Operator:
         pack = chosen["spatial_export_id"]
         if pack and selection.get("spatial_review_id") and pack.get("review_id") != selection["spatial_review_id"]:
             raise Fault("JOURNEY_SELECTION", "The map pack belongs to a different saved geographic view.")
+        # Calibration review: retain the original dossier in a saved journey.
+        review_id = selection.get("calibration_review_id", "")
+        if not isinstance(review_id, str):
+            raise Fault("JOURNEY_SELECTION", "Choose one saved calibration review.")
+        if review_id:
+            from calibration import validate_review_journey
+            validate_review_journey(ws, journey)
         request_sha256 = digest(journey)
         current = self.operator_session(workspace)
         if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):
@@ -364,6 +378,8 @@ class Operator:
     def cancel(self, key):
         with self.lock:
             task = self.task(key)
+            if self.native_jobs.supports(task) and task["state"] != "queued":
+                return self.native_jobs.request_stop(task)
             if task["state"] != "queued":
                 raise Fault("TASK_RUNNING", "Only a task that has not started can be cancelled here.", 409)
             task.update(state="cancelled", ended_at=now())
@@ -387,8 +403,10 @@ class Operator:
             attempt.update(state="complete", ended_at=task["ended_at"])
         except BaseException as error:
             detail, status = summary_error(error)
-            task.update(state="failed", error=detail, ended_at=now())
-            attempt.update(state="failed", error=detail, ended_at=task["ended_at"])
+            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else
+                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")
+            task.update(state=final_state, error=detail, ended_at=now())
+            attempt.update(state=final_state, error=detail, ended_at=task["ended_at"])
             error_file = self.root / "tasks" / (key + ".attempt-" + str(attempt["number"]) + ".error.txt")
             with contextlib.suppress(OSError):
                 error_file.write_text(traceback.format_exc(), encoding="utf-8")
@@ -438,8 +456,7 @@ class Operator:
         if action == "run.prepare":
             return ws.prepare_run(value)
         if action == "run.start":
-            from ecsa_runs.upstate import invoke_original_run
-            return invoke_original_run(self, task, ws, required(value, "run_id"))
+            return self.native_jobs.execute_retained(task, ws)
         if action == "run.compare":
             return ws.compare_runs(value["run_ids"])
         if action == "observation.import":
@@ -826,8 +843,7 @@ class Operator:
             for study in state["parameter-studies"]:
                 study["case_count"] = len(study.get("cases", []))
                 study.pop("cases", None)
-        from programme_activity import ProgrammeActivity
-        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
+        state["compute_programmes"] = self.programme_activity.summaries(workspace, state["runs"])
         # Compact core readers already retain these exact summaries without
         # repeatedly reading the original rows and stage file inventories.
         if not compact:
@@ -848,6 +864,12 @@ class Operator:
 
     def task_view(self, key):
         task = self.task(key)
+        if self.native_jobs.supports(task):
+            try:
+                task["_native_job"] = self.native_jobs.snapshot(task)
+            except NativeJobError as error:
+                if error.code != "PROGRAMME_PREPARING":
+                    raise
         result = task.get("result", {})
         core_results = {"source.import": "sources", "profile.save": "profiles", "scenario.save": "scenarios",
                         "grid.prepare": "grids", "run.prepare": "runs", "run.start": "runs",
@@ -1040,6 +1062,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.item(workspace, one("kind"), one("id")))
                 if url.path == "/api/source-info":
                     return self.send_json(200, self.app.source_info(workspace, one("collection"), one("source"), one("layer")))
+                if url.path == "/api/native-job":
+                    return self.send_json(200, self.app.native_jobs.view(one("id"), workspace,
+                        stream=one("stream", "native"), offset=one("offset", "0"),
+                        expected_run=one("run_id", ""), expected_execution=one("execution_id", "")))
                 if url.path == "/api/task":
                     return self.send_json(200, self.app.task_view(one("id")))
                 if url.path == "/api/run-log":
@@ -1070,7 +1096,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'parameter_studies.mjs', 'parameter_studies.css', 'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css', 'observed_series.mjs', 'observation_support.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

@@ -9,7 +9,7 @@ const date=(value,time=false)=>{if(!value)return 'Date unavailable';const d=new 
 const kindLabel={registry:'Registry',ledger:'Ledger',carbon:'Stellarcarbon'};
 const methodLabel={PROPORTIONAL_GROSS:'Proportional to original gross payments',FIFO_GROSS:'Oldest available provider contributions first',EXPLICIT:'Explicit payment amounts'};
 const actionLabel={'import':'Source edition imported','payment-link':'Payment assignment saved',allocation:'Payout allocation saved',bridge:'Carbon association saved',statement:'Statement version saved',settings:'Workspace renamed','carry-payment-links':'Unchanged payment assignments carried forward'};
-const statusLabel={IDLE:'Ready',RUNNING:'Acquiring original records',COMPLETE:'Complete',INTERRUPTED:'Paused at retained checkpoint',
+const statusLabel={SAVED:'Saved source checkpoint',IDLE:'Ready',RUNNING:'Acquiring original records',COMPLETE:'Complete',INTERRUPTED:'Paused at retained checkpoint',
   complete:'Complete','complete-with-source-notes':'Complete with source notes',capturing:'Acquiring original records',interrupted:'Paused at retained checkpoint',
   'provider-payout':'Provider payout','vendor-fee':'Vendor fee','requires-source-classification':'Source classification required'};
 function token(atoms,decimals){if(atoms===null||atoms===undefined)return 'Unavailable';const n=BigInt(atoms),sign=n<0n?'-':'',s=(n<0n?-n:n).toString().padStart(Number(decimals)+1,'0'),d=Number(decimals);return sign+(d?s.slice(0,-d)+'.'+s.slice(-d):s);}
@@ -305,10 +305,14 @@ function intake(){
 }
 function captureStatusMarkup(){
   return ['registry','ledger'].map(kind=>{
-    const value=state.captures?.[kind]||{status:'IDLE'};
+    const value=state.captures?.[kind]||{status:'IDLE'},checkpoint=value.checkpoint;
+    const saved=checkpoint?'<p>Saved '+h(checkpoint.savedAt?date(checkpoint.savedAt,true):'original checkpoint')+
+      (checkpoint.responses!==undefined?' · '+h(checkpoint.responses)+' original responses':'')+'</p>'+ 
+      '<p><a class="button" href="'+h(api.checkpointURL(kind))+'" download>Export complete checkpoint</a></p>':'';
     return '<div class="panel"><h3>'+kindLabel[kind]+' acquisition</h3><p>'+h(statusLabel[value.status]||value.status)+
       (value.phase?' · '+h(value.phase.replace(/-/g,' ')):'')+(value.table?' · '+h(value.table):'')+'</p>'+
-      (value.error?'<p>'+h(value.error.message)+'</p>':'')+
+      (value.error?'<p>'+h(value.error.message)+'</p>':'')+saved+
+      (value.checkpointError?'<p>'+h(value.checkpointError.message)+' The previous committed checkpoint remains available.</p>':'')+
       (value.status==='RUNNING'?button('Pause at retained checkpoint','stop-capture',{kind}):'')+
       (value.editionId?button('Open captured edition','source',{id:value.editionId}):'')+'</div>';
   }).join('');
@@ -316,11 +320,17 @@ function captureStatusMarkup(){
 function capture(){
   return '<h1>Capture original records</h1><p>Acquire complete original responses through the native receiver. Registry access uses the operator’s existing API key; ledger acquisition uses public original sources and the installed Stellar SDK.</p>'+
     '<div id="capture-status" class="grid">'+captureStatusMarkup()+'</div>'+
+    '<form class="panel grid" data-form="checkpoint-import"><h2 class="span-all">Continue a saved acquisition</h2>'+
+      select('Original source kind','kind',[{id:'ledger',name:'Ledger'},{id:'registry',name:'Registry'}],'ledger','id','name',null,true)+
+      field('Complete original checkpoint JSON','checkpointFile','','file',true)+
+      '<p class="span-all">Receive the complete saved file, then use the same source options and Resume below. Source selection, original responses and progress remain intact.</p>'+
+      '<div class="actions span-all"><button>Receive checkpoint</button></div></form>'+
     '<form class="panel grid" data-form="capture-registry"><h2 class="span-all">Registry edition</h2>'+
       field('Edition label','label','GiveCredit registry · '+date(new Date()),'text',true)+
       field('Existing authorized registry API key','apiKey','','password',true)+
       field('Original organization ID','organizationId','04340418-765d-48ab-af36-512a66c960b4','text',false,'Leave empty for all accessible original records.')+
       field('Registry API base','baseUrl','https://registry.cfce.io/api','url',true)+
+      field('Original complete capture options JSON · optional','captureOptionsFile','','file',false,'When selected, this file supplies the original query instead of the fields above. The entered API key is used for access.')+
       '<label class="checkline span-all"><input type="checkbox" name="resume">Resume this source acquisition from its retained checkpoint</label>'+
       '<p class="span-all">All native table pages are retained through the terminal page, including nested donation impact links and later relations.</p><div class="actions span-all"><button class="primary">Capture original registry</button></div></form>'+
     '<form class="panel grid" data-form="capture-ledger"><h2 class="span-all">Stellar ledger edition</h2>'+
@@ -338,6 +348,7 @@ function capture(){
       field('First event ledger · inclusive','startLedger','','text')+field('Last event ledger · exclusive','endLedger','','text')+
       '</div></details><label class="checkline span-all"><input type="checkbox" name="resume">Resume this source acquisition from its retained checkpoint</label>'+
       '<p class="span-all">The acquisition retains original receipt hashes, native donation calls, observed provider transfers and their full transaction metadata. Historical states remain separate from current getter observations.</p>'+
+      field('Original complete capture options JSON · optional','captureOptionsFile','','file',false,'Use the same original options for a historical checkpoint, including retained ledger sources and exact source boundaries.')+
       '<div class="actions span-all"><button class="primary">Capture original ledger</button></div></form>';
 }
 async function render(){
@@ -487,6 +498,11 @@ document.addEventListener('submit',event=>{
       message('Independent editable workspace received.');
       main.insertAdjacentHTML('afterbegin','<section class="panel"><h2>Received workspace is ready</h2><a class="button" href="'+h(ready.url)+'" target="_blank" rel="noopener">Open the received workspace</a><p>'+h(ready.directory)+'</p></section>');return;
     }
+    if(type==='checkpoint-import'){
+      const source=JSON.parse(await data.get('checkpointFile').text());
+      await api.importCheckpoint(value.kind,source,{revision:state.revision});
+      await refresh();message('Original checkpoint received. Continue with the same capture options and Resume.');return;
+    }
     if(type==='capture-registry'||type==='capture-ledger'){
       const kind=type==='capture-registry'?'registry':'ledger',input={resume:data.has('resume')};
       if(kind==='registry')Object.assign(input,{apiKey:value.apiKey,baseUrl:value.baseUrl,organizationId:value.organizationId||null});
@@ -494,6 +510,14 @@ document.addEventListener('submit',event=>{
         for(const key of ['network','contractId','registryEditionId','rpcUrl','horizonUrl','archiveRpcUrl','fromDate','beforeDate','startLedger','endLedger'])if(value[key])input[key]=value[key];
         input.transactionHashes=(value.transactionHashes||'').split(/[\s,]+/).filter(Boolean);
         if(value.accounts)input.accounts=value.accounts.split(/[\s,]+/).filter(Boolean);
+      }
+      const optionsFile=data.get('captureOptionsFile');
+      if(optionsFile?.size){
+        const original=JSON.parse(await optionsFile.text());
+        if(!original||typeof original!=='object'||Array.isArray(original))throw new Error('Choose the complete original capture options JSON.');
+        for(const key of Object.keys(input))delete input[key];
+        Object.assign(input,original,{resume:data.has('resume')});
+        if(kind==='registry'&&value.apiKey)input.apiKey=value.apiKey;
       }
       await api.capture(kind,input,value.label,{revision:state.revision});
       if(form.elements.apiKey)form.elements.apiKey.value='';

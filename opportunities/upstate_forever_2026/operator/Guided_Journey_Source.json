@@ -4,28 +4,28 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 18410,
-      "sha256": "d26ec75243ac872e62ee546173a41caaecb66dff931714eb2138a940e86a01cf"
+      "bytes": 19265,
+      "sha256": "9f48a87fa421dcc1340f889aedc6c5ca7c02622dec033426fdad2729c8ef8fb9"
     },
     "operator/Guided_Journey_Integration.json": {
       "bytes": 11712,
       "sha256": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b"
     },
     "operator/extensions/guided-journey.json": {
-      "bytes": 1382,
-      "sha256": "081005d323f5c521227f030fbaa5795d2b965591b3c0a071e7ac361df939644d"
+      "bytes": 1405,
+      "sha256": "2755b6dcd057097d980d85fa186fdc7d560a8bcf45678d56052bb9fe7f448734"
     },
     "operator/web/journey.mjs": {
-      "bytes": 65167,
-      "sha256": "6597690150bd4ebedb43a94469d404bd7ce9fc73acfc721d6b7ef6644ae9995e"
+      "bytes": 70413,
+      "sha256": "50104cfae414b8cb68fc8d380f7f7898939b376fa761a48969efba148c45c059"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 23569,
-      "sha256": "734f536b425dd264657e5fbeb6427fb960d2f1ae9a43db672ef2d84b1fc6dd4e"
+      "bytes": 26934,
+      "sha256": "3a7dc94ad9e9cf575e21b71d4d07e53d6594e9fe24ec22ae70327d3d70d70ae5"
     }
   },
   "source_context": {
@@ -44,6 +44,12 @@
       "operation_id": "ES-9960",
       "source_head": "b1e87539dcf820b7617fa9d6cae66e0395c1d3c6",
       "route": "Saved guided view → complete project → receiving workspace → original task resumption"
+    },
+    "calibration_review": {
+      "base_commit": "5f7f283b8a9f6a754df3918613e197cfc9a21959",
+      "selection": "calibration_review_id",
+      "route": "Original saved dossier → optional guided review → native saved view → project continuity",
+      "validation": "Current native session method composed by operator/install_calibration.py"
     }
   }
 }

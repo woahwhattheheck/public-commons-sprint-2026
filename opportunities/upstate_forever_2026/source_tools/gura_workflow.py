@@ -52,7 +52,7 @@ REQUIRED_SOURCE = (
     "source_tools/receive_gura.py", "source_tools/gura_comparison.py",
     "source_tools/gura_workflow.py", "model/workspace.py", "model/rasters.py",
     "model/compute_programme.py", "model/compute_programme_cli.py",
-    "model/scenario_decisions.py", "model/portable.py", "operator/server.py",
+    "model/scenario_decisions.py", "model/native_study.py", "model/portable.py", "operator/server.py",
 )
 GIS_MODULES = ("numpy", "rasterio", "fiona", "pyproj", "shapely")
 NATIVE_MODULES = ("natcap.invest", "osgeo.gdal", "pygeoprocessing")
@@ -732,7 +732,11 @@ def build_reference_report(args, receipt, plan, state, state_path):
         raise ValueError("Complete the retained original reference before producing its annual totals")
     selection = scenario_decisions.select_cohort(
         workspace, original["id"], alternative_run_ids=[],
-        title=receipt["study"] + " | original annual watershed totals", zones=plan["zones"])
+        title=receipt["study"] + " | original annual watershed totals", zones=plan["zones"],
+        delivery_mode="native_study", native_study={
+            "title": plan["study"], "purpose": plan["purpose"],
+            "reference": plan.get("source_reference"),
+        })
     state.update(phase="original annual watershed totals", updated_at=now())
     atomic_json(state_path, state)
 

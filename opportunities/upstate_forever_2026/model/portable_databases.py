@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextlib import closing, contextmanager
 from pathlib import Path
 import hashlib
+import re
 import sqlite3
 import stat
 import tempfile
@@ -24,7 +25,11 @@ SIDECARS = ("-wal", "-shm", "-journal")
 
 
 def _state_database(name, path):
-    return name in MUTABLE_DATABASE_MEMBERS
+    """Recognize only original application-owned mutable database members."""
+    return isinstance(name, str) and (
+        name in MUTABLE_DATABASE_MEMBERS
+        or re.fullmatch(r"workspace/source-refreshes/[0-9a-f]{64}/state\.sqlite3", name) is not None
+    )
 
 
 def _identity(path):

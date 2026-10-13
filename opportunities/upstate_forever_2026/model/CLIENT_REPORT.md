@@ -45,7 +45,7 @@ Saved releases reopen with their retained choices. **Revise this selection** cre
 
 ## Observed water-quality context and receiving waters
 
-Import the complete original observed-report source through its supplied native installer. In the atlas **Source context** step, enable **Observed water-quality context** and choose the imported scientific report document. The selector lists editions carrying the original report schema. The report retains the measured concentrations, dated flow context, reported discharge quantities and four original scientific figures alongside the annual native-model results. The same source selection and numeric figure specifications drive PDF, offline HTML, Markdown and structured report data.
+Import the complete original observed-report source through its supplied native installer. In the atlas **Source context** step, enable **Observed water-quality context** and choose the imported scientific report document. The selector lists editions carrying the original report schema. The report retains the measured concentrations, dated flow context, reported discharge quantities and the figures declared by the selected original source recipe alongside the annual native-model results. The same source selection and numeric figure specifications drive PDF, offline HTML, Markdown and structured report data.
 
 Receiving-water tables show baseline and alternative annual exports over the same valid cells. They preserve each original receiving-area identifier and source-feature cohort. Geometric contribution area, total selected pixel area and each quantity's valid modeled support are recorded separately. Long source-feature cohorts continue across table rows without dropping IDs. Working-material links include every retained receiving-water asset.
 
@@ -142,3 +142,23 @@ The first rendered report links to `working/scientific-workspace.zip`. The actua
 Select the existing native-study delivery mode for an original study such as Gura. Its title, purpose, reference, reporting polygon, model domain, biophysical table and native grid are retained with the release. The scientific report and client companion use that study context. The client map guide counts the five native-study families and any optional source-water families actually selected; the regional mode retains its seven RFP families and original RFP references. Native-study PDF, HTML and Markdown identify the original study rather than presenting the regional RFP as its contract.
 
 Both reports preserve the same completed runs, annual-mass artifacts and paired valid support. The companion links to the scientific report and selected economic or observed materials without changing their quantities. The final archive captures both complete report sets, the original grid record, the offline atlas navigator and delivery manifest.
+
+## Receive the completed client delivery
+
+The maintained `source_tools/receive_client_delivery.py` entry continues the original client receiving operation. It uses the selected completed delivery or its received snapshot, applies the explicitly selected compiler, and checks the four client formats, map-file index, package assets and original working-archive descriptors. It reuses the retained native run cohort.
+
+After the existing Gura study driver reaches its completed checkpoint, use the same application, interpreter and Workspace from that operation:
+
+```sh
+"$GIS_PYTHON" -B "$APPLICATION/source_tools/receive_client_delivery.py" \
+  --application "$APPLICATION" --workspace "$GURA_WORKSPACE" \
+  --native-study-record "$GURA_WORKSPACE/gura-receiving/gura-native-study-state.json" \
+  --expected-report-edition 2026-10-13-client-report-9 \
+  --expected-compiler-sha256 0c6fc153c8279ac6fdce7b73f45b2ca2d6fbc55f573a26d34ecd48e55ea78c63
+```
+
+The edition and compiler hash above identify the current client edition9 on main d6169e5c, which preserves the complete PR3104 companion and adds producing-model execution provenance. The receiver checks those selected bytes before importing the compiler. Preserve the current complete application, including the report-context handoff from PR3150 and its Gura callers, when continuing that source edition.
+
+`--native-study-record` reads the completed driver's actual delivery ID, verifies its output directory, saved source report and ordered native cohort against the same Workspace, and returns the checkpoint's original byte count and SHA256 with the receiving result. This removes delivery-ID copying from the native job. The existing explicit `--delivery-id ORIGINAL_ID` route remains available for any completed release or restored `received_snapshot`; the two selectors are mutually exclusive.
+
+The result contains the selected and resulting delivery IDs, original grid, native run IDs, map-file count, absolute client report paths and archive descriptors. Keep this result with the existing operation output, then use the maintained Workspace archive receiving and operator preview routes to reopen the report and its original GIS files. The archive inventory check reads `delivery.files` from the actual portable manifest, retaining the original roles and hashes.

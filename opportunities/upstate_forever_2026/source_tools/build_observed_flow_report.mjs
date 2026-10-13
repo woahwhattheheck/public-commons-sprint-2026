@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {parseCsv,assessObservedContext} from './observed_context.mjs';
 import {combineObservedFlow} from './observed_flow_inputs.mjs';
 import {renderFlowReport} from './observed_flow_report.mjs';
+import {buildFlowGeography} from './observed_flow_map.mjs';
 
 if(process.argv.length>3)throw Error('Usage: node source_tools/build_observed_flow_report.mjs [APPLICATION_ROOT]');
 const application=resolve(process.argv[2]||join(dirname(fileURLToPath(import.meta.url)),'..'));
@@ -25,7 +26,16 @@ const dmrRoot=join(application,'observations/eighteenmile_2023/npdes/flow_contex
 const dmrSummary=JSON.parse(await readFile(join(dmrRoot,'derived/summary.json'),'utf8'));
 const monthly=parseCsv(await readFile(join(dmrRoot,'derived/upstream_monthly.csv'),'utf8'));
 const dmr={annual:dmrSummary.annual,aggregate:monthly};
-const text=renderFlowReport({...combined,dmr});
+const geographySources=[],geographyInput={},geographyPaths={
+ collection:expansion+'nldi/derived/upstream-whole-catchments.geojson',
+ bindings:expansion+'nldi/derived/station-basin-bindings.json',
+ applicability:expansion+'nldi/derived/gauge-catchment-applicability.json',
+ eighteenmilePoint:'observations/observed_hydrology_20261013/original/eighteenmile_nldi_reference.json',
+ eighteenmileBasin:'observations/observed_hydrology_20261013/original/eighteenmile_nldi_whole_basin.geojson'
+};
+for(const [role,path]of Object.entries(geographyPaths))geographyInput[role]=JSON.parse(await retained(path,role,geographySources));
+const geography=buildFlowGeography({...geographyInput,sourceInputs:geographySources});
+const text=renderFlowReport({...combined,dmr,geography});
 const columns=Object.keys(combined.quality[0]),quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
 const csv=[columns,...combined.quality.map(row=>columns.map(k=>row[k]))].map(row=>row.map(quote).join(',')).join('\n')+'\n';
 const outputRoot=join(application,'observations/calibration_context_20261013'),outputs=[];
@@ -35,4 +45,4 @@ for(const [name,body]of [['observed-flow-report.html',text],['combined-flow-cont
  await writeFile(temporary,body,{encoding:'utf8',flag:'wx'});await rename(temporary,output);
  outputs.push({path:output,bytes:Buffer.byteLength(body),sha256:createHash('sha256').update(body).digest('hex')});
 }
-process.stdout.write(JSON.stringify({outputs,gauges:combined.summary.gauge_count,daily_records:combined.daily.length,numeric_daily_records:combined.summary.numeric_daily_records,study_dates:input.dates.length})+'\n');
+process.stdout.write(JSON.stringify({outputs,gauges:combined.summary.gauge_count,daily_records:combined.daily.length,numeric_daily_records:combined.summary.numeric_daily_records,study_dates:input.dates.length,geographic_basins:geography.basins.length,source_point_catchment_pairs:geography.point_catchment_pair_count})+'\n');

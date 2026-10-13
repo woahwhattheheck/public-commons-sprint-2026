@@ -49,20 +49,23 @@ def main(argv=None):
     for name in ["discover","acquire"]:command(name).add_argument("--input",required=True)
     for name in ["advance","pause","resume","capture-source"]:
         command(name).add_argument("--operation",required=True)
+    command("correction-worksheet-document").add_argument("--id",required=True)
+    c=command("correction-worksheet-receive");c.add_argument("--import-id",required=True);c.add_argument("--file",required=True)
     c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
     c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
-    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return","correction"],required=True);c.add_argument("--id",required=True)
-    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections"])
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return","correction","correction-worksheet"],required=True);c.add_argument("--id",required=True)
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews"])
     c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
     c.add_argument("--severity");c.add_argument("--code");c.add_argument("--finding-source");c.add_argument("--finding-record")
     c.add_argument("--rule");c.add_argument("--target-group");c.add_argument("--source-id");c.add_argument("--record-id");c.add_argument("--outcome");c.add_argument("--candidate")
+    c.add_argument("--row-key")
     c.add_argument("--row-kind",choices=["plan-field","step-field","step-presence","step-context","step-command","step-progress","step-order"])
     c.add_argument("--conflict",choices=["true","false"]);c.add_argument("--unresolved",choices=["true","false"])
     c=command("conformance-finding");c.add_argument("--assessment",required=True);c.add_argument("--finding",required=True)
     c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
     c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
-    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return","correction"])
-    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections"])
+    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return","correction","correction-worksheet"])
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews"])
     c.add_argument("--id");c.add_argument("--record");c.add_argument("--member");c.add_argument("--out",required=True)
     for name in ["receive-workspace","receive-handoff"]:command(name).add_argument("--file",required=True)
     args=p.parse_args(argv)
@@ -73,6 +76,8 @@ def main(argv=None):
     with Workspace(root,create=args.command in {"init","receive-workspace","receive-handoff"}and not root.exists(),credentials_file=args.credentials_file)as ws:
         name=args.command
         if name in {"init","state"}:result=ws.state()
+        elif name=="correction-worksheet-document":result=ws.directory_correction_worksheet_document(args.id)
+        elif name=="correction-worksheet-receive":result=ws.import_directory_correction_worksheet_return(args.import_id,Path(args.file).expanduser().absolute())
         elif name=="operating-plan-catalog":result=ws.directory_operating_catalogue()
         elif name=="operating-plan-draft":result=ws.directory_operating_plan_draft(args.id,args.revision)
         elif name in {"operating-plan-document","operating-plan-input","operating-plan-basis"}:
@@ -99,7 +104,10 @@ def main(argv=None):
             kind="acquisitions"if args.kind=="operations"else args.kind
             result=ws.directory_operation(args.id)if kind=="acquisitions"and args.id else ws.directory_record(kind,args.id)if args.id else ws.directory_records(kind,args.offset,args.limit,args.query)
         elif name=="rows":
-            if args.kind=="correction":
+            if args.kind=="correction-worksheet":
+                if not args.collection:p.error("Worksheet rows require their exact --collection")
+                result=ws.directory_correction_worksheet_rows(args.collection,args.id,args.offset,args.limit,row_key=args.row_key,state=args.state)
+            elif args.kind=="correction":
                 if not args.collection:p.error("Correction rows require their exact --collection")
                 result=ws.directory_correction_rows(args.collection,args.id,args.offset,args.limit)
             elif args.kind=="source":result=ws.directory_source_rows(args.id,args.offset,args.limit,args.table,args.query)
@@ -124,7 +132,10 @@ def main(argv=None):
             if args.kind=="workspace":result=ws.export_workspace(args.out)
             elif args.kind=="handoff":result=ws.export_directory_handoff(args.id,args.out)
             else:
-                if args.kind=="correction":
+                if args.kind=="correction-worksheet":
+                    if not args.collection:p.error("Worksheet files require their exact --collection")
+                    path,d=ws.directory_correction_worksheet_file(args.collection,args.id,args.member or "input")
+                elif args.kind=="correction":
                     if not args.collection:p.error("Correction files require their exact --collection")
                     path,d=ws.directory_correction_file(args.collection,args.id,args.member or("input"if args.collection=="correctionPlans"else"changes"))
                 elif args.kind.startswith("conformance-"):

@@ -104,13 +104,16 @@ class Programmes:
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
         if action == "compute.programme.pair-completion":
-            result = manager.create_pair_completion(key, expected_preview_id=payload.get("expected_preview_id"))
+            result = self.operator.native_jobs.create_pair_completion(
+                task, manager, key, expected_preview_id=payload.get("expected_preview_id"))
             if payload.get("run") is not True:
                 return result
             key = result["id"]
             action = "compute.programme.run"
         if action == "compute.programme.run":
-            result = manager.resume(key, only_runs=payload.get("only_runs"))
+            # ES-SUPERVISION-20261012 programme execution
+            result = self.operator.native_jobs.execute_programme(
+                task, manager, key, only_runs=payload.get("only_runs"))
             # Preserve completed and partial native results if later summary
             # or report publication fails in this same queued task.
             task["result"] = result

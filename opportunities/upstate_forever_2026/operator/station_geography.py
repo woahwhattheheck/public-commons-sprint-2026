@@ -52,7 +52,8 @@ class StationGeography:
     def _microbial_catalog(self, ws):
         from model import utility_microbial_study as microbial
         installed = microbial.SOURCE_DIRECTORY / "source-manifest.json"
-        retained = any(row.get("original_manifest", {}).get("sha256") == microbial.MANIFEST_SHA256
+        source_editions = getattr(microbial, "SOURCE_EDITIONS", {microbial.MANIFEST_SHA256: None})
+        retained = any(row.get("original_manifest", {}).get("sha256") in source_editions
                        for row in ws._list("sources"))
         return {"id": "utility-microbial", "title": microbial.TITLE,
                 "available": installed.is_file() or retained,
