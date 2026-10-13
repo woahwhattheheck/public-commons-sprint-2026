@@ -1021,6 +1021,71 @@ export async function runInstalledFlowableJourney({
     }
     mark('Native installed CMMN customer continuation',completedInstalledCase);
 
+    // Continue the complete authored process programme on these same original installed owners.
+    const [{buildFlowableProcessProgramme},{receiveFlowableProgramme}]=await Promise.all([
+      load(SDK+'workspace/process-programme.mjs'),load(SDK+'workspace/native-programme-receiving.mjs')]);
+    const programmeReferencePath=join(sourceRoot,SDK+'workspace/examples/process-commissioning.programme.json');
+    const programmeReferenceFile=await checkedFile(programmeReferencePath);
+    const programmeReferenceBytes=await readFile(programmeReferencePath);
+    need(programmeReferenceBytes.length===programmeReferenceFile.bytes&&hash(programmeReferenceBytes)===programmeReferenceFile.sha256,
+      'Read the same complete installed process programme reference.');
+    const programmeReference=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(programmeReferenceBytes));
+    need(programmeReference.schema==='stellar-forge.flowable-programme.v1'&&programmeReference.steps.length===29&&
+      programmeReference.sources.length===10,'Use all twenty-nine original operations and ten complete source members.');
+    const programmeMembers=Object.create(null),programmeInputs=Object.create(null);
+    for(const member of programmeReference.sources){
+      need(typeof member.name==='string'&&!Object.hasOwn(programmeMembers,member.name),
+        'Every original programme member has one complete retained source.');
+      const inputMatch=/^inputs\/(sf_grant_review|sf_customer_onboarding|sf_vendor_approval)\.json$/.exec(member.name);
+      need(inputMatch||/^(?:process-catalog\.json|(?:grant-review|customer-onboarding|vendor-approval)-v[12]\.bpmn20\.xml)$/.test(member.name),
+        'Receive only the original authored catalogue, six BPMN files and three typed inputs.');
+      const path=join(sourceRoot,SDK+(inputMatch?'workspace/examples/process-inputs/'+inputMatch[1]+'.json':'examples/'+member.name));
+      await checkedFile(path,member);
+      const bytes=await readFile(path);
+      need(bytes.length===member.bytes&&hash(bytes)===member.sha256&&bytes.toString('base64')===member.contentBase64,
+        'The installed original member differs from the complete programme: '+member.name);
+      programmeMembers[member.name]={...member,text:new TextDecoder('utf-8',{fatal:true}).decode(bytes)};
+      if(inputMatch)programmeInputs[inputMatch[1]]=member.name;
+    }
+    need(typeof configuration.adminUserId==='string'&&configuration.adminUserId&&
+      typeof reviewerUserId==='string'&&reviewerUserId&&reviewerUserId===configuration.reviewerUserId,
+      'Select the existing native administrator and reviewer created by the original host.');
+    const processProgrammeConnection=senderStatus.connections.find(item=>item.connection.id===configuration.connection.id);
+    need(processProgrammeConnection&&processProgrammeConnection.connection.baseUrl===configuration.connection.baseUrl,
+      'The programme uses the original saved process REST connection.');
+    const processProgramme=buildFlowableProcessProgramme({
+      catalogText:programmeMembers['process-catalog.json'].text,members:programmeMembers,inputs:programmeInputs,
+      operation:'NATIVE-PROCESS-PROGRAMME-'+hash(configuration.operation).slice(0,24),
+      roles:{operator:configuration.adminUserId,reviewer:reviewerUserId},
+      familyKeys:['sf_grant_review','sf_customer_onboarding','sf_vendor_approval'],
+      migrateKeys:['sf_grant_review','sf_vendor_approval'],delegationKey:'sf_customer_onboarding'});
+    need(processProgramme.steps.length===29&&processProgramme.sources.length===10,
+      'The same native source selection must retain the complete three-family process course.');
+    const programmeText=JSON.stringify(processProgramme,null,2)+'\n';
+    const programmeInput=await memo('process-programme-input',{
+      requestId:request('process-programme'),connectionId:processProgrammeConnection.id,
+      referenceSha256:programmeReferenceFile.sha256,programmeSha256:hash(programmeText)},
+      async()=>({requestId:request('process-programme'),connectionId:processProgrammeConnection.id,programmeText}));
+    await publish('process-commissioning.programme.json',processProgramme);
+    report.files.push(await checkedFile(join(directory,'process-commissioning.programme.json'),
+      {bytes:Buffer.byteLength(programmeText),sha256:hash(programmeText)}));
+    if(!state.processProgrammeReceiving){state.processProgrammeReceiving={};await save();}
+    const programmeReceiving=await receiveFlowableProgramme({
+      client:sender,receiver,programmeInput,archivePath:join(directory,'complete-process-programme-workspace.ndjson'),
+      state:state.processProgrammeReceiving,retain:async value=>{state.processProgrammeReceiving=value;await save();},signal});
+    const completedProgramme=await sender.readProgramme({id:programmeReceiving.programme});
+    need(programmeReceiving.steps===29&&completedProgramme.connectionId===processProgrammeConnection.id&&
+      completedProgramme.progress.state==='COMPLETED'&&completedProgramme.progress.total===29&&
+      completedProgramme.progress.confirmed===29&&completedProgramme.progress.rows.every(row=>row.state==='CONFIRMED')&&
+      completedProgramme.programmeSha256===hash(programmeText)&&
+      completedProgramme.basisSha256===programmeReceiving.basisSha256,
+      'Every original programme operation must be confirmed on the same native process connection.');
+    report.files.push(await checkedFile(programmeReceiving.download.path,programmeReceiving.download));
+    report.processProgramme={...programmeReceiving,record:completedProgramme.record,
+      sourceReference:programmeReferenceFile,connectionId:processProgrammeConnection.id,
+      nativeRoles:{operator:configuration.adminUserId,reviewer:reviewerUserId},sources:completedProgramme.sources};
+    mark('Complete original BPMN programme and independent receiving',report.processProgramme);
+
     const finalDecisionDelivery=await sender.exportWorkspace({requestId:request('export-complete-decision-continuation'),
       label:'Complete original process and decision operating history'});
     const finalDecisionExport=await mcp.tool('merchant_flowable_download',{workspace:'sender',kind:'delivery',id:finalDecisionDelivery.id});
@@ -1048,10 +1113,22 @@ export async function runInstalledFlowableJourney({
       receiving:ref(finalDecisionReopened),file:finalDecisionReceived.file,records:await compareCore(sender,receiver),
       casePortfolio:completedInstalledCase.portfolio,caseInstanceId:completedInstalledCase.caseInstanceId});
 
+
+    const coldProgramme=await receiver.readProgramme({id:programmeReceiving.programme});
+    need(coldProgramme.record.sha256===completedProgramme.record.sha256&&
+      coldProgramme.record.revision===completedProgramme.record.revision&&
+      coldProgramme.progress.state==='COMPLETED'&&coldProgramme.progress.confirmed===29&&
+      coldProgramme.programmeSha256===completedProgramme.programmeSha256&&
+      coldProgramme.basisSha256===completedProgramme.basisSha256,
+      'Cold final receiving preserves the full original programme and every selected native outcome.');
+    report.processProgramme.coldReceiving={workspaceId:(await receiver.status()).workspaceId,
+      record:coldProgramme.record,basisSha256:coldProgramme.basisSha256,steps:coldProgramme.progress.total};
+
     report.completeWorkspace={delivery:ref(finalDecisionDelivery),receiving:ref(finalDecisionReopened),
       file:finalDecisionReceived.file,workspaceId:(await receiver.status()).workspaceId};
-    need(CORE_KINDS.length===14 && completedInstalledCase?.work?.historicCase?.state==='completed',
-      'The final complete customer receiving includes all fourteen native process, decision and case record kinds.');
+    need(CORE_KINDS.length===15 && CORE_KINDS.includes('programme') &&
+      completedInstalledCase?.work?.historicCase?.state==='completed' && coldProgramme.progress.state==='COMPLETED',
+      'The final complete customer receiving includes all fifteen process, decision, case and programme record kinds.');
     preparedReport=report;
   } catch(error) {errors.push(error);}
   finally {
