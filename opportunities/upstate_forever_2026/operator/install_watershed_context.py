@@ -41,6 +41,9 @@ OPTIONAL = (
     "source/water_context/20261013/full-domain-water-context.json",
     "source/water_context/20261013/scdes-domain217-source-coverage.json",
     "source_tools/WATERSHED_SOURCE_IMPORT.md",
+    "source_tools/NATIVE_NETWORK_SOURCE.md",
+    "source_tools/prepare_watershed_manifest.py",
+    "source_tools/prepare_watershed_network.py",
 )
 
 

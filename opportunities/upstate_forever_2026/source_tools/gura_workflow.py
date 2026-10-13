@@ -223,6 +223,85 @@ def _native_selection(args, grid=None):
     return retained["resolution_m"], retained["upstream_buffer_m"]
 
 
+def _native_header(dataset):
+    """Read the original north-up metre grid without preparing another edition."""
+    import math
+    crs, affine = dataset.crs, dataset.transform
+    if (not crs or not crs.is_projected
+            or str(crs.linear_units).lower() not in ("metre", "meter", "metres", "meters")):
+        raise ValueError("The original Gura land-cover grid must be projected in metres")
+    x, y = map(float, dataset.res)
+    transform = [float(value) for value in list(affine)[:6]]
+    if (not all(math.isfinite(value) for value in [x, y, *transform])
+            or x <= 0 or y <= 0
+            or not math.isclose(x, y, rel_tol=1e-9, abs_tol=1e-8)
+            or not math.isclose(affine.b, 0.0, abs_tol=1e-10)
+            or not math.isclose(affine.d, 0.0, abs_tol=1e-10)
+            or affine.a <= 0 or affine.e >= 0
+            or dataset.width <= 0 or dataset.height <= 0):
+        raise ValueError("The original Gura land-cover grid must retain finite square north-up cells")
+    area = abs(affine.a * affine.e - affine.b * affine.d) / 10000.0
+    return {"resolution_m": x, "pixel_area_ha": area, "source_crs": str(crs),
+            "source_transform": transform, "source_resolution_m": [x, y],
+            "width": dataset.width, "height": dataset.height}
+
+
+def _verify_retained_native_header(ws, collection, grid, receipt):
+    """Compare retained source headers without replacing the saved model grid."""
+    import rasterio
+    reference, source_entry = ws.source_file(
+        collection["id"], grid["spec"]["input_sources"]["NLCD"])
+    with rasterio.open(reference) as dataset:
+        actual = _native_header(dataset)
+        actual_crs = dataset.crs
+
+    def numbers(label, recorded, observed):
+        if not isinstance(recorded, (tuple, list)) or len(recorded) != len(observed):
+            raise ValueError("The retained Gura " + label + " has another shape")
+        for before, after in zip(recorded, observed):
+            value = float(before)
+            if not math.isfinite(value) or not math.isclose(
+                    value, float(after), rel_tol=1e-9, abs_tol=1e-8):
+                raise ValueError("The retained Gura " + label + " differs from its source raster")
+
+    definition = grid["grid"]
+    if rasterio.crs.CRS.from_user_input(definition["crs"]) != actual_crs:
+        raise ValueError("The saved Gura grid and retained source use different coordinate systems")
+    normalization = definition.get("reference_normalization", {})
+    for key, actual_key in (("source_transform", "source_transform"),
+                            ("source_pixel_size_m", "source_resolution_m")):
+        if key in normalization:
+            numbers(key, normalization[key], actual[actual_key])
+    for key, actual_key in (("source_width", "width"), ("source_height", "height")):
+        if key in normalization and normalization[key] != actual[actual_key]:
+            raise ValueError("The retained Gura source dimensions differ from the saved grid")
+    source_identity = receipt.get("raster_identities", {}).get("NLCD", {})
+    for key, actual_key in (("transform", "source_transform"),
+                            ("resolution", "source_resolution_m")):
+        if key in source_identity:
+            numbers(key, source_identity[key], actual[actual_key])
+    for key in ("width", "height"):
+        if key in source_identity and source_identity[key] != actual[key]:
+            raise ValueError("The original Gura receiving record has another source raster size")
+    if source_identity.get("crs") and rasterio.crs.CRS.from_user_input(
+            source_identity["crs"]) != actual_crs:
+        raise ValueError("The original Gura receiving record has another source coordinate system")
+    native = receipt["native_grid"]
+    for key in ("source_transform", "source_resolution_m"):
+        if key in native:
+            numbers(key, native[key], actual[key])
+    if native.get("source_crs") and rasterio.crs.CRS.from_user_input(native["source_crs"]) != actual_crs:
+        raise ValueError("The retained native source coordinate system differs from its receipt")
+    if "source_pixel_area_ha" in native:
+        numbers("source cell area", [native["source_pixel_area_ha"]], [actual["pixel_area_ha"]])
+    # A selected model grid may be a separate prepared edition. Its cell area
+    # is bound to that saved resolution, independently of source size/context.
+    grid_area = float(definition["resolution_m"]) ** 2 / 10000.0
+    for label, record in (("model grid", definition), ("receiving grid", native)):
+        if "pixel_area_ha" in record:
+            numbers(label + " cell area", [record["pixel_area_ha"]], [grid_area])
+
+
 def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, upstream_buffer_m=None):
     from model.common import file_digest, selected_models
     from source_tools.gura_comparison import _context
@@ -248,6 +327,7 @@ def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, u
                                else getattr(args, "expected_resolution_m", None)),
         upstream_buffer_m=(upstream_buffer_m if upstream_buffer_m is not None
                            else getattr(args, "upstream_buffer_m", None))), grid)
+    _verify_retained_native_header(ws, collection, grid, receipt)
     source_ids = receipt.get("source_ids", {})
     for model in selected_models(receipt):
         role = model + "_archive"
@@ -274,6 +354,48 @@ def capsule_directory(workspace):
     return workspace / "gura-workflow"
 
 
+def _recover_original_receiving(capsule, source_directory, workspace, saved_plan):
+    """Find or reproduce the exact original receipt authenticated by its plan."""
+    from model.common import atomic_bytes, canonical
+    expected = saved_plan["receiving"]
+    expected_size = expected["bytes"]
+    expected_digest = expected["sha256"]
+    if (not isinstance(expected_size, int) or isinstance(expected_size, bool)
+            or expected_size < 1 or not isinstance(expected_digest, str)
+            or len(expected_digest) != 64
+            or any(character not in "0123456789abcdef" for character in expected_digest)):
+        raise ValueError("The saved comparison plan lacks its exact receiving identity")
+    candidates = [capsule / "original-receiving.json", source_directory / "receiving.json"]
+    candidates.extend(sorted((capsule / "receiving-locations").glob("*.json")))
+    candidates.extend(sorted((source_directory / "receiving-locations").glob("*.json")))
+    candidates.extend(sorted((workspace.root / "gura-comparisons").glob("*/original-receiving.json")))
+    captured = []
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        raw = candidate.read_bytes()
+        if len(raw) == expected_size and hashlib.sha256(raw).hexdigest() == expected_digest:
+            return candidate
+        captured.append((candidate, raw))
+    # The old workflow writer used pretty JSON while receive_gura used common
+    # canonical JSON plus LF. Recover only bytes that reproduce the saved hash;
+    # neither a plan identity nor a receipt field is changed to fit the copy.
+    for candidate, raw in captured:
+        try:
+            document = json.loads(raw.decode("utf-8"))
+            restored = canonical(document) + b"\n"
+        except (UnicodeError, ValueError, TypeError):
+            continue
+        if len(restored) != expected_size or hashlib.sha256(restored).hexdigest() != expected_digest:
+            continue
+        destination = capsule / "receiving-records" / (expected_digest + ".json")
+        atomic_bytes(destination, restored, immutable=True)
+        event("original_receiving_bytes_recovered", source=str(candidate),
+              receiving=str(destination), bytes=expected_size, sha256=expected_digest)
+        return destination
+    raise ValueError("The retained copies do not reproduce the original receipt selected by the comparison plan")
+
+
 def restore_workflow_paths(args):
     """Reopen a copied workflow without changing its original receipt bytes."""
     from model.common import atomic_bytes
@@ -296,16 +418,7 @@ def restore_workflow_paths(args):
         raise ValueError("The copied Gura workflow inputs differ from their retained source selection")
     plan_path = capsule / "comparison-plan.json"
     saved_plan = read_json(plan_path)
-    expected_receipt = saved_plan["receiving"]["sha256"]
-    if sha256(original_path) != expected_receipt:
-        # The older capsule writer reformatted JSON. Recover the exact original
-        # record already retained by the completed or interrupted comparison.
-        candidates = [args.source_directory / "receiving.json"]
-        candidates.extend((ws.root / "gura-comparisons").glob("*/original-receiving.json"))
-        original_path = next((path for path in candidates
-                              if path.is_file() and sha256(path) == expected_receipt), None)
-        if original_path is None:
-            raise ValueError("Restore the original receipt retained with the comparison plan")
+    original_path = _recover_original_receiving(capsule, args.source_directory, ws, saved_plan)
     receipt = read_json(original_path)
     collection = ws._get("sources", receipt["source_collection_id"])
     if collection["original_manifest"]["sha256"] != receipt["source_manifest_sha256"]:

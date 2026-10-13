@@ -470,9 +470,21 @@ export function attachPairedEnsembles(context) {
     detailId=id;
     const s=detail.selection||{},summaries=detail.summary||{},records=detail.reports?.files||[];
     const native=detail.native_context||{},nativeRuns=new Set(native.available_run_ids||[]);
-    const nativeRun=id=>nativeRuns.has(id)?action('native-run',short(id),id):'<code>'+esc(id||'Source reference in retained analysis')+'</code>'; 
+    const sourceCell=(row,side)=>{
+      const id=row[side+'_run_id'];
+      let html=id?(nativeRuns.has(id)?action('native-run',short(id),id):'<code>'+esc(id)+'</code>'):'';
+      for(const [quantity,pair] of Object.entries(row.rasters||{})){
+        const source=pair[side];if(!source)continue;
+        html+='<div><strong>'+esc(names[quantity]||quantity)+'</strong> · '+esc(pair.units||'')+'<br>'+number(source.bytes)+' bytes<br><code>'+esc(source.sha256||'Hash absent from original record')+'</code></div>';
+      }
+      return html||'Original source description retained below';
+    };
+    const sourceDescription=typeof s.input_description==='string'?s.input_description:JSON.stringify(s.input_description??'Source description absent from this edition');
     let html='<article class="pe-result"><h3>'+esc(s.title||short(id))+'</h3><p>'+esc(detail.state)+
       ' · '+number(s.selected_member_count)+' selected of '+number(s.planned_member_count)+' planned profiles.</p>'+
+      '<p><strong>Purpose:</strong> '+esc(s.purpose||'Purpose absent from this edition')+'</p>'+
+      '<p><strong>Retained input kind:</strong> '+esc(s.input_kind||'Input kind absent from this edition')+'</p>'+
+      '<p><strong>Original source description:</strong> '+esc(sourceDescription)+'</p>'+
       '<p><strong>Positive reduction = baseline − alternative.</strong> '+esc(supportNames[s.support]||s.support)+'.</p>'+
       (detail.error?'<div class="pe-notice" role="alert">'+esc(detail.error.message||JSON.stringify(detail.error))+'</div>':'')+
       '<div class="pe-actions">'+(detail._report_url?'<a href="'+esc(detail._report_url)+'" target="_blank" rel="noopener">Open full quantitative report</a>':'')+
@@ -496,11 +508,11 @@ export function attachPairedEnsembles(context) {
             [row.baseline_total_common_support,row.alternative_total_common_support,row.reduction_total_common_support,row.reduction_percent_common_support,row.paired_valid_cells].map(amount=>cell(number(amount))).join('')+'</tr>'))).join('')+'</details>';
     } else html+='<p>'+number(detail.tiles_complete||0)+' durable tiles are retained. The result record includes the current execution state.</p>';
     html+='<details><summary>Quantitative raster and report downloads ('+(detail._downloads||[]).length+')</summary><div class="pe-downloads">'+downloads(detail._downloads||[])+'</div></details>'+
-      '<details><summary>Original run pairs and source references</summary>'+
-      table(['Profile','Baseline native run','Alternative native run'],(s.members||[]).map(row=>'<tr>'+
-        '<th scope="row">'+esc(profileName(row.profile_id)||short(row.id))+'</th>'+
-        '<td>'+nativeRun(row.baseline_run_id)+'</td>'+
-        '<td>'+nativeRun(row.alternative_run_id)+'</td></tr>'))+
+      '<details><summary>Original member sources and references</summary>'+
+      table(['Member / profile','Baseline source','Alternative source'],(s.members||[]).map(row=>'<tr>'+
+        '<th scope="row">'+esc(profileName(row.profile_id)||row.id||'Member')+'</th>'+
+        '<td>'+sourceCell(row,'baseline')+'</td>'+
+        '<td>'+sourceCell(row,'alternative')+'</td></tr>'))+
       '<pre>'+esc(JSON.stringify({ensemble_id:id,grid:s.grid,source_references:s.source_references,
         quantiles:s.quantiles,quantile_method:s.quantile_method,improvement_thresholds:s.improvement_thresholds},null,2))+'</pre></details></article>';
     query('[data-pe-detail]').innerHTML=html;

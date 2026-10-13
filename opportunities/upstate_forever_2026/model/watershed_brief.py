@@ -15,7 +15,7 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v2"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v3"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
 
@@ -394,8 +394,8 @@ def render_selection_brief(selection):
     for key in ("priority", "state_area", "roles", "geometry"):
         if methods.get(key):
             lines.extend([_text(methods[key]), ""])
-    lines.extend(["## Original sources", "", *_source_links(list(selection.get("sources", []))
-                               + list(selection.get("supporting_source_references", []))), "",
+    lines.extend(["## Original sources", "", *_source_links(
+        list(selection.get("sources", [])) + list(selection.get("supporting_source_references", []))), "",
                   "## Saved selection identity", ""])
     identities = [
         ["Regional context", selection["context_id"]],
