@@ -75,7 +75,7 @@ class RegionalSoil(SourcePreparation):
         return workspace.root / "regional-soil" / identifier(task_id) / "operation.json"
 
     def _native_root(self, workspace, task_id):
-        return self.operator.root / "regional-soil" / identifier(workspace.project["id"]) / identifier(task_id)
+        return self.operator.root / "regional-soil" / str(workspace.project["id"]) / identifier(task_id)
 
     def _records(self, workspace):
         root = workspace.root / "regional-soil"
