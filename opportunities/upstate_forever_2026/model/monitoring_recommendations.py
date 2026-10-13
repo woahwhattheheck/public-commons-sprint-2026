@@ -680,25 +680,7 @@ def export_recommendations(workspace, *, recommendation_id, export_root=None):
                                     "files": len(files)})
 
 
-def main():
-    from .workspace import Workspace
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workspace", required=True)
-    parser.add_argument("action", choices=["catalog", "context", "preview", "prepare", "inspect", "design", "export"])
-    parser.add_argument("--request", type=Path)
-    parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
-    request = load_json(args.request) if args.request else {}
-    commands = {"catalog": catalog, "context": context, "preview": preview, "prepare": prepare,
-                "inspect": inspect, "design": design, "export": export_recommendations}
-    result = commands[args.action](Workspace(args.workspace), **request)
-    if args.output:
-        atomic_json(args.output, result)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-
-
-if __name__ == "__main__":
-    main()def verify_workspace(workspace):
+def verify_workspace(workspace):
     records = [p.stem for p in sorted((workspace.root / COLLECTION).glob("*.json"))]
     for identity in records:
         inspect(workspace, identity)
