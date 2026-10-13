@@ -26,12 +26,20 @@ def parser():
         ("grid-prepare", "Prepare the original 30 m alignment and source/reporting masks"),
         ("run-prepare", "Bind an immutable grid/profile/scenario selection"),
         ("delivery-build", "Build seven map families, report, GIS and native working handoff"),
+        ("community-table-import", "Import an original registered community table"),
+        ("community-plan-save", "Save an immutable community intervention plan"),
+        ("community-report-build", "Build the complete saved community report"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("selection", type=Path)
     for name in ("run", "run-inspect"):
         command = commands.add_parser(name)
         command.add_argument("run_id")
+    regional = commands.add_parser("regional-delivery",
+        help="Complete retained native models as maps, decision tables and an editable project")
+    regional.add_argument("model_receiving", type=Path)
+    regional.add_argument("--output", type=Path, required=True)
+    regional.add_argument("--receive-directory", type=Path)
     compare = commands.add_parser("compare-runs")
     compare.add_argument("run_ids", nargs="+", help="Baseline first, then completed alternatives")
     observation = commands.add_parser("observations-import")
@@ -62,6 +70,10 @@ def perform(args):
         manifest = inspect_archive(args.archive, verify=True)
         return {"schema": manifest["schema"], "project": manifest["project"],
                 "members": len(manifest["members"]), "selection": manifest["selection"], "bytes": "MATCH"}
+    if args.command == "regional-delivery":
+        from .regional_delivery import complete_delivery
+        return complete_delivery(args.model_receiving, workspace_path=args.workspace,
+                                 output=args.output, receive_directory=args.receive_directory)
     if not args.workspace:
         raise ValueError("--workspace is required for this operation")
     workspace = Workspace(args.workspace, create=args.command == "init",
@@ -70,7 +82,10 @@ def perform(args):
         return workspace.overview()
     operations = {"profile-save": workspace.save_profile, "scenario-save": workspace.save_scenario,
                   "grid-prepare": workspace.prepare_grid, "run-prepare": workspace.prepare_run,
-                  "delivery-build": workspace.build_delivery}
+                  "delivery-build": workspace.build_delivery,
+                  "community-table-import": workspace.import_community_table,
+                  "community-plan-save": workspace.save_community_plan,
+                  "community-report-build": workspace.build_community_report}
     if args.command in operations:
         return operations[args.command](read_json(args.selection))
     if args.command == "source-import":
