@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import sys
 
 APP = Path(__file__).resolve().parent.parent
@@ -194,11 +195,19 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.task_timeout_seconds <= 0:
         parser.error("Select a positive duration for observing each original task")
+    def stop(signum, _frame):
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        raise KeyboardInterrupt("Receiving-water owner interrupted by signal " + str(signum))
+
+    previous_term = signal.signal(signal.SIGTERM, stop)
     try:
-        result = operate(args)
-    except BaseException as error:
-        result = {"schema": SCHEMA, "state": "failed", "stage": "open_original_operation",
-                  "error": {"type": type(error).__name__, "message": str(error)}}
+        try:
+            result = operate(args)
+        except BaseException as error:
+            result = {"schema": SCHEMA, "state": "failed", "stage": "open_original_operation",
+                      "error": {"type": type(error).__name__, "message": str(error)}}
+    finally:
+        signal.signal(signal.SIGTERM, previous_term)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2))
     return 0 if result["state"] == "complete" else 1
 
