@@ -330,14 +330,15 @@ def _read(workspace, key):
     actual = {k: v for k, v in state["selection"].items() if k != "schema"}
     if state.get("id") != key or expected != actual or state.get("workspace_id") != workspace.project["id"]:
         raise ValueError("The retained experiment differs from its original project selection")
+    active = selected(state["baseline_selection"])
+    state["models"] = list(active)
+    state["pollutants"] = list(required_outputs(active))
     return state
 
 
 def inspect(workspace, key):
     state = _read(workspace, key)
     active = selected(state["baseline_selection"])
-    state["models"] = list(active)
-    state["pollutants"] = list(required_outputs(active))
     completed = failed = 0
     for case in state["cases"]:
         run = workspace.inspect_run(case["run_id"])
@@ -355,11 +356,16 @@ def inspect(workspace, key):
         completed += int(case["state"] == "complete")
         failed += int(case["state"] == "failed")
     state["progress"] = {"total": len(state["cases"]), "completed": completed, "failed": failed}
+    if state["state"] == "complete" and completed != len(state["cases"]):
+        state["state"] = "partial"
     return state
 
 
 def list_experiments(workspace):
-    return [inspect(workspace, path.parent.name)
+    # The workspace catalogue uses saved execution checkpoints. Inspecting the
+    # selected study refreshes its cases without rereading every native run on
+    # each global workbench refresh.
+    return [_read(workspace, path.parent.name)
             for path in sorted((workspace.root / "experiments").glob("*/experiment.json"))]
 
 

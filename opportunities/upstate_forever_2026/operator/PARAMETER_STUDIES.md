@@ -22,6 +22,8 @@ If a case fails or execution is interrupted, reopen the same study and choose **
 
 **Refresh completed results** summarizes cases that already completed. The table and downloadable artifacts remain useful while other cases recover. The study continues to show its partial state until all native cases complete.
 
+The study list shows saved execution checkpoints. Opening a study refreshes its native case states; if a previously completed study has an unfinished case, its detail view returns to partial state and offers continuation.
+
 ## Read the results
 
 The matrix reports baseline mass, study-case mass and signed change for each selected model output and reporting area. NDR studies report nitrogen and phosphorus; SDR studies report sediment; combined studies report all three. Every completed case must retain the same native model scope and the complete exports for that scope. Filter by area or pollutant; pagination changes the displayed rows only. All rows remain in the CSV and JSON exports.
@@ -36,7 +38,7 @@ Download the CSV, JSON, HTML report, profile selections and complete ZIP from th
 
 ## Operator integration
 
-The operator's parameter studies use `model/parameter_studies.py`. The regional scenario-by-profile experiment engine remains in `model/experiments.py`. Each engine reads its own saved layout: parameter studies use `parameter-study.json` and the `experiment-specs` registry; regional experiments use `plan.json`, `state.json` and per-case records. Existing study identifiers and source selections are retained.
+The operator's parameter studies use `model/parameter_studies.py`. The regional scenario-by-profile experiment engine remains in `model/experiments.py`. Each engine reads its own saved layout: parameter studies use `experiment.json` and the `experiment-specs` registry; regional experiments use `plan.json`, `state.json` and per-case records. Existing study identifiers and source selections are retained.
 
 Add the following files under `opportunities/upstate_forever_2026/`:
 
