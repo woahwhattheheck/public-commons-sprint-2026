@@ -46,6 +46,11 @@ def augment(html: str) -> str:
     encoded = json.dumps(binding, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c")
     insert = ('<style id="chemistry-review-style">' + CSS + '</style>\n'
               '<script id="chemistry-review-binding" type="application/json">' + encoded + '</script>\n'
+              '<script id="chemistry-review-hydration">'
+              'for(const id of ["reach","operator"]){const seen=new Set();'
+              'for(const option of [...document.getElementById(id).options]){'
+              'if(seen.has(option.value))option.remove();else seen.add(option.value);}}'
+              '</script>\n'
               '<script id="chemistry-review-extension">' + script + '</script>\n')
     if not re.search(r'</body\s*>', html, re.I):
         raise ValueError("The original workbench has no closing body.")
