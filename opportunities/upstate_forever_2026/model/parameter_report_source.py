@@ -18,6 +18,7 @@ from .parameter_exports import member_descriptors, MEMBER_SCHEMA
 from .parameter_views import DEFAULT_VIEWS
 from . import parameter_scientific_figures as figures
 from . import ensemble_study_scope as source_scope
+from . import parameter_support_reconciliation as reconciliation
 
 DIRECTORY = "parameter-report-sources"
 SCHEMA = "upstate.parameter-report-source/v1"
@@ -498,6 +499,7 @@ def _sections(selected, rows, ranges):
             "completed cases does not create a new range. The original selected pair rows remain "
             "available with their own geographic support.",
         ]])
+    sections.extend(reconciliation.sections(selected, rows))
     sections.append(["Original files and spatial interpretation", [
         "The complete original report retains every case, area, pollutant, executed version and requested difference map. "
         "GIS rasters describe the original comparison extent; selecting a reporting polygon here does not clip or modify a raster. "
@@ -514,6 +516,7 @@ def _sections(selected, rows, ranges):
 
 
 def _recipe(directory, selected, rows, ranges, scope):
+    reconciliation.write(directory, selected, rows)
     graphics = figures.write(directory, selected, rows)
     source_sections = source_scope.sections(scope)
     scenario_id = identifier(selected["reference"]["scenario_id"])
@@ -620,7 +623,8 @@ def prepare(workspace, value, *, render=True):
                 "producer_sha256": file_digest(Path(__file__)),
                 "figure_helper_sha256": file_digest(Path(figures.__file__)),
                 "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__)),
-                "source_scope_helper_sha256": file_digest(Path(source_scope.__file__))}
+                "source_scope_helper_sha256": file_digest(Path(source_scope.__file__)),
+                "support_reconciliation_sha256": file_digest(Path(reconciliation.__file__))}
     operation_id = digest(identity)
     directory = workspace.root / DIRECTORY / operation_id
     directory.mkdir(parents=True, exist_ok=True)
@@ -666,7 +670,10 @@ def prepare(workspace, value, *, render=True):
                                ("figure_specification", figures.SPEC), ("figure_coordinates", figures.COORDINATES),
                                ("figure_coordinates_json", "parameter-figure-coordinates.json"),
                                ("figure_coverage", figures.COVERAGE),
-                               ("original_source_scope", source_scope.SCOPE_FILE)):
+                               ("original_source_scope", source_scope.SCOPE_FILE),
+                               ("support_reconciliation", reconciliation.JSON_FILE),
+                               ("support_reconciliation_csv", reconciliation.CSV_FILE),
+                               ("support_reconciliation_source", reconciliation.SOURCE_FILE)):
                 operation["files"][name] = describe_file(workspace.root, source / path)
             operation["delivery_selection"] = shared.delivery_selection(operation["source"])
             operation.pop("error", None)

@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "parameter-support-reconciliation",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "extend_components": {
+    "parameter-studies": {
+      "paths": [
+        "model/parameter_support_reconciliation.py",
+        "model/PARAMETER_SUPPORT_RECONCILIATION.md",
+        "integration/component_fragments/parameter-support-reconciliation.json"
+      ]
+    }
+  }
+}
