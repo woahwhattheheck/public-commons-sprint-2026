@@ -308,7 +308,7 @@ try{
       };
       try{
         if(input.checkpoint?.metadata?.status==='complete'){
-          giveSource.validateSourceEdition(input.checkpoint);ledger=input.checkpoint;
+          giveSource.validateSourceEdition(input.checkpoint);await giveLedger.validateLedgerCheckpointSelection(input.checkpoint,input);ledger=input.checkpoint;
           result.capture.storage=await checkpointStore.save(ledger,{phase:'complete-reused'});result.capture.checkpoint=checkpointStore.manifestPath;
         }else ledger=await giveLedger.captureLedger(input);
       }catch(error){
