@@ -422,7 +422,89 @@ def get_report_source(workspace, source_key, operation_id):
         if not path.resolve().is_relative_to(root.resolve()) or read_json(path) != result["delivery_selection"]:
             raise ImplementationError("The retained ordered delivery selection changed.")
         files.append(describe_file(workspace.root, path))
-    return {**result, "source_key": source_key, "files": files, "reused": True}
+    original_plan = read_json(store.base / _safe_id(result["plan_id"]) / "reports" / result["report_id"] / "plan.json")
+    attachments = deepcopy(identity.get("original_local_attachments", []))
+    available = {item["retained_path"] for item in attachments if item.get("retained_path")}
+    original_selection = result["identity"].get("original_delivery_selection")
+    report_preview = {
+        "schema": SCHEMA, "operation_id": operation_id,
+        "source_identity": deepcopy(identity), "plan_binding": deepcopy(binding),
+        "report_id": result["report_id"], "title": original_plan["title"], "as_of": result["as_of"],
+        "counts": {key: len(original_plan[key]) for key in
+                   ("tasks", "budget_lines", "sites", "monitoring_plans", "visits", "activities", "observations")},
+        "existing_observed_sources": deepcopy(observed_context.source_choices(original_selection or {})),
+        "delivery_selection_supplied": original_selection is not None,
+        "original_report_member_count": len(identity["members"]),
+        "attachment_count": len(available), "attachment_inventory": attachments,
+        "state": "retained",
+    }
+    return {**result, "source_key": source_key, "files": files, "reused": True,
+            "report_preview": report_preview}
+
+
+def list_report_sources(workspace, plan_id, *, report_id=None):
+    """Discover committed original report handoffs without browser state or registration."""
+    workspace = _workspace(workspace)
+    plan_id = _safe_id(plan_id, "plan_id")
+    if report_id is not None and (not isinstance(report_id, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", report_id)):
+        raise ImplementationError("Choose an original saved report edition.")
+    ImplementationStore(workspace).get(plan_id)
+    base = workspace.root / "implementation" / "report-context"
+    if base.is_symlink() or not base.resolve().is_relative_to(workspace.root.resolve()):
+        raise ImplementationError("The retained report source inventory leaves its Workspace.")
+    if not base.exists():
+        return []
+    items = []
+    for root in sorted(base.iterdir()):
+        if not re.fullmatch(r"[0-9a-f]{64}", root.name):
+            continue
+        if root.is_symlink() or not root.is_dir():
+            raise ImplementationError("A retained report source directory changed.")
+        receipt_path = root / RECEIPT_NAME
+        if not receipt_path.exists():
+            continue  # An interrupted source build has no committed handoff.
+        if receipt_path.is_symlink():
+            raise ImplementationError("A retained report source receipt changed.")
+        receipt = read_json(receipt_path)
+        identity = receipt.get("source_identity", {})
+        if identity.get("plan_binding", {}).get("plan_id") != plan_id:
+            continue
+        if report_id is not None and identity.get("report_id") != report_id:
+            continue
+        handoffs = root / "handoffs"
+        if handoffs.is_symlink():
+            raise ImplementationError("The retained report handoff inventory changed.")
+        if not handoffs.exists():
+            continue
+        for directory in sorted(handoffs.iterdir()):
+            if not re.fullmatch(r"[0-9a-f]{64}", directory.name):
+                continue
+            if directory.is_symlink() or not directory.is_dir():
+                raise ImplementationError("A retained report handoff directory changed.")
+            path = directory / "handoff.json"
+            if not path.exists():
+                continue
+            if path.is_symlink():
+                raise ImplementationError("A retained report handoff record changed.")
+            result = get_report_source(workspace, root.name, directory.name)
+            if result["plan_id"] != plan_id or (report_id is not None and result["report_id"] != report_id):
+                raise ImplementationError("The retained report handoff names another saved plan.")
+            selection = result.get("delivery_selection")
+            choices = observed_context.source_choices(selection) if selection is not None else [
+                {key: result[key] for key in ("source_collection_id", "source_id")}]
+            items.append({
+                "source_key": root.name, "operation_id": directory.name,
+                "plan_id": plan_id, "report_id": result["report_id"],
+                "plan_binding": deepcopy(result["plan_binding"]),
+                "revision": result["revision"], "as_of": result["as_of"],
+                "title": result["report_preview"]["title"],
+                "delivery_selection_supplied": selection is not None,
+                "source_count": len(choices), "sources": deepcopy(choices),
+                "delivery_mode": selection.get("delivery_mode") if selection is not None else None,
+            })
+    return sorted(items, key=lambda item: (item["revision"], item["as_of"], item["report_id"],
+                                          item["source_key"], item["operation_id"]), reverse=True)
 
 
 def main(argv=None):

@@ -4,6 +4,31 @@ This course publishes an existing native Ensembles design as an ordinary scienti
 
 A completed land-cover pair or a completed baseline parameter contrast is sufficient. A partial design keeps its completed physical results, unfinished run counts and original errors visible. An annual observation or calibration is optional for this native-study report.
 
+## Original input scope at the report opening
+
+The scientific source now includes **Original geography, source classifications and model endpoint** immediately after the saved-design summary. It shows the retained grid title, CRS, cell size and area, dimensions and bounds, the computational and reporting source choices, and each original input's declared classification and units.
+
+Grid rectangle area is calculated from the saved width, height and native pixel area. It describes the rectangular raster envelope. The separate source selections identify actual computational and reporting geometry; the original comparison sections identify finite paired support. A coordinate system or rectangular extent alone does not identify an agency catchment or an actual utility service area.
+
+Classifications come from the original source entry's `classification` field. If that field is absent, the report says **Not declared**. It does not infer measured, simulated or regional status from filenames, titles or coordinates. Mixed source editions keep their individual declarations visible. Native NDR quantities retain kg/year and SDR quantities retain metric tonnes/year delivered to modeled streams; source-to-intake interpretation remains a separate scientific relationship.
+
+### Original assumption and recipe documents
+
+The producer resolves original document entries in the selected source collections when either:
+
+- Their exact URI is referenced by an original selected profile.
+- Their body SHA256 equals an explicit `recipe-sha256:` profile reference or a selected input entry's `recipe_sha256`.
+
+It preserves each selected document, its companions, source entry and original manifest bytes under `reference-sources/`. The source inventory includes those bindings; `study-source-scope.json` retains the exact grid/selections/classifications/document descriptors. Known original simulated assumption and input-recipe schemas expose their original assumption fields as ordinary report tables. Other referenced documents remain available as complete original files without interpreting their contents.
+
+This closes the real simulated-headwaters profile's `input-assumptions.json` and `input-recipe.json` references. Those documents describe the original input edition. Selected per-case profile tables continue to show actual varied parameters, so an original baseline assumption is not silently substituted for a varied case. The existing scientific collector carries the scope tables and source links through HTML, PDF, complete report data and the ordinary source ZIP.
+
+### Preserve old and new source editions
+
+The source recipe remains version2 and existing v1/v2 transfer compatibility remains intact. The producer and source-scope helper hashes enter the saved source identity, so preparation creates a distinct immutable presentation edition. Previously exported numeric reports and native runs are unchanged. The source packet continues to retain exact original coefficient tables, all original scalar rows and comparison-support identities, plus the explicitly referenced documents. Large rasters and geometry remain in their complete editable Workspace transfer under original paths and hashes.
+
+Use the SAME `prepare(workspace, actual_ensemble_id, render=True)` action at the existing source/export boundary. Open the actual report and its attached original assumptions, inspect its grid/source labels and original parameter cases, and view the final figures and archive contents in the recipient's viewer. The completed5156 course is the explicitly simulated120×120-cell,30m,1,296-hectare square. The actual Upper Savannah geography successor has its own source/grid identity and native operation.
+
 ## Operator course
 
 1. Open **Scenario sensitivity** and select the saved design.
@@ -78,11 +103,39 @@ This requires a prepared source and forwards the server-bound original collectio
 
 Nitrogen and phosphorus retain kg/year. Sediment retains metric tonnes/year, normalized to the original paired report's t/year spelling. Each constituent and unit stays separate. The source adds no economic weighting or cross-pollutant physical total and does not change the original model units.
 
-The report retains both common-support and full-valid totals. A difference between full-valid totals cannot replace the exact paired contrast when coverage differs. Percent change uses the common-valid baseline; a zero baseline leaves the percent undefined.
+The report shows the original quantities in separate tables so the geographic basis stays visible:
 
-Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases. Case numbers are presentation positions; each point retains its original profile/member/scenario/run identity and JSON pointer.
+| Visible result | Original meaning |
+| --- | --- |
+| Common-support baseline and alternative masses | Annual mass summed over cells valid in both selected runs. |
+| Signed annual change | The original alternative-minus-baseline change on those common cells. For parameter sensitivity, the alternative is the varied-profile baseline and the reference is the first selected profile's baseline. |
+| Percent change | The producer's stored percent relative to the common-support baseline mass. A zero common baseline leaves this percent undefined, including when both common masses are zero. |
+| Own-valid baseline and alternative totals | Each run's original integrated mass sum over its own finite, non-NoData cells inside the retained reporting mask. These two totals can cover different cells. |
+| Common, own-valid and only-valid cell counts | The original membership counts for the paired support; the two only-valid counts show the cells excluded from that paired contrast. |
 
-The minimum and maximum describe the completed named parameter set on one exact support mask. They are descriptive case ranges. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
+Use the common-support table for the physical change. Use the own-valid totals to understand each original run's available result. Subtracting the latter can combine a physical change with a change in valid geographic coverage.
+
+The original report prints the stored values; the scientific source does not recalculate annual mass, change or percent. Native nitrogen and phosphorus export densities are integrated by the model workflow using the actual pixel hectares once before these mass artifacts are created. No additional pixel-area conversion belongs in the report.
+
+### Interpret missing values and geographic coverage
+
+The coverage table exposes both identities: **baseline valid = common + baseline only**, and **alternative valid = common + alternative only**. “Baseline only” means valid in the baseline but unavailable in the alternative; “alternative only” is the converse. These cells are excluded from the paired change. Neither count includes cells unavailable in both runs or cells outside the reporting polygon. The table therefore does not express a percentage of the whole catchment.
+
+A zero common baseline has a valid annual mass change when common cells exist, but its percent change is undefined. Read the displayed reason beside the stored percent. A legacy row with no common valid cells has no defined paired quantity; its explicit reason stays visible and it contributes no zero effect to a figure or range. The current paired producer records a no-common-cell comparison as an original error, which remains in the report's native messages.
+
+“Pair masks identical” means both only-valid counts are zero for every included pair. The two runs can still share missing cells. Read the reporting geography and original raster inventory before describing the extent covered by the model.
+
+The own-valid totals and paired sums retain their original producers and numerical precision. Minor rounding differences can arise between a stored difference raster and a double-precision paired sum; the scientific report keeps the original quantities rather than forcing a recomputed equality.
+
+Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases.
+
+Every original report row has a stable visible key: `LC0001` denotes the first row in `paired_rows`, and `PS0001` denotes the first row in `parameter_rows`. Each subsequent key uses that original row's one-based index. These keys belong to the retained report edition; they do not restart when figures split into support groups or pages. The same key appears on the figure ticks, figure coordinates and report tables.
+
+Use the visible case index to find the member, scenario, constituent and unit for a plotted key. Parameter sensitivity also identifies its original reference member/profile and varied profile. The complete original member, profile, scenario and native run IDs remain in the source records and coordinate companions.
+
+The minimum and maximum describe the completed named parameter set on one exact support mask. The range table shows its common-cell count and whether the pair masks are identical. It does not pool other masks or physical units. Percent ranges include only members with a defined stored percent, so a valid mass-change member with a zero baseline need not contribute to that percentage range.
+
+These are descriptive case ranges. The included case count is a count of retained physical contrast rows in that group, distinct from the study's native-run completion count. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
 
 ## Figures and original coordinates
 
@@ -91,7 +144,13 @@ For each retained geographic support group, the source produces two panels:
 - original baseline/reference and alternative/varied annual masses on the same common-valid cells;
 - original paired annual change, with an explicit zero-change line.
 
-Land-cover and baseline-parameter figures remain distinct. The first profile's reference role is preserved in the parameter figure source records. The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it.
+Land-cover and baseline-parameter figures remain distinct. Each caption states the original common-cell count, exact support hash and signed direction: negative change means lower modeled export. The parameter caption and case table retain the original reference profile.
+
+Read the detail table immediately after each figure in PDF, HTML or Markdown. It maps every visible row key to the actual member/profile and reference profile, with the original valid, common and only-valid cell counts. The common-mass table, coverage table and own-valid totals use the same keys, making the displayed value traceable without opening a separate CSV.
+
+The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it. The standalone SVG's keys refer to the same original case index and accompanying report tables.
+
+For a brief operator explanation: “This key names the saved model case. These two values use the same valid cells, and their signed change is printed here. The next table shows which cells were excluded. The full totals remain available on each run's own support. This profile reference and source record explain the assumptions.”
 
 If an older retained report has zero common valid cells or lacks an exact common-support hash, its row remains in the original numeric report and is explicitly listed as omitted from the grouped figure. No geographic mask or zero-valued physical result is inferred.
 
@@ -105,7 +164,7 @@ The scientific source includes:
 - exact saved design and native run snapshots, native comparison records, prepared grid metadata and every selected profile/scenario record;
 - original biophysical CSV bodies and all their retained companions;
 - complete source collection/entry identities, original scenario-mask source bindings, alignment statistics and original/aligned raster descriptors;
-- scientific report recipe, all original figure coordinates, full vector specification and standalone SVGs.
+- scientific report recipe, the stable case-key index and per-figure detail tables, all original figure coordinates, full vector specification and standalone SVGs.
 
 Native-input-inventory.json marks which original source bytes are included. The complete numeric and graphical report can be reopened from its scientific source archive. Original model DEM, land cover, climate, R/K, scenario geometry, physical output rasters and native logs stay under their exact paths and hashes in the full Workspace archive. Use that existing complete-project transfer to inspect or rerun the hydrologic model.
 
@@ -139,3 +198,136 @@ Composer dependency: existing scientific-report-editions.
 The A73C simulated headwaters case remains one generator, one source edition and one native runtime operation. Its parameter-study owner retains the routing/Lmax design and joint decision calculations; its delivery owner retains the full native maps and project archive. This course accepts that design's actual saved ID after its original contrasts complete, then supplies a typed scientific source to the existing report composer.
 
 Actual Upper Savannah studies use their own regional input grid, coefficient profiles, scenarios and run IDs. Gura remains the original Kenya model commissioning case. A scientific source preserves whichever original design it is given and its full source provenance; it transfers no observations, calibration claims or physical quantities between those studies.
+
+
+## Complete simulated demonstration receiving
+
+The maintained `source_tools/simulated_headwaters.py` driver carries the same teaching case through the scientific report and independent receiving. Its original command, Workspace, output directory, prepare-only/field-only options, native run queue and customer/field phases remain the entry points. Continue the existing case with the same original command after a repaired native or report phase.
+
+The driver completes the existing parameter course before the final mapped delivery. It then prepares this course's actual saved-ensemble source with `prepare(workspace, ensemble_id, render=True)`. The saved source must belong to the same project and design and describe the completed native course. The original native-process and field chapters retain their order; the study source is appended once.
+
+The original ordered report publisher saves the full source selection as a `scientific-report-editions` record. This is the edition shown by the Sources composer. The existing mapped delivery retains the original baseline, riparian restoration, matched-area control, overlays and map settings, with the same ordered scientific source chapters.
+
+### Two actual receiving results
+
+The driver prepares two original application archives:
+
+| Receiving scope | Original producer | What the independently started receiving child opens |
+| --- | --- | --- |
+| Selected scientific report | `model.study_transfer.export_study`, rooted at the saved scientific-report edition | The original ordered report, every selected source, the editable ensemble design and its retained native member runs, original parameter-course results and report lineage. |
+| Complete demonstration project | The existing `Workspace.backup` operation | The original complete native model case, maps, spatial reviews, field campaign, customer requests/handbacks, scientific sources, saved report and parameter course. |
+
+Both use the existing `source_tools/simulated_headwaters_receiving.py` helper from the archive's own application in a separate isolated Python process. The selected report uses its `selected_study` mode; the complete project retains all original scientific, field and customer checks. The child verifies the actual retained report and data. It does not rerender a report or execute a native model.
+
+The selected transfer is explicit:
+
+~~~python
+selection = {
+    "schema": "upstate.study-selection/v1",
+    "title": actual_title,
+    "roots": [{"kind": "scientific-report-editions", "id": saved_report_id}],
+    "include_related_results": False,
+}
+~~~
+
+The receiving child resolves the same original Study receipt using `verify_received_studies`, reads the archived scientific report through `scientific_report_editions.inspect`, and checks the report-bound source operation against the original ensemble/report signatures. Every retained recipe input, source collection body/companion and scientific output is checked through the existing archive member inventory. Original course verification checks the selected profiles, ordered scenarios, completed native member runs, support-group decision reports and paired-product archives.
+
+### Retained driver outputs
+
+All paths below are relative to the original demo output directory. The driver receipt records the actual identities and absolute receiving paths.
+
+| Output | Contents |
+| --- | --- |
+| `parameter-course.json` | The original completed parameter-course result. |
+| `native-study-scientific-source.json` | The original registered source operation, source binding, figure count and rendering release. |
+| `delivery-selection.json` / `mapped-delivery.json` | The original mapped selection with the ordered study chapter and its completed delivery. |
+| `scientific-report-preview.json` / `scientific-report-edition.json` | The original ordered publisher preview and immutable saved edition. |
+| `selected-study-transfer.json` | The original selected Study receipt and complete archive identity. |
+| `selected-study-archives/<edition>.zip` | The selected report, editable dependencies and embedded application. |
+| `selected-study-reopened/<edition>/` | The received application and Workspace for that exact archive. |
+| `selected-study-cold-reopen/<attempt>/` | The actual isolated child request, launch, stdout/stderr and original result. |
+| `archives/<edition>.zip` and `reopened/<edition>/` | The complete project's original archive and its independent receiving directory. |
+| `cold-reopen/<attempt>/` | The complete project's original isolated receiving records. |
+
+The existing `demo-receiving.json` gains `scientific_study`, `scientific_report`, `scientific_study_transfer`, `scientific_study_received` and `scientific_study_cold_receiving`. Original run, field, customer, spatial, parameter and complete-project receipt fields remain available.
+
+### Continue an interrupted original phase
+
+The selected archive name binds the actual scientific edition, source operation and current driver/receiving helper source identities. The complete archive identity also includes the actual scientific source, saved report and selected transfer ID. A newer scientific or application edition therefore receives its own output identity.
+
+A repeated selected export uses the original producer's completed archive recovery. Existing receiving directories are reused only after their members and project match that same original archive. Each isolated reopen gets a new attempt directory with its actual process result. An exception retains the native driver's phase and the original receiver's child logs, so the same owner can repair that concrete stage and continue the same case.
+
+The teaching selection remains explicitly simulated. This receiving course preserves the original physical constituent units, annual time basis, sign conventions and exact support masks. Its modeled results are independent of the separate Upper Savannah regional observation/calibration and Gura commissioning operations.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->
+
+## Current owner demonstration direction
+
+The complete current brief is retained here from `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`; carry it onward with this receiving course.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

@@ -6,7 +6,7 @@ const id = { type: 'string', pattern: '^[a-f0-9]{24}$' };
 const sha = { type: 'string', pattern: '^[a-f0-9]{64}$' };
 const uuid = { type: 'string', pattern: '^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$' };
 const revision = { type: 'integer', minimum: 1 };
-const kind = { enum: ['connection','capture','cohort','rollout','delivery','receiving'] };
+const kind = { enum: ['connection','capture','cohort','commissioning','rollout','delivery','receiving'] };
 const reference = { type: 'object', properties: { sha256: sha, bytes: { type: 'integer', minimum: 0 },
   mediaType: text(200) }, required: ['sha256','bytes'], additionalProperties: false };
 const paging = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 500 } };
@@ -50,6 +50,25 @@ export const TYK_WORKSPACE_ACTIONS = Object.freeze({
     { id,expectedRevision:{type:'integer',minimum:0},label:text(300),note:text(20000),
       captureId:id,captureRevision:revision,apiIds:{type:'array',items:text(1000),minItems:1,uniqueItems:true} },
     ['label','captureId','captureRevision','apiIds']),
+  createCommissioning: action('Save cohort commissioning', 'Save a complete Dashboard cohort procedure with original native bindings and selected operational checks.', true,
+    {cohortId:id,cohortRevision:revision,label:text(300),customer:text(300),operator:text(300),
+      checkNames:{type:'array',items:text(200),minItems:1,uniqueItems:true},
+      workshare:{type:'object',properties:{name:text(1000),mediaType:text(200),contentBase64:text(32*1024*1024),note:text(20000)},
+        required:['name','mediaType','contentBase64'],additionalProperties:false},abortOnFailure:{type:'boolean'},overrideStaged:{type:'boolean'}},
+    ['cohortId','cohortRevision','label','checkNames']),
+  readCommissioning: action('Read cohort commissioning', 'Read complete original native progress, staged source identities, operating-plan history and review contexts.', false,
+    {id,revision},['id']),
+  prepareCommissioningStep: action('Prepare next cohort request', 'Prepare the selected native conversion, staging or promotion through the original rollout owner.',true,
+    {id,expectedRevision:revision,stepId:{enum:['conversion','staging','promotion']}},['id','expectedRevision','stepId']),
+  refreshCommissioning: action('Capture commissioning portfolio', 'Capture the complete current staged or promoted portfolio using the original native capture operation.',true,
+    {id,expectedRevision:revision,phase:{enum:['staged','final']}},['id','expectedRevision','phase']),
+  recordCommissioningReview: action('Record cohort acceptance', 'Retain an explicit original-source review and every selected API/check result with complete supporting files.',true,
+    {id,expectedRevision:revision,stepId:{enum:['conversion-review','production-review']},contextSha256:sha,
+      reviewer:text(300),note:text(20000),checks:{type:'array',items:{type:'object',properties:{apiId:text(1000),name:text(200),
+        outcome:{enum:['passed','failed']},note:text(20000)},required:['apiId','name','outcome','note'],additionalProperties:false}},
+      files:{type:'array',items:{type:'object',properties:{name:text(1000),mediaType:text(200),contentBase64:text(32*1024*1024),note:text(20000)},
+        required:['name','mediaType','contentBase64'],additionalProperties:false}}},
+    ['id','expectedRevision','stepId','contextSha256','reviewer','note']),
   prepareRollout: action('Prepare native request', 'Read the target preimage and retain the exact native request for review.', true,
     { connectionId:id,cohortId:id,cohortRevision:revision,label:text(300),note:text(20000),selection,
       sourceDefinition:{type:'object',properties:{captureId:id,revision,apiId:text(1000),sha256:sha},
@@ -67,7 +86,7 @@ export const TYK_WORKSPACE_ACTIONS = Object.freeze({
     { id,expectedRevision:revision,manifestSha256:sha }, ['id','expectedRevision','manifestSha256']),
 });
 export const TYK_RECORD_STATES = Object.freeze([
-  'SAVED','CAPTURING','CAPTURED','PREPARING','PREPARED','DISPATCHED','READBACK',
+  'IN_PROGRESS','COMPLETE','SAVED','CAPTURING','CAPTURED','PREPARING','PREPARED','DISPATCHED','READBACK',
   'CONFIRMED','ACCEPTED','PARTIAL','UNCHANGED','DIVERGED','ABSENT','UNKNOWN','STALE',
   'PREPARE_FAILED','INTERRUPTED','EXPORTED','INSPECTED','ADOPTING','ADOPTED',
 ]);

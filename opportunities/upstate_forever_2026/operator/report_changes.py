@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import quote
 from model import report_changes as engine
+from model import report_changes_review
 from model.common import held, identifier
 from source_report_editions import ScientificReportEditions
 from source_reports import document_policy
 
-ACTIONS = frozenset({'report-changes.prepare', 'report-changes.export'})
+ACTIONS = frozenset({'report-changes.prepare', 'report-changes.export', 'report-changes.review'})
 
 
 class ReportChanges:
@@ -58,6 +59,20 @@ class ReportChanges:
                 'plan': engine._plan(payload.get('plan'), engine._tables(engine.edition(left)),
                                      engine._tables(engine.edition(right))),
                 'existing': (self._directory(ws, key) / 'comparison.json').is_file()}
+
+    def review_preview(self, workspace, payload):
+        result = report_changes_review.preview_review(
+            self.operator.ws(workspace), identifier(payload.get('comparison_id')),
+            payload.get('review_selection'))
+        return {'workspace_key': workspace, **result}
+
+    def review(self, task):
+        payload = task['payload']
+        return report_changes_review.create_review(
+            self.operator.ws(task['workspace']), identifier(payload.get('comparison_id')),
+            payload.get('review_selection'),
+            expected_operation_id=payload.get('expected_operation_id'),
+            created_at=task['created_at'])
 
     def prepare(self, workspace, payload):
         ws = self.operator.ws(workspace)
@@ -118,6 +133,8 @@ class ReportChanges:
             return self.catalog(workspace)
         if operation == 'preview':
             return self.preview(workspace, payload)
+        if operation == 'review-preview':
+            return self.review_preview(workspace, payload)
         if operation == 'detail':
             return self.detail(workspace, identifier(payload.get('id')))
         if operation == 'rows':
@@ -133,12 +150,19 @@ class ReportChanges:
             return self.prepare(task['workspace'], task['payload'])
         if task['action'] == 'report-changes.export':
             return self.export(task['workspace'], identifier(task['payload'].get('id')))
+        if task['action'] == 'report-changes.review':
+            return self.review(task)
         raise self.Fault('REPORT_COMPARISON_ACTION', 'Choose a report comparison task.')
 
     def decorate_task(self, task):
         if task['state'] != 'complete' or task['action'] not in ACTIONS:
             return task
         result = task.get('result') or {}
+        if task['action'] == 'report-changes.review':
+            return {**task, '_review': {
+                'kind': 'review', 'review_id': result['review_id'],
+                'comparison_id': result['comparison_id'],
+                'title': result['title'], 'artifact_count': result['artifact_count']}}
         if task['action'] == 'report-changes.export':
             # Reissue a fresh verified ticket rather than preserving an expired URL.
             ws = self.operator.ws(task['workspace'])

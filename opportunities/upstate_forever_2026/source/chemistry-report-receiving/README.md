@@ -1,0 +1,225 @@
+# Receive and inspect the original Chemistry reports in the application
+
+This course opens actual completed Chemistry analyses through the maintained operator, prepares immutable saved reports and typed scientific sources, uses **Open this report only** and **Add to current report**, renders one ordered scientific report, downloads its original files, exports its selected Study, and restores and reopens that Study.
+
+The default four original analyses are the authored four-reach reference case already retained in the regional project. Its source describes the coefficients as an editable mathematical example. Keep that provenance visible when presenting its calibration, uncertainty or monitoring result. A different completed field or compound-observation case can use the same course with its actual case and run IDs.
+
+Existing Chemistry, Scientific Reports, Study transfer, queue, restore, file tickets and scientific figures remain the application’s original implementations.
+
+## Current source and original receiving operation
+
+Use the current cumulative application containing:
+
+- Chemistry compound/interval source from merged PR3724 and its maintained report, typed-source and Study-transfer consumers.
+- The explicit replace/append prepared-source callers and verified source-bank installer from merged PR3847. The maintained Scientific Reports composer declares `SCIENTIFIC_REPORT_SOURCE_SELECTION = 'replace-v1'`.
+- The application’s `AGENTS.md`, version 2026-10-13.1 or its maintained successor.
+
+Use the [complete current Chemistry27 source bank](chemistry-source-bank.json) retained beside this guide, with its matching guarded installer and source manifest. This is the complete editor-lifetime successor to the merged PR3893 receiving edition: 377,616 UTF-8 bytes / SHA256 `ff2b0cfad89d8bf522b3d2d6dc7fecc217658881f3459f80716feffb476db381`. It supplies 27 complete leaves and inherits eleven omitted required leaves from the actual installed application. The Study phase requires the maintained `model/chemistry_study_transfer.py` supporting BOTH `native-chemistry-scientific-source-v1` and `native-chemistry-scientific-source-v2`; the corrected complete helper is 24,377 bytes / SHA256 `2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca`. It preserves the actual producing edition while retaining local editable cases, runs, reports and sources. The earlier v1-only resolver omitted that history for v2 sources. Adopt the complete source/installer/manifest successor together, then continue this same course. Use the delivered bank’s operating guide for installation; this browser course does not install or rewrite the application.
+
+The existing regional native operation is Chemistry5170, joined to DD6B’s original report course2722 and accepted by RIVER13. Continue its physically received project and actual installed application. RIVER13’s completed compound calibration, sensitivity, original 512-draw uncertainty and monitoring results are the current saved-result continuation; source publication PR4008 carries the complete current Chemistry43 application addition. The original project is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`; default case `ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb`.
+
+The application’s registered **Workspace key** can differ from that project UUID. Read the actual operator Workspace selector or ready record and use its key.
+
+| Original analysis | Completed run |
+|---|---|
+| Simulation | `59d4b738620b469249bb297fa05626012de72a1cdd4e5135a9f6dc4b7f9c8a53` |
+| Calibration | `6742a178dfe5c7dc69ea3c7b9cebfb1477bb3074db98f1c8990c5686569bc58d` |
+| Original 512-draw uncertainty | `2296638a0531acf18d172955d3da5e7845dc71ccaf76189b36b0217565c40a5a` |
+| Monitoring design | `9e2e96abc6dcdbb799c00a106e50fb93c98298ea8c44fccd2282e12ac202a044` |
+
+Additional attribution, sensitivity or paired-control runs belong to their actual source holder. Include them when the selected Workspace retains their completed run records and artifacts.
+
+## Standing owner instruction for this receiving operation
+
+The following complete instruction is retained from the current October 13 owner-directed receiving course (source message 1791885321.786379) and travels with this guide:
+
+Required use of the final product
+Before calling a client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing peer must actually open, run or render the exact outgoing version, LOOK at the rendered screen or its real screenshots, and operate the important user controls. Check the actual screenshare width and narrow/mobile width where relevant, populated, empty, loading and error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Code review, DOM counts, HTTP 200, unit checks or another peer's approval do not replace seeing the actual product.
+
+ALL ATTACHMENTS count. Literally open, view, play and use the final delivered HTML, PDF, report, slides, spreadsheet, map, image, video, audio, archive and project as its recipient would. For archives, extract and open the actual contained deliverables and working project. Tests, checklists and screenshots merely captured are not substitutes. Use available high-quality generative media models and natural voice generation/TTS for videos; avoid robotic default voices. Watch and listen to the final export for pronunciation, pacing, timing and audio alignment. Keep building and fixing; inspection is not review/test performance theatre.
+
+For the Ecosystem product use plain industrial design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. No decorative template slop. Keep the real workflows, data and computation. Reviews must lead directly to repairs and must not replace hard implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a separate verification product. Prior empty-Workspace screenshots are not acceptance of a completed scientific Workspace.
+
+PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled policy/instruction surface the provider and workers actually read: global and project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions, Commons source mirrors, cloud repository instruction copies, and current build and receiving guides. Every delegating peer includes this complete rule in child assignments, including its all-attachments and final-media clarification. Return exact changed paths, source/version and readback. A Slack ACK alone is not propagation. Preserve all existing owner controls and do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work. Continue the same Ecosystem Sprint Integration assembled product and its original scientific, run, browser and receiver owners. Continue native source, runtime and archive joins rather than diverting everyone to cosmetic review. Preserve October13 cutoff10amEDT/14UTC; this does not expire standing inspection rule or change other owner-directed schedules.
+
+## Reopen the completed native report edition
+
+The native receiving command already retains a complete `receiving.json` and `scientific-preview.json` in its selected output directory. Its `steps.summary` records the actual completed run IDs, compound case, report IDs, typed-source IDs and combined scientific report edition. Each `steps["report-" + mode]` ties a source and report to the exact native run. Use those original receipts to create the browser selection:
+
+~~~sh
+node source/chemistry-report-receiving/browser.mjs \
+  --from-native /ACTUAL/compound-receiving-output \
+  --workspace-key ACTUAL_REGISTERED_WORKSPACE_KEY \
+  --write-config /mnt/data/chemistry-browser-selection.json
+~~~
+
+The command requires matching summary, scientific-report receipt and original preview identities. It uses the retained source order, matches each original report/source pair to its native run, and copies the actual project, case, title and contact. It records SHA256 of both original receipt files. It creates a new configuration file without overwriting a prior receiving selection. Run the ordinary browser command below with that file and the existing authenticated operator.
+
+The resulting `scientific_report_edition_id` selects the **already completed original combined edition**. The course still operates the real replace/append controls and previews their exact ordered sources. It then opens the selected saved edition through its visible native control, checks its project, source order, title and exact contact, and proceeds through its retained files, export and selected-Study reopen. The journal keeps `composer_preview_id` and `scientific_report_id` separately. This branch submits no scientific render action.
+
+The distinction matters for historical identity: the original native renderer preserves an omitted contact as `{}`, while the current browser composer serializes its three empty contact fields as an object containing three empty strings. Those two source identities are different. An existing browser can also retain an earlier contact draft. Supplying `contact` now explicitly fills or clears all three visible fields. The saved-edition check preserves the original full contact object exactly; it does not rewrite a historical edition to match the current form.
+
+For a manually prepared selection using `scientific_report_edition_id`, include the original nonempty `title`, exact `contact` object, actual completed `runs` with their `report_id` and `source_record_id`, and actual registered Workspace key. An original empty object must remain `"contact": {}`. Without a saved combined edition ID, the ordinary course continues to prepare or reopen the current composer preview. In both paths, the exported and restored Study root is the actual selected scientific edition.
+
+## Runtime
+
+Use the accepting host’s existing Node, Playwright and Chromium. The script imports the supplied Playwright module. The original operator must already be running and expose the selected Workspace.
+
+Create a configuration file:
+
+~~~sh
+node source/chemistry-report-receiving/browser.mjs \
+  --write-example /mnt/data/chemistry-browser-selection.json
+~~~
+
+Edit `workspace_key`. The example has the original four IDs, case/project identity, a provenance-specific report title and `restore_study: true`. Each run can additionally supply `report_id` and `source_record_id` when an existing saved edition is intended. Otherwise the real preparation controls produce and retain the current original editions.
+
+~~~json
+{
+  "schema": "upstate.chemistry-browser-receiving/v1",
+  "workspace_key": "ACTUAL_REGISTERED_WORKSPACE_KEY",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "case_id": "ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb",
+  "runs": [
+    {
+      "run_id": "59d4b738620b469249bb297fa05626012de72a1cdd4e5135a9f6dc4b7f9c8a53"
+    }
+  ],
+  "title": "Upper Savannah Chemistry — authored reference analyses",
+  "restore_study": true,
+  "task_timeout_seconds": 1200
+}
+~~~
+
+Optional `contact` has `name`, `organization` and `email`. Supplying it fills or clears all three fields, so an earlier browser draft cannot silently supply a contact. With `scientific_report_edition_id`, retain the full exact original contact object and title. For another original case, replace or omit `case_id` and supply its actual `project_id`. Run/report/source IDs are original 64-character hex identities.
+
+Run against the private original operator URL:
+
+~~~sh
+node source/chemistry-report-receiving/browser.mjs \
+  --config /mnt/data/chemistry-browser-selection.json \
+  --output /mnt/data/chemistry-browser-receiving \
+  --url-file /actual/private/operator-url.txt \
+  --playwright /actual/installed/playwright/index.mjs
+~~~
+
+The URL file stays local. `CHEMISTRY_OPERATOR_URL` is an alternative. The original capability stays in normal browser session storage and is used for same-origin reads. The receiving output retains the origin, not the token or authentication URL.
+
+If needed, `CHROMIUM_EXECUTABLE` names the existing Chromium executable. `--headed` opens a visible window. `--cdp http://127.0.0.1:9222` or `CHEMISTRY_RECEIVING_CDP` connects to existing Chromium. The course creates and closes its own page, retaining the original browser context and existing pages.
+
+Use a dedicated output directory and one receiving process for it.
+
+## Actual product course
+
+1. Select the original Workspace and open its Chemistry catalogue. Verify the completed state and selected case identity of each run.
+2. Open its retained result table: calibration observations, uncertainty summaries, or monitoring selected rows.
+3. Open or prepare each immutable report. New reports reopen through the **completed task’s own button**, exercising the original extension dispatcher and Workspace identity.
+4. Open its actual iframe. Capture desktop 1440×1000 and narrow 390×844 screenshots, including each second-level report section at both sizes. Download the original report and editable/scientific ZIP controls; verify byte lengths and SHA256.
+5. Open or prepare each typed scientific source, including its completed-task button. Report/run/source IDs must agree.
+6. Use **Open this report only** for the first source and **Add to current report** for subsequent sources. The actual preview must return exactly those identities in their original order.
+7. Operate **Preview selected sources**. If `scientific_report_edition_id` is supplied, open that exact original saved edition and verify its retained identity. Otherwise operate **Prepare PDF, HTML and data**, or reopen the existing edition returned by the current preview. Download HTML/PDF and complete scientific-report ZIP through the original visible anchors.
+8. Transfer that saved report to Study transfer, preview its source/history closure and export the one selected report root.
+9. With `restore_study: true`, choose that downloaded ZIP in **Receive study archive**, wait for the original `workspace.restore` task, select its returned Workspace and reopen every Chemistry report/source plus the saved scientific report.
+10. Save actual browser errors, interrupted tasks if any, source/result IDs, checked downloads and screenshots.
+
+The Study archive carries the maintained source-specific Chemistry history: local cases, completed runs, reports, typed sources and original artifacts. External-workspace sources use the maintained contained-source semantics.
+
+`restore_study: false` is an explicitly export-only course. Normal receiving uses `true`.
+
+## Continue an interrupted course
+
+Rerun the identical command with the **same configuration and output directory**. The journal pins the selection SHA256. Before the browser admits a report, source, render, export or restore request, it saves that complete original action, payload, Workspace and `operation_id` and awaits the atomic journal write. If the write fails or the selected Workspace changes, the request is aborted before transport.
+
+An acknowledged action reopens its original task ID. If its response was lost, the course first reads the complete original task history. It reopens the exact operation or one uniquely matching full request, including a completed task originally reused under a different operation ID. Multiple matches remain an actionable ambiguity in Operations; no duplicate is submitted. Only when no retained task matches does it submit the **same retained request with the same operation ID** to the existing operator. The returned task must match the original action, payload and Workspace, and an already saved task ID cannot change. No new identity is generated for recovery.
+
+This receipt recovery does not resume failed, interrupted or cancelled tasks. Those retain their original state and exception for normal Operations handling. Existing pre-correction journals can continue when they contain the complete original request; an incomplete or mismatched journal is preserved with an actionable exception.
+
+Failed/interrupted/cancelled native tasks retain their actual exception. Correct the original source/runtime issue with its owner, resume the same task in the application, then rerun this course. Existing report/source IDs reopen directly.
+
+The browser’s original draft and pending-request handling remain in place. A changed selection uses a new receiving output so different case identities remain distinct.
+
+## Read the result
+
+`receiving.json` holds original input selection, per-run report/source IDs, current composer preview ID, selected saved scientific report ID, original operation/task identities, Study ZIP and received Workspace key.
+
+- `records/` contains the actual API responses used for Workspace, results, previews, tasks and report/source editions.
+- `downloads/` contains original control downloads, each checked against retained bytes/SHA256.
+- `images/` contains desktop/narrow views, report sections, queued states and actual failure images.
+- `views/` contains loaded report HTML and the actual error DOM if interrupted.
+- `REVIEW.md` links the actual screenshots.
+- `visual-review.json` is written by the producing reviewer after opening the images/product: inspected files, findings, repairs and current source edition.
+
+`browser_course_complete` records completed controls/downloads/receiving. The automatic `visual_review.state` remains `awaiting_actual_image_review` until a producing peer opens the actual images or application and records that inspection. Layout/text counts support the work.
+
+## Visual and scientific inspection
+
+Open the exact saved report and desktop/narrow images. Read the title, source provenance, key conclusions and full physical accounting tables. Inspect every section for clipping, overlaps, unreadable labels and missing figures. Operate wide table scrolling. Open the downloaded PDF and inspect units, markers, pagination and table headings.
+
+Calibration distinguishes fitted/held-out rows, exact/censored/interval references and the full retained measurement operator. Inspect original convergence, termination and error scales; interval distance and endpoint inclusion remain the engine’s quantities.
+
+Uncertainty retains its actual parameter prior, seed and draw count. Read the pointwise quantile and prior-variation meaning. A composite quantity uses the original per-draw operator. Retain conserved mass basis and integration duration.
+
+Monitoring retains the selected observations and actual precision/design criterion. The authored reference case’s optimized coefficients and monitoring design remain visibly identified by their original provenance.
+
+Operate both prepared-source controls, verify order, download files, reopen the saved report and received Study. Fix visible defects with the original renderer/controller owner, rerun that exact repaired edition and retain the prior receiving result.
+
+Return accessible image/file handles through the existing native operation so producing peers can look at the pixels. A path on another host by itself cannot support image inspection.
+
+## Maintained contracts and primary references
+
+The driver uses the actual Workspace selector, Chemistry controls, Scientific Reports controls and Study controls. Reads inspect original records. Submitted actions are limited to report/source preparation, scientific rendering/export, selected Study export and ordinary Workspace restore.
+
+Playwright’s [download API](https://playwright.dev/docs/api/class-download) saves real download bytes. Its [response waiting API](https://playwright.dev/docs/api/class-page#page-wait-for-response) starts waits before the triggering control. Its [browser close contract](https://playwright.dev/docs/api/class-browser#browser-close) distinguishes launched browsers from connected sessions.
+
+Native scientific results and user-facing reports remain the maintained product implementations.
+
+## Editor-lifetime receiving continuation
+
+The current source also binds pending project/observation reads and Save/Run admission to the original mounted Workspace, retained editor and native desk activation. Later edits or a newly selected file take precedence; leaving and returning cannot revive an older pending read. The native wrapper preserves the draft while changing the activation token. The queue keeps any already accepted original task and operation ID.
+
+Alongside this saved-result course, use the original populated editor to load a project and observation CSV, edit during a pending load, select a later file, open another scenario, and leave and return. Check the visible preserved draft and any actionable message. Then save and submit the intended current selection and inspect the queued Workspace/case/request before continuing report, scientific-source and selected-Study reopening. Keep this as the same receiving operation and inspect its actual rendered result.
+
+
+## Complete current owner direction
+
+The following complete brief is carried from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3` (Git `8cd1c1f3d371a2fb75471813844e31f489aa8272`). It preserves the current scientific and native owners. This complementary saved-Chemistry report course does not replace the primary actual-geography modeled demonstration.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Current project instructions
+
+Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

@@ -32,6 +32,14 @@ PURPOSE = (
 )
 
 
+class ReceiverInterrupted(RuntimeError):
+    """Carry a nested original receiver's observed process exit unchanged."""
+    def __init__(self, code, command):
+        super().__init__("Original Gura receiver interrupted: " + str(code))
+        self.native_failure = {"kind": "gura_receiver_interrupted",
+                               "return_code": code, "command": list(command)}
+
+
 def axes_for(scope):
     active = SCOPES[scope]
     result = []
@@ -74,8 +82,8 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--application", type=Path, required=True)
     p.add_argument("--workspace", type=Path, required=True)
-    p.add_argument("--inputs", type=Path, required=True,
-                   help="Original release NDR.zip and SDR.zip directory")
+    p.add_argument("--inputs", type=Path,
+                   help="Official ZIP directory for first intake; omit to verify retained Workspace inputs")
     p.add_argument("--baseline-run-id",
                    help="Existing completed original both-model Gura baseline")
     p.add_argument("--scopes", choices=tuple(SCOPES), nargs="+",
@@ -386,7 +394,7 @@ def main(argv=None):
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("GDAL_CACHEMAX", "64")
     import receive_gura_native as receiver
-    from receive_gura_planning import original_baseline
+    from receive_gura_planning import original_baseline, original_sources
     from model import parameter_studies
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
@@ -397,7 +405,7 @@ def main(argv=None):
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
     receiving.mkdir(parents=True, exist_ok=True)
-    inputs = args.inputs.resolve(strict=True)
+    inputs = args.inputs.resolve(strict=True) if args.inputs is not None else None
     scopes = [name for name in SCOPES if name in set(args.scopes)]
     state, directory = None, None
     custody_fds = ()
@@ -460,21 +468,24 @@ def main(argv=None):
                 checkpoint("original-reference")
                 original_args = [
                     "--application", str(application), "--workspace", str(root),
-                    "--inputs", str(inputs), "--models", "ndr", "sdr", "--mode", "both"]
+                    "--models", "ndr", "sdr", "--mode", "both"]
+                if inputs is not None:
+                    original_args += ["--inputs", str(inputs)]
                 if args.isolate_native_cases:
                     # The original reference receiver owns its separate .driver
                     # lease. It does not reacquire this suite's native batch lease.
-                    code = subprocess.call(
-                        [sys.executable, "-B", str(Path(receiver.__file__)), *original_args],
+                    original_command = [sys.executable, "-B", str(Path(receiver.__file__)), *original_args]
+                    code = subprocess.call(original_command,
                         cwd=application, env=dict(os.environ), pass_fds=custody_fds)
+                    if code < 0 or code in (130, 137, 143):
+                        raise ReceiverInterrupted(code, original_command)
                 else:
                     code = receiver.main(original_args)
                 if code:
                     raise RuntimeError("Original Gura receiving requires recovery; inspect its retained state")
                 baseline_id = read_json(recorded)["workspace_baseline"]["run_id"]
             workspace = ReusingWorkspace(root)
-            originals = {model: receiver.unpack_original(inputs, receiving, model)
-                         for model in ("ndr", "sdr")}
+            originals = original_sources(inputs, receiving, receiver)
             # Resume only the explicitly retained original both-model selection.
             candidate = workspace.inspect_run(identifier(baseline_id))
             if (run_models(candidate) != ("ndr", "sdr") or workspace._get(
@@ -542,8 +553,10 @@ def main(argv=None):
             # pointer, so an explicit continuation reopens the same suite.
             continuation = [sys.executable, "-B", str(Path(__file__).resolve()),
                             "--application", str(application), "--workspace", str(root),
-                            "--inputs", str(inputs), "--baseline-run-id", baseline["id"],
+                            "--baseline-run-id", baseline["id"],
                             "--scopes", *scopes, "--design", args.design]
+            if inputs is not None:
+                continuation += ["--inputs", str(inputs)]
             for target in targets[1:]:
                 continuation.extend(["--evaluation-run-id", target["id"]])
             if args.difference_maps:
@@ -633,9 +646,10 @@ def main(argv=None):
                        failed_study_keys=failures, completed_at=now() if complete else None)
             return 0 if complete else 1
         except Exception as error:
+            interrupted = process_interrupted(error) or isinstance(error, ReceiverInterrupted)
             try:
-                checkpoint("interrupted" if process_interrupted(error) else "error",
-                           state="partial" if process_interrupted(error) else "error", error={
+                checkpoint("interrupted" if interrupted else "error",
+                           state="partial" if interrupted else "error", error={
                     **(getattr(error, "native_failure", None) or {}),
                     "type": type(error).__name__, "message": str(error),
                     "traceback": traceback.format_exc()})
@@ -643,7 +657,9 @@ def main(argv=None):
                 if not storage_exhausted(error):
                     raise
             logging.exception("Gura parameter suite stopped at its actual operation")
-            return 1
+            # Preserve the interrupted cohort boundary for its original supervisor.
+            # The saved native_failure retains the exact child code and source IDs.
+            return 130 if interrupted else 1
 
 
 if __name__ == "__main__":

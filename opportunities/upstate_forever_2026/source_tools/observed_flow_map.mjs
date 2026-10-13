@@ -18,28 +18,34 @@ export function buildFlowGeography({collection,bindings,applicability,eighteenmi
 }
 
 /* Geographic navigation from retained original NLDI points and whole-basin polygons. */
-export function renderFlowMap(geography,selected="",focus=false){
+export function renderFlowMap(geography,selected="",focus=false,options={}){
  const escape=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const basins=geography.basins||[],chosen=basins.find(b=>b.site===selected),shown=focus&&chosen?[chosen]:basins;
- if(!shown.length)return '<p>No retained whole-basin geometry in this source edition.</p>';
+ if(!shown.length)return '<p>'+escape(options.emptyLabel||"No retained whole-basin geometry in this source edition.")+'</p>';
  const mercator=([lon,lat])=>{if(!Number.isFinite(lon)||!Number.isFinite(lat)||Math.abs(lat)>=85.051129||Math.abs(lon)>180)throw Error("Invalid original geographic coordinate");return[lon*Math.PI/180,Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))];};
  const polygons=g=>g.type==="Polygon"?[g.coordinates]:g.type==="MultiPolygon"?g.coordinates:(()=>{throw Error("Original basin must be Polygon or MultiPolygon");})();
  let xmin=Infinity,ymin=Infinity,xmax=-Infinity,ymax=-Infinity,vertices=0;
  for(const basin of shown){for(const polygon of polygons(basin.geometry))for(const ring of polygon){if(ring.length<4||ring[0][0]!==ring.at(-1)[0]||ring[0][1]!==ring.at(-1)[1])throw Error("Incomplete or unclosed original polygon ring");for(const p of ring){const[x,y]=mercator(p);xmin=Math.min(xmin,x);xmax=Math.max(xmax,x);ymin=Math.min(ymin,y);ymax=Math.max(ymax,y);vertices++;}}const[x,y]=mercator(basin.point);xmin=Math.min(xmin,x);xmax=Math.max(xmax,x);ymin=Math.min(ymin,y);ymax=Math.max(ymax,y);}
  if(!(xmax>xmin&&ymax>ymin))throw Error("Original basin extent is empty");
- const W=1160,H=480,P=36,scale=Math.min((W-2*P)/(xmax-xmin),(H-2*P)/(ymax-ymin)),dx=(W-scale*(xmax-xmin))/2,dy=(H-scale*(ymax-ymin))/2;
+ const W=options.width??1160,H=options.height??480,P=36;
+ if(!Number.isFinite(W)||!Number.isFinite(H)||W<600||W>2000||H<300||H>1200)throw Error("Map display dimensions are invalid");
+ const labelSize=options.labelSize??11;if(!Number.isFinite(labelSize)||labelSize<8||labelSize>24)throw Error("Map label size is invalid");
+ const scale=Math.min((W-2*P)/(xmax-xmin),(H-2*P)/(ymax-ymin)),dx=(W-scale*(xmax-xmin))/2,dy=(H-scale*(ymax-ymin))/2;
  const xy=p=>{const[x,y]=mercator(p);return[dx+(x-xmin)*scale,H-dy-(y-ymin)*scale];};
  const shape=basin=>polygons(basin.geometry).map(polygon=>polygon.map(ring=>ring.map((p,i)=>{const[x,y]=xy(p);return(i?"L":"M")+x.toFixed(3)+" "+y.toFixed(3);}).join("")+"Z").join("")).join("");
  const displayArea=new Map(shown.map(basin=>[basin.site,polygons(basin.geometry).reduce((total,polygon)=>total+polygon.reduce((sum,ring,index)=>{let area=0;for(let i=1;i<ring.length;i++){const a=xy(ring[i-1]),b=xy(ring[i]);area+=a[0]*b[1]-b[0]*a[1];}return sum+(index?-1:1)*Math.abs(area)/2;},0),0)]));
  const paintOrder=[...shown].sort((a,b)=>displayArea.get(b.site)-displayArea.get(a.site)||a.site.localeCompare(b.site));
  const order=[...paintOrder.filter(b=>b.site!==selected),...paintOrder.filter(b=>b.site===selected)];
  let svg='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fafafa" stroke="#bbb"/>';
- for(const basin of paintOrder){const active=basin.site===selected;svg+='<g class="basin-shape" data-basin="'+escape(basin.site)+'" tabindex="0" role="button" aria-label="'+escape("Open "+basin.site+" "+basin.name+' hydrograph')+'"><title>'+escape(basin.site+" · "+basin.name+" · original whole-catchment polygon")+'</title><path d="'+shape(basin)+'" fill="'+(active?"#d0d0d0":"#ededed")+'" fill-opacity="'+(active?"1":".7")+'" fill-rule="evenodd" stroke="'+(active?"#111":"#888")+'" stroke-width="'+(active?"1.6":".8")+'" vector-effect="non-scaling-stroke"/></g>';}
+ for(const basin of paintOrder){const active=basin.site===selected;svg+='<g class="basin-shape" data-basin="'+escape(basin.site)+'" tabindex="0" role="button" aria-label="'+escape(options.actionLabel?options.actionLabel+" "+basin.site+" "+basin.name:"Open "+basin.site+" "+basin.name+' hydrograph')+'"><title>'+escape(basin.site+" · "+basin.name+" · original whole-catchment polygon")+'</title><path d="'+shape(basin)+'" fill="'+(basin.excluded===true?"none":active?"#d0d0d0":"#ededed")+'" fill-opacity="'+(active?"1":".7")+'" fill-rule="evenodd" stroke="'+(active?"#111":"#888")+'" stroke-width="'+(active?"1.6":".8")+'" vector-effect="non-scaling-stroke"'+(basin.excluded===true?' stroke-dasharray="4 3"':"")+'/></g>';}
  if(chosen&&shown.includes(chosen))svg+='<path d="'+shape(chosen)+'" fill="none" stroke="#111" stroke-width="1.6" vector-effect="non-scaling-stroke" pointer-events="none"/>';
  for(const basin of order)if(basin.site===selected&&basin.relation==="outside"&&Array.isArray(basin.nearest_boundary)){const a=xy(basin.point),b=xy(basin.nearest_boundary);svg+='<path d="M'+a[0].toFixed(3)+' '+a[1].toFixed(3)+'L'+b[0].toFixed(3)+' '+b[1].toFixed(3)+'" fill="none" stroke="#555" stroke-dasharray="3 3"><title>Connector from original source point to retained nearest boundary coordinate</title></path>';}
- for(const basin of order){const[x,y]=xy(basin.point),active=basin.site===selected;svg+='<g data-basin="'+escape(basin.site)+'" tabindex="0" role="button" aria-label="'+escape("Open "+basin.site+" source gauge")+'"><title>'+escape(basin.site+" · original NLDI point · "+(basin.relation||"original geographic source"))+'</title><circle cx="'+x.toFixed(3)+'" cy="'+y.toFixed(3)+'" r="'+(active?"6":"4")+'" fill="white" stroke="#111" stroke-width="'+(active?"2":"1.2")+'"/><text x="'+(x+8).toFixed(3)+'" y="'+(y-7).toFixed(3)+'" font-size="11" fill="#222" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">'+escape(basin.site)+'</text></g>';}
- svg+='<text x="14" y="21" font-size="12" fill="#444">N</text><path d="M18 44V27m-4 5 4-5 4 5" fill="none" stroke="#555"/><text x="14" y="'+(H-12)+'" font-size="11" fill="#555">'+escape(shown.length+" original whole basins · "+vertices+" retained polygon vertices · Web Mercator display")+'</text>';
- return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+escape(chosen&&focus?chosen.site+" original NLDI whole basin":"Original NLDI whole basins and gauge locations")+'"><g font-family="system-ui,sans-serif">'+svg+'</g></svg>';
+ const labelCounts=new Map();
+ for(const basin of order){const[x,y]=xy(basin.point),active=basin.site===selected;
+ const labelKey=x.toFixed(3)+","+y.toFixed(3),labelLine=options.separateCoincidentLabels?(labelCounts.get(labelKey)||0):0;
+ labelCounts.set(labelKey,labelLine+1);svg+='<g data-basin="'+escape(basin.site)+'" tabindex="0" role="button" aria-label="'+escape(options.actionLabel?options.actionLabel+" "+basin.site:"Open "+basin.site+" source gauge")+'"><title>'+escape(basin.site+" · "+(options.pointLabel||"original NLDI point")+" · "+(basin.relation||"original geographic source"))+'</title><circle cx="'+x.toFixed(3)+'" cy="'+y.toFixed(3)+'" r="'+(active?"6":"4")+'" fill="white" stroke="#111" stroke-width="'+(active?"2":"1.2")+'"/><text x="'+(x+8).toFixed(3)+'" y="'+(y-7+labelLine*(labelSize+4)).toFixed(3)+'" font-size="'+labelSize+'" fill="#222" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">'+escape(basin.site)+'</text></g>';}
+ svg+='<text x="14" y="21" font-size="12" fill="#444">N</text><path d="M18 44V27m-4 5 4-5 4 5" fill="none" stroke="#555"/><text x="14" y="'+(H-12)+'" font-size="11" fill="#555">'+escape(shown.length+" "+(options.featureLabel||"original whole basins")+" · "+vertices+" retained polygon vertices · Web Mercator display")+'</text>';
+ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+escape(options.mapLabel||(chosen&&focus?chosen.site+" original NLDI whole basin":"Original NLDI whole basins and gauge locations"))+'"><g font-family="system-ui,sans-serif">'+svg+'</g></svg>';
 }
 
 export function renderFlowGeography(geography,selected="02186702"){

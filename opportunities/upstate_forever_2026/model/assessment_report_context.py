@@ -9,11 +9,11 @@ from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
 
-from . import assessment_context, observed_context
+from . import assessment_context, observed_context, assessment_map_context
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
 
-VERSION = "1.0.0"
+VERSION = "1.2.0"
 SCHEMA = "upstate.assessment-report-context/v1"
 RECIPE = "assessment-report.json"
 MANIFEST = "assessment-report.sources.json"
@@ -110,9 +110,58 @@ def _links(items):
     return {"kind": "links", "items": [{"title": title, "path": path} for title, path in items]}
 
 
-def _sections(context, parcel=None):
+def _compared_memberships(row, selection):
+    """Read original memberships only from the source used by this comparison."""
+    selected = selection.get("watershed_source") or {}
+    expected = (selected.get("collection_id"), selected.get("source_id"))
+    if any(value is None for value in expected):
+        return []
+    return [member for member in row.get("computed_memberships", [])
+            if (member.get("source_ref", {}).get("collection_id"),
+                member.get("source_ref", {}).get("source_id")) == expected]
+
+
+def _membership_labels(members):
+    labels = []
+    for member in members:
+        native = member.get("watershed_id")
+        label = _text(native)
+        if sum(other.get("watershed_id") == native for other in members) > 1:
+            reference = member.get("source_ref") or {}
+            feature = reference.get("native_feature_id")
+            if feature is None:
+                feature = "index " + _text(reference.get("source_feature_index"))
+            label += " [feature " + _text(feature) + "]"
+        label += " (" + _text(member.get("relation")) + ")"
+        labels.append(label)
+    return "\n".join(labels) if labels else "No retained membership in compared source"
+
+
+def _comparison_counts(rows):
+    return [sum(row.get("association_agreement") is True for row in rows),
+            sum(row.get("association_agreement") is False for row in rows),
+            sum(row.get("association_agreement") is None for row in rows)]
+
+
+def _ordered_groups(result, selection):
+    """Present editions in the retained inventory selection order."""
+    references = [inventory["table"] for inventory in selection.get("inventories", [])]
+    if not references and selection.get("table"):
+        references = [selection["table"]]
+    rank = {(reference.get("collection_id"), reference.get("source_id")): index
+            for index, reference in enumerate(references)}
+    row_rank = {row.get("assessment_row_id") or assessment_context._row_id(row):
+                rank.get((row.get("source_ref", {}).get("collection_id"),
+                          row.get("source_ref", {}).get("source_id")), len(rank))
+                for row in result.get("rows", [])}
+    return sorted(result["assessment_groups"], key=lambda group:
+                  min((row_rank.get(row_id, len(rank)) for row_id in group.get("row_ids", [])),
+                      default=len(rank)))
+
+
+def _sections(context, parcel=None, map_context=None):
     result, summary = context["result"], context["summary"]
-    groups = result["assessment_groups"]
+    groups = _ordered_groups(result, context["selection"])
     editions = []
     seen = set()
     for group in groups:
@@ -125,6 +174,8 @@ def _sections(context, parcel=None):
             editions.append(values)
     rows = result["rows"]
     comparisons = [row for row in rows if row.get("association_status") != "both_resolved_agree"]
+    watershed_source = context["selection"]["watershed_source"]
+    source_label = str(watershed_source["source_id"]) + " / " + str(watershed_source["collection_id"])
     sections = [
         ["Assessment geographic context — " + context["title"], [
             result["relation"],
@@ -135,6 +186,11 @@ def _sections(context, parcel=None):
                     "Relationship basis"],
                    [[context["id"], summary["station_count"], summary["assessment_row_count"],
                      summary["watershed_count"], result["relationship_basis"]]]),
+            _table(["Assessment records agreeing", "Assessment records differing",
+                    "Assessment records with unresolved comparison"], [_comparison_counts(rows)]),
+            "Compared original watershed source: " + source_label + ". These counts refer to "
+            "distinct original assessment records, so a station with several causes or editions "
+            "can occur more than once.",
             "Original selection and filters: " + json.dumps(context["selection"],
                 ensure_ascii=False, sort_keys=True, allow_nan=False),
         ]],
@@ -159,19 +215,48 @@ def _sections(context, parcel=None):
             "independent original records.",
         ]],
         ["Publisher and computed geography — unresolved or differing relationships", [
-            _table(["Station", "Original row ID", "Edition", "Cause", "Use", "Support",
-                    "Original publisher watershed", "Publisher polygons", "Computed polygons",
+            _table(["Station", "Edition", "Cause / use", "Support",
+                    "Original assessment watershed", "Computed watershed membership",
                     "Comparison"],
-                   [[row["station_id"], row.get("assessment_row_id") or assessment_context._row_id(row),
-                     row.get("assessment_edition"), row["cause"], row["impaired_use"],
+                   [[row["station_id"], row.get("assessment_edition"),
+                     _text(row["cause"]) + " / " + _text(row["impaired_use"]),
                      row.get("use_support"), row.get("original_watershed_value"),
-                     row.get("published_polygon_ids"), row.get("computed_polygon_ids"),
+                     _membership_labels(_compared_memberships(row, context["selection"])),
                      row.get("association_status")] for row in comparisons]),
+            "Computed watershed IDs and interior/boundary relationships come from the retained "
+            "station memberships in the compared source above. Other watershed sources remain "
+            "in each original row's complete computed_memberships; they are not used for this comparison. "
+            "A published-only or unresolved relationship remains separate from a resolved difference.",
             "An unresolved side is not a geographic disagreement. Original row dictionaries, "
             "native publisher identity, normalized source-body identity and original array pointer "
             "or CSV row remain in the complete linked JSON and CSV.",
         ]],
     ]
+    if map_context is not None:
+        map_source = map_context["source"]
+        blocks = [map_context["message"],
+            "Compared original source: " + str(map_source["title"] or map_source["source_id"]) +
+            " (" + map_source["native_crs"] + "). The retained original body is included directly "
+            "with its file hash; complete original source companions also remain in the station package.",
+            str(map_context["selected_polygon_count"]) + " saved selected polygons; " +
+            str(map_source["feature_count"]) + " original source polygons. " +
+            str(map_context["differing_assessment_record_count"]) + " original records have differing "
+            "resolved relationships; " + str(map_context["unresolved_assessment_record_count"]) +
+            " have an unresolved comparison. Unresolved locations are not represented as geographic differences."]
+        if map_context["status"] == "ready":
+            blocks.extend([
+                "The overview uses light-gray source polygons and black selected-context outlines. "
+                "Each difference map shows at most six original station/polygon relationships: "
+                "gray publisher polygons and black station-membership outlines. Numbered labels are "
+                "polygon label anchors, not station coordinates. These maps use the existing native "
+                "vector renderer without reprojection or simplification.",
+                "Original projected grid metres and grid north are displayed. Map shading shows "
+                "source and relationship roles; it is not a water-quality, concentration or priority scale.",
+                _links([(figure["title"], figure["path"]) for figure in map_context["figures"]])])
+        blocks.append(_links([
+            ("Complete native map provenance and every original differing record", assessment_map_context.METADATA),
+            ("Unchanged native watershed source", map_source["file"]["path"])]))
+        sections.insert(3, ["Source-native assessment watershed maps", blocks])
     if parcel is not None:
         result_parcel = parcel["result"]
         sections.append(["Original parcel geographic associations — " + parcel["title"], [
@@ -257,6 +342,7 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
             raise ValueError("Choose a retained assessment parcel association")
         originals["parcels"] = _saved_members(workspace, parcel, parcels=True)
     identity = {"version": VERSION, "report_loader_edition": observed_context.EDITION,
+        "map_implementation": assessment_map_context.implementation(),
         "workspace_id": workspace.project["id"], "context_id": context["id"],
         "parcel_id": parcel["id"] if parcel else None,
         "members": {group: [item for unused, item in sorted(members.values(),
@@ -271,6 +357,10 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
                 target = directory / group / _relative(name)
                 _copy(path, target, item)
                 inputs.append(describe_file(directory, target))
+        map_context = assessment_map_context.prepare(workspace, context, directory)
+        map_inputs = [*map_context["files"],
+                      describe_file(directory, directory / assessment_map_context.METADATA)]
+        inputs.extend(map_inputs)
         recipe = {"schema": observed_context.SCHEMA, "title": parcel["title"] if parcel else context["title"],
             "edition": "assessment-geographic-context-report-" + VERSION,
             "report_context_kind": "assessment_geographic_context",
@@ -279,13 +369,20 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
             "parcel_received_from": parcel.get("received_from") if parcel else None,
             "original_selection": context["selection"], "assessment_groups": context["result"]["assessment_groups"],
             "original_source_references": assessment_context._source_references(context["result"]),
-            "inputs": inputs, "sections": _sections(context, parcel),
+            "inputs": inputs, "sections": _sections(context, parcel, map_context),
             "source_links": ["context/context.json", "context/assessment-context.zip",
                 "context/original-station-geography.zip", "context/context.geojson",
                 "context/OPEN_ASSESSMENT_CONTEXT.html", "context/package.json"] +
                 (["parcels/parcel-context.zip", "parcels/parcel-context.json",
                   "parcels/OPEN_PARCEL_CONTEXT.html"] if parcel else []),
-            "figures": []}
+            "figures": [{"id": figure["id"], "path": figure["path"]} for figure in map_context["figures"]],
+            "assessment_map": {key: map_context[key] for key in ("version", "status", "source",
+                "selected_polygon_count", "differing_assessment_record_count",
+                "unresolved_assessment_record_count", "difference_relationship_count")}}
+        if map_context.get("figure_spec"):
+            recipe["figure_spec"] = map_context["figure_spec"]
+        recipe["source_links"].extend([assessment_map_context.METADATA,
+            map_context["source"]["file"]["path"], *[figure["path"] for figure in map_context["figures"]]])
         atomic_json(directory / RECIPE, recipe, immutable=True)
         source_id = "assessment-context-report-" + operation_id[:20]
         manifest = {"schema": "upstate.sources/v1", "title": recipe["title"],
@@ -300,18 +397,21 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
                 "metadata": {"report_schema": observed_context.SCHEMA,
                     "report_context_kind": "assessment_geographic_context",
                     "context_id": context["id"], "parcel_id": parcel["id"] if parcel else None,
-                    "original_source_references": recipe["original_source_references"]},
+                    "original_source_references": recipe["original_source_references"],
+                    "assessment_map": recipe["assessment_map"]},
                 "companions": inputs}]}
         atomic_json(directory / MANIFEST, manifest, immutable=True)
         result = {"schema": SCHEMA, "version": VERSION, "operation_id": operation_id,
             "workspace_id": workspace.project["id"], "context_id": context["id"],
             "parcel_id": parcel["id"] if parcel else None, "title": recipe["title"],
+            "assessment_map": recipe["assessment_map"],
             "summary": context["summary"], "member_count": len(inputs) + 1,
             "source_id": source_id, "manifest": describe_file(workspace.root, directory / MANIFEST),
             "recipe": describe_file(workspace.root, directory / RECIPE),
             "files": [describe_file(workspace.root, directory / name) for name in
                 (MANIFEST, RECIPE, "context/assessment-context.zip")] +
-                ([describe_file(workspace.root, directory / "parcels/parcel-context.zip")] if parcel else [])}
+                ([describe_file(workspace.root, directory / "parcels/parcel-context.zip")] if parcel else []) +
+                [describe_file(workspace.root, directory / item["path"]) for item in map_inputs]}
         if import_source:
             collection = workspace.import_sources(directory / MANIFEST)
             source = {"source_collection_id": collection["id"], "source_id": source_id}

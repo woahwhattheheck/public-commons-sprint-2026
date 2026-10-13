@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 import uuid
 from core import Problem, digest, now, stable, strict_json
-from . import engine
+from . import engine, receiving
 
 TABLE = "classification_documents"
 REVIEWS = "classification_reviews"
 MAX_DOCUMENT = 32 * 1024 * 1024
-ACTION_NAMES = ("save_method", "save_roles", "save_roster", "preview_scenario", "save_scenario", "review")
+ACTION_NAMES = ("save_method", "save_roles", "save_roster", "preview_scenario", "save_scenario", "review",
+                "preview_package", "receive_package")
 
 
 def _exists(db):
@@ -42,7 +43,7 @@ def _load(db, kind, identity):
 
 def _reviews(db, identity):
     return [json.loads(r[0]) for r in db.execute(
-        "SELECT document FROM classification_reviews WHERE document_id=? ORDER BY revision", (identity,))]
+        "SELECT document FROM classification_reviews WHERE document_id=? ORDER BY revision,rowid", (identity,))]
 
 
 def _latest(db, identity):
@@ -178,6 +179,8 @@ def dispatch(workspace, db, action, payload, revision):
     if action not in ACTION_NAMES:
         raise Problem("Unknown classification action", 404, "UNKNOWN_CLASSIFICATION_ACTION")
     _ensure(db)
+    if action in {"preview_package", "receive_package"}:
+        return receiving.dispatch(workspace, db, action, payload, revision)
     if action == "save_method":
         value, original = _input(payload, "method")
         return _save(db, "method", engine.method(value), payload, revision, original=original)
@@ -243,22 +246,28 @@ def _metadata(db, doc):
             "errors": len(value.get("errors", [])), "warnings": len(value.get("warnings", [])),
             "currency": value.get("currency"), "data_kind": value.get("data_kind"),
             "parents": doc["parents"], "latest_review": _latest(db, doc["id"]),
-            "totals": value.get("totals"), "supersedes": doc.get("supersedes")}
+            "totals": value.get("totals"), "supersedes": doc.get("supersedes"),
+            "received_packages": receiving.origins(db, doc["id"])}
 
 
 def state(workspace, db):
     result = {"schema": engine.SCHEMA, "workspace_id": workspace.meta(db)["id"],
-              "revision": workspace.meta(db)["revision"], "methods": [], "roles": [], "rosters": [], "scenarios": []}
+              "revision": workspace.meta(db)["revision"], "methods": [], "roles": [], "rosters": [], "scenarios": [],
+              "received_packages": receiving.page(workspace, db)}
     if not _exists(db):
         return result
     groups = {"method": "methods", "roles": "roles", "roster": "rosters", "scenario": "scenarios"}
-    for row in db.execute("SELECT document FROM classification_documents ORDER BY revision DESC"):
+    for row in db.execute("SELECT document FROM classification_documents ORDER BY revision DESC,rowid DESC"):
         doc = json.loads(row[0])
         result[groups[doc["kind"]]].append(_metadata(db, doc))
     return result
 
 
 def document(workspace, db, kind, identity):
+    if kind == "received":
+        return receiving.document(workspace, db, identity)
+    if kind == "received-page":
+        return receiving.page(workspace, db, identity)
     doc = _load(db, kind, identity)
     return {**doc, "reviews": _reviews(db, doc["id"])}
 
@@ -278,6 +287,8 @@ def _package(db, doc):
 
 
 def download(workspace, db, kind, identity):
+    if kind in {"received-original", "received-manifest", "received-member"}:
+        return receiving.download(workspace, db, kind, identity)
     if kind in {"scenario-csv", "scenario-package"}:
         doc = _load(db, "scenario", identity)
         review = _accepted(db, doc)

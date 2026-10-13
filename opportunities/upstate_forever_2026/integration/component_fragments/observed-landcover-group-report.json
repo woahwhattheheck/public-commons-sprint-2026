@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "observed-landcover-group-report",
+  "source_reference": {
+    "workflow": "Original selected-HUC group data, native scientific figures and editable Study report"
+  },
+  "extend_components": {
+    "observed-watershed-change": {
+      "paths": [
+        "model/observed_landcover_report.py",
+        "model/observed_landcover_provenance.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/observed_landcover_report.py",
+        "model/observed_landcover_provenance.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
+      ]
+    }
+  }
+}

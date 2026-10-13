@@ -4,11 +4,13 @@
   "description": "Complete native Flowable BPMN, CMMN and DMN releases, process and case work, decisions, native history and customer handover",
   "commands": {
     "flowable-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/cli.mjs",
-    "flowable-process-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs"
+    "flowable-process-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs",
+    "flowable-decision-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-decision-programme.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
-    "flowable-process-programme": "Compile a complete original-source BPMN commissioning programme for the existing Flowable operator."
+    "flowable-process-programme": "Compile a complete original-source BPMN commissioning programme for the existing Flowable operator.",
+    "flowable-decision-programme": "Compile complete original DMN sources and typed cases into the existing Flowable operator programme."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -26,7 +28,9 @@
     "./seller/flowable/workspace/programmes": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-core.mjs",
     "./seller/flowable/workspace/case-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/case-programme.mjs",
     "./seller/flowable/workspace/programme-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/native-programme-receiving.mjs",
-    "./seller/flowable/workspace/process-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/process-programme.mjs"
+    "./seller/flowable/workspace/process-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/process-programme.mjs",
+    "./seller/flowable/workspace/decision-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme.mjs",
+    "./seller/flowable/workspace/decision-programme-review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme-review.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -71,7 +75,12 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_grant_review.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_customer_onboarding.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_vendor_approval.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.compile.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.compile.json",
+    "products/flowable-merchant/DECISION_PROGRAMMES.md",
+    "products/flowable-merchant/AUTHORING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.compile.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.programme.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.inputs.json"
   ],
   "browserAssets": [
     {

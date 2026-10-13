@@ -10,6 +10,8 @@ from migration_formats import FORMATS, FIELDS, CLASSIFICATIONS, import_source, s
 from migration_reconcile import CHECKS, reconcile, compare_reconciliations
 import migration_cases
 import financial_workspace
+import migration_registers
+import property_workspace
 
 EVIDENCE_FIELDS = ("path","expected_target_path","size_bytes","content_sha256","principals","label","classified_at","migrated_at")
 MUTATIONS = ("workspace.update","source.import","round.create","mapping.create","evidence.link","reconciliation.create",
@@ -19,8 +21,8 @@ READS = ("schema","state","entity.list","source.list","source.get","source.rows"
          "reconciliation.list","reconciliation.get","reconciliation.items","reconciliation.compare",
          "correction.list","correction.get","correction.history","operation.get","events","delivery.list","delivery.get")
 
-MUTATIONS = MUTATIONS + migration_cases.MUTATIONS + financial_workspace.MUTATIONS
-READS = READS + migration_cases.READS + financial_workspace.READS
+MUTATIONS = MUTATIONS + migration_cases.MUTATIONS + financial_workspace.MUTATIONS + migration_registers.MUTATIONS + property_workspace.MUTATIONS
+READS = READS + migration_cases.READS + financial_workspace.READS + migration_registers.READS + property_workspace.READS
 
 def schema():
     return {
@@ -33,9 +35,11 @@ def schema():
                         "capture_kinds":["customer_export","local_reference","public_reference"],
                         "optional":["task_id","round_label","job_id","snapshot_id","report_set_id","producer","observed_at","captured_at",
                                     "scan_job_id","scan_cycle_id","scan_mode","policy_only","encoding","delimiter","note"]},
-      "entity_kinds":["source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit"]+list(migration_cases.ENTITY_KINDS)+list(financial_workspace.KINDS),
+      "entity_kinds":["source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit"]+list(migration_cases.ENTITY_KINDS)+list(financial_workspace.KINDS)+list(property_workspace.KINDS)+list(migration_registers.ENTITY_KINDS),
       "case_migration":migration_cases.schema(),
       "financial_reporting":financial_workspace.schema(),
+      "register_migration":migration_registers.schema(),
+      "property_continuity":property_workspace.schema(),
       "mapping_kinds":["identity","principal","status","evidence"],
       "mapping_entry_fields":{
           "identity":["source_row_id","target_row_id","reason"],
@@ -349,11 +353,17 @@ class MigrationWorkspace(Store):
         try:
             migration_cases.ensure(self)
             financial_workspace.ensure(self)
+            migration_registers.ensure(self)
+            property_workspace.ensure(self)
         except BaseException:
             self.close()
             raise
 
     def _handler(self, operation):
+        if operation in migration_registers.HANDLERS:
+            return lambda op:migration_registers.HANDLERS[operation](self,op)
+        if operation in property_workspace.HANDLERS:
+            return lambda op:property_workspace.invoke(self,op)
         if operation in financial_workspace.HANDLERS:
             return lambda op:financial_workspace.invoke(self,op)
         if operation in migration_cases.HANDLERS:
@@ -390,10 +400,14 @@ class MigrationWorkspace(Store):
                 return prepare_delivery(self,p)
             if operation in MUTATIONS:
                 return self.execute(operation,p,self._handler(operation))
+            if operation in migration_registers.READS:
+                return migration_registers.read(self,operation,p)
             if operation in migration_cases.READS:
                 return migration_cases.read(self,operation,p)
             if operation in financial_workspace.READS:
                 return financial_workspace.read(self,operation,p)
+            if operation in property_workspace.READS:
+                return property_workspace.read(self,operation,p)
             if operation=="schema":
                 return schema()
             if operation=="state":
@@ -450,7 +464,7 @@ class MigrationWorkspace(Store):
     def entity_list(self, p):
         kind = p.get("kind")
         kinds = ("source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit")
-        kinds = kinds + migration_cases.ENTITY_KINDS + financial_workspace.KINDS
+        kinds = kinds + migration_cases.ENTITY_KINDS + financial_workspace.KINDS + migration_registers.ENTITY_KINDS + property_workspace.KINDS
         if kind not in kinds:
             raise MigrationError("ENTITY_KIND", "Choose an advertised retained entity kind", {"kinds":list(kinds)})
         offset,limit = page(p)
@@ -562,6 +576,13 @@ class MigrationWorkspace(Store):
 
     def _iter_export(self, kind, entity_id, *, format="ndjson"):
         """Bounded file delivery through the original database; caller keeps this workspace open."""
+        if kind in property_workspace.KINDS:
+            yield from property_workspace.iter_export(self,kind,entity_id,format)
+            return
+        if kind.startswith("register."):
+            from migration_reports import iter_register_export
+            yield from iter_register_export(self,kind,entity_id,format=format)
+            return
         if kind in financial_workspace.KINDS:
             yield from financial_workspace.iter_export(self,kind,entity_id,format)
             return

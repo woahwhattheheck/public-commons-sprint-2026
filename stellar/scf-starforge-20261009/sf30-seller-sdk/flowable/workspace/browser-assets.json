@@ -36,6 +36,76 @@
         "programme-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/programme-authoring.mjs",
+      [
+        "programme-authoring.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-authoring-store.mjs",
+      [
+        "programme-authoring-store.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-authoring-browser.mjs",
+      [
+        "programme-authoring-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/process-programme.mjs",
+      [
+        "process-programme.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/case-programme.mjs",
+      [
+        "case-programme.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-core.mjs",
+      [
+        "programme-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-process.source-draft.json",
+      [
+        "examples/process.source-draft.json",
+        "application/json; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-case.source-draft.json",
+      [
+        "examples/case.source-draft.json",
+        "application/json; charset=utf-8"
+      ]
+    ],
+    [
+      "/decision-programme.mjs",
+      [
+        "decision-programme.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-decision.source-draft.json",
+      [
+        "examples/decision.source-draft.json",
+        "application/json; charset=utf-8"
+      ]
     ]
   ]
 }

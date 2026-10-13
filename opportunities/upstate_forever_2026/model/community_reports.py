@@ -14,7 +14,7 @@ from .common import atomic_bytes, canonical, describe_file, digest, held, verify
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
                           get_plan, get_table, text, verify_plan_context, INTERVENTION_FIELDS)
 
-FORMAT_VERSION = 6
+FORMAT_VERSION = 7
 
 SCIENTIFIC_SCOPE_NOTES = (
     "Community summaries describe the selected whole source block groups. "
@@ -460,6 +460,17 @@ def _contents(plan, table, title, revision=None, previous_plan=None):
             ["Original edited CSV", "Rows", "Added", "Changed", "Removed"],
             [[imported["source"]["filename"], import_summary["row_count"],
               len(import_summary["added_ids"]), len(import_summary["changed_ids"]), len(import_summary["removed_ids"])]],
+        ))
+    if imported and imported.get("field_provenance"):
+        meanings = {"original-column": "Original received value; native field validation",
+                    "generated-source-row-id": "Stable identifier from original file SHA256 and row",
+                    "native-default": "Original native default; blank cost remains unspecified"}
+        sections.insert(4, (
+            "Original intervention field mapping",
+            ["Plan field", "Original CSV column", "Column number", "Interpretation"],
+            [[row["field"], row["source_column"] or "Unmapped",
+              row["source_column_number"] if row["source_column_number"] is not None else "",
+              meanings[row["basis"]]] for row in imported["field_provenance"]],
         ))
     estimate = plan["cost_summary"]
     cost_statement = (

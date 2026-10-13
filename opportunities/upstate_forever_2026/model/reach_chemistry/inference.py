@@ -78,17 +78,88 @@ class Parameters:
         return Project(raw)
 
 
+
+def observation_components(p: Project, observation: dict) -> list[tuple[str, float]]:
+    """Return the explicitly declared linear concentration operator on one conserved basis."""
+    label = f"observation {observation.get('id', '?')}"
+    p.reach(observation.get("reach"))
+    if "species" in observation:
+        if "components" in observation:
+            raise ModelError(label + ": choose species or components, not both")
+        sid = observation["species"]
+        p.specie(sid)
+        if observation.get("basis") is not None and observation["basis"] != p.species[sid]["basis"]:
+            raise ModelError(label + ": observation basis differs from its species")
+        return [(sid, 1.0)]
+    text(observation.get("measurement"), label + ".measurement")
+    basis = text(observation.get("basis"), label + ".basis")
+    components = records(observation.get("components"), label + ".components", nonempty=True)
+    result, seen = [], set()
+    for component in components:
+        sid = component.get("species")
+        p.specie(sid)
+        if sid in seen:
+            raise ModelError(label + ": components must name each original species once")
+        if p.species[sid]["basis"] != basis:
+            raise ModelError(label + ": every component must use the declared conserved basis")
+        weight = number(component.get("weight"), label + ".components.weight", positive=True)
+        result.append((sid, weight))
+        seen.add(sid)
+    return result
+
+
+def observation_fields(observation: dict) -> dict:
+    """Keep the original single-species or complete compound measurement identity."""
+    if "species" in observation:
+        return {"species": observation["species"]}
+    return {"measurement": observation["measurement"], "basis": observation["basis"],
+            "components": deepcopy(observation["components"])}
+
+
+def observation_key(observation: dict) -> tuple:
+    """Separate point-error metrics for every explicit original observation operator."""
+    if "species" in observation:
+        return ("species", observation["species"])
+    return ("measurement", observation["measurement"], observation["basis"],
+            tuple(sorted((row["species"], float(row["weight"])) for row in observation["components"])))
+
+
+def _interval(observation: dict) -> tuple[float, float, bool, bool]:
+    name = f"observation {observation['id']}"
+    lower = number(observation.get("lower_mg_l"), name + ".lower_mg_l")
+    upper = number(observation.get("upper_mg_l"), name + ".upper_mg_l")
+    if upper <= lower:
+        raise ModelError(name + ": interval upper_mg_l must exceed lower_mg_l")
+    if not isinstance(observation.get("lower_closed"), bool) or not isinstance(observation.get("upper_closed"), bool):
+        raise ModelError(name + ": interval endpoints need explicit lower_closed and upper_closed booleans")
+    if observation.get("mg_l") is not None:
+        raise ModelError(name + ": an interval observation must not supply a point mg_l")
+    return lower, upper, observation["lower_closed"], observation["upper_closed"]
+
+
+def _interval_contains(value: float, bounds: tuple[float, float, bool, bool]) -> bool:
+    lower, upper, lower_closed, upper_closed = bounds
+    return bool((value >= lower if lower_closed else value > lower)
+                and (value <= upper if upper_closed else value < upper))
+
+
 def observation_rows(p: Project, raw: list[dict], *, fitting: bool = False) -> list[dict]:
     obs = list(keyed(raw, "observations", nonempty=True).values())
     for o in obs:
-        p.index(o.get("reach"), o.get("species"))
+        observation_components(p, o)
         t = number(o.get("day"), f"observation {o['id']}.day")
         if t > p.end_day: raise ModelError(f"observation {o['id']}: day exceeds project duration")
         if fitting:
-            number(o.get("mg_l"), f"observation {o['id']}.mg_l")
+            qualifier = o.get("qualifier", "equal")
+            if qualifier not in ("equal", "below", "interval"):
+                raise ModelError("observation qualifier must be equal, below or interval")
+            if qualifier == "interval":
+                _interval(o)
+            else:
+                number(o.get("mg_l"), f"observation {o['id']}.mg_l")
+                if any(key in o for key in ("lower_mg_l", "upper_mg_l", "lower_closed", "upper_closed")):
+                    raise ModelError(f"observation {o['id']}: interval bounds require qualifier interval")
             number(o.get("sigma_mg_l"), f"observation {o['id']}.sigma_mg_l", positive=True)
-            if o.get("qualifier", "equal") not in ("equal", "below"):
-                raise ModelError("observation qualifier must be equal or below")
             if o.get("role", "fit") not in ("fit", "holdout"):
                 raise ModelError("observation role must be fit or holdout")
             ref = o.get("provenance")
@@ -102,7 +173,7 @@ def tangent_predictions(parameters: Parameters, values: np.ndarray, observations
     p = parameters.assign(np.asarray(values, dtype=float))
     count, n = len(parameters.rows), p.n
     obs = observation_rows(p, observations)
-    ids = [p.index(o["reach"], o["species"]) for o in obs]
+    operators = [[(p.index(o["reach"], sid), weight) for sid, weight in observation_components(p, o)] for o in obs]
     predictions, jac = np.zeros(len(obs)), np.zeros((len(obs), count))
     # [m, dm/dp_1, ..., dm/dp_k, 1]. Initial-condition parameters seed tangents.
     initial_tangents = [np.zeros(n) for _ in parameters.rows]
@@ -114,9 +185,17 @@ def tangent_predictions(parameters: Parameters, values: np.ndarray, observations
     def sample(day):
         for i, o in enumerate(obs):
             if o["day"] == day:
-                idx = ids[i]; factor = 1000.0 / p.state_volumes[idx]
-                predictions[i] = state[idx] * factor
-                for j in range(count): jac[i, j] = state[(j+1)*n + idx] * factor
+                if "species" in o:
+                    idx = operators[i][0][0]; factor = 1000.0 / p.state_volumes[idx]
+                    predictions[i] = state[idx] * factor
+                    for j in range(count): jac[i, j] = state[(j+1)*n + idx] * factor
+                else:
+                    for idx, weight in operators[i]:
+                        factor = weight * 1000.0 / p.state_volumes[idx]
+                        predictions[i] += state[idx] * factor
+                        for j in range(count): jac[i, j] += state[(j+1)*n + idx] * factor
+                if not np.isfinite(predictions[i]) or not np.isfinite(jac[i]).all():
+                    raise ModelError(f"observation {o['id']}: concentration operator overflow; review weights and model units")
     sample(0.0)
     start = 0.0
     for phase in p.phases:
@@ -195,7 +274,8 @@ def fit_observations(project: dict | Project, parameter_rows: list[dict], observ
         raise ModelError("loss must be linear, soft_l1 or huber")
     if isinstance(max_evaluations, bool) or not isinstance(max_evaluations, int) or max_evaluations < 1:
         raise ModelError("max_evaluations must be a positive integer")
-    measured = np.asarray([o["mg_l"] for o in obs], float)
+    intervals = {i: _interval(o) for i, o in enumerate(obs) if o.get("qualifier") == "interval"}
+    measured = np.asarray([o.get("mg_l", 0.0) if i not in intervals else 0.0 for i, o in enumerate(obs)], float)
     sigma = np.asarray([o["sigma_mg_l"] for o in obs], float)
     censored = np.asarray([o.get("qualifier") == "below" for o in obs])
     cache_x = None; cache_y = None; cache_j = None; evaluations = 0
@@ -210,6 +290,16 @@ def fit_observations(project: dict | Project, parameter_rows: list[dict], observ
         J = cache_j/sigma[:, None]
         inactive = censored & (cache_y <= measured)
         r = r.copy(); J = J.copy(); r[inactive] = 0; J[inactive] = 0
+        # Distance to the interval closure has no fabricated midpoint or epsilon.
+        # Membership of open endpoints is retained separately in the result.
+        for i, (lower, upper, unused_lower_closed, unused_upper_closed) in intervals.items():
+            if cache_y[i] < lower:
+                r[i] = (cache_y[i] - lower) / sigma[i]
+            elif cache_y[i] > upper:
+                r[i] = (cache_y[i] - upper) / sigma[i]
+            else:
+                r[i] = 0.0
+                J[i] = 0.0
         return r, J
     optimization = least_squares(lambda x: evaluate(x)[0][fit_indices], pars.values,
                                  jac=lambda x: evaluate(x)[1][fit_indices],
@@ -220,19 +310,43 @@ def fit_observations(project: dict | Project, parameter_rows: list[dict], observ
     threshold = max(weighted_jac[fit_indices].shape) * np.finfo(float).eps * (sv[0] if len(sv) else 0)
     rank = int((sv > threshold).sum())
     full_rank = rank == len(pars.rows)
-    rows = [{"id": o["id"], "reach": o["reach"], "species": o["species"], "day": o["day"],
-             "role": o.get("role", "fit"), "qualifier": o.get("qualifier", "equal"),
-             "observed_mg_l": o["mg_l"], "predicted_mg_l": float(cache_y[i]),
-             "sigma_mg_l": o["sigma_mg_l"], "weighted_residual": float(residual[i]),
-             "provenance": o["provenance"]} for i, o in enumerate(obs)]
+    rows = []
+    for i, o in enumerate(obs):
+        row = {"id": o["id"], "reach": o["reach"], **observation_fields(o), "day": o["day"],
+               "role": o.get("role", "fit"), "qualifier": o.get("qualifier", "equal"),
+               "observed_mg_l": None if i in intervals else o["mg_l"],
+               "predicted_mg_l": float(cache_y[i]), "sigma_mg_l": o["sigma_mg_l"],
+               "weighted_residual": float(residual[i]), "provenance": o["provenance"]}
+        if i in intervals:
+            row.update({name: o[name] for name in ("lower_mg_l", "upper_mg_l", "lower_closed", "upper_closed")})
+            row["interval_contains_prediction"] = _interval_contains(float(cache_y[i]), intervals[i])
+        rows.append(row)
     scores = []
+    # Preserve original single-species ordering; append complete compound operators.
+    identities = [{"species": sid} for sid in p.sids]
+    seen = {observation_key(row) for row in identities}
+    for row in obs:
+        key = observation_key(row)
+        if key not in seen:
+            identities.append(observation_fields(row)); seen.add(key)
     for role in ("fit", "holdout"):
-        for sid in p.sids:
-            selected = [r for r in rows if r["role"] == role and r["species"] == sid and r["qualifier"] == "equal"]
+        for identity in identities:
+            selected = [r for r in rows if r["role"] == role and observation_key(r) == observation_key(identity)
+                        and r["qualifier"] == "equal"]
             if selected:
                 errors = np.asarray([r["predicted_mg_l"] - r["observed_mg_l"] for r in selected])
-                scores.append({"role": role, "species": sid, "count": len(selected),
+                scores.append({"role": role, **identity, "count": len(selected),
                                "rmse_mg_l": float(np.sqrt(np.mean(errors**2))), "bias_mg_l": float(errors.mean())})
+    interval_scores = []
+    for role in ("fit", "holdout"):
+        for identity in identities:
+            selected = [r for r in rows if r["role"] == role and observation_key(r) == observation_key(identity)
+                        and r["qualifier"] == "interval"]
+            if selected:
+                interval_scores.append({"role": role, **identity, "count": len(selected),
+                    "predictions_within_declared_interval": sum(r["interval_contains_prediction"] for r in selected),
+                    "weighted_distance_to_interval_rmse": float(np.sqrt(np.mean(
+                        [r["weighted_residual"] ** 2 for r in selected])))})
     calibrated = pars.assign(optimization.x)
     return {"schema": "reach-chemistry-calibration/1", "original_project_sha256": p.fingerprint,
             "calibrated_project_sha256": calibrated.fingerprint, "calibrated_project": calibrated.raw,
@@ -242,6 +356,10 @@ def fit_observations(project: dict | Project, parameter_rows: list[dict], observ
                             "active_bound": int(bound)} for q, original, v, bound in
                            zip(pars.rows, pars.values, optimization.x, optimization.active_mask)],
             "observations": rows, "scores": scores,
+            **({"interval_scores": interval_scores, "interval_loss":
+                "Signed distance to the interval closure divided by sigma_mg_l; zero in the closure. "
+                "Open/closed endpoint membership is reported separately; no midpoint or epsilon is substituted."}
+               if intervals else {}),
             "identifiability": {"method": "local weighted residual Jacobian SVD",
                                 "rank": rank, "parameters": len(pars.rows), "full_rank": full_rank,
                                 "singular_values": sv.tolist(),
@@ -325,14 +443,20 @@ def uncertainty(project: dict | Project, parameter_rows: list[dict], observation
     # Predictions only: ensemble does not need to propagate parameter tangents.
     from .solver import simulate
     endpoints = sorted(set(o["day"] for o in obs))
-    targets = list({(o["reach"], o["species"]): {"reach": o["reach"], "species": o["species"]} for o in obs}.values())
+    components = [observation_components(p, o) for o in obs]
+    targets = list({(o["reach"], sid): {"reach": o["reach"], "species": sid}
+                    for o, group in zip(obs, components) for sid, unused_weight in group}.values())
     outputs = np.zeros((draws, len(obs)))
     maximum_budget_residual = 0.0
     for i in range(draws):
         run = simulate(pars.assign(values[i]), endpoints, targets=targets, cancelled=cancelled)
         result = run.result()
         lookup = {(s["day"], r["reach"], r["species"]): r["mg_l"] for s in result["samples"] for r in s["values"]}
-        outputs[i] = [lookup[(o["day"], o["reach"], o["species"])] for o in obs]
+        outputs[i] = [lookup[(o["day"], o["reach"], o["species"])] if "species" in o else
+                      sum(weight * lookup[(o["day"], o["reach"], sid)] for sid, weight in group)
+                      for o, group in zip(obs, components)]
+        if not np.isfinite(outputs[i]).all():
+            raise ModelError("Observation ensemble operator overflow; review component weights and model units")
         maximum_budget_residual = max(maximum_budget_residual, max(abs(b["relative_residual"]) for b in result["budgets"]))
         if progress: progress({"stage": "uncertainty", "completed": i+1, "total": draws})
     q = np.quantile(outputs, [0.05, 0.5, 0.95], axis=0)

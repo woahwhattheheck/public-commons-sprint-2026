@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "3",
+  "version": "4",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
@@ -26,7 +26,8 @@
       "profile.customer_review.apply",
       "profile.biophysical.evidence.save",
       "profile.biophysical.ranges.prepare",
-      "profile.biophysical.experiment.prepare"
+      "profile.biophysical.experiment.prepare",
+      "profile.biophysical.evidence.populate"
     ],
     "invoke": {
       "handler": "invoke",

@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "watershed-context",
   "title": "Regional watershed context",
-  "version": "1.6.0",
+  "version": "1.9.1",
   "order": 55,
   "assets": [
     "watershed_context.mjs",
-    "watershed_context.css"
+    "watershed_context.css",
+    "water_context_map.mjs"
   ],
   "backend": {
     "module": "watershed_context",
@@ -100,6 +101,20 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/map",
+        "operation": "map",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -126,7 +141,18 @@
       "args": [
         "task"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/watershed-explorer/{workspace_key}/{source_sha256}/source-explorer.html",
+        "handler": "source_explorer_file",
+        "args": [
+          "workspace_key",
+          "route.source_sha256"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   },
   "client": {
     "module": "/web/watershed_context.mjs",

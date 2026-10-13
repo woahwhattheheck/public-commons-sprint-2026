@@ -127,7 +127,7 @@
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
       "path": "products/flowable-merchant/native-installed-journey.mjs",
-      "commit": "888cb09c514ac2f21f76b8b4eb5950eb50003a24",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
       "editions": [
         {
           "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
@@ -140,6 +140,12 @@
           "git_blob": "91eec5129528ae229f9fb354989eb443a968ad40",
           "bytes": 84265,
           "sha256": "6306c88052dad25ed0d27db5beecd24eab3ba334b03ba764a1370fb980461ea0"
+        },
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "484f731c55cf16100b4e2aa34ef4326f7db6836b",
+          "bytes": 91050,
+          "sha256": "782fb6c30e97e432b8690d1863653e906c0bf1911cfabeef934294aae0c33951"
         }
       ]
     },
@@ -149,13 +155,19 @@
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
       "path": "products/flowable-merchant/PROGRAMMES.md",
-      "commit": "888cb09c514ac2f21f76b8b4eb5950eb50003a24",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
       "editions": [
         {
           "commit": "888cb09c514ac2f21f76b8b4eb5950eb50003a24",
           "git_blob": "bb1a823b6c5222b8bcc4fc8293d505666161627e",
           "bytes": 13135,
           "sha256": "a0809143285a9829cd608487b6342fc797fe5ad4f5d773b2bad7debf9e8297d5"
+        },
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "69a1b3569afad353137540f7a89bf13a0fd9be17",
+          "bytes": 18492,
+          "sha256": "0fb7bbdb3dbbac990f4c8899b90185833eb57bd93b3789014e3952f864ff1c74"
         }
       ]
     },
@@ -284,6 +296,134 @@
           "git_blob": "db0324ece964acf1192eb126108813c487ad6f71",
           "bytes": 5846,
           "sha256": "7741bc55024a40dc01b5dce91b747d9b3749ccdaa6bc094b12785e5ea05c3998"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-programme-compiler",
+      "label": "Complete BPMN process cohort compiler",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/process-programme.mjs",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "5641ac16ef9cc637c4f0e8242f03b9d3f471fdec",
+          "bytes": 9465,
+          "sha256": "72a6f995f9fb65798be329371c56d125f38f39181f6cf998d6e2b9900587e457"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-programme-command",
+      "label": "Original-source process programme compilation command",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "2cca6cbfa6c1a280fb9662b32ae1010606425cc6",
+          "bytes": 5446,
+          "sha256": "c887f3ffe4a564011a7c87abaeffb3dc9a217fb9b20db4617c4bd021621c2222"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-programme-reference",
+      "label": "Complete 29-step two-edition process programme",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.programme.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "82032a5443e408ea515db52e8b4f9690078695c4",
+          "bytes": 48777,
+          "sha256": "0d84854be4147f365d49de096101643a7a2a8697b16b65f393377a72ac323411"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-programme-selection",
+      "label": "Complete process cohort compilation selection",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.compile.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "5374cc69440f26892adb2f10360bf4507e9eebdb",
+          "bytes": 697,
+          "sha256": "9fa64fd0b0db5cfa7c9be731012c9162beb8217331090ac757edb100da01829c"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-grant-input",
+      "label": "Original exact typed grant-review input",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_grant_review.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "210dc4f2d0be3722263e861ff7a682b52cbe149a",
+          "bytes": 337,
+          "sha256": "c6c1473f88ea773497149ca41340f73972268e4359a1c02f9b5492c02d6fabf4"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-onboarding-input",
+      "label": "Original exact typed onboarding input",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_customer_onboarding.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "fa29c36a1927ca8dae430fc4553df8b9a31fdad1",
+          "bytes": 344,
+          "sha256": "0d0199cd7642bff174f4e2039bc67b5c95b31dff8d45253010b66e97f2835c8f"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-vendor-input",
+      "label": "Original exact typed vendor-approval input",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-inputs/sf_vendor_approval.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "c80c88e3430e9d8b684521fecafad9aa409e7ac4",
+          "bytes": 340,
+          "sha256": "c01b16f6e6d60859f5f697bd4a2c77452255dd26ea1b2b796a5832158b21b086"
+        }
+      ]
+    },
+    {
+      "id": "flowable-process-distribution",
+      "label": "Maintained installed process compiler command and source closure",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json",
+      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "editions": [
+        {
+          "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+          "git_blob": "96aefb959c5ea1b9a5af7a87f6e5aa44f244db0f",
+          "bytes": 7430,
+          "sha256": "905c3ea575f61bc984e91fb22ed310357b8226e4bcf8703ce83a61922d25df5b"
         }
       ]
     }

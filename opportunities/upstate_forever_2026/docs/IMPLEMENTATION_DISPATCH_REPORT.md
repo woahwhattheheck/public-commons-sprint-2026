@@ -62,3 +62,70 @@ The source lives under `implementation/laboratory-reports/<operation_id>/`. Orig
 Selecting this same prepared source for the same dispatch/current revision unwraps its own producer layer before recomposition. The previous original context binding is checked, so repeated preparation does not duplicate report sections. A different saved revision or changed source choice produces another source edition while preserving the earlier one.
 
 Ordinary working-archive retention includes the implementation operation, source collection and module. Install the module alongside the original laboratory-dispatch and field-observation sources; use the existing observed source collector and report formatter.
+
+## Ordered original scientific sources
+
+Both field registration and laboratory reconciliation accept the complete current report selection through `existing_report_selection`. When `observed_context_sources` is present, its explicit order is authoritative; `source_roles.OBSERVED_CONTEXT` names the first entry. The complete binding covers every selected source, including sources that are not copied into the new producer's recipe.
+
+For a new field or laboratory edition, the first original report is retained inside the new recipe at `existing-context/`, including all of its original source files, links and numeric figure specification. The new recipe replaces that entry in the ordered list. Every other original report remains in its existing position, with its original collection and source ID. For example, a selected regional study followed by an outcome report becomes the composed regional-and-field report followed by that same outcome report. Independent sources are collected once by the existing report engine.
+
+Preparing the same saved field or laboratory edition again recognizes its own selected source even after it has been moved within the list. It verifies the producer's retained original selection, restores only the inherited source in that slot, and replaces the slot with the resulting source edition. Added or reordered independent sources remain selected. A producer that originally had no inherited report remains in its own insertion position. This prevents recursive copies of the same field or laboratory sections while retaining deliberate source-order changes.
+
+The original implicit single-source selection remains supported. Its completed source identities and receipts remain reusable. Explicit ordered selections record the original composition slot in the producer identity, so preview, queued import, reopen and restored-Workspace reads use the same deterministic selection. The producer does not change model runs, report/economic bindings, contact details, geography or other source roles.
+
+For the original Eighteenmile laboratory cycle, the laboratory recipe already contains the original field report. Appending a saved outcome therefore produces two selected source documents: the laboratory report with its retained field sections, then the outcome report with its figures and supporting records. All three scientific contexts remain available without adding the field report a second time.
+
+
+### Carry the current Report desk selection through field work
+
+In **Field records**, open **Preserve an existing report selection** and choose
+**Use current Report desk selection** before reviewing the saved field revision.
+The captured selection includes its complete original source order and unrelated
+report, model and geography settings. Saving a dirty field plan preserves this
+snapshot; preview and **Register saved field observations** use the same bound
+selection. **Register without preceding report selection** explicitly returns to
+the original source-only flow.
+
+For a laboratory request, the same **Use current Report desk selection** control
+is alongside the existing registered-field and original JSON choices. Review and
+register the request's scientific report source after choosing the intended
+selection. A later change to the Report desk does not silently replace that
+reviewed snapshot.
+
+**Prepare standalone scientific report** opens every source from the completed
+receipt in its original order. **Prepare client report** opens the complete
+retained delivery selection. Neither registration automatically replaces the
+current report draft. These are explicit handoffs; the saved source edition and
+its original revision remain available after further plan edits.
+
+
+### Inspect the outgoing populated workflow
+
+Before presenting this product as client-ready, use the existing native receiving
+operation to run this exact installed edition with its populated saved plan and
+ordered report sources. Open the real screen and view its actual screenshots at
+the screenshare width and 390 px. Operate selection capture, save/review,
+registration, both report handoffs, downloads and reopening; inspect the
+relevant empty, loading and error states. Fix clipped or unreadable content in
+the same workflow. Keep plain industrial presentation with readable tables,
+clear hierarchy, consistent spacing and useful labels. Source/API review and an
+empty-Workspace screen do not replace this actual rendered-product inspection.
+
+
+## Recover a saved laboratory report after transfer or browser restart
+
+Open the native saved plan, choose **Prepare or reopen laboratory request**, and open the original request package. In **Saved laboratory report selections**, choose **Load saved selections**. The native catalogue lists only committed original report-source operations for that request, with their results revision, original source count and operation identity. **Refresh saved selections** discovers an operation completed in another browser. An empty list means that request has no retained completed scientific-source registration; preparing a request alone does not create one.
+
+Choose **Open retained selection** for the intended results revision. The existing source downloads, **Prepare standalone scientific report** and **Prepare client report** now use that exact receipt and its complete ordered report selection. The editable plan, laboratory instructions and any new report draft remain unchanged. Request revision, saved results revision and current editable plan revision are distinct labels, not inferred completion dates.
+
+The catalogue and detail read the original native operation under `implementation/laboratory-reports/<operation_id>`. The maintained getter verifies the original project, saved plan revision, request package, receipt files, imported source binding and saved selection before returning it. It does not reconcile results again, register a replacement source, or change a native revision. Interrupted folders without a committed import are excluded. Full Workspace capture retains these original operations; the selected Study lineage carries the laboratory operation when that source was selected. Older scientific-only Study archives retain their original dependency set.
+
+Late catalogue replies, changed requests, workspace changes and newer receipt selections cannot replace the current view. Opening a saved report does not overwrite a plan or laboratory request draft. Existing native revision save/review rules still apply when preparing a genuinely new report.
+
+### Receiving this exact continuation
+
+Use the current cumulative application or maintained `install_implementation.py`; its existing file list already contains the updated model, provider, descriptor and laboratory controller. No additional optional dependency or offline bundle is required because these catalogue controls are part of the existing native laboratory capability.
+
+At the same original receiving boundary, open a real retained request in a fresh browser, load its completed selections, select an explicit results revision and operate the original source download and both report handoffs. Export and reopen the complete Workspace or selected Study using its actual saved identity. At desktop/screenshare width and 390 px, personally LOOK at the outgoing populated, empty, loading and relevant error screens and actual screenshots. Open and use every delivered attachment, original report, CSV/JSON and archive in its normal viewer. Fix observed readability or control failures in this same workflow. This focused normal-use inspection follows the standing owner instruction; source review and merge alone do not claim native/rendered acceptance.
+
+Current work order: read the complete application-level **CURRENT_OWNER_DIRECTION.md**, version **2026-10-13.3**, together with the standing rendered-product instruction. Immediate execution priority remains the prepared native simulated Upper Savannah model: original 30 m upstream domain, separate South Carolina reporting mask and four utility anchors; baseline, riparian alternative and matched control; editable inputs and actual progress; stream-delivered NDR nitrogen/phosphorus in kg/year and SDR sediment in tonnes/year; maps, tables, reports and complete editable cold reopening. Keep source identities and simulated labels explicit. This laboratory continuation uses its existing owner/course and does not displace active model execution or introduce another queue. Preserve the October 13, 2026 14:00 UTC cutoff. The complete current owner brief must accompany the receiving work order and onward delegation.

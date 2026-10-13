@@ -133,6 +133,9 @@ def validate_run_comparison(workspace, comparison, *, expected_id=None):
     """Validate current and original legacy comparison identities without rerunning models."""
     from .common import digest, identifier
     from .model_selection import common_comparison_outputs
+    if "source_refresh_context" in comparison:
+        from .source_refresh_comparison import validate
+        return validate(workspace, comparison, expected_id=expected_id)
     if (comparison.get("schema") != "upstate.run-comparison/v1"
             or comparison.get("direction") != "alternative minus baseline"):
         raise ValueError("Select the retained alternative-minus-baseline comparison")

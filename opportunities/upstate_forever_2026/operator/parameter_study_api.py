@@ -5,11 +5,10 @@ import json
 
 from model import parameter_studies as experiments
 from model import parameter_calibration
-from model.common import identifier, read_json, verify_file
-from model.model_selection import selected
+from model.common import identifier
 
-ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
-READS = {"catalog", "results", "calibration", "execution"}
+ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare"}
+READS = {"catalog", "results", "calibration", "execution", "view", "source-catalog", "scientific-source"}
 
 
 class ParameterStudyAPI:
@@ -22,6 +21,10 @@ class ParameterStudyAPI:
         payload = task["payload"]
         if task["action"] == "parameter-study.prepare":
             return experiments.prepare(workspace, payload)
+        if task["action"] == "parameter-study.source.prepare":
+            from model import parameter_report_source
+            return self._source(task["workspace"], parameter_report_source.prepare(
+                workspace, payload, render=payload.get("render", True)))
         experiment_id = identifier(payload.get("experiment_id"))
         if task["action"] == "parameter-study.run":
             return self.operator.native_jobs.execute_parameter_study(task, workspace, experiment_id)
@@ -40,8 +43,40 @@ class ParameterStudyAPI:
     def preview(self, workspace_id, payload):
         return experiments.preview(self.operator.ws(workspace_id), payload)
 
+    def _source(self, workspace_id, value):
+        if value is None:
+            return None
+        from model.common import relative_file
+        workspace = self.operator.ws(workspace_id)
+        return {**value, "workspace_key": workspace_id,
+                "scientific_report_selection": {"workspace_key": workspace_id,
+                    "sources": [value["source"]], "title": value["title"]} if value.get("source") else None,
+                "downloads": [self.operator._ticket(workspace_id,
+                    relative_file(workspace.root, item["path"]), item, name.replace("_", " "))
+                    for name, item in value.get("files", {}).items()]}
+
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "source-catalog":
+            from model import parameter_report_source
+            return parameter_report_source.catalog(workspace, identifier(payload.get("id")))
+        if operation == "scientific-source":
+            from model import parameter_report_source
+            result = (parameter_report_source.get(workspace, identifier(payload["source_id"]))
+                      if payload.get("source_id") else
+                      parameter_report_source.latest(workspace, identifier(payload.get("id"))))
+            return self._source(workspace_id, result)
+        if operation == "view":
+            from model.parameter_views import DEFAULT_VIEWS
+            value = DEFAULT_VIEWS.read(workspace, identifier(payload.get("id")), **{
+                name: payload[name] for name in ("offset", "limit", "case_filter", "query", "run_id")
+                if payload.get(name) not in (None, "")})
+            from model.parameter_report_source import summary
+            value["scientific_source"] = summary(workspace, value["id"],
+                value.get("artifacts", {}).get("results", {}).get("sha256"))
+            value["_downloads"] = self.operator._files(
+                workspace_id, value, workspace.root / "experiments" / value["id"])
+            return value
         if operation == "execution":
             from model.parameter_case_status import read
             return read(workspace, identifier(payload.get("id")),
@@ -64,59 +99,17 @@ class ParameterStudyAPI:
             raise self.fault("PARAMETER_STUDY_READ", "Choose the parameter catalog, completed results or calibration candidates.")
 
         experiment_id = identifier(payload.get("id"))
-        state = experiments.inspect(workspace, experiment_id)
-        artifact = state.get("artifacts", {}).get("results")
-        if not artifact:
-            raise self.fault("PARAMETER_STUDY_RESULTS", "Run or summarize completed cases to create study results.", 404)
-        path = verify_file(workspace.root / "experiments" / experiment_id, artifact)
-        result = read_json(path)
-        if result.get("experiment_id") != experiment_id or result.get("workspace_id") != workspace.project["id"]:
-            raise self.fault("PARAMETER_STUDY_RESULTS_ID", "The result table belongs to another saved study.", 409)
-
-        areas = result["areas"]
-        pollutants = sorted({row["pollutant"] for row in result["rows"]})
-        area_id = payload.get("area_id") or None
-        pollutant = payload.get("pollutant") or None
-        if area_id and area_id not in {area["id"] for area in areas}:
-            raise self.fault("PARAMETER_STUDY_AREA", "Choose a reporting area from this study.")
-        if pollutant and pollutant not in pollutants:
-            raise self.fault("PARAMETER_STUDY_POLLUTANT", "Choose a pollutant from this study.")
+        from model.parameter_result_query import DEFAULT_RESULTS
         try:
-            offset = max(0, int(payload.get("offset") or 0))
-            limit = max(1, min(1000, int(payload.get("limit") or 100)))
-        except (TypeError, ValueError) as error:
-            raise self.fault("PARAMETER_STUDY_PAGE", "Use whole numbers for the result-table page.") from error
-
-        def matches(row):
-            return (not area_id or row["area_id"] == area_id) and (not pollutant or row["pollutant"] == pollutant)
-
-        matching = [row for row in result["rows"] if matches(row)]
-        if offset >= len(matching):
-            offset = max(0, ((len(matching) - 1) // limit) * limit)
-        return {
-            "experiment_id": experiment_id,
-            "title": result["title"],
-            "purpose": result["purpose"],
-            "design": result["design"],
-            "models": result.get("models") or list(selected(result["baseline_selection"])),
-            "mass_basis": result.get("mass_basis", "Sum of retained annual mass per pixel."),
-            "completed_cases": result["completed_cases"],
-            "total_cases": result["total_cases"],
-            "areas": areas,
-            "pollutants": pollutants,
-            "rows": matching[offset:offset + limit],
-            "ranges": [row for row in result["ranges"] if matches(row)],
-            "total_rows": len(result["rows"]),
-            "filtered_rows": len(matching),
-            "offset": offset,
-            "limit": limit,
-            "comparison_basis": result["comparison_basis"],
-            "range_basis": result["range_basis"],
-            "aggregation": {name: value for name, value in result.get("aggregation", {}).items()
-                            if name != "pairs"},
-            **{name: result[name] for name in (
-                "invest_version", "invest_version_basis", "baseline_selection",
-                "native_versions", "native_run_selections", "native_version_labels", "native_version_guides")
-               if name in result},
-            "artifact_sha256": artifact["sha256"],
-        }
+            return DEFAULT_RESULTS.read(workspace, experiment_id, **{
+                name: payload[name] for name in (
+                    "area_id", "pollutant", "offset", "limit", "range_offset", "range_limit",
+                    "expected_artifact_sha256") if payload.get(name) not in (None, "")
+            })
+        except FileNotFoundError as error:
+            raise self.fault("PARAMETER_STUDY_RESULTS", str(error), 404) from error
+        except BlockingIOError as error:
+            raise self.fault(
+                "PARAMETER_STUDY_RESULTS_BUSY",
+                "The original study is publishing results. Reopen the completed result table after that operation.",
+                409) from error

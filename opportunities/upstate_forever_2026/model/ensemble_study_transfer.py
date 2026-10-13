@@ -14,6 +14,9 @@ BASIS = "saved_native_ensemble"
 SOURCE_ID = "saved-native-ensemble-study"
 DIRECTORY = "ensemble-study-sources"
 REPORT_SCHEMA = "upstate.observed-report/v1"
+# Source v2 adds visible case keys and original coverage tables. Its retained
+# numeric release, native snapshots and lineage fields are the original v1 contract.
+SUPPORTED_SOURCE_VERSIONS = (1, 2)
 
 
 def _relative(value):
@@ -110,7 +113,9 @@ def _captured(closure, entry):
         identifier(basis.get(name))
     project = basis.get("workspace_id")
     operation_id = digest(basis)
-    if (basis.get("version") != 1 or not isinstance(project, str) or not project
+    if (type(basis.get("version")) is not int
+            or basis["version"] not in SUPPORTED_SOURCE_VERSIONS
+            or not isinstance(project, str) or not project
             or metadata.get("workspace_id") != project
             or metadata.get("source_operation_id") != operation_id
             or metadata.get("ensemble_id") != basis["ensemble_id"]
@@ -258,6 +263,136 @@ def _local_release(closure, key, ensemble_id, expected=None):
     closure.tree(prefix.rstrip("/"))
 
 
+def _local_paired_products(closure, plan, *, operation=None):
+    """Retain the original paired rasters named by this native course."""
+    if operation is None:
+        operation_path = "ensemble_results/" + plan["id"] + "/operation.json"
+        candidate = closure.root / operation_path
+        if not candidate.exists() and not candidate.is_symlink():
+            return
+        operation = closure.read(operation_path)
+    if operation.get("ensemble_id") != plan["id"]:
+        raise ValueError("The paired-product operation belongs to another native design")
+    scalar = operation.get("report")
+    if scalar is not None:
+        _local_release(closure, identifier(scalar["id"]), plan["id"])
+        closure._descriptors(scalar.get("files", {}),
+                             "ensemble_reports/" + scalar["id"] + "/")
+    for archived in operation.get("archives", []):
+        if archived.get("archive") is not None:
+            closure._descriptors(archived["archive"])
+    for product in operation.get("raster_products", []):
+        if not product.get("analysis_id"):
+            # Pending members remain in their original operation; no product
+            # directory has been published for them yet.
+            continue
+        key = identifier(product["analysis_id"])
+        prefix = "ensemble-products/" + key + "/"
+        analysis = closure.read(prefix + "analysis.json")
+        selected = analysis.get("selection", {})
+        if (analysis.get("schema") != "upstate.paired-raster-ensemble/v1"
+                or analysis.get("id") != key or digest(selected) != key
+                or selected.get("input_kind") != "original Workspace native run artifacts"):
+            raise ValueError("The paired product changed its original native selection")
+        references = selected.get("source_references", {})
+        scenario = product.get("scenario_id")
+        if (references.get("project_id") != closure.workspace.project["id"]
+                or references.get("grid_id") != plan["grid_id"]
+                or (references.get("baseline_scenario") or {}).get("id") != plan["baseline_scenario_id"]
+                or (references.get("alternative_scenario") or {}).get("id") != scenario
+                or scenario not in plan["alternative_scenario_ids"]):
+            raise ValueError("The paired product belongs to another original native study")
+        expected = {}
+        for member in plan["members"]:
+            runs = {row["scenario_id"]: row["run_id"] for row in member["runs"]}
+            expected[member["profile_id"]] = (
+                runs[plan["baseline_scenario_id"]], runs[scenario], scenario)
+        members = selected.get("members")
+        if not isinstance(members, list) or not members:
+            raise ValueError("The paired product needs its original selected native members")
+        actual = {}
+        for member in members:
+            profile = identifier(member["profile_id"])
+            if profile in actual:
+                raise ValueError("The paired product repeats an original parameter member")
+            actual[profile] = (member["baseline_run_id"], member["alternative_run_id"], member["scenario_id"])
+        if (any(expected.get(profile) != choice for profile, choice in actual.items())
+                or selected.get("planned_member_count") != len(plan["members"])
+                or selected.get("selected_member_count") != len(members)):
+            raise ValueError("The paired product changed its original parameter-matched runs")
+        if product.get("state") == "complete" and analysis.get("state") != "complete":
+            raise ValueError("The completed native course lost its paired output")
+        closure._descriptors(analysis.get("artifacts", {}), prefix)
+        report_path = prefix + "reports.json"
+        if product.get("report_signature") is not None:
+            reports = closure.read(report_path)
+            if (reports.get("ensemble_id") != key
+                    or digest(reports) != product["report_signature"]):
+                raise ValueError("The paired product changed its captured report edition")
+            closure._descriptors(reports.get("files", []), prefix)
+        if product.get("archive") is not None:
+            closure._descriptors(product["archive"])
+        # Keep the same editable analysis, report, tile checkpoints and execution
+        # controls. Native input runs are already followed by include_source.
+        closure.tree(prefix.rstrip("/"))
+
+
+def _local_parameter_course(closure, plan, captured_runs):
+    """Follow the saved all-alternative comparisons of this same native course."""
+    prefix = "ensemble_results/" + plan["id"] + "/"
+    original_path = closure.root / (prefix + "headwaters-course.json")
+    if not original_path.exists() and not original_path.is_symlink():
+        return
+    course = closure.read(prefix + "headwaters-course.json")
+    selection = course.get("selection", {})
+    expected = {
+        "grid_id": plan["grid_id"], "baseline_scenario_id": plan["baseline_scenario_id"],
+        "base_profile_id": plan["base_profile_ids"][0],
+        "alternative_scenario_ids": plan["alternative_scenario_ids"],
+    }
+    if (course.get("schema") != "upstate.headwaters-parameter-course/v1"
+            or course.get("project_id") != closure.workspace.project["id"]
+            or course.get("ensemble_id") != plan["id"] or selection != expected
+            or course.get("selection_sha256") != digest(selection)):
+        raise ValueError("The retained parameter course changed its original native selection")
+    closure.need("sources", identifier(course["input_source_collection_id"]),
+                 "Original parameter-course input source edition")
+    result_path = closure.root / (prefix + "headwaters-results.json")
+    if not result_path.exists() and not result_path.is_symlink():
+        return
+    result = closure.read(prefix + "headwaters-results.json")
+    if (result.get("schema") != course["schema"]
+            or result.get("project_id") != course["project_id"]
+            or result.get("ensemble_id") != plan["id"] or result.get("selection") != selection):
+        raise ValueError("The saved parameter results belong to another original course")
+    saved_operation = result.get("operation")
+    if saved_operation is not None:
+        if not isinstance(saved_operation, dict):
+            raise ValueError("The saved parameter result needs its original operation record")
+        _local_paired_products(closure, plan, operation=saved_operation)
+    members = {member["id"]: member for member in plan["members"]}
+    seen = set()
+    for row in (result.get("joint_decisions") or {}).get("comparisons", []):
+        member = members.get(row.get("member_id"))
+        if member is None or member["id"] in seen:
+            raise ValueError("The joint decision comparison changed its original member")
+        seen.add(member["id"])
+        runs = [item["run_id"] for item in member["runs"]]
+        selected_runs = [row.get("baseline_run_id"), *row.get("alternative_run_ids", [])]
+        if row.get("profile_id") != member["profile_id"] or selected_runs != runs:
+            raise ValueError("The joint decision comparison changed its parameter-matched cohort")
+        key = identifier(row["comparison_id"])
+        comparison = closure.read("comparisons/" + key + "/comparison.json")
+        actual_runs = [comparison.get("baseline_run_id"),
+                       *[item.get("run_id") for item in comparison.get("alternatives", [])]]
+        if comparison.get("id") != key or actual_runs != selected_runs:
+            raise ValueError("The saved joint comparison differs from the original course result")
+        # Reuse this producer's original captured-run version policy. These
+        # all-alternative IDs differ from the scalar report's paired IDs.
+        _captured_comparisons({key: comparison}, captured_runs)
+        _local_comparison(closure, key, comparison, captured_runs)
+
+
 def include_source(closure, collection_id, entry):
     """Carry a selected native study report and its original editable design."""
     if (entry.get("metadata") or {}).get("source_basis") != BASIS:
@@ -315,6 +450,8 @@ def include_source(closure, collection_id, entry):
             _local_comparison(closure, comparison_id, captured, runs)
         results = "ensemble_results/" + key
         closure.tree(results)
+        _local_paired_products(closure, plan)
+        _local_parameter_course(closure, plan, runs)
         state = closure.read(results + "/state.json")
         if state.get("ensemble_id") != key:
             raise ValueError("The editable native study progress belongs to another design")
@@ -362,13 +499,21 @@ def lock_paths(closure):
         if record.get("report_context_kind") != "native_ensemble_study" or record.get("relationship") != "same_project":
             continue
         key = identifier(record["ensemble_id"])
-        for name in (".execute.lock", ".report.lock", ".state.lock"):
+        for name in (".operation.lock", ".execute.lock", ".report.lock", ".state.lock"):
             paths.add("ensemble_results/" + key + "/" + name)
         paths.add(DIRECTORY + "/" + identifier(record["source_operation_id"]) + "/.prepare.lock")
+        if "ensemble_results/" + key + "/headwaters-course.json" in closure.files:
+            paths.add("ensemble_results/" + key + "/.headwaters-course.lock")
     # A design may now point to a newer scientific source than the selected
     # saved report. Its retained operation also participates in this capture.
     for prefix in closure.trees:
         pieces = prefix.split("/")
         if len(pieces) == 2 and pieces[0] == DIRECTORY:
             paths.add(DIRECTORY + "/" + identifier(pieces[1]) + "/.prepare.lock")
+    for prefix in closure.trees:
+        pieces = prefix.split("/")
+        if len(pieces) == 2 and pieces[0] == "ensemble-products":
+            key = identifier(pieces[1])
+            paths.add("ensemble-products/" + key + "/.analysis.lock")
+            paths.add("ensemble-products/" + key + "/.report.lock")
     return sorted(paths)

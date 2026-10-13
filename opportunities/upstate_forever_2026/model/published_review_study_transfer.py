@@ -167,6 +167,8 @@ def _local(closure, key, identity, review, record, entry, recipe, members):
         raise ValueError("The editable saved review differs from its captured original")
     closure.need("sources", identifier(binding["source_collection_id"]), reason)
     closure.tree(prefix.rstrip("/"))
+    from . import published_review_admission
+    published_review_admission.include_review(closure, review)
     return {"review_path": review_path, "study_prefix": study_prefix.rstrip("/"),
             "source_product_path": prefix.rstrip("/")}
 

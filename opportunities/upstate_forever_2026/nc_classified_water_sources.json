@@ -1,0 +1,189 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "North Carolina Savannah original designated-water classifications",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "nc-savannah-classification-registry",
+      "title": "NC Savannah legal schedule and complete original native classified streams",
+      "kind": "document",
+      "path": "source/water_classifications/north_carolina/20261013/derived/classification-registry.json",
+      "sha256": "6136e64bc720adb89f9e81fa360e74c6bbe99fee548f9b8df7791ab15fc59c5a",
+      "uri": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0",
+      "vintage": "Source-published schedule printed2016-03-03; native capture2026-10-13",
+      "metadata": {
+        "registry_schema": "upstate.classified-water-registry/v2",
+        "jurisdiction": "NC",
+        "classification_system": "NC-15A-NCAC-02B",
+        "edition_status": "source-published",
+        "original_records": 103,
+        "native_crs": "EPSG:32119",
+        "geometry_parts": 237,
+        "geometry_vertices": 32145,
+        "original_attributes_match": true,
+        "geometry_capture_path": "source/water_classifications/north_carolina/20261013/capture.json",
+        "field_mapping_path": "source/water_classifications/north_carolina/20261013/mapping.json",
+        "original_selection_path": "source/water_classifications/north_carolina/20261013/selection.json"
+      },
+      "companions": [
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-surface-water-classifications-layer-original-20261013.json",
+          "sha256": "506e655fcd62ec9694cd4b5bd076953801264402343eabcdb962c3018de1c838"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-classification-count-original-20261013.json",
+          "sha256": "2dcfc360649fd6f1b8b9e14faeba23fcd7c0311aa9db7692ee424345faf0d9fb"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-classification-ids-original-20261013.json",
+          "sha256": "4c30bdfdb720e6b7c70be99a56bca4268194147844d0569884a7aac35abf2e3a"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-classification-attributes-original-20261013.json",
+          "sha256": "c712fa061627b5da064fbc4c490f68f8e3824b15ea360b40b668cf5aaf90f9f3"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p001-original-20261013.json",
+          "sha256": "501b14bf3c6b2f9f5313f5375d458a5ac36e40d9c94801a903bcaed0a91ab463"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p002-original-20261013.json",
+          "sha256": "4cc11d57e2f13d96377e9859c59d5dfe8822e49b6b8f7f759ae9dc9afd53905f"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p003-original-20261013.json",
+          "sha256": "00e1f4bcea1a937120ad537a270fe127c85cfcd3e7f3ed17958456332259a88a"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p004-original-20261013.json",
+          "sha256": "cb1bac734f3801c02b6e1aca7abb4d26f473a24cbdbaee19c326576ddcee6a85"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p005-original-20261013.json",
+          "sha256": "b988771229f04227567cdf778d00ec7cc4010ba52ff759bffbd68a8d174f464e"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p006-original-20261013.json",
+          "sha256": "99035ee544d3bb2f8e8f343f2a0061892305d3e0809a5b81e0e9a618cf368d1b"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p007-original-20261013.json",
+          "sha256": "332c3441c809ee6f165d695fda7c304b5b55a1220df0e62676f6aaa2c252f8f9"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p008-original-20261013.json",
+          "sha256": "4c4fd66de0c6a6f375369b788f9a4efe0343d8298aadab70ce67140ef7159be1"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p009-original-20261013.json",
+          "sha256": "5b83d803f9e53556af2801bc9024457a40b2237a660229642e93eb9f167fbc87"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p010-original-20261013.json",
+          "sha256": "8fa97f9dd8482bcabc380582dc28cf80584e663561d9cf134ab7300b878ecfda"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p011-original-20261013.json",
+          "sha256": "8e25a4e29c8167fcfd655f1de9b1e1d5dd91a46b29a0070b98219e1ef7bff37e"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p012-original-20261013.json",
+          "sha256": "0379e99cd0aab7ca3a50f08dcc3a4db23c91f12af35561500f36f73e319ac179"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p013-original-20261013.json",
+          "sha256": "191fbc4b65f3d2d08047f0b43a5186e872be50d1d69441e55003a66a14050c44"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p014-original-20261013.json",
+          "sha256": "90985393fe3392fd4c79fc00de3301dd7eebe8fc76151d30f1492f5176cba6fc"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p015-original-20261013.json",
+          "sha256": "9f8102fd63f683eb49ae42b81a7246aaadafc6a14d15901f817c6fe260c13e49"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p016-original-20261013.json",
+          "sha256": "3ae1eea2ef1d6eba753f55d64d7b6cfbd54190053f3dd109e89412762eaf9d88"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p017-original-20261013.json",
+          "sha256": "92fe42b6adc4d2f4b4d61fade9370603ca8fe4808cce26949ce13e05660ef9f4"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p018-original-20261013.json",
+          "sha256": "3074c2376c1147e9ed54c5cc0fa52525ff229fc3bb99c80d21d82bfd62a0b50b"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p019-original-20261013.json",
+          "sha256": "d3dbc2a28fc5026cb80b9991e9bb8f43028ebeb8b1dc4675136bd66fd39d7946"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p020-original-20261013.json",
+          "sha256": "24ae3fe54f4cb35aa72f48bd338e1d09821c5004fc3bef5085229f2af40dd0fc"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-savannah-native-geometry-p021-original-20261013.json",
+          "sha256": "61f31e6eb89b29f4c232cdcc38f9dd71fc5d6a7dcda5d521c40fbfa23ff243e6"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/original/nc-surface-water-classifications-layer-after-capture-original-20261013.json",
+          "sha256": "506e655fcd62ec9694cd4b5bd076953801264402343eabcdb962c3018de1c838"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/source-manifest.json",
+          "sha256": "ef579026e958e3e67d10ae2552fdb965af9f396caf902dedb6c91c16ec8046ca"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/extracted/savannah-hydrologic-schedule-lines.json",
+          "sha256": "bf85dff5cfb84b936c59da4016e7b16ce93db4af86f1d2651a63e23fd290be76"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/extracted/savannah-alphabetic-schedule-lines.json",
+          "sha256": "823310f9366cd49ff9deaffa0401b31c4974974f645986f965c484028e4eef3f"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/derived/combined-native-features.json",
+          "sha256": "b4d09dc77279d1c4e4a074593d910c90f9472eafbc0ce4d36f632471a75592e8"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/capture.json",
+          "sha256": "924916fcd47358adcb637a4414b0445de68940ad84f7781a6ef5fea56294022a"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/mapping.json",
+          "sha256": "1c74c22a931e38d5464b23e39aee96f7a192f7fb2d2320ed8e496019a933897f"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/derived/reconciliation.json",
+          "sha256": "b935fdb160fae0c3bf8ed59a822fd89f24b444fea1da58ee879d98c970827dff"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/derived/classification-register.csv",
+          "sha256": "47ce1a14bfe07afcdf6ac096878355107e3c97e530ae831db9f21d0329b7a8ab"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/build-registry.mjs",
+          "sha256": "0ee775c72294e4f7e736c66fed92aed401ddccd863bc795a7fa46578b0082df5"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/build-nc-source.mjs",
+          "sha256": "afc28df87e8b1b0d12610ff49c7421c62625cf122399235104c605878f43d6ac"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/README.md",
+          "sha256": "6f233b77ae10c449686d15ad84038297dc4b66f047613ad0e9031c0c51285574"
+        },
+        {
+          "path": "source/water_classifications/north_carolina/20261013/selection.json",
+          "sha256": "c49f26c72625c6c2aab606e65de607056ef84a10e1e012233479731719affbb8"
+        }
+      ],
+      "source_schema": "upstate.classified-water-registry/v2",
+      "jurisdiction": "NC",
+      "classification_system": "NC-15A-NCAC-02B",
+      "designation_status": "source-published",
+      "data_status": "source-published"
+    }
+  ]
+}

@@ -214,3 +214,17 @@ The **Source-water areas** desk now prepares a complete native cohort directly f
 The desk uses `experiments.prepare` and `programme_experiments.create`, so the programme retains the same canonical case iterator, per-profile baseline identities and completed-result synchronization described above. Its **Open programme and continue runs** control opens this maintained programme controller. Use the original pause/resume, selected-case execution, logs and paired maps here; the source-water plan reopens the corresponding receiving-area reports after completion.
 
 The source-water plan, native programme and experiment have separate saved IDs. Their original source and selection relationships are retained in `receptor-programmes/<id>/result.json`. Complete Workspace archives carry all three collections together with actual original sources and native outputs. `model/RECEPTOR_PROGRAMMES.md` documents the full selection, command-line workflow and authenticated result navigation.
+
+## Keep pending forms with their original selections
+
+Programme forms retain their original Workspace and editor from opening through preview and submission. This applies to creation and copying, saved experiment and conservation-study intake, attribution attachment, matching-calculation preparation, paired maps and native-study export. A delayed catalogue cannot replace a newer form or open over another desk. Closing a form releases its listeners; a late preview or JSON file read cannot submit work from that dismissed form. Reopening begins a new selection. Ordinary desk refreshes preserve a still-open form.
+
+Use the current form to review changed selections before saving. The original scientific selection, run IDs, preview identity, case ordering and accepted task operation stay on the maintained APIs. Copying continues to retain the original case reasons and changes when its grid, model, profile and scenario still agree. Export continues to use the selected completed baseline and alternatives.
+
+### Inspect the outgoing Programme interface
+
+For the actual receiving application, inspect the exact outgoing version at a desktop or screenshare width and a narrow width. Use a populated Workspace with retained native results, original studies and saved programmes. Open the actual screens or screenshots and look for legible text, useful column widths, clipping, overflow, cramped controls and unclear state labels; preserve the plain industrial design and original scientific work.
+
+Operate creation, copying, experiment and conservation intake, matching calculations, paired maps and native-study export. Reopen the saved programme and exported report or package through their original links. Include empty, loading and error states as well as populated results. During a delayed catalogue or preview, close or replace the form, then confirm that its late response cannot replace the current form or submit an obsolete selection. Confirm that ordinary refreshes keep a valid open form usable and that paging and the native-case console retain their current behavior.
+
+Record the inspected source revision, actual application opening route, populated Workspace, screen widths, viewed screenshots, control outcomes and saved/exported identities with the existing receiving operation. A controller exercise establishes request and selection behavior; actual rendered-product readiness also requires this populated-screen and control inspection. Keep the existing scientific execution course and the 14:00 UTC sprint cutoff.

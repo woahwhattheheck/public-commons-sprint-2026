@@ -464,6 +464,28 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/'+caseId+'/installation-seed',
       {body:{expectedVersion},mutation:false});
   }
+  installationWorkflows(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','sourceId','expectedSourceSha256'],['expectedVersion','sourceId','expectedSourceSha256']);
+    integer(body.expectedVersion,'Current case version'); id(body.sourceId,'source'); sha(body.expectedSourceSha256);
+    return this.#request('/api/operations/'+caseId+'/installation-workflows',{body,mutation:false});
+  }
+  installationWorkflowSeed(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','sourceId','expectedSourceSha256','cycleIds','installationId','expectedRevision','document'],
+      ['expectedVersion','sourceId','expectedSourceSha256','cycleIds','installationId','expectedRevision']);
+    integer(body.expectedVersion,'Current case version'); id(body.sourceId,'source'); sha(body.expectedSourceSha256);
+    integer(body.expectedRevision,'Current installation edition',0,500);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select the current Installation edition, or zero for a new Installation.');
+    need(Array.isArray(body.cycleIds)&&body.cycleIds.length>0&&body.cycleIds.length<=100&&
+      body.cycleIds.every(value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value))&&
+      new Set(body.cycleIds).size===body.cycleIds.length,
+      'GRANT_INVALID_INPUT','Select each original customer cycle once.');
+    if(Object.hasOwn(body,'document'))object(body.document,'Complete editable installation document');
+    return this.#request('/api/operations/'+caseId+'/installation-workflow-seed',{body,mutation:false});
+  }
   installationPreview(caseId, body) {
     id(caseId,'operation');
     exact(body,['expectedVersion','installationId','expectedRevision','document'],

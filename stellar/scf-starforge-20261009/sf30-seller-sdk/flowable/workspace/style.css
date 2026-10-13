@@ -33,3 +33,7 @@ details{margin-top:16px}summary{font-weight:600;cursor:pointer}a{color:#252525;t
 @media(max-width:760px){header{padding:14px 16px}.workspace-label{display:none}.shell{display:block}aside{padding:10px;border-right:0;border-bottom:1px solid #ccc}nav{display:flex;flex-wrap:wrap;gap:2px}nav button{font-size:12px;padding:7px 9px}.aside-note{display:none}main{padding:16px}.form-grid{display:block}.metrics{gap:10px}h1{font-size:23px}.toolbar label{min-width:100%;flex:1}.key-values{grid-template-columns:1fr}.key-values dd{margin-bottom:8px}.panel{padding:16px}.product{font-size:13px;margin-left:12px}}
 
 .native-diagram{display:block;max-width:100%;height:auto;margin:18px 0;border:1px solid #ddd;background:#fff}
+
+/* Source authoring keeps complete identities readable at narrow operator widths. */
+#programme-authoring .source-identity{overflow-wrap:anywhere}
+#programme-authoring .toolbar{margin:12px 0}

@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-source-impact",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "components": {
+    "receiving-source-impact": {
+      "title": "Saved Source Updates impact on original Receiving studies",
+      "paths": [
+        "model/receiving_source_impact.py",
+        "operator/receiving_source_impact.py",
+        "operator/extensions/receiving-source-impact.json",
+        "operator/web/receiving_source_impact.mjs",
+        "operator/web/receiving_source_impact.css",
+        "operator/RECEIVING_SOURCE_IMPACT.md",
+        "integration/component_fragments/receiving-source-impact.json"
+      ],
+      "requires": [
+        "source-updates",
+        "receiving-waters"
+      ]
+    }
+  },
+  "required_components": [
+    "receiving-source-impact"
+  ]
+}

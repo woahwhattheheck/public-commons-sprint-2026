@@ -10,11 +10,13 @@ import csv
 from datetime import datetime, timezone
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import math
 import os
 from pathlib import Path
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -242,6 +244,17 @@ def write_inputs(output, recipe_path):
 
 
 def operate(args):
+    # Name the actual issuing process before application/GIS imports or source
+    # preparation, so a receiving worker can join the real host and execution.
+    args.execution = {
+        "hostname": socket.gethostname(), "pid": os.getpid(), "parent_pid": os.getppid(),
+        "python": sys.executable, "python_version": sys.version.split()[0],
+        "application": str(APP), "driver_sha256": sha256(Path(__file__)),
+        "workspace": str(args.workspace.resolve()), "output": str(args.output.resolve()),
+        "mode": "prepare" if args.prepare_only else "field" if args.field_only else "complete",
+        "issued_at": utc_now(),
+    }
+    event("demo_process_started", operation=OPERATION, **args.execution)
     from model.common import held
     output = args.output.resolve()
     workspace = args.workspace.resolve()
@@ -327,7 +340,7 @@ def operate_locked(args, output):
         return result
 
     ws = Workspace(workspace_path, create=True, title=recipe["title"])
-    save(project_id=ws.project["id"])
+    save(project_id=ws.project["id"], execution=args.execution)
     imported = phase("import_sources", lambda: ws.import_sources(output / "inputs" / "sources.json"))
     collection = imported["id"]
     ids = source["source_ids"]
@@ -423,6 +436,21 @@ def operate_locked(args, output):
          fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
     atomic_json(output / "fieldwork-campaign.json", campaign)
 
+    from model import simulated_qc_comparison
+    qc_comparison = phase("field_qc_comparison", lambda:
+        simulated_qc_comparison.continue_comparison(ws, campaign["operation_id"]))
+    if (qc_comparison["phase"] != "complete"
+            or qc_comparison["field_operation_id"] != campaign["operation_id"]
+            or qc_comparison["plan_id"] != campaign["plan_id"]
+            or qc_comparison["original_project_id"] != ws.project["id"]):
+        raise ValueError("Complete the original field case's retained QC comparison")
+    previous_comparison = receipt.get("qc_comparison")
+    if (previous_comparison is not None
+            and previous_comparison.get("browser_choice") != qc_comparison["browser_choice"]):
+        raise ValueError("Preserve the original QC comparison before selecting another case edition")
+    save(qc_comparison=qc_comparison)
+    atomic_json(output / "field-qc-comparison.json", qc_comparison)
+
     from model.simulated_customer_review import continue_review, export_review_case
     customer = phase("customer_review_ready", lambda: continue_review(
         ws, campaign["operation_id"], through="ready"))
@@ -464,6 +492,36 @@ def operate_locked(args, output):
     process_report = phase("native_process_report",
                            lambda: native_process_report.build(ws, process_selection, render=True))
     save(native_process_report_id=process_report["id"])
+    from source_tools.headwaters_parameter_course import continue_course
+    parameter_course = phase("parameter_course", lambda: continue_course(
+        ws, parameter_plan["ensemble_id"], execute=True,
+        on_progress=lambda value: event("parameter_course_progress", progress=value)))
+    save(parameter_course=parameter_course)
+    if parameter_course.get("state") != "complete":
+        raise ValueError("Continue the original saved parameter course from its actual pending members")
+    atomic_json(output / "parameter-course.json", parameter_course)
+
+    from model.ensemble_study_source import prepare as prepare_study_source
+    from model.ensemble_scientific_source import delivery_selection as attach_study_source
+    study_source = phase("native_study_scientific_source", lambda: prepare_study_source(
+        ws, parameter_plan["ensemble_id"], render=True))
+    if (study_source.get("state") != "complete" or study_source.get("source_state") != "current"
+            or study_source.get("native_state") != "complete"
+            or study_source["workspace_id"] != ws.project["id"]
+            or study_source["ensemble_id"] != parameter_plan["ensemble_id"]):
+        raise ValueError("Retain the complete scientific source of this same native parameter course")
+    scientific_study = {
+        "source_operation_id": study_source["id"], "source": study_source["source"],
+        "ensemble_id": study_source["ensemble_id"],
+        "report_id": study_source["selection"]["report_id"],
+        "summary_signature": study_source["selection"]["summary_signature"],
+        "run_signature": study_source["selection"]["run_signature"],
+        "report_signature": study_source["report"]["signature"],
+        "figure_count": study_source["figure_count"],
+    }
+    save(scientific_study=scientific_study)
+    atomic_json(output / "native-study-scientific-source.json", study_source)
+
     delivery_selection = {
         "delivery_mode": "native_study", "audit_scope": "source-native",
         "native_study": {"title": recipe["title"],
@@ -486,12 +544,35 @@ def operate_locked(args, output):
     }
     delivery_selection = native_process_report.attach(ws, process_report["id"], delivery_selection)
     delivery_selection = attach_to_delivery(ws, campaign["operation_id"], delivery_selection)
+    delivery_selection = simulated_qc_comparison.attach_to_delivery(
+        ws, qc_comparison["operation_id"], delivery_selection)
+    delivery_selection = attach_study_source(study_source["source"], delivery_selection)
     atomic_json(output / "delivery-selection.json", delivery_selection)
     delivery = phase("mapped_delivery", lambda: ws.build_delivery(delivery_selection))
     if delivery.get("state") != "complete":
         raise ValueError("Finish the mapped delivery before archiving the demonstration")
     save(delivery_id=delivery["id"], delivery_state=delivery["state"])
     atomic_json(output / "mapped-delivery.json", delivery)
+
+    from model import observed_context, scientific_report_editions
+    prepared_report = phase("preview_scientific_report", lambda: scientific_report_editions.preview(ws, {
+        "title": recipe["title"] + ": native processes, field campaign and parameter study",
+        "sources": observed_context.source_choices(delivery_selection),
+        "contact": delivery_selection["contact"],
+    }))
+    atomic_json(output / "scientific-report-preview.json", prepared_report)
+    saved_report = phase("scientific_report_edition",
+                         lambda: scientific_report_editions.render_prepared(ws, prepared_report))
+    report_value, report_directory, report_operation = scientific_report_editions.inspect(
+        ws, saved_report["scientific_report_edition_id"])
+    scientific_report = {
+        "id": report_value["id"], "title": report_value["title"],
+        "sources": observed_context.source_choices(report_value["render_identity"]["selection"]),
+        "source_count": report_value["source_count"], "figure_count": report_value["figure_count"],
+    }
+    save(scientific_report=scientific_report)
+    atomic_json(output / "scientific-report-edition.json", report_value)
+
 
     from source_tools.simulated_headwaters_rehearsal import save_native_review
     spatial_reviews = receipt.setdefault("spatial_review_ids", {})
@@ -508,25 +589,71 @@ def operate_locked(args, output):
         save(spatial_review_id=spatial_reviews[runs[1]["id"]],
              spatial_review_ids=spatial_reviews)
 
-    from source_tools.headwaters_parameter_course import continue_course
-    parameter_course = phase("parameter_course", lambda: continue_course(
-        ws, parameter_plan["ensemble_id"], execute=True,
-        on_progress=lambda value: event("parameter_course_progress", progress=value)))
-    save(parameter_course=parameter_course)
-    if parameter_course.get("state") != "complete":
-        raise ValueError("Continue the original saved parameter course from its actual pending members")
-    atomic_json(output / "parameter-course.json", parameter_course)
+    from model import study_transfer
+    from source_tools.simulated_headwaters_receiving import cold_reopen, restore_selected_study
+    study_selection = {
+        "schema": "upstate.study-selection/v1",
+        "title": recipe["title"] + ": editable scientific report",
+        "roots": [{"kind": "scientific-report-editions", "id": scientific_report["id"]}],
+        "include_related_results": False,
+    }
+    selected_sources = {
+        "application/source_tools/simulated_headwaters_receiving.py":
+            sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
+        "application/source_tools/simulated_headwaters.py": sha256(Path(__file__)),
+    }
+    selected_edition = hashlib.sha256(json.dumps({
+        "scientific_report": scientific_report["id"],
+        "scientific_study": scientific_study["source_operation_id"],
+        "receiving_source_sha256": selected_sources["application/source_tools/simulated_headwaters_receiving.py"],
+        "driver_source_sha256": selected_sources["application/source_tools/simulated_headwaters.py"],
+    }, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    selected_archive = output / "selected-study-archives" / (selected_edition + ".zip")
+    selected_archive.parent.mkdir(parents=True, exist_ok=True)
+    selected_transfer = phase("selected_study_archive", lambda: study_transfer.export_study(
+        ws, selected_archive, study_selection,
+        progress=lambda value: event("selected_study_progress", progress=value)))
+    selected_identity = {
+        "transfer_id": selected_transfer["id"], "selection": study_selection,
+        "archive": {name: selected_transfer[name] for name in ("path", "bytes", "sha256")},
+    }
+    save(scientific_study_transfer=selected_identity)
+    atomic_json(output / "selected-study-transfer.json", selected_transfer)
+    selected_restored, selected_manifest = phase("selected_study_restore", lambda: restore_selected_study(
+        selected_archive, selected_transfer, output / "selected-study-reopened" / selected_edition,
+        expected_sources=selected_sources))
+    selected_cold = phase("selected_study_cold_reopen", lambda: cold_reopen(
+        selected_restored, selected_manifest, receipt, output / "selected-study-cold-reopen",
+        selected_study=selected_identity))
+    save(scientific_study_received=selected_restored, scientific_study_cold_receiving=selected_cold)
+
+    programme = phase("adopt_completed_programme", lambda: adopt_completed_programme(ws, receipt))
+    programme.update(phase("save_programme_opening", lambda: save_programme_opening(ws, programme)))
+    save(programme_id=programme["programme_id"], programme=programme)
+    atomic_json(output / "programme-receiving.json", read_json(ws.root / programme["adoption"]["path"]))
 
     from model import portable
     archive_selection = {
         "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
+        "programme_id": programme["programme_id"], "programme_report_id": programme["report_id"],
+        "programme_input_sha256": programme["input"]["sha256"],
+        "programme_adoption_sha256": programme["adoption"]["sha256"],
+        "operator_opening_id": programme["operator_opening_id"],
+        "operator_session_revision": programme["operator_session"]["revision"],
+        "operator_session_sha256": programme["operator_session_file"]["sha256"],
+        "programme_opening_sources": programme["opening_sources"],
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
         "customer_review": customer_identity,
         "customer_review_source_sha256": sha256(APP / "model" / "simulated_customer_review.py"),
         "ensemble_id": parameter_plan["ensemble_id"],
+        "scientific_study": scientific_study,
+        "scientific_report": scientific_report,
+        "selected_study_transfer_id": selected_transfer["id"],
         "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
+    archive_selection = simulated_qc_comparison.attach_to_archive(
+        ws, qc_comparison["operation_id"], archive_selection)
     edition_suffix = hashlib.sha256(json.dumps(
         archive_selection, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
     edition_id = delivery["id"] + "-" + edition_suffix
@@ -537,7 +664,19 @@ def operate_locked(args, output):
     record = records.setdefault(edition_id, {})
     required_members = [
         "application/source_tools/simulated_headwaters_receiving.py",
+        "application/source_tools/adopt_simulated_headwaters_programme.py",
+        "application/model/compute_programme.py",
+        "application/operator/server.py",
+        "workspace/" + programme["operator_session_file"]["path"],
+        "workspace/" + programme["input"]["path"],
+        "workspace/" + programme["adoption"]["path"],
+        "workspace/compute-programmes/" + programme["programme_id"] + "/programme.json",
+        "workspace/compute-programmes/" + programme["programme_id"] + "/progress.json",
+        *["workspace/" + item["path"] for item in programme["files"]],
         "application/model/simulated_customer_review.py",
+        "application/model/simulated_qc_comparison.py",
+        *["workspace/" + item["path"] for item in qc_comparison["retained_files"]],
+        "workspace/sources/" + qc_comparison["report_source"]["source_collection_id"] + ".json",
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
         "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
@@ -550,6 +689,13 @@ def operate_locked(args, output):
         *["workspace/review-handbacks/" + customer[key] + ".json"
           for key in ("planning_handback_id", "handback_id")],
         "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/headwaters-results.json",
+        "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/latest-scientific-study.json",
+        "workspace/ensemble-study-sources/" + study_source["id"] + "/operation.json",
+        "workspace/sources/" + study_source["source"]["source_collection_id"] + ".json",
+        *["workspace/" + item["path"] for item in study_source["files"].values()],
+        "workspace/scientific-report-editions/" + scientific_report["id"] + "/edition.json",
+        *["workspace/scientific-report-editions/" + scientific_report["id"] + "/" + item["path"]
+          for item in report_value["files"].values()],
 
     ]
 
@@ -559,6 +705,17 @@ def operate_locked(args, output):
             raise ValueError("Existing archive belongs to another scientific project")
         if any(name not in manifest["members"] for name in required_members):
             raise ValueError("Existing archive lacks the selected completed runs or delivery")
+        for member, source_key in (
+                ("application/source_tools/simulated_headwaters_receiving.py", "receiving_source_sha256"),
+                ("application/model/simulated_customer_review.py", "customer_review_source_sha256")):
+            if manifest["members"][member]["sha256"] != archive_selection[source_key]:
+                raise ValueError("Existing archive contains another selected receiving implementation: " + member)
+        for scope, items in (("application/", programme["opening_sources"]),
+                             ("workspace/", [programme["operator_session_file"]])):
+            for item in items:
+                retained = manifest["members"].get(scope + item["path"], {})
+                if any(retained.get(name) != item[name] for name in ("bytes", "sha256")):
+                    raise ValueError("Archive changed the selected Programme opening: " + item["path"])
         return manifest
 
     if record.get("backup"):
@@ -580,29 +737,12 @@ def operate_locked(args, output):
     record["backup"] = saved
     save(backup=saved, archive_edition_id=edition_id, archive_editions=records)
     restored_root = output / "reopened" / edition_id
-    if record.get("restored"):
-        restored = record["restored"]
-    elif restored_root.exists():
-        def recover_restored():
-            for name, original in manifest["members"].items():
-                actual = restored_root / name
-                if (actual.is_symlink() or not actual.is_file()
-                        or actual.stat().st_size != original["bytes"]
-                        or sha256(actual) != original["sha256"]):
-                    raise ValueError("Existing receiving member differs: " + name)
-            original_project = read_json(restored_root / "workspace" / "workspace.json")
-            if original_project != manifest["project"]:
-                raise ValueError("Existing receiving project differs")
-            return {
-                "schema": "upstate.scientific-workspace-receiving/v1",
-                "project": original_project, "directory": str(restored_root),
-                "workspace": str(restored_root / "workspace"),
-                "application": str(restored_root / "application"),
-                "archive_sha256": saved["sha256"], "members": len(manifest["members"]),
-                "selection": manifest["selection"], "identity": "MATCH",
-                "recovered_existing_receiving": True,
-            }
-        restored = phase("recover_published_receiving", recover_restored)
+    if restored_root.exists() or restored_root.is_symlink():
+        # Reconcile the receiver's durable completion, including its native
+        # registration and full returned artifact descriptors. A prior outer
+        # receipt alone does not establish this archive/destination identity.
+        restored = phase("recover_published_receiving", lambda: portable.resume_restore(
+            archive, restored_root, expected_archive_sha256=saved["sha256"]))
     else:
         restored_root.parent.mkdir(parents=True, exist_ok=True)
         restored = phase("restore", lambda: portable.restore(archive, restored_root))
@@ -625,6 +765,11 @@ def operate_locked(args, output):
     received_campaign = inspect_campaign(reopened, campaign["operation_id"])
     if received_campaign["phase"] != "closeout" or received_campaign["plan_id"] != campaign["plan_id"]:
         raise ValueError("Reopen the original completed field campaign with this scientific project")
+    received_qc_comparison = simulated_qc_comparison.inspect_comparison(
+        reopened, qc_comparison["operation_id"])
+    if received_qc_comparison != qc_comparison:
+        raise ValueError("Reopen the same complete original field/QC comparison")
+    save(received_qc_comparison=received_qc_comparison)
     from model.ensembles import Ensembles
     received_ensemble = Ensembles(reopened).inspect(parameter_plan["ensemble_id"])
     if (received_ensemble["grid_id"] != receipt["grid_id"]
@@ -640,6 +785,7 @@ def operate_locked(args, output):
     from source_tools.simulated_headwaters_receiving import cold_reopen
     cold_receiving = phase("cold_reopen", lambda: cold_reopen(
         restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            {"kind": "compute_programme", **programme},
             {"kind": "customer_review", "operation_id": customer["operation_id"],
              "expected": {**customer_identity, "project_id": ws.project["id"],
                           "field_operation_id": campaign["operation_id"]},
@@ -647,6 +793,12 @@ def operate_locked(args, output):
              "output": str(output / "customer-review-reopened" / edition_id)},
             {"kind": "parameter_course", "ensemble_id": receipt["ensemble_id"],
              "expected": {"project_id": ws.project["id"]}},
+            {"kind": "native_study_source", "ensemble_id": receipt["ensemble_id"],
+             "source_operation_id": scientific_study["source_operation_id"],
+             "expected": scientific_study},
+            {"kind": "scientific_report", "expected": scientific_report},
+            {"kind": "field_qc_comparison", "operation_id": qc_comparison["operation_id"],
+             "expected": qc_comparison["browser_choice"]},
             {"kind": "field_campaign", "operation_id": campaign["operation_id"],
              "expected": {"phase": "closeout", "plan_id": campaign["plan_id"],
                           "original_project_id": ws.project["id"],
@@ -660,6 +812,135 @@ def operate_locked(args, output):
           alternative_run_ids=[run["id"] for run in runs[1:]], delivery_id=delivery["id"],
           archive=receipt["backup"])
     return receipt
+
+
+def adopt_completed_programme(ws, receipt):
+    """Retain the exact adoption input once; reopen the same completed Programme."""
+    from model.compute_programme import ComputeProgrammes
+    from source_tools.adopt_simulated_headwaters_programme import adopt
+    fields = ("schema", "operation", "demo_id", "classification", "project_id",
+              "recipe_sha256", "input_summary", "source_collection_id", "source_ids",
+              "grid_id", "profile_id", "baseline_run_id", "baseline_scenario_id",
+              "alternative_run_ids", "alternative_scenario_ids", "control", "delivery_id")
+    binding = {name: receipt[name] for name in fields}
+    key = hashlib.sha256(json.dumps(binding, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    directory = ws.root / "simulated-headwaters" / DEMO_ID / "programme" / key
+    directory.mkdir(parents=True, exist_ok=True)
+    original = directory / "programme-input.json"
+    adopted = directory / "programme-receiving.json"
+    if original.exists():
+        saved_input = read_json(original)
+        if {name: saved_input.get(name) for name in fields} != binding:
+            raise ValueError("Retain the original Programme input and selected native identities")
+    else:
+        atomic_json(original, receipt)
+    if adopted.exists():
+        result = read_json(adopted)
+    else:
+        result = adopt(ws, original, output=adopted)
+    run_ids = [receipt["baseline_run_id"], *receipt["alternative_run_ids"]]
+    if (result.get("schema") != "upstate.simulated-programme-receiving/v1"
+            or result.get("operation") != OPERATION or result.get("demo_id") != DEMO_ID
+            or result.get("project_id") != ws.project["id"]
+            or result.get("recipe_sha256") != receipt["recipe_sha256"]
+            or result.get("source_collection_id") != receipt["source_collection_id"]
+            or result.get("existing_delivery_id") != receipt["delivery_id"]
+            or [row["run_id"] for row in result.get("native_runs", [])] != run_ids):
+        raise ValueError("The saved Programme adoption differs from the original case")
+    source = descriptor(ws.root, original)
+    if any(result["original_receipt"].get(name) != source[name] for name in ("bytes", "sha256")):
+        raise ValueError("The Programme's immutable original input bytes changed")
+    manager = ComputeProgrammes(ws)
+    status = manager.status(result["programme_id"], include_ensemble_candidates=False)
+    if (status["state"] != "complete"
+            or [row["run_id"] for row in status["runs"]] != run_ids
+            or (result.get("programme_reused") is not True
+                and any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
+                        for row in status["runs"]))):
+        raise ValueError("Reopen the Programme's verified completed original native runs")
+    report = manager.read_report(result["programme_id"])
+    for name in ("schema", "rows", "files"):
+        if report.get(name) != result["report"].get(name):
+            raise ValueError("The retained Programme report changed: " + name)
+    preview = manager.delivery_preview(result["programme_id"], result["native_study_selection"])
+    if (not preview["ready"] or preview["selection"]["baseline_run_id"] != run_ids[0]
+            or preview["selection"]["scenario_run_ids"] != run_ids[1:]):
+        raise ValueError("The Programme map selection differs from the original three cases")
+    return {"programme_id": result["programme_id"], "programme_state": status["state"],
+            "report_id": report["id"], "input": source,
+            "adoption": descriptor(ws.root, adopted), "files": report["files"],
+            "run_ids": run_ids, "directory": directory.relative_to(ws.root).as_posix()}
+
+
+def save_programme_opening(ws, programme):
+    """Save the original Guided journey through this application's Operator API."""
+    from model.common import digest
+    from source_tools.adopt_simulated_headwaters_programme import save_operator_opening
+
+    adopted = read_json(ws.root / programme["adoption"]["path"])
+    opening = adopted["operator_opening"]
+    if (opening.get("schema") != "upstate.simulated-operator-opening/v1"
+            or opening.get("programme_id") != programme["programme_id"]
+            or opening["journey"].get("project_id") != ws.project["id"]):
+        raise ValueError("Retain the original Programme's project-bound Guided opening")
+    server_path = APP / "operator" / "server.py"
+    source_files = [server_path, APP / "source_tools" / "adopt_simulated_headwaters_programme.py"]
+    sources = [descriptor(APP, path) for path in source_files]
+    # operator is a Python standard-library module, so load the original server
+    # by its full source path rather than importing a competing package name.
+    name = "_simulated_headwaters_operator_" + sources[0]["sha256"]
+    spec = importlib.util.spec_from_file_location(name, server_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Open the retained original Operator server source")
+    module = importlib.util.module_from_spec(spec)
+    previous_module = sys.modules.get(name)
+    previous_path = list(sys.path)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+        if Path(module.APPLICATION).resolve() != APP.resolve():
+            raise ValueError("The Operator belongs to another application edition")
+        # This owned state directory stays outside both the application and
+        # scientific Workspace. No HTTP listener or native task is started.
+        with tempfile.TemporaryDirectory(prefix="simulated-headwaters-operator-") as state:
+            operator = module.Operator(ws.root, state)
+            try:
+                workspace_key = operator.primary
+                if operator.ws(workspace_key).root != ws.root:
+                    raise ValueError("The Operator opened another scientific Workspace")
+                retained_opening = save_operator_opening(operator, workspace_key, adopted)
+                saved = retained_opening["operator_session"]
+                if operator.operator_session(workspace_key) != saved:
+                    raise ValueError("The original Operator save did not reopen unchanged")
+            except BaseException as failure:
+                try:
+                    operator.close()
+                except Exception as closing:
+                    if hasattr(failure, "add_note"):
+                        failure.add_note("Operator cleanup also failed: " + str(closing))
+                raise
+            else:
+                operator.close()
+    finally:
+        sys.path[:] = previous_path
+        if previous_module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = previous_module
+    session_path = ws.root / "operator-session.json"
+    session_file = descriptor(ws.root, session_path)
+    if (read_json(session_path) != saved
+            or session_file != retained_opening["operator_session_file"]
+            or retained_opening["opening_id"] != opening["id"]
+            or saved["journey"].get("recorded_context", {}).get("operator_opening", {}).get("id") != opening["id"]
+            or saved["journey"].get("selection") != opening["journey"]["selection"]
+            or saved.get("revision") != digest(saved["journey"])):
+        raise ValueError("Retain the exact saved Programme view and original notes history")
+    if [descriptor(APP, path) for path in source_files] != sources:
+        raise ValueError("Programme opening source changed during its original save")
+    return {"operator_opening_id": retained_opening["opening_id"], "operator_session": saved,
+            "operator_session_file": retained_opening["operator_session_file"], "opening_sources": sources}
 
 
 def main(argv=None):

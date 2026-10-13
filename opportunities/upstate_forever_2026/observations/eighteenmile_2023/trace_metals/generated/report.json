@@ -1,0 +1,2066 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "Eighteenmile 2023 trace metals — selected original observations",
+  "edition": "20261013-original153",
+  "selection_id": "061bcd7ad5d40ced49cb5ab787a6a23864ec3312889a11dc2b7c1d2fee2c29fe",
+  "metadata": {
+    "report_schema": "upstate.eighteenmile-trace-metals/v1",
+    "original_input_sha256": "9b110923090d4200f54b2c2d97592053ea84e5d3b366662e4d582ec1b5369309",
+    "record_count": 153,
+    "activity_count": 17,
+    "selection": {
+      "station": "all",
+      "analyte": "all",
+      "status": "all",
+      "month": "all",
+      "search": "",
+      "plot": "Iron"
+    }
+  },
+  "inputs": [
+    {
+      "path": "inputs.json",
+      "bytes": 5874,
+      "sha256": "f9b8ec464b3c0e0a3bc8f1ac7571b83c474d07523fa90dc9f17dda16531d81a3"
+    },
+    {
+      "path": "same-activity-context.csv",
+      "bytes": 46647,
+      "sha256": "4df663be093c39f337cf271000109416d2c111dbb02480a533ee6ee42f8c3889"
+    },
+    {
+      "path": "selected-activities.csv",
+      "bytes": 16234,
+      "sha256": "45abc7d8dd82bd2409c9bde1706d251648fb0ffd177d13b896fd67e31c886aee"
+    },
+    {
+      "path": "selected-records.csv",
+      "bytes": 140871,
+      "sha256": "2b37bed5a992b6e0182a327290fbd54a2a95002afcaf1a5745650cec227f6275"
+    },
+    {
+      "path": "selected-summary.csv",
+      "bytes": 686,
+      "sha256": "7bfe9404e93947d8b936a9ce7e94c92cb95ffc31f4e844c8d210e38cd7085f5c"
+    },
+    {
+      "path": "selection.json",
+      "bytes": 11950,
+      "sha256": "047281f8e02edf71233c93626ff4218aa4b81e941a14dc4f6986d49ab1191894"
+    },
+    {
+      "path": "wqp/originals/SV-245-2023.csv",
+      "bytes": 11724,
+      "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+    },
+    {
+      "path": "wqp/originals/SV-268-2023.csv",
+      "bytes": 92801,
+      "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+    },
+    {
+      "path": "wqp/originals/SV-374-2023.csv",
+      "bytes": 92708,
+      "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+    },
+    {
+      "path": "wqp/originals/SV-375-2023.csv",
+      "bytes": 71625,
+      "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+    },
+    {
+      "path": "wqp/originals/SV-376-2023.csv",
+      "bytes": 71632,
+      "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+    },
+    {
+      "path": "wqp/originals/SV-591-2023.csv",
+      "bytes": 1754,
+      "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+    },
+    {
+      "path": "wqp/originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+    },
+    {
+      "path": "wqp/originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+    },
+    {
+      "path": "wqp/originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+    }
+  ],
+  "sections": [
+    [
+      "Selected original trace-metal observations",
+      [
+        "This edition contains 153 original results from 17 sampling activities at 5 stations. Station: all; metal: all; result: all; month: all; search: none; chart: Iron.",
+        "Every result retains its original station/activity/source-row identity, reported value and unit, quantification limit and unit, analytical method, fraction, collection metadata and source comments.",
+        "The quantified ranges use reported values only within each displayed metal/method/unit/fraction group. Below-limit rows retain blank reported-value fields and their original limits. The same-activity chemistry context is presented using its own original basis."
+      ]
+    ],
+    [
+      "Sampling support",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Activity",
+            "Date",
+            "Original time",
+            "Timezone"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "AE96380",
+              "2023-02-02",
+              "13:10:00",
+              "EDT"
+            ],
+            [
+              "SV-376",
+              "AE96417",
+              "2023-02-06",
+              "10:19:00",
+              "EDT"
+            ],
+            [
+              "SV-374",
+              "AE98073",
+              "2023-03-06",
+              "10:59:00",
+              "EDT"
+            ],
+            [
+              "SV-268",
+              "AE99153",
+              "2023-03-21",
+              "12:36:00",
+              "EDT"
+            ],
+            [
+              "SV-375",
+              "AF01621",
+              "2023-05-09",
+              "11:08:00",
+              "EDT"
+            ],
+            [
+              "SV-376",
+              "AF02071",
+              "2023-05-17",
+              "10:38:00",
+              "EDT"
+            ],
+            [
+              "SV-374",
+              "AF03226",
+              "2023-06-05",
+              "11:10:00",
+              "EDT"
+            ],
+            [
+              "SV-268",
+              "AF03778",
+              "2023-06-12",
+              "13:17:00",
+              "EDT"
+            ],
+            [
+              "SV-375",
+              "AF06354",
+              "2023-08-01",
+              "10:52:00",
+              "EDT"
+            ],
+            [
+              "SV-376",
+              "AF06480",
+              "2023-08-02",
+              "10:00:00",
+              "EDT"
+            ],
+            [
+              "SV-374",
+              "AF08089",
+              "2023-09-06",
+              "10:55:00",
+              "EDT"
+            ],
+            [
+              "SV-268",
+              "AF08544",
+              "2023-09-14",
+              "13:36:00",
+              "EDT"
+            ],
+            [
+              "SV-375",
+              "AF11063",
+              "2023-11-06",
+              "11:54:00",
+              "EDT"
+            ],
+            [
+              "SV-376",
+              "AF11183",
+              "2023-11-07",
+              "10:08:00",
+              "EDT"
+            ],
+            [
+              "SV-268",
+              "AF12373",
+              "2023-12-05",
+              "13:41:00",
+              "EDT"
+            ],
+            [
+              "SV-374",
+              "AF12519",
+              "2023-12-06",
+              "10:28:00",
+              "EDT"
+            ],
+            [
+              "SV-245",
+              "AF12945",
+              "2023-12-14",
+              "10:30:00",
+              "EDT"
+            ]
+          ]
+        },
+        "Stations were sampled on different schedules. Calendar overlap identifies calendar support and does not equate distinct activities or collection times."
+      ]
+    ],
+    [
+      "Results and original method support",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Metal",
+            "Reported / total",
+            "Below limit",
+            "Reported range (mg/L)",
+            "Method"
+          ],
+          "rows": [
+            [
+              "Cadmium",
+              "0 / 17",
+              "17",
+              "No quantified result",
+              "USEPA 200.8"
+            ],
+            [
+              "Chromium",
+              "0 / 17",
+              "17",
+              "No quantified result",
+              "USEPA 200.7"
+            ],
+            [
+              "Copper",
+              "0 / 17",
+              "17",
+              "No quantified result",
+              "USEPA 200.7"
+            ],
+            [
+              "Iron",
+              "17 / 17",
+              "0",
+              "0.06 – 11",
+              "USEPA 200.7"
+            ],
+            [
+              "Lead",
+              "2 / 17",
+              "15",
+              "0.0044 – 0.0074",
+              "USEPA 200.7"
+            ],
+            [
+              "Manganese",
+              "16 / 17",
+              "1",
+              "0.014 – 0.31",
+              "USEPA 200.7"
+            ],
+            [
+              "Mercury",
+              "0 / 17",
+              "17",
+              "No quantified result",
+              "APHA 3112-B"
+            ],
+            [
+              "Nickel",
+              "0 / 17",
+              "17",
+              "No quantified result",
+              "USEPA 200.7"
+            ],
+            [
+              "Zinc",
+              "3 / 17",
+              "14",
+              "0.011 – 0.017",
+              "USEPA 200.7"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Original quantification limits",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Metal",
+            "Retained limits",
+            "Fraction"
+          ],
+          "rows": [
+            [
+              "Cadmium",
+              "0.00010 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Chromium",
+              "0.0050 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Copper",
+              "0.010 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Iron",
+              "0.02 mg/L; 0.020 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Lead",
+              "0.0020 mg/L; 0.002 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Manganese",
+              "0.01 mg/L; 0.010 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Mercury",
+              "0.00020 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Nickel",
+              "0.020 mg/L",
+              "Unfiltered"
+            ],
+            [
+              "Zinc",
+              "0.010 mg/L; 0.01 mg/L",
+              "Unfiltered"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Cadmium — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.00010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Chromium — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.0050 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Copper — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Iron — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "2.7 mg/L",
+              "Reported numeric",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "2.1 mg/L",
+              "Reported numeric",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "0.76 mg/L",
+              "Reported numeric",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "2.5 mg/L",
+              "Reported numeric",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "1 mg/L",
+              "Reported numeric",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "11 mg/L",
+              "Reported numeric",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "0.13 mg/L",
+              "Reported numeric",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "8 mg/L",
+              "Reported numeric",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "1.3 mg/L",
+              "Reported numeric",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "2.3 mg/L",
+              "Reported numeric",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "0.060 mg/L",
+              "Reported numeric",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "4.5 mg/L",
+              "Reported numeric",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "0.58 mg/L",
+              "Reported numeric",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "1.2 mg/L",
+              "Reported numeric",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "1.1 mg/L",
+              "Reported numeric",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "0.16 mg/L",
+              "Reported numeric",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "2.1 mg/L",
+              "Reported numeric",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Lead — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "0.0074 mg/L",
+              "Reported numeric",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "0.0044 mg/L",
+              "Reported numeric",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.0020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Manganese — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "0.14 mg/L",
+              "Reported numeric",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "0.1 mg/L",
+              "Reported numeric",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "0.11 mg/L",
+              "Reported numeric",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "0.19 mg/L",
+              "Reported numeric",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "0.1 mg/L",
+              "Reported numeric",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "0.2 mg/L",
+              "Reported numeric",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "0.014 mg/L",
+              "Reported numeric",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "0.31 mg/L",
+              "Reported numeric",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "0.076 mg/L",
+              "Reported numeric",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "0.088 mg/L",
+              "Reported numeric",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "0.26 mg/L",
+              "Reported numeric",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "0.066 mg/L",
+              "Reported numeric",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "0.096 mg/L",
+              "Reported numeric",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "0.21 mg/L",
+              "Reported numeric",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "0.028 mg/L",
+              "Reported numeric",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "0.24 mg/L",
+              "Reported numeric",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Mercury — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.00020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Nickel — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.020 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Zinc — original selected results",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Date",
+            "Original result / bound",
+            "Condition",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375",
+              "2023-02-02",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96380"
+            ],
+            [
+              "SV-376",
+              "2023-02-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE96417"
+            ],
+            [
+              "SV-374",
+              "2023-03-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE98073"
+            ],
+            [
+              "SV-268",
+              "2023-03-21",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AE99153"
+            ],
+            [
+              "SV-375",
+              "2023-05-09",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF01621"
+            ],
+            [
+              "SV-376",
+              "2023-05-17",
+              "0.017 mg/L",
+              "Reported numeric",
+              "AF02071"
+            ],
+            [
+              "SV-374",
+              "2023-06-05",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF03226"
+            ],
+            [
+              "SV-268",
+              "2023-06-12",
+              "0.013 mg/L",
+              "Reported numeric",
+              "AF03778"
+            ],
+            [
+              "SV-375",
+              "2023-08-01",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06354"
+            ],
+            [
+              "SV-376",
+              "2023-08-02",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF06480"
+            ],
+            [
+              "SV-374",
+              "2023-09-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08089"
+            ],
+            [
+              "SV-268",
+              "2023-09-14",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF08544"
+            ],
+            [
+              "SV-375",
+              "2023-11-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11063"
+            ],
+            [
+              "SV-376",
+              "2023-11-07",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF11183"
+            ],
+            [
+              "SV-268",
+              "2023-12-05",
+              "0.011 mg/L",
+              "Reported numeric",
+              "AF12373"
+            ],
+            [
+              "SV-374",
+              "2023-12-06",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12519"
+            ],
+            [
+              "SV-245",
+              "2023-12-14",
+              "< 0.010 mg/L",
+              "Present Below Quantification Limit",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Same-activity original chemistry",
+      [
+        "The following observations share each metal activity's exact organization, station, project and activity identity. Original result fraction and units remain visible; no hardness-basis conversion is applied.",
+        {
+          "kind": "table",
+          "columns": [
+            "Station / date",
+            "Characteristic",
+            "Original value / unit",
+            "Fraction",
+            "Activity"
+          ],
+          "rows": [
+            [
+              "SV-375 / 2023-02-02",
+              "Calcium",
+              "5.5 mg/L",
+              "Total",
+              "AE96380"
+            ],
+            [
+              "SV-375 / 2023-02-02",
+              "Hardness, Ca, Mg",
+              "19 mg/L",
+              "Total",
+              "AE96380"
+            ],
+            [
+              "SV-375 / 2023-02-02",
+              "Magnesium",
+              "1.4 mg/L",
+              "Unfiltered",
+              "AE96380"
+            ],
+            [
+              "SV-376 / 2023-02-06",
+              "Calcium",
+              "4.4 mg/L",
+              "Total",
+              "AE96417"
+            ],
+            [
+              "SV-376 / 2023-02-06",
+              "Hardness, Ca, Mg",
+              "16 mg/L",
+              "Total",
+              "AE96417"
+            ],
+            [
+              "SV-376 / 2023-02-06",
+              "Magnesium",
+              "1.2 mg/L",
+              "Unfiltered",
+              "AE96417"
+            ],
+            [
+              "SV-374 / 2023-03-06",
+              "Calcium",
+              "4 mg/L",
+              "Total",
+              "AE98073"
+            ],
+            [
+              "SV-374 / 2023-03-06",
+              "Hardness, Ca, Mg",
+              "15 mg/L",
+              "Total",
+              "AE98073"
+            ],
+            [
+              "SV-374 / 2023-03-06",
+              "Magnesium",
+              "1.1 mg/L",
+              "Unfiltered",
+              "AE98073"
+            ],
+            [
+              "SV-268 / 2023-03-21",
+              "Calcium",
+              "4.8 mg/L",
+              "Total",
+              "AE99153"
+            ],
+            [
+              "SV-268 / 2023-03-21",
+              "Hardness, Ca, Mg",
+              "18 mg/L",
+              "Total",
+              "AE99153"
+            ],
+            [
+              "SV-268 / 2023-03-21",
+              "Magnesium",
+              "1.5 mg/L",
+              "Unfiltered",
+              "AE99153"
+            ],
+            [
+              "SV-375 / 2023-05-09",
+              "Calcium",
+              "5.5 mg/L",
+              "Total",
+              "AF01621"
+            ],
+            [
+              "SV-375 / 2023-05-09",
+              "Hardness, Ca, Mg",
+              "19 mg/L",
+              "Total",
+              "AF01621"
+            ],
+            [
+              "SV-375 / 2023-05-09",
+              "Magnesium",
+              "1.3 mg/L",
+              "Unfiltered",
+              "AF01621"
+            ],
+            [
+              "SV-376 / 2023-05-17",
+              "Calcium",
+              "3.9 mg/L",
+              "Total",
+              "AF02071"
+            ],
+            [
+              "SV-376 / 2023-05-17",
+              "Hardness, Ca, Mg",
+              "15 mg/L",
+              "Total",
+              "AF02071"
+            ],
+            [
+              "SV-376 / 2023-05-17",
+              "Magnesium",
+              "1.3 mg/L",
+              "Unfiltered",
+              "AF02071"
+            ],
+            [
+              "SV-374 / 2023-06-05",
+              "Calcium",
+              "2.5 mg/L",
+              "Total",
+              "AF03226"
+            ],
+            [
+              "SV-374 / 2023-06-05",
+              "Hardness, Ca, Mg",
+              "10 mg/L",
+              "Total",
+              "AF03226"
+            ],
+            [
+              "SV-374 / 2023-06-05",
+              "Magnesium",
+              "0.98 mg/L",
+              "Unfiltered",
+              "AF03226"
+            ],
+            [
+              "SV-268 / 2023-06-12",
+              "Calcium",
+              "2.9 mg/L",
+              "Total",
+              "AF03778"
+            ],
+            [
+              "SV-268 / 2023-06-12",
+              "Hardness, Ca, Mg",
+              "12 mg/L",
+              "Total",
+              "AF03778"
+            ],
+            [
+              "SV-268 / 2023-06-12",
+              "Magnesium",
+              "1.2 mg/L",
+              "Unfiltered",
+              "AF03778"
+            ],
+            [
+              "SV-375 / 2023-08-01",
+              "Calcium",
+              "5.7 mg/L",
+              "Total",
+              "AF06354"
+            ],
+            [
+              "SV-375 / 2023-08-01",
+              "Hardness, Ca, Mg",
+              "20 mg/L",
+              "Total",
+              "AF06354"
+            ],
+            [
+              "SV-375 / 2023-08-01",
+              "Magnesium",
+              "1.3 mg/L",
+              "Unfiltered",
+              "AF06354"
+            ],
+            [
+              "SV-376 / 2023-08-02",
+              "Calcium",
+              "4.6 mg/L",
+              "Total",
+              "AF06480"
+            ],
+            [
+              "SV-376 / 2023-08-02",
+              "Hardness, Ca, Mg",
+              "17 mg/L",
+              "Total",
+              "AF06480"
+            ],
+            [
+              "SV-376 / 2023-08-02",
+              "Magnesium",
+              "1.3 mg/L",
+              "Unfiltered",
+              "AF06480"
+            ],
+            [
+              "SV-374 / 2023-09-06",
+              "Calcium",
+              "2.0 mg/L",
+              "Total",
+              "AF08089"
+            ],
+            [
+              "SV-374 / 2023-09-06",
+              "Hardness, Ca, Mg",
+              "8.7 mg/L",
+              "Total",
+              "AF08089"
+            ],
+            [
+              "SV-374 / 2023-09-06",
+              "Magnesium",
+              "0.89 mg/L",
+              "Unfiltered",
+              "AF08089"
+            ],
+            [
+              "SV-268 / 2023-09-14",
+              "Calcium",
+              "4.5 mg/L",
+              "Total",
+              "AF08544"
+            ],
+            [
+              "SV-268 / 2023-09-14",
+              "Hardness, Ca, Mg",
+              "17 mg/L",
+              "Total",
+              "AF08544"
+            ],
+            [
+              "SV-268 / 2023-09-14",
+              "Magnesium",
+              "1.4 mg/L",
+              "Unfiltered",
+              "AF08544"
+            ],
+            [
+              "SV-375 / 2023-11-06",
+              "Calcium",
+              "6.2 mg/L",
+              "Total",
+              "AF11063"
+            ],
+            [
+              "SV-375 / 2023-11-06",
+              "Hardness, Ca, Mg",
+              "21 mg/L",
+              "Total",
+              "AF11063"
+            ],
+            [
+              "SV-375 / 2023-11-06",
+              "Magnesium",
+              "1.4 mg/L",
+              "Unfiltered",
+              "AF11063"
+            ],
+            [
+              "SV-376 / 2023-11-07",
+              "Calcium",
+              "4.9 mg/L",
+              "Total",
+              "AF11183"
+            ],
+            [
+              "SV-376 / 2023-11-07",
+              "Hardness, Ca, Mg",
+              "18 mg/L",
+              "Total",
+              "AF11183"
+            ],
+            [
+              "SV-376 / 2023-11-07",
+              "Magnesium",
+              "1.3 mg/L",
+              "Unfiltered",
+              "AF11183"
+            ],
+            [
+              "SV-268 / 2023-12-05",
+              "Calcium",
+              "5.4 mg/L",
+              "Total",
+              "AF12373"
+            ],
+            [
+              "SV-268 / 2023-12-05",
+              "Hardness, Ca, Mg",
+              "20 mg/L",
+              "Total",
+              "AF12373"
+            ],
+            [
+              "SV-268 / 2023-12-05",
+              "Magnesium",
+              "1.6 mg/L",
+              "Unfiltered",
+              "AF12373"
+            ],
+            [
+              "SV-374 / 2023-12-06",
+              "Calcium",
+              "2.2 mg/L",
+              "Total",
+              "AF12519"
+            ],
+            [
+              "SV-374 / 2023-12-06",
+              "Hardness, Ca, Mg",
+              "9.5 mg/L",
+              "Total",
+              "AF12519"
+            ],
+            [
+              "SV-374 / 2023-12-06",
+              "Magnesium",
+              "0.98 mg/L",
+              "Unfiltered",
+              "AF12519"
+            ],
+            [
+              "SV-245 / 2023-12-14",
+              "Calcium",
+              "4.7 mg/L",
+              "Total",
+              "AF12945"
+            ],
+            [
+              "SV-245 / 2023-12-14",
+              "Hardness, Ca, Mg",
+              "17 mg/L",
+              "Total",
+              "AF12945"
+            ],
+            [
+              "SV-245 / 2023-12-14",
+              "Magnesium",
+              "1.2 mg/L",
+              "Unfiltered",
+              "AF12945"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Original comments and collection methods",
+      [
+        "The selected original metal rows have blank result, activity and laboratory comment fields. Blank original collection method/equipment fields remain blank in the complete selected CSV.",
+        "Original analytical method names, method descriptions, detection-limit type, result status and all 73 normalized source/context fields remain in selected-records.csv."
+      ]
+    ]
+  ],
+  "figure_spec": "figure-spec.json",
+  "figures": [
+    {
+      "id": "trace-cadmium",
+      "path": "figures/trace-cadmium.svg"
+    },
+    {
+      "id": "trace-chromium",
+      "path": "figures/trace-chromium.svg"
+    },
+    {
+      "id": "trace-copper",
+      "path": "figures/trace-copper.svg"
+    },
+    {
+      "id": "trace-iron",
+      "path": "figures/trace-iron.svg"
+    },
+    {
+      "id": "trace-lead",
+      "path": "figures/trace-lead.svg"
+    },
+    {
+      "id": "trace-manganese",
+      "path": "figures/trace-manganese.svg"
+    },
+    {
+      "id": "trace-mercury",
+      "path": "figures/trace-mercury.svg"
+    },
+    {
+      "id": "trace-nickel",
+      "path": "figures/trace-nickel.svg"
+    },
+    {
+      "id": "trace-zinc",
+      "path": "figures/trace-zinc.svg"
+    }
+  ],
+  "source_links": [
+    "README.md",
+    "analysis_core.mjs",
+    "build.mjs",
+    "explorer.css",
+    "explorer.mjs",
+    "explorer_template.mjs",
+    "figure-spec.json",
+    "figures/trace-cadmium.svg",
+    "figures/trace-chromium.svg",
+    "figures/trace-copper.svg",
+    "figures/trace-iron.svg",
+    "figures/trace-lead.svg",
+    "figures/trace-manganese.svg",
+    "figures/trace-mercury.svg",
+    "figures/trace-nickel.svg",
+    "figures/trace-zinc.svg",
+    "hash.mjs",
+    "inputs.json",
+    "report.html",
+    "report_core.mjs",
+    "same-activity-context.csv",
+    "selected-activities.csv",
+    "selected-records.csv",
+    "selected-summary.csv",
+    "selection.json",
+    "wqp/normalize_core.mjs",
+    "wqp/originals/SV-245-2023.csv",
+    "wqp/originals/SV-268-2023.csv",
+    "wqp/originals/SV-374-2023.csv",
+    "wqp/originals/SV-375-2023.csv",
+    "wqp/originals/SV-376-2023.csv",
+    "wqp/originals/SV-591-2023.csv",
+    "wqp/originals/SV-838-2023.csv",
+    "wqp/originals/SV-839-2023.csv",
+    "wqp/originals/SV-840-2023.csv"
+  ]
+}

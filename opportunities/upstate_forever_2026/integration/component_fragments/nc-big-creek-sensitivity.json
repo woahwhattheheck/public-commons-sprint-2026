@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "nc-big-creek-sensitivity",
+  "source_reference": "ECO-NC-AMBIENT-EVIDENCE-20261013",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "source/nc_big_creek_sensitivity/20261013/derive.mjs",
+        "source/nc_big_creek_sensitivity/20261013/present.mjs",
+        "source/nc_big_creek_sensitivity/20261013/explorer.mjs",
+        "source/nc_big_creek_sensitivity/20261013/source_manifest.mjs",
+        "source/nc_big_creek_sensitivity/20261013/reproduce.mjs",
+        "source/nc_big_creek_sensitivity/20261013/NATIVE_OPENING.md",
+        "source/nc_ambient_measurements/20261013/create_report_explorer.mjs",
+        "source/nc_ambient_measurements/20261013/open_saved_report.py"
+      ],
+      "source_manifests": [
+        "nc_big_creek_sensitivity.sources.json"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ]
+}

@@ -1,0 +1,699 @@
+{
+  "schema": "upstate.designation-assessment-summary/v1",
+  "jurisdiction": "NC",
+  "classification_edition": {
+    "id": "nc-savannah-published-schedule-20160303-captured-20261013",
+    "jurisdiction": "NC",
+    "classification_system": "NC-15A-NCAC-02B",
+    "title": "North Carolina Savannah river-basin classification schedule",
+    "regulation": "15A NCAC 02B .0303 — Savannah classification schedule",
+    "status": "source-published",
+    "publisher": "North Carolina Department of Environmental Quality",
+    "source_url": "https://www.deq.nc.gov/water-quality/planning/csu/surface-water/river-basin-water-quality-classifications-dec-9-2013/savannah-hydro-order/download",
+    "printed_at_source": "2016/03/03 9:26:10",
+    "capture_date": "2026-10-13",
+    "native_data_last_edit_date": 1773841052625,
+    "legal_rule": "15A NCAC 02B .0303",
+    "scope": "Complete 103 named Savannah schedule records, independently reconciled to the publisher Savannah-labelled native GIS cohort"
+  },
+  "assessment_edition": "FINAL 2022",
+  "captured_at": "2026-10-13 08:59:02 UTC",
+  "acquisition_scope": {
+    "huc8_display": [
+      "03060101",
+      "03060102"
+    ],
+    "layer1_original_filter": "HUC8 IN ('3060101','3060102')",
+    "layers2_and3_original_filter": "HUC8 IN (3060101,3060102)",
+    "parameter_join": {
+      "field": "AU_ID",
+      "values": [
+        10117,
+        10118,
+        10119,
+        10120,
+        10460,
+        10461,
+        10462,
+        10463,
+        10464,
+        10465,
+        10466,
+        10467,
+        10468,
+        10469,
+        10470,
+        10471,
+        10472,
+        10473,
+        10474,
+        10475,
+        10476,
+        10477,
+        10478,
+        10479,
+        10480,
+        10481,
+        10482,
+        10483,
+        10484,
+        10485,
+        10486,
+        10487,
+        10488,
+        10489,
+        10490,
+        10491,
+        10492,
+        10493,
+        10494,
+        10495,
+        10496,
+        10497,
+        10498,
+        10499,
+        10500,
+        10501,
+        10502,
+        10503,
+        10504,
+        10505,
+        10506,
+        10507,
+        10508,
+        10509,
+        10510,
+        10511,
+        10512,
+        10513,
+        10514,
+        10515,
+        10516,
+        10517,
+        10518,
+        10519,
+        10520,
+        10521,
+        10522,
+        10523,
+        10524,
+        10525,
+        10526,
+        10528,
+        10529,
+        10530,
+        10531,
+        10532,
+        10533,
+        10534,
+        10535,
+        10536,
+        10537,
+        10538,
+        10539,
+        10540,
+        10541,
+        10542,
+        10543,
+        10544,
+        10545,
+        10546,
+        10547,
+        10548,
+        10549,
+        10550,
+        10551,
+        10552,
+        10553,
+        10554,
+        10555,
+        10556,
+        10557,
+        10558,
+        10559,
+        10560,
+        10561,
+        10562,
+        10563,
+        13394,
+        13410,
+        13419
+      ],
+      "query": "AU_ID IN (10117,10118,10119,10120,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,10476,10477,10478,10479,10480,10481,10482,10483,10484,10485,10486,10487,10488,10489,10490,10491,10492,10493,10494,10495,10496,10497,10498,10499,10500,10501,10502,10503,10504,10505,10506,10507,10508,10509,10510,10511,10512,10513,10514,10515,10516,10517,10518,10519,10520,10521,10522,10523,10524,10525,10526,10528,10529,10530,10531,10532,10533,10534,10535,10536,10537,10538,10539,10540,10541,10542,10543,10544,10545,10546,10547,10548,10549,10550,10551,10552,10553,10554,10555,10556,10557,10558,10559,10560,10561,10562,10563,13394,13410,13419)"
+    }
+  },
+  "join_method": "exact-jurisdiction-and-BIMS-index; literal class independently compared",
+  "legal_records": 103,
+  "assessment_units": 110,
+  "distinct_bims_indices": 103,
+  "literal_class_agreements": 110,
+  "assessment_status_counts": {
+    "Data Inconclusive": 4,
+    "Meeting Criteria": 23,
+    "No Data": 83
+  },
+  "tr_hqw_orw_legal_records": 84,
+  "tr_hqw_orw_assessment_units": 90,
+  "tr_hqw_orw_status_counts": {
+    "Data Inconclusive": 2,
+    "Meeting Criteria": 22,
+    "No Data": 66
+  },
+  "other_literal_designation_status_counts": {
+    "Data Inconclusive": 2,
+    "Meeting Criteria": 1,
+    "No Data": 17
+  },
+  "polygon_features": 34,
+  "polygon_aus": 34,
+  "additional_aus_from_polygons": 0,
+  "parameter_rows": 77,
+  "aus_with_parameter_rows": 27,
+  "parameter_cycles": {
+    "2020": 2,
+    "2022": 75
+  },
+  "original_au_measure_units": {
+    "FW Acres": 5,
+    "FW Miles": 105
+  },
+  "parameter_collection_years": {
+    "1999": 2,
+    "2001": 1,
+    "2004": 2,
+    "2006": 8,
+    "2009": 2,
+    "2012": 20,
+    "2014": 28,
+    "2015": 2,
+    "2016": 1,
+    "2017": 2,
+    "2018": 2,
+    "2020": 7
+  },
+  "parameter_rows_before_2016": 65,
+  "parameter_publisher_statuses": {
+    "": 6,
+    "DRAFT": 5,
+    "EPA_APPROVED": 66
+  },
+  "aus_with_one_parameter_row": 24,
+  "aus_without_parameter_rows": 83,
+  "parameter_coverage": [
+    {
+      "au_id": 10117,
+      "name": "CHATTOOGA RIVER",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2017": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10461,
+      "name": "Fowler Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "1999": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10462,
+      "name": "East Fork Chattooga River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2015": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10465,
+      "name": "East Fork Overflow Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10466,
+      "name": "West Fork Overflow Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2017": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10468,
+      "name": "Abes Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "1999": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10469,
+      "name": "Clear Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10475,
+      "name": "Big Creek",
+      "parameter_rows": 42,
+      "collection_years": {
+        "2012": 20,
+        "2014": 22
+      },
+      "criteria_labels": {
+        "Data Inconclusive": 2,
+        "Meeting Criteria": 40
+      }
+    },
+    {
+      "au_id": 10481,
+      "name": "Tullulah River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10494,
+      "name": "Norton Mill Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2016": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10499,
+      "name": "Scotsman Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2015": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10506,
+      "name": "TOXAWAY RIVER",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2004": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10512,
+      "name": "Horsepasture River",
+      "parameter_rows": 8,
+      "collection_years": {
+        "2009": 1,
+        "2020": 7
+      },
+      "criteria_labels": {
+        "Data Inconclusive": 1,
+        "Meeting Criteria": 7
+      }
+    },
+    {
+      "au_id": 10513,
+      "name": "Horsepasture River (Lupton Lake, Sapphire Lake)",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10514,
+      "name": "Horsepasture River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10516,
+      "name": "Burlingame Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Data Inconclusive": 1
+      }
+    },
+    {
+      "au_id": 10517,
+      "name": "Rock Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10521,
+      "name": "Logan Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10532,
+      "name": "Little Hogback Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10533,
+      "name": "Hogback Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2006": 1
+      },
+      "criteria_labels": {
+        "Data Inconclusive": 1
+      }
+    },
+    {
+      "au_id": 10535,
+      "name": "Whitewater River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10541,
+      "name": "Thompson River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2009": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10550,
+      "name": "Indian Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10553,
+      "name": "Bearwallow Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2001": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 10554,
+      "name": "Bearwallow Creek",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2004": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    },
+    {
+      "au_id": 13394,
+      "name": "Trays Island Creek (Fairfield Lake)",
+      "parameter_rows": 3,
+      "collection_years": {
+        "2006": 1,
+        "2018": 2
+      },
+      "criteria_labels": {
+        "Data Inconclusive": 1,
+        "Meeting Criteria": 2
+      }
+    },
+    {
+      "au_id": 13410,
+      "name": "Horsepasture River",
+      "parameter_rows": 1,
+      "collection_years": {
+        "2014": 1
+      },
+      "criteria_labels": {
+        "Meeting Criteria": 1
+      }
+    }
+  ],
+  "designation_component_counts": {
+    "Tr": {
+      "assessment_units": 83,
+      "assessment_status_counts": {
+        "Data Inconclusive": 2,
+        "Meeting Criteria": 22,
+        "No Data": 59
+      }
+    },
+    "HQW": {
+      "assessment_units": 9,
+      "assessment_status_counts": {
+        "Meeting Criteria": 2,
+        "No Data": 7
+      }
+    },
+    "ORW": {
+      "assessment_units": 18,
+      "assessment_status_counts": {
+        "Data Inconclusive": 1,
+        "Meeting Criteria": 6,
+        "No Data": 11
+      }
+    }
+  },
+  "split_legal_records": [
+    {
+      "legal_record_id": "NC:NC-15A-NCAC-02B:savannah:3",
+      "bims_index": "3",
+      "waterbody_name": "CHATTOOGA RIVER (Cashiers Lake)",
+      "reach_description": "From source to North Carolina-Georgia State Line",
+      "class_raw": "B;Tr,ORW",
+      "class_components": [
+        "B",
+        "Tr",
+        "ORW"
+      ],
+      "special_markers": [],
+      "effective_date": "1989-03-01",
+      "assessment_unit_count": 4,
+      "assessment_unit_ids": [
+        10117,
+        10118,
+        10119,
+        10120
+      ],
+      "assessment_status_counts": {
+        "Meeting Criteria": 1,
+        "No Data": 3
+      },
+      "mixed_assessment_labels": true,
+      "parameter_record_count": 1,
+      "original_polygon_feature_count": 2
+    },
+    {
+      "legal_record_id": "NC:NC-15A-NCAC-02B:savannah:3-3",
+      "bims_index": "3-3",
+      "waterbody_name": "Norton Mill Creek",
+      "reach_description": "From source to Chattooga River",
+      "class_raw": "C;Tr:+",
+      "class_components": [
+        "C",
+        "Tr"
+      ],
+      "special_markers": [
+        "+"
+      ],
+      "effective_date": "1973-07-01",
+      "assessment_unit_count": 2,
+      "assessment_unit_ids": [
+        10493,
+        10494
+      ],
+      "assessment_status_counts": {
+        "Meeting Criteria": 1,
+        "No Data": 1
+      },
+      "mixed_assessment_labels": true,
+      "parameter_record_count": 1,
+      "original_polygon_feature_count": 1
+    },
+    {
+      "legal_record_id": "NC:NC-15A-NCAC-02B:savannah:4-13-(0.5)",
+      "bims_index": "4-13-(0.5)",
+      "waterbody_name": "Horsepasture River (Lupton Lake, Sapphire Lake)",
+      "reach_description": "From source to N.C. Hwy. 281 (Bohaynee Road)",
+      "class_raw": "C;Tr:+",
+      "class_components": [
+        "C",
+        "Tr"
+      ],
+      "special_markers": [
+        "+"
+      ],
+      "effective_date": "2009-07-01",
+      "assessment_unit_count": 3,
+      "assessment_unit_ids": [
+        10511,
+        10512,
+        10513
+      ],
+      "assessment_status_counts": {
+        "Meeting Criteria": 2,
+        "No Data": 1
+      },
+      "mixed_assessment_labels": true,
+      "parameter_record_count": 9,
+      "original_polygon_feature_count": 2
+    },
+    {
+      "legal_record_id": "NC:NC-15A-NCAC-02B:savannah:4-13-5-(3)",
+      "bims_index": "4-13-5-(3)",
+      "waterbody_name": "Trays Island Creek (Fairfield Lake)",
+      "reach_description": "From Camp Merrie-Woods Water Supply Intake to Dam at Fairfield Lake",
+      "class_raw": "B:+",
+      "class_components": [
+        "B"
+      ],
+      "special_markers": [
+        "+"
+      ],
+      "effective_date": "2009-07-01",
+      "assessment_unit_count": 2,
+      "assessment_unit_ids": [
+        13394,
+        13419
+      ],
+      "assessment_status_counts": {
+        "Data Inconclusive": 1,
+        "No Data": 1
+      },
+      "mixed_assessment_labels": true,
+      "parameter_record_count": 3,
+      "original_polygon_feature_count": 1
+    }
+  ],
+  "inconclusive_assessment_units": [
+    {
+      "au_id": 10475,
+      "bims_index": "3-10-3",
+      "name": "Big Creek",
+      "class_raw": "C;Tr,ORW",
+      "au_number": "3-10-3",
+      "au_description": "From source to North Carolina-Georgia State Line",
+      "measure": 4.115699768,
+      "units": "FW Miles"
+    },
+    {
+      "au_id": 10516,
+      "bims_index": "4-13-10",
+      "name": "Burlingame Creek",
+      "class_raw": "C:+",
+      "au_number": "4-13-10",
+      "au_description": "From source to Horsepasture River",
+      "measure": 1.47250998,
+      "units": "FW Miles"
+    },
+    {
+      "au_id": 10533,
+      "bims_index": "4-13-9",
+      "name": "Hogback Creek",
+      "class_raw": "C;Tr:+",
+      "au_number": "4-13-9",
+      "au_description": "From source to Horsepasture River",
+      "measure": 1.647210002,
+      "units": "FW Miles"
+    },
+    {
+      "au_id": 13394,
+      "bims_index": "4-13-5-(3)",
+      "name": "Trays Island Creek (Fairfield Lake)",
+      "class_raw": "B:+",
+      "au_number": "4-13-5-(3)a",
+      "au_description": "From Camp Merrie-Woods Water Supply Intake to backwater of Fairfield Lake",
+      "measure": 0.4,
+      "units": "FW Miles"
+    }
+  ],
+  "source_label_reconciliation": [
+    {
+      "au_id": 10475,
+      "object_id": 10173,
+      "asmt_id": 10673,
+      "parameter_original": "Cyanide (5 mg/L, AL, FW)",
+      "flag": "published-label-unit-differs-from-methodology",
+      "methodology": "2022 NC 303(d) methodology, printed page 6",
+      "methodology_criterion_value": 5,
+      "methodology_criterion_unit": "µg/L",
+      "source_uri": "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download",
+      "handling": "Original label retained; do not use its embedded mg/L value as the numeric cyanide criterion."
+    }
+  ]
+}

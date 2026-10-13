@@ -1,8 +1,9 @@
 // Source-bound programme reporting for the original assessment/station editions.
 import { createArchiveCodec } from "./archive_codec.mjs";
+import { addAnnualReferenceMapHtml } from "./annual_reference_maps.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
-import { renderNativeAssessmentReviewer } from "./native_assessment_reviewer.mjs";
+import { renderNativeAssessmentReviewer, annualReferenceInterpretation, annualReferenceCsv } from "./native_assessment_reviewer.mjs";
 import { bindNativeMicrobiology, renderNativeMicrobiology } from "./native_assessment_microbiology.mjs";
 import { NATIVE_CONTEXT_SCHEMA, bindNativeAssessmentGeography } from "./native_assessment_geography.mjs";
 
@@ -78,7 +79,7 @@ function nativeGeography(text, records) {
       sha256: sha(text), bytes: codec.utf8Encode(text).length }, stations: result };
 }
 
-export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations }) {
+export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations, nativeAnnualMaps }) {
   const joined = joinAssessmentIdentities(assessments, identityCrosswalk);
   const programme = parse(priorities, "original programme crosswalk");
   if (programme.schema !== "upstate.source-priority-assessment-crosswalk/v2" ||
@@ -210,6 +211,15 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     files["inputs/microbial-assessment-observations.csv"] = nativeMicrobialObservations;
   }
   result.inputs = Object.entries(files).filter(([path]) => path.startsWith("inputs/")).map(([path,text]) => identity(path,text));
+  if(nativeAnnualMaps){
+    if(!nativeAnnual||nativeAnnualMaps.context?.schema!=="upstate.annual-reference-basin-maps/v1"||
+       nativeAnnualMaps.context.input_sha256!==nativeAnnual.input_sha256||
+       nativeAnnualMaps.context.annual_source?.sha256!==sha(nativeAnnualContext))
+      throw Error("Annual map source binding differs from the selected report context.");
+    result.annual_reference_map={edition:nativeAnnualMaps.context.edition,
+      source:nativeAnnualMaps.context.annual_source,
+      geometry:identity("annual-reference-basin-map.json",nativeAnnualMaps.files["annual-reference-basin-map.json"])};
+  }
   files["assessment-associations.json"] = json(result);
   const flattened = records.map(row => ({ ...row,
     assessment_watershed_name: row.assessment_programme.name,
@@ -231,12 +241,25 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
   files["watershed-membership-comparison.csv"] = csv(watershedRows, ["huc12","name","priority_states","assessment_records",
     "assessment_stations","station_exact_records","station_exact_stations","assessment_record_ids","station_record_ids","state_rows"]);
   files["assessment-edition-summary.csv"] = csv(editions, Object.keys(editions[0]));
-  if (nativeAnnual) files["inputs/annual-reference-assessment-summary.json"] = nativeAnnualContext;
+  if (nativeAnnual) {
+    files["inputs/annual-reference-assessment-summary.json"] = nativeAnnualContext;
+    const annualYields=annualReferenceInterpretation(nativeAnnual);
+    files["annual-reference-yields.json"]=json(annualYields);
+    files["annual-reference-yields.csv"]=annualReferenceCsv(annualYields);
+    files["annual-reference-relations.csv"]=annualReferenceCsv(annualYields,true);
+  }
   const reviewHtml = renderAssociationReviewer(result, renderAssociationReport(result));
   files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
     renderNativeAssessmentReviewer({result,context:parse(geography,"completed native geography"),annual:nativeAnnual,html:reviewHtml}) : reviewHtml;
   if (microbial) files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = renderNativeMicrobiology({
     html:files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],bound:microbial});
+  if(nativeAnnualMaps){
+    for(const [path,body] of Object.entries(nativeAnnualMaps.files)){
+      if(files[path]!==undefined)throw Error("Annual map output collides with an existing report file.");
+      files[path]=body;
+    }
+    files["OPEN_ASSESSMENT_ASSOCIATIONS.html"]=addAnnualReferenceMapHtml(files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],nativeAnnualMaps);
+  }
   const reportIdentity = identity("assessment-associations.json", files["assessment-associations.json"]);
   const sourceId = "assessment-association-report-" + reportIdentity.sha256.slice(0,20);
   files["artifacts.json"] = json({schema:"commons.artifacts/v1",source_id:sourceId,files:Object.entries(files).map(([path,text])=>identity(path,text))});
@@ -255,14 +278,29 @@ export function renderAssociationReport(result) {
   const r=result.records, s=result.summary;
   const hucCell = context => '<code>' + esc(context.huc12 || "HUC12 unreported") + '</code><br>' + esc(context.name) +
     '<br><span class="muted">' + esc(context.priority_states.length ? "FY26 priority: " + context.priority_states.join(", ") : context.domain_status === "selected_domain" ? "No FY26 priority state row" : context.domain_status.replaceAll("_"," ")) + '</span>';
-  const recordLink = row => '<a href="#record-' + r.indexOf(row) + '">' + esc(row.site) + '</a>';
+  const recordPositions = new Map(r.map((row, index) => [key(row), index]));
+  const recordLink = row => {
+    const index = recordPositions.get(key(row));
+    if (index === undefined) fail("Report row is absent from its original source edition");
+    return '<a href="#record-' + index + '">' + esc(row.site) + '</a>';
+  };
   const comparisons = table(["Publisher relationship","Assessment records"],Object.entries(s.recordComparisons).map(([label,count])=>[esc(label.replaceAll("_"," ")),esc(count)]));
   const differences = table(["Station / assessment edition","Assessment publisher HUC12","Station publisher HUC12","Cause / support","Priority relationship"],
     result.differences.map(row=>[recordLink(row)+"<br>"+esc(row.source_vintage),hucCell(row.assessment_programme),
       hucCell(row.station_programme),esc((row.cause_label || row.cause_raw)+" / "+row.use_support.replaceAll("_"," ")),esc(row.priority_relation.replaceAll("_"," "))]));
-  const coarser = table(["Station","Assessment edition / HUC12","Station publisher HUC8","Selected HUC12s sharing that HUC8"],
-    result.coarser_station_memberships.map(row=>[recordLink(row),esc(row.source_vintage)+"<br><code>"+esc(row.huc12)+"</code>",
-      "<code>"+esc(row.station_publisher_huc8 || "Not reported")+"</code>",esc(row.station_huc8_domain_huc12s.join("; "))]));
+  const coarser = table(["Station / original cause and support","Assessment edition / HUC12","Station publisher HUC8","Selected watershed lookup"],
+    result.coarser_station_memberships.map(row=>[
+      recordLink(row)+"<br>"+esc(row.cause_label || row.cause_raw || "Cause not reported")+
+        '<br><span class="muted">'+esc(row.use || "Use not reported")+" · "+
+        esc(String(row.use_support || "support_not_reported").replaceAll("_"," "))+"</span>",
+      esc(row.source_vintage)+"<br><code>"+esc(row.huc12)+"</code>",
+      "<code>"+esc(row.station_publisher_huc8 || "Not reported")+"</code>",
+      row.station_huc8_domain_huc12s.length ?
+        "<details><summary>"+esc(row.station_huc8_domain_huc12s.length)+" selected watershed IDs</summary>"+
+        "<p>Watersheds sharing the reported HUC8; station membership is unresolved at HUC12.</p><ul>"+
+        row.station_huc8_domain_huc12s.map(huc=>"<li><code>"+esc(huc)+"</code></li>").join("")+"</ul></details>" :
+        "No selected watershed shares this reported HUC8"
+    ]));
   const editions = table(["Original assessment edition","Records / distinct sites","Assessment HUC: priority records / sites",
     "Station exact HUC12: priority records / sites","Station HUC12 unreported records"],s.assessment_editions.map(e=>[
     esc(e.source_id)+"<br>"+esc(e.vintage),esc(e.records+" / "+e.stations),

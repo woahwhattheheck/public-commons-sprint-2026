@@ -12,9 +12,16 @@ import tempfile
 from datetime import datetime, timezone
 
 CODE_FILES = (
+    "AGENTS.md",
+    "CURRENT_OWNER_DIRECTION.md",
     "measurement_workspace/published_studies.py",
     "measurement_workspace/study_reviews.py",
     "measurement_workspace/geographic_study_selection.py",
+    "measurement_workspace/microbial_selection.py",
+    "operator/SELECTED_MICROBIAL_STUDY.md",
+    "examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json",
+    "examples/selected-microbial-activities-20261013/receive.py",
+    "integration/component_fragments/selected-microbial-studies.json",
     "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
     "source_tools/receive_geographic_study_review.py",
     "measurement_workspace/STUDY_REVIEWS.md",
@@ -26,7 +33,12 @@ CODE_FILES = (
     "measurement_workspace/rl18151_observations.py",
     "measurement_workspace/RL18151_OBSERVATIONS.md",
     "source_tools/receive_original_study.py",
+    "source_tools/continue_study_report.py",
     "source_tools/receive_rl18151_study.py",
+    "source_tools/offline_handover/README.md",
+    "source_tools/offline_handover/adapt_eighteenmile_retained.py",
+    "source_tools/offline_handover/build_offline_handover.py",
+    "source_tools/offline_handover/offline_handover.html",
     "source_tools/receive_sv833_study.py",
     "measurement_workspace/SV833_OBSERVATIONS.md",
     "measurement_workspace/utility_microbiology.py",
@@ -39,12 +51,23 @@ CODE_FILES = (
     "operator/team_route_policy.json",
     "operator/extensions/published-studies.json",
     "operator/web/published_studies.mjs",
+    "operator/web/published_microbial_selection.mjs",
     "operator/web/published_review_reports.mjs",
+    "model/received_published_reviews.py",
+    "model/published_review_admission.py",
+    "operator/published_review_admission.py",
+    "operator/extensions/received-published-review-admission.json",
+    "operator/received_published_reviews.py",
+    "operator/web/received_published_reviews.mjs",
+    "operator/web/received_published_reviews.css",
+    "operator/RECEIVED_PUBLISHED_REVIEWS.md",
+    "integration/component_fragments/received-published-reviews.json",
     "operator/PUBLISHED_REVIEW_REPORTS.md",
     "model/published_review_report_source.py",
     "model/published_review_study_transfer.py",
     "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
     "integration/component_fragments/published-review-report-source.json",
+    "integration/component_fragments/published-study-report-receiving.json",
     "operator/web/published_studies.css",
     "PUBLISHED_STUDIES.md",
     "published_studies_family.json",
@@ -80,6 +103,7 @@ def portable_source(source):
     additions = {
         "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations", "source", "source_tools"),
         "APPLICATION_FILES": (
+            "CURRENT_OWNER_DIRECTION.md", "AGENTS.md",
             "PUBLISHED_STUDIES.md", "published_studies_family.json", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
             "eighteenmile_chlorophyll_reconciled.sources.json",
@@ -149,6 +173,49 @@ def review_transfer_source(source):
     updated = updated.replace(original_call, original_call + addition_call, 1)
     result = source[:start] + updated + source[end:]
     ast.parse(result)
+    return result
+
+
+RECEIVING_HOOKS = json.loads(r'''{"model/study_receiving.py":[{"before":"from . import observed_landcover_receiving\n","after":"from . import observed_landcover_receiving\nfrom . import received_published_reviews\n"},{"before":"        **observed_landcover_receiving.summary(identity),\n","after":"        **observed_landcover_receiving.summary(identity),\n        **received_published_reviews.summary(identity),\n"},{"before":"    observed_landcover_receiving.augment(closure, retained, result)\n","after":"    observed_landcover_receiving.augment(closure, retained, result)\n    received_published_reviews.augment(closure, retained, result)\n"}],"operator/study_receiving.py":[{"before":"    result[\"workspace_key\"] = workspace_key\n","after":"    import received_published_reviews\n    received_published_reviews.decorate(operator, workspace_key, result)\n    result[\"workspace_key\"] = workspace_key\n"}],"operator/web/received_studies.mjs":[{"before":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\n","after":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\nimport {receivedPublishedReviewsHTML,openReceivedPublishedReview} from './received_published_reviews.mjs';\n"},{"before":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n","after":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n    html+=receivedPublishedReviewsHTML(value,!!disabled);\n"},{"before":"    if(action?.startsWith('cohort-')){\n","after":"    if(action?.startsWith('published-review-')){\n      const ws=workspace,e=epoch,value=opened;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      return await openReceivedPublishedReview(host,value,target,{\n        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,\n      });\n    }\n    if(action?.startsWith('cohort-')){\n"}]}''')
+
+
+def review_receiving_sources(application):
+    """Compose the original received-study hooks before changing any file."""
+    result = []
+    for relative, changes in RECEIVING_HOOKS.items():
+        path = application / relative
+        original = path.read_text(encoding="utf-8")
+        updated = original
+        for change in changes:
+            before, after = change["before"], change["after"]
+            if updated.count(after) == 1:
+                continue
+            if after in updated or updated.count(before) != 1:
+                raise ValueError("The received-review join needs its maintained source anchor: " + relative)
+            updated = updated.replace(before, after, 1)
+        if path.suffix == ".py":
+            ast.parse(updated)
+        result.append((path, original, updated))
+    path = application / "operator/extensions/study-transfer.json"
+    original = path.read_text(encoding="utf-8")
+    descriptor = json.loads(original)
+    if descriptor.get("id") != "study-transfer":
+        raise ValueError("Choose the maintained Study transfer descriptor.")
+    assets = descriptor.get("assets")
+    styles = descriptor.get("client", {}).get("styles")
+    if (not isinstance(assets, list) or not all(isinstance(item, str) for item in assets)
+            or not isinstance(styles, list) or not all(isinstance(item, str) for item in styles)):
+        raise ValueError("The Study transfer assets/styles need their maintained list registration.")
+    changed = False
+    for name in ("received_published_reviews.mjs", "received_published_reviews.css"):
+        if name not in assets:
+            assets.append(name)
+            changed = True
+    if "/web/received_published_reviews.css" not in styles:
+        styles.append("/web/received_published_reviews.css")
+        changed = True
+    updated = json.dumps(descriptor, indent=2, ensure_ascii=False) + "\n" if changed else original
+    result.append((path, original, updated))
     return result
 
 
@@ -264,6 +331,7 @@ def main():
     transfer_path = application / "model" / "scientific_report_study_transfer.py"
     transfer_original = transfer_path.read_text(encoding="utf-8")
     transfer_updated = review_transfer_source(transfer_original)
+    receiving_updates = review_receiving_sources(application)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     changed, reused = [], []
     for relative in expected:
@@ -280,6 +348,7 @@ def main():
     for path, original, updated in (
         (portable_path, portable_original, portable_updated),
         (transfer_path, transfer_original, transfer_updated),
+        *receiving_updates,
     ):
         relative = str(path.relative_to(application))
         if updated == original:
@@ -302,7 +371,8 @@ def main():
         "builtin_id": "scdes-eighteenmile-lake-2023",
         "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in [
-            *expected, "model/portable.py", "model/scientific_report_study_transfer.py"]],
+            *expected, "model/portable.py", "model/scientific_report_study_transfer.py",
+            *(str(path.relative_to(application)) for path, _, _ in receiving_updates)]],
     }, indent=2))
 
 

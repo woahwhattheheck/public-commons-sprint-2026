@@ -1,0 +1,24 @@
+{
+  "schema": "commons-feature-v1",
+  "id": "connected-document-authoring-20261013",
+  "name": "Complete source Doc authoring",
+  "capability": "Author and reconcile an original complete source packet in an explicitly selected native Doc with actor, preimage, tab and revision guards; feed the existing maintained Library receiver.",
+  "owner_subsystem": "connected-source-delivery",
+  "carrier": "CommonJS and native connected tools",
+  "claimed_paths": [
+    "host/connected_document_authoring.cjs",
+    "host/CONNECTED_DOCUMENT_AUTHORING.md"
+  ],
+  "test_paths": [],
+  "public_entrypoint": "host/connected_document_authoring.cjs",
+  "dependencies": [
+    "Maintained sha256Utf8 returning complete bytes and SHA-256",
+    "Caller complete original source-packet validator",
+    "Native Google Drive profile, metadata, document text, complete document for empty-body admission, and batch update",
+    "Maintained connected_document_delivery.cjs receiver for export and Library admission"
+  ],
+  "resource_links": [
+    "host/CONNECTED_DOCUMENT_AUTHORING.md"
+  ],
+  "next_gap": "Continue the accepted native source operation through the maintained receiver and use the actual outgoing product."
+}

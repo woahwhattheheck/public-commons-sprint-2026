@@ -527,6 +527,7 @@ async function nativeStatus(){
   await runDraft();
 }
 function customerFamily(call){
+  if(['merchant_worldbank_programme_export','merchant_worldbank_programme_manifest'].includes(call?.tool))return 'worldbank-programme';
   if(call?.tool?.startsWith('merchant_grpc_'))return 'grpc';
   if(call?.tool?.startsWith('merchant_grant_reviewer_'))return 'grant-reviewer';
   if(['merchant_openapi_export','merchant_openapi_manifest'].includes(call?.tool))return 'openapi';
@@ -534,8 +535,8 @@ function customerFamily(call){
   if(call?.tool?.startsWith('merchant_client_export'))return 'core';
   return null;
 }
-const customerAuthority=family=>({core:'Merchant release store',opensearch:'OpenSearch workspace deployment',openapi:'API workspace package','grant-reviewer':'Grant reviewer packet and results',grpc:'gRPC customer, source and observations'}[family]??family);
-const customerWorkspace=family=>['opensearch','openapi','grant-reviewer','grpc'].includes(family);
+const customerAuthority=family=>({core:'Merchant release store',opensearch:'OpenSearch workspace deployment',openapi:'API workspace package','grant-reviewer':'Grant reviewer packet and results',grpc:'gRPC customer, source and observations','worldbank-programme':'World Bank programme and complete workspace'}[family]??family);
+const customerWorkspace=family=>['opensearch','openapi','grant-reviewer','grpc','worldbank-programme'].includes(family);
 const customerCallReady=call=>call?.state==='COMPLETE'&&Boolean(customerFamily(call));
 function customerResults(result){
   const queue=[result],seen=new Set(),values=[];
@@ -557,6 +558,15 @@ function customerSelection(call,result){
   if(!family||call.state!=='COMPLETE'||!result||result.isError===true)return null;
   const args=JSON.parse(call.argumentsJson),values=customerResults(result);
   if(values.some(value=>value.isError===true))return null;
+  if(family==='worldbank-programme'){
+    const packet=values.find(value=>['EXPORTED','MANIFEST_RETAINED'].includes(value.state)&&
+      value.manifest?.schema==='stellar-forge.worldbank-programme-delivery.v1'&&
+      value.manifest.exportId===value.exportId&&/^[a-f0-9]{64}$/.test(value.exportId??'')&&
+      value.manifestFile?.name==='worldbank-programme-delivery.json'&&/^[a-f0-9]{64}$/.test(value.manifestFile.sha256??''));
+    if(!packet||packet.workspace!==args.workspace||packet.manifest.workspace!==args.workspace||
+      args.exportId!==undefined&&args.exportId!==packet.exportId)return null;
+    return {family,workspace:args.workspace,exportId:packet.exportId,expectedManifestSha256:packet.manifestFile.sha256};
+  }
   if(family==='openapi'){
     const packet=values.find(value=>['EXPORTED','MANIFEST_RETAINED'].includes(value.state)&&
       value.manifest?.schema==='stellar-forge.api-merchant-package-export.v1'&&
@@ -574,7 +584,7 @@ function customerSelection(call,result){
   return {family,exportId,expectedManifestSha256:sha,...(family==='opensearch'?{workspace:args.workspace}:{})};
 }
 function customerFormRules(){
-  const family=$('customer-family').value,workspace=customerWorkspace(family),apiPackage=family==='openapi',reviewer=family==='grant-reviewer',exactSha=apiPackage||reviewer||family==='grpc';
+  const family=$('customer-family').value,workspace=customerWorkspace(family),apiPackage=family==='openapi',reviewer=family==='grant-reviewer',exactSha=apiPackage||reviewer||family==='grpc'||family==='worldbank-programme';
   $('customer-workspace-field').hidden=!workspace;$('customer-workspace').required=workspace;
   $('customer-workspace').pattern=reviewer?'[A-Za-z0-9][A-Za-z0-9._-]{0,127}':'[a-z0-9][a-z0-9_-]{0,63}';
   $('customer-workspace').maxLength=reviewer?128:64;
@@ -584,6 +594,7 @@ function customerFormRules(){
   text($('customer-form-hint'),apiPackage?
     'Use the API workspace alias and the full package-export.json digest returned by Export or Manifest. The internal package manifest has its own separate digest.':
     reviewer?'Use the configured reviewer workbench alias, exact export ID and complete manifest digest returned by the original export.':
+    family==='worldbank-programme'?'Use the original Analysis alias, exact export ID and worldbank-programme-delivery.json digest. Every report, workbook and workspace file is retained.':
     family==='grpc'?'Use the configured gRPC workspace, complete export ID and grpc-workspace-export.json digest. The archive restores the original nested client paths.':
     'Use the export identity and manifest digest returned by the original merchant.');
 }
@@ -641,12 +652,12 @@ function renderCustomer(){
   $('resume-customer').disabled=Boolean(value.active);$('pause-customer').disabled=!value.active;$('download-customer').disabled=!value.localFiles;
   $('customer-files').replaceChildren(...(value.files??[]).map(file=>{
     const row=node('tr'),hash=node('td');hash.append(node('code',file.sha256));const actionCell=node('td'),button=node('button','Download');
-    button.disabled=!value.localFiles;action(button,()=>download('customer-file/'+encodeURIComponent(value.id)+'?'+new URLSearchParams({file:file.name}),file.name,{stream:value.identity.family==='grpc',maximumBytes:file.bytes}));actionCell.append(button);
+    button.disabled=!value.localFiles;action(button,()=>download('customer-file/'+encodeURIComponent(value.id)+'?'+new URLSearchParams({file:file.name}),file.name,{stream:['grpc','worldbank-programme'].includes(value.identity.family),maximumBytes:file.bytes}));actionCell.append(button);
     row.append(node('td',file.path??file.name),node('td',file.bytes),hash,actionCell);return row;
   }));
   text($('customer-json'),pretty(value));
   if(value.identity.family==='grant-reviewer')text($('download-customer'),value.manifest?.kind==='reviewer-packet'?'Download original receiving packet':'Download complete original file');
-  else text($('download-customer'),value.identity.family==='grpc'?'Download complete gRPC archive':value.identity.family==='openapi'?'Download original API package archive':'Download original customer archive');
+  else text($('download-customer'),value.identity.family==='worldbank-programme'?'Download original World Bank delivery ZIP':value.identity.family==='grpc'?'Download complete gRPC archive':value.identity.family==='openapi'?'Download original API package archive':'Download original customer archive');
   renderCustomers();reviewerPage.sync();grpcPage.sync();
 }
 $('connect-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,connect);});
@@ -686,7 +697,7 @@ action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
 action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),
-  state.customer.identity.family==='grant-reviewer'?(state.customer.manifest?.kind==='reviewer-packet'?'grant-reviewer-packet.json':state.customer.manifest?.files?.[0]?.name??'original-file'):state.customer.identity.exportId+'.tar.gz',{stream:state.customer.identity.family==='grpc',maximumBytes:(state.customer.files??[]).reduce((sum,file)=>sum+file.bytes,0)+1048576}));
+  state.customer.identity.family==='worldbank-programme'?'WorldBank_Analysis_Delivery.zip':state.customer.identity.family==='grant-reviewer'?(state.customer.manifest?.kind==='reviewer-packet'?'grant-reviewer-packet.json':state.customer.manifest?.files?.[0]?.name??'original-file'):state.customer.identity.exportId+'.tar.gz',{stream:['grpc','worldbank-programme'].includes(state.customer.identity.family),maximumBytes:(state.customer.files??[]).reduce((sum,file)=>sum+file.bytes,0)+1048576}));
 const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
   requireProfile,loadProfile,loadProfiles,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer});
 const reviewerPage=createReviewerCustomerPage({state,$,node,text,pretty,when,properties,action,busy,api,notice,uid,

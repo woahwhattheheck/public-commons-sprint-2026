@@ -1,0 +1,17 @@
+{
+  "publisher": "North Carolina Department of Environmental Quality",
+  "source_edition": "Final 2022 Integrated Report",
+  "captured_at": "2026-10-13 08:40:58 UTC",
+  "original": {
+    "path": "source/nc_assessment_2022/20261013/original/ncdeq-final2022-layer2-all-attributes-original.json",
+    "uri": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/ArcGIS/rest/services/2022_Integrated_Report_Overall_Stream_Assessment/FeatureServer/2/query?f=json&where=HUC8%20IN%20(3060101%2C3060102)&outFields=*&returnGeometry=false&orderByFields=OBJECTID",
+    "bytes": 64862,
+    "sha256": "b838dd0e6f624159d84320a249d82b4d72e9d7e63638c18c36937ed498212381"
+  },
+  "metadata": {
+    "path": "source/nc_assessment_2022/20261013/original/ncdeq-final2022-layer2-metadata-original.json",
+    "uri": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/ArcGIS/rest/services/2022_Integrated_Report_Overall_Stream_Assessment/FeatureServer/2?f=json",
+    "bytes": 17527,
+    "sha256": "672d98bc5aa07374357a431e00646ef66b05f1981f650038972b5f4af29eef0d"
+  }
+}

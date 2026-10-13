@@ -1,0 +1,54 @@
+{
+  "schema": "commons.landsage-native-bootstrap/v1",
+  "operationId": "LANDSAGE-PARCEL-EVIDENCE-OPERATOR-103D-20261013",
+  "reviewer": "REPLACE_WITH_ACTUAL_REVIEWER",
+  "sourcePage": "https://app.notion.com/p/3f8dd7723100811cb67cfd0485b1ad9e",
+  "nativeRuntimeFile": "/absolute/installed-native-runtime.json",
+  "vectorPython": "/absolute/installed-fiona-python",
+  "workspace": "/absolute/original-bloomington-workspace",
+  "parcel": {
+    "path": "/absolute/original/Bloomington_public_example_one_parcel_response.json",
+    "bytes": 2489,
+    "sha256": "3c7b30af07053862a87ea4b1a1639364e8f983576b02a2febe7339b2b94adcbf",
+    "sourceUri": "https://gisdata.in.gov/server/rest/services/Hosted/Parcel_Boundaries_of_Indiana_2025/FeatureServer/0/query?where=1%3D1&geometry=-86.55%2C39.15%2C-86.50%2C39.19&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=objectid%2Cstate_parcel_id%2Cparcel_id%2Cnguid%2Cprop_add%2Cprop_city%2Cprop_state%2Ccounty_id%2Ccounty_fips%2Csource_featureid%2Csource_originator%2Cloaddate&returnGeometry=true&outSR=4326&orderByFields=objectid%20ASC&resultRecordCount=1&f=json",
+    "attachmentReference": "notion-file-block://f28e5818-3af3-4509-91a6-600bebaa0b33/112867b7-0726-45ab-b79b-41a0ebcb0344?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=Bloomington_public_example_one_parcel_response.json"
+  },
+  "metadata": {
+    "path": "/absolute/original/Indiana_2025_Parcel_Layer_Metadata.json",
+    "bytes": 16132,
+    "sha256": "c1cdce8b8834fbb83041553f6f7c67dcd0d5620a3f73141cf5384f3a91fbdf07",
+    "sourceUri": "https://gisdata.in.gov/server/rest/services/Hosted/Parcel_Boundaries_of_Indiana_2025/FeatureServer/0?f=pjson",
+    "attachmentReference": "notion-file-block://6278aae9-8890-45e6-a957-adc662ceaa1f/34908ac8-f4ed-43b7-b36f-6ca3a68ab8a1?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=Indiana_2025_Parcel_Layer_Metadata.json"
+  },
+  "floodContract": {
+    "path": "/absolute/original/flood-source-contract.json",
+    "bytes": 117356,
+    "sha256": "555730fb7285ec5740d88b674583ff3be4dbbdc8c1b57f8b7964e44b3204d6f2",
+    "sourceUri": "urn:commons:landsage:corrected-flood-source-contract-20261013",
+    "attachmentReference": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8VEAHBDF",
+    "sourceReceipt": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791886374361729"
+  },
+  "dnrGeometry": {
+    "path": "/absolute/original/Bloomington_dnr_selected_parcel_query_original_geometry_20261013.json",
+    "bytes": 4400973,
+    "sourceUri": "https://gisdata.in.gov/server/rest/services/Hosted/FloodHazard_BestAvai_DNR_Watergdb/FeatureServer/0/query?f=json&where=1%3D1&geometry=%7B%22rings%22%3A%5B%5B%5B-86.52992205299995%2C39.174750406000044%5D%2C%5B-86.52999965099997%2C39.174750774000074%5D%2C%5B-86.52999850999998%2C39.174811170000055%5D%2C%5B-86.52992091199997%2C39.174810801000035%5D%2C%5B-86.52992205299995%2C39.174750406000044%5D%5D%5D%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryPolygon&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=true&resultRecordCount=25&orderByFields=objectid%20ASC",
+    "fileUploadId": "3f8dd772-3100-81f9-a022-00b26830a78d",
+    "attachmentReference": "notion-file-block://0e5c4214-4340-437e-891d-449c0f7a25da/17a68855-2073-42fc-9716-d91e87d72082?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=Bloomington_dnr_selected_parcel_query_original_geometry_20261013.json",
+    "observedAt": "2026-10-13 approximately 10:03 UTC; original source-owner acquisition"
+  },
+  "femaGeometry": {
+    "path": "/absolute/original/Bloomington_fema_selected_parcel_query_original_geometry_20261013.json",
+    "bytes": 2840253,
+    "sourceUri": "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?f=json&where=1%3D1&geometry=%7B%22rings%22%3A%5B%5B%5B-86.52992205299995%2C39.174750406000044%5D%2C%5B-86.52999965099997%2C39.174750774000074%5D%2C%5B-86.52999850999998%2C39.174811170000055%5D%2C%5B-86.52992091199997%2C39.174810801000035%5D%2C%5B-86.52992205299995%2C39.174750406000044%5D%5D%5D%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryPolygon&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=true&resultRecordCount=25&orderByFields=OBJECTID%20ASC",
+    "fileUploadId": "3f8dd772-3100-81a8-9fb2-00b258bf31d5",
+    "attachmentReference": "notion-file-block://dc997613-2c50-4be2-8527-09f73188bfc4/751e5da2-3b2d-4237-a802-658e1f708147?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=Bloomington_fema_selected_parcel_query_original_geometry_20261013.json",
+    "observedAt": "2026-10-13 approximately 10:03 UTC; original source-owner acquisition"
+  },
+  "floodContractSuperseded": {
+    "path": "/absolute/original/flood-source-contract-superseded.json",
+    "bytes": 116698,
+    "sha256": "309262f21b9920285301137c883388c8148f45301ebd8bab24648fe10435b867",
+    "sourceUri": "urn:commons:landsage:original-flood-source-contract",
+    "attachmentReference": "notion-file-block://4b6d9016-0f51-4207-a58d-931bf3367fdc/de9ea2a5-9dc1-4606-9fd0-b11b23661a72?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=Bloomington_DNR_FEMA_Public_Source_Contract_20261013.json"
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "North Carolina assessment rating history, 2008–2022",
+  "captured_at": "2026-10-13 08:40:58 UTC",
+  "scope": "Fixed 2022 assessment-unit corpus in the two selected Savannah HUC8 basins; original eight overall-rating columns",
+  "notes": [
+    "Preserve each original publisher rating verbatim. No Data is an assessment label; null remains missing. Rating changes do not establish a causal or measured water-quality trend.",
+    "AU_Length and AU_Units are the source's fixed 2022 published size. Size-weighted groupings use that fixed corpus, not reconstructed historical lengths or areas.",
+    "Original government bodies are preserved verbatim with complete source URLs and hashes. Derived code and reports use the repository license; the original publisher's source terms remain with the retained metadata."
+  ],
+  "entries": [
+    {
+      "id": "nc-assessment-history-2008-2022",
+      "title": "North Carolina assessment rating history, 2008–2022",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "path": "source/nc_assessment_history/20261013/report.recipe.json",
+      "uri": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/ArcGIS/rest/services/2022_Integrated_Report_Overall_Stream_Assessment/FeatureServer/2/query?f=json&where=HUC8%20IN%20(3060101%2C3060102)&outFields=*&returnGeometry=false&orderByFields=OBJECTID",
+      "vintage": "Final 2022 Integrated Report; original IR2008–IR2022 columns",
+      "publisher": "North Carolina Department of Environmental Quality",
+      "source_format": "JSON",
+      "bytes": 11731,
+      "sha256": "198ec62c3f3247c5944f2d93dddbf91407e68eb4ff49d730ad5ace3b9782984b",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "producer": "nc-assessment-history-20261013-v1",
+        "source_edition": "NC DEQ Final 2022 Integrated Report",
+        "assessment_units": 110,
+        "rating_cells": 880,
+        "cohort_basis": "The same assessment units present in the captured 2022 layer; earlier ratings are original columns on those current records.",
+        "size_basis": "AU_Length and AU_Units are the source's fixed 2022 published size. Size-weighted groupings use that fixed corpus, not reconstructed historical lengths or areas.",
+        "needs_expert_review": true
+      },
+      "companions": [
+        {
+          "path": "source/nc_assessment_2022/20261013/original/ncdeq-final2022-layer2-all-attributes-original.json",
+          "bytes": 64862,
+          "sha256": "b838dd0e6f624159d84320a249d82b4d72e9d7e63638c18c36937ed498212381"
+        },
+        {
+          "path": "source/nc_assessment_2022/20261013/original/ncdeq-final2022-layer2-metadata-original.json",
+          "bytes": 17527,
+          "sha256": "672d98bc5aa07374357a431e00646ef66b05f1981f650038972b5f4af29eef0d"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/README.md",
+          "bytes": 5674,
+          "sha256": "7c04773d08afc1b8c02d4c2bb576425d57721f4973185af0cefad80ed8b0de5b"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/analysis.json",
+          "bytes": 967940,
+          "sha256": "7e1e8d79155ae51da1081296707b517eae05f19f5176cec4f8a15f8823739c92"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/figures/rating_counts.svg",
+          "bytes": 6769,
+          "sha256": "22eb183ccd88c4e0387daf105bc1a62c6fc8381442ae111ea08c941b85c51505"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/figures/specification.json",
+          "bytes": 5043,
+          "sha256": "4fc84359e49433cf7153d18cb56a8838bd8bd7a935e1c439b5c4e5d8a0c80f81"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/history_core.mjs",
+          "bytes": 11974,
+          "sha256": "9a76fc3119455ceb8a0bda5e38868d26b0facc6b517eb97a23722350bb3f3671"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/produce_history.mjs",
+          "bytes": 7952,
+          "sha256": "155f4cd71d91ac41776a64a3e45ed9ef3120cfc1446d0d77cf832737109cb658"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/render_history.mjs",
+          "bytes": 15786,
+          "sha256": "f8e17f0793f6ee2d457d497d4b69553fc2a9ca4ea5c09739a7116f994056fc40"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/replay.mjs",
+          "bytes": 2518,
+          "sha256": "cb13ce2164ab0fb86a7c1cf38cfda67875291c170a8a46f016d31a61852c42c2"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/report.html",
+          "bytes": 980903,
+          "sha256": "cb35126aa46f5fa0695bad11c37f504618d471a01deeacb853225b78476d7acf"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/source.json",
+          "bytes": 1034,
+          "sha256": "45b982790d7bbde45fa5e3dc3ecab9d5cfc61937a558387a1302388b9d7382b7"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/cycle_counts.csv",
+          "bytes": 691,
+          "sha256": "5212da07261a9bf92a9f5e19276f4c4a03c3a8897de1205b921bf23107d8aa61"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/fixed_2022_size_by_rating.csv",
+          "bytes": 1788,
+          "sha256": "3cfa185c17417684966530fa9936c8beb491b01719f6e8d5a4d412ae467629cd"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/history.csv",
+          "bytes": 185767,
+          "sha256": "d5fdc7d8bf4afda9f22720ffbd8520abd79e806c4d0e89e57cd499f976dbaa31"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/transition_matrices.csv",
+          "bytes": 7542,
+          "sha256": "8add9d4984c7844cd4642cd1fb31a29ec013775df028860e586cc8de134df141"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/transitions.csv",
+          "bytes": 3664,
+          "sha256": "716a3ce9e4d87ef0dbfbba97efd647f5404f80e179f09cda4117dc8efd6a8480"
+        },
+        {
+          "path": "source/nc_assessment_history/20261013/tables/unit_trajectories.csv",
+          "bytes": 23513,
+          "sha256": "88eff73a8fdfa2baf2ac85bc35593a1abc216eb0b13cfca602084a222027e298"
+        }
+      ]
+    }
+  ]
+}

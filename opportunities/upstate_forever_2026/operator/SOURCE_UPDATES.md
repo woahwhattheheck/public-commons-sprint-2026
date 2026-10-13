@@ -21,7 +21,11 @@ The plan uses the complete dependency graph of the selected source edition. A ch
 Choose the saved plan in **Continue a saved update**.
 
 - **Prepare refreshed cases** recreates the dependent profiles, scenario masks, grids and prepared runs with replacement source identities. The earlier source edition and its cases remain available for comparison.
-- **Prepare and run models** continues the saved update through the original native engine and prepares compatible completed-run comparisons.
+- **Complete refreshed runs and comparisons** finishes every prepared successor through the existing native runner, including source editions whose changes are citation or other lineage metadata. The original completed run is offered to the native input matcher. That matcher verifies actual per-model raster values, masks, grid geometry, coefficient columns, parameters and runtime compatibility before reusing a native stage. Changed inputs use the ordinary native calculation. The desk shows actual NDR/SDR reuse separately and opens the completed target's own retained output files.
+
+A metadata-only edition does not imply that its newly prepared target already has results. Earlier application editions could leave such targets prepared while labelling their plan complete. Opening that saved plan now shows the remaining work. Select **Complete refreshed runs and comparisons** to continue the same immutable plan through a new queue operation; active or unacknowledged submissions keep their original request identity.
+
+A complete run may combine a reused NDR or SDR stage with a newly computed counterpart. The run and source-update report retain the actual source run of each reused stage. Comparisons are attempted for all completed successor pairs, including metadata-only updates, under the existing model-version and spatial-support checks. An incompatible comparison states its reason without changing either run. Confirmed process interruption or exhausted storage stops further native branches and retains the original operation for recovery.
 - **Download selected plan** saves the edition assessment and retained execution state as JSON.
 
 The operation checkpoints replacement identities after each dependent item. **Progress and recovery** shows queue state, request details, results and errors. After an interrupted or failed operation, correct the affected source or runtime condition and use **Resume this operation**. A saved plan can also be continued from its current checkpoints.
@@ -85,7 +89,7 @@ A receiving session should retain its application root, startup command, install
 
 ### Concurrent use in the shared application
 
-Source comparisons retain their exact source choices. Changing editions or source mappings while a comparison is loading discards the superseded response; saving checks the current choices again. Plan details track the selected plan and its retained progress timestamp, so idle application refreshes reuse the displayed details while changed progress reloads them. Workspace changes and closed desks discard their outstanding responses. An aborted mount from an earlier workspace cannot replace the newly opened desk with an old error.
+Source comparisons retain their exact source choices. Changing editions or source mappings while a comparison is loading discards the superseded response; saving checks the current choices again. Plan details track the selected plan and its retained progress timestamp, so idle application refreshes reuse the displayed details while changed progress reloads them. Workspace changes and closed desks discard their outstanding state, catalogue, plan and error responses. The standalone page waits for its selected workspace and source catalogue together before displaying them. Refresh requests arriving during a load are coalesced and then completed for the current selection, including an explicit refresh; a delayed response cannot reopen the previous workspace. An aborted mount from an earlier workspace cannot replace the newly opened desk with an old error.
 
 ## Existing source refresh plans
 
@@ -93,7 +97,7 @@ The common desk lists both retained source-refresh plan formats. It reopens and 
 
 ## Retained requests in the current operator
 
-Source updates saves a request identity and its complete selection before submitting a plan, native preparation, model execution, land-cover comparison or complete-study export. If the connection ends before acknowledgement, **Continue a submitted selection** retrieves the same original task. A failed or interrupted acknowledged task retains the existing **Resume this operation** control. Changing the source choices creates a separate request. A fresh completed plan save captures the current native dependency snapshot; a fresh completed archive export includes the project's later work. Pending retries retain the earlier intent.
+Source updates saves a request identity and its complete selection before submitting a plan, native preparation, model execution, land-cover comparison or complete-study export. If the connection ends before acknowledgement, **Continue a submitted selection** retrieves the same original task. A failed or interrupted acknowledged task retains the existing **Resume this operation** control. Changing the source choices creates a separate request. A fresh completed plan save captures the current native dependency snapshot; a fresh completed archive export includes the project's later work. A fresh explicit apply after a completed task continues the same selected plan with a new queue operation, so a previously prepared or partially finished successor can advance. Pending retries retain the earlier intent.
 
 The update title, source replacements, selected plan and land-cover choices survive leaving the desk and reopening the same workspace. The existing operation queue remains responsible for execution and queued cancellation. Complete exports include both immutable refresh-plan formats and their native execution state.
 
@@ -130,9 +134,26 @@ plan and HTML/CSV reports, and reopening the saved plan in a fresh browser.
 With `--transfer`, it downloads the ordinary complete archive, verifies its
 native ticket, restores that exact ZIP through the original form, and opens the
 same immutable update and progress in the independent receiving workspace.
+It also opens the original standalone bookmark, delays one actual response from
+the earlier workspace, selects the actual restored workspace, and then releases
+that original response. The selected workspace, saved preference and plan must
+remain on the receiving study. This interaction uses the real operator response
+and real restored workspace; it does not create another native case. Desktop and
+phone screenshots of the standalone receiving view are retained for the same
+producing-peer visual inspection.
 
-Screenshots, optional browser video, original downloads and the completed step
-journal are saved in the selected output directory. The private operator URL
+The maintained driver opens and refreshes the populated plan at desktop and
+390-pixel phone widths, then downloads its HTML/CSV report and original plan
+through the narrow view. With `--run-models`, it checks actual completed native
+stage/output receipts, repeats preparation on the same plan, and confirms those
+receipts remain identical. Add `--expect-reuse` only for a deliberately selected
+lineage-only edition of completed original runs; every model must then retain
+its actual reused source-run identity. Fresh-browser and archive receiving
+views are captured at both widths. Complete archive SHA256 is streamed from
+disk without retaining the ZIP in JavaScript memory.
+
+Screenshots, actual control geometry, optional browser video, original downloads
+and the completed step journal are saved in the selected output directory. The private operator URL
 and capability are redacted. A native failure leaves its actual task identity
 and exception in that same journal and the original operator queue, so
 continuation uses the saved operation.
@@ -140,3 +161,60 @@ continuation uses the saved operation.
 ### Existing plan bookmarks
 
 The original root-selective `/source-refresh` page remains available. Its catalogue keeps the original root-selective plans. An existing direct source-edition plan bookmark opens that exact plan in the common Source updates page, preserving its workspace; the common desk lists both formats. Direct `/web/source-refresh.html?workspace=...&plan_id=...` bookmarks also reopen the selected original plan after capability bootstrap.
+
+### Inspect the installed populated view
+
+Use the exact receiving application and actual retained study for the browser journey above. Open the populated **Source updates** desk at desktop and narrow phone widths; inspect source selectors, dependency rows, run provenance, comparison availability and task/error controls for clipped text, overlapping controls and unreadable tables. Operate the real sequence: compare editions, save the plan, prepare replacements, choose **Complete refreshed runs and comparisons**, open the completed comparison, download the original reports and complete archive, then reopen that archive in an independent workspace. Inspect the completed state again at both widths. The producing peer must open and visually inspect the saved desktop and phone PNGs as well as operating the controls; captured geometry alone does not finish that review. Correct an observed product defect in its maintained source and repeat the affected interaction.
+
+For a source edition that changes only lineage metadata, confirm the successor run is actually complete and its per-model rows identify the verified reused original stages and retained outputs. Continue that same plan once with preparation only and confirm those completion and provenance rows remain. For changed scientific inputs, use the deliberately selected replacement edition and inspect the native stages and output differences produced by the original engine. Retain the actual application/source pin, commands, workspace/plan/run IDs, result journal and screenshots with the existing receiving operation; publication and source checks precede this operated product review.
+
+
+## Completed updates in Scientific Reports
+
+Choose the completed saved update, enter a title and scientific rationale, then select **Prepare scientific report source**. The existing operator queue retains the request. The resulting ordinary source contains the actual original/replacement selections, completed native-stage provenance, comparison support and an immutable checkpoint attachment.
+
+**Open this report source** replaces the Scientific Reports selection explicitly. **Add to current report** preserves its draft and ordered existing sources. The original composer, Customer review and editable Study actions carry the actual saved edition onward. The Study preserves the report's frozen evidence and the same original plan's current coherent checkpoint separately.
+
+The full source, installation, actual receiving command and producing-peer desktop/narrow inspection course are documented in docs/source-refresh-scientific-report.md. The receiving command is source_tools/receive_source_refresh_report.py. It calls existing composer/review/Study APIs and does not start a native model.
+
+Source-edition differences reflect changed inputs on the modeled case. Interpret intervention benefit only through an explicit intervention comparison. Sum-change values cover common finite cells of the aligned native output; reporting-area-only quantities require their own saved spatial selection.
+
+
+## Receive the complete report flow in the actual browser
+
+The existing browser course can open a saved update directly. This mode leaves its native cases in their current state unless you explicitly supply --run-models. Use a completed original plan for the scientific report course:
+
+~~~bash
+cd "$APP"
+node source/run_source_updates_browser.mjs \
+  --url-file "$PRIVATE_OPERATOR_URL_FILE" \
+  --workspace "$OPERATOR_WORKSPACE_KEY" \
+  --plan-id "$ACTUAL_COMPLETED_PLAN_ID" \
+  --report-selection "$ACTUAL_REPORT_INPUT_JSON" \
+  --transfer --video --output "$OWNED_BROWSER_OUTPUT"
+~~~
+
+Use --plan-id instead of --from-collection, --to-collection, --mapping or --title. The original from/to mode remains available when the actual task is to prepare and explicitly execute a new source update. --expect-reuse still requires --run-models and verifies the actual saved per-model reuse receipts.
+
+The browser input uses the actual source rationale and optional existing report choices:
+
+~~~json
+{
+  "plan_id": "ACTUAL_COMPLETED_PLAN_ID",
+  "title": "Actual source update report title",
+  "rationale": "The scientific reason for this retained input change.",
+  "notes": "",
+  "report_title": "Actual composed report title",
+  "append_to": []
+}
+~~~
+
+plan_id is optional in this file and, when present, must match the opened plan. notes is one optional text note (or a one-item string list), matching the existing form. append_to may contain the actual existing {source_collection_id,source_id} choices to keep before the new update chapter. Leave it empty for a source-update report on its own. The driver selects only saved sources returned by the original composer; it creates no scientific observations or reviewer answers.
+
+The course fills the real source form, submits its original queued operation, downloads the retained identity, opens the prepared source with explicit replacement, and then exercises Add against the operator-selected ordered draft. It verifies that Add keeps the title/order and does not duplicate the source. It prepares the actual preview, renders or reopens the existing edition, opens the original report viewer at desktop and 390-pixel widths, and downloads every original report member and its complete ZIP. Downloads stream to disk and are checked against the actual provider's byte counts and SHA256 values.
+
+With --transfer, the same original Workspace archive includes that report source and edition. The browser restores it through the existing operator, reopens the actual source and report, and compares all retained report file identities. It also keeps the earlier original-to-restored workspace race receiving course. The source-update report CLI above separately follows the smaller editable Study and Customer review closure.
+
+journey.json retains actual operation/result IDs, source choices, downloaded identities and saved screenshots. The producing peer must open and look at the desktop/narrow operator and report screenshots, plus the downloaded HTML and PDF, and operate the resulting product. The recorded geometry and completed browser commands do not replace that visual inspection. Correct visible defects before using the report or recording the demonstration.
+
+For the current Upper Savannah demonstration, use the actual original geographic shapes, 30 m source edition, upstream model domain versus South Carolina reporting area and utility focus provided by the responsible model owner. Explicitly simulated physical inputs stay labeled. A source-update difference describes the effect of changed inputs; use the saved baseline/restoration/matched-control comparisons to discuss management effects. Annual nitrogen/phosphorus mass reaching streams, sediment units, and any separate intake/concentration calculations retain their distinct scientific meanings.

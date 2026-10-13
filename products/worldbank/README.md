@@ -10,6 +10,21 @@ and Python Analysis reports, workbooks and portable workspace. Original country
 and indicator metadata, response pages, null values, numeric tokens, review
 revisions and source hashes travel with the edition.
 
+## Commission the customer procedure
+
+Create an editable Operating Plan from the customer's agreed source selections,
+review policy, calculations, workbook and receiving criteria:
+
+~~~sh
+starforge worldbank-product commissioning example --out ./customer-brief.json
+# Edit the complete brief for the actual customer before creating its plan.
+starforge worldbank-product commissioning create --brief ./customer-brief.json --out ./customer-plan.json
+~~~
+
+The [commissioning guide](COMMISSIONING.md) carries that exact brief and selected
+supporting files through the original Operating Plans editor, saved revisions,
+result files and customer receiving. Preparing a plan performs no source query.
+
 ## Start working
 
 Build the committed product with --selection worldbank, install its original
@@ -23,6 +38,17 @@ The command prints the private browser URL. Choose source, countries,
 indicators and dates; capture the complete original pages; compare an earlier
 capture; review observations; and export the accepted edition. The
 [operating guide](OPERATING.md) follows the complete customer workflow.
+
+Use the [customer commissioning and acceptance guide](CUSTOMER_DELIVERY.md) to
+agree the source population, interpretation, reporting and workbook definitions,
+recurrence, receiving and support before preparing a customer delivery. It connects
+the same original source application, Analysis workspace and Merchant programme.
+The selected package also retains the complete [grant customer chapter](../../stellar-forge/developer-site/grant-chapters/worldbank-customer-programmes.md)
+and its [sixteen-source declaration](../../stellar-forge/developer-site/grant-products/worldbank-customer-programmes.json).
+Those measured source references retain their original Merchant repository and
+immutable editions; the public installation manifest identifies this package's
+actual source. The existing cumulative application publisher selects the chapter
+through its normal source-edition workflow.
 
 Continue an original reviewed handover into Analysis:
 
