@@ -18,7 +18,7 @@ Under **Continue this selection in the native workspace**, choose one of:
 
 The counter shows the exact number of records that will travel. A zero-result filtered view must be cleared or replaced with the full utility choice before export.
 
-Review the discussion fields, then use **Download native source review**. This writes `upper-savannah-source-review.json`. Existing Markdown notes and original data downloads remain available. An unchanged prepared prompt is labelled as such in the native report. Changed text is labelled **Edited in source explorer**; this records the text's editing status, without assigning authorship or acceptance.
+Review the discussion fields, then use **Download native source review**. This writes `upper-savannah-source-review.json`. Existing Markdown notes and original data downloads remain available. An unchanged prepared prompt is labelled as such in the native report. Changed text is labelled **Edited in source explorer** and records the current field text. The brief states the complete utility, filtered domain or focused-watershed scope alongside the exact state and search filters.
 
 ## Open the same source selection natively
 

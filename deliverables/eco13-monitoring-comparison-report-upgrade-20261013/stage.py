@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Stage the complete Monitoring upgrade using the application's original source reader."""
+"""Stage a complete component upgrade using the unchanged original source reader."""
 from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -23,10 +24,22 @@ def main():
     if not (application / "model/workspace.py").is_file():
         raise ValueError("Choose the original installed Upper Savannah application.")
     sys.path.insert(0, str(application))
-    from source_tools.application_assembly import read_layer, publish_file
     manifest = json.loads((bank / "manifest.json").read_bytes())
-    if manifest.get("schema") != "upstate.monitoring-source-upgrade/v1":
-        raise ValueError("Choose the complete Monitoring upgrade manifest.")
+    if manifest.get("schema") not in {"upstate.monitoring-source-upgrade/v1",
+                                     "upstate.chemistry-source-upgrade/v1"}:
+        raise ValueError("Choose the complete original component upgrade manifest.")
+    original = manifest["bootstrap"]
+    module_path = bank / original["path"]
+    if module_path.is_symlink() or not module_path.resolve().is_relative_to(bank):
+        raise ValueError("Keep the original source assembler inside this bank.")
+    body = module_path.read_bytes()
+    if len(body) != original["bytes"] or hashlib.sha256(body).hexdigest() != original["sha256"]:
+        raise ValueError("The complete original source assembler differs from its declared identity.")
+    spec = importlib.util.spec_from_file_location("_upstate_component_source_assembly", module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    read_layer, publish_file = module.read_layer, module.publish_file
     files = {}
     for part in manifest["parts"]:
         path = bank / part["path"]
@@ -59,12 +72,12 @@ def main():
             raise ValueError("Choose a fresh stage; an existing file has another edition: " + name)
     for name, body in sorted(files.items()):
         publish_file(destination / name, body)
-    result = {"schema": "upstate.monitoring-source-upgrade-stage/v1",
+    result = {"schema": manifest["schema"].replace("-upgrade/v1", "-upgrade-stage/v1"),
               "application": str(application), "source_root": str(destination),
               "source_commit": manifest["source_commit"],
               "files": len(files), "source_bytes": sum(map(len, files.values())),
               "manifest_sha256": hashlib.sha256((bank / "manifest.json").read_bytes()).hexdigest(),
-              "installer": "integrations/monitoring/install_monitoring.py"}
+              "installer": manifest["installer"]}
     print(json.dumps(result, indent=2, sort_keys=True))
 
 

@@ -34,6 +34,40 @@ Say: “This is a teaching landscape. We change a defined part of it, run the sa
 | 8. Export | Complete delivery → original report and downloads | Actual maps, physical layers, methods, original source inputs and package inventory | The exported files belong to this exact saved calculation. |
 | 9. Reopen | Guided journey → Save view and transfer project → Project continuity | The independently received project identity, selected results, source inputs and saved notes | Open the received project and show the same result before adding a separate local note. |
 
+## Interpret the restoration and siting experiment
+
+Start with the intervention that the original inputs actually specify. The riparian restoration and matched-area control each replace 236 pasture/hay cells and 399 crop cells with forest. At 0.09 hectare per cell, that is 21.24 hectares of pasture and 35.91 hectares of cropland, totaling 57.15 hectares in each alternative.
+
+| Declared input | Pasture/hay → forest | Cropland → forest |
+| --- | --- | --- |
+| Nitrogen loading coefficient, kg/ha/year | 10 → 2 | 22 → 2 |
+| Phosphorus loading coefficient, kg/ha/year | 0.7 → 0.12 | 1.8 → 0.12 |
+| Maximum nutrient retention proportion | 0.35 → 0.80 | 0.15 → 0.80 |
+| Dimensionless USLE cover factor | 0.025 → 0.003 | 0.18 → 0.003 |
+
+These are the demonstration's original assumed coefficients. The native `measured-runoff` label specifies how the loading coefficient enters the equation. Both treatment recipes specify the same unadjusted land-class loading reduction: **888.12 kg N/year** and **72.648 kg P/year**, obtained by multiplying the area in each changed class by its original coefficient difference. These are input-accounting quantities before the model applies the precipitation/runoff proxy and delivery processes. The saved native exports show the resulting modeled response.
+
+NDR combines the adjusted source loading with delivery along downslope paths. A changed vegetation cell can affect nutrients originating upslope as well as its own load. SDR combines rainfall erosivity, soil erodibility, terrain, land cover and delivery. Use the original process maps to explain where the result came from. The 90-metre restoration mask measures distance from the generated valley axes; the 100-metre nutrient critical length is a separate profile parameter used along flow paths.
+
+Matching treated area and starting land-cover classes holds treatment amount constant. The original control diagnostics show the remaining terrain, rainfall, erodibility and location differences. Read those diagnostics alongside the modeled export change when explaining the effect of siting.
+
+### Choose between locations on the joint support
+
+For “what changed from baseline?”, open the ordinary native comparison and read its actual alternative-minus-baseline change, annual-mass unit and common valid-cell count.
+
+For “which location performs better under this profile?”, open the parameter course's **joint siting decision report**. Its original producer evaluates the baseline, riparian alternative and control on common finite support for each selected quantity. Use that report's shared-support values to compare the two treatments. Separate baseline-to-alternative comparisons can cover different cells, so their individually printed reductions are not a substitute for the joint comparison.
+
+For “does that ordering persist under the explored model choices?”, inspect the retained routing and dimensionless maximum-L parameter members. Each member has its own baseline and both alternatives. The joint decision outputs preserve distinct support groups where the available cells differ. Explain the ordering and descriptive range within those original groups, together with completed and pending native runs.
+
+The parameter range describes the saved model choices. NDR does not use SDR's maximum-L parameter, so several coupled members may repeat the same nutrient result. Read the actual profile changes before explaining variation or repeated results. The native study's scalar pair report and the ordinary comparison print alternative-minus-baseline change. Its paired raster products and joint siting benefits print baseline-minus-alternative reduction. Use the product table below when moving between these views.
+
+### Turn the result into the next planning action
+
+Use the saved decision report to select candidate locations for reconnaissance, then open their original change mask and physical export maps with the units, extent and legend visible. A treatment whose ordering persists across the completed choices is a useful candidate for field screening. An ordering that varies identifies which terrain, routing or source assumptions the team should investigate first. Keep entered costs and source-water priorities visible as additional planning dimensions.
+
+Continue into the same field chapter to show how the proposed work receives sampling records, quality review, a corrective task and closeout. Instantaneous phosphorus concentrations retain mg/L as P and their sampling support; annual modeled export retains its watershed support and mass/year unit. The original Upper Savannah RFP block-group summaries belong to that separate retained project. Use its own source-bound Community report when discussing socioeconomic context.
+
+
 ## Read the physical quantities correctly
 
 Original InVEST 3.20 nitrogen and phosphorus export rasters are annual densities in **kg/ha/year**; the sediment export raster is in **metric tonnes/ha/year**. The Workspace integrates these densities using the actual pixel area once. Its integrated export raster cells therefore contain **kg/year per cell** or **metric tonnes/year per cell**. Native watershed-vector totals already contain annual mass. Read the selected artifact's recorded units before summing, mapping or comparing.
@@ -42,7 +76,19 @@ A square 30-metre cell covers 900 square metres, or **0.09 hectare**. A density 
 
 The saved SDR parameter **l_max = 122** is a dimensionless cap on the L factor. The input coefficient and its meaning remain separate from the 30-metre spatial resolution and 90-metre restoration distance.
 
-The ordinary native comparison reports **alternative minus baseline**. A negative export difference means lower modeled export under the alternative. Paired ensemble products use their own printed **baseline minus alternative** reduction convention, where positive values mean a reduction. Read and state the selected product's sign; do not transfer a sign from one view to another.
+Read the printed quantity and support of each named product. The parameter course retains several products with different conventions:
+
+| Open this retained product | Printed quantity and direction | Meaning of lower export | Geographic support |
+| --- | --- | --- | --- |
+| Ordinary native comparison | Export change = alternative − baseline | Negative change | That baseline/alternative pair's common valid cells, for the selected output |
+| Native study report, `pairs.csv` | Export change = alternative − baseline within the same profile | Negative change | Original pairwise common-valid mask; ranges group identical mask hashes |
+| Native study report, `sensitivity.csv` | Export change = varied-profile baseline − reference-profile baseline | Negative change | The two profiles' common-valid cells with land cover held fixed |
+| Paired raster product | Reduction = baseline − alternative | Positive reduction | Original per-metric raster cohort support |
+| Joint siting decision | Avoided export = baseline − alternative | Positive benefit | Common finite cells across the baseline and all selected alternatives, per metric |
+
+For example, a baseline of 10 kg/year and an alternative of 8 kg/year on the same support give −2 kg/year change and +2 kg/year avoided export. This arithmetic illustration explains the signs. Present the actual saved case values from the selected product.
+
+The source-aware teaching companion records these conventions beside the original run, profile and support identities. The scalar report, raster reductions and joint decision each remain attached to their original producers.
 
 Inspect common valid support before interpreting a difference or percentage. The report's original total and its paired common-cell total can cover different supported areas. A percentage needs a nonzero baseline with the reported compatible support. The full spatial pattern is useful even when changes vary across the catchment.
 
@@ -80,7 +126,7 @@ Open `uploads/simulated-headwaters/selected-case.md` for the actual selected-cas
 
 The same page lists each native pollutant change with its original unit and common valid-cell count. It reads the actual alternative-minus-baseline artifact directly. It does not subtract full-run totals that may cover different valid areas. The companion `selected-case.json` preserves the exact scenario patches, coefficient-profile identities, native artifact descriptors and comparison rows used by the explanation.
 
-When the receipt includes the retained parameter course, the binder reads that existing ensemble and its original course result. Its grid, baseline, base profile and ordered alternatives must match the teaching scenarios. The page displays the original native-run completion and course state. Each parameter member retains its own baseline and alternative runs. Paired ensemble products retain their **baseline-minus-alternative** convention and per-metric support; their members remain in the existing parameter course. The ordinary native run list and its **alternative-minus-baseline** comparison keep their original identities.
+When the receipt includes the retained parameter course, the binder reads that existing ensemble and its original course result. Its grid, baseline, base profile and ordered alternatives must match the teaching scenarios. The page displays the original native-run completion and course state. Each parameter member retains its own baseline and alternative runs. The course's scalar native-study report uses **alternative minus baseline**; its parameter contrasts use **varied-profile baseline minus reference-profile baseline**. Its paired raster reductions and joint siting benefits use **baseline minus alternative**. Read their separate metric support and original case identities. The selected-case companions name these conventions individually.
 
 The binder performs no scientific calculation. Existing task, browser, transfer and archive operations continue through the same rehearsal receiver. Both selected-case companions travel in its existing teaching uploads and final package.
 
@@ -263,6 +309,20 @@ Use the returned `receipt_id` in **Customer reviews → Received packages**. Ope
 For a short spoken handoff: “We started with the saved quality finding. The reviewer asked for follow-up evidence and original laboratory context. Engineering assigned the work, linked the five actual closeout documents, and returned a revised review. This received copy opens those same records, and the next response continues their history.”
 
 Add two actual frames to the same teaching packet: the original request beside its assigned engineering work; and the independently received ready handback with its revised source evidence. Retain their exact review, response and handback IDs and the measured preparation/receive times alongside the existing model and field frames.
+
+### Record the same customer transition
+
+The maintained rehearsal now binds the completed case export from `demo-receiving.json` automatically. It verifies `case-manifest.json`, the original scientific project and all six customer operation/review/response/handback identities before using the existing browser context. The complete export is copied immutably into the receiving packet at `uploads/simulated-customer-review/`; it retains both native ZIPs, both desks, their complete files and the original worklist snapshot.
+
+After relocating the same export, add `--customer-case /owned/delivered/customer-review-case` to the existing `source_tools/simulated_headwaters_rehearsal.py` command. That explicit path is checked against the retained receipt's original manifest; it does not create a new customer generation. Continue the same input/output directory after an interrupted recording. A previously completed course whose input did not include this customer chapter keeps its original recording unchanged: create a separate recording output edition bound to the same scientific project and six saved customer identities. The immutable input and browser progress binding prevent an older completed video from silently standing in for this extended chapter.
+
+The recorded customer chapter opens the populated original review and its saved response, downloads the original response record and one exact retained artifact, operates the source-file search and its empty state, then reopens the original purpose and requirements. It uses the ordinary review controls to prepare an explicitly **SIMULATED local teaching draft**, displays the required-name error, saves the draft, reopens it and downloads its JSON against the original saved parent response. The draft stays in this recording's browser profile and exported teaching files. The native customer history retains its original six saved identities.
+
+Next, it follows the ready engineering desk into the exact revised review and its replacement files, then uses the handback's original-response link to reopen the retained customer request. Desktop and 390-pixel views cover the original/revised Overview, Files, Requirements and Responses, plus the engineering resolutions table. These transitions are part of the existing operator walkthrough video. The surrounding receiver continues its original media attachment, complete scientific backup and fresh receiving steps.
+
+`browser/results/browser-progress.json` records customer chapter actions, the selected identities, real timestamps, completed downloads and retained screenshots. Interrupted actions and the finalized partial video remain available. The existing 14:00 UTC cutoff and cooperative browser shutdown apply to this chapter.
+
+**Inspect the actual outgoing pixels.** The producing worker must open this exact populated edition, view its real desktop and narrow-width screenshots, operate the important controls and inspect the downloaded/reopened records. Capture count, DOM checks and a successful exit are not visual inspection. Return viewable image handles for the original response, revised evidence and complete engineering table; fix clipped, crowded, unstyled or unreadable output before presenting it. Retain the application's `AGENTS.md` version `2026-10-13.1` with the delivered source. Use its plain industrial typography, spacing, tables and controls. The same requirement applies to the neighboring field/QC chapter.
 
 ## Retained handoff
 

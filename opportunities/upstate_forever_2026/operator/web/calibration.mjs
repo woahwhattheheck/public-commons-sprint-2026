@@ -958,7 +958,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+
       (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+
       (value.calibration_review_id?button('review-open','Open complete review',value.calibration_review_id):'')+
-      (value.calibration_report_source_id?button('review-source-report','Open scientific report',value.calibration_report_source_id,true)+
+      (value.calibration_report_source_id?button('review-source-report','Open this report only',value.calibration_report_source_id,true)+
+        button('review-source-append','Add to current report',value.calibration_report_source_id)+
         button('review-source-delivery','Open mapped report form',value.calibration_report_source_id):'')+'</div>';
   }
   async function dispatch(node){

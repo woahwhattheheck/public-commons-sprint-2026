@@ -56,7 +56,7 @@ Exact-value scatter plots use equal physical axis ranges for each complete opera
 
 Parameter-prior figures group by the same operator and retain the original 5th/50th/95th percentiles. Physical state trajectories, reaction transfers and mass budgets remain separated by actual modeled species and conserved basis.
 
-Choose **Prepare source for scientific reports**, then **Open scientific report** to append that retained source to the existing ordered scientific composer. The source includes:
+Choose **Prepare source for scientific reports**, then **Open this report only** to select exactly that retained source and its title in the existing scientific composer. **Add to current report** deliberately appends it to the current ordered draft. The source includes:
 
 - Complete reference, point-score and interval-support CSV tables.
 - Full local sensitivity, design and ensemble tables when present.
@@ -64,7 +64,7 @@ Choose **Prepare source for scientific reports**, then **Open scientific report*
 - Original numeric figure specifications and SVG companions, used by the existing PDF/HTML renderer.
 - The saved Chemistry report, original project/request/result, artifact inventory and editable Chemistry archive.
 
-The composer preserves other selected sources and the current working title/contact information. Use its original preview, render, export and saved-edition controls. Full Workspace transfer retains these saved sources and report editions.
+Opening this report only replaces the draft source selection and title. Adding keeps the other selected sources in order, avoids duplicate source entries and preserves the draft title. Both retain contact information. Use its original preview, render, export and saved-edition controls. Full Workspace transfer retains these saved sources and report editions.
 
 ## Versioned presentation and continuation
 

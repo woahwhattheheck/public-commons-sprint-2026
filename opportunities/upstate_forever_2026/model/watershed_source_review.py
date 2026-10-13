@@ -158,10 +158,10 @@ def receive(text, report, choices):
         "sources": [{"name": name, **value, "path": "source-review-originals/" + name}
                     for name, value in SOURCES.items()],
         "interpretation": (
-            "The review records a source selection and discussion text. Prepared prompts remain "
-            "identified separately from edited text. Neither status establishes client agreement "
-            "or author identity. The native report retains its own NRCS whole-HUC area fields, "
-            "SC source jurisdiction, observations and model/output boundaries."
+            "The review records the selected geography and discussion text. Prepared prompts "
+            "show the original suggested topics; edited text records the current explorer fields. "
+            "The native report retains its own NRCS whole-HUC area fields, SC source jurisdiction, "
+            "observations and model/output boundaries."
         ),
     }
     return context, bodies, choice if kind == "utility" else None
@@ -173,9 +173,19 @@ def brief_lines(selection, table, number):
     if not review:
         return []
     selected = review["selection"]
-    lines = ["## Reviewed explorer selection", "",
-             selected["utility_title"] + " · " + selected["kind"].replace("_", " ") + " selection.", ""]
+    filters = selected["filters"]
+    geographic_title = (selected["utility_title"] if selected["kind"] == "utility"
+                        or filters["scope"] == "utility" else "Original 217-watershed model domain")
+    kind_label = {"utility": "complete utility planning area",
+                  "visible": "watersheds matching the explorer filters",
+                  "focused": "focused watershed"}[selected["kind"]]
+    lines = ["## Reviewed explorer selection", "", geographic_title + " · " + kind_label + ".", ""]
     lines.extend(table(["Original source review", "Retained value"], [
+        ["Utility selected in explorer", selected["utility_title"]],
+        ["Explorer view scope", filters["scope"]],
+        ["State filter", filters["state"] or "All states"],
+        ["Text filter", filters["search"] or "Unfiltered"],
+        ["Selection rule", kind_label],
         ["Selected whole HUC12s", ", ".join(selected["huc12s"])],
         ["USGS whole-HUC area (km²)", number(review["published_usgs_area_sqkm"])],
         ["USGS whole-HUC area (acres)", number(review["published_usgs_area_acres"])],

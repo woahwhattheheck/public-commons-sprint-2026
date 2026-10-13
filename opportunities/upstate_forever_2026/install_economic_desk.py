@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/web/economic_request_store.mjs",
     "install_economic_desk.py",
     "model/native_versions.py",
     "operator/economic_workbench.py",

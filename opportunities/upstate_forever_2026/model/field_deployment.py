@@ -409,7 +409,7 @@ def render_html(context):
              "<h1>" + escape(context["selection"]["title"]) + "</h1>",
              "<p>" + escape(plan["title"]) + " · saved revision " + str(plan["revision"]) + "</p>",
              '<p class="screen"><a href="field-workbench.html">Open field workbench</a> · <a href="original-plan.json" download>Complete editable plan</a> · <a href="visits.ics" download>Calendar</a> · <a href="sites.geojson" download>Site geometry</a></p>',
-             "<p>Open the field workbench, choose Open JSON and select original-plan.json. Record actual visits, samples and observations there, export the complete edited plan, and import it in the original Workspace. Review the saved revision before returning completed work to its original Monitoring campaign.</p>",
+             "<p>Open the field workbench to continue the included original plan. Choose a selected visit in the packet toolbar, record actual visits, samples and observations, then export the completed plan and files as a complete ZIP. Import that ZIP in the original Workspace and review its saved revision before returning completed work to its original Monitoring campaign.</p>",
              "<p>The packet groups original visits by planned date, original crew and observer. Local clock values remain as recorded. Calendar events cover the stated day. Source search areas remain identified where no station point is available.</p>",
              "<p>Original site coordinates and their declared datum are retained. GeoJSON and calendar coordinates use WGS84 only after an explicit declaration or a recorded native transformation. Unstated or unavailable transformations leave geometry empty; coordinate-inventory.json retains each original coordinate and operation.</p>"]
     parts.append(_table(["Day", "Original crew", "Observer", "Visits"], [
@@ -510,8 +510,13 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
         # Retain the complete existing offline editor from the exact reviewed installed sources.
         from build_implementation_offline import build
         built_path = directory / "field-workbench.html"
-        built = build(APPLICATION, built_path)
-        atomic_json(directory / "offline-build.json", {name: built[name] for name in ("schema", "bytes", "sha256", "inputs")}, immutable=True)
+        built = build(APPLICATION, built_path, field_packet={
+            "schema": "upstate.offline-field-packet/v1",
+            "workspace_id": workspace.project["id"], "deployment_id": context["id"],
+            "plan": context["original_plan"], "visit_ids": context["selection"]["visit_ids"],
+        }, field_files=context["attachment_files"])
+        atomic_json(directory / "offline-build.json", {name: built[name] for name in
+                    ("schema", "bytes", "sha256", "inputs", "field_packet")}, immutable=True)
         for name, descriptor in context["identity"]["offline_application_sources"].items():
             verify_file(APPLICATION, descriptor)
         for path, descriptor in context["attachment_files"]:

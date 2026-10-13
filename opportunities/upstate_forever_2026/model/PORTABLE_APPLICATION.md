@@ -21,6 +21,15 @@ Capture includes the core model and operator, source tools and source material, 
 
 Python bytecode, package caches, active lock files and temporary native recovery reserves are omitted. Ordinary application source is checked again before publication so an installation changing during capture cannot silently produce a mixed application.
 
+## Concurrent capture
+
+Each backup invocation owns an exclusively created temporary archive. A second
+capture that cannot acquire the original Workspace locks cleans up only its own
+temporary file, preserving the first writer's progress. The completed archive
+is still published with an exclusive link to the chosen new destination; an
+archive created there by another operation is preserved. This uses the existing
+source selection, full native inventory and original lock order.
+
 ## Saved database state
 
 The project-local investigation database at `workspace/intelligence/investigations.sqlite3` is captured with SQLite's online backup API after opening a read transaction. This includes committed transactions still in a write-ahead log. Each archived database opens independently; its live WAL, shared-memory and rollback-journal companions are omitted.
