@@ -1,8 +1,8 @@
-# Retained supplier XML and workbook intake
+# Retained supplier XML, workbook and document intake
 
-This source reader turns one complete retained supplier collection into usable schema and workbook data while preserving every original byte. It uses Python 3.11+ and the standard library. It reads XML/XSD/WSDL, XLSX and UTF-8 supplier HTML; it writes one complete JSON source packet, deterministic gzip, and ordered Base64 frames for a connected reader.
+This source reader turns one complete retained supplier collection into usable schema and workbook data while preserving every original byte. It uses Python 3.11+ and the standard library. It reads XML/XSD/WSDL, XLSX and UTF-8 supplier HTML, and retains complete original PDFs; it writes one complete JSON source packet, deterministic gzip, and ordered Base64 frames for a connected reader.
 
-The immediate collection is CharityEngine's eleven original public API/import files. Its existing migration implementation consumes the source output in its original company case. The example catalogue contains only public supplier URLs, filenames and observed byte counts. Company terms, contacts, account credentials and private implementation source do not belong in this public example.
+The immediate collection is CharityEngine's eighteen original public API/import/service files. Its existing migration implementation consumes the source output in its original company case. The example catalogue contains only public supplier URLs, filenames and observed byte counts. Company terms, contacts, account credentials and private implementation source do not belong in this public example.
 
 ## Receive the retained originals
 
@@ -22,13 +22,13 @@ python3 -B host/supplier_source_intake.py inspect \
 
 Refresh expired signed URLs through the same original file references. The reader downloads only explicitly resolved retained-file URLs; it does not fetch the example's public URLs, follow schema imports or invoke supplier APIs. No new account, provider write, scientific process, customer send or source acquisition is part of this course.
 
-If the eleven originals already exist under their exact catalogue filenames, omit --downloads and read them directly. The public host/examples/charityengine-originals.json also supports this local-original route. A supplied sha256 is checked when present; otherwise the digest is measured from the selected retained bytes. The declared original byte count is always checked. Choosing a local original is the receiving operator's source selection; matching length alone is not an independent proof of a preexisting digest.
+If the eighteen originals already exist under their exact catalogue filenames, omit --downloads and read them directly. The public host/examples/charityengine-originals.json also supports this local-original route. A supplied sha256 is checked when present; otherwise the digest is measured from the selected retained bytes. The declared original byte count is always checked. Choosing a local original is the receiving operator's source selection; matching length alone is not an independent proof of a preexisting digest.
 
 Every original is retained in --originals. Existing differing output files are left intact and reported. Use the same directory to resume the same source edition. A later source edition belongs in a different output directory. Downloads are preserved individually, so a failed later file does not discard earlier exact inputs. The final source packet and frames appear only after the complete collection has parsed and its original/member round trip has passed.
 
 ## Full output
 
-- supplier-originals.json: every complete original, its byte length and SHA-256, original public URL/stable reference, and full parsed XML or workbook content.
+- supplier-originals.json: every complete original, its byte length and SHA-256, original public URL/stable reference, and full parsed XML or workbook content. PDF records keep the complete original binary and declared document kind.
 - supplier-originals.json.gz: the same source in deterministic gzip (mtime0).
 - SOURCE_TRANSFER.json: whole JSON and gzip identities, ordered frame count, original-file identities and whole collection counts.
 - source-frame-0001.txt onward: ordered, ASCII-only Base64 frames of that exact gzip. Default28,000 characters per frame; --frame-characters may change the transport size without altering the source packet.
@@ -39,6 +39,10 @@ XML records include the complete original bytes and UTF-8 text when applicable, 
 Workbook records include every ZIP member's complete bytes, length, SHA-256, CRC, compression metadata and parsed XML when applicable. The full workbook, worksheet XML and relationships are preserved. Every cell retains its source address/attributes, raw type, exact lexical cached value, separately resolved shared/inline text, formula text/attributes and full cell XML. All rows, styles, number formats, date-system properties, merges, validations and additional workbook resources remain in the original members. Transitional and Strict OOXML namespaces are supported.
 
 Values stay exact: identifier strings and leading zeros are preserved; numeric and date serial values stay lexical strings with their original style/date-system context. Formula text and a saved cached result remain distinct, and this reader does not recalculate formulas. Rich text preserves original XML while excluding phonetic annotations from the actual cell value. Blank cells with no value remain distinct from numeric zero, false, empty text and a missing cell.
+
+PDF records preserve the complete original binary in originalBase64 with its measured byte count, SHA-256, source URL and stable reference. The document object declares application/pdf, retains the catalogue's original kind, and describes the separate document-reading route. A PDF header is checked during collection and inspection; PDF bytes never enter the UTF-8 text decoder. Read the retained PDF through the original document reader to obtain its text, page locations and layout. Attach any extracted text as a separately identified derivative of that exact original; this packet preserves the source bytes required to do so.
+
+The current public example includes six actual import workbooks, four XML/WSDL companions, seven original HTML pages and one service brochure PDF. Existing XML, workbook and HTML record bodies remain unchanged by the document support. The original eleven- or seventeen-file outputs remain valid earlier selections. To receive all eighteen, reuse the already retained --originals directory and select a separate output directory for that complete eighteen-file edition; keep any prior output and the same original source-reading operation.
 
 ## Return to the existing implementation
 

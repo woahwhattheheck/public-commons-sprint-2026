@@ -340,6 +340,9 @@ def inspect_packet(packet):
         body = base64.b64decode(item["originalBase64"], validate=True)
         if digest(body) != {k: item[k] for k in ("bytes", "sha256")}:
             raise ValueError("Original round-trip differs: " + name)
+        if name.lower().endswith(".pdf"):
+            if not body.startswith(b"%PDF-") or item.get("document", {}).get("mediaType") != "application/pdf":
+                raise ValueError("Original PDF type or header differs: " + name)
         if name.lower().endswith(".xlsx"):
             with zipfile.ZipFile(io.BytesIO(body)) as archive:
                 expected = item["workbook"]["members"]
@@ -405,6 +408,14 @@ def main():
                 pass
         elif name.lower().endswith(".xlsx"):
             record["workbook"] = workbook_source(body)
+        elif name.lower().endswith(".pdf"):
+            if not body.startswith(b"%PDF-"):
+                raise ValueError("Declared original PDF has no PDF header: " + name)
+            record["document"] = {
+                "mediaType": "application/pdf",
+                "sourceKind": item.get("kind", "original_supplier_pdf"),
+                "textPolicy": "Complete original PDF bytes are retained. Document text, pages and layout belong to the original PDF reader."
+            }
         else:
             record["originalText"] = body.decode("utf-8")
         packet["files"].append(record)
