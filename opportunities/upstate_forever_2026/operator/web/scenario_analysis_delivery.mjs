@@ -1,3 +1,4 @@
+import {nativeModelVersionLabel} from './native_versions.mjs';
 /** Original scenario analysis -> original seven-family GIS delivery. */
 const rows=value=>Array.isArray(value)?value:[];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -37,9 +38,15 @@ export function createAnalysisDelivery({getState,api,endpoint,openDelivery,openR
     const plan=choices.find(row=>row.id===selectedPlan);
     const releaseRows=rows(value.releases).map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.state)+'</td><td>'+esc(short(row.id))+'</td><td>'+
       button('release','Open original delivery','data-id="'+esc(row.id)+'"')+'</td></tr>').join('');
-    const cases=table(['Native case','Role','Grid','Profile','Observed InVEST','Requested InVEST'],rows(value.cases).map(row=>[
-      row.title,row.role,short(row.grid_id),short(row.profile_id),row.native_version?.observed||'Not retained',
-      row.native_version?.requested||'Not retained']));
+    const cases=table(['Native case','Role','Grid','Profile','Compared native models','Last run runtime','Requested InVEST'],rows(value.cases).map(row=>{
+      const saved=rows(record.runs).find(run=>run.id===(row.run_id||row.id));
+      const versions=saved?.model_versions||row.model_versions;
+      const label=versions?nativeModelVersionLabel({...saved,model_versions:versions}):
+        ((row.native_version?.comparison_version||row.native_version?.observed||row.native_version?.requested||'Not retained')+
+         ' · original saved run-level provenance');
+      return [row.title,row.role,short(row.grid_id),short(row.profile_id),label,
+        row.native_version?.observed||'Not retained',row.native_version?.requested||'Not retained'];
+    }));
     const capRows=Object.entries(binding.normalization?.caps||{}).map(([name,cap])=>[
       name.replaceAll('_',' '),cap,binding.normalization?.cap_units?.[name]||'Original native unit']);
     const planChooser=choices.length?'<label><span>Optional prepared receiving-water plan</span><select data-analysis-delivery-plan>'+
