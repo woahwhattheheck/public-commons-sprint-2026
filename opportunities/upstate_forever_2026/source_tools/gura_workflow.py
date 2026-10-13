@@ -196,7 +196,34 @@ def operation_lock(source_directory):
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def check_receiving(path, workspace, *, expected_resolution_m=None, upstream_buffer_m=None):
+def _native_selection(args, grid=None):
+    """Keep native cell size and upstream context as independent selections."""
+    requested = {
+        "resolution_m": getattr(args, "expected_resolution_m", None),
+        "upstream_buffer_m": getattr(args, "upstream_buffer_m", None),
+    }
+    for key, value in requested.items():
+        if value is not None and (not math.isfinite(float(value))
+                or (float(value) <= 0 if key == "resolution_m" else float(value) < 0)):
+            raise ValueError("Select a finite positive resolution and nonnegative context buffer")
+    if grid is None:
+        return (requested["resolution_m"],
+                requested["upstream_buffer_m"] if requested["upstream_buffer_m"] is not None else 0.0)
+    retained = {
+        "resolution_m": float(grid["grid"]["resolution_m"]),
+        "upstream_buffer_m": float(grid["spec"]["upstream_buffer_m"]),
+    }
+    for key, value in retained.items():
+        if not math.isfinite(value) or (value <= 0 if key == "resolution_m" else value < 0):
+            raise ValueError("The retained Gura grid has an invalid " + key)
+        selected = requested[key]
+        if selected is not None and not math.isclose(float(selected), value, rel_tol=1e-9, abs_tol=1e-8):
+            raise ValueError("Continue the retained Gura " + key + "=" + format(value, "g")
+                             + "; use a separate Workspace and source directory for another selection")
+    return retained["resolution_m"], retained["upstream_buffer_m"]
+
+
+def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, upstream_buffer_m=None):
     from model.common import file_digest, selected_models
     from source_tools.gura_comparison import _context
     original_path, receipt, ws, collection, grid, profile, baseline = _context(
@@ -215,6 +242,12 @@ def check_receiving(path, workspace, *, expected_resolution_m=None, upstream_buf
                                 ("upstream buffer", upstream_buffer_m, context)):
         if chosen is not None and not math.isclose(float(chosen), actual, rel_tol=1e-9, abs_tol=1e-8):
             raise ValueError("Continue this receipt's original " + name + ": " + str(actual) + " metres")
+    # Preserve the shared positional args contract and explicit receiving controls.
+    _native_selection(SimpleNamespace(
+        expected_resolution_m=(expected_resolution_m if expected_resolution_m is not None
+                               else getattr(args, "expected_resolution_m", None)),
+        upstream_buffer_m=(upstream_buffer_m if upstream_buffer_m is not None
+                           else getattr(args, "upstream_buffer_m", None))), grid)
     source_ids = receipt.get("source_ids", {})
     for model in selected_models(receipt):
         role = model + "_archive"
@@ -389,8 +422,7 @@ def prepare(args, identity):
     if args.source_reference and source_reference and args.source_reference != source_reference:
         raise ValueError("Continue the saved original source reference: " + source_reference)
     source_reference = source_reference or args.source_reference or "retained-application-sha256:" + identity["sha256"]
-    resolution_m = 15.0 if args.expected_resolution_m is None else args.expected_resolution_m
-    buffer_m = 0.0 if args.upstream_buffer_m is None else args.upstream_buffer_m
+    retained_grid = None
     if prior_selection is not None:
         from model.workspace import Workspace
         retained_reference = prior_selection.get("source_reference")
@@ -399,15 +431,7 @@ def prepare(args, identity):
         retained_grid = Workspace(args.workspace).get_grid(prior_selection["grid_id"])
         if retained_grid.get("state") != "complete":
             raise ValueError("Complete the original partial-intake grid before preparing its programme")
-        resolution_m = float(retained_grid["grid"]["resolution_m"])
-        buffer_m = float(retained_grid["spec"]["upstream_buffer_m"])
-        for name, requested, retained in (
-                ("resolution", args.expected_resolution_m, resolution_m),
-                ("context buffer", args.upstream_buffer_m, buffer_m)):
-            if requested is not None and not math.isclose(
-                    requested, retained, rel_tol=1e-9, abs_tol=1e-8):
-                raise ValueError("Continue the partial intake's retained " + name
-                                 + ": " + str(retained) + " metres")
+    resolution_m, buffer_m = _native_selection(args, retained_grid)
     selected = SimpleNamespace(
         workspace=args.workspace, source_directory=args.source_directory,
         ndr_archive=Path(inputs["ndr_archive"]["path"]),
@@ -421,8 +445,7 @@ def prepare(args, identity):
     )
     event("preparing_original_inputs", workspace=str(args.workspace),
           source_directory=str(args.source_directory), inputs=inputs,
-          resolution_m=selected.expected_resolution_m,
-          pixel_area_ha=selected.expected_resolution_m ** 2 / 10000,
+          expected_resolution_m=selected.expected_resolution_m,
           upstream_buffer_m=selected.upstream_buffer_m)
     receipt = receive_gura.receive(selected)
     check_receiving(receiving_path, args.workspace,
@@ -430,7 +453,8 @@ def prepare(args, identity):
                     upstream_buffer_m=selected.upstream_buffer_m)
     event("original_inputs_prepared", receiving=str(receiving_path),
           programme_id=receipt["programme_id"], grid_id=receipt["grid_id"],
-          profile_id=receipt["profile_id"], scenario_id=receipt["scenario_id"])
+          profile_id=receipt["profile_id"], scenario_id=receipt["scenario_id"],
+          native_grid=receipt["native_grid"])
     return receipt
 
 
@@ -735,7 +759,7 @@ def main(argv=None):
                         default=APPLICATION_ROOT / "source" / "gura-original-tables-3.20")
     parser.add_argument("--source-reference")
     parser.add_argument("--expected-resolution-m", type=float,
-                        help="New original intake defaults to captured15m; an existing receipt retains its grid")
+                        help="Optional expected source cell size; new intake reads its original raster, resume retains its grid")
     parser.add_argument("--upstream-buffer-m", type=float,
                         help="New original intake defaults to zero added context; an existing receipt retains its buffer")
     parser.add_argument("--convert", action="append",
@@ -775,7 +799,7 @@ def main(argv=None):
             return status(args)
         if args.command == "serve":
             restore_workflow_paths(args)
-            check_receiving(args.source_directory / "receiving.json", args.workspace)
+            check_receiving(args.source_directory / "receiving.json", args.workspace, args)
             return serve(args)
         return workflow(args)
     except (ValueError, OSError, KeyError, TypeError, ImportError, RuntimeError) as error:

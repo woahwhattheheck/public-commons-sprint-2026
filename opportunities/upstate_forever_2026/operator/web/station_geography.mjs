@@ -44,9 +44,48 @@ const filteredStationCSV = (stationRows,editionId,coordinateFor) => {
   return [columns,...records].map(record=>record.map(csvCell).join(',')).join('\r\n')+'\r\n';
 };
 
+const watershedKey = value => canonical({watershed_id:value?.watershed_id,source_ref:value?.source_ref||{}});
+const watershedCoverage = (stationRows, watershedFeatures) => {
+  const groups=new Map();
+  function add(properties) {
+    const key=watershedKey(properties);
+    if(!groups.has(key))groups.set(key,{key,watershed_id:properties.watershed_id,
+      name:properties.name??properties.NAME??properties.GNIS_NAME??'',
+      source_ref:properties.source_ref||{},stations:new Map(),boundary:new Set(),overlap:new Set()});
+    return groups.get(key);
+  }
+  for(const feature of list(watershedFeatures))add(feature.properties||{watershed_id:feature.id});
+  for(const station of list(stationRows))for(const membership of list(station.watersheds)){
+    const group=add(membership),id=String(station.station_id);
+    group.stations.set(id,station);
+    if(membership.relation==='boundary')group.boundary.add(id);
+    if(list(station.watersheds).length>1)group.overlap.add(id);
+  }
+  return [...groups.values()].map(group=>{
+    const stations=[...group.stations.values()],causes=new Map();
+    for(const station of stations)for(const cause of assessmentCauses(station))causes.set(cause,(causes.get(cause)||0)+1);
+    return {key:group.key,watershed_id:group.watershed_id,name:group.name,source_ref:group.source_ref,
+      station_count:stations.length,station_ids:[...group.stations.keys()].sort(),
+      boundary_station_count:group.boundary.size,overlap_station_count:group.overlap.size,
+      original_inventory_rows:stations.reduce((sum,row)=>sum+inventoryReferences(row).length,0),
+      linked_observation_rows:stations.reduce((sum,row)=>sum+Number(row.observation_count||0),0),
+      listed_causes:Object.fromEntries([...causes].sort(([a],[b])=>a.localeCompare(b)))};
+  }).sort((a,b)=>String(a.watershed_id).localeCompare(String(b.watershed_id))||a.key.localeCompare(b.key));
+};
+const coverageCSV = (coverage,editionId) => {
+  const columns=['edition_id','watershed_id','watershed_name','distinct_station_count','station_ids',
+    'listed_causes_distinct_station_counts','original_inventory_rows','linked_observation_rows',
+    'boundary_station_count','overlap_station_count','original_watershed_source_reference'];
+  return [columns,...coverage.map(row=>[editionId,row.watershed_id,row.name,row.station_count,
+    JSON.stringify(row.station_ids),JSON.stringify(row.listed_causes),row.original_inventory_rows,
+    row.linked_observation_rows,row.boundary_station_count,row.overlap_station_count,JSON.stringify(row.source_ref)])]
+    .map(record=>record.map(csvCell).join(',')).join('\r\n')+'\r\n';
+};
+
 export function attachStationGeography(host) {
   let node=null, workspace=null, state=null, catalog=null, edition=null, draft=defaultDraft();
   let requests=[], currentTask=null, selectedEdition=null, selectedStation=null, filter='all', search='', causeFilter='', page=0;
+  let watershedFilter='', coveragePage=0, coverageSearch='', coverageOpen=false, coverageCache=null;
   let generation=0, controller=null, loading=false, busy=false, error='', message='', taskFingerprint='';
   let sourceFingerprint='', viewBox=null, baseViewBox=null, projectPoint=null, drag=null, advancedOpen=false, formOpen=true;
   let aliasesText='{}', observationTablesText='[]', sourceOptionsText='{}';
@@ -58,17 +97,19 @@ export function attachStationGeography(host) {
     if (!workspace) return;
     try {
       sessionStorage.setItem(cacheKey(workspace),JSON.stringify({draft,requests:requests.slice(-32),currentTask,selectedEdition,
-        selectedStation,filter,search,causeFilter,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen}));
+        selectedStation,filter,search,causeFilter,watershedFilter,coveragePage,coverageSearch,coverageOpen,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen}));
     } catch (_) { /* Original server tasks and source editions remain retained. */ }
   }
   function restore() {
     draft=defaultDraft(); requests=[]; currentTask=null; selectedEdition=null; selectedStation=null;
-    filter='all';search='';causeFilter='';page=0;aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';advancedOpen=false;formOpen=true;
+    filter='all';search='';causeFilter='';watershedFilter='';coveragePage=0;coverageSearch='';coverageOpen=false;page=0;aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';advancedOpen=false;formOpen=true;
     try {
       const value=JSON.parse(sessionStorage.getItem(cacheKey(workspace))||'{}');
       draft={...draft,...(value.draft||{})}; requests=list(value.requests);currentTask=value.currentTask||null;
       selectedEdition=value.selectedEdition||null;selectedStation=value.selectedStation||null;
       filter=statuses.includes(value.filter)?value.filter:'all';search=value.search||'';causeFilter=typeof value.causeFilter==='string'?value.causeFilter:'';page=Number(value.page)||0;
+      watershedFilter=typeof value.watershedFilter==='string'?value.watershedFilter:'';
+      coveragePage=Math.max(0,Number(value.coveragePage)||0);coverageSearch=typeof value.coverageSearch==='string'?value.coverageSearch:'';coverageOpen=!!value.coverageOpen;
       aliasesText=value.aliasesText||JSON.stringify(draft.aliases||{},null,2);
       observationTablesText=value.observationTablesText||JSON.stringify(draft.observation_tables||[],null,2);
       sourceOptionsText=value.sourceOptionsText||'{}';advancedOpen=!!value.advancedOpen;formOpen=value.formOpen!==false;
@@ -150,10 +191,73 @@ export function attachStationGeography(host) {
     const query=search.trim().toLocaleLowerCase();
     return rows().filter(row=>{
       const membership=row.watershed_status||row.membership_status;
-      return (filter==='all'||row.status===filter||membership===filter)&&(!causeFilter||assessmentCauses(row).includes(causeFilter))&&(!query||[row.station_id,row.label,row.name,
+      const geographyMatches=!watershedFilter||(watershedFilter==='__outside__'?membership==='outside':
+        watershedFilter==='__unresolved__'?membership==='unresolved':list(row.watersheds).some(w=>watershedKey(w)===watershedFilter));
+      return geographyMatches&&(filter==='all'||row.status===filter||membership===filter)&&(!causeFilter||assessmentCauses(row).includes(causeFilter))&&(!query||[row.station_id,row.label,row.name,
         ...list(row.watersheds).map(x=>x.watershed_id),...['station_description','county','cause','impaired_use'].flatMap(field=>inventoryValues(row,field))].join(' ').toLocaleLowerCase().includes(query));
     });
   }
+
+  function coverageRows() {
+    if(!coverageCache||coverageCache.edition!==edition)coverageCache={edition,rows:watershedCoverage(rows(),features('watershed_geojson'))};
+    return coverageCache.rows;
+  }
+  function renderWatershedFilter() {
+    const target=node?.querySelector('[data-sg-watershed-filter]');if(!target)return;
+    const coverage=coverageRows();
+    if(watershedFilter&&!['__outside__','__unresolved__'].includes(watershedFilter)&&!coverage.some(row=>row.key===watershedFilter))watershedFilter='';
+    const outside=rows().filter(row=>row.watershed_status==='outside').length;
+    const unresolved=rows().filter(row=>row.watershed_status==='unresolved').length;
+    const repeated=new Map();for(const row of coverage)repeated.set(String(row.watershed_id),(repeated.get(String(row.watershed_id))||0)+1);
+    const options=[['','All retained watersheds'],['__outside__','Outside retained polygons · '+outside+' stations'],
+      ['__unresolved__','Unresolved station location · '+unresolved+' stations'],
+      ...coverage.map(row=>[row.key,String(row.watershed_id)+(row.name?' · '+row.name:'')+
+        (repeated.get(String(row.watershed_id))>1?' · '+(row.source_ref.source_id||'original source')+' / '+short(row.source_ref.collection_id)+' / '+String(row.source_ref.native_feature_id??row.source_ref.source_feature_index??''):'')+
+        ' · '+row.station_count+' stations'])];
+    target.innerHTML=options.map(([value,label])=>'<option value="'+esc(value)+'"'+(value===watershedFilter?' selected':'')+'>'+esc(label)+'</option>').join('');
+    target.disabled=!edition;
+  }
+  function coverageMatches() {
+    const query=coverageSearch.trim().toLocaleLowerCase();
+    return coverageRows().filter(row=>!query||[row.watershed_id,row.name,row.source_ref.source_id,
+      ...row.station_ids,...Object.keys(row.listed_causes)].join(' ').toLocaleLowerCase().includes(query));
+  }
+  function renderCoverage() {
+    const target=node?.querySelector('[data-sg-coverage-content]');if(!target)return;
+    if(!edition){target.innerHTML='<p>Open a saved geography edition to inspect its watershed coverage.</p>';return;}
+    const all=coverageRows(),selected=coverageMatches(),limit=40;
+    coveragePage=Math.max(0,Math.min(coveragePage,Math.max(0,Math.ceil(selected.length/limit)-1)));
+    const visible=selected.slice(coveragePage*limit,(coveragePage+1)*limit);
+    const unique=new Set(rows().filter(row=>list(row.watersheds).length).map(row=>String(row.station_id)));
+    target.innerHTML='<p>'+all.length+' retained watershed features · '+all.filter(row=>row.station_count>0).length+' with selected study stations · '+unique.size+
+      ' distinct stations with a resolved polygon membership.</p><p class="sg-help">Counts describe this saved study inventory. A zero means no selected study station lies in that retained polygon. Boundary and overlap stations appear in every matching polygon; station counts across watersheds can overlap.</p>'+
+      '<div class="sg-table-caption"><span>'+selected.length+' of '+all.length+' watershed features · page '+(coveragePage+1)+' of '+Math.max(1,Math.ceil(selected.length/limit))+'</span><div>'+
+      button('export-coverage','Download coverage CSV')+button('coverage-previous','Previous',coveragePage===0?'disabled':'')+
+      button('coverage-next','Next',(coveragePage+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
+      '<div class="sg-table-scroll"><table><thead><tr><th>Retained watershed</th><th>Distinct stations</th><th>Listed causes / stations</th><th>Inventory / observed rows</th><th>Boundary / overlap stations</th><th>Original source</th></tr></thead><tbody>'+
+      visible.map(row=>'<tr'+(watershedFilter===row.key?' class="sg-selected"':'')+'><td>'+
+        button('select-watershed',row.watershed_id,'data-sg-watershed-key="'+esc(row.key)+'"')+(row.name?'<small>'+esc(row.name)+'</small>':'')+'</td>'+
+        '<td>'+row.station_count+'</td><td>'+esc(Object.entries(row.listed_causes).map(([cause,count])=>cause+' · '+count).join(', ')||'—')+'</td>'+
+        '<td>'+row.original_inventory_rows+' / '+row.linked_observation_rows+'</td><td>'+row.boundary_station_count+' / '+row.overlap_station_count+'</td>'+
+        '<td>'+esc(row.source_ref.source_id||'—')+'<small>Native feature '+esc(row.source_ref.native_feature_id??row.source_ref.source_feature_index??'—')+'</small></td></tr>').join('')+
+      (!visible.length?'<tr><td colspan="6">No retained watersheds match this search.</td></tr>':'')+'</tbody></table></div>';
+  }
+  function applyWatershed(value) {
+    watershedFilter=value;page=0;viewBox=null;
+    renderWatershedFilter();renderTable();renderMap(true);renderCoverage();save();
+  }
+  function downloadCSV(body,filename) {
+    const url=URL.createObjectURL(new Blob([body],{type:'text/csv;charset=utf-8'}));
+    const link=document.createElement('a');link.href=url;link.download=filename;link.hidden=true;
+    node.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function downloadCoverage() {
+    if(!edition)throw Error('Open a saved station geography edition first.');
+    const selected=coverageMatches();
+    downloadCSV(coverageCSV(selected,edition.id),'station-geography-'+short(edition.id)+'-watershed-coverage.csv');
+    message='Downloaded '+selected.length+' watershed features with distinct station IDs, original cause counts and source references.';notice();
+  }
+
   function renderCauseFilter() {
     const target=node?.querySelector('[data-sg-cause]');if(!target)return;
     const counts=new Map();
@@ -263,9 +367,14 @@ export function attachStationGeography(host) {
     const target=node?.querySelector('[data-sg-map]');if(!target)return;
     const selected=filteredRows(), selectedIDs=new Set(selected.map(r=>String(r.station_id)));
     const stationFeatures=features('station_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id??f.id))&&point(f));
-    const candidateFeatures=features('candidate_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id))&&point(f));
+    const unresolved=new Set(selected.filter(r=>!validPoint(stationPoint(r))).map(r=>String(r.station_id)));
+    const candidateFeatures=features('candidate_geojson').filter(f=>selectedIDs.has(String(f.properties?.station_id))&&unresolved.has(String(f.properties?.station_id))&&point(f));
     const polygons=features('watershed_geojson');
-    const pairs=[...polygons.flatMap(f=>coordinatePairs(f.geometry)),...features('station_geojson').map(point),...features('candidate_geojson').map(point)].filter(validPoint);
+    const focused=watershedFilter&&!watershedFilter.startsWith('__')?polygons.filter(f=>watershedKey(f.properties)===watershedFilter):[];
+    const extentPolygons=focused.length?focused:polygons;
+    const pairs=[...extentPolygons.flatMap(f=>coordinatePairs(f.geometry)),
+      ...(focused.length?stationFeatures:features('station_geojson')).map(point),
+      ...candidateFeatures.map(point)].filter(validPoint);
     if(!pairs.length){target.innerHTML='<div class="sg-map-empty">No map coordinates are available for this selection. Original unmatched station rows remain in the table.</div>';return;}
     let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity; for(const p of pairs){minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minY=Math.min(minY,p[1]);maxY=Math.max(maxY,p[1]);}
     const aspect=Math.max(0.05,Math.cos((minY+maxY)/2*Math.PI/180));
@@ -279,7 +388,6 @@ export function attachStationGeography(host) {
       const polygons=geometry.type==='Polygon'?[geometry.coordinates]:geometry.type==='MultiPolygon'?geometry.coordinates:[];
       return polygons.map(poly=>poly.map(ring=>ring.map((p,i)=>{const q=projectPoint(p);return(i?'L':'M')+q[0]+' '+q[1];}).join(' ')+'Z').join(' ')).join(' ');
     };
-    const unresolved=new Set(selected.filter(r=>!validPoint(stationPoint(r))).map(r=>String(r.station_id)));
     const diameter=Math.max(viewBox[2],viewBox[3])/170;
     const mark=(f,candidate)=>{
       const station=String(f.properties?.station_id??f.id),xy=projectPoint(point(f)),active=station===String(selectedStation);
@@ -288,11 +396,11 @@ export function attachStationGeography(host) {
         '<title>'+esc(station+(candidate?' · unresolved original location':' · '+(f.properties?.status||'located')))+'</title></g>';
     };
     target.innerHTML='<svg class="sg-map-svg" data-sg-svg viewBox="'+viewBox.join(' ')+'" role="img" aria-label="Selected original stations and retained watershed boundaries" tabindex="0">'+
-      '<g class="sg-watersheds">'+polygons.map(f=>'<path d="'+pathFor(f.geometry)+'" fill-rule="evenodd" vector-effect="non-scaling-stroke"><title>'+esc(f.properties?.watershed_id??f.id??'Retained watershed')+'</title></path>').join('')+'</g>'+
-      '<g>'+candidateFeatures.filter(f=>unresolved.has(String(f.properties?.station_id))).map(f=>mark(f,true)).join('')+stationFeatures.map(f=>mark(f,false)).join('')+'</g></svg>'+
+      '<g class="sg-watersheds">'+polygons.map(f=>'<path class="'+(focused.length?(watershedKey(f.properties)===watershedFilter?'sg-watershed-focus':'sg-watershed-context'):'')+'" d="'+pathFor(f.geometry)+'" fill-rule="evenodd" vector-effect="non-scaling-stroke"><title>'+esc(f.properties?.watershed_id??f.id??'Retained watershed')+'</title></path>').join('')+'</g>'+
+      '<g>'+candidateFeatures.map(f=>mark(f,true)).join('')+stationFeatures.map(f=>mark(f,false)).join('')+'</g></svg>'+
       '<p class="sg-map-note">● Resolved station · ○ Original candidate · Retained watershed boundaries · WGS84 display</p>';
   }
-  function renderResult(reset=false) {renderCauseFilter();renderSummary();renderDownloads();renderTable();renderDetail();renderMap(reset);save();}
+  function renderResult(reset=false) {renderCauseFilter();renderWatershedFilter();renderCoverage();renderSummary();renderDownloads();renderTable();renderDetail();renderMap(reset);save();}
   async function loadCatalog(refreshForm=false) {
     if(!node||loading)return;loading=true;
     const key=workspace,version=generation;
@@ -393,6 +501,8 @@ export function attachStationGeography(host) {
     else if(target.matches('[data-sg-search]')){search=target.value;page=0;renderTable();renderMap();}
     else if(target.matches('[data-sg-filter]')){filter=target.value;page=0;renderTable();renderMap();}
     else if(target.matches('[data-sg-cause]')){causeFilter=target.value;page=0;renderTable();renderMap();}
+    else if(target.matches('[data-sg-watershed-filter]'))applyWatershed(target.value);
+    else if(target.matches('[data-sg-coverage-search]')){coverageSearch=target.value;coveragePage=0;renderCoverage();}
     save();
   }
   function chooseStation(id) {selectedStation=id;renderTable();renderDetail();renderMap();save();}
@@ -424,6 +534,10 @@ export function attachStationGeography(host) {
       else if(act==='clear-selection'){draft=defaultDraft();aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';formOpen=true;renderForm();save();}
       else if(act==='edit-edition')useEdition();
       else if(act==='export-filtered')downloadFilteredStations();
+      else if(act==='export-coverage')downloadCoverage();
+      else if(act==='select-watershed')applyWatershed(item.dataset.sgWatershedKey);
+      else if(act==='coverage-previous'){coveragePage=Math.max(0,coveragePage-1);renderCoverage();save();}
+      else if(act==='coverage-next'){coveragePage++;renderCoverage();save();}
       else if(act==='station')chooseStation(item.dataset.sgStation);
       else if(act==='previous'){page=Math.max(0,page-1);renderTable();save();}
       else if(act==='next'){page++;renderTable();save();}
@@ -452,8 +566,10 @@ export function attachStationGeography(host) {
       '<section data-sg-summary></section><section class="sg-results"><div class="sg-filters"><label>Find station<input type="search" data-sg-search value="'+esc(search)+'" placeholder="Station, watershed, description, county or cause"></label>'+
       '<label>Location status<select data-sg-filter>'+statuses.map(s=>'<option value="'+s+'"'+(s===filter?' selected':'')+'>'+esc(s==='all'?'All stations':s)+'</option>').join('')+'</select></label>'+
       '<label data-sg-cause-label>Original listed cause<select data-sg-cause><option value="">All listed causes</option></select></label>'+
+      '<label class="sg-watershed-picker">Geometry-derived watershed<select data-sg-watershed-filter></select></label>'+
       '<div class="sg-map-controls">'+button('zoom-in','Zoom in')+button('zoom-out','Zoom out')+button('fit-map','Fit study')+'</div></div>'+
       '<div class="sg-map-layout"><div data-sg-map></div><aside data-sg-detail></aside></div><div data-sg-table></div></section>'+
+      '<details class="sg-coverage" data-sg-coverage '+(coverageOpen?'open':'')+'><summary>Watershed station coverage</summary><label>Find watershed, station or cause<input type="search" data-sg-coverage-search value="'+esc(coverageSearch)+'" placeholder="Watershed ID, native name, station or cause"></label><div data-sg-coverage-content></div></details>'+
       '<section data-sg-downloads></section><section class="sg-operations"><h2>Retained operations</h2><div class="sg-table-scroll" data-sg-tasks></div></section></section>';
     const signal=controller.signal;
     node.addEventListener('input',editInput,{signal});
@@ -468,7 +584,7 @@ export function attachStationGeography(host) {
     },{signal});
     node.addEventListener('click',action,{signal});
     node.addEventListener('submit',event=>{if(!event.target.matches('[data-sg-form]'))return;event.preventDefault();try{const selection=collectSelection(event.target);if(selection)submit('station.geography.build',{selection});}catch(problem){fail(problem);}},{signal});
-    node.addEventListener('toggle',event=>{if(event.target.matches('[data-sg-form-box]'))formOpen=event.target.open;else if(event.target.matches('[data-sg-advanced]'))advancedOpen=event.target.open;save();},{signal,capture:true});
+    node.addEventListener('toggle',event=>{if(event.target.matches('[data-sg-form-box]'))formOpen=event.target.open;else if(event.target.matches('[data-sg-advanced]'))advancedOpen=event.target.open;else if(event.target.matches('[data-sg-coverage]'))coverageOpen=event.target.open;save();},{signal,capture:true});
     node.addEventListener('keydown',event=>{
       const target=event.target.closest('[data-sg-map-station]');
       if(target&&['Enter',' '].includes(event.key)){event.preventDefault();chooseStation(target.dataset.sgMapStation);return;}

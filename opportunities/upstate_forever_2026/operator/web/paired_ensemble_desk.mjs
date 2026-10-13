@@ -30,6 +30,7 @@ export function attachPairedEnsembles(context) {
   let pairRows=[], choices=new Map(), imported=null, selectedTask=null;
   let productSignature='', taskSignature='', pendingOpen=null, detailRequest=0;
   let lastRequest=null, lastSelection=null, savedDraft=null, pollingTask=null, detailId=null;
+  let viewSave=Promise.resolve();
   const query = selector => root?.querySelector(selector);
   const field = name => query('[name="'+name+'"]');
   const value = name => field(name)?.value ?? '';
@@ -152,6 +153,7 @@ export function attachPairedEnsembles(context) {
     if(opening?.kind==='design')await loadDesign(opening);
     else if(opening?.kind==='selection')applySelection(opening.selection);
     else if(opening?.kind==='product')await openProduct(opening.id);
+    else if(!opening&&catalog?.saved_view?.ensemble_id)await openProduct(catalog.saved_view.ensemble_id,{save:false});
     update(getState());
   }
   async function reload({restoreDraft=false,token=epoch,key=workspace}={}) {
@@ -174,7 +176,7 @@ export function attachPairedEnsembles(context) {
     for(const node of root.querySelectorAll('[name="pollutant"]'))
       node.checked=!node.disabled&&(savedDraft?.pollutants?.includes(node.value)??true);
     renderProducts(result.products||[]);
-    notify('Original run catalogue loaded.');
+    notify(result.saved_view_error||'Original run catalogue loaded.',!!result.saved_view_error);
   }
   function versions() {
     const previous=value('native_version')||savedDraft?.fields?.native_version;
@@ -461,19 +463,22 @@ export function attachPairedEnsembles(context) {
       '<p>Completed analyses retain their quantitative maps and reports here.</p>';
   }
 
-  async function openProduct(id) {
+  async function openProduct(id,{save=true}={}) {
     const token=epoch,key=workspace,request=++detailRequest;
     const detail=await api(url('/api/paired-ensemble/inspect',{ensemble_id:id},key),{signal:reads.signal});
     if(!current(token,key)||request!==detailRequest)return;
     detailId=id;
     const s=detail.selection||{},summaries=detail.summary||{},records=detail.reports?.files||[];
+    const native=detail.native_context||{},nativeRuns=new Set(native.available_run_ids||[]);
+    const nativeRun=id=>nativeRuns.has(id)?action('native-run',short(id),id):'<code>'+esc(id||'Source reference in retained analysis')+'</code>'; 
     let html='<article class="pe-result"><h3>'+esc(s.title||short(id))+'</h3><p>'+esc(detail.state)+
       ' · '+number(s.selected_member_count)+' selected of '+number(s.planned_member_count)+' planned profiles.</p>'+
       '<p><strong>Positive reduction = baseline − alternative.</strong> '+esc(supportNames[s.support]||s.support)+'.</p>'+
       (detail.error?'<div class="pe-notice" role="alert">'+esc(detail.error.message||JSON.stringify(detail.error))+'</div>':'')+
       '<div class="pe-actions">'+(detail._report_url?'<a href="'+esc(detail._report_url)+'" target="_blank" rel="noopener">Open full quantitative report</a>':'')+
       action('export','Export complete result ZIP',id,detail.state!=='complete')+
-      action('resume-product','Resume from retained native pairs',id)+'</div>';
+      (native.can_resume?action('resume-product','Resume from retained native pairs',id):'')+'</div>';
+    if(!native.can_resume)html+='<p>The result project retains its quantitative outputs and original source references. Open the scientific Workspace backup to continue calculations from its original native runs.</p>'; 
     if(Object.keys(summaries).length){
       html+=table(['Output','Common / reporting cells','Common coverage','Mean basin reduction','Tested basin range'],Object.entries(summaries).map(([name,summary])=>{
         const spread=summary.basin_reduction_distribution_common_support;
@@ -494,12 +499,23 @@ export function attachPairedEnsembles(context) {
       '<details><summary>Original run pairs and source references</summary>'+
       table(['Profile','Baseline native run','Alternative native run'],(s.members||[]).map(row=>'<tr>'+
         '<th scope="row">'+esc(profileName(row.profile_id)||short(row.id))+'</th>'+
-        '<td>'+action('native-run',short(row.baseline_run_id),row.baseline_run_id)+'</td>'+
-        '<td>'+action('native-run',short(row.alternative_run_id),row.alternative_run_id)+'</td></tr>'))+
+        '<td>'+nativeRun(row.baseline_run_id)+'</td>'+
+        '<td>'+nativeRun(row.alternative_run_id)+'</td></tr>'))+
       '<pre>'+esc(JSON.stringify({ensemble_id:id,grid:s.grid,source_references:s.source_references,
         quantiles:s.quantiles,quantile_method:s.quantile_method,improvement_thresholds:s.improvement_thresholds},null,2))+'</pre></details></article>';
     query('[data-pe-detail]').innerHTML=html;
     query('[data-pe-detail]').scrollIntoView?.({block:'nearest'});
+    if(save){
+      const retain=async()=>{
+        if(!current(token,key)||request!==detailRequest)return;
+        try{
+          const saved=await api(url('/api/paired-ensemble/view',{},key),{method:'POST',body:{workspace:key,ensemble_id:id}});
+          if(current(token,key)&&request===detailRequest)catalog.saved_view=saved;
+        }catch(error){if(current(token,key)&&request===detailRequest)notify('The result is open. Save its selected view again by reopening the result: '+error.message,true);}
+      };
+      viewSave=viewSave.then(retain,retain);
+      await viewSave;
+    }
   }
   async function resumeProduct(id) {
     const token=epoch,key=workspace;
