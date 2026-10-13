@@ -23,7 +23,7 @@ npx --no-install starforge highway-field-operations --help
 
 Package installation and native-runtime preparation are distinct. Use the included Runtime installation guide to select and prepare actual optional dependencies. Keep customer workspaces, private capabilities, runtime configuration and receiving outputs outside immutable installed source.
 
-The public recipe reuses the target's current complete Grant workspace, Installation profile loader, Runtime Workspace, Applications and merchant registries. It does not replace shared grant source or promise unrelated Merchant-only grant procedures. The full Highway app is unchanged; its original source selection contains 169 declared members plus the selection file.
+The public recipe includes the complete Grant Operations closure merged at `2977f57d845ef90679de46a7e96addff6c4d8c70`: customer adoption planning, issuer correspondence and award terms, saved operating procedures, period reporting and complete case/Application handoff. Its maintained registrations and full supporting source travel with Highway's own selection, Installation profile, Runtime Workspace, Applications and merchant interfaces. The full Highway app is unchanged; its original source selection contains 169 declared members plus the selection file.
 
 ## Open the complete installed guides
 
@@ -41,8 +41,9 @@ These links are relative to this README at the built package root.
 | Complete paired native comparison and receiving | [Paired review](source/products/highway-field-operations/app/PAIRED_REVIEW.md) |
 | Original CSV/SF30/SF100 producer | [Dataset producer](source/products/highway-field-operations/app/ORIGINAL_LOCAL_DATASET_PRODUCER.md) |
 | Configure installed Applications and runtime | [Applications](source/stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATIONS.md), [Runtime installation](source/stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md), [Runtime transfer](source/stellar/scf-starforge-20261009/distribution/RUNTIME_TRANSFER.md) |
+| Operate the complete Grant planning, procedures and reporting | [Grant Operations guide](source/products/grant-operations/OPERATING.md) |
 | Retain the actual customer Workshare and Installation | [Complete Highway profile](source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/highway-field-operations.json) |
-| Inspect original and adopted source identities | [Original adoption](source/products/highway-field-operations/ADOPTION.json), [public composition](source/products/highway-field-operations/PUBLIC_ADOPTION.json) |
+| Inspect original and adopted source identities | [Original adoption](source/products/highway-field-operations/ADOPTION.json), [original public composition](source/products/highway-field-operations/PUBLIC_ADOPTION.json), [current Grant dependency closure](source/products/highway-field-operations/GRANT_CLOSURE.json) |
 | Apply actual product and attachment inspection | [Product instructions](source/products/highway-field-operations/AGENTS.md) |
 
 In a repository checkout, the same documents are under `products/highway-field-operations/`; the `source/` prefix is added by the package builder.
@@ -86,7 +87,7 @@ Open the actual private application link locally. Keep its connection capability
 
 Local approval and a proposed edit are separate from an observed production GIS write. This package does not invent a production tenant, field observation, purchase, payment or customer acceptance.
 
-The complete Installation profile is discoverable through the existing public `profiles.mjs` loader and `prepare-core.mjs` preparation API. In this selected public edition, use the original Installation desk and retained case to record actual preparation and acceptance. The historical Merchant-only `grant-installation-workorder` command is not registered by this public selection.
+The complete Installation profile is discoverable through the public `profiles.mjs` loader and `prepare-core.mjs` preparation API. The selected `grant-workspace` contribution now registers `starforge grant-installation-workorder`; select `--profile highway-field-operations` with the original Workshare seed and actual customer/operator bindings. Use the existing Installation desk and retained case to preview/save the prepared input and record actual acceptance. The Operating guide gives the complete command sequence; a prepared workorder is not an observed installation or customer acceptance.
 
 ## Original receiving and interruption recovery
 
