@@ -10,6 +10,8 @@ import {DEMO,inputs} from './engine.mjs';
 import {analyze} from './robustness/compare.mjs';
 import {planWeek,inspectWeek,weekCsv,weekCalendar} from './weekly.mjs';
 import {openHouseholdWorkspace,digest,WorkspaceError} from './workspace.mjs';
+import {createRequestDetail,requestPackage,previewReview,reconcileReview} from './week-review.mjs';
+import {renderWeekReviewPage} from './week-review-page.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const LIMIT=100;
 function respond(res,status,body,extra={}){
@@ -31,8 +33,9 @@ function acceptsHost(req,boundHost){
 }
 export function start({port=Number(process.env.PORT||'4181'),host=process.env.HOST||'127.0.0.1',
   workspace=process.env.GRIDKIND_WORKSPACE||join(homedir(),'.local','share','gridkind')}={}){
-  const sourcePins=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs'].map(name=>
-    [name,createHash('sha256').update(readFileSync(join(ROOT,name))).digest('hex')]));
+  const capturedSources=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs','week-review.mjs','week-review-page.mjs','exact-inputs.js'].map(name=>[name,readFileSync(join(ROOT,name))]));
+  const sourcePins=Object.fromEntries(Object.entries(capturedSources).map(([name,bytes])=>[name,createHash('sha256').update(bytes).digest('hex')]));
+  const reviewSources=Object.freeze(Object.fromEntries(['engine.mjs','weekly.mjs','exact-inputs.js','week-review.mjs'].map(name=>[name,capturedSources[name].toString('utf8')])));
   const store=openHouseholdWorkspace({directory:workspace,sourcePins});
   const clients=new Map();
   function browser(req,res){
@@ -120,6 +123,84 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     }
     throw Error('Unknown weekly operation.');
   }
+  function weekReviewAction(id,body){
+    try{return performWeekReviewAction(id,body);}
+    catch(error){
+      const status=error instanceof WorkspaceError?error.status:400;
+      if(body?.action==='apply-return'&&[400,409].includes(status)){
+        // This second owned read follows the rejected attempt. Another process may
+        // have committed after the initial lookup but before our revision check.
+        // A failed read supplies no absence marker; the browser retains uncertainty.
+        try{
+          const householdId=body.context?.householdId;
+          const previous=store.weekReviewOutcome(id,householdId,body.requestId,body.response?.responseId);
+          if(previous){
+            const detail=previous.returnRecord.detail;
+            if(digest({targetRecordId:body.targetRecordId,response:body.response,choices:body.choices??{}})===
+              digest({targetRecordId:detail.targetId,response:detail.response,choices:detail.choices}))
+              return {...previous,householdId,state:view(id),replayed:true};
+          }else{
+            error.reviewOutcome={status:'not_committed',householdId,requestId:body.requestId,
+              responseId:body.response.responseId,targetRecordId:body.targetRecordId,
+              responseSha256:digest(body.response),choicesSha256:digest(body.choices??{})};
+          }
+        }catch{}
+      }
+      throw error;
+    }
+  }
+  function performWeekReviewAction(id,body){
+    // Reconcile a completed same-response transaction before its stale revision
+    // can reject a response-loss retry. The original visitor must still own that household;
+    // new mutations below require the current selected household/generation/revision.
+    const context=body?.context;
+    if(!context||typeof context.householdId!=='string')
+      throw new WorkspaceError('Read the original household before continuing this weekly review.',409);
+    if(body.action==='apply-return'){
+      const previous=store.weekReviewOutcome(id,context.householdId,body.requestId,body.response?.responseId);
+      if(previous){
+        const detail=previous.returnRecord.detail;
+        if(digest({targetRecordId:body.targetRecordId,response:body.response,choices:body.choices??{}})!==
+          digest({targetRecordId:detail.targetId,response:detail.response,choices:detail.choices}))
+          throw new WorkspaceError('This response identity already has a different retained outcome. Reopen the original result or create a new response edition.',409);
+        return {...previous,householdId:context.householdId,state:view(id),replayed:true};
+      }
+    }
+    const live=check(id,body,true);
+    if(body.action==='request'){
+      const base=store.record(id,live.householdId,body.baseRecordId);
+      if(base.kind!=='week')throw new WorkspaceError('Choose a saved weekly plan.');
+      const detail=createRequestDetail(base,{recipient:body.recipient,message:body.message});
+      const record=store.mutate(id,context.revision,ctx=>ctx.record({kind:'week-request',
+        scenario:base.scenario,parentId:base.id,name:('Review · '+base.label).slice(0,100),detail}));
+      committed(id,live);
+      return {record,bundle:requestPackage(record),state:view(id)};
+    }
+    if(!['preview-return','apply-return'].includes(body.action))throw new WorkspaceError('Unknown weekly review operation.');
+    const request=store.record(id,live.householdId,body.requestId);
+    const target=store.record(id,live.householdId,body.targetRecordId);
+    if(request.kind!=='week-request'||target.kind!=='week')throw new WorkspaceError('Choose an original review request and saved weekly target.');
+    if(body.action==='preview-return')return {preview:previewReview(request,target,body.response),state:view(id)};
+    const reconciled=reconcileReview(request,target,body.response,body.choices??{});
+    const result=store.mutate(id,context.revision,ctx=>{
+      // All reads, duplicate detection and both linked records share one commit.
+      const originalRequest=ctx.readRecord(request.id),originalTarget=ctx.readRecord(target.id);
+      if(originalRequest.sha256!==request.sha256||originalTarget.sha256!==target.sha256)
+        throw new WorkspaceError('The selected weekly review source changed.',409);
+      if(ctx.reviewOutcome(request.id,body.response.responseId))throw new WorkspaceError('This response was already applied. Reopen its retained outcome.',409);
+      const returnRecord=ctx.record({kind:'week-return',scenario:target.scenario,
+        parentId:request.id,name:('Review returned · '+target.label).slice(0,100),
+        detail:{requestId:request.id,requestSha256:request.sha256,targetId:target.id,targetSha256:target.sha256,
+          response:body.response,responseSha256:digest(body.response),choices:body.choices??{},decisions:reconciled.decisions}});
+      const record=ctx.record({kind:'week',scenario:target.scenario,parentId:returnRecord.id,
+        name:reconciled.report.input.name,detail:{report:reconciled.report,review:{
+          requestId:request.id,requestSha256:request.sha256,returnId:returnRecord.id,returnSha256:returnRecord.sha256,
+          targetId:target.id,targetSha256:target.sha256,responseId:body.response.responseId,responseSha256:digest(body.response)}}});
+      return {returnRecord,record};
+    });
+    committed(id,live);
+    return {...result,householdId:live.householdId,state:view(id),replayed:false};
+  }
   function workspaceAction(id,body){
     let live=check(id,body,true);
     if(body.action==='preview-import')return {preview:store.inspectImport(body.bundle)};
@@ -169,7 +250,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     try{
       if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const url=new URL(req.url,'http://localhost'),path=url.pathname;
-      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
+      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
         const file=path==='/'?'index.html':path==='/week'?'week.html':path.slice(1);
         const mime=path==='/'||path==='/week'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
@@ -181,6 +262,19 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(path==='/api/state')return respond(res,200,view(id));
         if(path==='/api/workspace/history')return respond(res,200,store.history(id,{householdId:url.searchParams.get('householdId')||undefined,offset:Number(url.searchParams.get('offset')||0)}));
         if(path==='/api/workspace/record')return respond(res,200,store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('id')));
+        if(path==='/api/week-review/export'){
+          const record=store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('recordId'));
+          if(record.kind!=='week-request')throw new WorkspaceError('Choose a saved weekly review request.');
+          const format=url.searchParams.get('format');
+          if(!['json','html'].includes(format))throw new WorkspaceError('Choose JSON or the offline review HTML.');
+          const bundle=requestPackage(record);
+          if(format==='json')return respond(res,200,bundle,{'content-disposition':'attachment; filename="gridkind-week-review-'+record.id+'.json"'});
+          const body=renderWeekReviewPage(bundle,reviewSources);
+          res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store',
+            'x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer',
+            'content-disposition':'attachment; filename="gridkind-week-review-'+record.id+'.html"'});
+          return res.end(body);
+        }
         if(path==='/api/week/export'){
           const record=store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('recordId'));
           if(record.kind!=='week')throw Error('Choose a saved weekly plan.');
@@ -198,18 +292,18 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
           return respond(res,200,bundle,{'content-disposition':`attachment; filename="gridkind-household-${bundle.payload.household.id.slice(0,8)}.json"`});
         }
       }
-      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week'].includes(path))return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
-      const body=await readBody(req,path==='/api/workspace'?8*1024*1024:40000);
+      const body=await readBody(req,path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
       // Resolve current selection after the complete request is read. Every UI
       // mutation carries its saved revision, active household and live generation.
-      const result=path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):workspaceAction(id,body);
+      const result=path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
       return respond(res,200,result);
     }catch(error){
       const status=error instanceof WorkspaceError?error.status:400;
       let state;
       if(status===409&&id){try{state=view(id);}catch{}}
-      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{})});
+      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{})});
     }
   });
   server.once('close',()=>{clients.clear();store.close();});
