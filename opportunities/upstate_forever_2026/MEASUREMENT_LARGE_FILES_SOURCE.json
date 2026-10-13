@@ -93,6 +93,12 @@
       "sha256": "40a7593281eefd98216690a59690f622632665018d52a68b1f4271e9d5a067a4"
     },
     {
+      "role": "addition",
+      "path": "measurement_workspace/EDITION_READING.md",
+      "bytes": 14302,
+      "sha256": "53d9bea6dcd45a7f6fe19a67fb4520e6f397df8631d26f3946f7e356cc8eaec3"
+    },
+    {
       "role": "native",
       "path": "measurement_workspace/engine/benchmark_reports.mjs",
       "bytes": 9782,
@@ -148,8 +154,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 24155,
-      "sha256": "d431c5351e25ecdc71a3bac160f2c61c42fc84bd0718f7d9c079ec72361ed9c6",
+      "bytes": 24307,
+      "sha256": "8a9cbe6042ffd0c7b486b89d45dcfd67032ff15fa15af7d6a5a63aecb91dec69",
       "role": "patch"
     },
     {
@@ -802,8 +808,8 @@
     },
     {
       "path": "measurement_workspace/web/collection_folder.mjs",
-      "bytes": 15721,
-      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55",
+      "bytes": 16186,
+      "sha256": "fe8b9b6e1f14004bc1b856004e754511aa637aa6e1861a2423de9d2aae1358b0",
       "role": "addition"
     },
     {
@@ -814,14 +820,14 @@
     },
     {
       "path": "measurement_workspace/web/collection_working.mjs",
-      "bytes": 10343,
-      "sha256": "e1e04cc67cf29f6a0567015c18cec58e0cdf82a1fd9b4bdb69e6d11eac877ad8",
+      "bytes": 11622,
+      "sha256": "94d63259a2e36790d32b6c948ce02d96acbb1f64d3cbac30421d5f169258386c",
       "role": "addition"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 35680,
-      "sha256": "aff2954339fea1197bb3e29a1b5df12b153e3c82b4bc2e99d5fc5b6d0c97f2a3",
+      "bytes": 40194,
+      "sha256": "14564b0ec7a3a8bf8ca9d60dd90ef59fd877f07e13b4ac1b6f4219ae64d5ef7f",
       "role": "native"
     },
     {
@@ -829,6 +835,18 @@
       "path": "measurement_workspace/web/eco_handovers.mjs",
       "bytes": 16816,
       "sha256": "19225b155b0092d6f49fa078eacc9c9b2c63330f5066624b13bc12395e876140"
+    },
+    {
+      "role": "addition",
+      "path": "measurement_workspace/web/edition_reader.mjs",
+      "bytes": 10642,
+      "sha256": "b2a67dd89d1eeaa13de512a9bcc69f1aded0393475b20d5a067a1745a9b3c3a6"
+    },
+    {
+      "role": "addition",
+      "path": "measurement_workspace/web/edition_review.mjs",
+      "bytes": 21511,
+      "sha256": "e72f2e65aa529b513870ff13fd9a1a61cd703cda94da71662942a3a621975bf7"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
@@ -970,15 +988,27 @@
     },
     {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2827,
-      "sha256": "6099b1a3d51cc77e7beb81a8b08f522f416e8c965420a274e1213fcf9396c0e7",
+      "bytes": 2879,
+      "sha256": "aaad0c69cc0b9fd6a4a52dc75e72e25523b57480a73ae5db71214e8a9e8bed68",
       "role": "native"
     },
     {
       "path": "operator/web/collection_folder.mjs",
-      "bytes": 15721,
-      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55",
+      "bytes": 16186,
+      "sha256": "fe8b9b6e1f14004bc1b856004e754511aa637aa6e1861a2423de9d2aae1358b0",
       "role": "addition"
+    },
+    {
+      "role": "addition",
+      "path": "operator/web/edition_reader.mjs",
+      "bytes": 10642,
+      "sha256": "b2a67dd89d1eeaa13de512a9bcc69f1aded0393475b20d5a067a1745a9b3c3a6"
+    },
+    {
+      "role": "addition",
+      "path": "operator/web/edition_review.mjs",
+      "bytes": 21511,
+      "sha256": "e72f2e65aa529b513870ff13fd9a1a61cd703cda94da71662942a3a621975bf7"
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
@@ -1160,6 +1190,15 @@
       "receiving_course_merge": "a59ff7986876aacab4bca3dc582986e93bd1bae8",
       "guide": "MEASUREMENT_LARGE_FILES.md",
       "behavior": "Complete explicit native source selection, current cumulative source authority, original shared install lease, exact predecessor upgrades and complete CLI collection asset serving."
+    },
+    "saved_edition_reader": {
+      "operation_id": "CEDAR-10212-ECO-IMMUTABLE-EDITION-READER-20261013",
+      "original_claim": "1791925754.806609",
+      "source_base": "6168e10a825b927d48cba6ad2d157602ce9ac494",
+      "guide": "measurement_workspace/EDITION_READING.md",
+      "behavior": "Complete immutable accepted/excluded populations, checked bounded original paging, original source context and complete downloads; same saved folder offline; full reader custody in the existing collection working copy.",
+      "owner_direction": "CURRENT_OWNER_DIRECTION.md version2026-10-13.4; contextual dismissible in-UI guidance from original owner thread1791926001.619199",
+      "receiving": "Same original15227/7915–8007 native collection/folder course; retain complete current sources and personally use the actual reader and all original attachments."
     }
   },
   "standalone": {
@@ -1177,6 +1216,7 @@
       "measurement_workspace/DAILY_FLOW_STUDIES.md",
       "measurement_workspace/DAILY_FLOW_UI.md",
       "measurement_workspace/ECO_LDA_HANDOVER.md",
+      "measurement_workspace/EDITION_READING.md",
       "measurement_workspace/FLOW_COMPARISON_RECEIVING.md",
       "measurement_workspace/FLOW_EXPORTS.md",
       "measurement_workspace/FLOW_LOAD_COMPARISONS.md",
@@ -1302,6 +1342,8 @@
       "measurement_workspace/web/collection_working.mjs",
       "measurement_workspace/web/collections.mjs",
       "measurement_workspace/web/eco_handovers.mjs",
+      "measurement_workspace/web/edition_reader.mjs",
+      "measurement_workspace/web/edition_review.mjs",
       "measurement_workspace/web/extension.mjs",
       "measurement_workspace/web/flow_editions.css",
       "measurement_workspace/web/flow_editions.mjs",
@@ -1520,7 +1562,8 @@
         "e365b6bf2ba8d59c0d876f6f61bcd53f17e8b96f02d2f338a32a62bec2db8eb6",
         "25cf788d40f621d8160bc3d50137b59c1e9d1fea20e4cc0fd015ee9246089ece",
         "92791dea9e24873f01ccfe1c8f3ddec0baf2a43323c5d8075f5134a2669aaf24",
-        "3b4e8b25588083e151e153f89d97d4b54da48ecdb24d3ccc6d7b730c305ee51d"
+        "3b4e8b25588083e151e153f89d97d4b54da48ecdb24d3ccc6d7b730c305ee51d",
+        "d431c5351e25ecdc71a3bac160f2c61c42fc84bd0718f7d9c079ec72361ed9c6"
       ],
       "measurement_workspace/engine/collection_zip.mjs": [
         "adaafa1a90bed1218168b53dac5bfc7e6f11813bdac389b2ffd8cab5ad009d5a",
@@ -2050,6 +2093,12 @@
       ],
       "source_tools/receive_workbook_measurements.mjs": [
         "a0fb56401dbc7c933ec009f9545baaa6029123c626bc1bcfa3a036b97cd450cf"
+      ],
+      "operator/extensions/measured-observations.json": [
+        "6099b1a3d51cc77e7beb81a8b08f522f416e8c965420a274e1213fcf9396c0e7"
+      ],
+      "operator/web/collection_folder.mjs": [
+        "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55"
       ]
     },
     "authority": "Use the current cumulative installation inventory when supplied; retain the explicit full source selection for a standalone-only release.",

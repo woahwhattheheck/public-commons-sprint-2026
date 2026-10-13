@@ -43,6 +43,12 @@ export function validateCollectionWorking(value,scope){
   if(row.retained!==null&&!object(row.retained))throw new Error('Invalid retained source response.');
   if(row.error!==null&&typeof row.error!=='string')throw new Error('Invalid retained source error.');
  }
+ if(value.reading!==undefined){
+  const reading=value.reading;
+  if(!object(reading)||!object(reading.states)||(reading.active!==null&&(!object(reading.active)||!['api','folder'].includes(reading.active.kind)||!id(reading.active.id)||!id(reading.active.collectionId))))throw new Error('The saved edition reading selection is incomplete.');
+  for(const [edition,snapshot] of Object.entries(reading.states))if(!id(edition)||!object(snapshot))throw new Error('The saved edition reading position is incomplete.');
+  if(reading.active&&!Object.hasOwn(reading.states,reading.active.id))throw new Error('The selected edition lost its complete reading position.');
+ }
  if(value.inspected!==null){
   const v=value.inspected;if(!object(v)||typeof v.definition!=='string'||!object(v.request)||!object(v.response)||!id(v.response.id)||!id(v.response.reviewSha256)||!Number.isSafeInteger(v.response.workspaceRevision))throw new Error('Invalid saved complete inspection.');
  }
@@ -124,4 +130,12 @@ export function restoreCollectionSession(value,scope){
  if(value.knownRevision!==null&&(typeof value.knownRevision!=='string'||!value.knownRevision))throw new Error('The retained collection persistence lease is invalid.');
  if(typeof value.storageBlocked!=='boolean'||typeof value.dirty!=='boolean'||typeof value.storageMessage!=='string')throw new Error('The retained collection persistence state is invalid.');
  return {format:value.format,state:validateCollectionWorking(value.state,scope),knownRevision:value.knownRevision,storageBlocked:value.storageBlocked,storageMessage:value.storageMessage,dirty:value.dirty};
+}
+
+/** Reading is recipient state; retain it beside the exact original request. */
+export function saveCollectionReading(state,selection,snapshot){
+ if(!object(selection)||!['api','folder'].includes(selection.kind)||!id(selection.id)||!id(selection.collectionId)||!object(snapshot))throw new Error('Choose the complete original edition reading position.');
+ const next={active:clone(selection),states:{...(state.reading?.states||{}),[selection.id]:clone(snapshot)}};
+ const candidate={...state,reading:next};validateCollectionWorking(candidate,state.scope);
+ state.reading=next;state.revision++;return clone(snapshot);
 }
