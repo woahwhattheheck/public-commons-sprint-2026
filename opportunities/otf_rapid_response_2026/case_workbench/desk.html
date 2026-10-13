@@ -38,7 +38,7 @@
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <nav aria-label="Workbench"><button data-tab="overview" type="button">Overview</button><button data-tab="vendor" type="button">Vendor proposal</button><button data-tab="record" type="button">Record work</button><button data-tab="cases" type="button">Case records</button><button data-tab="invoices" type="button">Invoices</button><button data-tab="sources" type="button">Original sources</button><button data-tab="provisions" type="button">Contract provisions</button><button data-tab="history" type="button">History</button></nav>
 <section data-pane="overview"><div id="overview"></div><details><summary>Create a new local workbook</summary><form id="new-form"><div class="grid"><div class="field"><label for="new-id">Workbook ID</label><input id="new-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required placeholder="otf-contract-workspace"></div><div class="field"><label for="new-title">Workbook title</label><input id="new-title" required placeholder="Approved case operations"></div></div><button type="submit">Create workbook</button></form></details><div class="toolbar"><button id="example" type="button">Open authored example</button><button id="report" type="button">Download overview HTML</button></div><p class="muted">The complete JSON is your editable original. Download it after changes and retain it in your approved private working directory. The desk makes no network requests and does not automatically save case data to this browser.</p></section>
-<section data-pane="vendor" hidden><h2>Vendor proposal</h2><p class="muted">Edit all nine proposal sections and prepare the original issuer budget workbook. Proposed prices, staffing and requested ceilings remain proposal content; actual award terms are recorded separately in the case workbook.</p><div class="toolbar"><label class="file-button">Open vendor input JSON<input id="vendor-input" type="file" class="visually-hidden" accept=".json,application/json"></label><button id="vendor-new" type="button">New proposal</button><button id="vendor-save" type="button">Save editable proposal</button><button id="vendor-prepare" type="button">Prepare review and issuer workbook</button></div><p id="vendor-state" class="muted">Unsaved local proposal draft</p><div id="vendor-review"></div><div id="vendor-fields"></div><div id="vendor-results"></div></section><section data-pane="record" hidden><h2>Record an original operation</h2><p class="muted">Attach source files first. Select the actual documents that establish the approval, work or observation. Original request IDs make retries return the same retained operation.</p><form id="operation-form"><div class="grid"><div class="field"><label for="action-type">Action</label><select id="action-type"></select></div><div class="field"><label for="operation-id">Original operation ID</label><input id="operation-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required></div></div><div id="action-fields"></div><button type="submit">Retain operation</button></form><details><summary>Receive an existing complete operation request</summary><p>Use an original request JSON produced by this application or its ordinary CLI.</p><label class="file-button">Open request JSON<input id="request-input" type="file" class="visually-hidden" accept=".json,application/json"></label></details></section>
+<section data-pane="vendor" hidden><h2>Vendor proposal</h2><p class="muted">Edit all nine proposal sections and prepare the original issuer budget workbook. Proposed prices, staffing and requested ceilings remain proposal content; actual award terms are recorded separately in the case workbook.</p><div class="toolbar"><label class="file-button">Open vendor input JSON<input id="vendor-input" type="file" class="visually-hidden" accept=".json,application/json"></label><button id="vendor-new" type="button">New proposal</button><button id="vendor-save" type="button">Save editable proposal</button><button id="vendor-prepare" type="button">Prepare review and issuer workbook</button></div><p id="vendor-state" class="muted">Unsaved local proposal draft</p><div id="vendor-review"></div><h3>Choose original proposal evidence</h3><label class="file-button">Choose biographies or work evidence<input id="vendor-attachment-input" type="file" class="visually-hidden" multiple></label><datalist id="vendor-attachment-choices"></datalist><div id="vendor-attachments"></div><div id="vendor-fields"></div><div id="vendor-results"></div></section><section data-pane="record" hidden><h2>Record an original operation</h2><p class="muted">Attach source files first. Select the actual documents that establish the approval, work or observation. Original request IDs make retries return the same retained operation.</p><form id="operation-form"><div class="grid"><div class="field"><label for="action-type">Action</label><select id="action-type"></select></div><div class="field"><label for="operation-id">Original operation ID</label><input id="operation-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required></div></div><div id="action-fields"></div><button type="submit">Retain operation</button></form><details><summary>Receive an existing complete operation request</summary><p>Use an original request JSON produced by this application or its ordinary CLI.</p><label class="file-button">Open request JSON<input id="request-input" type="file" class="visually-hidden" accept=".json,application/json"></label></details></section>
 <section data-pane="cases" hidden><div id="case-detail"></div></section>
 <section data-pane="invoices" hidden><div id="invoice-list"></div><p class="muted">Prepared invoice files preserve exact selected entries and original approval references. Submission and payment are separate source-backed records. Full handover includes working relative links to original files.</p></section>
 <section data-pane="sources" hidden><h2>Attach originals</h2><label class="file-button">Select original documents<input id="source-input" type="file" class="visually-hidden" multiple></label><p id="pending-count" class="muted"></p><p class="muted">Up to 24 MiB per original. Use beneficiary and worker aliases in ordinary views and retain sensitive documents only in the authorized working directory.</p><div id="source-list"></div></section>
@@ -46,7 +46,72 @@
 <section data-pane="history" hidden><div id="history-list"></div></section>
 <footer>OTF Rapid Response case operations · original software, MIT license · source basis: issuer notice and complete RFP dated October 6, 2026. Read the current signed agreement before using its actual rates, approvals and terms. This local workbench does not submit proposals, invoices or payments.</footer>
 </main><script>"use strict";const modules={};
-modules["vendor-core"]=(()=>{const ISSUER = 'https://www.opentech.fund/news/open-technology-fund-requests-proposals-for-the-rapid-response-fund/';
+modules["vendor-attachments"]=(()=>{/* MIT. Bind selected proposal attachments to actual included bytes. */
+const ATTACHMENT_LIMITS=Object.freeze({count:64,fileBytes:16777216,totalBytes:16777216});
+const RESERVED=new Set(["vendor-input.json","proposal-review.md","proposal-submission.md","readiness.json","budget-mapping.json","budget_template-rfp-2026.completed.xlsx","vendor-edition-manifest.json","submission-files.json","operation.json","complete.json","otf-vendor-proposal.zip","otf-vendor-submission.zip","originals","__proto__","constructor","prototype"]);
+function attachmentName(reference){
+ if(typeof reference!=="string"||!reference.startsWith("attachment:"))return null;
+ const name=reference.slice(11);
+ if(!name||name!==name.trim()||name.length>200||name==="."||name===".."||/[\/\\\u0000-\u001F\u007F]/.test(name)||RESERVED.has(name.toLowerCase()))throw new Error("Attachment must select a safe, nonreserved filename: "+reference);
+ return name;
+}
+function base64(bytes){let value="";for(let i=0;i<bytes.length;i+=32768)value+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(value);}
+function bytesOf(value){
+ if(typeof value!=="string"||value.length%4!==0||value.length>Math.ceil(ATTACHMENT_LIMITS.fileBytes/3)*4||/[^A-Za-z0-9+/=]/.test(value)||!/^[^=]*={0,2}$/.test(value))throw new Error("Attachment content must be canonical base64 within the file limit");
+ const bytes=Uint8Array.from(atob(value),c=>c.charCodeAt(0));if(base64(bytes)!==value)throw new Error("Attachment base64 differs from its canonical encoding");return bytes;
+}
+function selectedAttachmentReferences(doc){
+ const references=[];
+ for(const [collection,originalKey,publicKey] of [["team","cvEvidence","cvPublicEvidence"],["workExamples","evidence","publicEvidence"]]){
+  for(const [index,row] of (Array.isArray(doc?.[collection])?doc[collection]:[]).entries()){
+   const value=typeof row?.[publicKey]==="string"&&row[publicKey].trim()?row[publicKey].trim():typeof row?.[originalKey]==="string"?row[originalKey].trim():"";
+   const name=attachmentName(value);if(name!==null)references.push({path:collection+"["+index+"]."+publicKey,name});
+  }
+ }
+ return references;
+}
+function decodeSelected(doc){
+ const inventory=doc.outwardAttachments??[];
+ if(!Array.isArray(inventory)||inventory.length>ATTACHMENT_LIMITS.count)throw new Error("Outward attachment inventory exceeds supported capacity");
+ const names=new Map();
+ for(const item of inventory){
+  if(!item||typeof item!=="object"||Array.isArray(item)||typeof item.name!=="string")throw new Error("Attachment inventory entries must identify a file");
+  const name=attachmentName("attachment:"+item.name),key=name.toLowerCase();if(names.has(key))throw new Error("Attachment filenames collide: "+name);names.set(key,item);
+ }
+ let total=0;const selected=new Map(),references=selectedAttachmentReferences(doc);
+ for(const ref of references){
+  const item=names.get(ref.name.toLowerCase());if(!item||item.name!==ref.name)throw new Error(ref.path+" selects an absent attachment: "+ref.name);
+  if(selected.has(ref.name)){selected.get(ref.name).references.push(ref.path);continue;}
+  if(item.approvedForSubmission!==true)throw new Error("Select an explicitly approved outward attachment: "+item.name);
+  if(typeof item.mediaType!=="string"||!/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(item.mediaType))throw new Error("Attachment media type is invalid: "+item.name);
+  if(!Number.isSafeInteger(item.bytes)||item.bytes<1||item.bytes>ATTACHMENT_LIMITS.fileBytes||typeof item.sha256!=="string"||!/^[a-f0-9]{64}$/.test(item.sha256))throw new Error("Attachment length or SHA-256 is invalid: "+item.name);
+  const bytes=bytesOf(item.contentBase64);if(bytes.length!==item.bytes)throw new Error("Attachment length does not match original bytes: "+item.name);
+  total+=bytes.length;if(total>ATTACHMENT_LIMITS.totalBytes)throw new Error("Selected proposal attachments exceed the full package limit");
+  selected.set(item.name,{name:item.name,media_type:item.mediaType,bytes,sha256:item.sha256,references:[ref.path]});
+ }
+ return [...selected.values()];
+}
+function finish(files,digests){
+ for(let i=0;i<files.length;i++)if(digests[i]!==files[i].sha256)throw new Error("Attachment SHA-256 does not match original bytes: "+files[i].name);
+ return {files,manifest:files.map(file=>({name:file.name,mediaType:file.media_type,bytes:file.bytes.length,sha256:file.sha256,references:file.references}))};
+}
+function validateVendorAttachments(doc,sha256){
+ const files=decodeSelected(doc);return finish(files,files.map(file=>{const value=sha256(file.bytes);if(value&&typeof value.then==="function")throw new Error("Synchronous attachment validation received an asynchronous digest");return value;}));
+}
+async function validateVendorAttachmentsAsync(doc,sha256){
+ const files=decodeSelected(doc);return finish(files,await Promise.all(files.map(file=>sha256(file.bytes))));
+}
+async function createOutwardAttachment(name,mediaType,bytes,sha256){
+ attachmentName("attachment:"+name);
+ if(!(bytes instanceof Uint8Array)||bytes.length<1||bytes.length>ATTACHMENT_LIMITS.fileBytes)throw new Error("Selected attachment is empty or exceeds 16 MiB");
+ if(typeof mediaType!=="string"||!/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(mediaType))throw new Error("Attachment media type is invalid");
+ const hash=await sha256(bytes);if(typeof hash!=="string"||!/^[a-f0-9]{64}$/.test(hash))throw new Error("Attachment digest is invalid");
+ return {name,mediaType,bytes:bytes.length,sha256:hash,contentBase64:base64(bytes),approvedForSubmission:false};
+}
+
+return {ATTACHMENT_LIMITS,attachmentName,selectedAttachmentReferences,validateVendorAttachments,validateVendorAttachmentsAsync,createOutwardAttachment};})();
+modules["vendor-core"]=(()=>{const {attachmentName}=modules["vendor-attachments"];
+const ISSUER = 'https://www.opentech.fund/news/open-technology-fund-requests-proposals-for-the-rapid-response-fund/';
 const DEADLINE = '2026-11-23 23:59 EST';
 const SERVICE_LABELS = Object.freeze({
   'organizational-security':'Organizational Security & Digital Security Support',
@@ -89,8 +154,8 @@ const warnings = [];
 function required(path,value) {if(!asString(value)) needs.push(path); return asString(value);}
 function evidence(path,value) {
   const str = required(path,value);
-  if (str && !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(str) && !/^internal:[^\s].{2,}$/.test(str)) {
-    warnings.push(`${path}: evidence must be an https URL or an internal:<stable-id> custody reference`);
+  if (str && !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(str) && !/^internal:[^\s].{2,}$/.test(str) && !/^attachment:.+/.test(str)) {
+    warnings.push(`${path}: evidence must be an HTTPS URL, an internal:<stable-id> custody reference or an included attachment:<filename>`);
   }
   return str;
 }
@@ -133,15 +198,20 @@ function evidence(path,value) {
   if(doc.caseBudget||doc.caseAuthorization) warnings.push('Do not include per-case budget/approval in vendor proposal. Case approval is subsequent, in writing, by OTF Program Manager.');
   return {needs:[...new Set(needs)],warnings};
 }
-function render(doc,quality,{audience='internal'}={}){
+function render(doc,quality,{audience='internal',attachments=[]}={}){
   if(!['internal','submission'].includes(audience))throw Error('Unknown proposal audience');
   if(audience==='submission'&&(quality.needs.length||quality.warnings.length))throw Error('Complete required proposal fields before rendering submission edition');
   const a=obj(doc.applicant),c=obj(doc.contact),q=obj(doc.qualifications),s=obj(doc.supportServices),att=obj(doc.attestations);
   const evidenceFor=(value,originalKey,publicKey,label)=>{
     const item=obj(value);
     const selected=audience==='submission'?(asString(item[publicKey])||asString(item[originalKey])):asString(item[originalKey]);
+    if(audience==='submission'&&selected.startsWith('attachment:')){
+      const name=attachmentName(selected),included=attachments.find(file=>file.name===name);
+      if(!included||!Number.isSafeInteger(included.bytes)||included.bytes<1||!/^[a-f0-9]{64}$/.test(included.sha256))throw Error(label+': selected attachment must be validated and included in this proposal package');
+      return 'Included attachment: '+safe(name);
+    }
     if(audience==='submission'&&(!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(selected)||privateCustody(selected))){
-      throw Error(label+': provide an outward HTTPS evidence reference; retain private custody in '+originalKey);
+      throw Error(label+': provide an outward HTTPS link or a validated included attachment; retain private custody in '+originalKey);
     }
     return safe(selected);
   };
@@ -160,7 +230,7 @@ function render(doc,quality,{audience='internal'}={}){
     '## 2. Primary requested services and loaded hourly rates',
     ...asArray(doc.services).map((x,i)=>`${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${sentence(obj(x).offering)} Method: ${safe(obj(x).method)}`),
     '',
-    '| Labor category | Loaded USD / hour | Standard commercial USD / hour (optional) |',
+    '| Role | Loaded USD/h | Commercial USD/h (optional) |',
     '|---|---:|---:|',
     ...(asArray(doc.laborRates).length?asArray(doc.laborRates).map(x=>`| ${safe(obj(x).title)} | ${money(obj(x).loadedHourlyCents)} | ${'commercialHourlyCents' in obj(x)?money(obj(x).commercialHourlyCents):'Not specified'} |`):['| Actual categories to be supplied | Not provided | Not provided |']),
     '',
@@ -426,7 +496,7 @@ async function inflateRaw(bytes,expectedBytes){
 }
 async function buildVendorBudget(draft){return createAsyncIssuerBudget({sha256,inflateRaw}).buildIssuerBudget(originalBytes(),draft);}
 
-return {buildVendorBudget};})();
+return {sha256,buildVendorBudget};})();
 modules["vendor-authoring-forms"]=(()=>{/* MIT. Complete nine-section forms for the maintained OTF vendor schema. */
 const VENDOR_SECTIONS = [
   {
@@ -506,7 +576,7 @@ const VENDOR_SECTIONS = [
           },
           {
             "name": "cvPublicEvidence",
-            "label": "Outward CV / biography link (optional)",
+            "label": "Outward CV link or attachment:filename (optional)",
             "type": "text",
             "optional": true
           }
@@ -705,7 +775,7 @@ const VENDOR_SECTIONS = [
           },
           {
             "name": "publicEvidence",
-            "label": "Outward evidence link (optional)",
+            "label": "Outward evidence link or attachment:filename (optional)",
             "type": "text",
             "optional": true
           },
@@ -809,7 +879,8 @@ return {VENDOR_SECTIONS};})();
 modules["vendor-authoring"]=(()=>{/* MIT. Original-preserving authoring for the maintained OTF vendor schema. */
 const {check,render}=modules["vendor-core"];
 const {VENDOR_SECTIONS}=modules["vendor-authoring-forms"];
-const {buildVendorBudget}=modules["issuer-budget-browser"];
+const {buildVendorBudget,sha256}=modules["issuer-budget-browser"];
+const {validateVendorAttachmentsAsync}=modules["vendor-attachments"];
 const fields=VENDOR_SECTIONS.flatMap(section=>section.fields);
 const has=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
 function object(value,label){if(!value||typeof value!=="object"||Array.isArray(value))throw new Error(label+" must be an object");return value;}
@@ -868,23 +939,27 @@ function applyVendorFields(draft,values){
  for(const field of fields)if(has(values,field.name))result[field.name]=applyField(result[field.name],values[field.name],field,field.name);
  return copy(result);
 }
-function exportVendorDraft(draft){return JSON.stringify(object(draft,"Vendor draft"),null,2)+"\n";}
+function exportVendorDraft(draft){const text=JSON.stringify(object(draft,"Vendor draft"),null,2)+"\n";if(new TextEncoder().encode(text).length>25165824)throw new Error("Complete editable vendor input exceeds the case workbook’s 24 MiB source-file capacity; reduce selected attachment bytes before exporting");return text;}
 async function reviewVendorDraft(draft){
  const input=copy(object(draft,"Vendor draft")),base=check(input);let budget=null,budgetError=null;
  try{budget=await buildVendorBudget(input);}catch(error){budgetError=error.message;}
  const quality={needs:[...new Set([...base.needs,...(budget?.mapping.missing??[])])],warnings:[...base.warnings,...(budgetError?["Original issuer workbook: "+budgetError]:[])]};
- const internalMarkdown=render(input,quality,{audience:"internal"}),submissionIssues=[];let submissionMarkdown=null;
+ const submissionIssues=[];let submissionMarkdown=null,attachmentResult={files:[],manifest:[]};
+ try{attachmentResult=await validateVendorAttachmentsAsync(input,sha256);}catch(error){submissionIssues.push("Outgoing attachment: "+error.message);}
+ const internalMarkdown=render(input,quality,{audience:"internal"});
  if(quality.needs.length||quality.warnings.length)submissionIssues.push(...quality.needs,...quality.warnings);
- else{try{submissionMarkdown=render(input,quality,{audience:"submission"});}catch(error){submissionIssues.push(error.message);}}
- return {quality,internalMarkdown,submissionMarkdown,submissionIssues,budget,budgetError,contentComplete:quality.needs.length===0&&quality.warnings.length===0,submissionComplete:submissionMarkdown!==null};
+ else if(submissionIssues.length===0){try{submissionMarkdown=render(input,quality,{audience:"submission",attachments:attachmentResult.manifest});}catch(error){submissionIssues.push(error.message);}}
+ return {quality,internalMarkdown,submissionMarkdown,submissionIssues,budget,budgetError,attachmentResult,contentComplete:quality.needs.length===0&&quality.warnings.length===0,submissionComplete:submissionMarkdown!==null};
 }
 async function prepareVendorDraft(draft){
  const input=copy(object(draft,"Vendor draft")),review=await reviewVendorDraft(input),encoder=new TextEncoder();
  const textFile=(name,type,text)=>({name,media_type:type,bytes:encoder.encode(text)});
  const files=[textFile("vendor-input.json","application/json",exportVendorDraft(input)),textFile("proposal-review.md","text/markdown",review.internalMarkdown),textFile("readiness.json","application/json",JSON.stringify({schema:"commons.otf-vendor-authoring-readiness.v1",quality:review.quality,contentComplete:review.contentComplete,submissionComplete:review.submissionComplete,submissionIssues:review.submissionIssues},null,2)+"\n")];
  if(review.budget){files.push({name:review.budget.mapping.output.file,media_type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes:review.budget.bytes},textFile("budget-mapping.json","application/json",JSON.stringify(review.budget.mapping,null,2)+"\n"));}
+ for(const attachment of review.attachmentResult.files)files.push({name:attachment.name,media_type:attachment.media_type,bytes:attachment.bytes});
  if(review.submissionMarkdown)files.push(textFile("proposal-submission.md","text/markdown",review.submissionMarkdown));
- return {draft:input,review,files};
+ const submissionFiles=review.submissionComplete?files.filter(file=>file.name==="proposal-submission.md"||file.name===review.budget.mapping.output.file||review.attachmentResult.files.some(attachment=>attachment.name===file.name)):[];
+ return {draft:input,review,files,submissionFiles};
 }
 
 return {createVendorDraft,formatVendorUSD,parseVendorUSD,readVendorFields,applyVendorFields,exportVendorDraft,reviewVendorDraft,prepareVendorDraft};})();
@@ -1145,6 +1220,7 @@ const FORM_SPECS=[
 
 return {FORM_SPECS};})();
 modules["vendor-review"]=(()=>{/* MIT. Original proposal receiving through the maintained vendor compiler. */
+const {ATTACHMENT_LIMITS}=modules["vendor-attachments"];
 const {check,render}=modules["vendor-core"];
 const {documentFromBytes,decodeJSON,LIMITS,readLedger,applyOperation,canonical,sourceBytes}=modules["model"];
 async function reviewVendorOriginal(name,bytes){
@@ -1166,7 +1242,7 @@ async function retainVendorOriginal(input,review,at){
 /** Retain the complete exact prepared edition through the original source operation. */
 async function retainVendorPrepared(input,prepared,originalReview,at){
  const opened=await readLedger(input),selected=new Map(),members=[],names=new Set();
- if(!prepared||!Array.isArray(prepared.files)||prepared.files.length<3||prepared.files.length>12)throw new Error("Complete prepared proposal files are required");
+ if(!prepared||!Array.isArray(prepared.files)||prepared.files.length<3||prepared.files.length>ATTACHMENT_LIMITS.count+6)throw new Error("Complete prepared proposal files are required");
  async function retain(name,media_type,bytes){
   const supplied=await documentFromBytes(name,media_type,bytes),existing=opened.ledger.documents.find(d=>d.id===supplied.id)??selected.get(supplied.id);
   const document=existing??supplied;selected.set(document.id,document);
@@ -1191,6 +1267,8 @@ const {reviewVendorOriginal,retainVendorOriginal,retainVendorPrepared}=modules["
 const {FORM_SPECS}=modules["forms"];
 const {createVendorDraft,readVendorFields,applyVendorFields,exportVendorDraft,prepareVendorDraft}=modules["vendor-authoring"];
 const {VENDOR_SECTIONS}=modules["vendor-authoring-forms"];
+const {ATTACHMENT_LIMITS,attachmentName,createOutwardAttachment,selectedAttachmentReferences,validateVendorAttachmentsAsync}=modules["vendor-attachments"];
+const {sha256}=modules["issuer-budget-browser"];
 function startDesk(example=null){
  const root=document.getElementById("otf-workbench"),$=s=>root.querySelector(s);let current=null,opened=null,pending=[],dirty=false,busy=false,drafts={},vendorReview=null,vendorDraft=createVendorDraft(),vendorDirty=false,vendorControls=[],vendorPrepared=null;
  const e=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -1227,7 +1305,7 @@ function startDesk(example=null){
   let input;if(["select","case","role","service"].includes(spec.type)){input=e("select");input.append(new Option("Choose…",""));for(const [value,title] of optionsFor(spec))input.append(new Option(title,value));}
   else if(spec.type==="textarea"||spec.type==="lines"){input=e("textarea");input.rows=spec.type==="textarea"?4:3;}
   else{input=e("input");input.type=spec.type==="boolean"?"checkbox":spec.type==="integer"?"number":"text";if(spec.type==="integer"){input.min="0";input.step="1";}if(spec.type==="money"){input.inputMode="decimal";input.placeholder="0.00";}if(spec.type==="utc")input.placeholder="2027-03-01T09:00:00Z";}
-  if(initial!==undefined&&initial!==null){if(spec.type==="boolean")input.checked=initial;else input.value=spec.type==="lines"?initial.join("\n"):String(initial);}input.id=uid;label.htmlFor=uid;if(spec.type!=="boolean"&&spec.type!=="lines"&&!spec.nullable&&!spec.optional)input.required=true;box.append(input);
+  if(initial!==undefined&&initial!==null){if(spec.type==="boolean")input.checked=initial;else input.value=spec.type==="lines"?initial.join("\n"):String(initial);}input.id=uid;label.htmlFor=uid;if(preserveInitial&&["cvPublicEvidence","publicEvidence"].includes(spec.name))input.setAttribute("list","vendor-attachment-choices");if(spec.type!=="boolean"&&spec.type!=="lines"&&!spec.nullable&&!spec.optional)input.required=true;box.append(input);
   return{node:box,value:()=>{if(spec.type==="boolean")return input.checked;const v=preserveInitial?input.value:input.value.trim();if(!v.trim()&&spec.optional)return undefined;if(!v.trim()&&spec.nullable)return null;if(spec.type==="integer")return Number(v);if(spec.type==="lines")return v?v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];return v;}};
  }
  let controls=[],spec=FORM_SPECS[0];
@@ -1257,10 +1335,23 @@ function startDesk(example=null){
  
 
  function captureVendor(){const values=Object.fromEntries(vendorControls.map(x=>[x.spec.name,x.control.value()]));vendorDraft=applyVendorFields(vendorDraft,values);return vendorDraft;}
- function markVendorChanged(){vendorDirty=true;vendorPrepared=null;$("#vendor-results").replaceChildren(e("p","Draft changed. Prepare it again to update the review and original issuer workbook.","muted"));$("#vendor-state").textContent="Unsaved proposal edits";}
+ function markVendorChanged(){vendorDirty=true;vendorPrepared=null;$("#vendor-results").replaceChildren(e("p","Draft changed. Prepare it again to update the review and original issuer workbook.","muted"));$("#vendor-state").textContent="Unsaved proposal edits";renderVendorAttachments();}
  function renderVendorFields(values=readVendorFields(vendorDraft)){
   const node=$("#vendor-fields");node.replaceChildren();vendorControls=[];
   for(const section of VENDOR_SECTIONS){const details=e("details"),summary=e("summary",section.title);details.open=section.id==="applicant";details.append(summary,e("p",section.description,"muted"));for(const field of section.fields){const control=fieldControl(field,"vendor-"+field.name,values[field.name],{preserveInitial:true});vendorControls.push({spec:field,control});details.append(control.node);}node.append(details);}
+ }
+ function renderVendorAttachments(){
+  const node=section("#vendor-attachments","Included evidence files"),inventory=Array.isArray(vendorDraft.outwardAttachments)?vendorDraft.outwardAttachments:[],choices=$("#vendor-attachment-choices");
+  choices.replaceChildren(...inventory.map(item=>new Option("attachment:"+String(item?.name??""),"attachment:"+String(item?.name??""))));
+  node.append(e("p","Choose an actual biography, CV or work example. Approval starts unchecked. Explicitly approve a file and select attachment:filename in a personnel or work-example outward evidence field. Only approved, selected, byte-verified files enter the submission package.","muted"));
+  if(vendorDraft.outwardAttachments!==undefined&&!Array.isArray(vendorDraft.outwardAttachments)){node.append(e("p","The imported outwardAttachments inventory is invalid. Correct the complete vendor input before preparing an outward edition.","notice"));return;}
+  let references=[];try{const values=Object.fromEntries(vendorControls.map(x=>[x.spec.name,x.control.value()]));references=selectedAttachmentReferences({...vendorDraft,...values});}catch{}
+  if(!inventory.length){node.append(e("p","No local evidence files selected.","muted"));return;}
+  node.append(table(["Original file","Bytes / SHA-256","Explicit outward approval","Selected by","Actions"],inventory.map(item=>{
+   const approval=e("label"),check=e("input");check.type="checkbox";check.checked=item?.approvedForSubmission===true;approval.append(check,document.createTextNode(" Approved for outward use"));check.disabled=!item||typeof item!=="object";check.addEventListener("change",()=>{const current=vendorDraft.outwardAttachments??[],index=current.findIndex(value=>value.name===item.name&&value.sha256===item.sha256);if(index<0){fail(new Error("The selected original attachment has changed"));return;}vendorDraft.outwardAttachments=current.map((value,n)=>n===index?{...value,approvedForSubmission:check.checked}:value);markVendorChanged();});
+   const actions=e("div",undefined,"toolbar");actions.append(button("Download original",async()=>{const original=await validateVendorAttachmentsAsync({team:[{cvPublicEvidence:"attachment:"+item.name}],workExamples:[],outwardAttachments:[{...item,approvedForSubmission:true}]},sha256);download(item.name,original.files[0].bytes,item.mediaType);}),button("Remove from draft",async()=>{vendorDraft.outwardAttachments=(vendorDraft.outwardAttachments??[]).filter(value=>!(value.name===item.name&&value.sha256===item.sha256));markVendorChanged();}));
+   return [String(item?.name??"Invalid entry"),String(item?.bytes??"Unknown")+" bytes\n"+String(item?.sha256??""),approval,references.filter(ref=>ref.name===item?.name).map(ref=>ref.path).join(", ")||"Unselected",actions];
+  })));
  }
  function renderVendorOriginal(){
   const node=section("#vendor-review","Imported original");if(!vendorReview){node.append(e("p","Start a proposal here or open its complete vendor input JSON. The imported original stays available while you edit a separate draft.","muted"));return;}
@@ -1269,21 +1360,39 @@ function startDesk(example=null){
  function renderVendorPrepared(prepared){
   const node=section("#vendor-results","Prepared proposal edition"),review=prepared.review;node.append(e("p",review.submissionComplete?"All required proposal content is complete. Inspect the actual outgoing documents before presenting this edition.":"Continue the incomplete fields below. The editable proposal and internal review remain downloadable.","muted"));
   if(review.quality.needs.length||review.quality.warnings.length){const list=e("ul");for(const item of [...review.quality.needs,...review.quality.warnings])list.append(e("li",item));node.append(list);}
-  if(review.submissionIssues.length&&review.quality.needs.length===0&&review.quality.warnings.length===0){const list=e("ul");for(const item of review.submissionIssues)list.append(e("li",item));node.append(list);}
+  const remainingIssues=review.submissionIssues.filter(item=>![...review.quality.needs,...review.quality.warnings].includes(item));if(remainingIssues.length){const list=e("ul");for(const item of remainingIssues)list.append(e("li",item));node.append(e("h3","Submission evidence"),list);}
   node.append(table(["Complete file","Bytes","Download"],prepared.files.map(file=>[file.name,file.bytes.length,button(file.name,()=>download(file.name,file.bytes,file.media_type))])));
   const preview=e("details"),summary=e("summary","Read the complete internal proposal"),pre=e("pre",review.internalMarkdown);preview.append(summary,pre);node.append(preview);
   const original=vendorReview;
-  node.append(button("Download complete proposal package ZIP",()=>{const entries=prepared.files.map(f=>({name:f.name,data:f.bytes}));if(original)entries.push({name:"originals/imported-vendor-input.json",data:sourceBytes(original.source)},{name:"originals/source.json",data:JSON.stringify({name:original.source.name,bytes:original.source.bytes,sha256:original.source.sha256},null,2)+"\n"});download("otf-vendor-proposal.zip",zipStore(entries),"application/zip");}),button("Retain this prepared proposal in case workbook",async()=>{if(!current)throw new Error("Create or open a case workbook first");const value=await retainVendorPrepared(current,prepared,original,new Date().toISOString());await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"This exact proposal edition is already retained.":"Complete proposal edition and imported original retained. Download the case workbook or handover ZIP to save every document.");}));
+  node.append(e("h3","Submission documents"),e("p","The outward package contains only the eligible proposal, issuer workbook and exact approved evidence selected by its rows. Internal source JSON, original imports, readiness and private review stay in the working package.","muted"));
+  const outward=button("Download submission package ZIP",()=>{if(!prepared.review.submissionComplete||!prepared.submissionFiles?.length)throw new Error("Complete the displayed proposal and evidence requirements before preparing a submission package");download("otf-vendor-submission.zip",zipStore(prepared.submissionFiles.map(file=>({name:file.name,data:file.bytes}))),"application/zip");});outward.disabled=!prepared.review.submissionComplete;node.append(outward);
+  if(prepared.submissionFiles?.length)node.append(table(["Outgoing file","Exact bytes"],prepared.submissionFiles.map(file=>[file.name,file.bytes.length])));
+  node.append(e("h3","Internal working edition"));
+  node.append(button("Download INTERNAL working package ZIP",()=>{const entries=prepared.files.map(f=>({name:f.name,data:f.bytes}));if(original)entries.push({name:"originals/imported-vendor-input.json",data:sourceBytes(original.source)},{name:"originals/source.json",data:JSON.stringify({name:original.source.name,bytes:original.source.bytes,sha256:original.source.sha256},null,2)+"\n"});download("otf-vendor-proposal.zip",zipStore(entries),"application/zip");}),button("Retain this prepared proposal in case workbook",async()=>{if(!current)throw new Error("Create or open a case workbook first");const value=await retainVendorPrepared(current,prepared,original,new Date().toISOString());await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"This exact proposal edition is already retained.":"Complete proposal edition and imported original retained. Download the case workbook or handover ZIP to save every document.");}));
  }
+ $("#vendor-attachment-input").addEventListener("change",event=>work(async()=>{
+  const chosen=[...event.target.files];if(!chosen.length)return;
+  try{
+   const candidate=JSON.parse(JSON.stringify(captureVendor()));
+   if(candidate.outwardAttachments!==undefined&&!Array.isArray(candidate.outwardAttachments))throw new Error("Correct the imported attachment inventory before adding files");
+   const inventory=candidate.outwardAttachments??[];if(inventory.length+chosen.length>ATTACHMENT_LIMITS.count)throw new Error("At most "+ATTACHMENT_LIMITS.count+" evidence files can be retained");
+   for(const file of chosen){
+    attachmentName("attachment:"+file.name);if(inventory.some(item=>String(item.name).toLowerCase()===file.name.toLowerCase()))throw new Error("An original file with this name is already retained: "+file.name);
+    if(file.size<1||file.size>ATTACHMENT_LIMITS.fileBytes)throw new Error(file.name+" is empty or exceeds 16 MiB");
+    inventory.push(await createOutwardAttachment(file.name,file.type||"application/octet-stream",new Uint8Array(await file.arrayBuffer()),sha256));
+   }
+   candidate.outwardAttachments=inventory;exportVendorDraft(candidate);vendorDraft=candidate;markVendorChanged();note("Original evidence files added with approval unchecked. Select their actual outward use explicitly.");
+  }finally{event.target.value="";}
+ }));
  $("#vendor-fields").addEventListener("input",markVendorChanged);
  $("#vendor-fields").addEventListener("change",markVendorChanged);
- $("#vendor-new").addEventListener("click",()=>work(async()=>{if(vendorDirty&&!confirm("Start a new proposal? Download the current editable proposal first."))return;vendorDraft=createVendorDraft();vendorReview=null;vendorPrepared=null;vendorDirty=true;renderVendorFields();renderVendorOriginal();markVendorChanged();}));
- $("#vendor-input").addEventListener("change",event=>work(async()=>{const file=event.target.files[0];if(!file)return;if(vendorDirty&&!confirm("Open a different proposal? Download current proposal edits first.")){event.target.value="";return;}if(file.size>LIMITS.document_bytes)throw new Error("Vendor original exceeds 24 MiB");const bytes=new Uint8Array(await file.arrayBuffer()),review=await reviewVendorOriginal(file.name,bytes),draft=createVendorDraft(decodeJSON(bytes)),values=readVendorFields(draft);vendorReview=review;vendorDraft=draft;vendorPrepared=null;vendorDirty=false;renderVendorFields(values);renderVendorOriginal();$("#vendor-results").replaceChildren();$("#vendor-state").textContent="Imported original retained separately from editable draft";event.target.value="";note("Complete original proposal opened. All nine sections are available for editing.");}));
+ $("#vendor-new").addEventListener("click",()=>work(async()=>{if(vendorDirty&&!confirm("Start a new proposal? Download the current editable proposal first."))return;vendorDraft=createVendorDraft();vendorReview=null;vendorPrepared=null;vendorDirty=true;renderVendorFields();renderVendorOriginal();renderVendorAttachments();markVendorChanged();}));
+ $("#vendor-input").addEventListener("change",event=>work(async()=>{const file=event.target.files[0];if(!file)return;if(vendorDirty&&!confirm("Open a different proposal? Download current proposal edits first.")){event.target.value="";return;}if(file.size>LIMITS.document_bytes)throw new Error("Vendor original exceeds 24 MiB");const bytes=new Uint8Array(await file.arrayBuffer()),review=await reviewVendorOriginal(file.name,bytes),draft=createVendorDraft(decodeJSON(bytes)),values=readVendorFields(draft);vendorReview=review;vendorDraft=draft;vendorPrepared=null;vendorDirty=false;renderVendorFields(values);renderVendorOriginal();renderVendorAttachments();$("#vendor-results").replaceChildren();$("#vendor-state").textContent="Imported original retained separately from editable draft";event.target.value="";note("Complete original proposal opened. All nine sections are available for editing.");}));
  $("#vendor-save").addEventListener("click",()=>work(async()=>{const draft=captureVendor();download("vendor-input.json",exportVendorDraft(draft),"application/json");vendorDirty=false;$("#vendor-state").textContent="Editable proposal downloaded";note("Complete editable proposal downloaded, including retained unknown source fields.");}));
  $("#vendor-prepare").addEventListener("click",()=>work(async()=>{vendorPrepared=await prepareVendorDraft(captureVendor());renderVendorPrepared(vendorPrepared);$("#vendor-state").textContent=vendorDirty?"Prepared current edits · download editable proposal to save":"Prepared imported proposal edition";note(vendorPrepared.review.budget?"Proposal review and exact original issuer workbook prepared.":"Proposal review prepared; the displayed workbook message identifies the remaining runtime capability.");}));
 
  window.addEventListener("beforeunload",event=>{if(dirty||pending.length||vendorDirty){event.preventDefault();event.returnValue="";}});
- $("#operation-id").value="op-"+Date.now();render();renderVendorFields();renderVendorOriginal();show("overview");if(!globalThis.crypto?.subtle)note("This browser does not expose SHA-256 on this origin. Open the same standalone desk as a local file or through a trusted localhost HTTPS context.",true);
+ $("#operation-id").value="op-"+Date.now();render();renderVendorFields();renderVendorOriginal();renderVendorAttachments();show("overview");if(!globalThis.crypto?.subtle)note("This browser does not expose SHA-256 on this origin. Open the same standalone desk as a local file or through a trusted localhost HTTPS context.",true);
 }
 
 return {startDesk};})();

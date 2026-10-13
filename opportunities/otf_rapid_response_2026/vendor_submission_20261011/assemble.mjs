@@ -5,6 +5,7 @@ import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { check, render } from './vendor-core.mjs';
+import { validateVendorAttachments } from './vendor-attachments.mjs';
 import { buildIssuerBudget, ISSUER_TEMPLATE } from './issuer-budget.mjs';
 
 const root=dirname(fileURLToPath(import.meta.url));
@@ -15,8 +16,9 @@ export function prepareVendorPackage(doc,template,inputBytes=encode(json(doc))) 
   const quality=check(doc),budget=buildIssuerBudget(template,doc);
   for(const key of budget.mapping.missing)if(!quality.needs.includes(key))quality.needs.push(key);
   const contentComplete=quality.needs.length===0&&quality.warnings.length===0;
-  const submissionIssues=[];let submission=null;
-  if(contentComplete){try{submission=render(doc,quality,{audience:'submission'});}catch(e){submissionIssues.push(e.message);}}
+  const submissionIssues=[];let submission=null,attachments={files:[],manifest:[]};
+  try{attachments=validateVendorAttachments(doc,hash);}catch(e){submissionIssues.push(e.message);}
+  if(contentComplete&&submissionIssues.length===0){try{submission=render(doc,quality,{audience:'submission',attachments:attachments.manifest});}catch(e){submissionIssues.push(e.message);}}
   const submissionComplete=contentComplete&&submissionIssues.length===0;
   const outputs={
     'proposal-review.md':encode(render(doc,quality)),
@@ -34,8 +36,10 @@ export function prepareVendorPackage(doc,template,inputBytes=encode(json(doc))) 
       sourceTemplate:{file:ISSUER_TEMPLATE.file,sha256:ISSUER_TEMPLATE.sha256}
     }))
   };
-  if(submissionComplete)outputs['proposal-submission.md']=encode(submission);
-  return {outputs,quality,budget:budget.mapping,contentComplete,submissionComplete,submissionIssues};
+  for(const attachment of attachments.files)outputs[attachment.name]=attachment.bytes;
+  const submissionFiles={};
+  if(submissionComplete){outputs['proposal-submission.md']=encode(submission);for(const name of ['proposal-submission.md',budget.mapping.output.file,...attachments.files.map(file=>file.name)])submissionFiles[name]=outputs[name];outputs['submission-files.json']=encode(json({schema:'commons.otf-submission-files.v1',files:Object.entries(submissionFiles).map(([name,bytes])=>({name,bytes:bytes.length,sha256:hash(bytes)}))}));}
+  return {outputs,quality,budget:budget.mapping,contentComplete,submissionComplete,submissionIssues,submissionFiles,attachments:attachments.manifest};
 }
 async function existing(path) {
   try{return await readFile(path);}catch(e){if(e.code==='ENOENT')return null;throw e;}
