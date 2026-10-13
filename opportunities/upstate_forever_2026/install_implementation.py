@@ -19,6 +19,22 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/scientific_report.py",
+    "model/implementation_qc.py",
+    "operator/implementation_qc.py",
+    "operator/extensions/implementation-qc.json",
+    "operator/web/implementation_qc.mjs",
+    "integration/implementation_qc.json",
+    "source_tools/build_wqp_field_intake.mjs",
+    "source_tools/receive_wqp_field_results.py",
+    "source_tools/receive_wqp_laboratory_cycle.py",
+    "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+    "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+    "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/plan.json",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/mapping.json",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/coverage.json",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/lab-request.json",
     "model/implementation_schema.py",
     "model/implementation.py",
     "model/portable_implementation.py",
@@ -35,6 +51,7 @@ FILES = (
     "source_tools/receive_briefing_followup.py",
     "docs/BRIEFING_FOLLOWUP.md",
     "model/implementation_lab_dispatch.py",
+    "model/implementation_dispatch_report.py",
     "operator/implementation_operator.py",
     "operator/implementation_outcomes.py",
     "operator/extensions/implementation.json",
@@ -57,6 +74,9 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "model/IMPLEMENTATION_QC.md",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
+    "observations/eighteenmile_2023/wqp_20261013/field-intake/LABORATORY_CYCLE.md",
     OFFLINE_BUILDER,
     "docs/implementation-native-guide.md",
     "docs/implementation-operator-guide.md",
@@ -64,6 +84,7 @@ OPTIONAL_FILES = (
     "docs/IMPLEMENTATION_OBSERVATIONS.md",
     "docs/IMPLEMENTATION_LAB_RESULTS.md",
     "docs/IMPLEMENTATION_LAB_DISPATCH.md",
+    "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
     "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
     "model/IMPLEMENTATION_OUTCOMES_METHOD.md",
     "docs/IMPLEMENTATION_FIELD_CAPTURE.md",

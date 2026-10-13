@@ -78,7 +78,6 @@
     "gauge-support",
     "observed-context",
     "workspace-finder",
-    "monitoring-report",
     "parameter-studies",
     "utility-source-receiving",
     "paired-nutrient-sensitivity",
@@ -171,6 +170,7 @@
     "assessment-context": {
       "title": "assessment context",
       "paths": [
+        "model/assessment_report_context.py",
         "operator/extensions/assessment-context.json"
       ],
       "requires": [
@@ -2261,6 +2261,9 @@
       "title": "Station geography and assessment context",
       "paths": [
         "model/assessment_context.py",
+        "model/assessment_report_context.py",
+        "model/observed_station_studies.json",
+        "model/observed_station_studies.py",
         "model/station_assessment_context.py",
         "model/station_geography.py",
         "model/station_inventory.py",
@@ -3975,21 +3978,6 @@
         "core"
       ],
       "source_reference": "ES-20261013-WORKSPACE-FINDER: existing operator navigation, original retained core item routes and tasks."
-    },
-    "monitoring-report": {
-      "title": "Retained Monitoring designs and campaign revisions in ordered scientific reports",
-      "paths": [
-        "model/MONITORING_REPORT_SOURCE.md",
-        "model/monitoring_report_cli.py",
-        "model/monitoring_report_source.py",
-        "operator/extensions/monitoring-report.json",
-        "operator/monitoring_report_native.py",
-        "operator/web/monitoring-report.mjs"
-      ],
-      "requires": [
-        "monitoring",
-        "observed-context"
-      ]
     },
     "parameter-studies": {
       "title": "Native parameter studies, paired results and complete GIS/report suite exports",

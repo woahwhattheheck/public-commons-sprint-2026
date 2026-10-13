@@ -8,12 +8,15 @@
       "title": "Utility-focus microbial observations: temporal, calendar-support and same-station flow context",
       "kind": "document",
       "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
-      "sha256": "1eb83346c82d755bec698cd7259a076b97eba9406c1952aa9d0d99235a0c5f9a",
+      "sha256": "24fc6c3521a35e271a6a5d16077411196e1121a5963672f65fe4b82868afa125",
       "metadata": {
         "report_schema": "upstate.observed-report/v1",
         "source_operation": "ECO-MICROBIAL-EXPLORER-20261013",
         "original_records": 730,
-        "original_stations": 36
+        "original_stations": 36,
+        "scientific_figures": 3,
+        "scientific_panels": 6,
+        "plotted_source_positions": 445
       },
       "companions": [
         {
@@ -127,9 +130,73 @@
         {
           "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
           "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/publication-figures.mjs",
+          "sha256": "f86d6421ee81839d694010778067984f8603dee77646f8f5cb121d7b71efa75e"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/build-publication-figures.mjs",
+          "sha256": "4c80b5a902d1ab0216d3a4758ad0ba5f27da21d3e15410320981a61c48916af0"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/publication-figures.json",
+          "sha256": "b793c4b7877be7c54fb3255c30477c823b76135b3d7f2bab7229ea4b3f92ab47"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/publication-figure-source-points.csv",
+          "sha256": "bcf377990d2d998d96712105b2217817a301d2f75d232e90abc8c0ead3692744"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/render-publication-figures.py",
+          "sha256": "007181b0e6daba918027c342f04a3b8997481728ce4fbbd5d86bbf5bf37670ae"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/PUBLICATION_FIGURES.md",
+          "sha256": "44ba5f106b0c4958a6dbf1bf10f7b092a95dec80bdaee1026c15f14eb7b9f2be"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/figure-gallery.mjs",
+          "sha256": "1c8a622da168865ef15b09842af9b3f1dac0b8279c2aeeaef3b876f2d38df595"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/render-publication-svg.mjs",
+          "sha256": "0248b9ea0a2e0b35b3ddfd1c0b5467622e55737c289760ebe7adf9c8c05b84ec"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/figures/sampling-coverage.svg",
+          "sha256": "d091398e60dad9a8b46ecbbcf171375f3be291fd01db7f6e7c014f021f5165e1"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/figures/sv833-calendar-support.svg",
+          "sha256": "df663799579a5dfa610cea3b6f76e2dcbf8579bddc513d66d88a4a1cce2a7b46"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/figures/same-station-flow.svg",
+          "sha256": "1d042040776b1cb0d5d77f17e584ba374a289286e95df2e1fc0855214a35342c"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/publication-figures.html",
+          "sha256": "abb1c8b9c474a6e8b1d779e588556ae01da370e3fa23bc4e435be4505d8e5592"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.cjs",
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
         }
       ],
-      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/f8cb3f69a12bbee022c88a0c710c1141e796d08c/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/observed-report.json",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/eb3c23cff9d7462229ad47a205972b7831da8498/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/observed-report.json",
       "vintage": "2026-10-13"
     }
   ]
