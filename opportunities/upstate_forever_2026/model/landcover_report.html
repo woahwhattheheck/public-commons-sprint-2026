@@ -6,6 +6,9 @@
 :root{font-family:Arial,Helvetica,sans-serif;color:#202020;background:#f4f4f4;font-size:14px}*{box-sizing:border-box}body{margin:0}header{padding:22px 28px 18px;background:#202020;color:#fff}header .eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:10px;margin-bottom:9px;color:#ccc}h1{font-size:23px;font-weight:500;margin:0 0 8px}h2{font-size:16px;font-weight:600;margin:0 0 14px}h3{font-size:13px;margin:16px 0 8px}.sub{font-size:12px;color:#ccc;line-height:1.6}.toolbar{display:flex;align-items:end;gap:16px;flex-wrap:wrap;padding:17px 28px;background:#fff;border-bottom:1px solid #bbb}.toolbar label{display:grid;gap:6px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.05em}select,input,button{font:inherit;border:1px solid #888;background:#fff;color:#222;border-radius:0;min-height:34px;padding:7px 9px}button{cursor:pointer}button:hover{background:#e6e6e6}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #555;outline-offset:2px}select{max-width:min(380px,100%)}.toolbar label{min-width:0;max-width:100%}.toolbar input{max-width:100%}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:22px 28px;background:#bbb;border:1px solid #bbb}.stat{background:#fff;padding:16px}.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#555}.stat strong{font-size:25px;font-weight:500;display:block;margin:9px 0}.stat small{font-size:11px;color:#555;line-height:1.5}main{margin:0 28px 28px}.split{display:grid;grid-template-columns:minmax(310px,1fr) minmax(360px,1fr);gap:18px}.panel{background:#fff;border:1px solid #b5b5b5;padding:18px;margin-bottom:18px}.map-shell{background:#fafafa;border:1px solid #ccc;position:relative}.map-shell svg{display:block;width:100%;height:360px}.legend{display:flex;align-items:center;gap:10px;font-size:11px;margin-top:12px;color:#555}.gradient{height:9px;width:110px;background:linear-gradient(90deg,#ededed,#333)}.hint,.note{font-size:12px;line-height:1.6;color:#555}.note{padding:11px 14px;border-left:3px solid #666;background:#eee;margin:0 0 18px}.table-wrap{overflow:auto;max-height:480px;border:1px solid #ddd}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top;white-space:nowrap}th{background:#ededed;font-size:10px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;z-index:1}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}tbody tr:hover{background:#f2f2f2}tbody tr.selected{background:#dedede}tbody tr[tabindex]{cursor:pointer}td.wrap{white-space:normal;min-width:120px}.links{display:flex;flex-wrap:wrap;gap:10px 18px;line-height:1.7}a{color:#222;text-decoration:underline}details{margin-top:14px}summary{cursor:pointer;font-size:12px;font-weight:bold}footer{overflow-wrap:anywhere;font-size:11px;color:#555;padding:14px 28px;border-top:1px solid #bbb;line-height:1.6}.empty{padding:18px;color:#555}.error{padding:12px;border:2px solid #333;background:#eee}.tools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}#source-table td{white-space:normal;word-break:break-all}#edition-table td{white-space:normal;overflow-wrap:anywhere;min-width:110px}#edition-table small{display:block;margin-top:5px;line-height:1.5;color:#555}.badge{font-size:10px;padding:4px 7px;border:1px solid #aaa;display:inline-block;margin-top:5px}path.zone{cursor:pointer;stroke:#fff;stroke-width:.75;vector-effect:non-scaling-stroke}path.zone.selected{stroke:#111;stroke-width:2.5}path.zone:focus{stroke:#000;stroke-width:3;outline:none}
 @media(max-width:850px){.split{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}header,.toolbar{padding-left:16px;padding-right:16px}main{margin:0 16px 16px}.stats{margin:16px}.map-shell svg{height:300px}}
 @media print{body{background:#fff}header{color:#111;background:#fff;padding:0 0 14px}.sub,header .eyebrow{color:#444}.toolbar,.no-print{display:none}main,.stats{margin:12px 0}.split{display:block}.panel{break-inside:avoid}.map-shell svg{height:260px}.table-wrap{max-height:none;overflow:visible}th{position:static}footer{padding:8px 0}.stats{grid-template-columns:repeat(4,1fr)}a{color:#111}details{display:block}}
+
+.account-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}.account-controls label{display:grid;gap:6px;font-size:12px;min-width:0;max-width:100%}.account-controls select{max-width:100%;min-width:120px}.account-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;border:1px solid #bbb;background:#bbb;margin:14px 0}.account-card{background:#fff;padding:13px;min-width:0}.account-card span{display:block;color:#555;font-size:11px}.account-card strong{display:block;font-size:21px;font-weight:500;margin-top:8px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}#account-downloads{margin-top:14px}#interval-account-table tbody tr[tabindex]{cursor:pointer}@media(max-width:600px){.account-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.account-controls label{width:100%}.account-controls select{width:100%}.account-controls button{width:100%}}@media print{.account-controls,#account-downloads{display:none}.account-cards{grid-template-columns:repeat(3,1fr)}}
+
 </style></head><body>
 <header><div class="eyebrow">Ecosystem Sciences / Land-cover accounting</div><h1 id="title">Land-cover change ledger</h1><div class="sub" id="subtitle"></div></header>
 <section class="toolbar" aria-label="Report controls"><label><span id="scenario-label">Scenario</span><select id="scenario"></select></label><label>Map metric<select id="metric" aria-describedby="map-metric-note"></select></label><label>Find watershed<input id="search" type="search" placeholder="HUC identifier or name"></label><button id="reset">Study area totals</button><button id="print">Print report</button><label>Open retained ledger<input id="load" type="file" accept=".json,application/json"></label></section>
@@ -20,12 +23,31 @@
 <div id="timeline-trajectories" class="table-wrap"></div>
 <h3>Observed group crossings</h3><p class="hint">Entry and exit each count a cell once if that crossing occurred. Returned paths can contribute to both; these columns are not disjoint area categories.</p><div id="timeline-groups" class="table-wrap"></div>
 <details><summary>Every adjacent-observation transition</summary><div id="timeline-adjacent"></div></details>
-</section><section class="panel" id="source-editions-panel" hidden><h2>Original source editions</h2><p id="source-period" class="hint"></p><div class="table-wrap"><table id="edition-table"><thead><tr><th>Role</th><th>Edition</th><th>Source time</th><th>Retained original</th></tr></thead><tbody id="edition-rows"></tbody></table></div><p class="hint">The selected categorical source editions share the exact native grid. Area totals use polygon intersections with that grid and the selected common valid support.</p></section><div class="split"><section class="panel"><h2>Watershed map</h2><p class="note" id="map-metric-note"></p><div class="map-shell"><svg id="map" viewBox="0 0 600 380" role="img" aria-label="Watersheds shaded by selected land-cover metric"></svg></div><div class="legend"><span id="legend-low">0</span><span class="gradient"></span><span id="legend-high"></span><span>Diagonal hatch: unavailable</span></div><p class="hint">Select a watershed on the map or in the complete table. Geometry is simplified for display only; hectare accounting uses the complete polygons. A land-cover class change is not a modeled ecological benefit.</p><p id="map-availability" class="hint"></p><details id="map-values"><summary>Selected map values for every visible watershed</summary><div id="map-value-table" class="table-wrap"></div></details><div class="tools"><h3 id="selected">Study area union</h3><span class="badge" id="coverage-badge"></span></div><p class="hint" id="comparison-detail-note"></p><div class="table-wrap"><table><thead><tr><th>Land-cover group</th><th class="num">Before ha</th><th class="num">After ha</th><th class="num">Gain ha</th><th class="num">Loss ha</th></tr></thead><tbody id="groups"></tbody></table></div></section>
+</section><section class="panel" id="interval-accounts" hidden aria-label="Adjacent observation change accounts">
+<h2>Gains, losses and net change by observed interval</h2>
+<p id="interval-account-selection" class="hint"></p>
+<p class="note">A small net change can hide substantial gains and losses in different places. These accounts compare the two selected observations on the same all-year common support. They do not infer an event date, changes between observations, or a cause.</p>
+<div id="interval-account-controls" class="account-controls">
+<label>Observed interval<select id="account-interval"></select></label>
+<label>Account type<select id="account-kind"><option value="groups">Land-cover group</option><option value="classes">Original NLCD class</option></select></label>
+<label>Selected cover<select id="account-cover"></select></label>
+<button id="account-map" type="button">Map selected net change</button>
+</div>
+<p id="interval-account-support" class="hint"></p>
+<div id="interval-account-cards" class="account-cards"></div>
+<p id="interval-account-balance" class="hint"></p>
+<div id="interval-account-table" class="table-wrap"></div>
+<p class="hint">Group retention means remaining inside the same group at both observations; it includes changes between member classes. These original groups do not cover every supported class. Do not add overlapping watersheds to obtain study totals; select Study area totals for the original union.</p>
+<div class="links" id="account-downloads"></div>
+<p id="interval-account-availability" class="hint"></p>
+</section>
+<section class="panel" id="source-editions-panel" hidden><h2>Original source editions</h2><p id="source-period" class="hint"></p><div class="table-wrap"><table id="edition-table"><thead><tr><th>Role</th><th>Edition</th><th>Source time</th><th>Retained original</th></tr></thead><tbody id="edition-rows"></tbody></table></div><p class="hint">The selected categorical source editions share the exact native grid. Area totals use polygon intersections with that grid and the selected common valid support.</p></section><div class="split"><section class="panel"><h2>Watershed map</h2><p class="note" id="map-metric-note"></p><div class="map-shell"><svg id="map" viewBox="0 0 600 380" role="img" aria-label="Watersheds shaded by selected land-cover metric"></svg></div><div class="legend"><span id="legend-low">0</span><span class="gradient"></span><span id="legend-high"></span><span>Diagonal hatch: unavailable</span></div><p class="hint">Select a watershed on the map or in the complete table. Geometry is simplified for display only; hectare accounting uses the complete polygons. A land-cover class change is not a modeled ecological benefit.</p><p id="map-availability" class="hint"></p><details id="map-values"><summary>Selected map values for every visible watershed</summary><div id="map-value-table" class="table-wrap"></div></details><div class="tools"><h3 id="selected">Study area union</h3><span class="badge" id="coverage-badge"></span></div><p class="hint" id="comparison-detail-note"></p><div class="table-wrap"><table><thead><tr><th>Land-cover group</th><th class="num">Before ha</th><th class="num">After ha</th><th class="num">Gain ha</th><th class="num">Loss ha</th></tr></thead><tbody id="groups"></tbody></table></div></section>
 <section class="panel"><h2>Native categorical transitions</h2><p class="hint">Rows include unchanged classes and use the same analysis mask for before and after. Partial watershed cells contribute their polygon-intersection area.</p><div class="table-wrap"><table><thead><tr><th>From</th><th>To</th><th class="num">Hectares</th><th class="num">Touched cells</th></tr></thead><tbody id="transitions"></tbody></table></div><h3>Coverage accounting</h3><div class="table-wrap"><table><tbody id="support"></tbody></table></div></section></div>
 <section class="panel"><div class="tools"><h2>Complete watershed ledger</h2><span class="hint" id="row-count"></span></div><div class="table-wrap"><table><thead><tr><th>HUC / zone</th><th>Name</th><th class="num">Inside grid ha</th><th class="num">Outside grid ha</th><th class="num">Analyzed ha</th><th class="num">Changed ha</th><th class="num">Changed %</th><th class="num">Coverage %</th></tr></thead><tbody id="watersheds"></tbody></table></div></section>
 <section class="panel"><h2>Retained outputs</h2><div class="links" id="downloads"></div><details><summary>Input editions and measurement basis</summary><p id="provenance" class="hint"></p><div class="table-wrap"><table id="source-table"><thead><tr><th>Role</th><th>File</th><th class="num">Bytes</th><th>SHA-256</th></tr></thead><tbody id="sources"></tbody></table></div><div id="interpretation" class="hint"></div></details></section></main>
 <footer id="footer"></footer>
 <script type="application/json" id="ledger-data">__LEDGER_DATA__</script>
+<script type="application/json" id="interval-data">__INTERVAL_DATA__</script>
 <script>
 'use strict';
 let report, selected='__domain__', imported=location.href==='about:srcdoc'||new URLSearchParams(location.search).get('embedded')==='1', exportURLs=[];
@@ -58,7 +80,7 @@ function renderEditions(){
   }));
 }
 
-function load(data){if(data.schema!=='upstate.landcover-ledger/1'||data.complete!==true||!Array.isArray(data.rows)||!Array.isArray(data.scenarios)||!data.scenarios.length)throw Error('Select a complete land-cover ledger JSON.');const editions=sourceEditionInfo(data);if(data.timeline&&(data.timeline.schema!=='upstate.landcover-timeline/v1'||data.options.support_scope!=='all'||!Array.isArray(data.timeline.years)||data.timeline.years.length!==data.scenarios.length+1||data.timeline.years.some((x,i,a)=>!Number.isInteger(x)||x<1||x>9999||i>0&&x<=a[i-1])||!Array.isArray(data.timeline.rows)||data.timeline.rows.length!==data.zones.length))throw Error('Select a complete observed timeline on common support.');report=data;selected='__domain__';timelinePage=0;timelineZone=null;$('error').hidden=true;$('scenario-label').textContent=editions?'Comparison edition':'Scenario';$('scenario').replaceChildren(...data.scenarios.map(s=>{const match=editions?.alternatives.find(x=>x.key===s);const o=el('option',match?sourceLabel(match):s);o.value=s;return o;}));$('title').textContent=data.title;document.title=data.title;$('subtitle').textContent=`${data.zones.length-1} watersheds · ${data.scenarios.length} ${editions?'source comparisons':'scenarios'} · ${data.grid.crs} · ${fmt(data.grid.cell_ha,4)} ha / source pixel`;$('method').textContent=data.options.support_scope==='all'?'All-scenario common support: every scenario is compared on the same baseline-and-all-scenarios valid NLCD cells. Exclusions and outside-grid watershed area remain visible.':'Pair-specific common support: each scenario uses its own overlap with baseline. Coverage differs between scenarios; direct percentage rankings may therefore describe different land.';configureMapMetrics();renderSources();render();}
+function load(data,payload=null){if(data.schema!=='upstate.landcover-ledger/1'||data.complete!==true||!Array.isArray(data.rows)||!Array.isArray(data.scenarios)||!data.scenarios.length)throw Error('Select a complete land-cover ledger JSON.');const editions=sourceEditionInfo(data);if(data.timeline&&(data.timeline.schema!=='upstate.landcover-timeline/v1'||data.options.support_scope!=='all'||!Array.isArray(data.timeline.years)||data.timeline.years.length!==data.scenarios.length+1||data.timeline.years.some((x,i,a)=>!Number.isInteger(x)||x<1||x>9999||i>0&&x<=a[i-1])||!Array.isArray(data.timeline.rows)||data.timeline.rows.length!==data.zones.length))throw Error('Select a complete observed timeline on common support.');const checkedAccounts=validateIntervalPayload(data,payload);report=data;intervalPayload=checkedAccounts;configureIntervals();selected='__domain__';timelinePage=0;timelineZone=null;$('error').hidden=true;$('scenario-label').textContent=editions?'Comparison edition':'Scenario';$('scenario').replaceChildren(...data.scenarios.map(s=>{const match=editions?.alternatives.find(x=>x.key===s);const o=el('option',match?sourceLabel(match):s);o.value=s;return o;}));$('title').textContent=data.title;document.title=data.title;$('subtitle').textContent=`${data.zones.length-1} watersheds · ${data.scenarios.length} ${editions?'source comparisons':'scenarios'} · ${data.grid.crs} · ${fmt(data.grid.cell_ha,4)} ha / source pixel`;$('method').textContent=data.options.support_scope==='all'?'All-scenario common support: every scenario is compared on the same baseline-and-all-scenarios valid NLCD cells. Exclusions and outside-grid watershed area remain visible.':'Pair-specific common support: each scenario uses its own overlap with baseline. Coverage differs between scenarios; direct percentage rankings may therefore describe different land.';configureMapMetrics();renderSources();render();}
 
 const pairMapMetrics=[
  {id:'changed_pct_of_analysis',key:'changed_pct_of_analysis',scope:'comparison',label:'Selected comparison: changed / analysis area (%)',unit:'%',description:'Area whose class differs between the reference and selected comparison, divided by that comparison’s analysis area.'},
@@ -76,16 +98,23 @@ const historyMapMetrics=[
  {id:'timeline:forest_exit_ha',key:'forest_exit_ha',scope:'timeline',label:'Whole history: any forest exit (ha)',unit:'ha',description:'Each cell contributes once if it crosses out of forest at any selected interval. Entry, exit and returned membership overlap; they are not additive categories.'},
  {id:'timeline:forest_returned_ha',key:'returned_ha',group:'forest',scope:'timeline',label:'Whole history: forest membership returned (ha)',unit:'ha',description:'A path crosses the forest boundary, then ends with its initial forest/nonforest membership. It may also contribute to any-entry and any-exit area.'}
 ];
-function availableMapMetrics(){return report.timeline?[...pairMapMetrics,...historyMapMetrics]:pairMapMetrics;}
+const intervalMapMetrics=[
+ {id:'interval:gained_ha',key:'gained_ha',scope:'interval',label:'Selected interval: gross gain hectares',unit:'ha',description:'Area that crosses into the selected class or group between these two observations.'},
+ {id:'interval:lost_ha',key:'lost_ha',scope:'interval',label:'Selected interval: gross loss hectares',unit:'ha',description:'Area that crosses out of the selected class or group between these two observations.'},
+ {id:'interval:net_ha',key:'net_ha',scope:'interval',label:'Selected interval: net change hectares',unit:'ha',description:'Closing area minus opening area, also gross gain minus gross loss. Negative values mean a net decrease; zero can include balanced gains and losses.'}
+];
+function availableMapMetrics(){return [...pairMapMetrics,...(report.timeline?historyMapMetrics:[]),...(intervalPayload?intervalMapMetrics:[])];}
 function mapMetric(){return availableMapMetrics().find(item=>item.id===$('metric').value)||pairMapMetrics[0];}
 function configureMapMetrics(){
  const prior=$('metric').value;
  const groups=[['Selected reference/comparison',pairMapMetrics]];
  if(report.timeline)groups.push(['Complete observed history',historyMapMetrics]);
+ if(intervalPayload)groups.push(['Adjacent observed interval and selected cover',intervalMapMetrics]);
  $('metric').replaceChildren(...groups.map(([label,items])=>{const group=el('optgroup');group.label=label;for(const item of items){const option=el('option',item.label);option.value=item.id;group.append(option);}return group;}));
  $('metric').value=availableMapMetrics().some(item=>item.id===prior)?prior:pairMapMetrics[0].id;
 }
 function mapValue(row,metric,timelineRows){
+ if(metric.scope==='interval'){const value=intervalChoice(row.zone_id).item?.[metric.key];return typeof value==='number'&&Number.isFinite(value)?value:null;}
  const history=metric.scope==='timeline'?timelineRows.get(row.zone_id):null;
  const value=metric.scope==='timeline'?(metric.group?history?.groups?.[metric.group]?.[metric.key]:history?.summary?.[metric.key]):row[metric.key];
  return typeof value==='number'&&Number.isFinite(value)?value:null;
@@ -96,6 +125,11 @@ function describeMap(metric){
  $('map-metric-note').textContent=metric.scope==='timeline'?
  'Whole observed history '+years+'. '+metric.description+' The comparison selector changes the paired tables, not this history map. Missing years are not interpolated.':
  'Selected reference/comparison map. '+metric.description;
+ if(metric.scope==='interval'){
+  const {interval,item}=intervalChoice();
+  const name=intervalKind==='classes'?item.code+' · '+item.name:item.name.replaceAll('_',' ');
+  $('map-metric-note').textContent=interval.from_year+' → '+interval.to_year+' · '+name+'. '+metric.description+' Same all-observation common support; no intervening event date or annual rate is inferred. The comparison selector keeps its original paired tables.';
+ }
  const choice=$('scenario').selectedOptions[0]?.textContent||$('scenario').value;
  $('comparison-detail-note').textContent='Comparison details below and in the complete watershed ledger retain the selected reference → '+choice+'. The timeline tables retain the entire ordered history.';
 }
@@ -106,7 +140,7 @@ const cards=[['Analyzed area',fmt(active.support.analysis_valid_ha)+' ha','Share
 $('groups').replaceChildren(...Object.entries(active.groups).map(([name,g])=>{const tr=el('tr');cell(tr,name.replaceAll('_',' '));for(const k of ['baseline_ha','scenario_ha','gained_ha','lost_ha'])cell(tr,fmt(g[k]),true);return tr;}));
 $('transitions').replaceChildren(...[...active.transitions].sort((a,b)=>b.ha-a.ha).map(t=>{const tr=el('tr');cell(tr,`${t.from_code} · ${report.classes[t.from_code]}`,false,true);cell(tr,`${t.to_code} · ${report.classes[t.to_code]}`,false,true);cell(tr,fmt(t.ha,4),true);cell(tr,fmt(t.intersecting_cells,0),true);return tr;}));if(!active.transitions.length){const tr=el('tr');const td=el('td','No cells on the selected common support.','empty');td.colSpan=4;tr.append(td);$('transitions').append(tr);}
 $('support').replaceChildren(...Object.entries(active.support).map(([name,value])=>{const tr=el('tr');cell(tr,name.replace(/_ha$/,'').replaceAll('_',' '));cell(tr,fmt(value,4)+' ha',true);return tr;}));
-$('watersheds').replaceChildren(...rows.map(r=>{const z=report.zones.find(z=>z.id===r.zone_id);const tr=el('tr',null,r.zone_id===selected?'selected':'');tr.tabIndex=0;tr.setAttribute('aria-label',`Select watershed ${r.zone_name}`);tr.onclick=()=>{selected=r.zone_id;render();};tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.click();}};cell(tr,r.zone_id);cell(tr,r.zone_name,false,true);for(const value of [z.inside_grid_ha,z.outside_grid_ha,r.support.analysis_valid_ha,r.changed_ha,r.changed_pct_of_analysis,r.analysis_coverage_pct])cell(tr,fmt(value),true);return tr;}));$('row-count').textContent=`${rows.length} / ${report.zones.length-1} watersheds shown · CSV exports retain every row`;renderMap(rows);renderLinks();renderTimeline();}
+$('watersheds').replaceChildren(...rows.map(r=>{const z=report.zones.find(z=>z.id===r.zone_id);const tr=el('tr',null,r.zone_id===selected?'selected':'');tr.tabIndex=0;tr.setAttribute('aria-label',`Select watershed ${r.zone_name}`);tr.onclick=()=>{selected=r.zone_id;render();};tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.click();}};cell(tr,r.zone_id);cell(tr,r.zone_name,false,true);for(const value of [z.inside_grid_ha,z.outside_grid_ha,r.support.analysis_valid_ha,r.changed_ha,r.changed_pct_of_analysis,r.analysis_coverage_pct])cell(tr,fmt(value),true);return tr;}));$('row-count').textContent=`${rows.length} / ${report.zones.length-1} watersheds shown · CSV exports retain every row`;renderMap(rows);renderLinks();renderTimeline();renderIntervalAccounts();}
 
 let timelinePage=0,timelineZone=null;
 function timelineTable(headers,rows){const wrap=el('table'),head=el('thead'),hr=el('tr'),body=el('tbody');for(const label of headers){const th=el('th',label);th.scope='col';hr.append(th);}head.append(hr);for(const values of rows){const tr=el('tr');for(const value of values)cell(tr,value,false,true);body.append(tr);}wrap.append(head,body);return wrap;}
@@ -129,12 +163,151 @@ function renderTimeline(){
 $('timeline-prev').onclick=()=>{timelinePage=Math.max(0,timelinePage-1);renderTimeline();};
 $('timeline-next').onclick=()=>{timelinePage++;renderTimeline();};
 
+
+let intervalPayload=null,intervalSelection=0,intervalKind='groups',intervalCover='forest',openGeneration=0;
+const accountColumns=['opening_ha','retained_ha','gained_ha','lost_ha','closing_ha','net_ha'];
+const accountLabels=['Opening area','Retained area','Gross gain','Gross loss','Closing area','Net change'];
+const accountGroups={developed:[21,22,23,24],forest:[41,42,43],wetland:[90,95],cultivated_crop:[82],pasture_hay:[81],water:[11],shrub:[51,52],herbaceous:[71,72,73,74]};
+const near=(a,b,scale=0)=>Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=Math.max(1e-8,Math.max(Math.abs(a),Math.abs(b),scale)*3e-10);
+
+function csvRows(text){
+ const rows=[];let row=[],value='',quoted=false,closed=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(quoted){if(c==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}else value+=c;continue;}
+  if(c==='"'){if(value||closed)throw Error('Invalid quoted account CSV field.');quoted=true;continue;}
+  if(c===','||c==='\r'||c==='\n'){
+   row.push(value);value='';closed=false;
+   if(c!==','){if(c==='\r'&&text[i+1]==='\n')i++;rows.push(row);row=[];}
+   continue;
+  }
+  if(closed)throw Error('Unexpected text after an account CSV quote.');
+  value+=c;
+ }
+ if(quoted)throw Error('The account CSV ends inside a quoted field.');
+ if(value||closed||row.length){row.push(value);rows.push(row);}
+ return rows;
+}
+function validateAccountTables(accounts,tables){
+ const prefix=['zone_id','zone_name','analysis_ha','covered_ha','from_year','to_year','gap_years'];
+ const sheetText=value=>typeof value==='string'&&/^[=+\-@\t\r]/.test(value)?"'"+value:String(value??'');
+ for(const kind of ['classes','groups']){
+  const identity=kind==='classes'?['code','name']:['name','codes'],columns=[...prefix,...identity,...accountColumns];
+  const parsed=csvRows(tables.find(t=>t.path==='timeline-interval-'+kind+'.csv').content);
+  if(JSON.stringify(parsed.shift())!==JSON.stringify(columns))throw Error('An interval table changed its column definitions.');
+  let index=0;
+  for(const zone of accounts.rows)for(const interval of zone.intervals)for(const item of interval[kind]){
+   const expected={zone_id:zone.zone_id,zone_name:zone.zone_name,analysis_ha:zone.analysis_ha,covered_ha:zone.covered_ha,from_year:interval.from_year,to_year:interval.to_year,gap_years:interval.gap_years,...item};
+   if(kind==='groups')expected.codes=item.codes.join(' ');
+   const row=parsed[index++];
+   if(!row||row.length!==columns.length||columns.some((key,j)=>{
+    const wanted=expected[key];return typeof wanted==='number'?!row[j].trim()||!near(Number(row[j]),wanted):row[j]!==sheetText(wanted);
+   }))throw Error('An interval CSV differs from its complete retained account.');
+  }
+  if(index!==parsed.length)throw Error('An interval CSV contains a different record inventory.');
+ }
+}
+
+function validateIntervalPayload(data,payload){
+ if(payload==null)return null;
+ const a=payload.accounts,t=data.timeline;
+ if(!a||a.schema!=='upstate.landcover-change-accounts/v1'||!t||a.ledger_signature!==data.signature||JSON.stringify(a.years)!==JSON.stringify(t.years)||!Array.isArray(a.rows)||a.rows.length!==t.rows.length)throw Error('The interval accounts do not belong to this complete retained timeline.');
+ const expectedTables=['timeline-interval-classes.csv','timeline-interval-groups.csv'];
+ if(!Array.isArray(payload.tables)||payload.tables.length!==expectedTables.length||expectedTables.some(name=>payload.tables.filter(x=>x.path===name&&typeof x.content==='string').length!==1))throw Error('Retain both complete interval account tables.');
+ const codes=Object.keys(data.classes).map(Number),seen=new Set();
+ for(const row of a.rows){
+  const source=t.rows.find(x=>x.zone_id===row.zone_id);
+  if(!source||seen.has(row.zone_id)||row.zone_name!==source.zone_name||!near(row.analysis_ha,source.analysis_ha)||!near(row.covered_ha,source.covered_ha)||row.available!==(source.analysis_ha>0)||(row.available?row.unavailable_reason!==null:typeof row.unavailable_reason!=='string'||!row.unavailable_reason)||!Array.isArray(row.intervals)||row.intervals.length!==t.years.length-1)throw Error('An interval account changed its original reporting area or common support.');
+  seen.add(row.zone_id);
+  for(let i=0;i<row.intervals.length;i++){
+   const interval=row.intervals[i],opening=source.annual[i],closing=source.annual[i+1],observed=source.adjacent[i];
+   if(interval.from_year!==t.years[i]||interval.to_year!==t.years[i+1]||interval.gap_years!==t.years[i+1]-t.years[i])throw Error('An account changed its selected observed interval.');
+   if(!Array.isArray(interval.classes)||interval.classes.length!==codes.length||new Set(interval.classes.map(x=>x.code)).size!==codes.length||!Array.isArray(interval.groups)||interval.groups.length!==Object.keys(accountGroups).length||new Set(interval.groups.map(x=>x.name)).size!==interval.groups.length)throw Error('Retain the complete original class and group inventory.');
+   for(const [kind,items]of [['classes',interval.classes],['groups',interval.groups]])for(const item of items){
+    const members=kind==='classes'?[item.code]:accountGroups[item.name];
+    if(!members||members.some(code=>!codes.includes(code))||(kind==='classes'&&item.name!==data.classes[item.code])||(kind==='groups'&&JSON.stringify(item.codes)!==JSON.stringify(members)))throw Error('An account changed its original class definition.');
+    if(source.analysis_ha===0){if(accountColumns.some(k=>item[k]!==null))throw Error('Unsupported area must remain unavailable.');continue;}
+    if(accountColumns.some(k=>typeof item[k]!=='number'||!Number.isFinite(item[k]))||accountColumns.slice(0,5).some(k=>item[k]<0))throw Error('An account has invalid hectare quantities.');
+    const inside=code=>members.includes(code),sum=(rows,predicate)=>rows.reduce((n,x)=>n+(predicate(x)?x.ha:0),0);
+    const expected={
+     opening_ha:sum(opening.classes,x=>inside(x.code)),closing_ha:sum(closing.classes,x=>inside(x.code)),
+     retained_ha:sum(observed.transitions,x=>inside(x.from_code)&&inside(x.to_code)),
+     gained_ha:sum(observed.transitions,x=>!inside(x.from_code)&&inside(x.to_code)),
+     lost_ha:sum(observed.transitions,x=>inside(x.from_code)&&!inside(x.to_code))
+    };
+    expected.net_ha=expected.closing_ha-expected.opening_ha;
+    if(accountColumns.some(k=>!near(item[k],expected[k],k==='net_ha'?Math.max(expected.opening_ha,expected.closing_ha,expected.gained_ha,expected.lost_ha):0))||!near(item.opening_ha-item.lost_ha+item.gained_ha,item.closing_ha))throw Error('An interval account differs from its original observed stocks or transitions.');
+   }
+  }
+ }
+ validateAccountTables(a,payload.tables);
+ return payload;
+}
+function intervalChoice(zoneId=selected){
+ const row=intervalPayload?.accounts.rows.find(x=>x.zone_id===zoneId),interval=row?.intervals[intervalSelection];
+ const item=interval?.[intervalKind]?.find(x=>String(intervalKind==='classes'?x.code:x.name)===intervalCover);
+ return {row,interval,item};
+}
+function configureIntervals(){
+ intervalSelection=0;intervalKind='groups';intervalCover='forest';
+ $('account-kind').value=intervalKind;
+ $('account-interval').replaceChildren(...(intervalPayload?.accounts.years||[]).slice(1).map((year,i)=>{const o=el('option',intervalPayload.accounts.years[i]+' → '+year);o.value=String(i);return o;}));
+ populateAccountCovers();
+}
+function populateAccountCovers(){
+ const interval=intervalPayload?.accounts.rows[0]?.intervals[intervalSelection],items=interval?.[intervalKind]||[];
+ $('account-cover').replaceChildren(...items.map(item=>{const label=intervalKind==='classes'?item.code+' · '+item.name:item.name.replaceAll('_',' ')+' ('+item.codes.join(', ')+')';const o=el('option',label);o.value=String(intervalKind==='classes'?item.code:item.name);return o;}));
+ if(!items.some(x=>String(intervalKind==='classes'?x.code:x.name)===intervalCover))intervalCover=items.length?String(intervalKind==='classes'?items[0].code:items[0].name):'';
+ $('account-cover').value=intervalCover;
+}
+function renderIntervalAccounts(){
+ const panel=$('interval-accounts');panel.hidden=!report.timeline;if(!report.timeline)return;
+ const available=Boolean(intervalPayload);
+ $('interval-account-controls').hidden=!available;
+ $('interval-account-availability').textContent=available?'':'This original ledger retains its raw observed timeline. Open the complete interval report data from its account-report package to include the added stock and flow accounts.';
+ for(const id of ['interval-account-cards','interval-account-table','account-downloads'])$(id).replaceChildren();
+ if(!available){$('interval-account-selection').textContent='Original observed timeline retained';$('interval-account-support').textContent='';$('interval-account-balance').textContent='';return;}
+ const {row,interval,item}=intervalChoice();if(!row||!interval||!item)throw Error('The selected original interval account is unavailable.');
+ const editions=report.source_editions?[report.source_editions.baseline,...report.source_editions.alternatives]:[];
+ const sourceText=editions.length?' · '+sourceLabel(editions[intervalSelection])+' → '+sourceLabel(editions[intervalSelection+1]):'';
+ $('interval-account-selection').textContent=row.zone_name+' · '+interval.from_year+' → '+interval.to_year+sourceText;
+ $('interval-account-support').textContent=fmt(row.analysis_ha,4)+' ha common supported area / '+fmt(row.covered_ha,4)+' ha inside the source grid. Interval length: '+interval.gap_years+' calendar year'+(interval.gap_years===1?'':'s')+'. No annual rate or intervening transition date is estimated.';
+ $('interval-account-cards').replaceChildren(...accountColumns.map((key,i)=>{const card=el('div',null,'account-card');card.append(el('span',accountLabels[i]),el('strong',item[key]===null?'Unavailable':fmt(item[key],4)+' ha'));return card;}));
+ $('interval-account-balance').textContent=row.analysis_ha===0?'No cells have valid supported classes at every selected observation; quantities are unavailable, not measured zeros.':'Closing area = opening area − gross loss + gross gain. Retained area + gross loss = opening area; retained area + gross gain = closing area.';
+ const table=el('table'),head=el('thead'),hr=el('tr'),body=el('tbody');
+ for(const label of [intervalKind==='classes'?'NLCD class':'Original group',...accountLabels.map(x=>x+' (ha)')]){const th=el('th',label);th.scope='col';hr.append(th);}head.append(hr);table.append(head,body);
+ for(const x of interval[intervalKind]){
+  const key=String(intervalKind==='classes'?x.code:x.name),tr=el('tr',null,key===intervalCover?'selected':'');tr.tabIndex=0;
+  const label=intervalKind==='classes'?x.code+' · '+x.name:x.name.replaceAll('_',' ');
+  tr.setAttribute('aria-label','Select '+label+' account');tr.onclick=()=>{intervalCover=key;$('account-cover').value=key;render();};
+  tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.click();}};
+  cell(tr,label,false,true);for(const key of accountColumns)cell(tr,fmt(x[key],4),true);body.append(tr);
+ }
+ $('interval-account-table').append(table);
+ renderIntervalDownloads();
+}
+function intervalDownload(name,label,content,type){
+ const url=URL.createObjectURL(new Blob([content],{type}));exportURLs.push(url);const link=el('a',label);link.href=url;link.download=name;return link;
+}
+function intervalReportValue(){return {schema:'upstate.landcover-interval-report/v1',ledger:report,accounts:intervalPayload.accounts,tables:intervalPayload.tables};}
+function renderIntervalDownloads(){
+ const links=[intervalDownload('timeline-report.json','Save complete interval report data',JSON.stringify(intervalReportValue(),null,2)+'\n','application/json')];
+ for(const table of intervalPayload.tables)links.push(intervalDownload(table.path,table.path.includes('-classes')?'All class accounts CSV':'All group accounts CSV',table.content,'text/csv;charset=utf-8'));
+ $('account-downloads').replaceChildren(...links);
+}
+$('account-interval').onchange=()=>{intervalSelection=Number($('account-interval').value);populateAccountCovers();render();};
+$('account-kind').onchange=()=>{intervalKind=$('account-kind').value;populateAccountCovers();render();};
+$('account-cover').onchange=()=>{intervalCover=$('account-cover').value;render();};
+$('account-map').onclick=()=>{$('metric').value='interval:net_ha';render();$('map').scrollIntoView({block:'start'});};
+
+
 function renderMap(rows){
  const metric=mapMetric(),timelineRows=new Map((report.timeline?.rows||[]).map(row=>[row.zone_id,row]));
  describeMap(metric);
- const values=rows.map(row=>mapValue(row,metric,timelineRows)).filter(value=>value!=null),max=Math.max(0,...values);
+ const values=rows.map(row=>mapValue(row,metric,timelineRows)).filter(value=>value!=null),signed=metric.id==='interval:net_ha',extent=Math.max(0,...values.map(Math.abs)),max=signed?extent:Math.max(0,...values),min=signed&&extent>0?-extent:0;
  $('legend-high').textContent=mapValueText(max,metric);
- $('legend-low').textContent='0 '+metric.unit;
+ $('legend-low').textContent=mapValueText(min,metric);
+ document.querySelector('.gradient').style.background=signed?'linear-gradient(90deg,#775346,#f2f2f2,#33566f)':'linear-gradient(90deg,#ededed,#333)';
  const table=el('table'),head=el('thead'),header=el('tr'),body=el('tbody');
  for(const label of ['HUC / zone','Original name',metric.label]){const th=el('th',label);th.scope='col';header.append(th);}
  head.append(header);table.append(head,body);
@@ -167,8 +340,13 @@ function renderMap(rows){
   const d=polygons.map(polygon=>polygon.map(ring=>'M'+ring.map(coord).join('L')+'Z').join('')).join('');
   const path=document.createElementNS(ns,'path');path.setAttribute('d',d);path.setAttribute('fill-rule','evenodd');
   path.setAttribute('class','zone'+(selected===feature.id?' selected':''));
-  const value=mapValue(row,metric,timelineRows),shade=value==null?null:Math.round(237-(max>0?Math.max(0,Math.min(1,value/max)):0)*186);
-  path.setAttribute('fill',shade==null?'url(#missing)':'rgb('+shade+','+shade+','+shade+')');
+  const value=mapValue(row,metric,timelineRows);
+  let fill='url(#missing)';
+  if(value!==null){
+   if(signed){const t=extent>0?Math.min(1,Math.abs(value)/extent):0,target=value<0?[119,83,70]:[51,86,111];fill='rgb('+target.map(v=>Math.round(242+(v-242)*t)).join(',')+')';}
+   else{const shade=Math.round(237-(max>0?Math.max(0,Math.min(1,value/max)):0)*186);fill='rgb('+shade+','+shade+','+shade+')';}
+  }
+  path.setAttribute('fill',fill);
   path.setAttribute('tabindex','0');path.setAttribute('role','button');
   const description=feature.id+' '+feature.name+' · '+mapValueText(value,metric);
   path.setAttribute('aria-label',description);
@@ -180,5 +358,15 @@ function renderMap(rows){
 }
 function renderLinks(){for(const u of exportURLs)URL.revokeObjectURL(u);exportURLs=[];if(imported){const a=el('a','Download loaded ledger JSON');const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));exportURLs.push(u);a.href=u;a.download='ledger.json';$('downloads').replaceChildren(a,el('span','Companion CSV, raster and geometry files belong to this edition’s complete portable package. Open its report.html to access those files.','hint'));return;}const links=[['ledger.json','Complete JSON'],['watershed-summary.csv','Watershed CSV'],['transitions.csv','Transition CSV'],['coverage.csv','Coverage CSV'],['zone-extent.csv','Watershed extent CSV'],['landcover-groups.csv','Group gain/loss CSV'],['unknown-classes.csv','Unknown classes CSV'],['watersheds.geojson','Complete watershed geometry'],['export-manifest.json','Export file inventory']];if(report.source_editions)links.push(['input-editions.json','Complete source-edition binding'],['source-editions.csv','Source editions CSV']);if(report.timeline){links.push(['timeline-summary.csv','Timeline area summary'],['timeline-trajectories.csv','Every observed trajectory'],['timeline-annual-classes.csv','Annual class areas'],['timeline-adjacent-transitions.csv','Adjacent transitions'],['timeline-groups.csv','Observed group crossings'],['timeline-source-years.csv','Selected years and original sources']);for(const [key,path]of Object.entries(report.rasters.timeline||{}))links.push([path,'Timeline raster: '+key.replaceAll('_',' ')]);}if(report.rasters.study_area_fraction)links.push([report.rasters.study_area_fraction,'Study-area fraction raster']);const raster=report.rasters.transitions?.[$('scenario').value];if(raster)links.push([raster,'Selected transition raster']);$('downloads').replaceChildren(...links.filter(([file])=>/^[A-Za-z0-9._-]+$/.test(file)&&!file.includes('..')).map(([file,label])=>{const a=el('a',label);a.href=file;a.download=file;return a;}));}
 function renderSources(){const src=report.inputs.map(s=>{const tr=el('tr');cell(tr,s.role);cell(tr,s.path.split(/[\\/]/).pop());cell(tr,fmt(s.bytes,0),true);cell(tr,s.sha256);return tr;});$('sources').replaceChildren(...src);$('provenance').textContent=`Area basis: ${report.grid.area_basis}. Projection method: ${report.grid.projection_method}. Support mode: ${report.options.support_scope}. Unknown-code handling: ${report.options.unknown_policy}. Complete transition rasters encode from_code × 100 + to_code; 0 is excluded. Multiply the selected cell's area by study-area-fraction.tif when deriving unique study-area totals.`;$('interpretation').replaceChildren(...[...report.interpretation,...(report.timeline?.interpretation||[])].map(x=>el('p',x)));$('footer').textContent=`${report.schema} · engine ${report.version} · complete ${report.completed_at} · edition ${report.signature}`;}
-$('scenario').onchange=render;$('metric').onchange=render;$('search').oninput=render;$('reset').onclick=()=>{selected='__domain__';$('search').value='';render();};$('print').onclick=()=>window.print();$('load').onchange=async e=>{try{const file=e.target.files[0];if(file){const data=JSON.parse(await file.text());if(data.schema!=='upstate.landcover-ledger/1'||data.complete!==true)throw Error('Select a complete land-cover ledger JSON.');imported=true;load(data);}}catch(err){fail(err);}};try{load(JSON.parse($('ledger-data').textContent));}catch(err){fail(err);}
+$('scenario').onchange=render;$('metric').onchange=render;$('search').oninput=render;$('reset').onclick=()=>{selected='__domain__';$('search').value='';render();};$('print').onclick=()=>window.print();$('load').onchange=async e=>{
+ const file=e.target.files[0],ticket=++openGeneration;if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());if(ticket!==openGeneration)return;
+  const wrapped=data.schema==='upstate.landcover-interval-report/v1';
+  const ledger=wrapped?data.ledger:data,payload=wrapped?{accounts:data.accounts,tables:data.tables}:null;
+  validateIntervalPayload(ledger,payload);
+  load(ledger,payload);imported=true;render();document.documentElement.dataset.openedReport=String(ticket);
+ }catch(err){if(ticket===openGeneration)fail(err);}
+};
+try{load(JSON.parse($('ledger-data').textContent),JSON.parse($('interval-data').textContent));}catch(err){fail(err);}
 </script></body></html>
