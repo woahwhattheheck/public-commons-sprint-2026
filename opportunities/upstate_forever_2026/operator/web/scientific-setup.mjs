@@ -228,6 +228,7 @@ export function attachScientificSetup(host) {
     if(!alive(generation,keyValue))return;
     preview=null;await refresh();if(!alive(generation,keyValue))return;
     if(task.result?.setup_id)await openSetup(task.result.setup_id);
+    if(!alive(generation,keyValue))return;
     notice('The setup and its original customer review are retained. Continue review decisions in Customer reviews.');
   }
   async function createSetup(){
@@ -259,6 +260,7 @@ export function attachScientificSetup(host) {
   async function click(event){
     const node=event.target.closest('[data-setup-action]');if(!node||!root?.contains(node))return;
     event.preventDefault();event.stopPropagation();const action=node.dataset.setupAction;
+    const generation=epoch,keyValue=workspaceKey;
     if(busy&&action!=='task')return;
     try{
       if(action==='reload'){await mount(root);return;}
@@ -270,9 +272,9 @@ export function attachScientificSetup(host) {
       if(action==='refresh'){persistDraft();invalidatePreview();await refresh();}
       if(action==='new'){if(pending)throw Error('Reopen the retained operation before creating another setup.');draft=defaultSetupSelection();preview=null;active=null;sequence++;save(key('draft'),draft);save(key('active'),null);renderShell();}
       if(action==='edit'&&active){if(pending)throw Error('Reopen the retained operation before creating another setup.');draft=normalizeSetupDraft(active.setup?.selection||active.specification?.selection);preview=null;sequence++;save(key('draft'),draft);renderForm();q('[data-setup-form]').scrollIntoView({block:'start',behavior:'smooth'});stateBusy(false);}
-    }catch(error){notice(error.message||String(error),true);}
+    }catch(error){if(alive(generation,keyValue))notice(error.message||String(error),true);}
   }
-  function submit(event){if(!event.target.matches('[data-setup-form]'))return;event.preventDefault();previewSetup().catch(error=>notice(error.message,true));}
+  function submit(event){if(!event.target.matches('[data-setup-form]'))return;event.preventDefault();const generation=epoch,keyValue=workspaceKey;previewSetup().catch(error=>{if(alive(generation,keyValue))notice(error.message,true);});}
   async function mount(node){
     detach();root=node;workspaceKey=workspace();epoch++;storageWarning=false;catalog=null;active=null;preview=null;pending=null;
     root.addEventListener('click',click);root.addEventListener('input',change);root.addEventListener('change',change);root.addEventListener('submit',submit);

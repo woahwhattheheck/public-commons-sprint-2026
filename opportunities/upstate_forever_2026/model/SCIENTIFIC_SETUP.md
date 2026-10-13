@@ -27,7 +27,7 @@ All selected collection entries are retained, including context entries. Full or
 
 Schema: upstate.scientific-setup-selection/v1.
 
-Required text fields: title, question, domain_rationale. Required original 64-hex Workspace IDs: grid_id, profile_id, baseline_scenario_id. alternative_scenario_ids, source_collection_ids and observation_ids are arrays of unique existing IDs; absent arrays become empty.
+Required text fields: title, question, domain_rationale. The title is limited to 300 characters; the question and each note use the original review core's 20,000-character limit. Independent domain/validation descriptions permit 40,000 characters. NUL characters are rejected. Required original 64-hex Workspace IDs: grid_id, profile_id, baseline_scenario_id. alternative_scenario_ids, source_collection_ids and observation_ids are arrays of unique existing IDs; absent arrays become empty.
 
 The grid must already be complete. The baseline must be an existing baseline with no patches; each alternative must be an existing landcover scenario with real patches. This workflow captures those objects; it does not create a grid or invent scenario changes.
 
