@@ -4,7 +4,7 @@ This bank carries the full maintained Chemistry 0.3.0 component merged in PR3724
 
 ## Included source
 
-The two source parts contain **40 complete UTF-8 files / 418,177 source bytes**:
+The two source parts contain **40 complete UTF-8 files / 418,891 source bytes**:
 
 - All **38** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and its guide. These two files are staged for direct execution and need not be copied into the running application.
@@ -12,7 +12,7 @@ The two source parts contain **40 complete UTF-8 files / 418,177 source bytes**:
 
 The separate bootstrap directory contains the complete unchanged original application source assembler. The stager checks its exact declared byte count and SHA before loading it; the installed base need not supply a matching staging helper. Every source part and every complete member is verified before the original assembler publishes any staged source.
 
-Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). Receiving script pin: `1c067ec39324290f20eb85ae3a365be74a71e7a4`. Each file's source commit and complete identity appear in `manifest.json`.
+Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). Receiving script pin: `5a8c02a05f2c45c758d361c44c624479bfa157b4`. Each file's source commit and complete identity appear in `manifest.json`.
 
 ## Existing application and project
 
@@ -58,3 +58,9 @@ See the complete staged `source/CHEMISTRY_COMPOUND_RECEIVING.md` for the exact s
 `OUTPUT/receiving.json` is the durable operation journal and completion summary. The same directory retains the original inputs, exact derived observations and requests, native scientific preview, saved scientific IDs, editable received project, complete Workspace archive and independently received application/Workspace.
 
 The current Chemistry desk can reopen every returned case/run/report ID. Its scientific sources use the existing ordered-source report composer. The frozen bank supplies complete source; the actual receiving journal supplies the operation's resulting native IDs and files.
+
+## Rendered-product inspection before presentation
+
+The owner instruction in repository `AGENTS.md` version `2026-10-13.1` applies to the producing receiving worker. Open and render the exact outgoing operator and scientific reports, view their actual screens or real screenshots, and operate their important controls before describing them as client-ready. Inspect the populated scientific Workspace at the intended desktop/screenshare and narrow widths, relevant empty/loading/error states, downloads/exports and reopening. View the generated PDF, HTML and source pages themselves; repair unreadable, clipped, overflowing or broken output in the same operation. Source checks and screenshot capture alone do not establish rendered readiness.
+
+Keep the plain industrial presentation: readable tables, restrained controls, clear hierarchy, consistent spacing and useful labels. Preserve the existing native science and the current receiving owners. Carry this instruction into the receiver's application-level instructions and current handoff guides. Return the actual populated-workspace screenshots and report files so the original producing team can also inspect them. This continues the existing Ecosystem sprint; its cutoff remains **October 13, 2026, 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville).
