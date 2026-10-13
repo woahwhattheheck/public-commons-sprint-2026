@@ -54,3 +54,9 @@ The complete HTML download opens with the selected evidence, date support, separ
 Analyst choices, method rationale and every required site/source confirmation are readable fields. Profile rules, minimum-sample basis, minimum spacing, season, contextual frequency and limitations use readable tables and expandable method descriptions. Primary publication links come from the exact saved source index; the report retains its original catalogue when an installed source changes. Reading the result requires no JSON editing.
 
 The full original-row table remains in the report, including laboratory comments and exact CSV locators. CSV, JSON, original-study ZIP and every retained reference file remain ordinary downloads. The complete source ZIP includes the generated report and exact rendering module. This presentation preserves the saved calculation identity, observations, thresholds, numerical comparisons, request and original source bindings.
+
+## Reading the retained comparison on screen
+
+The analytical-window table separates the original measurement threshold and its criterion unit from an excursion fraction and its dimensionless permitted fraction. Numerical bounds keep the measured cohort unit; contextual rules show **Not assessed**. The source-profile details, contextual frequency, original record IDs and recovered analytical support use readable fields and lists.
+
+Working changes retain the preceding calculated result with the heading **Previous working preview** until a new calculation succeeds. Its exact profile and primary source links stay with that result, even when the installed catalogue is refreshed. A saved comparison remains identified as its saved edition. These display choices preserve the original selection, calculation, sampling requirements, source binding and task history.

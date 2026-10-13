@@ -43,3 +43,9 @@
 .pmi-task-list{border-top:1px solid #ccc;margin-top:24px}.pmi-task-list li{margin:8px 0}.pmi-result-head{margin-top:24px}
 @media(max-width:680px){.pmi-desk{padding:12px;margin:16px 0}.pmi-grid,.pmi-confirmations{grid-template-columns:minmax(0,1fr)}.pmi-open{display:block}.pmi-open button{margin-top:10px}.pmi-detail dl{grid-template-columns:minmax(0,1fr)}.pmi-detail dt{border-bottom:0;padding-bottom:2px}.pmi-detail dd{padding-top:2px}.pmi-pages{gap:6px}.pmi-pages button{padding:8px}.pmi-desk input,.pmi-desk select,.pmi-desk textarea{font-size:16px}}
 @media print{.pmi-desk{border:0;padding:0}.pmi-desk button,.pmi-open,.pmi-task-list,[data-pmi-form]{display:none}.pmi-table{overflow:visible}.pmi-table table{min-width:0;font-size:8pt}.pmi-table tr{break-inside:avoid}.pmi-table thead{display:table-header-group}.pmi-desk details{border:0}.pmi-desk h3,.pmi-desk h4{break-after:avoid}}
+
+/* Readable retained scientific definitions. */
+.pmi-desk .pmi-definition{display:grid;grid-template-columns:minmax(9rem,1fr) minmax(0,3fr);gap:.35rem .8rem;margin:.65rem 0}
+.pmi-desk .pmi-definition dt{font-weight:600;overflow-wrap:anywhere}.pmi-desk .pmi-definition dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.pmi-desk .pmi-definition ul{margin:.2rem 0;padding-left:1.3rem}.pmi-desk .pmi-muted{color:#555}.pmi-desk [data-pmi-result-note]:empty{display:none}
+@media(max-width:600px){.pmi-desk .pmi-definition{grid-template-columns:1fr;gap:.2rem}.pmi-desk .pmi-definition dd{margin-bottom:.6rem}}
