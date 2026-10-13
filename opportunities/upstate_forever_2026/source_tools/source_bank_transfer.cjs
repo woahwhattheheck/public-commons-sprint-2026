@@ -127,25 +127,40 @@ function inspectBank(input, names, paths) {
   if (input.git_blob !== undefined && input.git_blob !== stamp.git_blob) throw new Error("Original bank Git blob differs: " + input.name);
   if (input.sha256 !== undefined && input.sha256 !== stamp.sha256) throw new Error("Original bank SHA-256 differs: " + input.name);
   const bank = JSON.parse(input.text);
-  if (bank.schema !== "commons.source-bank/v1" || !Array.isArray(bank.files)) throw new Error("Expected commons.source-bank/v1");
-  if (requireInteger(bank.file_count, "file_count") !== bank.files.length) throw new Error("Source file count differs: " + input.name);
-  requireInteger(bank.source_bytes, "source_bytes");
+  const knownSchemas = ["commons.source-bank/v1", "commons.source-text-bank/v1", "upstate.source-bank/v1"];
+  if (!bank || !knownSchemas.includes(bank.schema) || !Array.isArray(bank.files)) {
+    throw new Error("Expected a supported complete source bank");
+  }
+  const optionalInventory = bank.schema === "upstate.source-bank/v1";
+  if (!optionalInventory || Object.prototype.hasOwnProperty.call(bank, "file_count")) {
+    if (requireInteger(bank.file_count, "file_count") !== bank.files.length) throw new Error("Source file count differs: " + input.name);
+  }
+  if (!optionalInventory || Object.prototype.hasOwnProperty.call(bank, "source_bytes")) requireInteger(bank.source_bytes, "source_bytes");
   let sourceBytes = 0;
   for (const item of bank.files) {
     if (!item || typeof item !== "object") throw new Error("Expected source file metadata");
     const path = sourcePath(item.path);
     if (paths.has(path)) throw new Error("Source banks repeat a member: " + path);
     paths.add(path);
-    const bytes = decodeBase64(item.content_base64);
+    const hasText = Object.prototype.hasOwnProperty.call(item, "content");
+    const hasBase64 = Object.prototype.hasOwnProperty.call(item, "content_base64");
+    if (hasText === hasBase64 || (hasBase64 && bank.schema !== "commons.source-bank/v1")) {
+      throw new Error("Source member needs one declared content representation: " + path);
+    }
+    const bytes = hasText ? utf8(item.content) : decodeBase64(item.content_base64);
+    const actualGitBlob = gitBlobBytes(bytes);
     if (requireInteger(item.bytes, "source bytes") !== bytes.length ||
-        item.sha256 !== sha256Bytes(bytes) || item.git_blob !== gitBlobBytes(bytes)) {
+        item.sha256 !== sha256Bytes(bytes) ||
+        ((hasBase64 || Object.prototype.hasOwnProperty.call(item, "git_blob")) && item.git_blob !== actualGitBlob)) {
       throw new Error("Original source content or identity differs: " + path);
     }
     sourceBytes += bytes.length;
     requireInteger(sourceBytes, "total source bytes");
   }
-  if (sourceBytes !== bank.source_bytes) throw new Error("Source byte count differs: " + input.name);
-  return {name: input.name, original, stamp, fileCount: bank.file_count, sourceBytes};
+  if ((!optionalInventory || Object.prototype.hasOwnProperty.call(bank, "source_bytes")) && sourceBytes !== bank.source_bytes) {
+    throw new Error("Source byte count differs: " + input.name);
+  }
+  return {name: input.name, original, stamp, fileCount: bank.files.length, sourceBytes};
 }
 function prepareTransfer(inputs, options = {}) {
   if (!Array.isArray(inputs) || !inputs.length) throw new Error("Supply at least one complete source bank");
@@ -225,6 +240,46 @@ function prepareTransfer(inputs, options = {}) {
     payloadBudget: {maxPayloadBytes, reserveBytes, chunkBytes}
   };
 }
-return Object.freeze({prepareTransfer, identity});
+
+function prepareInlineReceiver(transfer, materializerText, options = {}) {
+  if (!transfer || typeof transfer.manifestJson !== "string" || !Array.isArray(transfer.parts)) {
+    throw new Error("Provide the complete prepared transfer");
+  }
+  const materializerIdentity = identity(materializerText);
+  if (options.materializerGitBlob !== undefined && options.materializerGitBlob !== materializerIdentity.git_blob) {
+    throw new Error("Maintained materializer Git identity differs");
+  }
+  const manifest = JSON.parse(transfer.manifestJson);
+  if (manifest.schema !== "commons.source-bank-transfer/v1" || !Array.isArray(manifest.banks)) throw new Error("Invalid transfer manifest");
+  const expected = new Map();
+  for (const bank of manifest.banks) for (const part of bank.parts) {
+    if (!/^[a-f0-9]{40}$/.test(part.git_blob) || expected.has(part.git_blob)) throw new Error("Repeated or invalid part identity");
+    expected.set(part.git_blob, part);
+  }
+  const seen = new Set(), parts = transfer.parts.map(part => {
+    const expectedPart = expected.get(part.git_blob), stamp = identity(part.json);
+    if (!expectedPart || seen.has(part.git_blob) || stamp.git_blob !== part.git_blob ||
+        stamp.bytes !== expectedPart.json_bytes || stamp.sha256 !== expectedPart.json_sha256) {
+      throw new Error("Prepared source part differs");
+    }
+    seen.add(part.git_blob);
+    return {git_blob: part.git_blob, json: part.json};
+  });
+  if (seen.size !== expected.size) throw new Error("Prepared source parts are incomplete");
+  const packet = JSON.stringify({materializer: materializerText, manifest: transfer.manifestJson, parts}) + "\n";
+  const packetIdentity = identity(packet);
+  const payload = base64(gzipFixed(utf8(packet)));
+  const body = "PACKET_BYTES=" + packetIdentity.bytes + "\nPACKET_SHA=" + JSON.stringify(packetIdentity.sha256) +
+    "\nMATERIALIZER_SHA=" + JSON.stringify(materializerIdentity.sha256) + "\n" + "import base64,gzip,hashlib,json,sys\nfrom pathlib import Path\nraw=gzip.decompress(base64.b64decode(DATA_B64,validate=True))\nif len(raw)!=PACKET_BYTES or hashlib.sha256(raw).hexdigest()!=PACKET_SHA:\n    raise ValueError(\"Inline source packet differs\")\npacket=json.loads(raw)\nhelper=packet[\"materializer\"].encode(\"utf-8\")\nif hashlib.sha256(helper).hexdigest()!=MATERIALIZER_SHA:\n    raise ValueError(\"Maintained materializer differs\")\nif len(sys.argv)!=2:\n    raise SystemExit(\"Supply one new owned receiving directory\")\nroot=Path(sys.argv[1]).absolute()\nif any(p.is_symlink() for p in (root,*root.parents)):\n    raise ValueError(\"Use ordinary owned receiving directories\")\nroot.mkdir(parents=True,exist_ok=True)\nnamespace={\"__name__\":\"source_bank_transfer\",\"__file__\":str(root/\"input/materialize_source_banks.py\")}\nexec(compile(helper,namespace[\"__file__\"],\"exec\"),namespace)\nmanifest=json.loads(packet[\"manifest\"])\nexpected={item[\"git_blob\"]:item for bank in manifest[\"banks\"] for item in bank[\"parts\"]}\nbodies={\"materialize_source_banks.py\":helper,\"transfer.json\":packet[\"manifest\"].encode(\"utf-8\")}\nseen=set()\nfor part in packet[\"parts\"]:\n    key=part[\"git_blob\"]\n    if key not in expected or key in seen:\n        raise ValueError(\"Inline source parts differ\")\n    seen.add(key)\n    data=part[\"json\"].encode(\"utf-8\")\n    stamp=expected[key]\n    if len(data)!=stamp[\"json_bytes\"] or hashlib.sha256(data).hexdigest()!=stamp[\"json_sha256\"]:\n        raise ValueError(\"Inline part body differs\")\n    if hashlib.sha1(b\"blob \"+str(len(data)).encode(\"ascii\")+b\"\\0\"+data).hexdigest()!=key:\n        raise ValueError(\"Inline part Git identity differs\")\n    bodies[\"parts/\"+key+\".json\"]=data\nif seen!=set(expected):\n    raise ValueError(\"Inline source parts are incomplete\")\ninputs=root/\"input\"\nfor name,data in bodies.items():\n    path=namespace[\"target\"](inputs,name)\n    if any(p.is_symlink() for p in (path,*path.parents)):\n        raise ValueError(\"Preserving symbolic links in receiving directory\")\n    if path.exists() and (not path.is_file() or path.read_bytes()!=data):\n        raise ValueError(\"Preserving a different existing receiving input: \"+name)\nfor name,data in bodies.items():\n    namespace[\"retain\"](namespace[\"target\"](inputs,name),data)\nresult=namespace[\"receive\"](inputs/\"transfer.json\",inputs/\"parts\",root/\"received\")\nprint(json.dumps({k:v for k,v in result.items() if k!=\"files\"},ensure_ascii=False,indent=2))\n";
+  const script = "import base64\nDATA_B64 = " + JSON.stringify(payload) +
+    "\nexec(base64.b64decode(" + JSON.stringify(base64(utf8(body))) + ',validate=True).decode("utf-8"))\n';
+  const scriptIdentity = identity(script);
+  const maxScriptBytes = requireInteger(options.maxScriptBytes ?? 250000, "maxScriptBytes", 1024);
+  if (scriptIdentity.bytes > maxScriptBytes) throw new Error("Inline receiver exceeds budget; deliver the existing manifest and parts separately");
+  return {script, scriptIdentity, packetIdentity, materializerIdentity,
+    transferManifestIdentity: identity(transfer.manifestJson), maxScriptBytes};
+}
+
+return Object.freeze({prepareTransfer, prepareInlineReceiver, identity});
 
 });
