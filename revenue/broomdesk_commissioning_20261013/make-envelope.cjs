@@ -1,0 +1,4 @@
+'use strict';
+const Zip=require('./host/connected_zip.cjs'),Gzip=require('./host/connected_gzip.cjs'),Sha=require('./host/connected_sha256.cjs');
+function envelope(value){const text=JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0')),bytes=Zip.utf8(text),raw=Gzip.deflateRawBytes(bytes,{huffman:'auto',max_chain:4096,block_bytes:32768,max_input_bytes:Math.max(1,bytes.length)}).data,out=new Uint8Array(raw.length+18);out.set([31,139,8,0,0,0,0,0,0,255]);out.set(raw,10);const v=new DataView(out.buffer);v.setUint32(out.length-8,Zip.crc32(bytes),true);v.setUint32(out.length-4,bytes.length,true);const read=Gzip.gunzipBytes(out,{expected_bytes:bytes.length,max_output_bytes:bytes.length,max_input_bytes:out.length});if(Zip.utf8Text(read.data)!==text)throw Error('Whole package envelope differs.');return{payload:Zip.base64(out),bytes:bytes.length,sha256:Sha.sha256Bytes(bytes).sha256};}
+module.exports={envelope};
