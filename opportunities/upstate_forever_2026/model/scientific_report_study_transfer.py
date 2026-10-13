@@ -70,9 +70,11 @@ def _source(closure, choice, expected_source):
     # These producer contracts apply only to explicitly ordered saved-edition
     # sources. Older archive selections keep their original dependency semantics.
     from . import monitoring_study_transfer, study_report_transfer, receiving_water_report_transfer
+    from . import native_process_study_transfer
     monitoring_study_transfer.include_source(closure, collection_id, entry)
     study_report_transfer.include_calibration(closure, collection_id, entry)
     receiving_water_report_transfer.include_source(closure, collection_id, entry)
+    native_process_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],
