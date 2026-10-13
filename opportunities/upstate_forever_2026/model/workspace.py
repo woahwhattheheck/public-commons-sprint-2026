@@ -437,6 +437,11 @@ class Workspace:
         from .observations import compare
         return compare(self, run_id, observation_id, catchments)
 
+    def delivery_preparations(self):
+        """Open named preparation history without starting GIS or a delivery."""
+        from .delivery_preparation import DeliveryPreparations
+        return DeliveryPreparations(self)
+
     def build_delivery(self, selection):
         from .delivery import build
         return build(self, selection)

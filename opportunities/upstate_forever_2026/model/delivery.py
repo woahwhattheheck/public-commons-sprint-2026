@@ -360,7 +360,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     ET.indent(root)
     atomic_bytes(path, ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n")
 
-def build(workspace, selection):
+def _prepare_context(workspace, selection):
     selection = dict(selection)
     study_mode = native_study.prepare(selection)
     fgdc_metadata.validate_contact(selection.get("contact"))
@@ -488,6 +488,76 @@ def build(workspace, selection):
                   "overlay_labels": OVERLAY_LABELS,
                   **({"parcel_source_lineage": LINEAGE_VERSION}
                      if selection.get("overlays", {}).get("parcels") else {})})
+    return {
+        "selection": selection,
+        "study_mode": study_mode,
+        "water_links": water_links,
+        "report_link": report_link,
+        "analysis_link": analysis_link,
+        "decision_link": decision_link,
+        "economic_link": economic_link,
+        "observed_link": observed_link,
+        "spatial_exports": spatial_exports,
+        "reviews": reviews,
+        "contact": contact,
+        "baseline": baseline,
+        "scenario_ids": scenario_ids,
+        "alternatives": alternatives,
+        "grid": grid,
+        "cells": cells,
+        "profile": profile,
+        "coefficient_binding": coefficient_binding,
+        "report_title": report_title,
+        "native_execution": native_execution,
+        "version_provenance": version_provenance,
+        "baseline_versions": baseline_versions,
+        "versions": versions,
+        "common_version": common_version,
+        "receptor_execution_binding": receptor_execution_binding,
+        "key": key,
+    }
+
+
+def prepare_binding(workspace, selection):
+    """Resolve the original delivery identity and exact sources without building outputs."""
+    context = _prepare_context(workspace, selection)
+    return {"schema": "upstate.delivery-binding/v1", "project_id": workspace.project["id"],
+            "delivery_id": context["key"], "selection": context["selection"]}
+
+
+def build(workspace, selection, *, expected_binding=None):
+    context = _prepare_context(workspace, selection)
+    binding = {"schema": "upstate.delivery-binding/v1", "project_id": workspace.project["id"],
+               "delivery_id": context["key"], "selection": context["selection"]}
+    if expected_binding is not None and binding != expected_binding:
+        raise ValueError("The original preparation build sources or installed application changed; "
+                         "resume with the retained source edition or explicitly prepare a new build")
+    selection = context["selection"]
+    study_mode = context["study_mode"]
+    water_links = context["water_links"]
+    report_link = context["report_link"]
+    analysis_link = context["analysis_link"]
+    decision_link = context["decision_link"]
+    economic_link = context["economic_link"]
+    observed_link = context["observed_link"]
+    spatial_exports = context["spatial_exports"]
+    reviews = context["reviews"]
+    contact = context["contact"]
+    baseline = context["baseline"]
+    scenario_ids = context["scenario_ids"]
+    alternatives = context["alternatives"]
+    grid = context["grid"]
+    cells = context["cells"]
+    profile = context["profile"]
+    coefficient_binding = context["coefficient_binding"]
+    report_title = context["report_title"]
+    native_execution = context["native_execution"]
+    version_provenance = context["version_provenance"]
+    baseline_versions = context["baseline_versions"]
+    versions = context["versions"]
+    common_version = context["common_version"]
+    receptor_execution_binding = context["receptor_execution_binding"]
+    key = context["key"]
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"

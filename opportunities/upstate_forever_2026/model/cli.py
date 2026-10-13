@@ -40,6 +40,28 @@ def parser():
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("selection", type=Path)
+    preparation_list = commands.add_parser("delivery-preparation-list",
+        help="List retained delivery preparations and their current saved editions")
+    preparation_list.add_argument("--offset", type=int, default=0)
+    preparation_list.add_argument("--limit", type=int, default=50)
+    preparation_inspect = commands.add_parser("delivery-preparation-inspect",
+        help="Open a saved preparation, its revision history and original builds")
+    preparation_inspect.add_argument("preparation_id")
+    preparation_inspect.add_argument("--revision", type=int)
+    preparation_preview = commands.add_parser("delivery-preparation-preview",
+        help="Inspect a complete delivery selection before saving or building")
+    preparation_preview.add_argument("selection", type=Path)
+    for name, help_text in (
+        ("delivery-preparation-save", "Save a complete preparation as its next retained revision"),
+        ("delivery-preparation-build", "Build an exact saved revision with the original delivery engine"),
+    ):
+        preparation_action = commands.add_parser(name, help=help_text)
+        preparation_action.add_argument("selection", type=Path)
+        preparation_action.add_argument("--operation-id", required=True,
+            help="The caller's original UUID; retain and reuse it to recover this same request")
+    preparation_operation = commands.add_parser("delivery-preparation-operation",
+        help="Recover the retained result or state of an original preparation request")
+    preparation_operation.add_argument("operation_id")
     for name in ("run", "run-inspect"):
         command = commands.add_parser(name)
         command.add_argument("run_id")
@@ -93,6 +115,23 @@ def perform(args):
                           title=getattr(args, "title", "Upper Savannah scientific workspace"))
     if args.command in ("init", "overview"):
         return workspace.overview()
+    if args.command.startswith("delivery-preparation-"):
+        from .delivery_preparation import DeliveryPreparations
+        preparations = DeliveryPreparations(workspace)
+        if args.command == "delivery-preparation-list":
+            return preparations.catalog(offset=args.offset, limit=args.limit)
+        if args.command == "delivery-preparation-inspect":
+            return preparations.inspect(args.preparation_id, revision=args.revision)
+        if args.command == "delivery-preparation-operation":
+            return preparations.operation(args.operation_id)
+        request = read_json(args.selection)
+        if args.command == "delivery-preparation-preview":
+            return preparations.preview(request)
+        if args.command == "delivery-preparation-save":
+            return preparations.save(request, operation_id=args.operation_id)
+        if args.command == "delivery-preparation-build":
+            return preparations.build(request, operation_id=args.operation_id)
+        raise ValueError("Unknown delivery preparation operation")
     operations = {"profile-save": workspace.save_profile, "scenario-save": workspace.save_scenario,
                   "grid-prepare": workspace.prepare_grid, "run-prepare": workspace.prepare_run,
                   "delivery-build": workspace.build_delivery,
