@@ -36,7 +36,10 @@ const progress = path.join(output, 'receiving-water-browser.json');
 const caseHash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const selection = {workspace, plan_id: c.plan_id || null, analysis_id: c.analysis_id || null,
   subjects: c.subjects || null, paper: c.paper || 'letter', dpi: c.dpi || 220,
-  ...(c.editable_selection ? {editable_selection: true} : {})};
+  ...(c.editable_selection ? {editable_selection: true} : {}),
+  ...(c.scope_analysis_id ? {scope_analysis_id:c.scope_analysis_id} : {})};
+assert.ok(!c.scope_analysis_id || (c.analysis_id && /^[0-9a-f]{64}$/.test(c.scope_analysis_id)),
+  'Choose the existing primary analysis and the original analysis for the other quantity support.');
 assert.ok(c.editable_selection === undefined || typeof c.editable_selection === 'boolean',
   'editable_selection must be true or false.');
 assert.ok(['letter', 'a4'].includes(selection.paper) && [150, 220, 300].includes(selection.dpi),
@@ -54,7 +57,9 @@ if (selection.editable_selection) applicationNames.push(
   'operator/web/receiving_waters.css', 'operator/web/extensions/study_transfer.mjs',
   'operator/extensions/receiving-waters.json', 'model/receiving_waters.py',
   'model/receiving_water_accounting.py', 'model/spatial_esri.py', 'source/capture_upstream_network.py');
-const applicationFiles = await Promise.all(applicationNames.map(async name =>
+if (selection.scope_analysis_id) applicationNames.push('operator/web/receiving_water_scope_compare.mjs',
+  'operator/web/receiving_waters.css','operator/web/receiving_waters_extension.mjs','operator/extensions/receiving-waters.json');
+const applicationFiles = await Promise.all([...new Set(applicationNames)].map(async name =>
   ({name, ...await fileRecord(path.join(applicationRoot, name))})));
 const applicationIdentity = caseHash(applicationFiles.map(({name, bytes, sha256}) => ({name, bytes, sha256})));
 const identity = caseHash({selection, application_identity: applicationIdentity});
@@ -587,6 +592,69 @@ async function reopenEditableRecords() {
   await checkpoint();
 }
 
+async function captureScopes(label) {
+  report.scope_comparison.screenshots ||= [];
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({width,height:1080});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const filename=path.join(output,label+'-'+width+'-attempt-'+report.attempts.length+'.png');
+    await page.screenshot({path:filename,fullPage:true});
+    report.scope_comparison.screenshots.push({label,viewport:{width,height:1080},...await fileRecord(filename)});
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+2),
+      'Quantity-support comparison must keep table scrolling inside the view at this viewport.');
+    await checkpoint();
+  }
+  await page.setViewportSize({width:1440,height:1080});
+}
+async function openScopePair(first, second) {
+  await openWater('analysis',first.id);
+  await page.locator('#water-selected [data-action="water-scope-new"]').click();
+  await page.locator('#water-selected [data-water-scope-comparison]').waitFor();
+  const reporting=first.quantity_scope==='reporting'?first:second;
+  const domain=first.quantity_scope==='model_domain'?first:second;
+  await page.locator('#water-selected [name="scope_compare_reporting"]').selectOption(reporting.id);
+  await page.locator('#water-selected [name="scope_compare_model_domain"]').selectOption(domain.id);
+  await page.locator('#water-selected [data-action="water-scope-apply"]').click();
+  const root=page.locator('#water-selected[aria-busy="false"][data-water-record-kind="scope-comparison"] [data-water-scope-comparison]'+
+    attr('data-reporting',reporting.id)+attr('data-domain',domain.id));
+  await root.waitFor();return root;
+}
+async function operateScopeComparison(first, second, reopened=false) {
+  const {compareQuantityScopes,scopeComparisonCSV}=await import(pathToFileURL(path.join(applicationRoot,'operator/web/receiving_water_scope_compare.mjs')).href);
+  const expected=compareQuantityScopes(first,second);
+  report.scope_comparison ||= {reporting_analysis_id:expected.reporting.id,model_domain_analysis_id:expected.model_domain.id,
+    screenshots:[],downloads:[],complete:false,reopened:false};
+  let root=await openScopePair(first,second);
+  await captureScopes(reopened?'quantity-support-cold-reopen':'quantity-support-baseline');
+  if(reopened){report.scope_comparison.reopened=true;await checkpoint();return;}
+  for(const quantity of expected.quantities){
+    await root.locator('[data-water-scope-filter="quantity"]').selectOption(quantity);
+    for(const run of expected.alternative_run_ids){
+      await root.locator('[data-water-scope-filter="run"]').selectOption(run);
+      await captureScopes('quantity-support-'+quantity+'-'+run.slice(0,12));
+    }
+  }
+  await root.locator('[data-water-scope-search]').fill('No original receiving area '+randomUUID());
+  await root.locator('.water-empty').waitFor();await captureScopes('quantity-support-empty-search');
+  await root.locator('[data-water-scope-search]').fill(expected.rows[0]?.id||'');
+  for(const format of ['json','csv']){
+    const pending=page.waitForEvent('download');
+    await root.locator('[data-action="water-scope-'+format+'"]').click();
+    const download=await pending;
+    const name='receiving-scope-comparison-'+expected.reporting.id.slice(0,12)+'-'+expected.model_domain.id.slice(0,12)+'.'+format;
+    assert.equal(download.suggestedFilename(),name);
+    const filename=path.join(output,name);await download.saveAs(filename);
+    const body=await fs.readFile(filename,'utf8');
+    if(format==='json')assert.deepEqual(JSON.parse(body),expected,'The complete download must preserve the original scope records despite the active search.');
+    else assert.equal(body,scopeComparisonCSV(expected),'The CSV download must include every original area, run and quantity.');
+    report.scope_comparison.downloads.push({format,...await fileRecord(filename)});
+  }
+  await root.locator('[data-water-scope-search]').fill('');
+  report.scope_comparison.complete=true;
+  report.scope_comparison.visual_review='Open and inspect every saved desktop/narrow image and both complete downloaded files; fix observed defects before presenting the product.';
+  await checkpoint();
+}
+
 try {
   attempt.stage = 'browser_import';
   ({chromium} = modules
@@ -599,6 +667,8 @@ try {
   attempt.stage = 'source_records';
   const analysis = c.analysis_id ? await api(endpoint('/api/receiving-waters/analysis', {analysis_id: c.analysis_id})) : null;
   if (analysis) assert.equal(analysis.state, 'complete');
+  const scopeAnalysis = selection.scope_analysis_id ? await api(endpoint('/api/receiving-waters/analysis',{analysis_id:selection.scope_analysis_id})) : null;
+  if(scopeAnalysis)assert.equal(scopeAnalysis.state,'complete');
   const planId = c.plan_id || analysis.plan_id;
   if (analysis) assert.equal(planId, analysis.plan_id);
   const plan = await api(endpoint('/api/receiving-waters/plan', {plan_id: planId}));
@@ -614,6 +684,7 @@ try {
     if (analysis) await editableSelection('analysis', analysis);
     await operatePlanComparison(plan, analysis);
   }
+  if(scopeAnalysis){attempt.stage='operate_quantity_support_comparison';await operateScopeComparison(analysis,scopeAnalysis);}
   attempt.stage = 'operate_maps';
   for (const target of cases) {
     const key = caseHash(target), row = report.cases[key] ||= {target};
@@ -655,6 +726,7 @@ try {
   }
   attempt.stage = 'cold_reopen_editable_selection';
   await reopenEditableRecords();
+  if(scopeAnalysis){attempt.stage='cold_reopen_quantity_support_comparison';await operateScopeComparison(analysis,scopeAnalysis,true);}
   assert.deepEqual(attempt.page_errors, []);
   assert.deepEqual(attempt.http_errors, []);
   attempt.complete = true; attempt.completed_at = new Date().toISOString();

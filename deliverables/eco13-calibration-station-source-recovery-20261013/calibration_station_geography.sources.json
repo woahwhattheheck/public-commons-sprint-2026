@@ -1,0 +1,1143 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original HUC05–07 calibration gauges, flow observations and whole-basin support",
+  "captured_at": "2026-10-13T04:10:33Z",
+  "scope": {
+    "source": "Original hydrology and NLDI editions captured2026-10-13",
+    "station_count": 13,
+    "daily_record_count": 26242,
+    "numeric_daily_record_count": 26241,
+    "coordinate_sources": [
+      "Original NWIS NAD83",
+      "Original NLDI geographic point"
+    ],
+    "query_simplified": false,
+    "query_split_catchment": false
+  },
+  "entries": [
+    {
+      "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+      "bytes": 30153,
+      "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
+      "id": "huc05-07-calibration-gauges-20261013",
+      "title": "Thirteen original USGS monitoring points and discharge context",
+      "kind": "vector",
+      "uri": "https://waterservices.usgs.gov/nwis/site/?format=rdb&huc=03060105%2C03060106%2C03060107&siteType=ST&siteOutput=expanded&hasDataTypeCd=dv&siteStatus=all",
+      "source_crs": "EPSG:4269",
+      "metadata": {
+        "geometry_type": "Point",
+        "feature_count": 13,
+        "site_id_field": "site_no",
+        "coordinate_datum": "Original NAD83",
+        "flow_period": "2020-01-01/2025-12-31",
+        "guide_file": "CALIBRATION_CONTEXT.md",
+        "source_index": "calibration-inputs.json"
+      },
+      "station_id_field": "monitoring_location_id",
+      "native_id_field": "monitoring_location_id",
+      "expected_features": 13,
+      "companions": [
+        {
+          "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+          "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1",
+          "bytes": 8144
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
+          "bytes": 11158
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
+          "bytes": 1786
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+          "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05",
+          "bytes": 8245
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+          "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690",
+          "bytes": 4027
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+          "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+          "bytes": 348121
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+          "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+          "bytes": 33415
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+          "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c",
+          "bytes": 3824
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+          "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964",
+          "bytes": 2399079
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+          "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7",
+          "bytes": 9682
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+          "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247",
+          "bytes": 65562
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+          "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+          "bytes": 5904
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+          "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+          "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+          "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+          "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+          "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+          "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+          "bytes": 19991
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+          "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+          "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+          "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+          "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+          "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+          "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+          "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+          "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+          "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+          "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+          "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+          "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+          "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+          "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+          "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+          "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+          "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+          "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+          "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+          "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+          "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+          "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+          "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+          "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+          "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+          "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+          "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+          "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba",
+          "bytes": 17523
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+          "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f",
+          "bytes": 133043
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+          "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea",
+          "bytes": 140830
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+          "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c",
+          "bytes": 150441
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+          "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d",
+          "bytes": 158068
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+          "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0",
+          "bytes": 156274
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+          "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c",
+          "bytes": 147925
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+          "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60",
+          "bytes": 22544
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+          "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd",
+          "bytes": 2975
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
+          "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797",
+          "bytes": 19443
+        }
+      ],
+      "vintage": "Original USGS station inventory retrieved 2026-10-13; discharge context 2020–2025"
+    },
+    {
+      "id": "nldi-daily-flow-gauge-locations-20261013",
+      "title": "Original 13 USGS daily-flow gauge locations",
+      "kind": "vector",
+      "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+      "id_field": "station_id",
+      "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791863575555249",
+      "vintage": "USGS-NLDI-2026-10-13-original-whole-catchment",
+      "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63",
+      "crs": "OGC:CRS84",
+      "support_kind": "nhdplusv2_upstream_whole_catchments",
+      "companions": [
+        {
+          "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+          "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1",
+          "bytes": 8144
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
+          "bytes": 11158
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
+          "bytes": 1786
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+          "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05",
+          "bytes": 8245
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+          "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690",
+          "bytes": 4027
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+          "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+          "bytes": 348121
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+          "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+          "bytes": 33415
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+          "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
+          "bytes": 30153
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+          "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c",
+          "bytes": 3824
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+          "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964",
+          "bytes": 2399079
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+          "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7",
+          "bytes": 9682
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+          "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247",
+          "bytes": 65562
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+          "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+          "bytes": 5904
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+          "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+          "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+          "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+          "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+          "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+          "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+          "bytes": 19991
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+          "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+          "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+          "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+          "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+          "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+          "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+          "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+          "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+          "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+          "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+          "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+          "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+          "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+          "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+          "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+          "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+          "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+          "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+          "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+          "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+          "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+          "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+          "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+          "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+          "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+          "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+          "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+          "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba",
+          "bytes": 17523
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+          "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f",
+          "bytes": 133043
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+          "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea",
+          "bytes": 140830
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+          "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c",
+          "bytes": 150441
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+          "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d",
+          "bytes": 158068
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+          "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0",
+          "bytes": 156274
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+          "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c",
+          "bytes": 147925
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+          "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60",
+          "bytes": 22544
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+          "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd",
+          "bytes": 2975
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
+          "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797",
+          "bytes": 19443
+        }
+      ],
+      "role": "gauge-location-context",
+      "basin_request_parameters": {
+        "simplified": false,
+        "splitCatchment": false
+      },
+      "bytes": 21927,
+      "station_id_field": "station_id",
+      "native_id_field": "station_id",
+      "source_crs": "EPSG:4326",
+      "expected_features": 13
+    },
+    {
+      "id": "nldi-daily-flow-whole-catchments-20261013",
+      "title": "Original full upstream whole-catchment support for 13 gauges",
+      "kind": "vector",
+      "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+      "id_field": "basin_id",
+      "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791863575555249",
+      "vintage": "USGS-NLDI-2026-10-13-original-whole-catchment",
+      "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b",
+      "crs": "OGC:CRS84",
+      "support_kind": "nhdplusv2_upstream_whole_catchments",
+      "companions": [
+        {
+          "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+          "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1",
+          "bytes": 8144
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
+          "bytes": 11158
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
+          "bytes": 1786
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+          "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05",
+          "bytes": 8245
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+          "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690",
+          "bytes": 4027
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+          "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+          "bytes": 348121
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+          "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+          "bytes": 33415
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+          "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
+          "bytes": 30153
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+          "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c",
+          "bytes": 3824
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+          "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964",
+          "bytes": 2399079
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+          "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7",
+          "bytes": 9682
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+          "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247",
+          "bytes": 65562
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+          "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+          "bytes": 5904
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+          "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+          "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+          "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+          "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+          "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+          "bytes": 19991
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+          "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+          "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+          "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+          "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+          "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+          "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+          "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+          "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+          "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+          "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+          "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+          "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+          "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+          "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+          "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+          "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+          "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+          "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+          "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+          "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+          "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+          "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+          "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+          "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+          "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+          "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+          "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+          "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba",
+          "bytes": 17523
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+          "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f",
+          "bytes": 133043
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+          "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea",
+          "bytes": 140830
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+          "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c",
+          "bytes": 150441
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+          "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d",
+          "bytes": 158068
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+          "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0",
+          "bytes": 156274
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+          "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c",
+          "bytes": 147925
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+          "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60",
+          "bytes": 22544
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+          "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd",
+          "bytes": 2975
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
+          "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797",
+          "bytes": 19443
+        }
+      ],
+      "role": "upstream-whole-catchment-support",
+      "basin_request_parameters": {
+        "simplified": false,
+        "splitCatchment": false
+      },
+      "request_parameters": {
+        "simplified": false,
+        "splitCatchment": false
+      },
+      "bytes": 838639,
+      "source_crs": "EPSG:4326",
+      "expected_features": 13
+    },
+    {
+      "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+      "bytes": 2399079,
+      "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964",
+      "id": "huc05-07-calibration-daily-20261013",
+      "title": "Original daily mean discharge with native source lines",
+      "kind": "table",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/",
+      "vintage": "2020–2025 observations",
+      "metadata": {
+        "row_count": 26242,
+        "guide_file": "CALIBRATION_CONTEXT.md",
+        "source_index": "calibration-inputs.json",
+        "original_manifest": "source-manifest.json"
+      },
+      "station_id_field": "site_no",
+      "companions": [
+        {
+          "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+          "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1",
+          "bytes": 8144
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
+          "bytes": 11158
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
+          "bytes": 1786
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+          "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05",
+          "bytes": 8245
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+          "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690",
+          "bytes": 4027
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+          "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+          "bytes": 348121
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+          "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+          "bytes": 33415
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+          "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
+          "bytes": 30153
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+          "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c",
+          "bytes": 3824
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+          "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7",
+          "bytes": 9682
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+          "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247",
+          "bytes": 65562
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+          "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+          "bytes": 5904
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+          "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+          "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+          "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+          "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+          "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+          "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+          "bytes": 19991
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+          "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+          "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+          "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+          "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+          "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+          "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+          "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+          "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+          "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+          "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+          "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+          "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+          "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+          "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+          "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+          "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+          "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+          "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+          "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+          "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+          "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+          "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+          "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+          "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+          "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+          "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+          "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+          "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba",
+          "bytes": 17523
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+          "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f",
+          "bytes": 133043
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+          "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea",
+          "bytes": 140830
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+          "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c",
+          "bytes": 150441
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+          "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d",
+          "bytes": 158068
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+          "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0",
+          "bytes": 156274
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+          "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c",
+          "bytes": 147925
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+          "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60",
+          "bytes": 22544
+        },
+        {
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+          "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd",
+          "bytes": 2975
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
+          "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797",
+          "bytes": 19443
+        }
+      ]
+    }
+  ]
+}

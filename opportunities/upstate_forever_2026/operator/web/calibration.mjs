@@ -60,10 +60,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     token===formToken && activeDraft?.workspace===current());
 
   function formOpening(){
-    const workspace=current(),request=++formRequest;
+    const workspace=current(),request=++formRequest,viewGeneration=generation;
     const body=$('#form-body'),anchor=body?.firstChild;
     const dialog=$('#form-dialog'),wasOpen=dialog?.open;
-    return {workspace,current:()=>workspace===current()&&request===formRequest&&
+    return {workspace,current:()=>workspace===current()&&request===formRequest&&viewGeneration===generation&&
       body===$('#form-body')&&body?.firstChild===anchor&&dialog?.open===wasOpen};
   }
   async function openingRead(opening,operation){
