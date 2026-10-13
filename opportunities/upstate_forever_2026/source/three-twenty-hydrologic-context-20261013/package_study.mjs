@@ -46,6 +46,7 @@ export function assemble(originals,authored,inputManifest,authoredManifest,ident
   const path=ROOT+"/"+file,entry={id:"three-twenty-network-"+name,title,kind,role,path,...identity(files[path]),uri:inputManifest.source_page,vintage:"Original USGS NLDI responses captured 2026-10-13",metadata:{source_schema:analysis.schema,station_count:4,downstream_whole_reaches:65,downstream_original_vertices:650,upstream_whole_reaches:45,original_inputs:14,navigation_mode:"DM",navigation_distance_km:100,source_geometry:"Unchanged original coordinate sequences; derived provenance properties retain source identity."},companions:descriptors.filter(d=>d.path!==path)};
   if(kind==="vector"){entry.source_crs="EPSG:4326";entry.native_id_field=idField;entry.metadata.native_id_field=idField;}
   if(file.endsWith(".svg"))entry.metadata.media_type="image/svg+xml";
+  if(file.endsWith(".html")){entry.metadata.media_type="text/html";entry.metadata.report_schema=analysis.schema;}
   return entry;
  });
  add(MANIFEST,json({schema:"upstate.sources/v1",title:"Three and Twenty Creek original four-station geographic context",captured_at:"2026-10-13",entries}));

@@ -141,6 +141,12 @@ def _source_update(workspace, binding, choice, analysis_crs, cache):
         updated.pop(field, None)
     updated.update(deepcopy(supplied))
     rows, identity = waters._source(workspace, updated, analysis_crs, cache=cache)
+    requested = updated.get("feature_ids")
+    if requested is not None:
+        wanted = [str(value) for value in requested]
+        actual = [str(row["id"]) for row in rows]
+        if len(set(wanted)) != len(wanted) or set(wanted) != set(actual):
+            raise ValueError("Confirm every selected original feature; a requested ID is duplicated, absent, filtered or empty")
     for row in rows:
         for name, value in where.items():
             if name not in row["properties"] or type(row["properties"][name]) is not type(value) or row["properties"][name] != value:

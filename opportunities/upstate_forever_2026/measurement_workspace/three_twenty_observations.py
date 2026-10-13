@@ -167,6 +167,28 @@ def build_files(application=None):
             + "\n\n".join(notes) + "\n"
         ).encode("utf-8"),
     })
+    application_root = Path(application) if application is not None else Path(__file__).resolve().parents[1]
+    context_manifests = []
+    for context_name in study_context.manifest_names(BUILTIN_ID):
+        if context_name == MANIFEST or not (application_root / context_name).is_file():
+            continue
+        retained = study_context.retained_files(application_root, application_root / context_name)
+        for name, raw in retained.items():
+            if name in files and files[name] != raw:
+                raise ValueError("An original station-network context conflicts at " + name)
+            files[name] = raw
+        context_manifests.append(context_name)
+    if context_manifests:
+        study["related_context_manifests"] = context_manifests
+        study["observation_selection_notes"].append(
+            "The original four-station river-network companion retains all four location representations, "
+            "65 downstream whole reaches, 45 upstream whole reaches, six geometric station-pair distances, "
+            "and its full interactive report and source code. This geographic context retains its own "
+            "four-station scope; the observation cohort, dates, result identities and statistics remain unchanged."
+        )
+        files["study.json"] = _json(study)
+        files["source_notes.json"] = _json([{"code": "ORIGINAL_RESULT_SELECTION", "context": note}
+                                            for note in study["observation_selection_notes"]])
     native = json.loads(originals[MANIFEST])
     original_report = next(entry for entry in native["entries"] if entry["id"] == "three-twenty-2026-report")
     report_name = ROOT + "/" + original_report["path"]

@@ -75,6 +75,24 @@ export function attachScientificReportEditions(host) {
     if(panel.parentNode!==container)container.append(panel);
     panel.hidden=false;
   }
+  function sourceActions(row,reportId=''){
+    const native=row.native_study,available=typeof host.openGISStudy==='function'&&host.hasView?.('gis-projects');
+    const attributes=' data-collection="'+esc(row.source_collection_id)+'" data-source="'+esc(row.source_id)+'"'+
+      (reportId?' data-report="'+esc(reportId)+'"':'');
+    return '<div class="inline-actions">'+
+      (typeof host.openItem==='function'?'<button type="button" data-scientific-report-action="source"'+attributes+'>Open original source files</button>':'')+
+      (native&&available?'<button type="button" data-scientific-report-action="gis"'+attributes+
+        (!native.local_project||busy||pending?' disabled':'')+'>Prepare editable native GIS</button>':'')+'</div>'+
+      (native&&!native.local_project?'<small>Open the restored original model project to include its native rasters. This received source keeps its original report data and files.</small>':'');
+  }
+  function reportSourcesHTML(){
+    const native=new Map((opened.native_studies||[]).map(row=>[key(row),row]));
+    return '<section class="scientific-report-preview"><h4>Continue with this report’s original studies</h4>'+
+      '<p>Open the retained source files, or prepare editable native GIS with this exact saved report. Choose an execution-history snapshot in the GIS desk when needed.</p><ol>'+
+      opened.edition.sources.map(row=>'<li><strong>'+esc(row.title||row.source_id)+'</strong><small>'+
+        esc(row.vintage||'Original retained edition')+'</small>'+
+        sourceActions({...row,native_study:native.get(key(row))},opened.edition.id)+'</li>').join('')+'</ol></section>';
+  }
   function render(){
     if(!panel)return;
     let chosen=[],selectionIssue='';
@@ -94,7 +112,7 @@ export function attachScientificReportEditions(host) {
       (selected.length?'<ol class="scientific-report-order">'+selected.map((row,index)=>{
         const original=sources.find(item=>key(item)===key(row));
         return '<li><div><strong>'+esc(original?.title||row.source_id)+'</strong><small>'+esc(original?.vintage||'Retained selection')+
-          ' · '+esc(row.source_id)+'</small></div><div class="inline-actions">'+
+          ' · '+esc(row.source_id)+'</small>'+sourceActions(original||row)+'</div><div class="inline-actions">'+
           '<button type="button" data-scientific-report-action="up" data-index="'+index+'"'+(!index||locked?' disabled':'')+' aria-label="Move study '+(index+1)+' earlier">Earlier</button>'+
           '<button type="button" data-scientific-report-action="down" data-index="'+index+'"'+(index===selected.length-1||locked?' disabled':'')+' aria-label="Move study '+(index+1)+' later">Later</button>'+
           '<button type="button" data-scientific-report-action="remove" data-index="'+index+'"'+(locked?' disabled':'')+'>Remove</button></div></li>';
@@ -200,7 +218,7 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
-      briefingHTML()+
+      reportSourcesHTML()+briefingHTML()+
       (opened.viewer_url?'<div class="source-report-frame-shell"><iframe title="'+esc(row.title)+
         '" sandbox="allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'');
     panel.querySelector('[data-scientific-report-files]').innerHTML='<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
@@ -355,6 +373,31 @@ export function attachScientificReportEditions(host) {
       const original=opened,ws=workspace,turn=generation,ticket=detailGeneration;
       return host.prepareCustomerReview({workspace_key:ws,edition_id:original.edition.id,
         isCurrent:()=>valid(ws,turn)&&active&&opened===original&&detailGeneration===ticket});
+    }
+    if(action==='source'||action==='gis'){
+      const pair={source_collection_id:button.dataset.collection,source_id:button.dataset.source};
+      const id=button.dataset.report||null,ws=workspace,turn=generation,ticket=++detailGeneration;
+      if(action==='gis'&&(busy||pending))throw Error('Recover the original report request before opening another workflow.');
+      let row;
+      if(id){
+        if(opened?.edition.id!==id)throw Error('Open the selected saved report first.');
+        const result=await request('/api/source-reports/scientific-edition',{id});
+        if(!active||!valid(ws,turn)||ticket!==detailGeneration||opened?.edition.id!==id)return;
+        if(result.workspace_key!==ws||result.edition?.id!==id||result.edition.state!=='complete')
+          throw Error('The saved report differs from the selected original edition.');
+        row=result.edition.sources.find(item=>key(item)===key(pair));
+        if(row)row={...row,native_study:(result.native_studies||[]).find(item=>key(item)===key(pair))};
+      }else{
+        const result=await request('/api/source-reports/scientific-catalog');
+        if(!active||!valid(ws,turn)||ticket!==detailGeneration)return;
+        if(result.workspace_key!==ws)throw Error('The source catalog belongs to another Workspace.');
+        row=result.sources.find(item=>key(item)===key(pair));
+      }
+      if(!row)throw Error('Choose a source retained in the selected original report.');
+      if(action==='source')return host.openItem('sources',pair.source_collection_id);
+      if(!row.native_study?.local_project||typeof host.openGISStudy!=='function'||!host.hasView?.('gis-projects'))
+        throw Error('Open this native study in its restored original project with the editable GIS desk.');
+      return host.openGISStudy({workspace_key:ws,...pair,...(id?{scientific_report_id:id}:{})});
     }
     if(action==='backup')return host.openBackup();
   }

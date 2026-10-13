@@ -19,6 +19,20 @@ STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "three_twenty_hydrologic_context.sources.json": {
+        "studies": (SV833_STUDY, "scdes-three-twenty-water-quality-2026",
+                    "three-twenty-historical-2021-2025"),
+        "retained_root": "application-context/three-twenty-hydrologic-context",
+        "source_inventory": "source/three-twenty-hydrologic-context-20261013/family.json",
+        "prefixes": ("source/three-twenty-hydrologic-context-20261013/",
+                     "source/sv833-hydrologic-context-20261013/"),
+        "paths": (
+            "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+            "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+            "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+            "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        ),
+    },
     "three_twenty_historical.sources.json": {
         "studies": ("three-twenty-historical-2021-2025",),
         "retained_root": "application-context/three-twenty-historical",
@@ -151,6 +165,33 @@ def source_files(application, manifest_path):
             if item.get("bytes") != len(raw) or item.get("sha256") != hashlib.sha256(raw).hexdigest():
                 raise ValueError("Original context source bytes changed: " + relative)
             files[relative] = raw
+    inventory_name = family.get("source_inventory")
+    if inventory_name is not None:
+        inventory_name = _relative(inventory_name)
+        inventory_path = (application / inventory_name).resolve(strict=True)
+        if not inventory_path.is_relative_to(application) or not inventory_path.is_file():
+            raise ValueError("The original context inventory must remain inside the application.")
+        inventory_raw = inventory_path.read_bytes()
+        inventory = json.loads(inventory_raw.decode("utf-8-sig"))
+        descriptors = inventory.get("files")
+        if (inventory.get("schema") != "commons.file-inventory/v1"
+                or not isinstance(descriptors, list)
+                or any(not isinstance(item, dict) for item in descriptors)):
+            raise ValueError("Retain the complete original context file inventory.")
+        identities = {}
+        for descriptor in descriptors:
+            relative = _relative(descriptor.get("path"))
+            if relative in identities or relative == inventory_name:
+                raise ValueError("The context inventory must list each source once and exclude itself.")
+            identities[relative] = descriptor
+        if set(identities) != set(files):
+            raise ValueError("The context inventory differs from the complete native source closure.")
+        for relative, raw in files.items():
+            descriptor = identities[relative]
+            if (type(descriptor.get("bytes")) is not int or descriptor["bytes"] != len(raw)
+                    or descriptor.get("sha256") != hashlib.sha256(raw).hexdigest()):
+                raise ValueError("Original context inventory identity changed: " + relative)
+        files[inventory_name] = inventory_raw
     return files
 
 
