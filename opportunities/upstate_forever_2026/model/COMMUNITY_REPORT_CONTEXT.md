@@ -8,9 +8,9 @@ The Community report keeps the exact saved plan, original community table, inter
 2. Open the saved report and choose **Use in scientific report**.
 3. Choose **Prepare a new report selection**, or select an existing retained delivery. An existing delivery preserves its original runs, maps, mode and ordered report sources. This Community source is appended once.
 4. Choose **Prepare scientific report source**. The original operator queue retains the report ID, original JSON hash and optional delivery ID. Normal task retry reuses that exact selection.
-5. When preparation completes, choose **Open retained report source** to inspect the imported source edition. **Original sources → Review retained reports** previews its unchanged Community HTML and offers every original file and complete source-edition export.
-6. Choose **Open prepared delivery form** when composing the full scientific map delivery. Its existing baseline/alternative and complete-model requirements still apply. The Community source is already available independently in the source viewer.
-7. Review the ordered sources in that original form and build the delivery. The Community planning sections retain their original scope alongside the other scientific reports, with the original source files available for inspection and receiving.
+5. When preparation completes, choose **Open scientific report**. The existing scientific report composer receives the exact ordered source choices in the current Workspace. It preserves an existing draft and adds each missing source once; review the combined order, title and contact details before previewing and building the saved report edition. This course uses the retained reports directly.
+6. Choose **Open retained report source** to inspect the imported source edition. **Original sources → Review retained reports** previews its unchanged Community HTML and offers every original file and complete source-edition export.
+7. Choose **Open prepared delivery form** when composing the full scientific map delivery. Its existing baseline/alternative and complete-model requirements still apply. Review the ordered sources in that original form and build the delivery. The Community planning sections retain their original scope alongside the other scientific reports, with the original source files available for inspection and receiving.
 
 The task’s completed-result buttons remain available after reopening the operator. Source preparation does not change the original plan or report.
 
