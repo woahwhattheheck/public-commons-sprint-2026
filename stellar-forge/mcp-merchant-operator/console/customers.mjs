@@ -11,7 +11,7 @@ const validId=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(
 const validSha=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const errorView=error=>({code:error.code??'CUSTOMER_RECEIVING_ERROR',message:error.message??String(error)});
 export function customerAccess(selection){
-  const prefix=selection.family==='grpc'?'merchant_grpc_export':selection.family==='grant-reviewer'?'merchant_grant_reviewer':
+  const prefix=selection.family==='worldbank-programme'?'merchant_worldbank_programme':selection.family==='grpc'?'merchant_grpc_export':selection.family==='grant-reviewer'?'merchant_grant_reviewer':
     selection.family==='core'?'merchant_client_export':selection.family==='opensearch'?'merchant_opensearch_deployment':
     selection.family==='openapi'?'merchant_openapi':null;
   if(!prefix)throw fail('CONSOLE_CUSTOMER_SELECTION','Choose an original supported customer family.',400);
@@ -19,6 +19,7 @@ export function customerAccess(selection){
 }
 export const customerManifestAccess=customerAccess;
 async function customerFamily(selection){
+  if(selection.family==='worldbank-programme')return (await import('./customer-worldbank.mjs')).worldBankCustomerFamily;
   if(selection.family==='grpc')return (await import('./customer-grpc.mjs')).grpcCustomerFamily;
   if(selection.family==='grant-reviewer')return (await import('./customer-reviewer.mjs')).reviewerCustomerFamily;
   return null;
@@ -177,6 +178,17 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     file:readCustomerFile,
     async streamFile(id,name,request,response){
       const record=store.delivery(id);
+      const selectedFamily=await customerFamily(record.identity);
+      if(selectedFamily?.sendFile){
+        if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+        await requireRead(record,request);
+        const file=record.files.find(value=>value.name===name);
+        if(!file)throw fail('CONSOLE_CUSTOMER_FILE','Select an original manifest member.',404);
+        if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+        archiveResponses.add(response);
+        const task=selectedFamily.sendFile({directory:directory(record),record,file,request,response});archiveCalls.add(task);
+        try{await task;return true;}finally{archiveCalls.delete(task);archiveResponses.delete(response);}
+      }
       if(record.identity.family!=='grpc')return false;
       if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
       await requireRead(record,request);
@@ -202,8 +214,9 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
       if(family?.archiveFile){
         const file=family.archiveFile(record);
         if(!file)throw fail('CONSOLE_CUSTOMER_ARCHIVE','Choose a complete original file from this export.',409);
-        const task=sendOriginalFile(record,file,request,response);archiveCalls.add(task);
-        try{await task;}finally{archiveCalls.delete(task);}
+        archiveResponses.add(response);
+        const task=family.sendFile?family.sendFile({directory:directory(record),record,file,request,response}):sendOriginalFile(record,file,request,response);archiveCalls.add(task);
+        try{await task;}finally{archiveCalls.delete(task);archiveResponses.delete(response);}
         return;
       }
       const owner=originalArchive(record);
