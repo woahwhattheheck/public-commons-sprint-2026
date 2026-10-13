@@ -2,7 +2,7 @@
 
 This module uses Python's standard library. It joins NRCS state records to the
 original HUC12 list and summarizes SCDES publisher HUC attributes. Native geometry
-intersections and pollutant transport remain in the receiving-water model.
+intersections and land-origin export summaries remain in the receiving-water model.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 SCHEMA = "upstate.watershed-context/v1"
-ANALYSIS_VERSION = "1.0.0"
+ANALYSIS_VERSION = "1.1.0"
 ACRE_TO_KM2 = 0.0040468564224
 TARGET_CLASSES = ("ORW", "ONRW", "TN", "TPGT", "TPT")
 PRIORITY_STATUS = "High Priority Area"
@@ -447,7 +447,9 @@ def _network_context(network: Mapping | list | None, rows: list[dict]) -> dict:
         "interpretation": (
             "Upstream summaries count distinct HUC12 ancestors present in the supplied "
             "native network and exclude the focal watershed. They describe connectivity; "
-            "the receiving-water model computes delivered sediment and nutrient loads."
+            "the receiving-water model groups land-origin sediment and nutrient export "
+            "over the selected contributing geometry. InVEST transport ends at the "
+            "modeled stream; in-stream and reservoir processing are separate."
         ),
     }
 
@@ -616,9 +618,12 @@ def build_watershed_context(
                 "for these selected classes. South Carolina jurisdiction is shown separately."
             ),
             "geometry": (
-                "Native receiving-water geometry intersections and routed load associations "
-                "are computed by the receiving-water engine. Source attribute counts remain "
-                "available for regional context and source inspection."
+                "Native receiving-water geometry intersections associate contributing land with "
+                "the selected receptor. Saved NDR/SDR summaries aggregate land-origin "
+                "export reaching the modeled stream over that geometry. In-stream "
+                "retention, reservoir processing and intake concentrations require "
+                "additional modeling. Source attribute counts remain available for "
+                "regional context and source inspection."
             ),
             "roles": (
                 "All original model-domain HUC12s are retained. Reporting and upstream roles "
@@ -804,9 +809,11 @@ def render_watershed_report(report: Mapping) -> str:
         f"{summary['unverified_zero_target_huc_count']} zero-record watersheds lack "
         "a complete query bound to this source context.", "",
         "Class counts retain each source feature's publisher HUC12 attribute. "
-        "The native receiving-water engine supplies spatial intersections and routed "
-        "sediment and nutrient results. Watersheds outside the classification layer's "
-        "state jurisdiction remain in the original model domain.", "",
+        "The native receiving-water engine supplies spatial intersections and land-origin "
+        "sediment and nutrient export summaries. InVEST transport ends at the modeled "
+        "stream; HUC connectivity preserves the separate receptor relationship. "
+        "Watersheds outside the classification layer's state jurisdiction remain "
+        "in the original model domain.", "",
         "## Hydrologic connectivity", "",
         f"Native ToHUC status: **{report['network']['status']}**.", ""])
     if report["network"]["status"] != "not_supplied":
