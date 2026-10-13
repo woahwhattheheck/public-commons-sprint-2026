@@ -460,6 +460,12 @@ def _retain_collection_editions(service, snap, collections, directory):
             for member in edition["files"]:
                 if archive.getinfo(member["path"]).file_size != member["bytes"]:
                     raise ValueError("The original collection ZIP member length differs")
+                member_hash = sha256()
+                with archive.open(member["path"]) as stream:
+                    for block in iter(lambda: stream.read(1024 * 1024), b""):
+                        member_hash.update(block)
+                if member_hash.hexdigest() != member["sha256"]:
+                    raise ValueError("The original collection ZIP member hash differs: " + member["path"])
         relative = "collections/" + collection_id + "/" + edition_id + ".zip"
         atomic_bytes(directory / relative, body, immutable=True)
         result.append({"collection_id": collection_id, "edition_id": edition_id,
