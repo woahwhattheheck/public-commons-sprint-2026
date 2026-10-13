@@ -356,3 +356,48 @@ A context with fewer rows must retain its exact filter and inventory selection;
 the result is never padded with missing records.
 
 The saved report and operator show each original edition reference as its own source link. A context spanning multiple original references uses its stable `urn:upstate:assessment-context:<build_id>` as the derived source URI and preserves the individual references in `metadata.original_source_references`.
+
+## Send a saved context to the existing scientific and client report
+
+Open the exact saved assessment context. Under **Scientific and client report**, choose a saved delivery if its native runs, map selection and previously ordered scientific sources should be retained. Leave the choice at **New report selection** to prepare a new report form. Select **Use saved assessment context in report**. The original task queue retains the operation; after it completes, **Open prepared report form** opens the existing Maps and delivery form. Review the delivery settings and use its normal generation and download controls.
+
+The same controls appear below an opened parcel association. **Use saved parcel and assessment context in report** includes its exact original context, parcel study, reporting boundary, parcel attributes, relationship rows and complete packages. A received parcel association keeps its original context identity and the destination context binding separately. Its retained values can be reported directly without recalculating them.
+
+The report source always uses the saved edition. Temporary table searches or map selections do not silently narrow the saved scientific selection. To publish a narrower cause/use/support/edition cohort, use the saved selection to prepare that context first.
+
+The report preserves each original edition/status/reference and each cause/use/support group, both publisher and computed watershed relationships, and the independent parcel geographic association. It keeps unresolved comparisons distinct from disagreements. It carries original body hashes, array pointers or CSV positions, source dictionaries and packages beside the report. Parcel areas use the saved metric CRS and union within each reporting-clipped parcel; overlapping source parcels remain independent. The report source is geographic assessment context and leaves the delivery's original scientific model inputs, concentrations, loads and scoring unchanged.
+
+The prepared document is imported through the maintained `upstate.sources/v1` intake. Its recipe uses the current `upstate.observed-report/v1` collector, which supports ordered scientific sources. Every package member is copied and checked before import; the recipe and source manifest refer to that common retained root. Report collection and Workspace archive/restore therefore retain the original files through the existing transport.
+
+### Native preparation and receiving
+
+From the original application, with actual saved IDs:
+
+```bash
+python -B -m model.assessment_report_context \
+  --workspace "$WORKSPACE" \
+  --context-id "$SAVED_CONTEXT_ID" \
+  --parcel-id "$SAVED_PARCEL_ASSOCIATION_ID" \
+  --delivery-id "$SAVED_DELIVERY_ID"
+```
+
+Omit `--parcel-id` for assessment context alone. Omit `--delivery-id` for a new report selection. `--prepare-only` writes the complete recipe, source manifest and retained companion files without importing them; it cannot be combined with a selected delivery.
+
+The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass that selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
+
+Native operator action:
+
+```json
+{
+  "action": "assessment.context.report",
+  "payload": {
+    "context_id": "ACTUAL_SAVED_CONTEXT_ID",
+    "parcel_id": "ACTUAL_SAVED_PARCEL_ASSOCIATION_ID",
+    "delivery_id": "ACTUAL_SAVED_DELIVERY_ID"
+  }
+}
+```
+
+The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list reopen the prepared report form only in the task's original Workspace.
+
+For a focused receiving check, use the same actual saved context, prepare and import its report source, bind and collect it through `model.observed_context`, and verify every delivered companion against the original source member descriptor. Archive/restore the current Workspace through its normal operation and reopen the same saved source and delivery. Preserve actual context, parcel, collection, document, report and receiving IDs in the existing operation receipt.
