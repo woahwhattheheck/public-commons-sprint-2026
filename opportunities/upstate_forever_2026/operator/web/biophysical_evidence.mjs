@@ -1,3 +1,4 @@
+import {createBiophysicalAuthoring} from './biophysical_authoring.mjs';
 /** Source-bound coefficient evidence and endpoint profiles in the existing profile workbench. */
 const text=value=>String(value??'');
 const esc=value=>text(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -33,6 +34,18 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
   let root=null,events=null,workspace=null,profileId=null,title='',generation=0,intent=0;
   let memory=null,catalog=null,evidence=null,range=null,preview=null,rangePreview=null;
   let busy=false,processing=false,message='',isError=false,taskSignature='';
+  const authoring=createBiophysicalAuthoring(host,{
+    service:{
+      read:(operation,payload)=>host.api('/api/profile-workbench/biophysical/authoring-'+operation,{method:'POST',body:payload}),
+      write:(kind,payload,operation_id,workspace)=>host.api('/api/actions',{method:'POST',body:{workspace,action:'profile.biophysical.authoring.'+kind,payload,operation_id}})
+    },
+    getEvidence:()=>evidence,
+    onEvidence:async id=>{
+      const s=scope();await host.refreshState?.({force:true});if(!alive(s))return;
+      const result=await read('catalog',{profile_id:s.profileId},s);if(!alive(s))return;
+      catalog=result;await selectEvidence(id);
+    }
+  });
   const $=selector=>root?.querySelector(selector);
   const current=()=>host.getState()?.workspace_key||null;
   const storageKey=key=>'upstate-biophysical-evidence-v1:'+key;
@@ -121,8 +134,12 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
     if(!root?.isConnected)return;
     const value=draft(),available=sources();
     const sourceIndex=available.findIndex(row=>row.collection_id===value.source_collection_id&&row.id===value.source_id);
-    root.innerHTML='<section class="pw-panel"><header class="pw-panel-heading"><div><h2>Coefficient evidence and ranges</h2><p>Bind original citations to this saved table and choose the exact coefficients to vary in native experiments.</p></div>'+button('refresh','Refresh evidence',busy?'disabled':'')+'</header><div class="pw-panel-body"><p data-be-message class="pw-message" role="status" aria-live="polite" hidden></p><div data-be-operations>'+operationsHTML()+'</div><div class="pw-two-columns"><div><h3>Document the original table</h3><p>Download the template, add the source for each documented cell, then import the completed CSV through Original sources. Values, units and nutrient load types must match this profile.</p><div class="pw-actions">'+button('template','Download evidence template',busy?'disabled':'')+button('cite-table','Cite original table',busy?'disabled':'')+'</div><p class="pw-note">Cite original table records each supplied coefficient with its exact source row and column. Add specific publications through an imported citation CSV.</p><label class="pw-field"><span>Imported evidence CSV</span><select data-be-field="source">'+option('','Select an original table source',sourceIndex<0)+available.map((row,i)=>option(JSON.stringify([row.collection_id,row.id]),row.title+' · '+row.collection_title,i===sourceIndex)).join('')+'</select></label><div class="pw-actions">'+button('preview','Inspect source evidence',sourceIndex<0||busy?'disabled':'',true)+'</div></div><div><h3>Retained evidence</h3><label class="pw-field"><span>Saved evidence for this exact profile</span><select data-be-field="evidence">'+evidenceChoices()+'</select></label><label class="pw-field"><span>Saved endpoint profiles</span><select data-be-field="range">'+rangeChoices()+'</select></label><p class="pw-note">Missing citations stay unknown. General profile references do not establish a source for an individual coefficient.</p></div></div><div data-be-evidence></div><div data-be-range></div></div></section>';
+    root.innerHTML='<section class="pw-panel"><header class="pw-panel-heading"><div><h2>Coefficient evidence and ranges</h2><p>Bind original citations to this saved table and choose the exact coefficients to vary in native experiments.</p></div>'+button('refresh','Refresh evidence',busy?'disabled':'')+'</header><div class="pw-panel-body"><p data-be-message class="pw-message" role="status" aria-live="polite" hidden></p><div data-be-operations>'+operationsHTML()+'</div><div class="pw-two-columns"><div><h3>Document the original table</h3><p>Download the template, add the source for each documented cell, then import the completed CSV through Original sources. Values, units and nutrient load types must match this profile.</p><div class="pw-actions">'+button('template','Download evidence template',busy?'disabled':'')+button('cite-table','Cite original table',busy?'disabled':'')+'</div><p class="pw-note">Cite original table records each supplied coefficient with its exact source row and column. Add specific publications through an imported citation CSV.</p><label class="pw-field"><span>Imported evidence CSV</span><select data-be-field="source">'+option('','Select an original table source',sourceIndex<0)+available.map((row,i)=>option(JSON.stringify([row.collection_id,row.id]),row.title+' · '+row.collection_title,i===sourceIndex)).join('')+'</select></label><div class="pw-actions">'+button('preview','Inspect source evidence',sourceIndex<0||busy?'disabled':'',true)+'</div></div><div><h3>Retained evidence</h3><label class="pw-field"><span>Saved evidence for this exact profile</span><select data-be-field="evidence">'+evidenceChoices()+'</select></label><label class="pw-field"><span>Saved endpoint profiles</span><select data-be-field="range">'+rangeChoices()+'</select></label><p class="pw-note">Missing citations stay unknown. General profile references do not establish a source for an individual coefficient.</p></div></div><div data-be-authoring></div><div data-be-evidence></div><div data-be-range></div></div></section>';
     setMessage(message,isError);renderEvidence();renderRange();
+    if(catalog){
+      const node=$('[data-be-authoring]'),s=scope();
+      authoring.mount(node,{workspace_key:workspace,catalog}).catch(error=>{if(alive(s))setMessage(error.message||error,true);});
+    }
   }
   function renderEvidence(){
     const node=$('[data-be-evidence]');if(!node)return;
@@ -316,11 +333,12 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
   }
   function update(snapshot=host.getState()){
     if(!root)return;if(snapshot?.workspace_key!==workspace){detach();return;}
+    authoring.update();
     const signature=canonical(allTasks().map(task=>[task.id,task.state]));
     if(signature!==taskSignature){taskSignature=signature;const node=$('[data-be-operations]');if(node)node.innerHTML=operationsHTML();const s=scope();completeOperations().catch(error=>{if(alive(s))setMessage(error.message||error,true);});}
   }
   function detach(){
-    save();events?.abort();events=null;root=null;generation++;intent++;busy=false;processing=false;
+    authoring.detach();save();events?.abort();events=null;root=null;generation++;intent++;busy=false;processing=false;
   }
   return {mount,update,detach};
 }

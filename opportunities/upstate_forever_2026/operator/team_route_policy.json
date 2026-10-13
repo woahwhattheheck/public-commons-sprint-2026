@@ -2,9 +2,9 @@
   "schema": "commons.ecosystem.extension-access-review.v1",
   "activeManifests": 57,
   "retiredManifests": 1,
-  "registeredRoutes": 233,
+  "registeredRoutes": 236,
   "registeredFileRoutes": 11,
-  "registeredActions": 169,
+  "registeredActions": 171,
   "safeViewerPosts": [
     "/api/assessment-context/catalog",
     "/api/assessment-context/edition",
@@ -106,7 +106,10 @@
     "/api/profile-workbench/biophysical/ranges-inspect",
     "/api/map-atlas/coefficient-evidence-catalog",
     "/api/published-studies/report-preview",
-    "/api/source-reports/scientific-source-preview"
+    "/api/source-reports/scientific-source-preview",
+    "/api/profile-workbench/biophysical/authoring-list",
+    "/api/profile-workbench/biophysical/authoring-inspect",
+    "/api/profile-workbench/biophysical/authoring-export"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",
