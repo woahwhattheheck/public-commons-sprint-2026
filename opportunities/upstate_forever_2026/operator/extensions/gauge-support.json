@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "gauge-support",
   "title": "Gauge support",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 45,
   "assets": [
     "gauge_support.mjs",
@@ -18,7 +18,8 @@
       ]
     },
     "actions": [
-      "gauge.support.build"
+      "gauge.support.build",
+      "gauge.support.report"
     ],
     "invoke": {
       "handler": "invoke",
@@ -114,7 +115,8 @@
       "toast",
       "navigate",
       "openItem",
-      "showTask"
+      "showTask",
+      "openDelivery"
     ],
     "styles": [
       "/web/gauge_support.css"

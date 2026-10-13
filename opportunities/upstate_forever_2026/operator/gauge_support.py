@@ -1,9 +1,9 @@
 """Gauge support in the current operator queue and verified file transport."""
 from pathlib import Path
-from model import gauge_support
+from model import gauge_support, gauge_report_context
 from model.common import identifier, read_json, verify_file
 
-ACTIONS = frozenset(("gauge.support.build",))
+ACTIONS = frozenset(("gauge.support.build", "gauge.support.report"))
 
 
 class GaugeSupport:
@@ -44,10 +44,21 @@ class GaugeSupport:
         if task.get("action") not in ACTIONS:
             raise self.Fault("GAUGE_SUPPORT_ACTION", "Choose a registered gauge support action.", 422)
         payload = task.get("payload") or {}
+        if task["action"] == "gauge.support.report":
+            return gauge_report_context.prepare(self.operator.ws(task["workspace"]),
+                payload.get("edition_id"), delivery_id=payload.get("delivery_id") or None)
         result = gauge_support.build(self.operator.ws(task["workspace"]), payload.get("selection", payload))
         return {key: result.get(key) for key in ("id","title","summary","selection","build_id")}
 
     def decorate_task(self, task):
+        if task.get("action") == "gauge.support.report" and task.get("state") == "complete":
+            result = task.get("result") or {}
+            ws = self.operator.ws(task["workspace"])
+            task.setdefault("_downloads", []).extend(self.operator._ticket(task["workspace"],
+                verify_file(ws.root, item), item, Path(item["path"]).name) for item in result.get("files", []))
+            task["_gauge_support"] = {"id": result.get("gauge_support_id"),
+                "title": "Gauge support report source", "view": "gauge-support"}
+            return task
         if task.get("action") in ACTIONS and task.get("state") == "complete" and (task.get("result") or {}).get("id"):
             row = self._edition(task["workspace"], task["result"]["id"], complete=False)
             task.setdefault("_downloads", []).extend(row["_downloads"])

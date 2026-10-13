@@ -158,9 +158,55 @@ Outputs include analysis.json; gauges, HUC intersections, annual coverage, utili
 
 The shared extension registers a Workspace verification callback. It checks saved outputs, every original source, the linked original station edition and the exact saved regional report. The component uses existing original-data readers, source retention, task queue, verified download tickets, extension host and portable engine.
 
+
+## Use a saved edition in the scientific or client report
+
+Open a saved Gauge support edition and choose **Use in scientific report**. The existing operator queue prepares a report source from that exact saved edition, imports it into the same Workspace and offers **Open prepared report form**. The current scientific/client delivery form then uses the registered source. A completed source action remains available under Saved operations after reconnect.
+
+Choose **New report selection** to start with this gauge context. Choose an existing saved delivery to retain its original model runs, alternatives, map settings, overlays, contact fields and previously selected original studies; the gauge context is appended to the ordered report-source selection. The new report uses the existing native baseline/alternative requirements and report assembly path.
+
+The report source contains typed sections for gauge/series identities, original point membership, whole-catchment support, annual flow coverage, reporting/upstream/utility scopes, individual HUC intersections and overlapping catchment relationships. It retains the complete original package closure, including native source manifests and companions, all saved analysis/CSV/GeoJSON outputs, the original regional report, station-geography ZIP and gauge-support ZIP.
+
+A self-contained map HTML and individual SVG maps use the saved catchment/HUC/gauge output geometries and the same local longitude/latitude display scale as the existing desk. Reporting HUC12s have grey fill, upstream context has white fill, whole catchments have a dark outline and gauges are points. All numeric areas continue to come from the original EPSG:5070 results. Map links and source attachments travel in the normal scientific/client HTML, PDF data package and delivery archive. The typed tables are rendered through the shared report engine.
+
+### Native source preparation and import
+
+From the current complete application:
+
+~~~sh
+"$PYTHON" -B -m model.gauge_support --workspace "$WORKSPACE" catalog
+"$PYTHON" -B -m model.gauge_support --workspace "$WORKSPACE" inspect "$GAUGE_EDITION_ID" --complete --verify
+"$PYTHON" -B -m model.gauge_report_context \
+  --workspace "$WORKSPACE" \
+  --edition-id "$GAUGE_EDITION_ID"
+~~~
+
+The last command verifies the selected saved result and its original package, writes the complete report source and imports it through `Workspace.import_sources`. Its JSON returns the exact `source`, `observed_context_binding`, `delivery_selection`, original edition/report IDs and verified files.
+
+Append `--delivery-id "$SAVED_DELIVERY_ID"` to start from a specific retained delivery selection. The returned `delivery_selection` preserves the complete existing selection and appends the newly registered source. It removes the previous observed-source binding so the normal delivery builder binds the current ordered sources.
+
+Use `--prepare-only` when preparing files without source import. The returned `manifest.path` is relative to the actual Workspace root and can be imported through the ordinary source-import action:
+
+~~~sh
+"$PYTHON" -B -m model.cli --workspace "$WORKSPACE" source-import "$WORKSPACE/$MANIFEST_PATH"
+~~~
+
+The module also exposes `prepare(workspace, edition_id, import_source=True, delivery_id=None)`. The shared operator action is `gauge.support.report` with payload `{edition_id, delivery_id?}`. It runs on the existing task queue and verified download transport.
+
+### Retention and reopen
+
+Each report source is stored below `gauge-support/BUILD_ID/report-context/OPERATION_ID/`. Its identity includes the producer version, Workspace/edition/build identities and exact hashes of the original package closure. Repeating preparation of the same source reuses identical retained files; a changed original fails verification.
+
+The native manifest is `gauge-report.sources.json`. Its single document source is `gauge-report.json`, using the maintained `upstate.observed-report/v1` recipe contract and `metadata.report_schema`. Every original package member and every map is listed with its exact bytes and SHA256 as a companion. The recipe records all input descriptors, so the delivery source binding verifies the complete selected edition before report assembly.
+
+The existing full Workspace backup retains the saved gauge edition, linked regional and station editions, registered source objects, queued operation, prepared report package and completed deliveries. Restore that same Workspace and reopen the source/delivery IDs returned by the original operation. The original Gauge support ZIP remains the report/source package for recipients who need the original analysis and all its inputs.
+
+Receiving continuation remains the original regional operation 1791859874 and source handoff 1791866330. After the original gauge build completes, run this report source action in that same Workspace, open the existing scientific/client report form, generate the normal report/data/archive, then restore the completed Workspace and reopen those same IDs. Return the actual source collection/document identity and resulting report/archive paths to the original operation.
+
 ## Component files
 
 - model/gauge_support.py
+- model/gauge_report_context.py
 - source_tools/receive_gauge_support.py
 - operator/gauge_support.py
 - operator/extensions/gauge-support.json
