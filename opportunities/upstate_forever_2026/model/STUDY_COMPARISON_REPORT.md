@@ -64,3 +64,36 @@ Use the existing experiment Run/Resume action or its original programme command 
 Keep the programme's native results, signed constituent differences, coverage, source choices and implementation assumptions together when moving into the Economic desk or a reviewed delivery. The original commercial workshare still selects its reviewed baseline and two alternatives. The broader source/scenario programme supports the team's scientific preparation and choice of those alternatives.
 
 TokenJunkieLabs.
+
+
+## Completed watershed context in the scientific report
+
+The report joins the grid's original `model_domain` and `reporting_area` source
+selectors to a completed watershed-context edition by exact HUC12 membership.
+It applies the original layer and property filter. A saved matching Workspace
+context takes precedence; otherwise the checked-in completed-result package is
+verified through the maintained native receiving code. This reads the completed
+result and its original receipts without executing another model.
+
+The geographic section and `study-watershed-context.csv` preserve one row per
+HUC. They retain published whole-HUC acres, labeled state portions, FY26
+source-water priorities and selected-class publisher feature counts. The
+management group follows the actual reporting source, while other contributing
+HUCs remain in the routing context. Whole-HUC membership does not establish
+whether the reporting polygons were clipped to a state boundary. The reporting
+mask's area, when available, comes separately from recorded native reporting
+cells multiplied by the grid's actual pixel area. Pollutant comparisons retain
+their own paired valid-cell support.
+
+The retained original context contains 217 HUCs and 4,659,072.10 whole-HUC
+acres. Its 116 SC-containing HUCs have 2,414,468.41 whole-HUC acres, of which the
+published SC portions total 2,113,830.3203338 acres. These are source grouping
+quantities; the actual grid selectors determine which group appears as managed
+area. The original edition retains 15 FY26 priority HUCs and 1,886 selected-class
+source features. The report links the NRCS and SCDES publisher sources and
+retains the exact completed-result identities in its downloadable JSON.
+
+Unrelated grids, including Gura, receive no regional context association when
+their source HUC membership is absent or differs. Multiple matching saved
+editions remain separate. The original result archive remains available through
+the existing regional receiving workflow and Workspace delivery.

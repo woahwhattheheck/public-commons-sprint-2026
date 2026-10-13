@@ -5,6 +5,8 @@ scenarios. PDF, offline HTML and structured report data share the same blocks.
 """
 from __future__ import annotations
 
+import base64
+from hashlib import sha256
 from html import escape as html_escape
 import math
 from pathlib import Path
@@ -13,7 +15,7 @@ from urllib.parse import unquote, urlsplit
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v8"
+REPORT_VERSION = "upstate.scientific-report/v10"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -855,7 +857,20 @@ def report_pdf(path, title, sections, *, contact, source_records):
                           story, onFirstPage=page_number, onLaterPages=page_number)
 
 
-def _html_block(block):
+def _figure_image(block, root):
+    """Encode the exact verified source bytes for self-contained HTML viewing."""
+    figure = _figure(block)
+    directory = Path(root).resolve(strict=True)
+    source = (directory / figure["path"]).resolve(strict=True)
+    if not source.is_relative_to(directory):
+        raise ValueError("Scientific figure is outside the original delivery")
+    payload = source.read_bytes()
+    if len(payload) != figure["bytes"] or sha256(payload).hexdigest() != figure["sha256"]:
+        raise ValueError("Scientific figure differs from its retained original SVG")
+    return "data:image/svg+xml;base64," + base64.b64encode(payload).decode("ascii")
+
+
+def _html_block(block, *, figure_images=None):
     def cell(value):
         value = _cell(value)
         if isinstance(value, dict):
@@ -866,7 +881,8 @@ def _html_block(block):
         title = ("<strong>" + cell(figure["title"]) + "</strong> "
                  if figure.get("title") else "")
         return ('<figure class="scientific-figure"><img src="' +
-                html_escape(figure["path"], quote=True) + '" alt="' +
+                html_escape(figure_images[figure["path"]] if figure_images is not None
+                            else figure["path"], quote=True) + '" alt="' +
                 html_escape(figure["alt"], quote=True) + '"><figcaption>' +
                 title + cell(figure["caption"]) + "</figcaption></figure>")
     if isinstance(block, dict) and block.get("kind") == "links":
@@ -931,15 +947,18 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     all_sections = list(sections) + [("Source editions", [_source_block(source_records)])]
+    figure_images = {}
     for _, blocks in all_sections:
         for block in blocks:
             if isinstance(block, dict) and block.get("kind") == "figure":
-                _figure(block, directory)
+                figure = _figure(block)
+                figure_images[figure["path"]] = _figure_image(figure, directory)
     headings = "".join("<li><a href=\"#section-" + str(index) + "\">" + html_escape(str(heading))
                        + "</a></li>" for index, (heading, _) in enumerate(all_sections))
     content = "".join("<section id=\"section-" + str(index) + "\"><h2>"
                       + html_escape(str(heading)) + "</h2>"
-                      + "".join(_html_block(block) for block in blocks) + "</section>"
+                      + "".join(_html_block(block, figure_images=figure_images)
+                                for block in blocks) + "</section>"
                       for index, (heading, blocks) in enumerate(all_sections))
     supplied_contact = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
     prepared = ("Prepared by " + supplied_contact if supplied_contact

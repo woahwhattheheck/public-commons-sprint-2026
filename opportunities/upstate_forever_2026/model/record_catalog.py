@@ -12,6 +12,7 @@ from pathlib import Path
 import threading
 
 from .common import canonical
+from .delivery_catalogue import delivery_view
 
 
 def _signature(value):
@@ -91,6 +92,7 @@ def delivery_summary(record):
         raise ValueError("Retained delivery maps and files must be objects")
     # Existing list views count map names, so retain those exact names.
     result["maps"] = dict.fromkeys(maps)
+    result["_delivery_view"] = delivery_view(record)
     result["map_count"] = len(maps)
     result["file_count"] = len(files)
     # The original conservation portfolio picker uses this producer count.

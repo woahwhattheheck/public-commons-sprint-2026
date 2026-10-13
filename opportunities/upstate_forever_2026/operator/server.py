@@ -39,6 +39,7 @@ from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS
 from experiment_operator import ExperimentOperator, ACTIONS as EXPERIMENT_ACTIONS, READS as EXPERIMENT_READS
 from parameter_study_api import ParameterStudyAPI, ACTIONS as PARAMETER_STUDY_ACTIONS, READS as PARAMETER_STUDY_READS
 from model.spatial_exports import SpatialExports
+from implementation_operator import implementation_error
 from delivery_review import read as read_delivery_report, send_preview as send_delivery_report_preview, REPORT_EDITION as CLIENT_REPORT_EDITION
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
@@ -98,6 +99,9 @@ def json_body(data):
     return result
 
 def summary_error(error):
+    implementation_detail = implementation_error(error)
+    if implementation_detail is not None:
+        return implementation_detail
     if isinstance(error, Fault):
         return {"code": error.code, "message": str(error)}, error.status
     if isinstance(error, FileNotFoundError):
