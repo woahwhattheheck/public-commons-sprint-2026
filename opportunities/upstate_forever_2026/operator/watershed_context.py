@@ -13,12 +13,13 @@ from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
 from model import utility_observed_context as observed_model
 from model import watershed_briefing as briefing_model
+from model import utility_monitoring
 from model.watershed_brief import (
     BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
 )
 
 ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export",
-                     "watershed.context.receive"})
+                     "watershed.context.receive", "watershed.context.monitoring"})
 CONTEXT_NAME = "full-domain-water-context.json"
 COVERAGE_NAME = "scdes-domain217-source-coverage.json"
 SCHEMA = "upstate.operator-watershed-context/v1"
@@ -268,7 +269,14 @@ class WatershedContextActions:
                 "exports": self.export_snapshot(workspace),
                 "sources": self._sources(ws),
                 "networks": self._network_sources(ws),
+                "utility_monitoring": utility_monitoring.catalog(ws),
             }
+        if operation == "monitoring":
+            key = identifier(value.get("monitoring_id") or value.get("id"))
+            result = utility_monitoring.inspect(ws, key)
+            directory = ws.root / utility_monitoring.FOLDER / key
+            return {**result, "_downloads": self._downloads(
+                workspace, directory, result, "operation.json", "Utility monitoring preparation")}
         if operation == "export":
             key = identifier(value.get("export_id") or value.get("id"))
             directory = ws.root / "watershed-context-exports" / key
@@ -695,6 +703,8 @@ class WatershedContextActions:
         return result
 
     def invoke(self, task):
+        if task.get("action") == "watershed.context.monitoring":
+            return utility_monitoring.prepare(self.operator.ws(task["workspace"]), task.get("payload") or {})
         if task.get("action") == "watershed.context.analyze":
             return self._analyze(task)
         if task.get("action") == "watershed.context.receive":
@@ -706,7 +716,8 @@ class WatershedContextActions:
     def decorate_task(self, task):
         if task.get("action") not in ACTIONS or task.get("state") != "complete":
             return task
-        kind = "export" if task["action"] == "watershed.context.export" else "report"
+        kind = ("monitoring" if task["action"] == "watershed.context.monitoring" else
+                "export" if task["action"] == "watershed.context.export" else "report")
         result = task["result"]
         row = self.read(task["workspace"], kind, {kind + "_id": result["id"]})
         return {
