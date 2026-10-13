@@ -179,3 +179,10 @@ The original current server has an explicit allowed static-file list. Revision 2
 The browser source-profile list now comes directly from the installed compiler. The active SCHydroClass profile appears with its own profile ID, and every profile marked classified_water or requiring a classification receives the same explicit class/rationale form checks. The earlier agency profile remains available for a separately retained source edition.
 
 The receiving-workbench helper and extension wrapper share the same complete controller. The wrapper refreshes its visible summary when saved waters, runs or relevant tasks change and preserves the selected record across navigation and workspace reopening. Unrelated task polling leaves the current water-detail view in place.
+
+
+## Current cumulative application task controls
+
+Revision 3 composes receiving-water task controls at the original customer-review task term. Current programme and experiment controls can appear between that term and the ordinary file downloads; they remain in their existing order. This supports the complete scientific-workbench application as well as the earlier operator layout. The receiving-water browser and registry interface are unchanged from revision 2.
+
+The installer retains its single-anchor and original-file checks before any application files are replaced. Its normal first and repeated invocation uses the same --root argument. Run it against the current full application after receiving the current scientific, source and shared-host components.
