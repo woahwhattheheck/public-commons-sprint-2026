@@ -9,7 +9,7 @@ export function attachmentName(reference){
 }
 function base64(bytes){let value="";for(let i=0;i<bytes.length;i+=32768)value+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(value);}
 function bytesOf(value){
- if(typeof value!=="string"||value.length>Math.ceil(ATTACHMENT_LIMITS.fileBytes/3)*4||! /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))throw new Error("Attachment content must be canonical base64 within the file limit");
+ if(typeof value!=="string"||value.length%4!==0||value.length>Math.ceil(ATTACHMENT_LIMITS.fileBytes/3)*4||/[^A-Za-z0-9+/=]/.test(value)||!/^[^=]*={0,2}$/.test(value))throw new Error("Attachment content must be canonical base64 within the file limit");
  const bytes=Uint8Array.from(atob(value),c=>c.charCodeAt(0));if(base64(bytes)!==value)throw new Error("Attachment base64 differs from its canonical encoding");return bytes;
 }
 export function selectedAttachmentReferences(doc){
