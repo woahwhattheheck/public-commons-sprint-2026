@@ -15,7 +15,8 @@
       ],
       "requires": [
         "implementation",
-        "extension-startup"
+        "extension-startup",
+        "monitoring-field-selection"
       ]
     }
   },
