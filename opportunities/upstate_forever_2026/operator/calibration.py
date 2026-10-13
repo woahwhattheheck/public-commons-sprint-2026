@@ -12,6 +12,7 @@ import zipfile
 from model.common import (atomic_bytes, atomic_json, describe_file,
                           held, identifier, read_json, verify_file)
 from model import calibration as science
+from model import calibration_catchments as catchment_science
 from model import calibration_history as history_science
 from model import calibration_history_export as history_export
 from model import calibration_uncertainty as uncertainty_science
@@ -19,11 +20,11 @@ from model import calibration_maps as map_science
 from model import calibration_review as review_science
 from model import calibration_report_source as report_source_science
 
-ACTIONS = frozenset({"calibration.history.export", "calibration.prepare", "calibration.analyze", "calibration.export",
+ACTIONS = frozenset({"calibration.catchments.build", "calibration.catchments.export", "calibration.history.export", "calibration.prepare", "calibration.analyze", "calibration.export",
                      "calibration.uncertainty", "calibration.uncertainty.export",
                      "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare",
                      "calibration.review.source"})
-READS = frozenset({"history", "catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
+READS = frozenset({"catchments-catalog", "catchments-source", "catchments-preview", "catchments", "history", "catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
     "execution": review_science.NATIVE_EXECUTION_FIELDS,
@@ -412,7 +413,8 @@ class CalibrationOperations:
                     "selected_run_id": row.get("selected_run_id"), "selected_profile_id": row.get("selected_profile_id"),
                     "created_at": row.get("created_at"), "state": row.get("state", "complete")}
                    for row in ws._list("calibrations")]
-        return {"calibration_plans": plans, "calibrations": reports,
+        return {"calibration_catchment_sources": catchment_science.editions(ws),
+                "calibration_plans": plans, "calibrations": reports,
                 "calibration_uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)],
                 "calibration_maps": [_map_summary(row) for row in ws._list("calibration-maps")],
                 "calibration_map_reviews": ws._list("calibration-map-reviews"),
@@ -422,6 +424,28 @@ class CalibrationOperations:
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
+        if operation == "catchments-catalog":
+            return {"workspace_key": workspace, **catchment_science.catalog(ws)}
+        if operation == "catchments-source":
+            return {"workspace_key": workspace, **catchment_science.source_fields(
+                ws, self._id(value, "source_collection_id"), value["source_id"])}
+        if operation == "catchments-preview":
+            gate = self.operator.gates[workspace]
+            if not gate.acquire(blocking=False):
+                raise self.Fault("NATIVE_BUSY", "The current native operation is using this workspace. "
+                                 "Inspect its original terrain after that operation finishes.", 409)
+            try:
+                return {"workspace_key": workspace, **catchment_science.preview(ws, value["selection"])}
+            finally:
+                gate.release()
+        if operation == "catchments":
+            selection = {key: value[key] for key in ("source_collection_id", "source_id", "id_field")}
+            result = catchment_science.inspect(ws, selection)
+            prefix = "/api/file/calibration-catchments/" + "/".join(
+                urllib.parse.quote(str(part), safe="") for part in
+                (workspace, selection["source_collection_id"], selection["source_id"])) + "/"
+            return {"workspace_key": workspace, "catchments": result, "viewer_url": prefix + "index.html",
+                    "_downloads": self._catchment_downloads(workspace, result)}
         if operation == "preview":
             selection = value.get("selection")
             if not isinstance(selection, dict):
@@ -528,6 +552,12 @@ class CalibrationOperations:
     def invoke(self, task):
         workspace, payload = task["workspace"], task["payload"]
         ws = self.operator.ws(workspace)
+        if task["action"] == "calibration.catchments.build":
+            result = catchment_science.build(ws, payload["selection"])
+            return {"catchments": result["catchments"], "catchment_operation_id": result["id"],
+                    "observation_id": result["observation_id"]}
+        if task["action"] == "calibration.catchments.export":
+            return catchment_science.export(ws, payload["selection"])
         if task["action"] == "calibration.history.export":
             return history_export.export(ws, self._id(payload, "report_id"))
         if task["action"] == "calibration.prepare":
@@ -779,6 +809,36 @@ class CalibrationOperations:
             downloads.append(self.operator._ticket(workspace, path, expected, label))
         return downloads
 
+
+    def _catchment_downloads(self, workspace, result):
+        ws = self.operator.ws(workspace)
+        downloads = []
+        for row in result["files"]:
+            path = Path(row["path"])
+            expected = describe_file(ws.root, path)
+            if (expected["sha256"], expected["bytes"]) != (
+                    row["original"]["sha256"], row["original"]["bytes"]):
+                raise ValueError("Original catchment member changed")
+            downloads.append(self.operator._ticket(workspace, path, expected, row["name"]))
+        return downloads
+
+    def catchment_member(self, workspace, collection_id, source_id, member_path):
+        ws = self.operator.ws(workspace)
+        path, entry = ws.source_file(identifier(collection_id), source_id)
+        if entry.get("metadata", {}).get("schema") != catchment_science.SCHEMA:
+            raise ValueError("Open the retained native catchment source")
+        rows = [entry["body"], *entry["companions"]]
+        found = [row for row in rows if row.get("view_path", row["filename"]) == member_path]
+        if len(found) != 1:
+            raise self.Fault("CATCHMENT_MEMBER", "Choose an original catchment source member.", 404)
+        item = found[0]
+        actual = verify_file(ws.root, {"path": item["object"], "bytes": item["bytes"],
+                                      "sha256": item["sha256"]})
+        expected = describe_file(ws.root, actual)
+        # Keep the original member suffix for content type and download names.
+        expected["filename"] = Path(member_path).name
+        return self.operator._ticket(workspace, actual, expected, member_path), REVIEW_POLICY
+
     def review_member(self, workspace, review_id, member_path):
         """Serve one verified original member through authenticated file transport."""
         ws = self.operator.ws(workspace)
@@ -817,17 +877,30 @@ class CalibrationOperations:
             value = review_science.inspect(workspace, row["id"])
             reviews.append({"id": value["id"], "calibration_id": value["calibration_id"]})
         report_sources = report_source_science.verify_workspace(workspace)
-        return {"calibration_report_sources": report_sources,
+        catchments = []
+        for row in catchment_science.editions(workspace):
+            value = catchment_science.inspect(workspace, {key: row[key] for key in
+                ("source_collection_id", "source_id", "id_field")})
+            catchments.append({"id": value["id"], "catchments": value["catchments"]})
+        return {"calibration_catchment_sources": catchments, "calibration_report_sources": report_sources,
                 "calibration_reviews": reviews, "calibration_uncertainties": verified,
                 "calibration_maps": [{"id": row["id"], "calibration_id": row["calibration_id"]}
                                      for row in maps.values()],
-                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews) + len(report_sources)}
+                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews) + len(report_sources) + len(catchments)}
 
     def decorate_task(self, task):
         if task["state"] != "complete" or task["action"] not in ACTIONS:
             return task
         result = task.get("result", {})
         downloads = []
+        if result.get("catchments"):
+            ws = self.operator.ws(task["workspace"])
+            original = catchment_science.inspect(ws, result["catchments"])
+            downloads.extend(self._catchment_downloads(task["workspace"], original))
+            if task["action"] == "calibration.catchments.export":
+                for item in result["files"]:
+                    path = verify_file(ws.root, item)
+                    downloads.append(self.operator._ticket(task["workspace"], path, item, item["label"]))
         if result.get("plan_id"):
             downloads.append(self._document(task["workspace"], "calibration-plans",
                                             result["plan_id"], "Original calibration selection"))

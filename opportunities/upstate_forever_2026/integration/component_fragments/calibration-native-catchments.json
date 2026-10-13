@@ -1,0 +1,63 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "calibration-native-catchments",
+  "source_reference": "model/CALIBRATION_CATCHMENTS.md",
+  "extend_components": {
+    "calibration": {
+      "paths": [
+        "model/calibration_catchments.py",
+        "operator/web/calibration_catchments.mjs",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_CATCHMENTS.md",
+        "source_tools/sparrow_candidate_course.py",
+        "model/calibration_history.py",
+        "integration/component_fragments/calibration-native-catchments.json"
+      ]
+    },
+    "parameter-studies": {
+      "paths": [
+        "model/calibration_catchments.py",
+        "operator/web/calibration_catchments.mjs",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_CATCHMENTS.md",
+        "source_tools/sparrow_candidate_course.py",
+        "model/calibration_history.py",
+        "integration/component_fragments/calibration-native-catchments.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/calibration_catchments.py",
+        "operator/web/calibration_catchments.mjs",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_CATCHMENTS.md",
+        "source_tools/sparrow_candidate_course.py",
+        "model/calibration_history.py",
+        "integration/component_fragments/calibration-native-catchments.json"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/calibration_catchments.py",
+        "operator/web/calibration_catchments.mjs",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_CATCHMENTS.md",
+        "source_tools/sparrow_candidate_course.py",
+        "model/calibration_history.py",
+        "integration/component_fragments/calibration-native-catchments.json"
+      ]
+    }
+  }
+}

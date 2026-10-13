@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "10+source-design1+profile-history1",
+  "version": "10+source-design1+profile-history1+native-catchments1",
   "order": 65,
   "assets": [
     "calibration.mjs",
@@ -10,7 +10,8 @@
     "calibration_maps.mjs",
     "calibration_review.mjs",
     "calibration_design.mjs",
-    "calibration_history.mjs"
+    "calibration_history.mjs",
+    "calibration_catchments.mjs"
   ],
   "backend": {
     "module": "calibration",
@@ -31,7 +32,9 @@
       "calibration.maps.review",
       "calibration.review.prepare",
       "calibration.review.source",
-      "calibration.history.export"
+      "calibration.history.export",
+      "calibration.catchments.build",
+      "calibration.catchments.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -156,6 +159,58 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/catchments-catalog",
+        "operation": "catchments-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/catchments-source",
+        "operation": "catchments-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/calibration/catchments-preview",
+        "operation": "catchments-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/catchments",
+        "operation": "catchments",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -246,6 +301,17 @@
         "args": [
           "route.workspace_key",
           "route.review_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      },
+      {
+        "path": "/api/file/calibration-catchments/{workspace_key}/{collection_id}/{source_id}/{member_path...}",
+        "handler": "catchment_member",
+        "args": [
+          "route.workspace_key",
+          "route.collection_id",
+          "route.source_id",
           "route.member_path"
         ],
         "response": "ticket_policy_pair"
