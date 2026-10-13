@@ -128,7 +128,7 @@
     },
     "saved_result_source_returns": {
       "operation_id": "ECO-SAVED-RESULT-SOURCE-RETURN-6A62-20261013",
-      "composed_main": "c8f69ec4db8ab66f422b2e1bf0474fdc887acca2",
+      "composed_main": "f33fad78ebddb8ccbe3f4b991440d0a2be83acc0",
       "original_claim": "1791919365.363289",
       "guide": "measurement_workspace/SAVED_RESULT_SOURCE_RETURNS.md",
       "source_review": "Complete source selection, exact displayed snapshot, original draft admission and asynchronous caller identity executed; SQLite and rendered receiving remain the original equipped course.",
@@ -303,8 +303,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 16582,
-      "sha256": "eb60c8a548bea0c808f928cd388b963ae2860d9578b697c10fc65018f8849125"
+      "bytes": 17689,
+      "sha256": "85ca8cd361b7ec1da7197e12ac48fc3ac7007642a819a0e795604e0096d12060"
     },
     {
       "path": "measurement_workspace/engine/collection_zip.mjs",
@@ -358,8 +358,8 @@
     },
     {
       "path": "measurement_workspace/engine/http.mjs",
-      "bytes": 15328,
-      "sha256": "352e121e42b3df25f29241352fcaa0b66d8e789dca0abd14230112ef6cd1520c"
+      "bytes": 15617,
+      "sha256": "496e869866da01f8b073493054360eeae32d9a0b1745e72d5ab0f7671bc53f3b"
     },
     {
       "path": "measurement_workspace/engine/intake-receiving.mjs",
@@ -1455,7 +1455,7 @@
       "a5517dfa93558403e75745ab98f476660f23f2ce74df5e97df023eef9d02d81a",
       "541e78c73837dfd00ed769af0bfb18a932f40ec300c5f95e0f721a6f829d49cd",
       "5b002b952b93cf474f6a7f7a6389362fb28fe1128a0b2051d9ced3b43f739c42",
-      "80d94a27026d3516f4aa2557b0dbd561553e61180f39d61bd2e1fd91072e8e70"
+      "5a1ccec5c05d1cb643d5af4d81ef299e921b1b4728cc16a03a32a48e513710b5"
     ],
     "measurement_workspace/engine/workspace.mjs": [
       "ae27aeaf1c57d67b71699a99c5894c00c209a15139c74c27cc0a90b3af7999d3",
@@ -1601,7 +1601,7 @@
       "a3974570b007b83a99cc35961fae5ef11a8a7a02bf2953c28be3062fbf7dedc2",
       "3aef55b9b9553ac0fd76ecd028d7da064c982a5145f7e516100ad32e39205afe",
       "802c96a2c537f61dffdda0cbea15420ff02446b4ba47fdb62039811a59fa96aa",
-      "21e20fdeb79c86c944129d922c3a54cfc3e3823962f5f1e889452084b3a38c0d"
+      "d265b9f6c6030e537ad212ca1033e369f44ffec8c2b95ba0b3edf1368baf860c"
     ],
     "measurement_workspace/engine/collections.mjs": [
       "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e"

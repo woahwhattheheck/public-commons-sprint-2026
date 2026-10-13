@@ -63,3 +63,8 @@ Use the original stable source row IDs/allocation keys, save each complete revie
 The existing receiving owner must open and LOOK at the exact outgoing app at desktop and narrow widths, operate its important populated/empty/error controls, download the handover, open its contents and reopen the working project. Verify that the application directory contains the original preparation CLI and all eight new Business Central/Microsoft files. Open every outgoing attachment in its normal viewer. Source review or a passing in-memory exercise does not establish visual or customer acceptance.
 
 Use the actual receiving environment and preserve active user sessions and current owner browser instructions. No broad test sweep, new migration controller, provider posting, credential collection or automatic supplier import is introduced by this packaging change.
+
+
+## Asset correspondence continuation
+
+Current complete distributions include `asset-crosswalk.mjs`, `asset-crosswalk-ui.mjs`, `asset-crosswalk-receiving.mjs` and `ASSET_CROSSWALK.md`. Both browser and CLI full handovers retain the exact original source and reviewed crosswalk journal. The copied CLI-generated HTML includes guided native-source preparation and the crosswalk desk. The existing finance receiving course invokes the isolated original crosswalk continuation; read the guide for an explicitly separate continuation when the earlier parent receipt is already complete. Perform actual desktop/narrow LOOK and open all crosswalk HTML/CSV/JSON and the copied full application.
