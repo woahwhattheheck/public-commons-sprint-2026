@@ -109,6 +109,7 @@ OPTIONAL_FILES = (
     "source_tools/receive_observed_scientific_review.py",
     "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
     "observations/eighteenmile_2023/scientific-review.request.json",
+    "source/water_context/20261013/regional-scientific-review.request.json",
     "source_tools/receive_scientific_report_review.py",
     "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
     "model/SCIENTIFIC_REPORT_REVIEW.md",
