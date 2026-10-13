@@ -42,7 +42,7 @@ All calls use its separate bearer plus X-Eco-Connector-Instance, persisted acros
 
 | Connector endpoint under /_eco/v1/connector | Contract |
 | --- | --- |
-| POST /register | Actual routes:[{method,path}]. Exact static GET paths and exact native GET/POST/PUT/PATCH/DELETE API paths declared by the installed operator. |
+| POST /register | Actual routes:[{method,path}]. Exact GET page/asset paths (including an explicitly mounted /measurements or /measurements/) and exact native GET/POST/PUT/PATCH/DELETE API paths declared by the installed operator. Registration admits only those exact rows; /_eco and its descendants stay reserved. |
 | GET /poll?wait=20&exclude=ID1,ID2 | Optional comma-separated active IDs, max64, prevent concurrent native worker polling from repeatedly selecting locked work. One original request object or204. Receiving chunks, queued work, execution reconciliation and demanded retained responses resurface. |
 | GET /requests/ID/input?offset=N | Raw original bytes with X-Chunk-SHA256 and X-Eco-Offset.204 indicates no available bytes; X-Eco-Input-Sealed indicates completion. |
 | POST /requests/ID/input-ack | JSON offset,bytes,sha256 after durable private write. Idempotent exact ACK. |
