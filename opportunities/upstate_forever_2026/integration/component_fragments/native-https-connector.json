@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "components": {
+    "native-https-connector": {
+      "title": "Native HTTPS connector",
+      "paths": [
+        "source_tools/eco_native_connector.py",
+        "integration/NATIVE_HTTPS_CONNECTOR.md"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "native-https-connector"
+  ],
+  "id": "native-https-connector"
+}

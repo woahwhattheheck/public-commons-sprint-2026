@@ -1,4 +1,5 @@
 // ES-SUPERVISION-20261012
+import {operatorFetch} from './remote_transport.mjs';
 import {attachNativeJobs} from './jobs.mjs';
 import {attachStartupGuide} from './startup_guide.mjs';
 import {attachWorkspaceFinder} from './workspace_finder.mjs';
@@ -70,7 +71,7 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
   const headers={Authorization:'Bearer '+capability,...(workspace?{'X-Workspace':workspace}:{})};
   if(body!==undefined)headers['Content-Type']='application/json';
   if(filename)headers['X-Upload-Filename']=encodeURIComponent(filename);
-  const response=await fetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal});
+  const response=await operatorFetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal},capability);
   const text=await response.text();
   if(epoch!==connectionEpoch)throw Error('The connection changed while this request was running.');
   let value;try{value=JSON.parse(text);}catch{
