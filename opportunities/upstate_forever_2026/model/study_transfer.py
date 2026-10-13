@@ -642,7 +642,9 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
-    for relative in chemistry_transfer.lock_paths(closure):
+    from . import source_refresh_report_transfer
+    for relative in (*chemistry_transfer.lock_paths(closure),
+                     *source_refresh_report_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
