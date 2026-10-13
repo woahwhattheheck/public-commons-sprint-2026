@@ -35,6 +35,43 @@ After composing these source files with the current complete application, use th
 
 Gura engine acceptance retains its original geography. Published South Carolina source-water areas require an actual intersecting Upper Savannah reporting grid and geographically matched native runs; the existing prepared-plan/source-area flow preserves those original identities.
 
+## Receiving the client report and briefing
+
+The original `source_tools/receive_client_delivery.py` continues to accept one
+explicit retained delivery ID or its completed original native-study checkpoint.
+Its selected application, compiler SHA256, report edition, project and ordered
+native cohort remain authoritative. Edition
+`2026-10-13-client-report-native-execution-13` adds the original
+`native-execution.json` link to the client report's scientific evidence section
+and therefore to its briefing. The edition change gives an already completed
+edition-12 delivery a distinct retained rebuild.
+
+The receiver verifies all six generated client files: PDF, HTML, Markdown,
+structured report model, briefing HTML and briefing index. The index binds the
+exact original model bytes; the HTML's embedded navigation model must match that
+same index. Meeting notes remain the briefing's separate interactive export.
+Native execution is checked against the delivery's frozen digest, ordered cohort,
+client model version vectors and manifest descriptor. The existing working archive
+inventory must preserve the same project, delivery selection and all seven file
+descriptors, including native execution. The builder already verifies the complete
+archive bytes; receiving reads its original inventory without another full scan.
+
+For the selected edition in this source bank:
+
+```sh
+"$GIS_PYTHON" -B "$APPLICATION/source_tools/receive_client_delivery.py" \
+  --application "$APPLICATION" --workspace "$ORIGINAL_WORKSPACE" \
+  --native-study-record "$ORIGINAL_STUDY_CHECKPOINT" \
+  --expected-report-edition 2026-10-13-client-report-native-execution-13 \
+  --expected-compiler-sha256 a691e3061ba5ef8e3a156a29f7932ad1fe56b215e69b5bc8611567b2e625407e
+```
+
+Use `--delivery-id` instead of `--native-study-record` when continuing a selected
+retained delivery directly. The receipt now includes each original client file,
+the briefing binding and page count, and the native execution descriptor/digest.
+Run this continuation after the existing native operation completes; it uses that
+operation's original Workspace and report-bound native cohort.
+
 ## Validation scope
 
 The current native-study consumer retains its separate original supported-engine and official-module source checks; its maintained source owner composes that context independently.
