@@ -46,7 +46,7 @@ class CompletedWorkspace(Workspace):
             return {**run, "reused": True, "model_scope": scope}
 
 
-def _control_source(ws, source, receipt, recipe_entry):
+def _control_source(ws, source, receipt, recipe_entry, recipe):
     if isinstance(source, dict):
         value = json.loads(json.dumps(source))
         original_record = {"parent": "original_receipt", "json_pointer": "/control"}
@@ -64,12 +64,22 @@ def _control_source(ws, source, receipt, recipe_entry):
     collection = identifier(value["source_collection_id"])
     source, entry = ws.source_file(collection, "SIM_MATCHED_CONTROL_INPUT")
     control = read_json(source)
-    if (entry["body"]["sha256"] != value["control_sha256"]
-            or control.get("schema") != "upstate.simulated-control-input/v1"
-            or control.get("base_recipe") != {
+    if entry["body"]["sha256"] != value["control_sha256"]:
+        raise ValueError("Control document differs from its original preparation record")
+    if control.get("schema") == "upstate.simulated-control-input/v1":
+        if (control.get("base_recipe") != {
                 "bytes": recipe_entry["body"]["bytes"], "sha256": receipt["recipe_sha256"]}
-            or control.get("source_id") != value["source_id"]):
-        raise ValueError("Control inputs differ from the original recipe and preparation record")
+                or control.get("source_id") != value["source_id"]):
+            raise ValueError("Control inputs differ from the original recipe and source ID")
+    elif control.get("schema") == "upstate.simulated-matched-control/v1":
+        if (control.get("source_recipe_sha256") != receipt["recipe_sha256"]
+                or control.get("demo_id") != recipe["demo_id"]
+                or control.get("grid") != recipe["grid"]
+                or control.get("mask_role") != "MATCHED_CONTROL_MASK"
+                or value["source_id"] != "SIM_MATCHED_CONTROL_MASK"):
+            raise ValueError("Matched-control inputs differ from the retained recipe, grid or mask role")
+    else:
+        raise ValueError("Select an original published simulated control input edition")
     _, mask_entry = ws.source_file(collection, value["source_id"])
     if (mask_entry.get("kind") != "raster" or
             mask_entry.get("classification") != "simulated" or
@@ -143,7 +153,7 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
         raise ValueError("Retain the original embedded matched-control preparation record")
     control_input = control_path if control_path is not None else embedded_control
     if control_input is not None:
-        control, control_original = _control_source(ws, control_input, receipt, recipe_entry)
+        control, control_original = _control_source(ws, control_input, receipt, recipe_entry, recipe)
         if embedded_control is not None and control != embedded_control:
             raise ValueError("Explicit control receipt differs from the accepted demo's embedded control")
         control_id, control_scenario = identifier(control["run_id"]), identifier(control["scenario_id"])
