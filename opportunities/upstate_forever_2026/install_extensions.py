@@ -293,6 +293,48 @@ def patch_view_lifecycle(source):
                "registered dispatch before built-in early-return desks")
 
 
+def host_capabilities(registration):
+    """Read the explicit host's top-level properties without rewriting callbacks."""
+    prefix, suffix = "const extensions=createExtensionHost({", "});"
+    body = registration.strip()
+    if not body.startswith(prefix) or not body.endswith(suffix):
+        raise ValueError("Preserve the complete original extension host registration")
+    body = body[len(prefix):-len(suffix)]
+    fields, start, stack, quote, escaped = [], 0, [], None, False
+    pairs = {")": "(", "]": "[", "}": "{"}
+    for index, char in enumerate(body):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in ("'", '"', "`"):
+            quote = char
+        elif char in "([{":
+            stack.append(char)
+        elif char in ")]}":
+            if not stack or stack.pop() != pairs[char]:
+                raise ValueError("Preserve balanced original extension callbacks")
+        elif char == "," and not stack:
+            fields.append(body[start:index].strip())
+            start = index + 1
+    if quote or stack:
+        raise ValueError("Preserve complete original extension callbacks")
+    fields.append(body[start:].strip())
+    result = {}
+    for field in fields:
+        if not field:
+            continue
+        name = field.split(":", 1)[0].strip()
+        if not re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", name) or name in result:
+            raise ValueError("Preserve unique explicit extension host capabilities")
+        result[name] = field
+    return result
+
+
 def patch_app(source):
     source = add(source, "import {attachCustomerReviews} from './reviews.mjs';\n",
                  "import {createExtensionHost} from './extension_host.mjs';\n",
@@ -310,19 +352,17 @@ def patch_app(source):
     source = source.replace(
         " openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});",
         " getProgramme:()=>typeof programmes==='undefined'?null:programmes});", 1)
-    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]
+    first, last = "const extensions=createExtensionHost({", registration.splitlines(keepends=True)[-1]
     if first not in source:
         source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
     else:
         if source.count(first) != 1 or source.count(last) != 1:
             raise ValueError("Expected one complete current extension browser instance")
         start, end = source.index(first), source.index(last, source.index(first)) + len(last)
-        current, cursor = source[start:end], 0
-        for original_line in registration.splitlines(keepends=True):
-            found = current.find(original_line, cursor)
-            if found < 0:
-                raise ValueError("Preserve and compose the current extension host capability: " + original_line.strip())
-            cursor = found + len(original_line)
+        current = host_capabilities(source[start:end])
+        for name, original in host_capabilities(registration).items():
+            if current.get(name) != original:
+                raise ValueError("Preserve and compose the current extension host capability: " + name)
     source = add(source, "    renderTasks();\n", "    extensions.update(state);\n",
                  "all task refreshes reach active desks")
     source = patch_view_lifecycle(source)
@@ -345,9 +385,14 @@ def patch_app(source):
         "if(extensions.hasView(requested))view=requested;}"
         "catch(error){toast('Additional desks: '+error.message);}"
     )
-    source = replace(source, "await api('/api/session',{method:'POST',body:{}});await refresh({force:true});",
-                     "await api('/api/session',{method:'POST',body:{}});" + startup + "await refresh({force:true});",
-                     "authenticated desk startup")
+    # The current team-session host already loads desks after its original
+    # authenticated workspace selection. Keep that complete startup in place.
+    if source.count(startup) > 1:
+        raise ValueError("authenticated desk startup: expected one installed desk loader")
+    if startup not in source:
+        source = replace(source, "await api('/api/session',{method:'POST',body:{}});await refresh({force:true});",
+                         "await api('/api/session',{method:'POST',body:{}});" + startup + "await refresh({force:true});",
+                         "authenticated desk startup")
 
     # The native-run desk passes a retained selection to the original delivery
     # form. This is the existing form, with an optional initial selection.
@@ -357,14 +402,27 @@ def patch_app(source):
         "requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection;",
         "requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;",
         "native delivery selection defaults")
-    source = replace(source,
-        "openForm(row?'Revise complete map delivery':'Build complete seven-map delivery'",
-        "openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery'",
-        "new preselected delivery title")
-    source = replace(source,
+    native_title = ("openForm(saved?(nativeStudy?'Revise native-study delivery':'Revise complete map delivery')"
+                    ":(nativeStudy?'Build complete native-study delivery':'Build complete seven-map delivery'),")
+    if source.count(native_title) > 1:
+        raise ValueError("new preselected delivery title: expected one native-study delivery form")
+    if native_title not in source:
+        source = replace(source,
+            "openForm(row?'Revise complete map delivery':'Build complete seven-map delivery'",
+            "openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery'",
+            "new preselected delivery title")
+    # Both retained host editions already implement this same action-label
+    # fallback. Preserve their bytes rather than require one whitespace style.
+    confirmations = (
         "toast(actionLabels[action]+' retained.');",
         "toast((actionLabels[action] || action)+' retained.');",
-        "registered action confirmation")
+        "toast((actionLabels[action]||action)+' retained.');",
+    )
+    count = sum(source.count(value) for value in confirmations)
+    if count != 1:
+        raise ValueError("registered action confirmation: expected one current compatible anchor; found " + str(count))
+    if confirmations[0] in source:
+        source = source.replace(confirmations[0], confirmations[1], 1)
     return source
 
 
