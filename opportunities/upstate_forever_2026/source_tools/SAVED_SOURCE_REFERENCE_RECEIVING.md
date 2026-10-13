@@ -63,3 +63,7 @@ New selected Study exports also retain the exact completed inspection record req
 The Study identity records that original inspection's canonical and byte hashes, source identity and selection identity. Receiving validates its original project, complete inspection, file and part positions, original filename/hash, columns and reading choices through the maintained source preview reader. Older Study receipts retain their original dependency rules. New embedded-preview sources continue to travel without any donor intake directory.
 
 For an existing older saved source, use its original collection as the `sources` root through the maintained Study export action. Keep the original source operation and collection; a new inspection or replacement save is unnecessary. The existing Windows saved-source course can first read source-info, export the selected original source collection, restore that archive on the existing operator, and read the same collection/source again.
+
+## Use the normal Study desk
+
+In the existing Study desk, choose **Saved source collections** in the Study type filter. Open a collection to inspect its original native files and worksheet summaries, then select the collection and preview the archive contents. The same export and receiving controls produce and reopen its editable source package. The contents preview explains when an older saved table also carries its original inspection. This uses the original source collection; it does not run another model or import a replacement workbook.
