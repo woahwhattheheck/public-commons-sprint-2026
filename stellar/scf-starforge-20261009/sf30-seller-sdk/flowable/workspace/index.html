@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>Flowable process and decision operations</title><link rel="stylesheet" href="/style.css">
+<meta name="color-scheme" content="light"><title>Flowable process, case and decision operations</title><link rel="stylesheet" href="/style.css">
 <script type="module" src="/browser.mjs"></script></head>
 <body>
-<header><div><strong>Flowable</strong><span class="product">Process and decision operations</span></div><div class="workspace-label" id="workspace-label">Opening workspace</div></header>
+<header><div><strong>Flowable</strong><span class="product">Process, case and decision operations</span></div><div class="workspace-label" id="workspace-label">Opening workspace</div></header>
 <div class="shell">
 <aside><nav aria-label="Workspace sections">
 <button type="button" data-page="overview" aria-current="page">Overview</button>
@@ -13,6 +13,7 @@
 <button type="button" data-page="tasks">Human tasks</button>
 <button type="button" data-page="migrations">Migrations</button>
 <button type="button" data-page="decisions">Decisions</button>
+<button type="button" data-page="cases">Cases</button>
 <button type="button" data-page="handover">Handover</button>
 <button type="button" data-page="engines">Engines</button>
 </nav><p class="aside-note">Original engine state, deployment resources and saved operation history.</p></aside>
@@ -25,7 +26,7 @@
 <div id="busy" hidden><span id="busy-text"></span><button type="button" id="cancel">Cancel connection</button></div>
 <div id="pending" class="panel" hidden><strong>Recover the original request</strong><p id="pending-text"></p>
 <button type="button" id="resume">Read original result</button><button type="button" id="dismiss">Close notice</button></div>
-<section data-panel="overview"><h1>Process operations</h1><p class="lede">Deploy process definitions, run and assign work, and migrate live processes with native engine validation.</p>
+<section data-panel="overview"><h1>Operations workspace</h1><p class="lede">Run versioned processes, adaptive cases and decision rules, with complete deployment source and saved operation history.</p>
 <div class="metrics" id="metrics"></div><div class="panel"><h2>Saved captures and operations</h2><div id="recent-records"></div></div></section>
 <section data-panel="definitions" hidden><h1>Process definitions</h1><p class="lede">Versioned definitions and their complete original BPMN and deployment resources.</p><div class="panel" id="definitions-table"></div></section>
 <section data-panel="releases" hidden><h1>Process releases</h1><p class="lede">Prepare a deployment from one original BPMN file or one ZIP/BAR containing the complete release.</p>
@@ -93,6 +94,62 @@
 <button type="submit">Prepare decision evaluation</button></form>
 <div class="panel"><h2>Saved evaluations</h2><div id="decisionEvaluation-records"></div></div>
 <div class="panel"><h2>Native execution history</h2><div id="historic-decisions-table"></div></div></section>
+<section data-panel="cases" hidden><h1>Adaptive case operations</h1>
+<p class="lede">Release versioned case definitions, manage case work and inspect the stages, milestones, human tasks and history retained by the engine.</p>
+<div class="toolbar"><label class="grow">Saved case portfolio<select id="case-portfolio-select" aria-label="Selected case portfolio"></select></label>
+<button id="capture-cases" type="button">Refresh cases</button></div>
+<p id="case-portfolio-status" class="muted"></p>
+<p class="muted">Select the saved connection for the original CMMN REST service, such as /flowable-rest/cmmn-api.</p>
+<div class="panel"><h2>Case definitions</h2><div id="case-definitions-table"></div></div>
+<div class="panel"><h2>Active cases</h2><div id="cases-table"></div></div>
+<div class="panel"><h2>Stages and plan items</h2><div id="case-plan-items-table"></div></div>
+<div class="panel"><h2>Case human tasks</h2><div id="case-tasks-table"></div></div>
+<form id="caseRelease-form" class="panel"><h2>Prepare case release</h2><div class="form-grid">
+<label>Release name<input name="label" maxlength="300" placeholder="Grant due diligence · version 2"></label>
+<label>Deployment name<input name="deploymentName" maxlength="1000"></label>
+<label>Deployment key<input name="deploymentKey" maxlength="1000"></label>
+<label>Tenant ID<input name="tenantId" maxlength="1000"></label>
+<label class="full">Original CMMN deployment<input name="resource" type="file" accept=".cmmn,.cmmn.xml,.bar,.zip" required></label></div>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<p class="muted">The release retains the complete original case resource or deployment archive and its native definition versions.</p>
+<button type="submit">Prepare case deployment</button></form>
+<div class="panel"><h2>Case release history</h2><div id="caseRelease-records"></div></div>
+<form id="caseInstance-form" class="panel"><h2>Case action</h2><div class="form-grid">
+<label>Action<select name="action"><option value="startCase">Start case</option><option value="updateCase">Update case</option><option value="evaluateCaseCriteria">Evaluate case criteria</option><option value="terminateCase">Terminate case</option></select></label>
+<label id="case-instance-id-field">Native case ID<input name="caseInstanceId" maxlength="2000"></label>
+<label class="full">Operation name<input name="label" maxlength="300"></label></div>
+<div id="case-instance-body-field"><label>Original native case JSON<textarea name="bodyText" rows="12" spellcheck="false" required></textarea></label>
+<button id="case-instance-template" type="button">Use action template</button></div>
+<p id="case-instance-help" class="muted"></p>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<button type="submit">Prepare case action</button></form>
+<div class="panel"><h2>Saved case actions</h2><div id="caseInstance-records"></div></div>
+<form id="casePlanItem-form" class="panel"><h2>Stage or plan item action</h2><div class="form-grid">
+<label>Native plan item ID<input name="planItemInstanceId" required maxlength="2000"></label>
+<label>Case ID (optional)<input name="caseInstanceId" maxlength="2000"></label>
+<label>Action<select name="action"><option value="startPlanItem">Start</option><option value="triggerPlanItem">Trigger</option><option value="enablePlanItem">Enable — native start behavior</option><option value="disablePlanItem">Disable</option></select></label>
+<label class="full">Operation name<input name="label" maxlength="300"></label></div>
+<label>Original native action JSON<textarea name="bodyText" rows="6" spellcheck="false" required>{"action":"start"}</textarea></label>
+<button id="case-plan-item-template" type="button">Use action template</button>
+<p class="muted">The native JSON action must be start, trigger, enable or disable and match the selected operation. In this Flowable release the enable endpoint starts the plan item. The review shows its current state before execution.</p>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<button type="submit">Prepare plan item action</button></form>
+<div class="panel"><h2>Saved plan item actions</h2><div id="casePlanItem-records"></div></div>
+<form id="caseTask-form" class="panel"><h2>Case human task action</h2><div class="form-grid">
+<label>Native task ID<input name="taskId" required maxlength="2000"></label>
+<label>Case ID (optional)<input name="caseInstanceId" maxlength="2000"></label>
+<label>Action<select name="action"><option value="claim">Claim</option><option value="unclaim">Release claim</option><option value="complete">Complete</option><option value="delegate">Delegate</option><option value="resolve">Resolve</option></select></label>
+<label class="full">Operation name<input name="label" maxlength="300"></label></div>
+<label>Original native task JSON<textarea name="bodyText" rows="8" spellcheck="false" required>{"action":"claim","assignee":""}</textarea></label>
+<button id="case-task-template" type="button">Use action template</button>
+<p class="muted">Release claim uses the original claim action with assignee:null. Completion and resolution can carry the full native variables array. Typed values retain their original JSON text.</p>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<button type="submit">Prepare case task action</button></form>
+<div class="panel"><h2>Saved case task actions</h2><div id="caseTask-records"></div></div>
+<div class="panel"><h2>Complete captured case collections</h2>
+<label>Native collection<select id="case-collection-select" aria-label="Captured case collection"></select></label>
+<p class="muted">Browse all captured records, including case history, completed work, milestones and variables. Open an individual case to see its related records and source together.</p>
+<div id="case-collection-table"></div></div></section>
 <section data-panel="handover" hidden><h1>Customer handover</h1><p class="lede">Receive complete source resources, saved revisions, native responses and operation journals in another workspace.</p>
 <div class="two-columns"><form id="export-form" class="panel"><h2>Export workspace</h2>
 <label>Handover name<input name="label" maxlength="300" placeholder="Customer process operations handover"></label>
@@ -102,7 +159,7 @@
 <p>Upload the complete exported archive, inspect its manifest, then adopt its original history.</p><button type="submit">Inspect archive</button></form></div>
 <div class="panel"><h2>Exported handovers</h2><div id="delivery-records"></div></div>
 <div class="panel"><h2>Received handovers</h2><div id="receiving-records"></div></div></section>
-<section data-panel="engines" hidden><h1>Engine connections</h1><p class="lede">Save the original process REST service and DMN REST service as named connections. Credential values come from the local process environment.</p>
+<section data-panel="engines" hidden><h1>Engine connections</h1><p class="lede">Save the original process, CMMN and DMN REST services as named connections. Credential values come from the local process environment.</p>
 <div class="panel" id="connections-table"></div>
 <form id="connection-form" class="panel"><h2 id="connection-form-title">Add engine</h2>
 <input type="hidden" name="recordId"><input type="hidden" name="revision">
@@ -114,5 +171,5 @@
 <button type="submit">Save engine</button><button type="button" id="new-engine">New engine</button></form></section>
 <section id="detail" class="panel" hidden aria-labelledby="detail-title"><div class="detail-heading"><h2 id="detail-title">Saved operation</h2>
 <button type="button" id="close-detail">Close</button></div><div id="detail-content"></div></section>
-<footer><span id="workspace-id"></span><span>Flowable process operations</span></footer>
+<footer><span id="workspace-id"></span><span>Flowable process, case and decision operations</span></footer>
 </main></div></body></html>

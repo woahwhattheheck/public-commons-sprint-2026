@@ -10,7 +10,7 @@ import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
-  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease } from './storage.mjs';
+  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError } from './storage.mjs';
 
 export const managedOperationFields = Object.freeze({
   'managed-adopt': ['homeId', 'reviewId'],
@@ -25,7 +25,7 @@ const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');
 const operationPath = (root, id) => join(root, 'operations', operationId(id));
 const hashValue = value => digest(json(canonical(value)));
-const asError = error => ({ code: error.code ?? 'MANAGED_HOME_ERROR', message: String(error.message ?? error).slice(0, 2000) });
+const asError = error => runtimeWorkspaceError(error, 'MANAGED_HOME_ERROR');
 const same = (left, right) => hashValue(left) === hashValue(right);
 const binding = value => Object.fromEntries(['directory', 'installationId', 'profileId', 'profileSha256',
   'lockSha256', 'sourceCommit', 'sourceManifestSha256'].map(key => [key, value[key]]));

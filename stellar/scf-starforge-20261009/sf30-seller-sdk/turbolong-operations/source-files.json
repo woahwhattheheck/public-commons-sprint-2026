@@ -3,7 +3,7 @@
   "rootFromWorkspace": "../../../..",
   "product": "turbolong-operations",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "selectedBase": "8496b4fd233a93f32d54f8c5aadfe3c31ea24cdf",
+  "selectedBase": "5d94d8ab4c14deeb151275ee6220cb919886ebfd",
   "files": [
     {
       "path": "stellar/scf-starforge-20261009/distribution/contributions/turbolong-operations.json",
@@ -49,8 +49,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs",
-      "bytes": 9584,
-      "sha256": "90e50055b920f27e171404fe6ec9ae06e24ddd6660d64d4b25302705423b9d1c",
+      "bytes": 11737,
+      "sha256": "870e25f0324ada9309d638bb4f7673bebebbd590411d7a96e9da0750d96d7ff9",
       "mode": 420
     },
     {

@@ -1,6 +1,6 @@
-# Flowable process and decision operations
+# Flowable process, case and decision operations
 
-This workspace gives an operator a complete view of a Flowable REST engine: original BPMN deployments and definition versions, active processes, human tasks, migration validation and process history. It preserves reviewed native requests and their replies alongside source resources, then exports the whole operating history for customer handover.
+This workspace gives an operator a complete view of Flowable process, case and decision services: original deployments and definition versions, active cases and processes, human work, migration validation, native rule evaluation and operating history. It preserves reviewed native requests and their replies alongside source resources, then exports the whole operating history for customer handover.
 
 The industrial browser, local CLI, installed SDK, Applications integration and merchant MCP use the same model. Each deliberate engine change is prepared and saved before dispatch. Reopening a workspace recovers its saved records and interrupted operations.
 
@@ -136,3 +136,21 @@ The browser stores an unfinished request's full input before transport and recon
 The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
 
 See [Decision deployment, evaluation and operating history](../../../../../products/flowable-merchant/DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.
+
+## Adaptive case operations
+
+The same installed workspace includes original CMMN deployment, versioned
+case starts and updates, criteria evaluation, case termination, stage and plan
+item actions, case human tasks, variables, milestones and complete native
+history. Save the actual CMMN REST endpoint as a named connection and open
+**Cases**.
+
+Use `capture-cases`, `case-portfolio`, `case-definition` and
+`case-instance` from the installed command line. The four saved operation
+kinds are `caseRelease`, `caseInstance`, `casePlanItem` and `caseTask`.
+The typed client and twelve case MCP actions use these same native reviews
+and original-request recovery.
+
+See [Adaptive case operations](../../../../../products/flowable-merchant/CASES.md) for the complete case programme,
+all eleven native collections, the pinned engine's plan item semantics and
+customer receiving.

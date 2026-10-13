@@ -65,38 +65,42 @@ No historical request or application file is rewritten to fit the worker. The so
 
 The earlier 287-member official-shell proof remains historical evidence inside C998 at root/producer-source/history-86320/official-headless-shell-8b4a896701caa8eb32888c7bdc4dc587c74599c2a8160da85b78ff60788d0d84.json. Its bytes retain SHA-256 8b4a896701caa8eb32888c7bdc4dc587c74599c2a8160da85b78ff60788d0d84. A different installed browser gets its own actual observation and receiving result; the entry does not relabel the old proof as a verification of the new runtime.
 
-## Accepted work and remaining journey
+## Completed browser receiving and current save
 
-The original provider receiving completed all 19 checks. Its final actions are CONFIRMED or ADOPTED. This continuation performs no provider mutation and does not run that fixture again.
+Native session 14280 ran the original receiving on October 13, 2026, from 00:09:40 through 00:12:10 UTC. Its browser child returned PASS / exit 0 in 10.953 seconds. It completed original phases 10–16: native package download, complete workspace export and download, public desktop/mobile captures, cold receive, cold browser reopen, original provider draft, and provider desktop/mobile captures. All three application servers drained with exit 0. The existing 19 provider checks and original workspace identities remain retained.
 
-The retained public example has two resources, three media rows, one transcript, two indexes and two supplemental rows from the five original public binary captures. The saved browser steps include original key allocation, review notes, late-typing handling, reasoned exclusion and inclusion restoration, five-table review, and the original queued native package through 09-native-package.
+The original queued jobs are d2c13c19c5d84643866148a973bec371 and f3410c2d415f4c92b7a7684bfa3c2562. The four PNGs were created; actual independent visual inspection was pending when the subsequent checkpoint save encountered ENOSPC in the ordinary-volume staging copy. That failed copy occurred before a new Library request. C998 remains the durable checkpoint until its successor has a successful save.
 
-Continue that existing package and job. The remaining browser journey performs the exact package download, complete workspace export and download, cold receive and reopen, original provider-operation selection, saved/new destination draft checks, and four screenshots. It preserves the original job/archive identities after interruptions. PASS is published only after the owned application, browser, context and control lock have drained.
+Inspect the original 14280 output first when available. The maintained runner reuses an exact completed browser result; on another worker it restores C998 and continues the original retained requests and saved steps. The historical 14280 PASS is retained as that actual run, separate from a new worker's observations.
 
-The full 70551 failure history is retained. That process reverified the original 287 browser members but was lost before a resumed browser result. The new entry makes no upfront browser download, runtime directory copy or extra-file hash pass.
+## Save the original private files
 
-## Supported file saves in the same process
+The complete original LibraryUploadWorkflow now runs in the owning foreground. New saves use exact private files under checkpoints/ or deliverables/, removing the failed ordinary-volume staging copy. The maintained uploader transfers the bytes and applies the original returned file metadata. Its complete unchanged helper graph is:
 
-The selected official save bridge retains the full v2 implementation and its checkpoint restoration, with the observed numbered filename correction from CanadaBuys PR795. It accepts the requested basename or a positive numbered collision name such as `START_HERE(3).md`, retains that actual returned name, and preserves every original request, byte, ID, size, version and full-response check. The retired private helper directory is not required.
+| Helper | Bytes | SHA-256 |
+| --- | ---: | --- |
+| library_upload.py | 44876 | 5bc473dadefe1f68ee8797baaed19d6662642d0ea4bcba128fa12938faa0d767 |
+| library_hosted_apps.py | 12576 | 97d029b097ace62b744c82dfde20ef6921ed543a33a771ecf6452bd655d11b59 |
+| library_file_transfer.py | 11084 | 5e1557817be17db06e2375f8c34ed83e948d520242e5ee4cb50a30c7a4c83378 |
 
-The complete 14,682-byte predecessor and selected 15,084-byte bridge are both retained by hash under the original producer history, together with the source-adoption record. The selected bridge is also provided as `official_library_save_bridge.py`. An already successful response is reconciled from its original receipt; this correction never requests another upload.
+Both older bridge editions, the original name-collision adoption, C998 receipt, and complete 14280 result history remain retained. Existing completed direct-file saves still reopen through their original receipt handler. Any unresolved prior request retains its original identity and requires its actual outcome to be reconciled before another dispatch.
 
-Selected bridge SHA-256: `8d8fff77773320f1c949e4d07e52d3b9ef012fd2f5d7c48a08d2c2ef536119dc`. Complete selected input: 1,757,304 bytes / SHA-256 `3e426dd17fc94860ec2d5729e231a87c8ab08a087dd0b3a821142f179356d547`. The original embedded 1,258,636-byte producer input, C998, logical requests, queued package, functional application and completed browser steps remain unchanged.
+The entry validates selected bridge/runtime bytes and all three helpers before execution. The original 1,258,636-byte embedded producer input remains byte-identical. Current bridge: 25926 bytes / 2c9468f0b5c26e5279aede0af0690fb613e2788c29fd9f689e8f16ee04fdaf5f. Complete public input: 1909392 bytes / 5184d94d6fc128dfb4ca46744a81d4e2a2755ceb13c1927d68ca36cd4a6c681e.
 
-For each artifact the producer retains one immutable original save request and emits LIBRARY_SAVE_REQUEST. The controller checks source/staged size and SHA-256, then calls the supported tool:
+For each new file the foreground persists its source and original call, then emits LIBRARY_PREPARED_TOOL_REQUEST. The controller permits only the canonical connector_openai_library prepare_uploads and finalize_uploads actions for that bound artifact:
 
-    library_create_library_file({
-      file: request.arguments.file,
-      library_artifact_type: "other"
-    })
+    library_prepare_uploads(request.arguments)
+    library_finalize_uploads(request.arguments)
 
-Return the complete actual raw tool result on the same process's stdin:
+The original workflow performs the actual transfer between these calls. Finalization receives every original opaque preparation field unchanged. The controller retains the complete provider result before replying:
 
-    {"action":"official-library-save-result","requestSha256":"<exact request hash>","result":<complete tool result>}
+    {"action":"library-prepared-tool-result","requestSha256":"<original request hash>","tool":"prepare_uploads or finalize_uploads","result":<complete canonical result>}
 
-A success requires isError:false and structuredContent with operation:create_library_file, status:succeeded, the exact filename and size, nonempty file_id and library_file_id, and an integer version. The raw response, normalized receipt and xattr results are retained before advancing. Do not create another save for an unresolved original request. A retained exact successful response may be returned to its existing intent; it must not be replaced with invented IDs or a second upload.
+Private transfer state retains the exact source SHA, prepared objects, transfer completion and final response. Recovery reuses that original successful result. A finalization intent without its response keeps the uncertainty attached to that same intent until the provider outcome is reconciled. Signed URLs and headers are excluded from public controller history and the delivery archive.
 
-The first browser-complete checkpoint keeps the four original PNGs for private recovery. Pixel files are excluded from final customer deliverable archives. The application/workspace, source histories and text reports remain complete.
+A successful original save includes validated file and Library IDs, actual returned name, source bytes/SHA, provider metadata and receipt. Preparation and finalization names may use the same already-reviewed positive-number collision suffix; the controller preserves that actual returned name. The separate shared receipt mirror can report failure when that volume is full; the private original receipt and finalized file identities stay authoritative.
+
+The first browser-complete checkpoint contains the four original PNGs for unfinished private visual review. Keep the native foreground continuously awaited through that checkpoint, actual image review and all six final saves.
 
 ## Four actual image inspections
 
@@ -107,7 +111,7 @@ At READY_FOR_VISUAL_REVIEW, use read-qa-image with the original filename, offset
 - aviary-original-migration-desktop.png
 - aviary-original-migration-mobile.png
 
-The controller verifies whole PNG size, SHA-256 and signature before displaying it. Send complete-visual-review only after actual inspection, naming all four bound images and recording concrete findings. Keep the same native process alive through that reply and all final saves. A checkpoint with pending images is reusable; do not redraw accepted images solely because the controller changed.
+The controller verifies whole PNG size, SHA-256 and signature before displaying it. After actual inspection, put {session, inputSha256, reviewed:true, command:<original requested complete-visual-review reply>} into its retained aviary-original-visual-decision-<input SHA> key. The continuously awaited controller forwards that exact decision to the same native process. Name all four bound images and record concrete findings. Keep the same native process alive through that reply and all final saves. A checkpoint with pending images is reusable; do not redraw accepted images solely because the controller changed.
 
 The final six files are:
 
@@ -130,6 +134,6 @@ The optional saveOfficialRuntimeAfterApplication remains false by default. Reuse
 
 ## Original coordination
 
-Continue the existing queued CLOUD12 request in C0BTB4SUCP9 / 1791829516.730339, initial message 1791844312.076109 and source follow-up 1791844525.368779. Acceptance and the actual job/runtime access receipt are required before any competing local execution. Source/runtime selection can be supplied by the accepting worker itself in the command above.
+Continue the existing queued CLOUD12 request in C0BTB4SUCP9 / 1791829516.730339, initial message 1791844312.076109 and source follow-up 1791844525.368779. 6200 owns the existing accepted receiving continuation (owner ACK 1791848229.360319). Reconcile its actual native identity before a competing producer starts. Source/runtime selection can be supplied by the accepting worker itself in the command above.
 
 Deliver the completed original Aviary arm in C0BTTA66TK3 / 1791791664.944019 and preserve the source/runtime/result evidence in its existing memory page. Do not create a new customer message or replay the original provider operation.

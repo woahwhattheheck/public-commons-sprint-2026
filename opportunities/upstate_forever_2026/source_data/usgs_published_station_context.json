@@ -1,0 +1,50 @@
+{
+  "schema": "upstate.published-monitoring-location-context/v1",
+  "checked_at": "2026-10-13",
+  "quantity": "published_station_metadata",
+  "selection": "Candidate source locations; the receiver discovers matching daily mean discharge from original USGS metadata and the exact supplied domain.",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.3063611111111,
+          34.8137777777778
+        ]
+      },
+      "properties": {
+        "monitoring_location_id": "USGS-02177000",
+        "name": "CHATTOOGA RIVER NEAR CLAYTON, GA",
+        "state": "South Carolina",
+        "county": "Oconee",
+        "source_huc8": "03060102",
+        "drainage_area": 207,
+        "drainage_area_unit": "square miles",
+        "source_url": "https://waterdata.usgs.gov/monitoring-location/USGS-02177000/",
+        "source_representation": "Published monitoring-location page metadata"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1516666666667,
+          34.6855555555556
+        ]
+      },
+      "properties": {
+        "monitoring_location_id": "USGS-344108083090600",
+        "name": "CHAUGA RIVER ABOVE WESTMINSTER, SC",
+        "state": "South Carolina",
+        "county": "Oconee",
+        "source_huc8": "03060102",
+        "drainage_area": 66.8,
+        "drainage_area_unit": "square miles",
+        "source_url": "https://waterdata.usgs.gov/monitoring-location/USGS-344108083090600/",
+        "source_representation": "Published monitoring-location page metadata"
+      }
+    }
+  ]
+}

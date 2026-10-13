@@ -1,0 +1,67 @@
+{
+  "schema": "upstate.nldi-source-bundle/v1",
+  "retrieved_on": "2026-10-13",
+  "source_prefix": "opportunities/upstate_forever_2026/source/usgs-nldi-upper-savannah-20261013",
+  "original_sources": [
+    {
+      "kind": "station_feature",
+      "station_id": "USGS-02192000",
+      "path": "original/nwissite-USGS-02192000.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02192000?f=json",
+      "bytes": 592,
+      "sha256": "51b1b01bf6b63960eac530b43c01520f25018b68d22b06c85cabeb718741014a"
+    },
+    {
+      "kind": "station_feature",
+      "station_id": "USGS-02189000",
+      "path": "original/nwissite-USGS-02189000.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02189000?f=json",
+      "bytes": 606,
+      "sha256": "2f4a46a2425d655dc21e4d76191bffbf20475f340b7b02f26a7833f1b315f923"
+    },
+    {
+      "kind": "reach_feature",
+      "comid": "11737823",
+      "path": "original/comid-11737823.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/comid/11737823?f=json",
+      "bytes": 584,
+      "sha256": "d2b30f7bb05d79d8e5c7ae61645672e3c7c1445d486f0ba3d681affc50fff517"
+    },
+    {
+      "kind": "reach_feature",
+      "comid": "6280111",
+      "path": "original/comid-6280111.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111?f=json",
+      "bytes": 878,
+      "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab"
+    },
+    {
+      "kind": "upstream_basin",
+      "comid": "6280111",
+      "path": "original/basin-comid-6280111.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 63709,
+      "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb",
+      "simplified": false,
+      "splitCatchment": false
+    },
+    {
+      "kind": "upstream_basin",
+      "comid": "11737823",
+      "path": "original/basin-comid-11737823.json",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/comid/11737823/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 101517,
+      "sha256": "a1f18ff285455a02e030fa1819336a6f8026c228832278e8e4d675ef4a1c0a89",
+      "simplified": false,
+      "splitCatchment": false
+    }
+  ],
+  "derived_catchments": "catchment-candidates.geojson",
+  "geometry_review": "geometry-review.json",
+  "id_field": "catchment_id",
+  "station_field": "station_id",
+  "crs": "OGC:CRS84",
+  "derivation": "Coordinates of retained source polygons are unchanged. The Calhoun Falls source includes one remote triangular polygon at longitude-80.46 latitude36.69; the retained component is the unique component containing the actual station point and the main Savannah catchment. All original components remain in the original response and geometry review.",
+  "matching": "Match the original annual-load station ID and published reach COMID to this current NLDI feature before selecting its catchment. Published water-quality and flow-station identities remain separate. These full-reach basins use splitCatchment=false.",
+  "applicability": "These source geometries can serve original Upper Savannah load references from F7DN436B or P13YSTHM when their actual station/reach pairing agrees; no annual load is inferred from a station feature."
+}

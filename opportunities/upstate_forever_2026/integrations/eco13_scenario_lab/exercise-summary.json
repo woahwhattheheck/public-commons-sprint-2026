@@ -1,0 +1,15 @@
+{
+  "kind": "software-integration-exercise",
+  "native_invest_executed": false,
+  "raster_cells": 4194304,
+  "parcels": 256,
+  "scenarios_including_baseline": 4,
+  "matched_cases": 2,
+  "models": 3,
+  "retained_jobs": 24,
+  "executor_calls_including_recovery": 25,
+  "paired_metric_rows": 80,
+  "verified_portable_files": 179,
+  "independent_revision": "8befb85b3fcc04211c70255dd5d5fc8c21fbde01f830872f5d0d48e47cb6b37f",
+  "elapsed_seconds": 1.956
+}

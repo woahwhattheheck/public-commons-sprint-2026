@@ -2,7 +2,7 @@
 import {join,resolve} from 'node:path';
 import {readSourceFile,directory as privateDirectory} from './files.mjs';
 import {openMerchantFileClient,createRetainedDownload} from '../../../../../stellar-forge/mcp-merchant-operator/retained-download.mjs';
-import {humanServicesDirectoryActions,validateHumanServicesDirectoryArguments} from './catalog.mjs';
+import {humanServicesDirectoryActions,validateHumanServicesDirectoryArguments,directoryForeignKeyQueries} from './catalog.mjs';
 import {TOOL_PREFIX,MANIFEST_NAME,MAX_PACKET_BYTES,MAX_RESPONSE_BYTES,SHA,UUID,ALIAS,need,checked,
   decode,encode,digest,parseHumanServicesDirectoryExport} from './contracts.mjs';
 export {humanServicesDirectoryActions} from './catalog.mjs';
@@ -188,8 +188,10 @@ export async function* iterateHumanServicesDirectoryConformance({
 }={}){
   checked(workspace,ALIAS,'workspace alias');checked(assessmentId,SHA,'conformance assessment ID');
   need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
-  need(kind==='findings'||kind==='rows','HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION');
-  const allowed=kind==='findings'?['severity','table','code','sourceId','recordId']:['table'];
+  const foreignKeyQuery=directoryForeignKeyQueries.find(row=>row.action==='directory_conformance_'+kind);
+  need(kind==='findings'||kind==='rows'||foreignKeyQuery,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION');
+  const allowed=foreignKeyQuery?foreignKeyQuery.filters:
+    kind==='findings'?['severity','table','code','sourceId','recordId']:['table'];
   need(filters&&typeof filters==='object'&&!Array.isArray(filters)&&
     Object.keys(filters).every(key=>allowed.includes(key)),'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_FILTERS');
   let offset=0,total;
@@ -203,6 +205,9 @@ export async function* iterateHumanServicesDirectoryConformance({
       Number.isSafeInteger(page.total)&&page.total>=0&&Array.isArray(page.rows)&&
       page.rows.length<=limit&&(total===undefined||page.total===total),
       'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED');
+    if(foreignKeyQuery)need(page.byteBudget===4194304&&Number.isSafeInteger(page.bytes)&&
+      page.bytes>=0&&page.bytes<=page.byteBudget,
+      'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED','Keep the original foreign-key page byte bound.');
     total=page.total;
     const next=offset+page.rows.length;
     need(next<=total&&(page.nextOffset===null?next===total:
@@ -212,6 +217,14 @@ export async function* iterateHumanServicesDirectoryConformance({
     if(page.nextOffset===null)return;
     offset=page.nextOffset;
   }
+}
+/** Stream every selected original relationship page through the complete retained-response reader. */
+export async function* iterateHumanServicesDirectoryForeignKeys({
+  client,workspace,assessmentId,kind='outcomes',filters={},limit=100,requestOptions
+}={}){
+  const selected={outcomes:'foreign_keys',candidates:'foreign_key_candidates',matches:'foreign_key_matches'}[kind];
+  need(selected,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION','Choose outcomes, candidates or matches.');
+  yield* iterateHumanServicesDirectoryConformance({client,workspace,assessmentId,kind:selected,filters,limit,requestOptions});
 }
 /** Receive the full selected native conformance file using the standard retained downloader. */
 export async function downloadHumanServicesDirectoryConformance({
@@ -225,4 +238,84 @@ export async function downloadHumanServicesDirectoryConformance({
   const receipt=await downloadHumanServicesDirectoryExport({...downloadOptions,workspace,client,
     exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
   return {result,receipt};
+}
+
+/** Prepare the complete exact native document; the caller reviews this saved preview before acceptance. */
+export async function prepareHumanServicesDirectoryOperatingPlan({
+  client,workspace,input,requestOptions
+}={}){
+  checked(workspace,ALIAS,'workspace alias');
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  const result=retained(await client.call('directory_operating_plan_preview',
+    {workspace,operating_plan_create:input},requestOptions));
+  need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_OPERATING_PREVIEW_REJECTED',
+    'Read the retained full native preparation response.',{exportId:result.exportId});
+  const preview=await readHumanServicesDirectoryValue({workspace,result,client});
+  need(preview?.schema==='stellar-forge.directory-operating-preview.v1'&&
+    preview.record?.stage==='prepared'&&preview.document?.id===input.id,
+    'HUMAN_SERVICES_DIRECTORY_OPERATING_PREVIEW_CHANGED');
+  return {result,preview};
+}
+/** Accept only the caller-selected complete reviewed preview. No replacement preview is created here. */
+export async function saveHumanServicesDirectoryOperatingPlan({
+  client,workspace,input,previewRecordId,requestOptions
+}={}){
+  checked(workspace,ALIAS,'workspace alias');checked(previewRecordId,SHA,'reviewed preview record');
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  need(!input?.previewRecordId||input.previewRecordId===previewRecordId,
+    'HUMAN_SERVICES_DIRECTORY_OPERATING_PREVIEW_SELECTION','Keep the same reviewed preview selection.');
+  try{
+    const result=retained(await client.call('directory_operating_plan_create',
+      {workspace,operating_plan_create:{...input,previewRecordId}},requestOptions));
+    need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_OPERATING_SAVE_REJECTED',
+      'Keep the complete reviewed preview and read this original native response.',
+      {previewRecordId,exportId:result.exportId});
+    const saved=await readHumanServicesDirectoryValue({workspace,result,client});
+    need(saved.record?.stage==='saved'&&saved.record.preparedFromId===previewRecordId&&saved.record.planId===input.id,
+      'HUMAN_SERVICES_DIRECTORY_OPERATING_SAVE_CHANGED');
+    return {result,saved};
+  }catch(error){
+    if(error&&typeof error==='object')error.details={...(error.details??{}),
+      directoryOperatingPlan:{workspace,previewRecordId,planId:input?.id}};
+    throw error;
+  }
+}
+/** Reopen all complete original editing inputs using the same retained JSON range protocol. */
+export async function readHumanServicesDirectoryOperatingPlan({
+  client,workspace,recordId,revision,requestOptions
+}={}){
+  checked(workspace,ALIAS,'workspace alias');checked(recordId,SHA,'original procedure record');
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  const values={},results={};
+  for(const kind of ['document','draft','basis','input']){
+    const result=retained(await client.call('directory_operating_'+kind,
+      {workspace,recordId,...(kind==='draft'&&revision!==undefined?{revision}:{})},requestOptions));
+    need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_OPERATING_READ_REJECTED',
+      'Read the complete original native reopening response.',{recordId,kind,exportId:result.exportId});
+    results[kind]=result;values[kind]=await readHumanServicesDirectoryValue({workspace,result,client});
+  }
+  need(values.document?.schema==='stellar-forge.operating-plan.v1'&&
+    values.draft?.schema==='stellar-forge.operating-plan-draft.v1'&&
+    values.draft.planId===values.document.id&&values.draft.baseRevision===values.document.revisions.length&&
+    values.basis?.schema==='stellar-forge.directory-operating-basis.v1',
+    'HUMAN_SERVICES_DIRECTORY_OPERATING_READ_CHANGED');
+  return {...values,results};
+}
+/** Export an exact saved revision or the full original JSON history, then receive every file. */
+export async function downloadHumanServicesDirectoryOperatingPlan({
+  client,workspace,input,requestOptions,...downloadOptions
+}={}){
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  const prepareResult=retained(await client.call('directory_operating_plan_export',
+    {workspace,operating_plan_export:input},requestOptions));
+  need(prepareResult.native?.ok,'HUMAN_SERVICES_DIRECTORY_OPERATING_EXPORT_REJECTED',
+    'Read the complete original procedure export response.',{exportId:prepareResult.exportId});
+  const prepared=await readHumanServicesDirectoryValue({workspace,result:prepareResult,client});
+  checked(prepared.id,SHA,'native procedure export');
+  const result=retained(await client.call('directory_export_file',{workspace,exportId:prepared.id},requestOptions));
+  need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_OPERATING_FILE_REJECTED',
+    'Keep the original native export descriptor and complete file response.',{nativeExportId:prepared.id,exportId:result.exportId});
+  const receipt=await downloadHumanServicesDirectoryExport({...downloadOptions,workspace,client,
+    exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
+  return {prepared,prepareResult,result,receipt};
 }

@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "flowable-workspaces",
-  "description": "Complete native Flowable BPMN and DMN releases, process and decision operations, migration, execution audit and customer handover",
+  "description": "Complete native Flowable BPMN, CMMN and DMN releases, process and case work, decisions, native history and customer handover",
   "commands": {
     "flowable-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/cli.mjs"
   },
   "commandDescriptions": {
-    "flowable-workspace": "Open, operate, receive and export native Flowable process and decision workspaces."
+    "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -18,7 +18,9 @@
     "./merchant/flowable/review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/review.mjs",
     "./seller/flowable/native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native-journey.mjs",
     "./seller/flowable/dmn-native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native.mjs",
-    "./seller/flowable/dmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native-journey.mjs"
+    "./seller/flowable/dmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native-journey.mjs",
+    "./seller/flowable/cmmn-native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/cmmn-native.mjs",
+    "./seller/flowable/cmmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/cmmn-native-journey.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -43,7 +45,20 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/vendor-review-v2.dmn",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/onboarding-route-v1.dmn",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/onboarding-route-v2.dmn",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/decision-catalog.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/decision-catalog.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/CMMN_NATIVE_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/CMMN_SOURCE_MAP.json",
+    "products/flowable-merchant/CASES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/case-catalog.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/grant-due-diligence-v1.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/grant-due-diligence-v2.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/grant-due-diligence.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/vendor-exception-v1.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/vendor-exception-v2.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/vendor-exception.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/onboarding-investigation-v1.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/onboarding-investigation-v2.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/onboarding-investigation.json"
   ],
   "browserAssets": [
     {

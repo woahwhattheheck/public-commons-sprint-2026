@@ -12,27 +12,39 @@ import ast
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-1"
+PREFIX = "waterlink-receiving-waters-5"
 REQUIRED = (
     "model/receiving_waters.py",
+    "model/receiving_water_spatial.py",
     "model/receiving_water_delivery.py",
     "model/receiving_water_cli.py",
     "source_tools/receiving_water_catalog.py",
     "operator/receiving_water_actions.py",
     "operator/web/receiving_waters.mjs",
+    "operator/web/receiving_water_spatial.mjs",
     "operator/web/receiving_waters.css",
 )
+EXTENSION_REQUIRED = (
+    "operator/web/receiving_waters_extension.mjs",
+    "operator/receiving_waters.extension.json",
+    "operator/extension_registry.py",
+    "operator/web/extension_host.mjs",
+)
+EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
     "operator/web/app.mjs",
     "operator/web/index.html",
     "model/delivery.py",
     "model/portable.py",
+    "model/spatial.py",
+    "operator/web/spatial.mjs",
 )
 
 
@@ -80,7 +92,7 @@ def before_method_return(text, class_name, method_name, addition, marker):
     return "".join(lines)
 
 
-def join_server(text):
+def join_standalone_server(text):
     text = after_line(
         text, "from customer_reviews import",
         "from receiving_water_actions import ReceivingWaterActions, ACTIONS as RECEIVING_WATER_ACTIONS, READS as RECEIVING_WATER_READS\n",
@@ -124,6 +136,61 @@ def join_server(text):
         'receiving_water_reads = {"/api/receiving-waters/"',
     )
     return text
+
+
+def has_extension_registry(text):
+    return re.search(r"self\.extensions\s*=\s*ExtensionRegistry\(", text) is not None
+
+
+def allow_browser_assets(text):
+    """Extend the original explicit allowlist without changing its file route."""
+    matches = list(re.finditer(r"if selected not in \(?(\{[^}\n]+\})", text))
+    if len(matches) != 1:
+        raise ValueError("Expected one current explicit operator static-asset allowlist")
+    match = matches[0]
+    names = ast.literal_eval(match.group(1))
+    if not isinstance(names, set) or not all(isinstance(name, str) for name in names):
+        raise ValueError("The operator static allowlist must contain original file names")
+    additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs"}
+    if additions <= names:
+        return text
+    replacement = "{" + ", ".join(repr(name) for name in sorted(names | additions)) + "}"
+    return text[:match.start(1)] + replacement + text[match.end(1):]
+
+
+def remove_standalone_registration(text):
+    """Move only this installer's original backend joins to the shared registry."""
+    additions = (
+        "from receiving_water_actions import ReceivingWaterActions, ACTIONS as RECEIVING_WATER_ACTIONS, READS as RECEIVING_WATER_READS\n",
+        "ACTIONS.update(RECEIVING_WATER_ACTIONS)\n",
+        "        self.receiving_water_actions = ReceivingWaterActions(self, Fault)\n",
+        "        if action in RECEIVING_WATER_ACTIONS:\n"
+        "            return self.receiving_water_actions.invoke(task)\n",
+        "        state.update(self.receiving_water_actions.snapshot(workspace))\n",
+        "        task = self.receiving_water_actions.decorate_task(task)\n",
+        '                receiving_water_reads = {"/api/receiving-waters/" + name: name for name in RECEIVING_WATER_READS}\n'
+        '                if url.path in receiving_water_reads:\n'
+        '                    return self.send_json(200, self.app.receiving_water_actions.read(\n'
+        '                        workspace, receiving_water_reads[url.path],\n'
+        '                        {name: one(name) for name in ("plan_id", "analysis_id", "catalog_id")}))\n',
+    )
+    for addition in additions:
+        if text.count(addition) > 1:
+            raise ValueError("Duplicate original receiving-water registration; compose its current source")
+        text = text.replace(addition, "", 1)
+    remaining = ("RECEIVING_WATER_ACTIONS", "RECEIVING_WATER_READS",
+                 "self.receiving_water_actions", "self.app.receiving_water_actions")
+    if any(value in text for value in remaining):
+        raise ValueError("The receiving-water backend has later edited call sites; preserve and join them to the shared registry")
+    return text
+
+
+def join_server(text):
+    if has_extension_registry(text):
+        text = remove_standalone_registration(text)
+    else:
+        text = join_standalone_server(text)
+    return allow_browser_assets(text)
 
 
 def join_app(text):
@@ -171,8 +238,8 @@ def join_app(text):
         "return receivingWaters.dispatch(button)",
     )
     text = replace_once(
-        text, "customerReviews.taskActions(row)+fileList(row._downloads||[])",
-        "receivingWaters.taskActions(row)+customerReviews.taskActions(row)+fileList(row._downloads||[])",
+        text, "customerReviews.taskActions(row)",
+        "receivingWaters.taskActions(row)+customerReviews.taskActions(row)",
         "receivingWaters.taskActions(row)",
     )
     text = replace_once(
@@ -185,6 +252,18 @@ def join_app(text):
         "return submitAction('delivery.build',{...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives}),title:",
         "...receivingWaters.deliverySelection(",
     )
+    text = replace_once(
+        text, "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection};\n",
+        "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity};\n",
+        "subject:button.dataset.subject,subject_kind:button.dataset.subjectKind",
+    )
+    # Compose the original plural-selector repair when receiving an earlier core.
+    for old, new in (
+        ("for(const node of $('[data-view]'))", "for(const node of $$('[data-view]'))"),
+        ("for(const node of $('[data-native-models]',form)){", "for(const node of $$('[data-native-models]',form)){"),
+        ("for(const input of $('input,select,textarea,button',node))", "for(const input of $$('input,select,textarea,button',node))"),
+    ):
+        text = text.replace(old, new)
     return text
 
 
@@ -251,12 +330,88 @@ def join_portable(text):
     )
 
 
+def join_spatial(text):
+    text = replace_once(
+        text, 'return units in {"class", "classes", "mask", "category",',
+        'return units in {"class", "classes", "mask", "binary", "category",',
+        '"class", "classes", "mask", "binary"',
+    )
+    text = after_line(
+        text, "from .common import",
+        "from . import receiving_water_spatial\n",
+        "from . import receiving_water_spatial",
+    )
+    text = replace_once(
+        text, "        return tuple((str(p.relative_to(root)), _signature(p)) for p in sorted(paths))\n",
+        "        paths.extend(receiving_water_spatial.manifest_paths(self.workspace))\n"
+        "        return tuple((str(p.relative_to(root)), _signature(p)) for p in sorted(paths))\n",
+        "paths.extend(receiving_water_spatial.manifest_paths(self.workspace))",
+    )
+    text = replace_once(
+        text, "            # Atomic source manifests can be added during a native run. Never cache\n",
+        "            receiving_water_spatial.add_layers(ws, add)\n"
+        "            # Atomic source manifests can be added during a native run. Never cache\n",
+        "receiving_water_spatial.add_layers(ws, add)",
+    )
+    text = replace_once(
+        text, '                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction"):\n',
+        '                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction",\n'
+        '                     "receiving_water_plan_id", "receiving_water_analysis_id", "subject_id",\n'
+        '                     "subject_kind", "family", "relationship_precision", "quantity_scope",\n'
+        '                     "quantity", "statistic", "normalization_id", "relationship_method",\n'
+        '                     "source_body_sha256", "source_selection_id", "invest_version"):\n',
+        '"source_body_sha256", "source_selection_id", "invest_version")',
+    )
+    return text
+
+
+def join_spatial_app(text):
+    if "from './receiving_water_spatial.mjs'" not in text:
+        text = (
+            "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} "
+            "from './receiving_water_spatial.mjs';\n\n" + text
+        )
+    text = replace_once(
+        text, "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';",
+        "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';",
+        "receivingWaterView, receivingWaterStateSignature}",
+    )
+    text = replace_once(
+        text, "return JSON.stringify(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])));",
+        "return JSON.stringify([['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])),receivingWaterStateSignature(state)]);",
+        ",receivingWaterStateSignature(state)]",
+    )
+    text = replace_once(
+        text, "function groupTitle(name){return ({source:",
+        "function groupTitle(name){return ({'receiving-water-plan':'Receiving-water boundaries',"
+        "'receiving-water-analysis':'Receiving-water results',source:",
+        "'receiving-water-plan':'Receiving-water boundaries'",
+    )
+    text = replace_once(
+        text, "  function targetMatches(row,target){\n",
+        "  function targetMatches(row,target){\n"
+        "    if(isReceivingWaterTarget(target))return receivingWaterTargetMatches(row,target);\n",
+        "if(isReceivingWaterTarget(target))return receivingWaterTargetMatches(row,target)",
+    )
+    text = replace_once(
+        text, "  function applyTarget(c,target){\n"
+        "    const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));\n",
+        "  function applyTarget(c,target){\n"
+        "    const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));\n"
+        "    if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}\n",
+        "Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)))",
+    )
+    return text
+
+
 JOINERS = {
     "operator/server.py": join_server,
     "operator/web/app.mjs": join_app,
     "operator/web/index.html": join_index,
     "model/delivery.py": join_delivery,
     "model/portable.py": join_portable,
+    "model/spatial.py": join_spatial,
+    "operator/web/spatial.mjs": join_spatial_app,
 }
 
 
@@ -284,6 +439,19 @@ def install(root, *, check=False):
             )
         if relative.endswith(".py"):
             ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    original_server = (root / "operator/server.py").read_text(encoding="utf-8")
+    original_app = (root / "operator/web/app.mjs").read_text(encoding="utf-8")
+    registry = has_extension_registry(original_server)
+    browser_registry = "createExtensionHost(" in original_app
+    if registry != browser_registry:
+        raise ValueError("Complete the existing shared extension host's server and browser join before composing receiving waters")
+    required = REQUIRED + (EXTENSION_REQUIRED if registry else ())
+    for relative in required:
+        path = root / relative
+        if not path.is_file():
+            raise FileNotFoundError(f"Receive the complete receiving-water extension source: {path}")
+        if relative.endswith(".py"):
+            ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     originals, changes = {}, {}
     for relative, join in JOINERS.items():
         path = root / relative
@@ -294,20 +462,47 @@ def install(root, *, check=False):
         originals[relative] = before
         if before != after:
             changes[relative] = after
+    if registry:
+        template = json.loads((root / "operator/receiving_waters.extension.json").read_bytes())
+        if (template.get("schema") != "upstate.operator-extension/v1"
+                or template.get("id") != "receiving-waters"
+                or template.get("backend", {}).get("module") != "receiving_water_actions"):
+            raise ValueError("Choose the original receiving-water extension descriptor")
+        for asset in template.get("assets", []):
+            if (not isinstance(asset, str) or "/" in asset or "\\" in asset
+                    or asset in {"", ".", ".."}
+                    or not (root / "operator/web" / asset).is_file()):
+                raise ValueError("A complete installed receiving-water web asset is missing")
+        target = root / EXTENSION_TARGET
+        before = target.read_bytes() if target.exists() else None
+        installed = json.loads(before) if before is not None else None
+        if installed is not None and installed != template:
+            previous = json.loads(json.dumps(template))
+            previous["version"] = "2"
+            previous["assets"] = [name for name in previous["assets"]
+                                  if name != "receiving_water_spatial.mjs"]
+            if installed != previous:
+                raise ValueError("The installed receiving-water descriptor has authored changes; compose that descriptor before replacing it")
+        originals[EXTENSION_TARGET] = before
+        if installed != template:
+            changes[EXTENSION_TARGET] = (json.dumps(template, indent=2) + "\n").encode("utf-8")
+    elif (root / EXTENSION_TARGET).exists():
+        raise ValueError("This application already carries the shared receiving-water descriptor; restore the complete extension host join")
     report = {
         "schema": "upstate.receiving-water-install/v1",
         "operation": PREFIX,
         "root": str(root),
+        "mode": "shared-extension" if registry else "original-operator",
         "state": "ready" if check else "installed",
         "files": [
-            {"path": relative, "before_sha256": sha256(originals[relative]),
+            {"path": relative, "before_sha256": sha256(originals[relative]) if originals[relative] is not None else None,
              "after_sha256": sha256(after), "bytes": len(after)}
             for relative, after in changes.items()
         ],
         "components": [
             {"path": relative, "sha256": sha256((root / relative).read_bytes()),
              "bytes": (root / relative).stat().st_size}
-            for relative in REQUIRED
+            for relative in required
         ],
     }
     if check or not changes:
@@ -316,7 +511,7 @@ def install(root, *, check=False):
     backup = root / ".receiving-water-install" / identity
     backup.mkdir(parents=True, exist_ok=True)
     for relative, before in originals.items():
-        if relative not in changes:
+        if relative not in changes or before is None:
             continue
         target = backup / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -328,16 +523,21 @@ def install(root, *, check=False):
     try:
         for relative, after in changes.items():
             path = root / relative
-            if path.read_bytes() != originals[relative]:
+            current = path.read_bytes() if path.exists() else None
+            if current != originals[relative]:
                 raise ValueError(f"Source changed during integration: {relative}; rerun against that edition")
-            mode = stat.S_IMODE(path.stat().st_mode)
+            mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+            path.parent.mkdir(parents=True, exist_ok=True)
             write_atomic(path, after, mode)
             applied.append(relative)
     except BaseException:
         for relative in reversed(applied):
             path = root / relative
-            if path.read_bytes() == changes[relative]:
-                write_atomic(path, originals[relative], stat.S_IMODE(path.stat().st_mode))
+            if path.is_file() and path.read_bytes() == changes[relative]:
+                if originals[relative] is None:
+                    path.unlink()
+                else:
+                    write_atomic(path, originals[relative], stat.S_IMODE(path.stat().st_mode))
         raise
     report["preimages"] = str(backup)
     write_atomic(backup / "install.json", (json.dumps(report, indent=2) + "\n").encode("utf-8"))

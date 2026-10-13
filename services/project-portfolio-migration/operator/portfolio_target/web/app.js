@@ -1,8 +1,9 @@
 import {createArchivePanel} from "/assets/archive.js";
 import {createCompanionPanel} from "/assets/companions.js";
+import {createCommissioningPanel} from "/assets/commissioning.js";
 const $ = id => document.getElementById(id);
 const terminal = new Set(["COMPLETE", "FAILED"]);
-const S = {token: "", workspace: "", state: null, sourceId: "", source: null, rows: [], selectedRow: null,
+const S = {token: "", workspace: "", connectionGeneration: 0, state: null, sourceId: "", source: null, rows: [], selectedRow: null,
   family: "tasks", offset: 0, profile: "mspdi", probes: {}, deployId: "", deployment: null,
   comparison: null, comparisonLimit: 50, definitionLimit: 50, pending: null, posting: false, polling: false, timer: null,
   corrections: [], sourceReview: null, sourceArtifacts: [], handoverArtifacts: [], editions: [], deployments: [],
@@ -43,7 +44,7 @@ function formDraft() {
   return {values, sourceId:S.sourceId, deployId:S.deployId, profile:S.profile,
     mappings:readMappings(false), corrections:S.corrections, sourceReview:S.sourceReview ? {id:S.sourceReview.id,ready:S.sourceReview.ready,edition_id:S.sourceReview.edition_id} : null,
     sourceArtifacts:S.sourceArtifacts, handoverArtifacts:S.handoverArtifacts, probes:S.probes,
-    archive:archivePanel.snapshot(),companions:companionPanel.snapshot()};
+    archive:archivePanel.snapshot(),companions:companionPanel.snapshot(),commissioning:commissioningPanel.snapshot()};
 }
 function saveDraft() { if (!S.workspace) return; S.draftVersion++; store("draft", formDraft()); }
 function showTab(name) {
@@ -58,11 +59,14 @@ function details(target, values) {
   target.replaceChildren(dl);
 }
 async function api(path, {method="GET", body, raw, headers={}}={}) {
+  const generation=S.connectionGeneration, token=S.token;
   const response = await fetch(path, {method, credentials:"omit", cache:"no-store",
     headers:{"Authorization":"Bearer " + S.token, ...(body === undefined ? {} : {"Content-Type":"application/json"}), ...headers},
     body:body === undefined ? raw : JSON.stringify(body)});
+  if (generation!==S.connectionGeneration || token!==S.token) throw new Error("The local connection changed while this response was in flight. Reopen its saved request in the original workspace.");
   let value;
   try { value = await response.json(); } catch { throw Object.assign(new Error("The local response ended before complete JSON."), {status:response.status}); }
+  if (generation!==S.connectionGeneration || token!==S.token) throw new Error("The local connection changed while this response was in flight. Reopen its saved request in the original workspace.");
   if (!response.ok) {
     const error = Object.assign(new Error(value.error?.message || "Local request failed."), {status:response.status, code:value.error?.code});
     if (response.status === 401 || response.status === 403) { $("signin").hidden = false; notice("Open the current local link or sign in again. The saved request remains available.", true); }
@@ -102,6 +106,12 @@ function options(select, rows, selected, label) {
   if (selected && !rows.some(row=>row.id===selected)) select.append(new Option(short(selected) + " · selected saved item", selected));
   select.value = selected;
 }
+async function loadMoreDeployments() {
+  if(!S.deploymentCursor)return;
+  const cursor=S.deploymentCursor,v=await api("/api/state?cursor="+cursor);
+  if(S.deploymentCursor!==cursor)return;
+  S.deployments=mergeRows(S.deployments,v.deployments.items);S.deploymentCursor=v.deployments.next_cursor||"";renderSelectors();
+}
 async function refreshState() {
   const value = await api("/api/state");
   const first = S.state === null;
@@ -118,6 +128,7 @@ async function refreshState() {
 }
 function renderSelectors() {
   archivePanel.updateState(S.state||{},S.editions);
+  commissioningPanel.updateState(S.state||{},S.editions);
   options($("source-edition"), S.editions, S.sourceId, row => short(row.id) + " · " + row.kind + " · " + String(row.created_at || ""));
   options($("deployment-select"), S.deployments, S.deployId, row => (row.project_name || short(row.id)) + " · " + row.state);
   $("more-editions").hidden = !S.editionCursor; $("more-deployments").hidden = !S.deploymentCursor;
@@ -225,10 +236,10 @@ function renderTarget() {
   lock();
 }
 async function loadDeployment(selected=S.deployId) {
-  if (!selected) {S.deployment=null;renderDeployment();return;}
+  if (!selected) {S.deployment=null;renderDeployment();await commissioningPanel.loadDeployment(null);return;}
   const value=await api("/api/deployments/" + selected);
   if (selected!==S.deployId) return;
-  S.deployment=value;renderDeployment();
+  S.deployment=value;renderDeployment();await commissioningPanel.loadDeployment(value);
   if (value.comparison_sha256) {
     const comparison=await api("/api/objects/" + value.comparison_sha256);
     if (S.deployId!==selected || S.deployment.comparison_sha256!==value.comparison_sha256) return;
@@ -395,6 +406,7 @@ async function applyResult(request,context={}) {
   $("history-result").replaceChildren(el("pre",pretty({request_id:request.id,kind:request.kind,state:request.state,result})));
   if (request.state!=="COMPLETE") {await refreshState();return;}
   if(await archivePanel.acceptResult(request,result,context)){await refreshState();saveDraft();lock();return;}
+  if(await commissioningPanel.acceptResult(request,result,context)){await refreshState();saveDraft();lock();return;}
   const sourceCurrent=context.sourceId===undefined || context.sourceId===S.sourceId;
   const deploymentCurrent=context.deployId===undefined || context.deployId===S.deployId || result.id===S.deployId;
   if (request.kind==="intake" && sourceCurrent) {S.sourceId=result.id;S.offset=0;S.sourceReview=null;S.corrections=[];$("source-decisions").value="{}";}
@@ -434,6 +446,10 @@ const sharedPanelContext={$,el,pretty,short,api,safe,artifacts,notice,lock,saveD
 const archivePanel=createArchivePanel(sharedPanelContext);
 const companionPanel=createCompanionPanel({...sharedPanelContext,
   invalidateReview:()=>{S.sourceReview=null;renderCorrections();}});
+const commissioningPanel=createCommissioningPanel({...sharedPanelContext,
+  workspaceId:()=>S.workspace,deployment:()=>S.deployment,deployments:()=>S.deployments,
+  hasMoreDeployments:()=>!!S.deploymentCursor,loadMoreDeployments,
+  selectDeployment:async identity=>{S.deployId=identity;await loadDeployment(identity);renderSelectors();saveDraft();}});
 
 document.querySelectorAll("[data-tab]").forEach(n=>n.onclick=()=>showTab(n.dataset.tab));
 document.querySelectorAll("[data-draft]").forEach(n=>n.addEventListener("input",()=>safe(()=>saveDraft())));
@@ -482,15 +498,22 @@ $("recover-request").onclick=()=>safe(async()=>{if(!S.pending)return;let current
 $("discard-request").onclick=()=>safe(async()=>{if(!S.pending)return;try{await api("/api/requests/"+S.pending.request_id);throw new Error("The original request now exists; reopen it.");}catch(error){if(error.status!==404)throw error;}store("pending",null);S.pending=null;lock();notice("The absent local request was discarded. Its draft fields remain.");});
 $("refresh").onclick=()=>safe(async()=>{await refreshState();if(S.deployId)await loadDeployment();if(S.sourceId)await loadSource();await archivePanel.refresh();if(S.pending)await poll();});
 $("more-editions").onclick=()=>safe(async()=>{const v=await api("/api/editions?cursor="+S.editionCursor);S.editions=mergeRows(S.editions,v.items);S.editionCursor=v.next_cursor||"";renderSelectors();});
-$("more-deployments").onclick=()=>safe(async()=>{const v=await api("/api/state?cursor="+S.deploymentCursor);S.deployments=mergeRows(S.deployments,v.deployments.items);S.deploymentCursor=v.deployments.next_cursor||"";renderSelectors();});
+$("more-deployments").onclick=()=>safe(loadMoreDeployments);
 $("signin-form").onsubmit=event=>{event.preventDefault();safe(async()=>{S.token=$("access-token").value.trim();await boot();$("access-token").value="";});};
 
 async function boot() {
+  S.connectionGeneration++;
   const hello=await api("/api/hello");
+  if(S.workspace!==hello.workspace_id){
+    if(S.timer)clearTimeout(S.timer);S.timer=null;
+    S.state=null;S.source=null;S.deployment=null;S.comparison=null;S.selectedRow=null;
+    S.editions=[];S.deployments=[];S.requests=[];S.rows=[];
+    S.editionCursor="";S.deploymentCursor="";S.requestCursor="";
+  }
   S.workspace=hello.workspace_id;sessionStorage.setItem("portfolio-token:"+location.origin,S.token);
   $("signin").hidden=true;$("workspace").hidden=false;$("connection").textContent="Local workspace · "+short(S.workspace);
   const draft=stored("draft",{});for(const [identity,value]of Object.entries(draft.values||{})){const n=$(identity);if(n?.hasAttribute("data-draft")){if(n.type==="checkbox")n.checked=!!value;else n.value=value;}}
-  archivePanel.restore(draft.archive||{});companionPanel.restore(draft.companions||{});
+  archivePanel.restore(draft.archive||{});companionPanel.restore(draft.companions||{});commissioningPanel.restore(draft.commissioning||{});
   S.sourceId=draft.sourceId||"";S.deployId=draft.deployId||"";S.profile=draft.profile||"mspdi";
   S.corrections=draft.corrections||[];S.sourceReview=draft.sourceReview||null;S.probes=draft.probes||{};
   S.sourceArtifacts=mergeArtifacts(draft.sourceArtifacts);S.handoverArtifacts=mergeArtifacts(draft.handoverArtifacts);
