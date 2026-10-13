@@ -63,7 +63,7 @@ A completed stage executed under an incompatible version is rejected even if its
 
 ## Receiving and current source composition
 
-Install the complete current Conservation backend and bindings with the shared helper. The supplied helper is the unchanged ECSA revision: 3,770 UTF-8 bytes, SHA-256 `bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2`. Its maintained dependency is `model/model_selection.py`.
+Install the complete current Conservation backend and bindings with the maintained shared helper and its `model/model_selection.py` dependency. The first Conservation source edition supplied ECSA’s 3,770-byte helper (SHA-256 `bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2`). The current shared successor also supplies `version_label`, `guide_url` and `run_label`; its original resolution functions and policy remain unchanged. Keep that current full source so the other scientific report consumers retain their presentation helpers. The installer recognizes the exact original helper as an upgrade predecessor.
 
 The accompanying composition document records exact beforeimages and ordered unique replacements for the two existing consumer modules. Compose these replacements onto a newer compatible application source when other owners have changed those same modules; preserve their reporting, practice and catalog changes.
 
