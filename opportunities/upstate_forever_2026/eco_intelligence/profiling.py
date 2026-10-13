@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Iterator, Any
 from .common import IntelligenceError, finite
+from .native_catalog import raster_unit_declarations
 
 class Moments:
     """Mergeable Welford population moments; works for raster blocks and table cells."""
@@ -99,6 +100,7 @@ def raster_profile(path: Path) -> dict:
     bands = []
     with rasterio.open(path) as src:
         for band in range(1, src.count + 1):
+            unit_info = raster_unit_declarations(src, band)
             moments = Moments()
             for top in range(0, src.height, 512):
                 for left in range(0, src.width, 512):
@@ -106,13 +108,13 @@ def raster_profile(path: Path) -> dict:
                     values = src.read(band, window=window, masked=True).compressed()
                     moments.array(values)
             bands.append({'band': band, 'description': src.descriptions[band-1],
-                          'unit': src.units[band-1], 'valid': moments.n,
+                          'unit': unit_info['unit'], 'unit_declarations': unit_info['declarations'], 'valid': moments.n,
                           'excluded_masked_or_nonfinite': src.width * src.height - moments.n,
                           'statistics': moments.result()})
         return {'format': 'raster', 'population': 'complete', 'width': src.width, 'height': src.height,
                 'crs': str(src.crs) if src.crs else None, 'bounds': list(src.bounds),
                 'transform': list(src.transform)[:6], 'dtype': list(src.dtypes), 'bands': bands,
-                'interpretation': 'Numeric cell statistics in native band units; sums are not automatically sediment mass.'}
+                'interpretation': 'Numeric cell statistics in declared raster units; interpret sums using their units and coverage.'}
 
 
 def vector_profile(path: Path) -> dict:
@@ -159,7 +161,9 @@ def compare_rasters(left: Path, right: Path, band: int = 1) -> dict:
             raise IntelligenceError('Rasters have different grids. Align CRS, resolution and transform explicitly before comparison.')
         if not 1 <= band <= min(a.count, b.count):
             raise IntelligenceError('Band does not exist in both rasters.')
-        if a.units[band-1] != b.units[band-1]:
+        left_unit_info = raster_unit_declarations(a, band)
+        right_unit_info = raster_unit_declarations(b, band)
+        if left_unit_info['unit'] != right_unit_info['unit']:
             raise IntelligenceError('Band units disagree.')
         for top in range(0, a.height, 512):
             for leftx in range(0, a.width, 512):
@@ -178,7 +182,8 @@ def compare_rasters(left: Path, right: Path, band: int = 1) -> dict:
         return {'format': 'raster_comparison', 'population': 'complete aligned grid', 'paired_cells': delta.n,
                 'baseline_only_cells': left_only, 'candidate_only_cells': right_only,
                 'both_excluded_cells': both_missing, 'increased': increased, 'decreased': decreased, 'unchanged': unchanged,
-                'unit': a.units[band-1], 'units_status':'declared' if a.units[band-1] else 'not declared in either band',
+                'unit': left_unit_info['unit'], 'units_status':'declared' if left_unit_info['unit'] else 'not declared in either raster',
+                'unit_declarations': {'baseline': left_unit_info['declarations'], 'candidate': right_unit_info['declarations']},
                 'grid':{'width':a.width,'height':a.height,'crs':str(a.crs) if a.crs else None,'transform':list(a.transform)[:6]}, 'baseline': baseline.result(), 'candidate': candidate.result(),
                 'candidate_minus_baseline': delta.result(),
                 'relative_sum_change_percent': None if not baseline.n or baseline.total == 0 else 100*(candidate.total-baseline.total)/baseline.total,
