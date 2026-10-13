@@ -84,6 +84,31 @@ It opens the issued HTML in another tab of that same browser, makes minimal expl
 
 Return the actual source edition, original receiving operation, browser/process identity, complete result directory and viewable images to the same publisher/native thread. The producing source owner must personally view the rendered images and use every outgoing attachment. Repair the first concrete defect in this same source. The programme records screenshots as awaiting inspection until that actual observation occurs.
 
+### Resume the same author and colleague exercise
+
+Keep the original browser profile, served source edition, `draftId`, output directory and receiving controller. Call the same exported function again with the same four arguments:
+
+```js
+import { receiveApplicationReturns } from './GRANT_APPLICATION_RETURNS_BROWSER.mjs';
+const result = await receiveApplicationReturns({
+  page, baseUrl, draftId, directory,
+});
+```
+
+The caller continues to own the existing browser and exclusive native operation. The helper binds the served application URL and original saved record before creating its internal exercise. It retains the original saved application, complete working input and measured runtime files. An explicit source upgrade belongs at a following reviewed source boundary; it cannot silently replace an incomplete exercise.
+
+Thirteen immutable stages carry the complete original record, separate-copy candidate, issued baseline and files, later author edit, colleague return, complete pending review, selected acceptance and four reopened branches. Each ordinary download or rendered image lives in its own attempt directory. Repeating a completed step reads its retained files and identities; it does not replace those files with a fresh export.
+
+Before the first **Save as separate draft**, the helper saves a unique internal exercise label and the complete original candidate. If the browser saved successfully but the process lost its response, continuation locates that exact saved copy and reconstructs the complete original save from its actual saved time and identity. It does not create another exercise merely because a receipt is absent. The issue, author Save and accepted-return steps similarly retain their complete candidates first, then compare the original saved revision and entire application against the original product functions using the actual recorded issue/adoption identity and time.
+
+An unchanged preceding record permits its original UI action. An already-saved exact successor resumes from that result. A different saved successor preserves the current work and reports the exact mismatched stage instead of overwriting it. Complete working checkpoints reopen through the existing working-copy importer with their original native expected revision; ordinary portable colleague files continue to clear writer references through the maintained editor.
+
+Each cold branch import waits for the original editor to install a new working identity and finish its file operation. The helper then downloads that complete reopened draft and compares every native field with the selected original branch before recording its screen.
+
+The final `application-return-result.json` binds all stage files, full downloads and actual screenshots. Reopening a completed result verifies those complete files before returning it. Keep the entire directory with the browser profile and application source. Do not copy only the final result or remove an earlier attempt. The previous unjournaled helper's output is historical source: this successor will not interpret an unrelated or differently bound result as one of its completed stages.
+
+An operated result retains `OPERATED_AWAITING_PIXEL_INSPECTION` until the producing peer actually views the desktop/narrow images and opens every complete attachment in its normal receiving application. Continue the existing original receiving and durable saved-case operation with that actual observation.
+
 ## Standing owner instruction
 
 The complete owner-controlled instruction read for this source is reproduced below. Its dated Ecosystem cutoff applies to that original sprint; it does not create a new SCF deadline.
