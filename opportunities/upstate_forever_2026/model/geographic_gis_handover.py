@@ -90,13 +90,14 @@ def prepare(workspace, prepared, scientific, delivery, *, reference_basis):
     if (plan["id"] != prepared["ensemble_id"] or grid["id"] != prepared["grid_id"]
             or workspace.get_grid(grid["id"]) != grid):
         raise ValueError("The scientific report and reference preparation select different inputs")
+    # The course's joint three-run comparison is a separate retained product
+    # from the scientific source's baseline/alternative pair comparisons.
     comparison_id = identifier(reference_basis["comparison_id"])
-    if comparison_id not in comparisons:
-        raise ValueError("The scientific source does not retain this reference comparison")
-    comparison = comparisons[comparison_id]
-    if (comparison["baseline_run_id"] != run_ids[0]
-            or [row["run_id"] for row in comparison["alternatives"]] != run_ids[1:]
-            or read_json(workspace.root / "comparisons" / comparison_id / "comparison.json") != comparison):
+    comparison_path = workspace.root / "comparisons" / comparison_id / "comparison.json"
+    comparison_descriptor = describe_file(workspace.root, comparison_path)
+    comparison = read_json(verify_file(workspace.root, comparison_descriptor))
+    if (comparison.get("baseline_run_id") != run_ids[0]
+            or [row["run_id"] for row in comparison.get("alternatives", [])] != run_ids[1:]):
         raise ValueError("Preserve the original ordered baseline/restoration/control comparison")
     selected_runs = {}
     reader = _SourceReader(workspace)
@@ -115,6 +116,9 @@ def prepare(workspace, prepared, scientific, delivery, *, reference_basis):
             if reader.read(descriptor["object"]) != workspace._get(family, selected_id):
                 raise ValueError("A selected reference input differs from its captured original")
         selected_runs[key] = deepcopy(saved)
+    from .native_versions import validate_run_comparison
+    validate_run_comparison(study._CapturedRuns(selected_runs), comparison,
+                            expected_id=comparison_id)
     history_selection = {"run_ids": run_ids, "title": prepared["selection"]["title"] + " — reference execution history"}
     preview = history.preview(workspace, history_selection)
     execution = history.build(workspace, history_selection, preview["id"])
@@ -129,6 +133,7 @@ def prepare(workspace, prepared, scientific, delivery, *, reference_basis):
                     "sha256": entry["body"]["sha256"], "operation_id": operation,
                     "selection": deepcopy(basis)},
                 "delivery": describe_file(workspace.root, delivery_path),
+                "comparison": comparison_descriptor,
                 "history_id": execution["id"]}
     key = digest(identity)
     directory = workspace.root / DIRECTORY / key
@@ -222,6 +227,9 @@ def verify(workspace, record, *, receive=False):
     for descriptor in record["files"].values():
         verify_file(workspace.root, descriptor)
     context = read_json(verify_file(workspace.root, record["files"]["context"]))
+    if "comparison" in record["identity"]:
+        if read_json(verify_file(workspace.root, record["identity"]["comparison"])) != context["comparison"]:
+            raise ValueError("The original joint reference comparison differs from its GIS capture")
     if context["identity"] != record["identity"] or list(context["reference_runs"]) != record["reference_run_ids"]:
         # JSON object ordering is not scientific identity; require the exact set below.
         if context["identity"] != record["identity"] or set(context["reference_runs"]) != set(record["reference_run_ids"]):
