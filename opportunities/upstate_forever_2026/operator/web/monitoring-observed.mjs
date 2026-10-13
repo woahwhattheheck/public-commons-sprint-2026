@@ -100,4 +100,5 @@ export function attachObservedContext(host) {
   const originalRender=host.render.bind(host);host.render=function(){originalRender();render();};
   const originalRefresh=host.refreshSources.bind(host);host.refreshSources=async function(){await originalRefresh();await refresh();};
   host.observedContextIdForPlan=function(planId){return current?.id&&current.plan_id===planId?current.id:null;};
+  host.observedContextForStudy=function(){return current?.id?{id:current.id,title:current.title,network_id:current.network_id,plan_id:current.plan_id,campaign_id:current.campaign_id}:null;};
 }

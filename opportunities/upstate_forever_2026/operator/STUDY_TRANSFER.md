@@ -221,3 +221,8 @@ omits canonical-only entries from its normalized selection to preserve existing
 plan identities; completed noncanonical sources remain explicit and frozen.
 `sync` uses retained completed runs; `run` retains the original native execution
 behavior for unfinished cases.
+
+
+## Editable Monitoring study transfer
+
+The original selected-study workflow also accepts saved Monitoring networks, designs, budget comparisons, campaigns and observational contexts. Monitoring’s **Transfer editable study** action opens this desk with the original workspace and saved roots. Full campaign parent history, native field events, replay operations and source companions remain editable after restore. See [Monitoring study transfer](../model/MONITORING_STUDY_TRANSFER.md) for exact dependency and continuation behavior.

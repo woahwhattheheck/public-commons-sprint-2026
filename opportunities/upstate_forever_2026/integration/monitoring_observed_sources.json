@@ -72,9 +72,11 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 11144,
-      "sha256": "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
-      "predecessor_sha256": []
+      "bytes": 11335,
+      "sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+      "predecessor_sha256": [
+        "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe"
+      ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -119,25 +121,27 @@
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1758,
-      "sha256": "f78a7bf1b38e057b04b65f03badbc89576930a152b4d3af7271803ec0500dd5c",
+      "bytes": 1795,
+      "sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
       "predecessor_sha256": [
         "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
         "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c",
         "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
-        "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf"
+        "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf",
+        "f78a7bf1b38e057b04b65f03badbc89576930a152b4d3af7271803ec0500dd5c"
       ]
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7810,
-      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
+      "bytes": 8104,
+      "sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
         "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
         "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44",
-        "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895"
+        "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
+        "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919"
       ]
     },
     {
@@ -158,31 +162,34 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 19002,
-      "sha256": "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c",
+      "bytes": 21280,
+      "sha256": "9a6b8beb001af96487838b62d21a064ffd14e1fb8be7160981338adf80d27b9c",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
         "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c",
         "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd",
-        "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518"
+        "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518",
+        "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c"
       ]
     },
     {
       "path": "operator/monitoring_receiving.py",
-      "bytes": 16918,
-      "sha256": "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155",
+      "bytes": 18059,
+      "sha256": "f59fea6a2b5c61f90803728776029b5880fe33bd61a2d7393e0abfa389727756",
       "predecessor_sha256": [
-        "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
+        "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7",
+        "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155"
       ]
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 15473,
-      "sha256": "1612f65c774b8ac1ddbd712500428441958f6e584d1317244660539329a691cd",
+      "bytes": 16434,
+      "sha256": "141b5b423a752ab1119668a233d2810b269dda4303d5056d99576ea9b54e9018",
       "predecessor_sha256": [
         "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b",
-        "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
+        "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e",
+        "1612f65c774b8ac1ddbd712500428441958f6e584d1317244660539329a691cd"
       ]
     },
     {
@@ -292,13 +299,34 @@
       "bytes": 6141,
       "sha256": "855b0cccacabd605ff15511132394cdeedd80ac68eb187c91a77598e8a53cf95",
       "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_study_transfer.py",
+      "bytes": 25411,
+      "sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/MONITORING_STUDY_TRANSFER.md",
+      "bytes": 7841,
+      "sha256": "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-study-transfer.mjs",
+      "bytes": 4888,
+      "sha256": "a9f5181bb522082c6a7b36ad23c0177980040c8912cb63713fab210b73c1570a",
+      "predecessor_sha256": []
     }
   ],
   "requires": [
     "operator/extension_registry.py",
     "model/monitoring_sources.py:verify_retained_binding",
     "source/eighteenmile-stream-nutrients-20261013/flow-analysis/",
-    "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv"
+    "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+    "model/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.mjs"
   ],
   "original_preimages": {
     "model/monitoring_actions.py": {
@@ -356,5 +384,12 @@
     }
   },
   "receiving": "integrations/monitoring/RECEIVING.md",
-  "receiving_base": "Complete current application at bef8f145e9430a8181926c735a45c2ba7f3672c0, retaining campaign fieldwork, native backup and streaming packet source"
+  "receiving_base": "Complete current application at bef8f145e9430a8181926c735a45c2ba7f3672c0, retaining campaign fieldwork, native backup and streaming packet source",
+  "selected_study_transfer": {
+    "source_manifest": "integration/monitoring_study_transfer_sources.json",
+    "guide": "model/MONITORING_STUDY_TRANSFER.md",
+    "receiving_option": {
+      "archive_scope": "selected"
+    }
+  }
 }

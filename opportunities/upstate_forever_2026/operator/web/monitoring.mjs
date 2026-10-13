@@ -1,5 +1,6 @@
 import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 import {attachMonitoringReport} from './monitoring-report.mjs';
+import {attachMonitoringStudyTransfer} from './monitoring-study-transfer.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
 const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
@@ -103,10 +104,13 @@ export function attachMonitoring(host) {
     if(ticket!==generation || workspace()!==key)return;
     node.monitoringReport ||= attachMonitoringReport(node,host,key);
     node.monitoringReport.update();
+    node.monitoringStudyTransfer ||= attachMonitoringStudyTransfer(node,host,key);
+    node.monitoringStudyTransfer.update();
     await fieldwork.mount(root,key);
   }
   async function update() {
     active?.monitoringReport?.update();
+    active?.monitoringStudyTransfer?.update();
     if (!active?.isConnected || active.busy || updating) return;
     const node = active, key = workspace(), version = generation;
     const current = () => active === node && generation === version &&
@@ -125,6 +129,6 @@ export function attachMonitoring(host) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();fieldwork.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }
