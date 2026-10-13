@@ -1,42 +1,54 @@
 # Complete native receiving repairs — 13 October 2026
 
-This companion carries six complete, already-merged application files for the existing native receiving operation. The immutable 976-file source remains at [receiving-union-20261013.source.json](receiving-union-20261013.source.json); its original bytes and ordered parts are unchanged.
+This companion carries twelve complete application files for the existing native receiving operation. The immutable [976-file source](receiving-union-20261013.source.json), its original bytes and ordered parts remain unchanged. The original Source-water receiver completed all six queued actions and both independent restores; this source continuation preserves that result.
 
-## Receive the two complete source editions
+## Receive the complete source companion
 
-First receive the full source continuation using its original envelope and per-file identities. Then inspect [native-actual-repairs-20261013.source.json](native-actual-repairs-20261013.source.json), a standard `commons.source-bank/v1` object with application-relative paths and complete UTF-8 file bodies.
+The [repair bank](native-actual-repairs-20261013.source.json) is a standard `commons.source-bank/v1` object with application-relative paths and complete UTF-8 file bodies. This second edition is **571,083 bytes**, SHA256 `3eac36bb58268b307788516e9771453bb89e4512d257bff838e7aec1deda7aaf`; its twelve source files total **539,832 bytes**.
 
-The repair bank is 282,590 bytes, SHA256 `6e7c7748fd208bb4504a0fbd704f4215a4a7279c2d05db1c9b6dfb0e7bfb0713`. Its six source files total 265,206 bytes. Verify the whole bank and every member's original byte length and SHA256 before placing source.
+The original [metadata-only inventory](receiving-union-20261013.inventory.json) lists every frozen path, byte length and SHA256. Its exact 180,762-byte body has SHA256 `20d48551e4a7a840e7d5ad7a1b1048ab49086e0f00d2e088efde63fd656acf57`. An equipped receiver can compare an already retained application against this inventory before transferring the full source packet. The inventory describes the original frozen edition; it is not a command to replace later installed source.
 
-Use the existing equipped publisher's ordinary public-Git → actual local file → authorized receiving-file route. Keep the source publication and actual application/Workspace receiving with their current owners. Return the real retained file handles through the same receiving operation.
+Verify each full bank and each member's UTF-8 bytes and SHA256 before placement. Use the existing equipped publisher's ordinary public-Git → actual local file → authorized receiving-file route. Preserve current source publication and application/Workspace owners.
 
-| Complete source | Merged owner change | Receiving effect |
+| Complete source | Original change | Receiving effect |
 |---|---|---|
-| `model/monitoring_comparison_report.py` | PR4200 | Corrects the actual native import failure and retains the complete current utility context. |
+| `model/monitoring_comparison_report.py` | PR4200 | Corrects the actual native import failure and retains complete utility context. |
 | `operator/web/spatial.mjs` | PR4152 | Applies map aspect and swipe geometry through trusted CSSOM under the original CSP. |
-| `model/cartography.py` | PR4190 | Separates scale notes and legends, and preserves geographic aspect in the single-map layout. |
-| `model/implementation_qc.py` | PR4132 | Retains the complete owner's recipient display correction. |
-| `model/implementation_qc_actions.py` | PR4132 | Retains its matching original action implementation. |
-| `model/review_handback.py` | PR4132 | Retains the corresponding complete handback correction. |
+| `model/cartography.py` | PR4190 | Separates scale notes and legends and preserves geographic aspect. |
+| `model/implementation_qc.py`, `model/implementation_qc_actions.py`, `model/review_handback.py` | PR4132 | Retains the matching complete recipient/QC source family. |
+| `operator/receptor_operator.py`, `operator/web/receptors.mjs`, `operator/extensions/receptors.json`, `operator/RECEPTORS_OPERATOR.md` | PR4252 + PR4261 | Embeds verified original image companions in the authenticated printable view and prepares nested report links before wrappers. |
+| `operator/delivery_preview.py` | Existing unchanged dependency | Provides the original bounded image parser and policy used by the preview repair. |
+| `model/study_transfer.py` | Actual operated PR4230 lock block, composed into frozen source | Prevents reacquiring the same native lock while preserving the original frozen imports and family behavior. |
 
-The full postimages are copied byte for byte from the owner publications. Each bank member records its original source commit and PR. `frozen_976_sha256` identifies the prior frozen member, or is null when the frozen bank did not contain that path.
+Each member records `frozen_976_sha256`, or null if the frozen bank did not contain the path. Reuse an installed identical body. A body matching its exact frozen predecessor can receive the complete successor at its owning worker's application boundary. Preserve a different newer installed body and compose with its current owner.
 
-An installed identical postimage is reusable. An installed body matching the recorded frozen predecessor can receive its full successor at the owning worker's source boundary. Preserve a different newer body and compose against its exact current owner source; the frozen predecessor hash does not authorize discarding concurrent improvements. The two QC modules are additive original family members.
+### Archive-lock source boundary
 
-## Continue retained native work
+The included dispatcher is **62,501 bytes**, SHA256 `84d8d08f578da1deceebc74cf5f3f45cb3a38e11595d24560ca1a6d005963e77`, Git blob `4841c4691aea2c880fcec112f4213cd12a6cd762`. It changes only the actual native path-token lock block in the frozen **62,180-byte** predecessor, SHA256 `54d6f27b873b94fb0fe6be8120743134fa2621f87f0e4cbde237411e1ceb2ef6`. Reversing that one block reconstructs the exact frozen body.
 
-The Source-water source report, original network and prepared-area products are already retained in the active receiving operation. Keep its original selector, Workspace and output directory. Continue the same command with `--resume`; its immutable `source-water-selection.json` and source plan identify the operation. Changing an existing `--prepared` request to `--report-id` changes that identity. An explicit `--report-id` belongs to a new receiving output that opens the already saved source.
+Current public PR4230 also has a newer 64,931-byte dispatcher with Parameter and source-refresh additions. Keep that newer installed edition and its dependencies. This bank's frozen-compatible composition introduces no Parameter import and does not replace that current source. The actual completed receiver already has its working lock correction.
 
-The complete source family resolves the Scientific Reports route and original `model/paired_ensemble/ensemble_store.py` provenance dependency. Keep the currently operated scientific formatter and other independently received newer peers during composition. The maintained receiver then continues its original queued scientific report, full Workspace archive, independent reopen, selected editable Study and independent selected restore. Retain interrupted tasks, saved native outputs, original source hashes and the first concrete exception.
+## Completed original native receiving
 
-Mapped source preparation remains an explicit distinct selection. Reopening a retained completed source report verifies its captured map files and original runtime; it does not require rerunning the native scientific model or replacing a completed source edition.
+[Actual receiver return 1791892773.135729](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791892773135729) completed all six original Source-water actions: scientific report, source ZIP, full Workspace backup, independent full restore, selected editable Study export and independent selected restore.
 
-## Current source and native status
+- Original project: `b9d5d257-c6bb-4f07-b975-8e8c63705db3`.
+- Original network: `5a02c70737ff8b11c0a3ecf1faa83f76f5b96e3df53e3514caed27a04f944b81`.
+- Prepared areas: `10e3fd4fb59c10dfcd4bb3e3b32aacaed003bac941144e9b6985ff9bf6143f26`.
+- Saved source report: `fb27115004057e75dd1d20ded55f2eb8bf8c16c6af5eb773411637999ee44f3f`.
+- Scientific report: `721a4ab550e4c3a199bbaf9bbea47d6471fb713fa836d970941030f05b3032a1`.
 
-The base packet records a coherent historical receiving snapshot. Its explicit `published_studies` metadata and included files identify the 444-member edition in that snapshot; inherited earlier composition notes also retain older family counts and historical custody. Current public-main Published studies families have advanced independently and stay with their maintained installer. Use the bank's actual files and exact hashes when opening the frozen source, and use the existing native worker's current receipt for application/Workspace custody.
+The same native owner is completing the final handback of those already-produced report/archive files and original receiving receipt. The separately returned protection-area Study contains four protection polygons; it remains distinct from the source-water product's 4 ARJWS and 32 PRWD upstream areas.
 
-Current consuming guides are `source_tools/RECEIVE_RECEPTOR_REPORT.md`, `source_tools/ORIGINAL_SOURCE_WATER_RECEIVING.md` and `operator/RECEPTORS_OPERATOR.md`. Current owner direction is `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, original Git blob `8cd1c1f3d371a2fb75471813844e31f489aa8272`. The actual regional model remains with its active calculation owner; the report/source receiving uses the already retained original products.
+Keep all completed native products and task history. In the existing final operator handback, open the saved Source-water card's Printable view, follow original network/prepared/profile links, look at embedded maps and print output at desktop/screenshare and 390px, and open every delivered attachment. The preview source changes display transport; it preserves the original scientific/source files.
 
+For a separate interrupted copy of the original receiving operation, retain its original selector, Workspace and output directory and continue with its maintained `--resume` option. Its immutable `source-water-selection.json` identifies that operation. Changing an existing `--prepared` selection into `--report-id` changes the request; a separate explicit report-ID request belongs to a new output opening the already saved source. Retain any concrete native exception and actual elapsed history.
+
+## Source edition and owner direction
+
+The base packet is a coherent historical receiving snapshot. Its explicit Published studies metadata and included files identify the 444-member edition; inherited earlier notes retain older counts and custody. Current public-main families advance independently. Use actual bank files/hashes for the frozen source and the native owner's receipt for current Workspace custody.
+
+The consuming guides remain `source_tools/RECEIVE_RECEPTOR_REPORT.md`, `source_tools/ORIGINAL_SOURCE_WATER_RECEIVING.md` and `operator/RECEPTORS_OPERATOR.md`. Current owner direction is `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, original Git blob `8cd1c1f3d371a2fb75471813844e31f489aa8272`. The actual geographic model stays with its active calculation owner; this report/source continuation reuses the retained original products.
 
 <!-- bryce-rendered-product-inspection:begin -->
 ## Standing lab rule: inspect the rendered product before presenting it

@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "ensemble-coefficient-evidence",
+  "source_reference": "Explicit original coefficient evidence and endpoint selections for saved ensemble scientific reports and editable Studies.",
+  "extend_components": {
+    "ensembles": {
+      "paths": [
+        "model/ensemble_coefficient_evidence.py",
+        "model/ensemble_study_source.py",
+        "model/ensemble_scientific_source.py",
+        "model/ensemble_consumers_cli.py",
+        "operator/ensemble_service.py",
+        "operator/extensions/ensembles.json",
+        "operator/web/ensembles.mjs",
+        "model/ENSEMBLE_COEFFICIENT_EVIDENCE.md",
+        "integration/component_fragments/ensemble-coefficient-evidence.json"
+      ],
+      "requires": [
+        "biophysical-evidence"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/ensemble_coefficient_evidence.py",
+        "model/scientific_report_study_transfer.py",
+        "model/ENSEMBLE_COEFFICIENT_EVIDENCE.md"
+      ],
+      "requires": [
+        "biophysical-evidence"
+      ]
+    }
+  }
+}

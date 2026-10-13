@@ -16,14 +16,16 @@ from .common import (atomic_json, digest, file_digest, held, identifier,
                      now, read_json, verify_file)
 from . import observed_context, receiving_waters as waters
 from . import receiving_water_report_source as reports
+from .geographic_utility_groups import augment as augment_utility_groups
 
 SCHEMA = "upstate.geographic-receiving-context/v1"
 FOLDER = "geographic-receiving-contexts"
 PUBLIC_SPEC = "source/water_context/20261012/public-water/receiving-waters.public-spec.json"
 SCOPES = ("model_domain", "reporting")
 INTERPRETATION = (
-    "Annual modeled land export reaching streams within the selected original "
-    "source support. Published protection areas and potential HUC12 upstream "
+    "Annual modeled export originating from land pixels in the selected original "
+    "source support and delivered to streams; not a load crossing that support boundary. "
+    "Published protection areas and potential HUC12 upstream "
     "catchments are distinct relationships. Reservoir transport, delivery to an "
     "intake, concentration and treatment removal are not calculated."
 )
@@ -168,6 +170,7 @@ def _source_choices(workspace, prepared):
                      "expected_union_huc12s": sorted(expected),
                      "support": "Full original HUC polygons; quantity scope is selected separately"},
     }
+    upstream = augment_utility_groups(workspace, prepared, upstream)
     spec_path = Path(__file__).resolve().parents[1] / PUBLIC_SPEC
     public = read_json(spec_path)
     protection = deepcopy(public)
@@ -260,6 +263,12 @@ def _verify(workspace, record):
         source = reports.inspect(workspace, item["report_source_id"], verify=True)
         if source["source"] != item["source"] or source["selection"]["analysis_id"] != analysis["id"]:
             raise ValueError("Retained utility scientific report differs")
+    if record.get("allocation") is not None:
+        from . import geographic_scenario_allocation as allocation
+        saved = allocation.inspect(workspace, record["allocation"]["id"])
+        if (saved["context_id"] != record["id"] or saved["prepared_id"] != record["prepared_id"]
+                or saved["source"] != record["allocation"]["source"]):
+            raise ValueError("Retained local scenario allocation differs from this receiving context")
     return record
 
 
@@ -279,6 +288,7 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
     scopes = tuple(value for value in SCOPES if value in scopes)
     runs, outputs, versions = _runs(workspace, prepared)
     specs = _source_choices(workspace, prepared)
+    from . import geographic_scenario_allocation as allocation
     identity = {
         "schema": SCHEMA, "project_id": workspace.project["id"],
         "prepared_id": prepared["id"], "prepared_sha256": file_digest(prepared_path),
@@ -286,6 +296,11 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
         "implementation_sha256": file_digest(__file__),
         "receiving_implementation_sha256": file_digest(waters.__file__),
         "report_implementation_sha256": file_digest(reports.__file__),
+        "allocation_implementation_sha256": file_digest(allocation.__file__),
+        "allocation_rendering_sha256": file_digest(allocation.rendering.__file__),
+        "allocation_contrasts_sha256": file_digest(allocation.contrasts.__file__),
+        "allocation_utility_profile_sha256": file_digest(
+            Path(__file__).resolve().parents[1] / "source/receptor-profiles/utility-focus-20261012.json"),
         "plan_selections": specs, "quantity_scopes": list(scopes),
         "runs": [{"id": run["id"], "selection": run["selection"], "artifacts": run["artifacts"]}
                  for run in runs],
@@ -342,6 +357,7 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
                     "units": {name: waters.TOTAL_UNITS[name] for name in outputs},
                     "subjects": [
                         {"id": row["id"], "kind": row["kind"], "title": row["title"],
+                         "classification": deepcopy(row.get("classification", {})),
                          "relationship_precision": row["relationship_precision"],
                          "contribution_area_ha": row["contribution_area_ha"],
                          "area_in_quantity_scope_ha": row["area_in_quantity_scope_ha"],
@@ -350,6 +366,10 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
                         for row in analysis["subjects"]],
                 })
                 publish("report_source_complete")
+        publish("local_scenario_allocation")
+        allocated = allocation.prepare(workspace, prepared, record, progress=progress)
+        record["allocation"] = {"id": allocated["id"], "source": allocated["source"]}
+        publish("local_scenario_allocation_complete", allocation_id=allocated["id"])
         record.update(state="complete", completed_at=now())
         _verify(workspace, record)
         atomic_json(final, record, immutable=True)
@@ -362,8 +382,10 @@ def append_sources(selection, context):
         raise ValueError("Append a completed geographic receiving context")
     selected = deepcopy(selection)
     choices = observed_context.source_choices(selected)
-    for item in context["analyses"]:
-        source = item["source"]
+    sources = [item["source"] for item in context["analyses"]]
+    if context.get("allocation") is not None:
+        sources.append(context["allocation"]["source"])
+    for source in sources:
         if source not in choices:
             choices.append(deepcopy(source))
     selected["observed_context_sources"] = choices
@@ -374,7 +396,10 @@ def append_sources(selection, context):
 
 
 def source_collection_ids(context):
-    return list(dict.fromkeys(item["source"]["source_collection_id"] for item in context["analyses"]))
+    sources = [item["source"] for item in context["analyses"]]
+    if context.get("allocation") is not None:
+        sources.append(context["allocation"]["source"])
+    return list(dict.fromkeys(source["source_collection_id"] for source in sources))
 
 
 def main(argv=None):

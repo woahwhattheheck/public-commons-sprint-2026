@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "operation": "VENTCRM-OPERATOR-COMMISSIONING-CRITERIA-379A-20261013",
+  "retrieved_on": "2026-10-13",
+  "sources": [
+    {
+      "id": "product",
+      "url": "https://ventcrm.com/",
+      "title": "Product tour and operator FAQ",
+      "retrieved_on": "2026-10-13",
+      "published_updated": null,
+      "publication_status": "current_product_page",
+      "facts": "Small route businesses are the stated fit. Dedicated deployment/database, owner sessions and limited technician access are described. The site lists booking, visits, invoicing and customer communications, with a phone walkthrough and an operator-specific setup timeline.",
+      "ref": "turn338view4"
+    },
+    {
+      "id": "pricing",
+      "url": "https://ventcrm.com/pricing",
+      "title": "Pricing and setup",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-09-20",
+      "publication_status": "current_product_page",
+      "facts": "Published founding price is USD750 once and USD129 monthly. Setup includes branding, service catalogue, migration, Stripe connection, business texting registration and booking configuration. SMS usage and Stripe processing are separate costs. Support, hosting and updates are included.",
+      "ref": "turn338view0"
+    },
+    {
+      "id": "migration",
+      "url": "https://ventcrm.com/jobber-alternative",
+      "title": "Jobber migration and cutover",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-09-20",
+      "publication_status": "current_product_page",
+      "facts": "Customers, jobs and invoices are named migration objects. Existing exports or spreadsheets are inputs. The existing system can stay in operation while the private system is prepared; a cutover is planned with the operator. Specific integrations require fit assessment.",
+      "ref": "turn338view2"
+    },
+    {
+      "id": "privacy",
+      "url": "https://ventcrm.com/privacy",
+      "title": "Privacy policy",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "Operator information belongs to the operator. The public demo uses fictional, periodically erased data. Hosting providers include Vercel and Neon in the US, with Stripe, Twilio and Resend for their respective services. The page displays a draft notice.",
+      "ref": "turn337view0"
+    },
+    {
+      "id": "sms",
+      "url": "https://ventcrm.com/sms-policy",
+      "title": "SMS policy",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "The policy describes business-number registration, recorded opt-in and automatic opt-out handling for STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT. It assigns consent responsibility to the operator and rejects unsolicited lists and using service consent for marketing. The page displays a draft notice.",
+      "ref": "turn337view1"
+    },
+    {
+      "id": "terms",
+      "url": "https://ventcrm.com/terms",
+      "title": "Terms of service",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "Published terms distinguish setup labor from the recurring service and describe refund treatment before/after setup begins. Cancellation is described as effective at billing-month end; export rights survive specified service termination. The page displays a draft notice.",
+      "ref": "turn337view2"
+    },
+    {
+      "id": "exit",
+      "url": "https://ventcrm.com/cancellation",
+      "title": "Cancellation and data export",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "Self-serve CSV names clients, invoices, leads and Stripe payout history. Complete exit delivery additionally names properties, jobs, quotes, payments and message history in CSV/JSON. A 30-day active-system deletion period is proposed; backup expiry remains unspecified. Agreed retention can extend active custody. The page displays a draft notice.",
+      "ref": "turn337view3"
+    },
+    {
+      "id": "acceptable_use",
+      "url": "https://ventcrm.com/acceptable-use",
+      "title": "Acceptable use",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "The policy covers one operating business, authorized data and consented messaging; it forbids probing, overloading and automated scraping of the public demo. The page displays a draft notice.",
+      "ref": "turn338view1"
+    },
+    {
+      "id": "cookies",
+      "url": "https://ventcrm.com/cookies",
+      "title": "Cookie policy",
+      "retrieved_on": "2026-10-13",
+      "published_updated": "2026-08-13",
+      "publication_status": "published_draft",
+      "facts": "The public/demo site describes a short-lived demo session cookie, analytics with storage denied and exclusion of form contents from analytics. This scope is the public/demo sites. The page displays a draft notice.",
+      "ref": "turn338view3"
+    }
+  ],
+  "interpretation": "Source facts record the current official pages. The criteria are proposed operating steps for the existing commissioning desk. Public policy pages are marked as published drafts; the selected operator agreement is a separate record."
+}

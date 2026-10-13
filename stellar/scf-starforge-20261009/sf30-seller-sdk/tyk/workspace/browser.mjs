@@ -1,3 +1,4 @@
+import { createGatewayCommissioningBrowser } from './gateway-commissioning-browser.mjs';
 import { createCommissioningBrowser } from './commissioning-browser.mjs';
 import { readTykBrowserRequest, saveTykBrowserRequest } from './browser-request-store.mjs';
 import { TYK_WORKSPACE_ACTIONS, TYK_MAX_JSON_BYTES } from './actions.mjs';
@@ -112,7 +113,8 @@ async function refresh(){
   options($('capture-select'),state.captures,state.capture?.id,item=>item.label+' · '+stateName(item.state)+' · '+stamp(item.createdAt));
   options($('rollout-cohort'),state.cohorts,state.cohort?.id,item=>item.label);
   await commissioning.updateCohorts(state.cohorts);
-  await Promise.all(['cohort','commissioning','rollout','delivery','receiving'].map(kind=>loadList(kind,0)));
+  await gatewayCommissioning.updateTargets(workspace.connections);
+  await Promise.all(['cohort','commissioning','gatewayCommissioning','rollout','delivery','receiving'].map(kind=>loadList(kind,0)));
   if($('capture-select').value)await loadCapture($('capture-select').value,state.capture?.id===$('capture-select').value?state.captureOffset:0);
   showPending();
 }
@@ -363,6 +365,8 @@ async function showRollout(input){
     const ref=record.response.reference;panel.append(link('Download complete original response','/api/source?sha256='+ref.sha256+'&bytes='+ref.bytes));
     if(record.response.json!==undefined||record.response.bodyText){const details=el('details');details.append(el('summary','Response preview'),
       el('pre',record.response.json!==undefined?fmt(record.response.json):record.response.bodyText));panel.append(details);}}
+  if(record.value.gatewayCommissioning)panel.append(button('Return to Gateway commissioning',
+    ()=>run('Opening complete Gateway course',()=>gatewayCommissioning.open(record.value.gatewayCommissioning.id))));
   if(record.value.commissioning)panel.append(button('Return to cohort commissioning',
     ()=>run('Opening complete cohort commissioning',()=>commissioning.open(record.value.commissioning.id))));
   if(record.value.activationReviews)panel.append(detail('Saved writes checked after reload',fmt(record.value.activationReviews)));
@@ -379,6 +383,7 @@ async function showReceiving(record){
   }),'primary'));
 }
 async function showResult(record){
+  if(record.kind==='gatewayCommissioning')return gatewayCommissioning.open(record.id);
   if(record.kind==='commissioning')return commissioning.open(record.id);
   if(record.kind==='rollout')return showRollout(record);
   if(record.kind==='capture'){tab('portfolio');return loadCapture(record.id);}
@@ -408,5 +413,6 @@ $('delivery-file').addEventListener('change',event=>{const file=event.target.fil
 });});
 $('refresh').addEventListener('click',()=>run('Refreshing original workspace',async()=>{await refresh();notice('Workspace refreshed.');}));
 const commissioning=createCommissioningBrowser({$,el,button,detail,table,read,action,run,refresh,notice,tab,showRollout,state});
+const gatewayCommissioning=createGatewayCommissioningBrowser({$,el,button,detail,table,read,action,run,refresh,notice,tab,showRollout,state});
 updateOperation();
 await run('Opening original workspace',async()=>{await refresh();notice('Workspace ready.');});

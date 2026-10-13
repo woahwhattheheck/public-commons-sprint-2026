@@ -504,3 +504,12 @@ No bid/prime-yesgate or arbitraryproduct/featurecap. TODAY10a.m.Eastern/14UTCcut
 Authoritative current work order: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359
 
 Durable application brief: `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`. Carry its complete current contents with the same native/product work order.
+
+
+## Printable reports with their original images
+
+The saved Source-water result's **Printable source-water report** opens a derived static view of the verified retained HTML. Original watershed SVGs and declared mapped figures are embedded from their exact inventoried bytes, so moving the view to the operator's authenticated file route preserves its geography. Existing profile-report links open the corresponding derived view; original table, source and archive downloads continue to use their retained file tickets.
+
+The preview uses the maintained delivery image reader, verifies every opened HTML/image member against its recorded length and SHA-256, and enforces the existing HTML and image size limits. Its dedicated Source-water route accepts only that Workspace's retained preview ticket and admits embedded images under a script-free sandbox. It does not change the shared file policy. Saved report identities, original HTML, native geometry, scientific recipes and complete linked ZIPs retain their original bytes. Reopen the saved result after restarting the operator to regenerate its file tickets.
+
+In the existing populated receiving course, open the exact saved source-only report and a retained mapped report when available, view the real watershed and figure pixels at desktop and 390-pixel widths, follow a profile report, download an original source member, and print/reopen the output. Extract the complete ZIP and open its original report independently. The producing worker must personally view and operate these outgoing artifacts under the standing product and all-attachments instructions above; source review does not substitute for that use.

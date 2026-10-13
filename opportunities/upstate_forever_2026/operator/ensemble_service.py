@@ -2,11 +2,11 @@
 from __future__ import annotations
 from model.common import identifier, read_json, relative_file, describe_file
 from model.ensembles import Ensembles, parameter_catalog
-from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source
+from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source, ensemble_coefficient_evidence
 
 ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report",
                      "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume", "ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source"})
-READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source", "study-source"})
+READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source", "study-source", "coefficient-evidence"})
 WRITES = frozenset({"preview"})
 
 class EnsembleService:
@@ -154,6 +154,17 @@ class EnsembleService:
                     "ensembles": self.overview(workspace),
                     "profiles": state["profiles"], "scenarios": state["scenarios"],
                     "grids": state["grids"]}
+        if operation == "coefficient-evidence":
+            consumer_id = payload.get("consumer_id")
+            lineage = (ensemble_coefficient_evidence.consumer_context(ws, identifier(consumer_id))
+                       if consumer_id else ensemble_coefficient_evidence.context(ws, self._ensemble_id(payload)))
+            previous = (ensemble_scientific_source.latest(ws, consumer_id) if consumer_id else
+                        ensemble_study_source.latest(ws, lineage["ensemble_id"]))
+            binding = (previous or {}).get("selection", {}).get("coefficient_evidence")
+            return {"workspace_key": workspace, "context": lineage,
+                    "catalog": ensemble_coefficient_evidence.catalog(ws, lineage),
+                    "selected": binding["reference_binding"]["selection"] if binding else
+                                {"evidence_ids": [], "range_ids": []}}
         if operation == "annual-references":
             return {"workspace_key": workspace, **ensemble_references.catalog(ws),
                     "ensembles": self.overview(workspace)}
@@ -243,7 +254,8 @@ class EnsembleService:
         action, payload = task["action"], task["payload"]
         if action == "ensemble.study-source":
             result = ensemble_study_source.prepare(ws, self._ensemble_id(payload),
-                                                   render=payload.get("render", True))
+                                                   render=payload.get("render", True),
+                                                   coefficient_evidence=payload.get("coefficient_evidence"))
             return {**result, "workspace_key": workspace,
                     "scientific_report_selection": self._scientific_report_selection(workspace, result),
                     "downloads": [
@@ -251,7 +263,8 @@ class EnsembleService:
                 for name, item in result.get("files", {}).items()]}
         if action == "ensemble.scientific-source":
             result = ensemble_scientific_source.prepare(ws, identifier(payload.get("consumer_id")),
-                                                       render=payload.get("render", True))
+                                                       render=payload.get("render", True),
+                                                       coefficient_evidence=payload.get("coefficient_evidence"))
             return {**result, "workspace_key": workspace,
                     "scientific_report_selection": self._scientific_report_selection(workspace, result),
                     "downloads": [

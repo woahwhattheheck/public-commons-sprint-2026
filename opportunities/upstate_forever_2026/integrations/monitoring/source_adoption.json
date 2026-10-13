@@ -38,6 +38,13 @@
       "sha256": "79668fbafe90b88dbe25741232afe92196845f72495d78afc95fdb559fa1a481"
     },
     {
+      "source": "integration/component_fragments/monitoring-field-selection.json",
+      "source_role": "current_application_source",
+      "path": "integration/component_fragments/monitoring-field-selection.json",
+      "bytes": 933,
+      "sha256": "e05a7f39cabe6ef233c2843c87f1f3bf6398b47aa8c876ea0557d2846d784dc4"
+    },
+    {
       "path": "integration/component_fragments/monitoring-observed-station-scope.json",
       "source": "integration/component_fragments/monitoring-observed-station-scope.json",
       "source_role": "current_application_source",
@@ -186,6 +193,13 @@
       "path": "model/monitoring_field_return.py",
       "bytes": 24812,
       "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b"
+    },
+    {
+      "source": "model/monitoring_field_selection.py",
+      "source_role": "current_application_source",
+      "path": "model/monitoring_field_selection.py",
+      "bytes": 16812,
+      "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
     },
     {
       "source": "model/MONITORING_FIELDWORK.md",
@@ -489,6 +503,13 @@
       "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc"
     },
     {
+      "source": "operator/extensions/monitoring-field-selection.json",
+      "source_role": "current_application_source",
+      "path": "operator/extensions/monitoring-field-selection.json",
+      "bytes": 1974,
+      "sha256": "74108c706cc569c12d578c1672dd7c9c48747702f45d9d402b309906b513d1a9"
+    },
+    {
       "source": "operator/extensions/monitoring-report.json",
       "source_role": "current_application_source",
       "path": "operator/extensions/monitoring-report.json",
@@ -590,6 +611,20 @@
       "predecessor_sha256": [
         "3ce6bc39fd1fabdff5f6850a6ecd610dae269dccbd0374558fa9cf780ea3cced"
       ]
+    },
+    {
+      "source": "operator/monitoring_field_selection_native.py",
+      "source_role": "current_application_source",
+      "path": "operator/monitoring_field_selection_native.py",
+      "bytes": 2367,
+      "sha256": "1077d4f492e88e33a12cecf9a8504f13775fc0cf811d972d7fa116497a15f45c"
+    },
+    {
+      "source": "operator/MONITORING_FIELD_SELECTION.md",
+      "source_role": "current_application_source",
+      "path": "operator/MONITORING_FIELD_SELECTION.md",
+      "bytes": 7795,
+      "sha256": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
@@ -698,6 +733,20 @@
       ]
     },
     {
+      "source": "operator/web/monitoring-field-selection.css",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring-field-selection.css",
+      "bytes": 1451,
+      "sha256": "0b53126ea205d7dcdcda34dec4a4e2ed5b0de6a00b7bc41352f6205efce90a82"
+    },
+    {
+      "source": "operator/web/monitoring-field-selection.mjs",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring-field-selection.mjs",
+      "bytes": 10454,
+      "sha256": "6777157bb63378175693b44a7457029883435992a8c4f5ba45ff537763433a64"
+    },
+    {
       "source": "operator/web/monitoring-frontiers.css",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-frontiers.css",
@@ -777,12 +826,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 13110,
-      "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
+      "bytes": 13439,
+      "sha256": "e74108536d78fe90637d358cbd304e1ece3a1a89efd95dfd6d1fa095f5b116ab",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 8855,
-      "previous_sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
+      "previous_bytes": 13110,
+      "previous_sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
       "retained_installed_editions": [
         {
           "bytes": 7810,
@@ -799,6 +848,10 @@
         {
           "bytes": 8855,
           "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb"
+        },
+        {
+          "bytes": 13110,
+          "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc"
         }
       ]
     },
@@ -937,6 +990,16 @@
         "Retain earlier completed exports in their original paths and receive indexed packets under export edition 2"
       ],
       "preserved": "Original comparison IDs, selection recipe, optimizer, numerical rows, source/context records and full editable Workspace receiving"
+    },
+    {
+      "operation_id": "ECO13-MONITORING-FIELD-SELECTION-DD6B-20261013",
+      "source_publication": "bce7959671e0ba7106847106012327e4868d6afa",
+      "pull_request": 4266,
+      "changes": [
+        "Retain exact field selection and source companions through the native queue",
+        "Reopen the maintained original desk and preserve edits across complete Workspace receiving",
+        "Keep all campaign assignments and original source editions unchanged"
+      ]
     }
   ],
   "observational_context": {
@@ -1104,5 +1167,13 @@
       }
     },
     "preserves": "Original optimizer, source editions, fieldwork return, microbial context, saved-record opening, editable comparison transfer, original utility context, current shared Study transfer and scientific report composer."
+  },
+  "retained_field_selection": {
+    "pull_request": 4266,
+    "source_commit": "bce7959671e0ba7106847106012327e4868d6afa",
+    "component": "integration/component_fragments/monitoring-field-selection.json",
+    "guide": "operator/MONITORING_FIELD_SELECTION.md",
+    "original_field_source": "source/monitoring-field-study/source-manifest.json",
+    "semantics": "Exact uploaded selection JSON and editable desk remain bound to the original source, project, network, frontier and saved plans; no campaign station reassignment."
   }
 }

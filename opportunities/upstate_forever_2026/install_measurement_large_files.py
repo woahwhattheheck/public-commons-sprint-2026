@@ -14,7 +14,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 
-VERSION = '1.2.1'
+VERSION = '1.2.2'
 MANIFEST = 'MEASUREMENT_LARGE_FILES_SOURCE.json'
 ALIASES = {'workspace.js': 'measured_observations.mjs', 'workspace.css': 'measured_observations.css',
            'extension.mjs': 'measured_observations_extension.mjs', 'collections.mjs': 'measured_collections.mjs',
