@@ -214,7 +214,7 @@ Open the actual report, its exports and the editable archive as a recipient. Ins
 
 The complete CRF receiving module also contains a concrete browser course. It uses the existing six-family authored reference plan and the original application, without adding an application file or changing the admitted register48 programme. This is an operator-authored software course; it contains no customer records, issued DWP workbook, native spreadsheet calculation, payment instruction or officer acceptance.
 
-Freeze the **entire current 56-file application**, including this guide and the complete receiving module, before the first original mutation. The browser continuation checks that exact application selection against the three-archive result; adding the browser source after an older course has already begun is not a valid continuation.
+Freeze the **entire current 59-file application**, including this guide and the complete receiving module, before the first original mutation. The already captured 56-file CRF course retains its original v5 application and exact source selection. The browser continuation checks that exact application selection against the three-archive result; adding the browser source after an older course has already begun is not a valid continuation.
 
 An accepting owner should run these commands from that exact application directory, using one owned ordinary-disk root and actual installed runtime paths:
 

@@ -20,7 +20,7 @@ Each register retains exact textual identity components and explicitly selected 
 
 Expand the Registers working-file panel to download or restore unsubmitted forms and pending original operations. [REGISTER_RECEIVING.md](REGISTER_RECEIVING.md) covers complete CSV/NDJSON exports, readable reports, editable producer/customer returns and the authored seven-register programme.
 
-The header also links to the maintained [financial reporting](FINANCIAL_REPORTING.md) and [property continuity](PROPERTY_CONTINUITY.md) applications. The header also opens [CRF reporting and workbook return](CRF_REPORTING.md): six reviewed source families, interim/cumulative annual editions, complete differences, retained finding decisions, actual workbook bindings and complete portable receiving. All workflows preserve their original editions in the same SQLite workspace.
+The header also links to the maintained [financial reporting](FINANCIAL_REPORTING.md) and [property continuity](PROPERTY_CONTINUITY.md) applications. The header also opens [CRF reporting and workbook return](CRF_REPORTING.md): six reviewed source families, interim/cumulative annual editions, complete differences, retained finding decisions, actual workbook bindings and complete portable receiving. All workflows preserve their original editions in the same SQLite workspace. [Housing commissioning](HOUSING_COMMISSIONING.md) connects Registers, Property and Financial reporting for one complete transition, including two recipient operators' continued work. The complete handover includes readable property and financial reports with every original record and full CSV/NDJSON sections.
 
 ## Open an operating workspace
 
@@ -145,7 +145,7 @@ The ZIP contains:
 - complete per-reconciliation CSV and NDJSON finding tables, plus machine-readable catalogues;
 - reports/case-review.html, all five case descriptor inventories and complete selected descriptor/row exports for each case edition.
 
-Current deliveries bind all 56 application files under commons.migration-workbench-application/v5. Complete earlier 16-, 21-, 24-, 31-, 39- and 48-file deliveries and preparations already frozen to their respective rosters retain their original application identity. See the portable contract in [CASE_MIGRATION.md](CASE_MIGRATION.md).
+Current deliveries bind all 59 application files under commons.migration-workbench-application/v6. Complete earlier 16-, 21-, 24-, 31-, 39-, 48- and 56-file deliveries and preparations already frozen to their respective rosters retain their original application identity. See the portable contract in [CASE_MIGRATION.md](CASE_MIGRATION.md).
 
 The readable report is an offline document and can be printed from a browser. It contains no external scripts, fonts or tracking. The full original decision history remains in SQLite even where a readable recent-history projection is shorter.
 

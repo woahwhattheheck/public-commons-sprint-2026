@@ -604,6 +604,22 @@ def latest(workspace, ensemble_id, *, verify=False, scenario_contrast=False, sou
     return {**operation, "source_state": "current" if source_current else "stale"}
 
 
+def _remember_contrast(workspace, operation):
+    if not operation["selection"].get("scenario_reference"):
+        return
+    directory = workspace.root / "ensemble_results" / operation["ensemble_id"]
+    path = directory / "scenario-contrast-sources.json"
+    with held(directory / ".contrast-history.lock", blocking=False):
+        record = read_json(path) if path.exists() else {
+            "ensemble_id": operation["ensemble_id"], "source_operation_ids": []}
+        if record.get("ensemble_id") != operation["ensemble_id"]:
+            raise ValueError("The scenario source history belongs to another ensemble")
+        keys = record["source_operation_ids"]
+        if operation["id"] not in keys:
+            keys.append(operation["id"])
+        atomic_json(path, record)
+
+
 def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
     """Freeze the original report, register its typed source and render ordinary exports."""
     if not isinstance(render, bool):
@@ -661,6 +677,7 @@ def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
             operation.pop("error", None)
             operation["updated_at"] = now()
             atomic_json(operation_path, operation)
+            _remember_contrast(workspace, operation)
             atomic_json(workspace.root / "ensemble_results" / plan["id"] / pointer_name,
                         {"ensemble_id": plan["id"], "source_operation_id": key})
             return latest(workspace, plan["id"], scenario_contrast=scenario_reference is not None,
@@ -670,6 +687,7 @@ def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
                              error={"type": type(error).__name__, "message": str(error)}, updated_at=now())
             atomic_json(operation_path, operation)
             if operation.get("source"):
+                _remember_contrast(workspace, operation)
                 atomic_json(workspace.root / "ensemble_results" / plan["id"] / pointer_name,
                             {"ensemble_id": plan["id"], "source_operation_id": key})
             raise

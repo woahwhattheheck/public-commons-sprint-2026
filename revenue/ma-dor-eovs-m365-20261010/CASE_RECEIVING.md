@@ -23,7 +23,7 @@ The full JSON input is bounded to 16 MiB. It contains:
 - authorization: the actual authority and original case/workstream reference.
 - actor: the recorded actual operator.
 - title: optional actual handover title.
-- application: the exact ordered APPLICATION_FILES list, each entry with path, bytes and lowercase SHA-256 of the installed complete source. Include every one of the current 56 files. An already admitted programme retains its original complete source selection.
+- application: the exact ordered APPLICATION_FILES list, each entry with path, bytes and lowercase SHA-256 of the installed complete source. Include every one of the current 59 files. An already admitted programme retains its original complete source selection.
 - workspace: path, actual original project id and expected_revision. The revision is checked before the first original phase.
 - source_files: complete selected original file receipts. Each entry has unique key, absolute path, filename, bytes and SHA-256.
 - steps: the complete actual producer source/mapping/plan/rehearsal/review/cutover action sequence.

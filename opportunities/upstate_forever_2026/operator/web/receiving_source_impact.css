@@ -48,3 +48,13 @@
  .rw-impact button{min-height:44px;max-width:100%;white-space:normal}
  .rw-impact table{min-width:570px}
 }
+
+/* Source replacement review uses the original source picker and study editor. */
+.rw-source-revision>header{display:flex;align-items:center;gap:1rem;justify-content:space-between}
+.rw-source-revision label{display:grid;gap:.4rem;margin:.8rem 0;font-weight:600;min-width:0}
+.rw-source-revision input:not([type=checkbox]){font:inherit;background:#fff;color:#222;border:1px solid #858585;border-radius:3px;padding:.65rem;width:100%;min-width:0}
+.rw-source-revision .rw-revision-check{display:flex;align-items:center;gap:.6rem}
+.rw-revision-binding{border-top:1px solid #ccc;padding:1rem 0}
+.rw-revision-binding h4{margin-top:0}
+.rw-source-revision [data-rwr-ready]{border-top:2px solid #888;padding-top:1rem}
+@media(max-width:640px){.rw-source-revision>header{align-items:start;flex-direction:column}}

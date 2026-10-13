@@ -1,6 +1,6 @@
 # Property continuity in the maintained migration workspace
 
-This is an additive property, lease and platform-return workstream in the existing migration application. It uses the same SQLite workspace, original file objects, operation journal, browser server, CLI, complete exports and portable receiving mechanism as the case, grant and financial workstreams. Existing records are retained. The full application roster is 39 files.
+This is an additive property, lease and platform-return workstream in the existing migration application. It uses the same SQLite workspace, original file objects, operation journal, browser server, CLI, complete exports and portable receiving mechanism as the case, grant and financial workstreams. Existing records are retained. The original property edition contained 39 files; the current cumulative application contains all 59 files, including the complete housing commissioning workflow.
 
 ## Intended use and original company ownership
 
@@ -108,7 +108,7 @@ A superseded review, control or contract cannot be selected as the current relea
 
 ## Complete receiving and cold reopen
 
-The current full portable application profile is commons.migration-workbench-application/v5. It includes all 56 application files. Earlier 16-, 21-, 24-, 31-, 39- and 48-file deliveries retain their exact advertised profile compatibility. The historical 39-file property edition keeps commons.migration-workbench-application/v3. A later application delivery must include every dependency and its exact manifest.
+The current full portable application profile is commons.migration-workbench-application/v6. It includes all 59 application files. Earlier 16-, 21-, 24-, 31-, 39-, 48- and 56-file deliveries retain their exact advertised profile compatibility. The historical 39-file property edition keeps commons.migration-workbench-application/v3. A later application delivery must include every dependency and its exact manifest.
 
 Use the complete plan schema commons.property-receiving-plan/v1 with:
 

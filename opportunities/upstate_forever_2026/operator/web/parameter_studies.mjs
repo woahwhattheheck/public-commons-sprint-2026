@@ -898,12 +898,14 @@ export function attachParameterStudies(host) {
   }
 
 
-  async function openSavedStudy(selection) {
+  async function openSavedStudy(selection, {current=()=>true}={}) {
+    if(!current())return null;
     const selectedWorkspace=workspace(), id=selection?.experiment_id;
     if(!selection||selection.workspace_key!==selectedWorkspace||!/^[0-9a-f]{64}$/.test(id||'')) {
       throw new Error('Open a retained parameter study in its original workspace.');
     }
     const retained=await host.api(requested('/api/parameter-studies/view',{id,limit:0}));
+    if(!current())return null;
     if(workspace()!==selectedWorkspace||retained.id!==id) {
       throw new Error('The workspace or saved parameter study changed while opening it.');
     }

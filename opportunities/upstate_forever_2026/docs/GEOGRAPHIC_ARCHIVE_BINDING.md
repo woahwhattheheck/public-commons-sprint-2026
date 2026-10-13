@@ -31,7 +31,7 @@ The one archive now carries `delivery/START_HERE.html`, its complete customer-re
 
 ## Adopt the completed original course without rerunning preparation
 
-When a worker reaches its completed native handover boundary, install the final cumulative receiver and continue its existing command with `--report-only`, the same `--workspace`, exact original `--selection`, and original `--output`. Keep active preparation/native processes running their admitted sources; do not replace the command beneath them.
+When a worker reaches its completed native handover boundary, install the final cumulative receiver and continue its existing command with `--report-only --adopt-handover`, the same `--workspace`, exact original `--selection`, and original `--output`. Keep active preparation/native processes running their admitted sources; do not replace the command beneath them.
 
 The guarded report-only join reads the immutable original admission, exact selection bytes, original receiving/prepared records, original Workspace preparation and every original ensemble run. It requires completed native records, preserves the original operation/source identity, and records the current handover receiver separately. It skips `geographic.prepare`; the existing course is inspected with `execute=False`. It does not weaken admission for new inputs or run an alternate native job.
 

@@ -12,6 +12,7 @@ from pathlib import Path
 from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
 from . import ensembles, ensemble_report
 from .ensembles import Ensembles
+from .native_execution import storage_exhausted
 
 VERSION = 1
 
@@ -125,6 +126,8 @@ def build(workspace, ensemble_id, value):
                     comparisons[member["id"]].append({
                         **pair_selection, "comparison_id": pair["comparison_id"]})
                 except Exception as error:
+                    if storage_exhausted(error):
+                        raise
                     errors.append({**pair_selection, "type": type(error).__name__, "message": str(error)})
         # Bind this entire original snapshot, including unchanged selections and
         # outputs, before publishing a source edition from its pair results.

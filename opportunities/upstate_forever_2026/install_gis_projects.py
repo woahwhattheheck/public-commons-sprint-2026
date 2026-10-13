@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MODEL_FILES = ('gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
+MODEL_FILES = ('gis_study_context.py', 'gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
                'gis_vector_review.py', 'gis_project_cli.py',
                'gis_project_native.py', 'gis_project_view.html', 'GIS_PROJECTS.md', 'requirements-gis.txt')
 OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
@@ -19,6 +19,10 @@ OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'operator/extensions/gis-vector-reviews.json',
     'source_tools/receive_native_study_gis.py', 'source/GIS_NATIVE_STUDY.md',
     'integration/component_fragments/gis-native-study.json')
+SHARED_REPORT_FILES = {
+    'operator/source_report_editions.py': {'f291275fad9ef4064d718a48012a0601b4bd7b4f60d5ccb1186646aa4a4c4756'},
+    'operator/web/source_report_editions.mjs': {'9ab75d0a9b64d32087d74974d8d35af345dc3647a53146402e95a2832a50d302'},
+}
 MARKER = '# Editable GIS integration: ASTRA-GIS12/v1'
 
 
@@ -118,15 +122,19 @@ def _vector_server_source(text):
     return text
 
 
+PREVIOUS_NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
+                                   'workspace, one("native_study_collection"), one("native_study_source")))\n')
 NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
-                          'workspace, one("native_study_collection"), one("native_study_source")))\n')
+                          'workspace, one("native_study_collection"), one("native_study_source"), '
+                          'one("scientific_report_id"), one("execution_history_id")))\n')
 ORIGINAL_CATALOGUE = '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n'
 
 
 def server_source(text):
     # Normalize our exact earlier direct route before the existing vector joins.
-    if NATIVE_STUDY_CATALOGUE in text:
-        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study direct route')
+    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, NATIVE_STUDY_CATALOGUE):
+        if route in text:
+            text = once(text, route, ORIGINAL_CATALOGUE, 'native-study direct route')
     text = _vector_server_source(_base_server_source(text))
     return once(text, ORIGINAL_CATALOGUE, NATIVE_STUDY_CATALOGUE, 'native-study selected read')
 
@@ -171,8 +179,9 @@ def index_source(text):
 
 def legacy_server_source(text):
     """Remove only the exact former GIS-owned joins before shared registration."""
-    if NATIVE_STUDY_CATALOGUE in text:
-        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study registered route')
+    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, NATIVE_STUDY_CATALOGUE):
+        if route in text:
+            text = once(text, route, ORIGINAL_CATALOGUE, 'native-study registered route')
     text = _remove_vector_server_source(text)
     if MARKER not in text:
         return text
@@ -219,6 +228,19 @@ def legacy_index_source(text):
         if old in text:
             text = once(text, old, '', 'legacy GIS navigation or stylesheet')
     return text
+
+
+def report_browser_source(text):
+    """Add one callback to the current Sources controller; preserve all other joins."""
+    callback = " openGISStudy:value=>extensions.openDesk('gis-projects','createForNativeStudy',value),\n"
+    if callback in text:
+        return text
+    if 'const sourceReports=attachSourceReports({' not in text:
+        return text
+    if 'createExtensionHost' not in text:
+        return text
+    seam = " prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),\n"
+    return once(text, seam, seam + callback, 'saved scientific report to GIS callback')
 
 
 def registration_plan(application):
@@ -279,16 +301,30 @@ def install(application, source, dry_run=False):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
     if not (application / 'model/workspace.py').is_file():
         raise ValueError('Receive the original scientific application before this additive component')
-    for dependency in ('model/ensemble_study_transfer.py', 'model/native_versions.py'):
+    for dependency in ('model/ensemble_study_transfer.py', 'model/native_versions.py',
+                       'model/scientific_report_editions.py'):
         target = application / dependency
         if not target.is_file() or target.is_symlink():
             raise ValueError('Receive the complete native-study component dependency before GIS installation: ' + dependency)
     transform, dependencies, integration = registration_plan(application)
+    original_app = (application / 'operator/web/app.mjs').read_text(encoding='utf-8')
+    if 'const sourceReports=attachSourceReports({' in original_app and 'createExtensionHost' in original_app:
+        client_host = application / 'operator/web/extension_host.mjs'
+        if client_host.is_symlink() or not client_host.is_file():
+            raise ValueError('Receive the maintained original browser extension host')
+        client_body = client_host.read_bytes()
+        if b'async function openDesk(' not in client_body:
+            raise ValueError('Receive the maintained asynchronous openDesk host before the source/report GIS bridge')
+        dependencies = {**(dependencies or {}), client_host: client_body}
     before={};planned={}
     for name, fn in transform.items():
         path=application/name
         if path.is_symlink(): raise ValueError('Original registration file is a symbolic link')
-        before[name]=path.read_bytes();planned[name]=fn(before[name].decode('utf-8')).encode('utf-8')
+        before[name]=path.read_bytes()
+        value = fn(before[name].decode('utf-8'))
+        if name == 'operator/web/app.mjs':
+            value = report_browser_source(value)
+        planned[name]=value.encode('utf-8')
     instruction = application / 'AGENTS.md'
     if instruction.is_symlink():
         raise ValueError('Application owner instruction destination is a symbolic link')
@@ -300,6 +336,16 @@ def install(application, source, dry_run=False):
         before[name]=target.read_bytes() if target.exists() else None
         # This installer is intentionally the owner of these named additive files.
         planned[name]=data
+    for name, predecessors in SHARED_REPORT_FILES.items():
+        target = application / name
+        if not target.exists():
+            continue
+        if target.is_symlink():
+            raise ValueError('Shared source-report destination is a symbolic link')
+        existing, successor = target.read_bytes(), (source / name).read_bytes()
+        if existing != successor and sha(existing) not in predecessors:
+            raise ValueError('Compose the current source-report owner revision before installation: ' + name)
+        before[name], planned[name] = existing, successor
     for name, data in planned.items():
         if name.endswith('.py'): compile(data,str(application/name),'exec')
     changes=[name for name in planned if planned[name]!=before[name]]

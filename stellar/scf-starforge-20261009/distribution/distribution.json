@@ -120,6 +120,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/routes.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf_2026/sf47_budget_model/workspace/operations_http.py",
+      "manifest": "stellar/scf_2026/sf47_budget_model/workspace/portfolio-browser-assets.json"
     }
   ],
   "supportFiles": [

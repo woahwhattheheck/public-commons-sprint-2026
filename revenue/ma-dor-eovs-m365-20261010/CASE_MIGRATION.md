@@ -10,7 +10,7 @@ Begin with the actual original case and its authorized source exports. Keep proc
 
 ## Install and reopen the existing project
 
-Use Python 3.10 or later on a host with SQLite and ordinary local filesystem locking. The existing browser server and native CLI remain the entry points. Obtain the complete selected application, not an individual replacement module. Current delivery contains all 56 application files listed in migration_portable.APPLICATION_FILES, including the complete case workflow and the cumulative register and CRF extensions.
+Use Python 3.10 or later on a host with SQLite and ordinary local filesystem locking. The existing browser server and native CLI remain the entry points. Obtain the complete selected application, not an individual replacement module. Current delivery contains all 59 application files listed in migration_portable.APPLICATION_FILES, including the complete case workflow and the cumulative register and CRF extensions.
 
 The original command syntax is:
 
@@ -117,7 +117,7 @@ This creates original review.html, case-review.html, all existing original repor
 
 ## Portable customer handover and return
 
-Use the original delivery.prepare operation. It freezes the complete SQLite snapshot, all original source objects, full reports, application and request receipts. New preparations include the complete 56-file application and declare application_profile commons.migration-workbench-application/v5. Inspection requires precisely that complete roster; an incomplete application is rejected. Historical 21-file case editions retain commons.case-migration-application/v1.
+Use the original delivery.prepare operation. It freezes the complete SQLite snapshot, all original source objects, full reports, application and request receipts. New preparations include the complete 59-file application and declare application_profile commons.migration-workbench-application/v6. Inspection requires precisely that complete roster; an incomplete application is rejected. Historical 21-file case editions retain commons.case-migration-application/v1.
 
     python3 migration_cli.py --workspace /absolute/original/workspace prepare-delivery --operation-id actual-delivery-request --actor actual-operator --expected-revision 42 --title "Actual case handover" --note "Actual scope"
     python3 migration_cli.py --workspace /absolute/original/workspace delivery-file actual-delivery-id --out /absolute/complete-handover.zip
@@ -128,7 +128,7 @@ The received project is /absolute/customer-receiving/workspace. Application sour
 
 Re-receiving an earlier identical handover into the original receiving directory verifies its retained original selection and preserves later legitimate customer edits. It is not a rollback. A different archive needs an explicitly different receiving selection; do not overwrite the first operation.
 
-Legacy compatibility is explicit. Complete original 16-file deliveries with no application_profile remain inspectable/receivable. A preparation that already froze the old 16-file application keeps its original source roster and manifest semantics. It is not relabeled as the current case application. Newly prepared case deliveries require the complete current APPLICATION_FILES roster; historical 21-, 24-, 31-, 39- and 48-file selections retain their exact advertised profiles. The database remains the original complete snapshot format.
+Legacy compatibility is explicit. Complete original 16-file deliveries with no application_profile remain inspectable/receivable. A preparation that already froze the old 16-file application keeps its original source roster and manifest semantics. It is not relabeled as the current case application. Newly prepared case deliveries require the complete current APPLICATION_FILES roster; historical 21-, 24-, 31-, 39-, 48- and 56-file selections retain their exact advertised profiles. The database remains the original complete snapshot format.
 
 ## Source and lifecycle verification
 

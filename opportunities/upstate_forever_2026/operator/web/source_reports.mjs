@@ -427,8 +427,13 @@ export function attachSourceReports(host) {
   async function openForSources(value,content){
     if(value?.workspace_key!==host.getWorkspace())
       throw Error('Choose prepared sources from the current Workspace.');
+    const navigationCurrent=()=>typeof value.isCurrent!=='function'||value.isCurrent();
+    if(!navigationCurrent())return null;
     if(!active||!panel||currentWorkspace!==host.getWorkspace())await mount(content);
-    return scientific.openForSources(value);
+    if(!active||!navigationCurrent())return null;
+    const workspace=host.getWorkspace(),ticket=generation;
+    const current=()=>active&&valid(workspace,ticket)&&navigationCurrent();
+    return scientific.openForSources({...value,isCurrent:current});
   }
   async function openForStudy(value,content){
     if(!value||value.workspace_key!==host.getWorkspace())

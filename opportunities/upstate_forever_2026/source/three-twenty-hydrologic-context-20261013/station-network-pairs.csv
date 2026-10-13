@@ -1,0 +1,7 @@
+station_a,station_b,station_a_comid,station_b_comid,same_reach,relation,approximate_network_distance_m,signed_b_minus_a_m,straight_line_original_m,source
+SV-833,RS-26250,11749277,11749733,false,b_downstream_of_a,9768.093292268033,9768.093292268033,8614.826527398034,Original DM reach membership plus exact endpoint topology and same-COMID point projection
+SV-833,SV-735,11749277,11749763,false,b_downstream_of_a,15109.264075114163,15109.264075114163,13190.065929851486,Original DM reach membership plus exact endpoint topology and same-COMID point projection
+SV-833,SV-111,11749277,11749507,false,b_downstream_of_a,20442.559634382058,20442.559634382058,17016.40683937606,Original DM reach membership plus exact endpoint topology and same-COMID point projection
+RS-26250,SV-735,11749733,11749763,false,b_downstream_of_a,5341.170782846129,5341.170782846129,4657.62895986225,Original DM reach membership plus exact endpoint topology and same-COMID point projection
+RS-26250,SV-111,11749733,11749507,false,b_downstream_of_a,10674.466342114025,10674.466342114025,8412.221641165903,Original DM reach membership plus exact endpoint topology and same-COMID point projection
+SV-735,SV-111,11749763,11749507,false,b_downstream_of_a,5333.295559267895,5333.295559267895,3890.319934382193,Original DM reach membership plus exact endpoint topology and same-COMID point projection

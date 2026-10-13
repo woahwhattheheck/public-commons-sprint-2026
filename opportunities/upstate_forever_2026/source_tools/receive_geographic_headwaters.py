@@ -76,7 +76,9 @@ def receive(args):
                     "source_tools/simulated_headwaters_receiving.py",
                     "source_tools/simulated_headwaters_handover.py",
                     "source_tools/demo_deadline.py",
-                    "model/geographic_receiving_context.py")},
+                    "model/geographic_receiving_context.py",
+                    "source_tools/geographic_scenario_context.py",
+                    "source_tools/geographic_scenario_interpretation.mjs")},
             }
             adoption_id = digest(adopted_source)
             atomic_json(output/"handover-adoptions"/(adoption_id+".json"),
@@ -139,6 +141,13 @@ def receive(args):
             progress=lambda value: print(json.dumps({"utility_progress":value}, default=str), flush=True)))
         atomic_json(output/"utility-comparisons.json", utilities)
         save(utility_comparisons=utilities)
+        from source_tools import geographic_scenario_context as scenario_context
+        interpreted = phase("scenario_source_context", lambda: scenario_context.prepare(
+            workspace, prepared, output/"scenario-source-context", node=args.node,
+            receiving_lock_fd=receiving_lock_fd,
+            receiving_lock_path=output/".geographic-receiving.lock"))
+        atomic_json(output/"scenario-source-context.json", interpreted)
+        save(scenario_source_context=interpreted)
         from model.ensemble_study_source import prepare as prepare_study_source
         from model.ensemble_scientific_source import delivery_selection
         scientific = phase("scientific_report",lambda:prepare_study_source(
@@ -164,6 +173,7 @@ def receive(args):
                      "Restoration/control preserve actual class counts, area and recorded rainfall residuals."]}
         selected = delivery_selection(scientific["source"], selected)
         selected = utility_context.append_sources(selected, utilities)
+        selected = scenario_context.append_source(selected, interpreted)
         atomic_json(output/"delivery-selection.json",selected)
         delivery = phase("mapped_delivery",lambda:workspace.build_delivery(selected))
         if delivery.get("state") != "complete":
@@ -175,7 +185,8 @@ def receive(args):
             "title":selection["title"]+": geography, assumptions and native results",
             "purpose":selection["question"],"source_collection_ids":list(dict.fromkeys([prepared["source_collection_id"],
                     scientific["source"]["source_collection_id"],
-                    *utility_context.source_collection_ids(utilities)])),
+                    *utility_context.source_collection_ids(utilities),
+                    interpreted["source"]["source_collection_id"]])),
             "run_ids":[prepared["baseline_run_id"],*prepared["alternative_run_ids"]],
             "delivery_ids":[delivery["id"]],"spatial_export_ids":[],
             "requirements":[
@@ -214,7 +225,8 @@ def receive(args):
         edition = digest({"prepared":prepared["id"],"ensemble":prepared["ensemble_id"],
                           "scientific_source":scientific["id"],"delivery":delivery["id"],"review":review["id"],
                           "review_response_id":response_id, "handover_id":handover["id"],
-                          "utility_context_id":utilities["id"], "binding_id":selected_binding["id"]})
+                          "utility_context_id":utilities["id"],
+                          "scenario_context_id":interpreted["id"], "binding_id":selected_binding["id"]})
         archive = output/("geographic-study-"+edition+".zip")
         archives = state.setdefault("archive_editions",{})
         previous = archives.get(edition)
@@ -244,7 +256,8 @@ def receive(args):
             restored, manifest, prepared, scientific, delivery["id"], review["id"],
             output/"cold-reopen"/edition, receiving_lock_fd=receiving_lock_fd,
             receiving_lock_path=output/".geographic-receiving.lock",
-            review_response_id=response_id, receiving_context=utilities))
+            review_response_id=response_id, receiving_context=utilities,
+            scenario_context=interpreted))
         save(state="complete", active_stage=None,
              completed_at=state.get("completed_at", now()), independent_reopen=cold)
         return state
@@ -289,6 +302,7 @@ def main(argv=None):
     parser.add_argument("--import-sources",type=Path,action="append",default=[])
     parser.add_argument("--selection",type=Path)
     parser.add_argument("--output",type=Path)
+    parser.add_argument("--node",default="node",help="Actual equipped Node executable for the maintained complete source-loading report")
     parser.add_argument("--adopt-handover",action="store_true",help="Use the completed original preparation under its retained admission for report-only handover source adoption")
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--catalog",action="store_true")

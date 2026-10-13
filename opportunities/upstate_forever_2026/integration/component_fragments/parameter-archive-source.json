@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "parameter-archive-source",
+  "source_reference": "Retained original Parameter result archive to ordinary scientific source; exact original bytes and donor identities remain separate from live editable Parameter studies.",
+  "extend_components": {
+    "parameter-studies": {
+      "paths": [
+        "model/parameter_archive_source.py",
+        "model/PARAMETER_ARCHIVE_SOURCE.md",
+        "receiving/gura-original-four-case-results.json",
+        "integration/component_fragments/parameter-archive-source.json"
+      ]
+    }
+  }
+}

@@ -13,6 +13,7 @@ import re
 import threading
 from urllib.parse import urlsplit
 from .operator import Measurements, BASE
+from .large_context import capture_native_domain, retained_native_reaches
 
 class MeasuredObservationExtension:
     def __init__(self, operator, fault):
@@ -37,8 +38,8 @@ class MeasuredObservationExtension:
                     value = json.loads(registry.read_text("utf-8"))
                     source = Path(workspace.root).resolve() / value["source_path"]
                     if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != value["source_sha256"]:
-                        # Do not leave obsolete source IDs available for new assignments.
-                        return []
+                        # Received projects retain their explicitly selected original domain.
+                        return retained_native_reaches(directory, value) or []
                     return value["reaches"]
                 self._services[key] = Measurements(workspace, data_dir=directory, reaches=reaches)
             return self._services[key]
@@ -105,6 +106,8 @@ class MeasuredObservationExtension:
             if any(part in {'.','..'} for part in parsed.path.split('/')):
                 raise ValueError('Invalid measured-data path')
             service=self._service(workspace)
+            if method == 'POST' and parsed.path == '/large/editions':
+                capture_native_domain(Path(workspace.root), service.directory)
             body=b'' if payload.get('payload') is None else json.dumps(payload['payload'],allow_nan=False).encode()
             status,headers,content=service.request(method,BASE+path,body)
             return {'status':status,'content_type':headers.get('Content-Type','application/json'),

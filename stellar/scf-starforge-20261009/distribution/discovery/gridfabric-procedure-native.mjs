@@ -14,11 +14,12 @@ const NATIVE_NAMES = ['core.cjs','model.cjs','sqlite-store.mjs','files.mjs','nat
   '../../merchant-fleet-gateway/state-lease.mjs'];
 const BROWSER_NATIVE_NAMES=[...NATIVE_NAMES,'procedure-files.mjs','procedure-archive.mjs','procedure-controller.mjs',
   'public/procedures.html','public/procedures.mjs','public/procedures.css','browser-assets.json','../../distribution/browser-assets.mjs'];
-const HELPER_NAMES = ['gridfabric-procedure-native.mjs','gridfabric-procedure-native.d.mts',
+const LEGACY_HELPER_NAMES = ['gridfabric-procedure-native.mjs','gridfabric-procedure-native.d.mts',
   'gridfabric-procedure.mjs','operating-plan.mjs','catalog.mjs',
   '../../sf30-seller-sdk/gridfabric-plaid/sdk/client.mjs',
   '../../sf30-seller-sdk/gridfabric-plaid/sdk/contract.mjs',
   '../../sf30-seller-sdk/gridfabric-plaid/sdk/http-client.mjs'];
+const HELPER_NAMES=[...LEGACY_HELPER_NAMES,'gridfabric-procedure-comparison.mjs'];
 const TABLES = ['instances','instance_editions','sources','source_rows','source_issues','mappings',
   'callbacks','callback_deliveries','events','event_revisions','distributions','opt_decisions',
   'device_actions','reports','report_rows','management_operations','management_receipts','operations'];
@@ -436,8 +437,8 @@ export async function readGridFabricProcedureCapture(value) {
       'GRID_CAPTURE_SOURCE_MEMBERS','Captured source bodies differ from the original declaration.');
     names.add(item.module);await retained(item);
   }
-  need(Array.isArray(capture.source.helpers)&&capture.source.helpers.length===HELPER_NAMES.length&&
-    same(capture.source.helpers.map(m=>m.module),HELPER_NAMES),'GRID_CAPTURE_HELPERS','Keep the complete executing helper source roster.');
+  need(Array.isArray(capture.source.helpers)&&[LEGACY_HELPER_NAMES,HELPER_NAMES].some(names=>
+    same(capture.source.helpers.map(m=>m.module),names)),'GRID_CAPTURE_HELPERS','Keep the complete executing helper source roster.');
   for(const item of capture.source.helpers)await retained(item);
   const responseValues=new Map();
   for(const response of capture.responses||[]){

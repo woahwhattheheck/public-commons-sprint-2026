@@ -116,9 +116,9 @@ Resolve the import relative to the calling source file or use an absolute file U
 
 Importing the callable does not resolve or import a Playwright package. It uses the caller's already-created page and context; the standalone entrypoint loads Playwright only when it launches its own browser. This preserves the maintained rehearsal's explicit external Playwright module configuration.
 
-The callable uses the supplied recorded page for the populated field/QC/task/evidence controls. It obtains fresh independent contexts from that page's existing Playwright Browser for the receiving/reopen steps. It closes only those temporary contexts and leaves the parent's page, Browser, recording and session open. Its own network handlers are removed afterward. The initial viewport is restored. Existing QC browser draft/recovery entries are retained in each attempt's `borrowed-qc-browser-drafts.json` and the durable root `recording-context.json` before local interaction. The root file marks restoration required until the original entries have been restored and read back. Native completed exports remain in `request-state.json`.
+The callable uses the supplied recorded page for the populated field/QC/task/evidence controls. It obtains fresh independent contexts from that page's existing Playwright Browser for the receiving/reopen steps. It closes only those temporary contexts and leaves the parent's page, Browser, recording and session open. Its own network handlers are removed afterward. The initial viewport is restored. Existing QC browser draft/recovery entries are retained in `private/attempt-N/borrowed-qc-browser-drafts.json` and the durable `private/recording-context.json` before local interaction. The private context marks restoration required until the original entries have been restored and read back. Native completed exports remain in `request-state.json`.
 
-The maintained recording may close its persistent context immediately on cooperative stop. In that case, the course explicitly retains pending draft restoration. The same-course resume on the original operator origin saves any intervening browser edits as `before-draft-recovery.json`, restores the original retained draft snapshot, then continues. A successful chapter restores the original entries and marks them restored; an unavailable or failed restoration stays an interrupted course. The caller's page, browser and recording ownership stay intact.
+The maintained recording may close its persistent context immediately on cooperative stop. In that case, the course explicitly retains pending draft restoration. The same-course resume on the original operator origin saves any intervening browser edits as `private/attempt-N/before-draft-recovery.json`, restores the original retained draft snapshot, then continues. A successful chapter restores the original entries and marks them restored; an unavailable or failed restoration stays an interrupted course. The caller's page, browser and recording ownership stay intact.
 
 Run the callable serially within the maintained rehearsal, after its field closeout and before its final archive. The chapter returns the original operation, plan, QC/action report IDs, accepted native task IDs, complete artifact inventory and actual screenshot descriptors. It does not import-and-run automatically, create another browser worker or stop the parent recording. The standalone CLI still starts and closes its own browser and uses the same operation/state logic.
 
@@ -164,6 +164,130 @@ The driver compares the exact input hash and original bindings. A changed input 
 If a queued export is still running, the same stored task remains authoritative. Continue that request and retain the actual returned status. If the current operation returns a concrete browser, source, queue or download exception, preserve `request-state.json`, `journey.json` and its current `attempt-N/` outputs before applying the source correction. Report the first useful exception with the actual application/source version, original project/plan/report IDs and issued command. Keep session-bearing URLs private.
 
 A desktop action that completed before a narrow-view interruption remains part of the original course. Resume the retained operation; do not edit measurements or recreate report sources to make a screen appear populated. A freshly received Workspace should use its own original operator key and current private URL while retaining the same project and field IDs from the portable archive.
+
+## Select readable presentations of the same original QC reports
+
+A completed field operation keeps its original two QC review IDs and three corrective-action report IDs. When the maintained renderer produces a more readable report, it retains a separate presentation edition. The original laboratory observations, evaluator results, decisions, tasks, source records and completed field journal stay attached to their original IDs.
+
+The optional presentation selection connects those separately retained reports to this same browser course. It is useful after a concrete layout repair, such as keeping a wide table within a focusable scrolling region on a 390-pixel screen. It selects existing reports from the original Workspace. It does not make new numerical reviews or write field decisions.
+
+### Keep original review identity separate from presentation identity
+
+The selector uses `model.field_report_presentation`. It requires all five explicit pairs:
+
+| Field | Meaning |
+|---|---|
+| `schema` | `upstate.field-report-presentation-selection/v1` |
+| `field_operation_id` | Actual completed field operation from `inspect_campaign` |
+| `reports[].kind` | `qc` for either original QC review; `actions` for each original decision report |
+| `reports[].original_report_id` | The original QC report ID or action report ID retained by that field operation |
+| `reports[].presentation_report_id` | A distinct already-retained readable presentation of that exact original report |
+
+The five rows can be entered in any order; the selector returns the original campaign order. Every selected report must name its immediate original in its native manifest's `presentation_successor.original_report_id`, retain a renderer source SHA-256 and describe its presentation scope. The selected report must preserve the exact saved plan revision, whole native QC review or action review, decision receipt and action-to-original-QC relationship.
+
+The complete original report filename set stays unchanged. Every scientific, plan, CSV, original observation and attachment member must have the same bytes. Only `report.html` and its exact descriptor updates in `observed-report.json`, `qc-sources.json` or `qc-actions-sources.json` may change. The selector validates those JSON changes against the original source recipe, roles, IDs and companion inventory. Native report inspection checks both complete report editions again. This gives the original numerical history a separate readable presentation without relabeling it.
+
+### Prepare the actual choice
+
+First retain the complete current `inspect_campaign` response using the original command above. Use the report IDs from the actual completed presentation operation. If that producing operation supplies its `handoff-receipt.json` with `reports[].id`, `original_report_id` and `new_report_id`, the following native example prepares the selection without transcribing an ID:
+
+~~~python
+import json
+from pathlib import Path
+from model.common import atomic_bytes, canonical, read_json
+from model.field_report_presentation import capture
+from model.simulated_fieldwork import inspect_campaign
+from model.workspace import Workspace
+
+workspace = Workspace(Path("/absolute/original/workspace"))
+field = read_json(Path("/absolute/fieldwork-inspect.json"))
+campaign = inspect_campaign(workspace, field["operation_id"])
+receipt = read_json(Path("/absolute/actual-presentation/handoff-receipt.json"))
+pairs = []
+for row in receipt["reports"]:
+    if row["id"].startswith("qc_reports-"):
+        kind = "qc"
+    elif row["id"].startswith("action_reports-"):
+        kind = "actions"
+    else:
+        continue
+    pairs.append({
+        "kind": kind,
+        "original_report_id": row["original_report_id"],
+        "presentation_report_id": row["new_report_id"],
+    })
+selection = {
+    "schema": "upstate.field-report-presentation-selection/v1",
+    "field_operation_id": campaign["operation_id"],
+    "reports": pairs,
+}
+presentation = capture(
+    workspace, campaign["operation_id"], selection,
+    Path("/absolute/new-field-presentation.json"),
+)
+atomic_bytes(
+    Path("/absolute/new-fieldwork-inspect.json"),
+    canonical({**campaign, "presentation": presentation}) + b"\n",
+    immutable=True,
+)
+~~~
+
+Replace the paths with the same native operation's real saved paths. The selected reports must already be retained in that original Workspace. If the actual producer retained them only in its isolated `field-report-context`, use the complete original adoption operation first:
+
+~~~text
+python -B -m model.field_report_adoption adopt --workspace ORIGINAL_WORKSPACE --field-operation ORIGINAL_FIELD_OPERATION_ID --receipt ORIGINAL_PRESENTATION_HANDOFF_RECEIPT --output NEW_PRESENTATION_SELECTION.json
+~~~
+
+The adoption receiver preflights all five original/native report pairs and saved revisions before invoking the existing report store. It retains the exact receipt and request, resumes the same partially copied editions after interruption, and writes a complete plain presentation selection for the existing recorder. For a relocated complete context, add `--source-context ACTUAL_RECEIVED_CONTEXT`; retain every original path relative to that root. The full original source, retry and independent-receiving procedure is in [FIELD_REPORT_ADOPTION.md](FIELD_REPORT_ADOPTION.md). No renderer or scientific calculation is repeated by this receiving operation.
+
+For an already-authored selection JSON, the native CLI performs the same full inspection and captures a complete portable choice:
+
+~~~text
+python -B -m model.field_report_presentation --workspace ORIGINAL_WORKSPACE --field-operation ORIGINAL_FIELD_OPERATION_ID --selection field-presentation-selection.json --output new-field-presentation.json
+~~~
+
+The output schema is `upstate.field-report-presentation/v1`. It retains the normalized selection, original field/project/plan IDs, stable `presentation_id`, every original and selected report member descriptor, exact original and presentation manifest identities, and renderer fingerprints. The result contains Workspace-relative source paths. Omitting `--output` inspects an existing selection without creating a file. Output capture is create-only: the same exact selected edition can be reopened, while different selected bytes require a new output.
+
+### Bind the same recorded application
+
+The maintained original headwaters recorder accepts the additional explicit option:
+
+~~~text
+python -B source_tools/simulated_headwaters_rehearsal.py --receipt ORIGINAL_DEMO_RECEIVING_JSON --workspace ORIGINAL_WORKSPACE --output NEW_REHEARSAL_DIRECTORY --browser-config EXISTING_BROWSER_CONFIGURATION_JSON --field-presentation new-field-presentation.json --run
+~~~
+
+Keep all other options from the original authorized recording. A current customer presentation still uses its separate `--customer-case` option. The two histories retain their own identities.
+
+The parent freezes the unchanged original field inspection plus its validated `presentation` field in the existing `uploads/simulated-headwaters/fieldwork-inspection.json`. Before the browser starts, native receiving rechecks the original completed campaign, current plan and each selected report. A changed field plan or presentation after binding requires an explicitly new recording edition. The earlier completed recording and all historical exports remain usable with their original selections.
+
+For the standalone browser command, supply `new-fieldwork-inspect.json` from the example as `--fieldwork`. For the callable course, pass that complete dictionary as `fieldwork`. The existing parent owns the page, browser, recording and stop behavior.
+
+### Follow decisions using their original QC review
+
+The course first opens the original QC result and its exact native decision history. It separately opens the selected readable QC report through the normal saved-review control and exports that selected report through the original queue and download controls. It then returns to the original QC review before entering follow-through.
+
+This distinction matters: a saved corrective-action record names the original QC report, even when its HTML has a newer presentation. The course preserves that relationship. Within the original follow-through history it opens each selected action presentation, whose saved native review still names that same original QC source. It exports the selected action report with the original native export action. No event, action batch or source relationship is rewritten.
+
+The resulting course retains original `qc_report_ids` and `action_report_ids`, plus `presentation_id`, `presentation_qc_report_ids` and `presentation_action_report_ids`. It captures the complete selected source context in `native-presentation.json`. The selected five native HTML/CSV/ZIP downloads are named with a readable-presentation suffix. Both original report histories remain in the native working project, and the source context carries the original and selected inventories.
+
+The fresh-browser pass opens the same exact selected reports. The offline pass opens the downloaded selected HTML at both desktop and narrow widths. The original field plan remains equal to its pre-course snapshot throughout.
+
+### Transfer and reopen the selected presentation
+
+Whole-Workspace receiving must retain both original and selected native report directories. The ordinary native Implementation report inventory already carries those reports and saved plan revisions. Carry the complete presentation JSON alongside the recording input and reopen it against the restored Workspace with the same selector command. Its original project, field operation, report IDs, manifest fingerprints and Workspace-relative files must still match.
+
+An archive created before the selected presentation reports were retained is an older scientific/presentation edition. Preserve that archive and create the new whole-project handover through the existing source-owning producer after the reports have been retained. Do not copy a later presentation selector beside an older archive and claim it contains those reports. The receiver reports the concrete missing member so the original retained source can be included.
+
+Open the selected HTML and every report/source/archive attachment in its normal viewer, operate full-width and narrow table controls, download all retained files, extract the complete packages and reopen the restored working project. Personally view the resulting screenshots. The returned `course_complete` status records the operated browser path; `producer_inspection_required` remains until the producing peer has actually looked at the resulting product and used the outgoing attachments.
+
+### Private browser drafts stay in the original recording profile
+
+The borrowed course retains draft recovery in `private/recording-context.json` and per-attempt members beneath `private/attempt-N/`. Public journey data contains only private-file descriptors, never original draft text. The complete original parent archive excludes private path components. Keep that private recovery directory with the original recording owner.
+
+When continuing an older field course, the maintained browser moves only its exactly recognized original draft/context members after verifying their saved byte lengths, SHA-256, field input identity and native draft shape. It preserves those bytes under the private tree and removes their former public-path copies. The same-course lease covers this migration and later recovery. An interruption after the private copy or original unlink is recovered from the matching retained descriptor; changed or unrelated files are left untouched and raise a concrete source error.
+
+A stopped persistent page can still require original draft restoration. Resume on the same operator origin with the same input and output; the course preserves intervening entries privately before restoring the original snapshot. The earlier source, screenshot and report artifacts remain part of their original attempts.
+
 
 ## Complete attachment and final-media instruction
 
@@ -232,3 +356,60 @@ Check foreground and background colors together on the root, cards and controls;
 Return the actual application and interpreter/browser versions, complete input identity, original project/plan/QC/action/task IDs, the completed or interrupted course result, full downloads and real viewed screenshots through the original receiving operation. Include any concrete repaired source and its immutable version.
 
 The original headwaters case already owns its native model run, field continuation, mapped scientific delivery and whole-project archive. This browser course is the operator-facing continuation of those same saved records. The customer handback and independent portable receiving retain their original source owners and current requests. Use the completed guide and evidence to rehearse the actual programme, preserving the explicitly simulated input basis and the maintained application's calculated results.
+
+## Complete current owner direction
+
+The current complete application brief is reproduced below so this field course carries its scientific scope and delivery direction onward. Original source: `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`.
+
+> # Current owner direction: Ecosystem Sciences demonstration
+> 
+> Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+> 
+> ## Direct owner instructions
+> 
+> > do the simulated model
+> 
+> > just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+> 
+> > just checking dont pause anythi g
+> 
+> > and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+> 
+> ## Build for an experienced scientific practice
+> 
+> Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+> 
+> Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+> 
+> ## Execute the prepared simulated case now
+> 
+> Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+> 
+> Demonstrate the scientific operation in the actual application:
+> 
+> 1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+> 2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+> 3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+> 4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+> 5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+> 
+> Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+> 
+> ## Present the real work and real speed
+> 
+> Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+> 
+> If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+> 
+> ## Carry this direction with the work
+> 
+> Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+> 
+> Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+> 
+
+### Original browser draft isolation and interrupted older courses
+
+Before opening any field QC editor on a borrowed recording page, the course retains the exact original scoped browser drafts under `private/`, commits its `restore_required` recovery record, and clears only those field/QC draft keys for the recorded demonstration. Existing analyst notes therefore do not enter the course screenshots or recording. Completion restores the original entries; an interrupted closed page keeps recovery pending for the same course.
+
+When reopening an older course, the held original course lease also covers migration of recognized recovery files that were fully written before their artifact journal, and recognized temporary `.pending-UUID` members. The course checks the original input and draft scope, plus any retained length and SHA-256 descriptor, and preserves those exact bytes physically under `private/` before producing public outputs. A changed, foreign, aliased or unreadable recovery member remains an explicit error. Unrelated files and browser storage stay in place.

@@ -47,6 +47,8 @@ def read(operator, workspace_key, operation, value):
     gauge_receiving.decorate(operator, workspace_key, result)
     import ensemble_receiving
     ensemble_receiving.decorate(operator, workspace_key, result)
+    import parameter_receiving
+    parameter_receiving.decorate(operator, workspace_key, result)
     import observed_landcover_receiving
     observed_landcover_receiving.decorate(operator, workspace_key, result)
     import received_published_reviews

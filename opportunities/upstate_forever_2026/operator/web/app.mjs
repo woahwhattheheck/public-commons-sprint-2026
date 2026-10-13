@@ -90,9 +90,20 @@ const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({fo
 const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args),openScientificReport});
 async function openScientificReport(selection){
  if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
+ const request={workspace,workspaceRevision,connectionEpoch};
+ const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch&&
+  (typeof selection.isCurrent!=='function'||selection.isCurrent());
+ if(!admitted())return null;
  detailDialog.close();detailContext=null;
- navigate('sources');
- return sourceReports.openForSources(selection,$('#content'));
+ const navigation=navigate('sources'),targetNavigation=navigationRevision;
+ await navigation;
+ if(!admitted()||view!=='sources'||navigationRevision!==targetNavigation)return null;
+ const container=$('#content'),anchor=container?.firstChild;
+ const isCurrent=()=>admitted()&&view==='sources'&&navigationRevision===targetNavigation&&
+  container?.isConnected&&$('#content')===container&&container.firstChild===anchor;
+ if(!isCurrent())return null;
+ try{return await sourceReports.openForSources({...selection,isCurrent},container);}
+ catch(error){if(!isCurrent())return null;throw error;}
 }
 async function openRetainedBuiltIn(selection,target,open){
  if(selection?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection?.id||''))
@@ -184,7 +195,7 @@ let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({
  openRunRevisionForm,
- openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
+ openParameterStudy:(selection,options)=>parameterStudies.openSavedStudy(selection,options),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
  openScientificReport,openSavedScientificReport,openSavedCustomerReview,prepareReportComparisonReview,openSavedReportComparison,
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
@@ -212,8 +223,10 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
 const sourceReports=attachSourceReports({
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,openItem,navigate,
  hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options),
+ openExtension:(...args)=>extensions.openExtension(...args),
  showTask,refresh,openBackup:()=>backupForm(),
  prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),
+ openGISStudy:value=>extensions.openDesk('gis-projects','createForNativeStudy',value),
  openStudy:selection=>extensions.openExtension('study-transfer','openForStudies',selection)
 });
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
@@ -551,10 +564,16 @@ async function showTask(id,focus=true,isCurrent=()=>true){
   if(!isCurrent())return;
   const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
   const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
+  let revisionActions='';
+  if(Array.isArray(row._run_revisions)&&row._run_revisions.length&&extensions.hasView('run-revisions')){
+    try{revisionActions=await extensions.openExtension('run-revisions','taskActions',row);}
+    catch(error){revisionActions='<div class="notice">'+esc('The revision link could not open: '+error.message)+'</div>';}
+    if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
+  }
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+scenarioInputReview.taskActions(row)+community.taskActions(row)+programmes.taskActions(row)+(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+scenarioInputReview.taskActions(row)+community.taskActions(row)+programmes.taskActions(row)+(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+revisionActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }

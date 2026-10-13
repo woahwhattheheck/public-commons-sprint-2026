@@ -372,13 +372,14 @@ export function attachEnsembles(context) {
 
   function pairTable(summary, kind='rows') {
     const parameter=kind==='sensitivity', rows=summary?.[kind]||[];
+    const reference=parameter||!!summary?.scenario_reference;
     if(!rows.length)return '<p class="note">'+(parameter?
       'Completed baseline parameter comparisons appear here when distinct parameter cases are selected.':
       'Completed land-cover comparisons appear here when alternatives are selected.')+'</p>';
     const members=new Map((summary.members||[]).map(x=>[x.id,x.label||short(x.id)]));
     const scenarios=new Map((summary.members||[]).flatMap(x=>(x.runs||[]).map(r=>[r.scenario_id,r.label||short(r.scenario_id)])));
     const headers=parameter?['Reference profile','Varied profile','Scenario']:['Parameter case','Alternative'];
-    return table([...headers,'Pollutant',parameter?'Reference on common cells':'Baseline on common cells',
+    return table([...headers,'Pollutant',reference?'Reference on common cells':'Baseline on common cells',
       parameter?'Varied on common cells':'Alternative on common cells','Annual change','Change %','Common cells','Unmatched cells'],
       rows.map(row=>'<tr>'+
         (parameter?cell(members.get(row.reference_member_id)||short(row.reference_member_id)):'')+
@@ -388,7 +389,7 @@ export function attachEnsembles(context) {
         cell(numeric(row.baseline_common))+cell(numeric(row.alternative_common))+
         cell(numeric(row.delta_common))+cell(numeric(row.percent_change))+
         cell(numeric(row.common_cells))+
-        cell(numeric(row.baseline_only_cells)+(parameter?' reference / ':' baseline / ')+
+        cell(numeric(row.baseline_only_cells)+(reference?' reference / ':' baseline / ')+
           numeric(row.alternative_only_cells)+(parameter?' varied':' alternative'))+'</tr>'));
   }
 
@@ -750,6 +751,154 @@ export function attachEnsembles(context) {
       });
   }
 
+
+  const contrastButton = (action, text, ensembleId, sourceId) =>
+    '<button type="button" data-action="ensemble-design-'+escapeHTML(action)+'" data-id="'+
+    escapeHTML(ensembleId)+'" data-source-id="'+escapeHTML(sourceId)+'">'+escapeHTML(text)+'</button>';
+
+  async function scenarioContrasts(id, initial=null) {
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    const value=await api(endpoint('/api/ensembles/contrast-catalog',{ensemble_id:id}));
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    if(value.workspace_key!==workspace || value.ensemble_id!==id || !Array.isArray(value.scenarios))
+      throw Error('Open these scenarios in their original Workspace.');
+    const selectedReference=initial?.reference_scenario_id||'';
+    const selectedAlternatives=new Set(initial?.alternative_scenario_ids||[]);
+    const scenarioOptions=value.scenarios.map(row=>'<option value="'+escapeHTML(row.id)+'"'+
+      (row.id===selectedReference?' selected':'')+'>'+escapeHTML(row.title)+
+      (row.original_baseline?' · original baseline':'')+'</option>').join('');
+    const alternatives=value.scenarios.map(row=>'<label class="check-row"><input type="checkbox" '+
+      'name="contrast_alternatives" value="'+escapeHTML(row.id)+'"'+
+      (selectedAlternatives.has(row.id)?' checked':'')+'><span><strong>'+
+      escapeHTML(row.title)+'</strong><small>'+escapeHTML(row.id)+'</small></span></label>').join('');
+    const history=(value.sources||[]).map(row=>'<tr>'+cell(row.title||short(row.id))+
+      cell(row.reference?.reference_title||'')+cell(label(row.state))+
+      cell(row.created_at||'')+'<td>'+(row.available?
+        contrastButton('contrast-open','Open exact edition',id,row.id):
+        '<span>This transfer omits that saved edition</span>')+'</td></tr>');
+    const content='<p>Choose the scenario that supplies the reference quantity, then the alternatives to compare with it. '+
+      'Each pair uses the same original parameter profile and grid. The signed change is alternative minus reference.</p>'+
+      '<p class="note">For a restoration-versus-control comparison, choose the matched control as reference and '+
+      'the restoration as alternative. The pair reducer reads their completed native outputs and determines the '+
+      'cells valid in both. Nitrogen and phosphorus remain kg/year; sediment remains tonnes/year, exported to streams.</p>'+
+      '<div class="form-grid">'+field('Reference scenario','<select name="contrast_reference" required>'+
+        '<option value="">Choose the reference</option>'+scenarioOptions+'</select>')+'</div>'+
+      '<fieldset><legend>Alternative scenarios</legend>'+alternatives+'</fieldset>'+
+      '<p data-contrast-count role="status"></p>'+
+      '<label class="check-row"><input type="checkbox" name="contrast_render" checked>'+
+      '<span>Prepare scientific figures, PDF, HTML and complete original-source package</span></label>'+
+      '<p>Unfinished pairs retain their original run IDs and state. Complete those runs through the original design, '+
+      'then prepare this same selection again to include their results.</p>'+
+      (history.length?'<h3>Saved comparison editions</h3>'+
+        table(['Edition','Reference','State','Prepared',''],history):'')+
+      '<p>Each saved edition opens its original quantities, source definitions and profile settings. '+
+      'The original baseline report remains available in the model study.</p>';
+    openForm('Compare two scenarios',value.title,content,'Prepare direct scenario report',async()=>{
+      if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)
+        throw Error('Reopen the original study before preparing its scenario comparison.');
+      const current=form(), reference=current?.elements.namedItem('contrast_reference')?.value;
+      const ids=new Set(value.scenarios.map(row=>row.id));
+      const chosen=[...(current?.querySelectorAll('[name="contrast_alternatives"]:checked')||[])]
+        .map(input=>input.value).filter(key=>key!==reference);
+      if(!ids.has(reference) || !chosen.length || chosen.some(key=>!ids.has(key)))
+        throw Error('Choose the reference and at least one different original alternative.');
+      const result=await submitAction('ensemble.contrast-source',{ensemble_id:id,
+        scenario_reference:{reference_scenario_id:reference,alternative_scenario_ids:chosen},
+        render:!!current.elements.namedItem('contrast_render')?.checked});
+      if(workspace===currentWorkspace() && version===designVersion && mounted===generation)
+        toast('The direct comparison is queued. Reopen Compare two scenarios to inspect its saved edition, maps and downloads.');
+      return result;
+    });
+    const current=form();
+    if(!current)return;
+    const updateChoice=()=>{
+      const reference=current.elements.namedItem('contrast_reference')?.value;
+      const inputs=[...current.querySelectorAll('[name="contrast_alternatives"]')];
+      inputs.forEach(input=>{
+        input.disabled=input.value===reference;
+        if(input.disabled)input.checked=false;
+      });
+      const chosen=inputs.filter(input=>input.checked&&!input.disabled).length;
+      const status=current.querySelector('[data-contrast-count]');
+      if(status)status.textContent=chosen+' alternative'+(chosen===1?'':'s')+' × '+
+        (value.members||[]).length+' original parameter profiles. Each completed pair keeps its own valid support.';
+    };
+    current.addEventListener('change',updateChoice);
+    updateChoice();
+  }
+
+  async function contrastSource(id, sourceId) {
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    const query={ensemble_id:id};
+    if(sourceId)query.source_id=sourceId;
+    const value=await api(endpoint('/api/ensembles/contrast-source',query));
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return null;
+    if(value.workspace_key!==workspace || value.source?.ensemble_id!==id ||
+        (sourceId && value.source.id!==sourceId) || !value.source?.selection?.scenario_reference)
+      throw Error('Open the original saved scenario-comparison edition in its Workspace.');
+    return {value,workspace,version,mounted};
+  }
+
+  async function openScenarioContrast(id, sourceId) {
+    const opened=await contrastSource(id,sourceId);
+    if(!opened)return;
+    const {value}=opened, source=value.source, reference=source.selection.scenario_reference;
+    const rows=value.paired_rows||[];
+    const quantities=rows.map(row=>'<tr>'+cell(row.member_label||short(row.member_id))+
+      cell(row.scenario_label||short(row.scenario_id))+
+      cell((pollutants[row.pollutant]||row.pollutant)+' · '+row.total_units)+
+      cell(numeric(row.baseline_common))+cell(numeric(row.alternative_common))+
+      cell(numeric(row.delta_common))+cell(numeric(row.percent_change))+
+      cell(numeric(row.common_cells))+
+      cell(numeric(row.baseline_only_cells)+' reference / '+numeric(row.alternative_only_cells)+' alternative')+'</tr>');
+    const maps=[...new Map(Object.values(value.comparisons||{}).flat().map(row=>
+      [row.comparison_id,row])).values()].map(row=>'<tr>'+cell(short(row.profile_id))+
+        cell(short(row.baseline_run_id))+cell(short(row.alternative_run_id))+
+        '<td><button type="button" data-action="spatial-item" data-kind="comparisons" data-id="'+
+        escapeHTML(row.comparison_id)+'">Open difference map</button></td></tr>');
+    let html='<div class="page-actions">'+button('scenario-contrasts','All comparison editions',id)+
+      contrastButton('contrast-open','Refresh this edition',id,source.id)+
+      contrastButton('contrast-revise','Revise this selection',id,source.id)+
+      contrastButton('contrast-compose','Compose scientific report',id,source.id)+
+      button('inspect','Original model study',id)+'</div>'+
+      '<p><strong>Reference: '+escapeHTML(reference.reference_title||reference.reference_scenario_id)+'</strong></p>'+
+      '<p>Signed annual change = alternative minus reference, on cells valid in both original runs. '+
+      'Negative values mean lower modeled export to streams. A zero reference has an undefined percentage change, shown as —.</p>'+
+      '<p>Saved edition '+escapeHTML(source.id)+' · '+escapeHTML(label(source.state))+
+      ' · '+escapeHTML(label(source.source_state))+'</p>'+
+      '<p>Original design baseline: '+escapeHTML(reference.original_baseline_scenario_id)+
+      '. Selected comparison reference: '+escapeHTML(reference.reference_scenario_id)+'.</p>'+
+      table(['Parameter profile','Alternative','Quantity and unit','Reference on common cells',
+        'Alternative on common cells','Annual change','Change %','Common cells','Unmatched cells'],quantities)+
+      '<p class="note">Own-valid totals, source classifications, physical units and complete support identities are retained in the report. '+
+      'Different support groups stay separate across profiles. Separate baseline differences cannot replace this direct pair.</p>'+
+      '<h3>Native spatial comparisons</h3>'+
+      table(['Original profile','Reference run','Alternative run',''],maps)+
+      '<h3>Original values and scientific exports</h3>'+downloadsHTML(value.downloads);
+    const errors=[...(value.errors||[]),...(source.error?[source.error]:[])];
+    if(errors.length)html+='<h3>Results awaiting completion</h3><ul>'+errors.map(error=>
+      '<li>'+escapeHTML(error.message||JSON.stringify(error))+'</li>').join('')+'</ul>';
+    detail(source.title||'Direct scenario comparison',html);
+  }
+
+  async function composeScenarioContrast(id, sourceId) {
+    const opened=await contrastSource(id,sourceId);
+    if(!opened)return;
+    const {value,workspace,version,mounted}=opened, selected=value.scientific_report_selection;
+    if(selected?.workspace_key!==workspace || !selected.sources?.length)
+      throw Error('Prepare the original comparison source before composing its report.');
+    await refresh({force:true});
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    return openScientificReport({workspace_key:workspace,title:selected.title,
+      sources:selected.sources.map(row=>({source_collection_id:row.source_collection_id,source_id:row.source_id}))});
+  }
+
+  async function reviseScenarioContrast(id, sourceId) {
+    const opened=await contrastSource(id,sourceId);
+    if(!opened)return;
+    return scenarioContrasts(id,opened.value.source.selection.scenario_reference);
+  }
+
   async function parameterStudies(id) {
     const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
     const response=await api(endpoint('/api/parameter-studies/ensemble-studies',{id}));
@@ -810,6 +959,7 @@ export function attachEnsembles(context) {
       button('report','Generate report and exports',id)+
       button('study-source','Prepare scientific study report',id)+
       button('parameter-studies','Parameter results by scenario',id)+
+      button('scenario-contrasts','Compare two scenarios',id)+
       button('consumer-decision','Physical decisions',id)+
       button('consumer-calibration','Evaluate annual loads',id)+'</div>'+
       '<div class="cards">'+[
@@ -820,7 +970,7 @@ export function attachEnsembles(context) {
       '<p>Selected models: '+escapeHTML((item.model_scope?.selected_models||item.models||['ndr','sdr'])
         .map(name=>name==='ndr'?'Nutrients':'Sediment').join(' and '))+'.</p>'+
       '<p class="note">Negative annual change means lower modeled export. Land-cover contrasts pair runs with the same parameter profile. '+
-      'Parameter contrasts hold observed land cover fixed and compare the varied profile with the first reference profile. '+
+      'Parameter contrasts hold original land cover fixed and compare the varied profile with the first reference profile. '+
       'Every contrast uses cells valid in both runs; source coverage and missing values remain visible.</p>';
     if(summary.report_state && summary.report_state!=='current')
       content+='<div class="notice">The saved result summary is '+escapeHTML(label(summary.report_state))+
@@ -906,9 +1056,15 @@ export function attachEnsembles(context) {
       ].map(([name,value])=>'<div class="card"><h3>'+escapeHTML(name)+'</h3><strong class="number">'+
         escapeHTML(value)+'</strong></div>').join('')+'</div>'+
       '<p>'+escapeHTML(item.reason||'')+'</p>'+
-      '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
-      'Each land-cover contrast uses matching parameter choices; parameter contrasts hold the retained baseline fixed. '+
-      'The original annual units, common-cell coverage and undefined values remain unchanged.</p>';
+      (summary.scenario_reference?
+        '<p class="note">Annual change is alternative minus the selected reference: '+
+        escapeHTML(summary.scenario_reference.reference_title||summary.scenario_reference.reference_scenario_id)+
+        '. Negative values mean lower modeled export to streams. Every direct pair uses its original same-profile runs '+
+        'and actual common valid cells. Original design baseline: '+
+        escapeHTML(summary.scenario_reference.original_baseline_scenario_id)+'.</p>':
+        '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
+        'Each land-cover contrast uses matching parameter choices; parameter contrasts hold the retained baseline fixed. '+
+        'The original annual units, common-cell coverage and undefined values remain unchanged.</p>');
     if(!local)html+='<p>This scientific source originated in another project. Its captured choices and results are available here.</p>';
     const errors=[...(summary.run_errors||[]),...(summary.errors||[])];
     if(summary.execution_error)errors.push(summary.execution_error);
@@ -933,6 +1089,7 @@ export function attachEnsembles(context) {
         source_project_id:row.source_project_id,study_id:studyID,ensemble_id:row.ensemble_id,
         report_id:row.report_id,source_operation_id:row.source_operation_id,
         model_scope:row.model_scope,grid_id:item.grid_id,axes:item.axes,
+        scenario_reference:summary.scenario_reference,
         sources:summary.sources,members:item.members
       },null,2))+'</pre></details></div>';
     detail(row.title||'Received model study',html,{kind:'ensemble-received-study',id:studyID});
@@ -953,6 +1110,10 @@ export function attachEnsembles(context) {
     if(action==='reload')return root?mount(root):undefined;
     if(action==='inspect')return inspect(id);
     if(action==='parameter-studies')return parameterStudies(id);
+    if(action==='scenario-contrasts')return scenarioContrasts(id);
+    if(action==='contrast-open')return openScenarioContrast(id,node.dataset.sourceId);
+    if(action==='contrast-compose')return composeScenarioContrast(id,node.dataset.sourceId);
+    if(action==='contrast-revise')return reviseScenarioContrast(id,node.dataset.sourceId);
     if(action==='received-compose')return composeReceivedStudy(id);
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});

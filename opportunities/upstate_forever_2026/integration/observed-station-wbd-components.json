@@ -229,7 +229,8 @@
         "observations/wbd_station_join_20261013/watershed_join.mjs",
         "operator/OBSERVED_STATION_STUDIES.md",
         "operator/install_observed_station_studies.py",
-        "operator/observed_station_wbd_hooks.json"
+        "operator/observed_station_wbd_hooks.json",
+        "source_tools/receive_observed_station_studies.py"
       ],
       "requires": [
         "station-geography",

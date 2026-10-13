@@ -13,7 +13,7 @@ import { defaultApplicationProviders, applicationProviderForKind } from './appli
 import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError,
-  workspaceReceivingState, receivedOperation, requireCurrentOperation, receivedApplication, requireCurrentApplication } from './storage.mjs';
+  workspaceReceivingState, createWorkspaceReceivingReader, receivedOperation, requireCurrentOperation, receivedApplication, requireCurrentApplication } from './storage.mjs';
 
 
 const SCHEMA = 'stellar-forge.runtime-application.v1';
@@ -134,11 +134,11 @@ async function application(root, id) {
 async function runCancellation(root, appId, id) {
   return readJSON(join(directoryFor(root, appId), 'runs', operationId(id) + '.cancel.json'), true);
 }
-async function operationView(root, id, observations = null) {
+async function operationView(root, id, observations = null, receiving = null) {
   const directory = operationPath(root, id);
   const request = await readJSON(join(directory, 'request.json'), true);
   const state = await readJSON(join(directory, 'state.json'), true);
-  const received = await receivedOperation(root, id);
+  const received = await receivedOperation(root, id, receiving);
   if (received) {
     const commandResult = await readJSON(join(directory, 'command-result.json'), true);
     return { id, request, state, ...managedResult(state, commandResult), active: false,
@@ -188,18 +188,18 @@ async function busyApplication(root, id) {
   }
   return null;
 }
-async function selectedRelease(root, saved, homes = null) {
+async function selectedRelease(root, saved, homes = null, receiving = null) {
   // This map belongs to one overview request, never to a lifecycle action.
-  if (homes && !homes.has(saved.homeId)) homes.set(saved.homeId, managedHome(root, saved.homeId));
-  const home = await (homes ? homes.get(saved.homeId) : managedHome(root, saved.homeId));
+  if (homes && !homes.has(saved.homeId)) homes.set(saved.homeId, managedHome(root, saved.homeId, receiving));
+  const home = await (homes ? homes.get(saved.homeId) : managedHome(root, saved.homeId, receiving));
   const release = home?.releases.find(item => item.runtime &&
     bindingKeys.every(key => item.runtime[key] === saved.runtime[key]));
   return { home, release };
 }
-async function applicationConnection(root, saved, homes = null, observations = null) {
+async function applicationConnection(root, saved, homes = null, observations = null, receiving = null) {
   const [{ home, release }, adoption] = await Promise.all([
-    selectedRelease(root, saved, homes),
-    saved.adoption ? operationView(root, saved.adoption.requestId, observations) : null,
+    selectedRelease(root, saved, homes, receiving),
+    saved.adoption ? operationView(root, saved.adoption.requestId, observations, receiving) : null,
   ]);
   // A release directory is visible before its dependency attachment and first
   // active selection finish. Keep the original adoption authoritative throughout.
@@ -207,10 +207,10 @@ async function applicationConnection(root, saved, homes = null, observations = n
     adoption.phase === 'SUCCEEDED' && !adoption.active);
   return { home, release, adoption, connected };
 }
-async function runViews(root, applicationId, history, observations = null) {
+async function runViews(root, applicationId, history, observations = null, receiving = null) {
   return Promise.all(history.map(async run => {
     const cancelled = await runCancellation(root, applicationId, run.id);
-    const observed = cancelled ? { id: run.id, phase: 'CANCELLED', active: false, result: cancelled } : await operationView(root, run.id, observations);
+    const observed = cancelled ? { id: run.id, phase: 'CANCELLED', active: false, result: cancelled } : await operationView(root, run.id, observations, receiving);
     return { id: run.id, createdAt: run.createdAt, revision: run.revision, command: run.request.command,
       args: run.request.args, terminal: run.request.terminal === true,
       applicationProvider: run.request.applicationProvider ?? null, ...observed,
@@ -218,19 +218,19 @@ async function runViews(root, applicationId, history, observations = null) {
       privateLinks: observed.active !== false && !observed.stop && Array.isArray(observed.url?.links) ? observed.url.links : [] };
   }));
 }
-async function view(root, saved, { homes = null, historyLimit = 30, observations = null } = {}) {
-  if (await receivedApplication(root, saved.id)) {
+async function view(root, saved, { homes = null, historyLimit = 30, observations = null, receiving = null } = {}) {
+  if (await receivedApplication(root, saved.id, null, receiving)) {
     const page = await applicationRunPage(root, { applicationId: saved.id, limit: historyLimit });
-    const rows = await runViews(root, saved.id, page.runs, observations);
+    const rows = await runViews(root, saved.id, page.runs, observations, receiving);
     return { ...saved, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, release: null, home: null,
       adoption: null, current: rows[0] ?? null, runs: rows, totalRuns: page.totalRuns,
       history: { limit: page.limit, nextCursor: page.nextCursor } };
   }
   const [{ home, release, adoption, connected }, page] = await Promise.all([
-    applicationConnection(root, saved, homes, observations),
+    applicationConnection(root, saved, homes, observations, receiving),
     applicationRunPage(root, { applicationId: saved.id, limit: historyLimit }),
   ]);
-  const rows = await runViews(root, saved.id, page.runs, observations);
+  const rows = await runViews(root, saved.id, page.runs, observations, receiving);
   const current = rows[0] ?? null;
   const phase = !connected ? 'CONNECTING' : !current ? 'READY' :
     current.active ? current.stop ? 'STOPPING' : current.url ? 'RUNNING' : 'STARTING' :
@@ -242,7 +242,8 @@ async function view(root, saved, { homes = null, historyLimit = 30, observations
     connectionReady: connected, adoption, current, runs: rows, totalRuns: page.totalRuns,
     history: { limit: page.limit, nextCursor: page.nextCursor } };
 }
-export async function applicationsState(root, { historyLimit = 30 } = {}, observations = null) {
+export async function applicationsState(root, { historyLimit = 30 } = {}, observations = null,
+  receiving = createWorkspaceReceivingReader(root)) {
   historyLimit = applicationHistoryLimit(historyLimit);
   // Observed overview requests remain read-only while a restore or backup holds
   // the workspace gate. Lifecycle callers retain their original initialization.
@@ -251,7 +252,7 @@ export async function applicationsState(root, { historyLimit = 30 } = {}, observ
     observations && error.code === 'ENOENT' ? [] : Promise.reject(error))).filter(name => /^[a-f0-9]{24}$/.test(name));
   const homes = new Map();
   const items = await Promise.all(names.map(async id => {
-    try { return await view(root, await application(root, id), { homes, historyLimit, observations }); }
+    try { return await view(root, await application(root, id), { homes, historyLimit, observations, receiving }); }
     catch (error) { return { id, label: id, phase: 'UNAVAILABLE', error: errorView(error) }; }
   }));
   items.sort((a, b) => String(a.label).localeCompare(String(b.label)) || a.id.localeCompare(b.id));
@@ -263,11 +264,12 @@ export async function applicationsState(root, { historyLimit = 30 } = {}, observ
     providers: providers?.sources ?? [], unavailableProviders: providers?.unavailable ?? [],
     catalogError, applications: items };
 }
-export async function applicationsHistory(root, input = {}, observations = null) {
+export async function applicationsHistory(root, input = {}, observations = null,
+  receiving = createWorkspaceReceivingReader(root)) {
   await application(root, recordId(input.applicationId));
   const page = await applicationRunPage(root, input);
   return { schema: 'stellar-forge.application-history.v1', ...page,
-    runs: await runViews(root, input.applicationId, page.runs, observations) };
+    runs: await runViews(root, input.applicationId, page.runs, observations, receiving) };
 }
 export async function reviewApplication(root, { runtimeId, runtimeDirectory, kind, settings: input,
   label, applicationId = null, expectedRevision = null, homeId = null, providerId = null } = {}) {
@@ -467,9 +469,10 @@ export async function applicationOperation(root, { applicationId, operationId: i
   need(saved.applicationId === applicationId && saved.id === id, 'APPLICATION_OPERATION_CHANGED');
   return saved.request;
 }
-export async function applicationOutput(root, { applicationId, operationId: id } = {}, observations = null) {
+export async function applicationOutput(root, { applicationId, operationId: id } = {}, observations = null,
+  receiving = createWorkspaceReceivingReader(root)) {
   await applicationOperation(root, { applicationId, operationId: id });
-  const value = await operationView(root, id, observations);
+  const value = await operationView(root, id, observations, receiving);
   let output;
   try { output = { available: true, ...await tailFile(join(operationPath(root, id), 'worker.log')) }; }
   catch (error) {
