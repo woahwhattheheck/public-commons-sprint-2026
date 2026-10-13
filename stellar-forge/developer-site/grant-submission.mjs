@@ -2,6 +2,8 @@ import {HANDOVER_ROUTES,attachGrantHandover} from './grant-handover.mjs';
 // MIT. Connect the complete submission workspace to the existing grant composer.
 export const SUBMISSION_OPERATION = 'SCF-SUBMISSION-WORKSPACE-22B705-20261012';
 export const SUBMISSION_ROUTES = [
+  ['/grant-requirement-review-core.mjs',['grant-requirement-review-core.mjs','text/javascript; charset=utf-8']],
+  ['/grant-requirement-review-workspace.mjs',['grant-requirement-review-workspace.mjs','text/javascript; charset=utf-8']],
   ['/grant-operating-plan-core.mjs',['grant-operating-plan-core.mjs','text/javascript; charset=utf-8']],
   ['/grant-operating-plan-workspace.mjs',['grant-operating-plan-workspace.mjs','text/javascript; charset=utf-8']],
   ['/stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs',['../../../stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs','text/javascript; charset=utf-8']],
@@ -35,6 +37,7 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     route:'/grant-submission.html',application_route:'/grant-data/application.md',source_index_route:'/grant-data/source-index.json',
     application_sha256:index.application.sha256,application_git_blob:index.application.git_blob,
     draft_schema:'stellar-forge.grant-submission-draft.v1',export_schema:'stellar-forge.grant-submission-export.v1',
+    required_content_review:{schema:'stellar-forge.grant-required-content-review.v1',coverage_schema:'stellar-forge.grant-required-content-coverage.v1',route:'/grant-submission.html',view:'review',operation:'SCF-REQUIRED-CONTENT-REVIEW-7108-20261013'},
     form_map_schema:'stellar-forge.grant-form-map.v1',operation:SUBMISSION_OPERATION,
     planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',update_schema:'stellar-forge.grant-plan-update.v1',target_schema:'stellar-forge.grant-plan-target.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
     product_sources:{schema:'stellar-forge.grant-product-authoring.v1',

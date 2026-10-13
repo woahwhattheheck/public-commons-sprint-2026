@@ -7,8 +7,8 @@ from model import parameter_studies as experiments
 from model import parameter_calibration
 from model.common import identifier
 
-ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare"}
-READS = {"catalog", "results", "calibration", "execution", "view", "source-catalog", "scientific-source"}
+ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare", "parameter-study.ensemble.continue"}
+READS = {"catalog", "results", "calibration", "execution", "view", "source-catalog", "scientific-source", "ensemble-studies"}
 
 
 class ParameterStudyAPI:
@@ -19,6 +19,9 @@ class ParameterStudyAPI:
     def invoke(self, task):
         workspace = self.operator.ws(task["workspace"])
         payload = task["payload"]
+        if task["action"] == "parameter-study.ensemble.continue":
+            from model.ensemble_parameter_studies import continue_studies
+            return self._ensemble_studies(task["workspace"], continue_studies(workspace, payload))
         if task["action"] == "parameter-study.prepare":
             return experiments.prepare(workspace, payload)
         if task["action"] == "parameter-study.source.prepare":
@@ -55,8 +58,26 @@ class ParameterStudyAPI:
                     relative_file(workspace.root, item["path"]), item, name.replace("_", " "))
                     for name, item in value.get("files", {}).items()]}
 
+    def _ensemble_studies(self, workspace_id, value):
+        if value is None:
+            return None
+        return {**value, "workspace_key": workspace_id,
+                "studies": [{**row, "source": self._source(workspace_id, row.get("source"))}
+                            for row in value.get("studies", [])]}
+
+    def ensemble_studies(self, workspace_id, operation_id):
+        from model.ensemble_parameter_studies import get
+        return self._ensemble_studies(workspace_id,
+            get(self.operator.ws(workspace_id), identifier(operation_id)))
+
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "ensemble-studies":
+            from model.ensemble_parameter_studies import latest, preview
+            key = identifier(payload.get("id"))
+            return {"workspace_key": workspace_id,
+                    "preview": preview(workspace, {"ensemble_id": key}),
+                    "latest": self._ensemble_studies(workspace_id, latest(workspace, key))}
         if operation == "source-catalog":
             from model import parameter_report_source
             return parameter_report_source.catalog(workspace, identifier(payload.get("id")))

@@ -4,6 +4,8 @@ import { listDrafts, loadDraft, saveDraft } from './drafts.mjs';
 import { REVIEW_SCHEMA, REVIEW_MAX_BYTES, createReviewRound, readSubmissionExport, captureSubmissionDraft,
   applyReviewAction, reviewRoundView, compareReviewDraft, exportReviewRound, importReviewRound, reviewReport } from './grant-review-round-core.mjs';
 
+import { WORKING_SCHEMA, WORKING_MAX_BYTES, newWorkingCopy, saveWorkingCopy, loadWorkingCopy,
+  listWorkingCopies, forkWorkingCopy, exportWorkingCopy, importWorkingCopy } from './grant-review-working-copy.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, value, cls) => { const item=document.createElement(tag); if(value!==undefined)item.textContent=String(value); if(cls)item.className=cls; return item; };
 const uid = () => crypto.randomUUID();
@@ -11,16 +13,130 @@ const keyOf = target => target.kind+':'+target.id;
 let round=null, view=null, savedId=null, savedRevision=0, dirty=false, busy=false;
 let screen='targets', selectedTarget='application:application', viewedEdition=null, actorId=null, filePurpose='start';
 let incoming=null, comparison=null, initialCapture=null;
-const formDrafts=new Map(), carryChoices=new Map();
+const formDrafts=new Map(), carryChoices=new Map(), formContexts=new Map();
+let workingBase=newWorkingCopy(), workingRevision=0, workingGeneration=0, storedGeneration=0;
+let workingTimer=null, workingTail=Promise.resolve(), workingWrite=null, workingError=null, workingReady=false;
+let newFields={newTitle:'',newPerson:'',newFormat:'plain',newParticipant:''};
+function readStartFields(){
+  for(const [name,id]of Object.entries({newTitle:'review-new-title',newPerson:'review-new-person',newFormat:'review-new-format',newParticipant:'review-new-participant'})){
+    if($(id))newFields[name]=$(id).value;
+  }
+}
+function workingMetadata(value){
+  // The live fields below have their own owners. Preserve any other original
+  // envelope members without pinning a superseded round or unfinished form graph.
+  const {round,incoming,initialCapture,ui,forms,contexts,carryChoices,native,...metadata}=value;
+  return metadata;
+}
+function workingSnapshot(){
+  readStartFields();
+  const label=(round?.title||newFields.newTitle||'Prepared submission review').slice(0,1000);
+  return structuredClone({...workingBase,label,folder:'SCF review working — '+label,round,incoming,initialCapture,
+    ui:{screen,selectedTarget,viewedEdition,actorId,...newFields},
+    forms:[...formDrafts],contexts:[...formDrafts.keys()].map(key=>[key,formContexts.get(key)]),
+    carryChoices:[...carryChoices],native:{id:savedId,revision:savedRevision,dirty}});
+}
+function workingStatus(){
+  const pending=workingGeneration!==storedGeneration;
+  $('review-working-state').textContent=workingError?'Working copy is not saved: '+workingError.message+' Download the complete working package or save a separate copy.':
+    pending?'Saving the complete working copy…':workingRevision?'Complete working copy saved · browser revision '+workingRevision+'. Unfinished text remains unrecorded.':'This window has its own working copy.';
+}
+function scheduleWorking(){
+  if(!workingReady)return;readStartFields();workingGeneration++;clearTimeout(workingTimer);workingStatus();
+  workingTimer=setTimeout(()=>{flushWorking().catch(()=>{});},450);
+}
+async function flushWorking(){
+  clearTimeout(workingTimer);
+  // All callers join one writer. Capture only when that writer is ready, never
+  // while it is waiting for IndexedDB to commit a preceding complete copy.
+  if(workingWrite)return workingWrite;
+  if(workingGeneration===storedGeneration&&workingRevision)return;
+  const id=workingBase.id;
+  const task=Promise.resolve().then(async()=>{
+    try{
+      do{
+        if(workingBase.id!==id)throw new Error('The working selection changed before its complete save finished.');
+        clearTimeout(workingTimer);
+        const generation=workingGeneration;
+        // Keep the full snapshot immutable across the original asynchronous CAS.
+        // This block releases both it and the returned record before the next copy.
+        {
+          const value=workingSnapshot();
+          const saved=await saveWorkingCopy(value,{recordId:id,revision:workingRevision});
+          workingRevision=saved.revision;storedGeneration=generation;workingError=null;
+        }
+        const url=new URL(location.href);url.searchParams.set('working',id);history.replaceState(null,'',url);
+        workingStatus();
+      }while(workingGeneration!==storedGeneration);
+    }catch(error){workingError=error;workingStatus();throw error;}
+  });
+  workingWrite=task;
+  // The settled tail deliberately returns no full record or source graph.
+  workingTail=task.finally(()=>{if(workingWrite===task)workingWrite=null;});
+  return workingTail;
+}
+function beginSelection(){
+  clearTimeout(workingTimer);workingBase=newWorkingCopy();workingRevision=0;workingGeneration=0;storedGeneration=0;workingError=null;
+  formDrafts.clear();formContexts.clear();carryChoices.clear();newFields={newTitle:'',newPerson:'',newFormat:'plain',newParticipant:''};
+  $('review-new-participant').value='';
+}
+async function installWorking(value,{persist=true}={}){
+  clearTimeout(workingTimer);await workingTail.catch(()=>{});
+  workingReady=true;workingBase=workingMetadata(value);workingRevision=0;workingGeneration=1;storedGeneration=0;workingError=null;
+  round=value.round;incoming=value.incoming;initialCapture=value.initialCapture;comparison=null;
+  ({screen,selectedTarget,viewedEdition,actorId}=value.ui);
+  newFields={newTitle:value.ui.newTitle,newPerson:value.ui.newPerson,newFormat:value.ui.newFormat,newParticipant:value.ui.newParticipant};
+  savedId=value.native.id;savedRevision=value.native.revision;dirty=value.native.dirty;
+  formDrafts.clear();formContexts.clear();carryChoices.clear();
+  value.forms.forEach(([k,v])=>formDrafts.set(k,v));value.contexts.forEach(([k,v])=>formContexts.set(k,v));value.carryChoices.forEach(([k,v])=>carryChoices.set(k,v));
+  $('review-new-participant').value=newFields.newParticipant;
+  await refreshView();
+  if(initialCapture&&!round)await renderStart();else await render();
+  if(persist)await flushWorking();workingStatus();
+}
+async function openWorking(id){
+  const selected=await loadWorkingCopy(id);await flushWorking();
+  await installWorking(await forkWorkingCopy(selected.input));
+  status('Opened a separate working copy with all original drafts and unfinished text. Its recorded review remains unchanged until you explicitly record an action.');
+}
+async function separateWorking(){
+  // A conflict or unavailable original record never authorizes overwriting it.
+  const selected=await forkWorkingCopy(workingSnapshot());
+  await installWorking(selected);status('Saved this window as a separate complete working copy; the previous saved copy remains available.');
+}
+async function renderWorkingCopies(root){
+  root.append(node('h3','Complete working copies'),node('p','Each window saves independently. Open a copy to continue its unfinished text in a separate record; the selected original stays available.'));
+  const records=await listWorkingCopies();
+  if(!records.length)root.append(node('p','No complete working copy has been saved in this browser.'));
+  for(const record of records){const card=node('article',undefined,'review-card');card.append(node('h4',record.name),node('p','Working revision '+record.revision+' · '+record.updatedAt,'review-muted'),
+    button('Open complete working copy',()=>openWorking(record.id)));root.append(card);}
+}
+function renderUnfinished(root){
+  if(!formDrafts.size)return;
+  const box=node('details');box.append(node('summary',formDrafts.size+' retained unfinished form'+(formDrafts.size===1?'':'s')));
+  for(const [key,raw]of formDrafts){
+    const c=formContexts.get(key),card=node('article',undefined,'review-card');
+    card.append(node('h4',c.kind+' · '+personName(c.actorId)),node('p','Original edition '+c.editionId,'review-code'),
+      details('Exact unfinished values',node('pre',JSON.stringify(raw,null,2),'review-source')));
+    card.append(button('Open this form’s original context',async()=>{
+      actorId=c.actorId;viewedEdition=c.editionId;
+      screen=['reply','resolve'].includes(c.kind)?'changes':c.kind==='receive'?'compare':['finish','reopen'].includes(c.kind)?'finish':'targets';
+      if(['decision','change'].includes(c.kind))selectedTarget=c.extra;
+      await refreshView();await render();
+    }));
+    box.append(card);
+  }
+  root.append(box);
+}
 const personName=id=>view?.participants.find(x=>x.id===id)?.label||id;
-const isDirty=()=>dirty||formDrafts.size>0||carryChoices.size>0;
+const isDirty=()=>workingGeneration!==storedGeneration||!!workingError;
 const status=message=>{$('review-status').textContent=message;};
 function fail(error){$('review-error').textContent=error?.message||String(error);$('review-error').hidden=false;}
 function clearError(){$('review-error').hidden=true;$('review-error').textContent='';}
 async function work(operation){
   if(busy)return;busy=true;clearError();$('review-workspace').inert=true;
   try{return await operation();}catch(error){fail(error);}
-  finally{$('review-workspace').inert=false;busy=false;metadata();}
+  finally{$('review-workspace').inert=false;busy=false;metadata();scheduleWorking();}
 }
 function button(label, action, cls=''){
   const item=node('button',label,cls);item.type='button';item.addEventListener('click',()=>work(action));return item;
@@ -49,11 +165,14 @@ function textInput(label,value,{area=false,type='text',placeholder='',readonly=f
 function choice(label,value,options,id=null){
   const wrap=node('label',undefined,'review-field'),field=node('select');
   for(const [key,labelText]of options){const item=node('option',labelText);item.value=key;field.append(item);}
-  field.value=value;if(id)field.id=id;wrap.append(node('span',label),field);return {wrap,field};
+  if(!options.some(([key])=>key===value)){const item=node('option','Unrecorded value: '+String(value));item.value=value;field.append(item);}field.value=value;if(id)field.id=id;wrap.append(node('span',label),field);return {wrap,field};
 }
 function details(label,...children){const item=node('details');item.append(node('summary',label),...children);return item;}
 function sourceText(label,text){const box=textInput(label,text,{area:true,readonly:true});box.field.className='review-original-text';return box.wrap;}
-function formKey(kind,extra=''){return [round?.id,view?.selectedEdition,actorId,kind,extra].join('|');}
+function formKey(kind,extra=''){
+  const c={roundId:round?.id,editionId:view?.selectedEdition,actorId,kind,extra},key=[c.roundId,c.editionId,c.actorId,kind,extra].join('|');
+  formContexts.set(key,c);return key;
+}
 function draftForm(key,form,read){
   form.addEventListener('input',()=>{formDrafts.set(key,read());metadata();});
   form.addEventListener('change',()=>{formDrafts.set(key,read());metadata();});
@@ -73,12 +192,12 @@ function referencesEditor(parent,initial=[]){
   parent.append(box);
   return ()=>entries.map(x=>({label:x.label.value,url:x.url.value,note:x.note.value})).filter(x=>x.label||x.url||x.note);
 }
-function clearForm(key){formDrafts.delete(key);metadata();}
+function clearForm(key){formDrafts.delete(key);formContexts.delete(key);metadata();}
 function guardUnrecorded(){
-  if(formDrafts.size||carryChoices.size)throw new Error('Record the pending decision or response, or use Discard unrecorded forms before opening another review. The current text remains in this page.');
+  if(formDrafts.size||carryChoices.size)throw new Error('Record the pending decision or response, or use Discard unrecorded forms before opening another review. Download the complete working package to preserve unfinished text, or finish/discard these forms before a recorded-review handover.');
 }
 async function preserveWorking(){
-  guardUnrecorded();if(!round||!dirty)return;
+  await flushWorking();if(!round||!dirty)return;
   try{const saved=await saveDraft({id:savedId,revision:savedRevision,input:round});savedId=saved.id;savedRevision=saved.revision;dirty=false;}
   catch(error){if(error.name!=='DraftConflictError')throw error;const saved=await saveDraft({revision:0,input:round});savedId=saved.id;savedRevision=saved.revision;dirty=false;}
 }
@@ -101,38 +220,47 @@ async function act(kind,input,{capture=null,key=null,after=null}={}){
 function pickFile(purpose){filePurpose=purpose;$('review-file').value='';$('review-file').click();}
 async function readFile(file){
   if(!file)throw new Error('Choose a complete exported JSON file.');
-  if(file.size>REVIEW_MAX_BYTES+65536)throw new Error('This file exceeds the complete 64 MiB review receiving allowance.');
+  if(file.size>(filePurpose==='working'?WORKING_MAX_BYTES:REVIEW_MAX_BYTES)+65536)throw new Error('This file exceeds the complete receiving allowance.');
   return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());
 }
 async function openFile(file){
   const purpose=filePurpose,text=await readFile(file);
+  if(purpose==='working'){
+    const selected=await importWorkingCopy(text);await flushWorking();
+    await installWorking(await forkWorkingCopy(selected));
+    status('Received the complete working package into a separate copy. Original recorded actions and unfinished form text retain their distinct meanings.');return;
+  }
   if(purpose==='round'){
-    const selected=await importReviewRound(text);await preserveWorking();round=selected;viewedEdition=null;savedId=null;savedRevision=0;dirty=true;incoming=comparison=null;carryChoices.clear();screen='targets';
+    const selected=await importReviewRound(text);await preserveWorking();beginSelection();round=selected;viewedEdition=null;savedId=null;savedRevision=0;dirty=true;incoming=comparison=null;carryChoices.clear();screen='targets';
     await refreshView();actorId=view.participants[0].id;await render();status('Received the complete review history and every original draft. Save this browser copy to continue.');return;
   }
   const capture=await readSubmissionExport(text,{fileName:file.name});
   if(purpose==='revision'){
     if(!round)throw new Error('Open the original review round first.');
-    comparison=await compareReviewDraft(round,capture);incoming=capture;carryChoices.clear();screen='compare';viewedEdition=null;await refreshView();await render();status('Read the complete revised draft. Compare its exact content and choose how to handle each current review decision.');return;
+    const nextComparison=await compareReviewDraft(round,capture);
+    await flushWorking();
+    workingBase=newWorkingCopy();workingRevision=0;workingGeneration=0;storedGeneration=0;workingError=null;
+    for(const [key,c]of formContexts)if(c.kind==='receive'){formDrafts.delete(key);formContexts.delete(key);}
+    comparison=nextComparison;incoming=capture;carryChoices.clear();screen='compare';viewedEdition=null;await refreshView();await render();status('Read the complete revised draft. Compare its exact content and choose how to handle each current review decision.');return;
   }
-  await preserveWorking();initialCapture=capture;await renderStart();status('Read the complete prepared submission. Name the review and its first participant.');
+  await preserveWorking();beginSelection();round=view=null;savedId=null;savedRevision=0;dirty=false;initialCapture=capture;newFields.newTitle=JSON.parse(capture.exportText).draft.title+' — review';await renderStart();status('Read the complete prepared submission. Name the review and its first participant.');
 }
 async function createFromCapture(){
   if(!initialCapture)throw new Error('Open an original prepared submission first.');
-  await preserveWorking();
+  readStartFields();await preserveWorking();
   const reviewer={id:uid(),label:$('review-new-person').value.trim()},title=$('review-new-title').value.trim(),format=$('review-new-format').value;
-  const next=await createReviewRound(initialCapture,{id:uid(),title,reviewer,format});
+  const next=await createReviewRound(initialCapture,{id:uid(),title,reviewer,format});beginSelection();
   savedId=null;savedRevision=0;actorId=reviewer.id;screen='targets';selectedTarget='application:application';incoming=comparison=null;initialCapture=null;carryChoices.clear();
   await commit(next,'Started a complete review of the selected original submission.');
 }
 async function openSavedSubmission(record){
   const current=await loadDraft(record.id);if(!current||current.input?.schema!==DRAFT_SCHEMA)throw new Error('This original submission draft is no longer available. Open its complete exported file.');
   const capture=await captureSubmissionDraft(current.input,{fileName:safeName(current.input.title)+'-browser-r'+current.revision+'.json'});
-  await preserveWorking();initialCapture=capture;await renderStart();status('Selected the actual saved submission revision '+current.revision+'. Its original logical draft identity is retained.');
+  await preserveWorking();beginSelection();round=view=null;savedId=null;savedRevision=0;dirty=false;initialCapture=capture;newFields.newTitle=current.input.title+' — review';await renderStart();status('Selected the actual saved submission revision '+current.revision+'. Its original logical draft identity is retained.');
 }
 async function openSavedRound(record){
   await preserveWorking();const current=await loadDraft(record.id);if(!current||current.input?.schema!==REVIEW_SCHEMA)throw new Error('This review is no longer available in the original browser store.');
-  const verified=await reviewRoundView(current.input);round=current.input;view=verified;savedId=current.id;savedRevision=current.revision;dirty=false;actorId=view.participants[0].id;
+  const verified=await reviewRoundView(current.input);beginSelection();round=current.input;view=verified;savedId=current.id;savedRevision=current.revision;dirty=false;actorId=view.participants[0].id;
   viewedEdition=null;screen='targets';incoming=comparison=null;carryChoices.clear();await render();status('Opened the original review at browser revision '+savedRevision+'.');
 }
 async function renderStart(){
@@ -141,8 +269,8 @@ async function renderStart(){
     const packet=JSON.parse(initialCapture.exportText),draft=packet.draft;
     const card=node('section',undefined,'review-card');card.append(node('h3',draft.title),node('p',draft.answers.length+' complete answers · '+draft.fields.length+' issuer fields · '+draft.sources.length+' original source editions'),
       node('p',initialCapture.fileName+' · '+initialCapture.bytes.toLocaleString()+' bytes','review-muted'));
-    const title=textInput('Review round name',draft.title+' — review',{id:'review-new-title'}),person=textInput('First reviewer’s name','',{id:'review-new-person',placeholder:'Name the person or automation recording the review'});
-    const format=choice('Review the text as copied','plain',[['plain','Plain text'],['markdown','Markdown']],'review-new-format');
+    const title=textInput('Review round name',newFields.newTitle,{id:'review-new-title'}),person=textInput('First reviewer’s name',newFields.newPerson,{id:'review-new-person',placeholder:'Name the person or automation recording the review'});
+    const format=choice('Review the text as copied',newFields.newFormat,[['plain','Plain text'],['markdown','Markdown']],'review-new-format');
     card.append(title.wrap,person.wrap,format.wrap,button('Start this review',createFromCapture,'review-primary'));root.append(card);
   }
   const row=node('div',undefined,'review-row');row.append(button('Open full submission draft',()=>pickFile('start')),button('Open complete review JSON',()=>pickFile('round')),
@@ -155,6 +283,7 @@ async function renderStart(){
   metadata();
 }
 async function renderSaved(root){
+  await renderWorkingCopies(root);
   root.append(node('h2','Saved review rounds'),node('p','These records use the same revision-checked Stellar Forge draft store. Opening one preserves any complete unsaved review.'));
   const records=(await listDrafts()).filter(x=>x.name?.startsWith('SCF review — '));
   if(!records.length)root.append(node('p','No review rounds are saved in this browser. Open a complete review JSON or prepare a new round.','review-empty'));
@@ -283,7 +412,6 @@ async function renderCompare(root){
   const controls=[];
   for(const item of comparison.decisions){
     const selected=carryChoices.get(item.decision.id)||{choice:'reopen',note:'Review this target again after receiving the revised draft.'};
-    if(!item.canCarry)selected.choice='reopen';
     const group=node('div',undefined,'review-carry');group.append(node('h4',item.title),node('p',personName(item.decision.actorId)+' · '+item.decision.decision+' · '+item.change,'review-muted'));
     const decision=choice('Decision for this revised draft',selected.choice,item.canCarry?[['reopen','Reopen for a fresh review'],['carry','Carry the original decision forward']]:[['reopen','Reopen — content or context changed']]),
       note=textInput('Selection note',selected.note,{area:true});
@@ -359,7 +487,7 @@ async function render(){
   $('review-current').hidden=false;$('review-start').hidden=true;renderNavigation();metadata();
   $('review-heading').textContent=round.title;
   $('review-context').textContent=view.draft.title+' · '+view.status.toLowerCase()+' · '+round.format+' copy format · review revision '+view.revision+(view.isCurrent?'':' · earlier draft');
-  const root=$('review-editor');root.replaceChildren();
+  const root=$('review-editor');root.replaceChildren();renderUnfinished(root);
   if(screen==='saved')await renderSaved(root);
   else if(screen==='compare')await renderCompare(root);
   else if(screen==='changes')renderChanges(root);
@@ -398,11 +526,30 @@ $('review-save-copy').addEventListener('click',()=>work(async()=>{
   const saved=await saveDraft({revision:0,input:round});savedId=saved.id;savedRevision=saved.revision;dirty=false;metadata();
   status('Saved a separate browser record with the same original review, participant and draft identities.');
 }));
-$('review-discard-forms').addEventListener('click',()=>work(async()=>{formDrafts.clear();carryChoices.clear();await render();status('Discarded only the unrecorded form text. All recorded review actions remain.');}));
+$('review-discard-forms').addEventListener('click',()=>work(async()=>{formDrafts.clear();formContexts.clear();carryChoices.clear();await render();status('Discarded only the unrecorded form text. All recorded review actions remain.');}));
 $('review-finish').addEventListener('click',()=>work(async()=>{screen='finish';viewedEdition=null;await refreshView();await render();}));
 window.addEventListener('beforeunload',event=>{if(isDirty()){event.preventDefault();event.returnValue='';}});
+$('review-working-download').addEventListener('click',()=>work(async()=>{
+  const value=workingSnapshot();download(await exportWorkingCopy(value),safeName(value.label)+'-working-copy.json');
+  status('Downloaded the complete working copy, including invalid unfinished text and every selected original draft. No review decision was invented.');
+}));
+$('review-working-open').addEventListener('click',()=>pickFile('working'));
+$('review-working-save').addEventListener('click',()=>work(async()=>{await flushWorking();status('Saved all current working fields and original sources.');}));
+$('review-working-fork').addEventListener('click',()=>work(separateWorking));
+$('review-working-latest').addEventListener('click',()=>work(async()=>{
+  const originalId=workingBase.id,latest=await loadWorkingCopy(originalId);
+  // First retain the local values independently; only then show the selected stored version.
+  await separateWorking();await installWorking(await forkWorkingCopy(latest.input));status('Opened the stored version in a separate copy. Your preceding local work is also saved separately.');
+}));
+document.addEventListener('input',event=>{if(event.target.closest('#review-workspace'))scheduleWorking();});
+document.addEventListener('change',event=>{if(event.target.closest('#review-workspace')&&event.target.id!=='review-file')scheduleWorking();});
 work(async()=>{
-  const selected=new URL(location.href).searchParams.get('review');
-  if(selected){const record=await loadDraft(selected);if(record?.input?.schema===REVIEW_SCHEMA){await openSavedRound(record);return;}}
-  await renderStart();status('Open a complete prepared submission or continue a saved review. Nothing is submitted to the issuer from this workspace.');
+  const parameters=new URL(location.href).searchParams,workingId=parameters.get('working');
+  if(workingId){
+    const record=await loadWorkingCopy(workingId);await installWorking(await forkWorkingCopy(record.input));
+    status('Recovered the complete saved work into this window’s independent copy. Unfinished text is still unrecorded.');return;
+  }
+  const selected=parameters.get('review');
+  if(selected){const record=await loadDraft(selected);if(record?.input?.schema===REVIEW_SCHEMA){workingReady=true;await openSavedRound(record);return;}}
+  workingReady=true;await renderStart();status('Open a complete prepared submission or continue a saved review. Nothing is submitted to the issuer from this workspace.');
 });

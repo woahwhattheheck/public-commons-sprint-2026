@@ -13,7 +13,9 @@
     "observed_landcover_received.mjs",
     "observed_landcover_received.css",
     "study_report_navigation.mjs",
-    "economic_received_comparisons.mjs"
+    "economic_received_comparisons.mjs",
+    "received_published_reviews.mjs",
+    "received_published_reviews.css"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -146,7 +148,8 @@
     ],
     "styles": [
       "/web/extensions/study_transfer.css",
-      "/web/observed_landcover_received.css"
+      "/web/observed_landcover_received.css",
+      "/web/received_published_reviews.css"
     ],
     "view": {
       "id": "study-transfer",

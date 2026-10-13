@@ -540,6 +540,12 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             "interaction-results/*/.analysis.lock"):
                 for path in sorted(root.glob(pattern)):
                     stack.enter_context(held(path, blocking=False))
+            # Bridge directories are published under the Workspace lock before
+            # their first operation record, so lock even a prepared directory.
+            for directory in sorted((root / "ensemble-parameter-studies").glob("*")):
+                if directory.is_dir():
+                    identifier(directory.name)
+                    stack.enter_context(held(directory / ".bridge.lock", blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
