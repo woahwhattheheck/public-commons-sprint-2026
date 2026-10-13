@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "250039f3973a41bc8fbd82de0074eaf51e3e5ffb",
+  "source_reference_base": "24c49dd1c852eb863d6a89c7bd78cda71b5b15bc",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
   "external_source_edition": {
     "files": 62,
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 11803,
-      "sha256": "6f2360db117c12fa70261184c609a005e9d6dc497b386a6201276c65647d1113"
+      "bytes": 11950,
+      "sha256": "7e19cde389356a8768170c3994be68d0df79325a25a67f9e2eb72623b57f139d"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -68,13 +68,13 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 99820,
-      "sha256": "4db2e826db7a5f6a557ac4428ab7784bf210649ad78a6ca1340ce3622b055641"
+      "bytes": 102550,
+      "sha256": "c2133f1954b214ea36222a7da525f805de3b21dd6291fa52ab5548580ca32208"
     },
     {
       "path": "measurement_workspace/source_observations.py",
-      "bytes": 8507,
-      "sha256": "90cc5a33cc90c8e12bdc00e8a5211ced66f95030369c9d94e31328ce57f10879"
+      "bytes": 10566,
+      "sha256": "6a49535945d72266e856c4dd790d45d7ab5b9f24bdc196369642940d71216968"
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
@@ -83,8 +83,18 @@
     },
     {
       "path": "measurement_workspace/study_context.py",
-      "bytes": 5008,
-      "sha256": "cfda0c0bfb3b6d66b4aba62dc9e22d7231516aee1c10cf1801e3497ce7bba6a0"
+      "bytes": 5481,
+      "sha256": "81f4087443bfc7c6c9cd21f851107fec940892aa0592c4bd7294cc0c4b2cbe89"
+    },
+    {
+      "path": "measurement_workspace/SV833_OBSERVATIONS.md",
+      "bytes": 6308,
+      "sha256": "1bfe68f5d8d41f73c17c8416cd2ba0bdf98b68b961ba11dd09b08e0165421c8b"
+    },
+    {
+      "path": "measurement_workspace/sv833_observations.py",
+      "bytes": 15137,
+      "sha256": "a20ec77953d227ddd982afdc25376c38455036b93ffbd974972f8a94f6ba8bc5"
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
@@ -100,6 +110,11 @@
       "path": "measurement_workspace/utility_microbiology.py",
       "bytes": 23319,
       "sha256": "f987e5e8a89aa9f372b8db7a96400b1fd8537df5f02ec74d0d39934d35685b2a"
+    },
+    {
+      "path": "measurement_workspace/wqp_profiles.py",
+      "bytes": 7493,
+      "sha256": "1e4ea8d687486ecfa94ebee1b9a82c024ddf12acfbe87f35bb3868accfacc339"
     },
     {
       "path": "microbial_temporal_observed_report.sources.json",
@@ -912,14 +927,154 @@
       "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
     },
     {
+      "path": "observations/sv833_2021_2026/activity-characteristic-measurements.csv",
+      "bytes": 137722,
+      "sha256": "930772f2a592b4cffbb533fb5693a4c7c8c97ceedf2ec4f6cd97d6149014ff73"
+    },
+    {
+      "path": "observations/sv833_2021_2026/activity-water-quality.csv",
+      "bytes": 50574,
+      "sha256": "cec74355b8a2028cb042251faa47dc72365850dcb082e3fa2af39970aea6633e"
+    },
+    {
+      "path": "observations/sv833_2021_2026/agency-nitrogen-reconciliation.csv",
+      "bytes": 233,
+      "sha256": "67d875d92e46a88d0232e229bea8a71790f82b459d9003136f9149143ef81550"
+    },
+    {
+      "path": "observations/sv833_2021_2026/analysis_core.mjs",
+      "bytes": 18961,
+      "sha256": "b9eab36dbe4c59788e1e8630d31a6bf8b01ce7c23d29432c95896b5d1bda91af"
+    },
+    {
+      "path": "observations/sv833_2021_2026/annual-seasonal-summaries.csv",
+      "bytes": 18624,
+      "sha256": "9451e49d80909d20f9669f326b8bd323cdc5d04c24084d7762746e15f50a1ae5"
+    },
+    {
+      "path": "observations/sv833_2021_2026/build_study.mjs",
+      "bytes": 2434,
+      "sha256": "0c7d0673987fa90982455090875295df888e424b425cb971834c01109f69b373"
+    },
+    {
+      "path": "observations/sv833_2021_2026/csv.mjs",
+      "bytes": 1178,
+      "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+    },
+    {
+      "path": "observations/sv833_2021_2026/exact-pair-associations.csv",
+      "bytes": 5924,
+      "sha256": "0514a3e0ca66e6ca132c73449b7399a24497de0ab8e97a074bb87404dfa12719"
+    },
+    {
+      "path": "observations/sv833_2021_2026/figures.mjs",
+      "bytes": 5977,
+      "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
+    },
+    {
+      "path": "observations/sv833_2021_2026/highest-turbidity-activities.csv",
+      "bytes": 10857,
+      "sha256": "8623059e9d18550625469a67bf7c1f44e0ba9cef2859c69e1d3e509bf698eb59"
+    },
+    {
+      "path": "observations/sv833_2021_2026/input-manifest.json",
+      "bytes": 5367,
+      "sha256": "1d499ae9ffdf7c4b82de80427a1730bab94527497e0a5d60bb0e6d54a8be07ca"
+    },
+    {
+      "path": "observations/sv833_2021_2026/interval-order-associations.csv",
+      "bytes": 293,
+      "sha256": "47f8e23e4bc78aee33b44c233246c232ed5455805d3b14b6b1340c3eea1df610"
+    },
+    {
+      "path": "observations/sv833_2021_2026/interval-order-pairs.csv",
+      "bytes": 275587,
+      "sha256": "7101c04a6772f35bfa4f4531fbe10db07ceece0f05889e89e906c43e8a7bd82f"
+    },
+    {
+      "path": "observations/sv833_2021_2026/interval-order.mjs",
+      "bytes": 2813,
+      "sha256": "91728417233ff06a6e6492aac6aea9234a93a5a6529016f11ff6a5739d6bda47"
+    },
+    {
+      "path": "observations/sv833_2021_2026/original-result-index.csv",
+      "bytes": 544426,
+      "sha256": "c4a51c181daebf787ac034fb9f119e0202d2932f35d95ff7aadc054c3f296a3a"
+    },
+    {
+      "path": "observations/sv833_2021_2026/original-row-weighting-effects.csv",
+      "bytes": 1004,
+      "sha256": "a7a06065dcb5b9dd76520bb8aa2e2c7236667bb8e3fae203f2d526cf1e53cae0"
+    },
+    {
+      "path": "observations/sv833_2021_2026/outputs.mjs",
+      "bytes": 3636,
+      "sha256": "cd088007b48d3e3c33ded6bb73c4e64a05ab16e3ac5022721ae58e0bbcdac729"
+    },
+    {
+      "path": "observations/sv833_2021_2026/physical-source-count-reconciliation.csv",
+      "bytes": 3280,
+      "sha256": "9b2bbd4c623a5217635fa1517e204f4df17831c1d99973e5a76b36d96392fdcb"
+    },
+    {
+      "path": "observations/sv833_2021_2026/quality-screening.csv",
+      "bytes": 1343,
+      "sha256": "fc124e84f5251ffe20a38ba0e997f8a1de7a78f0fffa8200666471fe36cbf7ed"
+    },
+    {
+      "path": "observations/sv833_2021_2026/README.md",
+      "bytes": 7853,
+      "sha256": "98837e63c11f38707ecf11ad1cd772ef4139d0f5e84c7d96bbcbc50f73511901"
+    },
+    {
+      "path": "observations/sv833_2021_2026/repeated-original-results.csv",
+      "bytes": 14257,
+      "sha256": "337b8e481530f594aeb17e758b0c722c87e36ada0843ae48ffcb709a5bdabb6a"
+    },
+    {
+      "path": "observations/sv833_2021_2026/report.mjs",
+      "bytes": 23882,
+      "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
+    },
+    {
+      "path": "observations/sv833_2021_2026/sampling-coverage.csv",
+      "bytes": 409,
+      "sha256": "82c0e3f2ec983027018348f1b16cbd4bc7a0ff7fbc9e394def5f0a8085dc967e"
+    },
+    {
+      "path": "observations/sv833_2021_2026/single-observation-influence.csv",
+      "bytes": 2885,
+      "sha256": "cdf61c3c5964702ada7f0ba4b320f52bb37b0e8835b2e0d061b1eb04f8175b16"
+    },
+    {
+      "path": "observations/sv833_2021_2026/study-summary.json",
+      "bytes": 138062,
+      "sha256": "b2e2c69a92cf039a19b7016f2b509b35d313927a37768470e6d1246210d8ed95"
+    },
+    {
+      "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
+      "bytes": 42103,
+      "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
+    },
+    {
+      "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
+      "bytes": 37328,
+      "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
+    },
+    {
+      "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
+      "bytes": 120250,
+      "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
+    },
+    {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2476,
-      "sha256": "62891332f4888ef975c314fbe1a2e9b37abbed55a9c3ef9f0838f744c8368a26"
+      "sha256": "14830d8a5f9409f93978c61e36543a2c67b74dac39a58137bfc18698d1291371"
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 20796,
-      "sha256": "0f25a55f086de63aa7a0fbd0d7eb65b4b245c033f4161292e779e91d6f635be0"
+      "bytes": 21286,
+      "sha256": "c6154b6d0af2bc52ec6d7fa4434742c29d3fa0b66fe73834283debcfc117950e"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -928,13 +1083,13 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 44296,
-      "sha256": "0b3548f4aa89758d2a304301b51d0164611b80179e4870a862d9bb7616008c52"
+      "bytes": 45514,
+      "sha256": "b73a4e3892f7d26f10e1015d282ebfd823c2bb90fb031e0962215e70c3394405"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
-      "bytes": 34931,
-      "sha256": "de74d5f15174c51c9b6ddf3b868e596046923135331dc07c30a6a278f4a13696"
+      "bytes": 35486,
+      "sha256": "2f08448b279d4246ec56f4287522adb12971acabbaf5c020e9b8cddd03bfe528"
     },
     {
       "path": "receive_published_studies.py",
@@ -1342,6 +1497,61 @@
       "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
     },
     {
+      "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+      "bytes": 17210,
+      "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 37404,
+      "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-results-2021-20261013-original.csv",
+      "bytes": 29770,
+      "sha256": "c5043c095664811a29489f36c1a16427ed7965a2919d3d61506b48ea0dbe161a"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 104616,
+      "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-results-2021-20261013-original.csv",
+      "bytes": 78656,
+      "sha256": "f6cf205ce830b97d8208839460d788993a890ddd95890634e5bf88ebddaebf2e"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 133399,
+      "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-period-of-record-original.csv",
+      "bytes": 11265,
+      "sha256": "a82722d08a9592c9f302107149c36073ce0c9b38900d095dbbde262215baff14"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-results-2021-20261013-original.csv",
+      "bytes": 120960,
+      "sha256": "d1260bb7bcf1f1edcedca33bcc5f3ece374a14fa27da1a89ba16aef2885c3e00"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+      "bytes": 110860,
+      "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/retained-assessment-context.json",
+      "bytes": 8285,
+      "sha256": "582f5465696d291e3e9de8d66357227f6f405422609f83dff7dc66c2aa6a87f5"
+    },
+    {
+      "path": "sv833_water_quality.sources.json",
+      "bytes": 65912,
+      "sha256": "a6ed3a91065e388d2dae11f7b9b2eae47267b39126e8d2fbcbc937c86dc95189"
+    },
+    {
       "path": "tools/attach_published_report.py",
       "bytes": 2849,
       "sha256": "563ff9332e781d066c2c74cfb012d9a994a76b4e80f1b3bf2876cc4c2f3c7444"
@@ -1385,6 +1595,14 @@
       "commit": "da78bc3dcd9af746c2ac2af311fcdaee9c34a4e0",
       "manifest": "eighteenmile_paired_sensitivity.sources.json",
       "manifest_sha256": "2c0cb2ca5ce42dc4b701bafb97d8f429e2b3a30709fe0b1c1cac306c2c0be81a"
+    },
+    "sv833": {
+      "commit": "4f14bb26783391c38815d93900de3a359b32785a",
+      "manifest": "sv833_water_quality.sources.json",
+      "manifest_sha256": "a6ed3a91065e388d2dae11f7b9b2eae47267b39126e8d2fbcbc937c86dc95189",
+      "original_result_rows": 610,
+      "original_activities": 56,
+      "original_source_files": 40
     }
   }
 }

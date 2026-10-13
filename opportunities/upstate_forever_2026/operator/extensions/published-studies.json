@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",

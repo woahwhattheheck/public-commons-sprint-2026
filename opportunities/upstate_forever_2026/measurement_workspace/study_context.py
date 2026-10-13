@@ -11,10 +11,23 @@ from pathlib import Path, PurePosixPath
 
 LAKE_STUDY = "scdes-eighteenmile-lake-2023"
 STREAM_STUDY = "scdes-eighteenmile-streams-2020-2025"
+SV833_STUDY = "scdes-sv833-water-quality-2021-2026"
+SV833_ROOT = "application-context/sv833"
 STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "sv833_water_quality.sources.json": {
+        "studies": (SV833_STUDY,),
+        "retained_root": SV833_ROOT,
+        "prefixes": (
+            "observations/sv833_2021_2026/",
+            "source/sv833-water-quality-20261013/",
+        ),
+        "paths": (
+            "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        ),
+    },
     "eighteenmile_stream_nutrient_analysis.sources.json": {
         "studies": (STREAM_STUDY,),
         "retained_root": STREAM_ROOT,
