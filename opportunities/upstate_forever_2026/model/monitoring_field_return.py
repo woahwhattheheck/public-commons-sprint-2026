@@ -83,6 +83,58 @@ def _saved_selection(service, campaign_id, revision_id, plan_revision):
     return document, revision, design, network, events
 
 
+def _sampling_binding(document, monitor, visit, revision, design, station_id):
+    """Keep original requested scope and saved local edits separate from results."""
+    declared = any(
+        link.get("kind") == "monitoring_campaign"
+        and isinstance(link.get("snapshot"), dict)
+        and isinstance(link["snapshot"].get("sampling_protocols"), dict)
+        and design["id"] in link["snapshot"]["sampling_protocols"]
+        for link in document["source_links"])
+    if ("sampling_requirements" not in monitor and "sampling_requirements" not in visit
+            and not declared):
+        return None, []
+    actual_protocol = monitor.get("sampling_requirements")
+    actual_visit = visit.get("sampling_requirements")
+    binding = {
+        "schema": "upstate.monitoring-sampling-field-return/v1",
+        "protocol": deepcopy(actual_protocol), "visit": deepcopy(actual_visit),
+        "original_protocol": None, "original_visit": None, "source_link": None,
+        "current_station_id": station_id,
+        "protocol_status": "unverified", "visit_status": "unverified",
+        "interpretation": "Original requested scope and saved fieldwork edits; actual observations remain separate. No analyte, reporting-limit or flow-goal attainment is inferred.",
+    }
+    try:
+        from .monitoring_sampling_protocol import sampling_source
+        retained = sampling_source(document, monitor, visit)
+        if retained is None:
+            return binding, ["The saved sampling protocol has no exact protected campaign source"]
+        if (retained["campaign_revision"].get("campaign_id") != revision["campaign_id"]
+                or retained["protocol"]["monitoring_design_id"] != design["id"]):
+            raise ContractError("The original sampling protocol belongs to another campaign or design")
+        original, original_visit = retained["protocol"], retained["visit"]
+        binding.update(
+            original_protocol=deepcopy(original), original_visit=deepcopy(original_visit),
+            source_link=deepcopy(retained["source_link"]),
+            protocol_status=("missing" if actual_protocol is None else
+                             "unchanged" if actual_protocol == original else "locally_edited"),
+            visit_status=("missing" if actual_visit is None else
+                          "unchanged" if actual_visit == original_visit else "locally_edited"),
+            source_reference_status=("unchanged" if retained["source_link"]["id"] == monitor.get("method_ref")
+                                     else "locally_edited"),
+        )
+        if (original_visit is None or not isinstance(actual_protocol, dict)
+                or not isinstance(actual_visit, dict)
+                or actual_protocol.get("schema") != "upstate.monitoring-sampling-protocol/v1"
+                or actual_visit.get("schema") != "upstate.monitoring-sampling-visit/v1"
+                or not isinstance(actual_protocol.get("requirements"), list)
+                or not isinstance(actual_visit.get("targets"), list)):
+            return binding, ["Reconcile the saved sampling protocol and its original visit binding before returning this evidence"]
+    except (ContractError, KeyError, TypeError) as error:
+        return binding, [str(error) or "The original sampling protocol source is incomplete"]
+    return binding, []
+
+
 def _rows(document, revision, design, network, events, event_times):
     visits = {row["id"]: row for row in document["visits"]}
     sites = {row["id"]: row for row in document["sites"]}
@@ -120,6 +172,9 @@ def _rows(document, revision, design, network, events, event_times):
                 source_issues.append("The field site coordinates differ from the retained source station")
         # Native events retain the campaign binding, including an unbound note.
         station_id = bound
+        sampling, sampling_issues = _sampling_binding(
+            document, monitor, visit, revision, design, station_id)
+        source_issues.extend(sampling_issues)
         local = activities.get(visit["id"], [])
         samples = [row for row in local if row["kind"] == "sample"]
         other = [row for row in local if row["kind"] != "sample"]
@@ -175,9 +230,20 @@ def _rows(document, revision, design, network, events, event_times):
                 "activities": original_activities, "observations": original_observations,
                 "observer": visit["observer"], "original_source_values": evidence["original_source_values"],
             }
+            if sampling is not None:
+                evidence["sampling_requirements"] = deepcopy(sampling)
+                # Custody revisions change after a successful return/re-import.
+                # Deduplicate the complete scientific scope, not that newer link.
+                meaningful["sampling_requirements"] = _pick(sampling, (
+                    "schema", "protocol", "visit", "original_protocol", "original_visit",
+                    "current_station_id", "protocol_status", "visit_status"))
             if activity is None:
                 meaningful["visit_notes"] = visit["notes"]
             evidence_id = digest(meaningful)
+            legacy_evidence_id = digest({key: value for key, value in meaningful.items()
+                                         if key != "sampling_requirements"})
+            returned_evidence_id = (evidence_id if evidence_id in existing_evidence else
+                                    legacy_evidence_id if legacy_evidence_id in existing_evidence else None)
             payload = {
                 "visit_key": key, "status": status, "occurred_at": occurred_at,
                 "sample_id": activity.get("sample_id") if activity else None,
@@ -194,7 +260,7 @@ def _rows(document, revision, design, network, events, event_times):
                 and not activity.get("custody_ref") and not visit["observer"]
                 and _original_values(activity) == _original_values({"source_values": prior.get("values", {})})
             )
-            action = ("needs_review" if issues else "already_returned" if evidence_id in existing_evidence
+            action = ("needs_review" if issues else "already_returned" if returned_evidence_id is not None
                       else "original_campaign_sample" if original_sample else "return")
             rows.append({
                 "entry_id": entry_id, "visit_id": visit["id"],
@@ -206,6 +272,11 @@ def _rows(document, revision, design, network, events, event_times):
                 "selected": False, "issues": issues, "evidence_id": evidence_id,
                 "payload": payload,
             })
+            if sampling is not None:
+                rows[-1]["sampling_requirements"] = deepcopy(sampling)
+                if returned_evidence_id is not None:
+                    rows[-1]["already_returned_evidence_id"] = returned_evidence_id
+                    rows[-1]["protocol_in_previous_return"] = returned_evidence_id == evidence_id
     return rows
 
 
