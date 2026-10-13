@@ -63,3 +63,49 @@ The complete exported study preserves the original application layout below `app
 A separate derived observed-report recipe prefixes the original source-view paths for this retained study. It records the unchanged original recipe hash, the source manifest and every path mapping. The native source collection exposes that recipe to the existing scientific delivery picker, where it can be selected with other observed reports in the desired order. Original recipe text, analytical values, source CSV/JSON bodies, source figures and original interpretation remain retained alongside it.
 
 Selected exports include the complete HTML/report companion tree, so original links and downloads resolve together. The original report document and the derived native recipe each retain all required source companions.
+
+## Printable scientific figures
+
+The complete current temporal source adds three original-data figures to the
+same native scientific-report selection:
+
+- **Changing sampling coverage, 2021–2025** shows annual routine-record counts,
+  the recurring eleven-station panel and observed versus first-appearing
+  stations. The separate field replicate remains in the original source.
+- **SV-833 calendar support** presents the original all-date medians beside the
+  same-station, same-method common-month comparison. The two selections retain
+  their actual record counts and original calendar memberships.
+- **Same-station discharge context** shows the original 2022 daily flow series,
+  all sixteen microbial sample dates, same-day flow and the preceding seven-day
+  window. Original non-detect limits and flow qualifiers remain visible.
+
+The original figure gallery is also registered as its own document source.
+Opening that single document retains its vector downloads, source-point table
+and reproduction files together. The earlier original temporal explorer and
+the native observed-report recipe remain separately available.
+
+These figures retain the scientific author's complete numeric specification,
+source-point table, rendered SVGs and reproducible source. The ordinary
+scientific renderer uses that retained specification for the PDF and the
+corresponding original SVGs for its HTML. Selecting the native temporal report
+alongside other source reports preserves the existing order and original source
+bindings.
+
+Install the complete current family, then import the maintained utility
+microbial builtin in **Published studies**. A new complete source bundle creates
+a new immutable study version. Previously imported versions remain available
+with their original reports and files. The primary agency-record tables and
+their station/date/method filters continue to use the original 730 results.
+
+To produce the figure-bearing scientific delivery, select the study's temporal
+observed-report source in the existing scientific-report picker. Keep any other
+selected reports in their intended order. The original explorer and figure
+report have their own retained full-source scope; filtering primary study rows
+does not silently recalculate either source report.
+
+The complete study ZIP and selected-report source tree retain the figure
+specification, SVGs, source-point CSV, original recipe and original application
+layout together. The path-derived study recipe points to those same unchanged
+members. It does not rewrite the original scientific specification, its plotted
+values, interval bounds or source-row identities. Use the normal export and
+reopen controls to carry that exact study version to another Workspace.
