@@ -991,6 +991,12 @@ class Operator:
         path, entry = self.ws(workspace).source_file(collection, source)
         result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
         if entry["kind"] == "table":
+            if isinstance(entry.get("client_source"), dict) and not entry.get("field_projection"):
+                from model.client_source_inspection_report import retained_table_preview
+                retained = retained_table_preview(self.ws(workspace), entry)
+                if retained is not None:
+                    result.update(retained)
+                    return result
             import csv
             with path.open(encoding="utf-8-sig", newline="") as original:
                 reader = csv.DictReader(original)
