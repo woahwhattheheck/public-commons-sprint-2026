@@ -22,7 +22,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     <button type="button" data-report-task hidden>Open saved operation</button>
     <button type="button" data-report-retry hidden>Resume original request</button>
     <button type="button" data-report-open hidden>Open prepared report form</button></div>
-    <p data-report-status class="small" role="status" aria-live="polite"></p>
+    <p data-report-status class="small" role="status" aria-live="polite"></p>\n    <p data-report-prepared class="small"></p>
     <div class="row"><label>Saved monitoring report sources<select data-report-saved><option value="">Choose a retained report source</option></select></label>
     <button type="button" data-report-refresh>Refresh saved sources</button>
     <button type="button" data-report-reopen>Open saved report source</button></div>
@@ -34,7 +34,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   let operation=saved.operation||null, prepared=saved.prepared||null;
   let chosenDelivery=saved.delivery_id||'', selectedSaved=saved.saved_id||'';
   let generation=0, detached=false, reading=false, submitting=false, requestSequence=0;
-  let selectionKey='', sourceRows=[], lastTaskState='', lastDeliveryList='';
+  let selectionKey='', sourceRows=[], lastTaskState=operation?.handled_complete_id===operation?.task_id&&operation?.task_id?operation.task_id+':complete':'', lastDeliveryList='';
   const current=()=>!detached&&node.isConnected&&getState()?.workspace_key===workspaceKey;
   const status=(text,error=false)=>{find('status').textContent=text;find('status').dataset.error=String(error);};
   function persist(){saveSaved(storageKey,{operation,prepared,delivery_id:chosenDelivery,saved_id:selectedSaved});}
@@ -66,6 +66,10 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     find('task').hidden=!operation?.task_id;
     find('retry').hidden=!operation||!!operation.task_id||submitting;
     find('open').hidden=!prepared?.source||!prepared?.delivery_selection;
+    const retained=prepared?.selection||{};
+    find('prepared').textContent=prepared?.source
+      ? 'Prepared source: '+(prepared.title||prepared.id)+(retained.campaign_id?' · campaign '+retained.campaign_id+' · exact revision '+retained.expected_revision_id:retained.plan_id?' · saved design '+retained.plan_id:'')
+      : '';
     find('reopen').disabled=!selectedSaved||reading;
     const rows=getState()?.data?.deliveries||[];
     const signature=JSON.stringify(rows.map(row=>[row.id,row.title]));
@@ -96,8 +100,9 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     if(task.state==='complete'){
       if(!task.result?.source||!task.result?.delivery_selection)
         throw Error('The completed report operation has no retained source selection.');
-      prepared=clone(task.result);
       if(identity!==lastTaskState){
+        prepared=clone(task.result);
+        operation.handled_complete_id=task.id;
         status('Scientific report source retained. Open the prepared report form to review its native runs and delivery settings.');
         showFiles(task._downloads);
         void refreshSources(false);
@@ -199,7 +204,9 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     renderSelection();
     const task=(getState()?.tasks||[]).find(row=>row.id===operation?.task_id);
     if(task){
-      if(task.state==='complete'&&!task.result?.source){void readTask();}
+      if(task.state==='complete'&&!task.result?.source){
+        if(lastTaskState!==task.id+':complete')void readTask();
+      }
       else{try{acceptTask(task);}catch(error){fail(error);}}
     }
   }
