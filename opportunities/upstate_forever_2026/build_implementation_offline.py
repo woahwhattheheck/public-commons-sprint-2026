@@ -13,6 +13,7 @@ PARTS = {
     "core": "operator/web/implementation_core.mjs",
     "forms": "operator/web/implementation_forms.mjs",
     "results": "operator/web/implementation_results.mjs",
+    "briefing": "operator/web/implementation_briefing.mjs",
     "ui": "operator/web/implementation.mjs",
     "css": "operator/web/implementation.css",
     "catalog": "operator/web/implementation_catalog.json",
@@ -46,10 +47,12 @@ def build(application: Path, output: Path | None = None) -> dict:
     script = _module(sources["core"], "IMPLEMENTATION_CORE", {})
     script += _module(sources["forms"], "IMPLEMENTATION_FORMS", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
     script += _module(sources["results"], "IMPLEMENTATION_RESULTS", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
+    script += _module(sources["briefing"], "IMPLEMENTATION_BRIEFING", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
     script += _module(sources["ui"], "IMPLEMENTATION_UI", {
         "./implementation_core.mjs": "IMPLEMENTATION_CORE",
         "./implementation_forms.mjs": "IMPLEMENTATION_FORMS",
         "./implementation_results.mjs": "IMPLEMENTATION_RESULTS",
+        "./implementation_briefing.mjs": "IMPLEMENTATION_BRIEFING",
     })
     script += "\nconst catalog = " + json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c") + ";\n"
     script += "window.implementationWorkbench = IMPLEMENTATION_UI.mountPortableImplementation(document.getElementById('implementation-root'), catalog);\n"
