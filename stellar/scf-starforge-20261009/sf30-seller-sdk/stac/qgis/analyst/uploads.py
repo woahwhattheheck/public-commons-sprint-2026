@@ -44,7 +44,7 @@ class Uploads:
         require(isinstance(value, dict) and set(value) <= {"uploadId", "kind", "files"},
                 "ANALYST_UPLOAD", "Use a complete upload manifest.")
         identity = value.get("uploadId")
-        require(value.get("kind") in ("source", "project", "field") and isinstance(value.get("files"), list) and
+        require(value.get("kind") in ("source", "project", "field", "evidence") and isinstance(value.get("files"), list) and
                 0 < len(value["files"]) <= 100000, "ANALYST_UPLOAD",
                 "Select an original source folder, returned field folder or one complete project ZIP.")
         files, seen, total = [], set(), 0
@@ -69,6 +69,9 @@ class Uploads:
         if value["kind"] == "project":
             require(len(files) == 1 and files[0]["path"].lower().endswith(".zip"),
                     "ANALYST_PROJECT_UPLOAD", "Select one complete original project archive.")
+        elif value["kind"] == "evidence":
+            require(len(files) == 1 and 0 < total <= 128 * 1024 * 1024,
+                    "EVIDENCE_SOURCE_UPLOAD", "Select one complete original evidence file of up to 128 MiB.")
         elif value["kind"] == "source":
             require(bool({"qgis-receiving.json", "vector-export.json", "postgis-receiving.json",
                           "parcel-source-receiving.json", "parcel-map-source.json"} & seen),
@@ -171,7 +174,7 @@ class Uploads:
                 files.append({"path": raw["path"], **measured})
             result = {"uploadId": identity, "kind": manifest["kind"],
                       "directory": str(self.content_root(manifest)), "files": files}
-            if manifest["kind"] == "project":
+            if manifest["kind"] in ("project", "evidence"):
                 result.update(file=str(self.content_root(manifest) / files[0]["path"]), sha256=files[0]["sha256"])
             retain_bytes(root, "completed.json", json_bytes(result))
             return result

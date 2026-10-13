@@ -17,6 +17,7 @@ from .portable_implementation import report_edition
 from . import gauge_study_receiving
 from . import ensemble_study_receiving
 from . import report_review_study_receiving
+from . import report_changes_study_transfer
 from . import observation_comparability_study_transfer as comparability_transfer
 from . import observed_landcover_receiving
 from . import study_report_transfer
@@ -56,6 +57,7 @@ def _summary(value):
         **gauge_study_receiving.summary(identity),
         **ensemble_study_receiving.summary(identity),
         **report_review_study_receiving.summary(identity),
+        **report_changes_study_transfer.receiving_summary(identity),
         **comparability_transfer.summary(identity),
         **observed_landcover_receiving.summary(identity),
     }
@@ -91,6 +93,8 @@ def detail(workspace, key):
         report_lineage="scientific_report_sources" in identity,
         implementation_lineage="implementation_report_sources" in identity,
         customer_review_lineage="customer_reviews" in identity,
+        implementation_source_keys={(row["source_collection_id"], row["source_id"])
+                                    for row in identity.get("implementation_report_sources", [])},
         report_source_keys={(row["source_collection_id"], row["source_id"])
                             for row in identity.get("scientific_report_sources", [])},
     ).resolve(identity.get("investigation_dependencies", ()))
@@ -152,10 +156,32 @@ def detail(workspace, key):
                     "captured_with_study": deployment_id in captured["native_plan"].get("retained_deployment_ids", []),
                     "members": members,
                 })
+        if native is not None and row.get("laboratory") is not None:
+            from .implementation_lab_dispatch import dispatch_files
+            lab = row["laboratory"]
+            package, package_files = dispatch_files(workspace, native["plan_id"], lab["dispatch_id"])
+            lab["label"] = package["label"]
+            lab["laboratory"] = package["laboratory"]
+            lab["prepared_at"] = package["prepared_at"]
+            lab["request_members"] = []
+            for descriptor, path in package_files:
+                relative = path.relative_to(closure.root).as_posix()
+                closure.add_file(relative, descriptor)
+                lab["request_members"].append({"path": relative, "bytes": descriptor["bytes"],
+                                               "sha256": descriptor["sha256"]})
+            report_prefix = "implementation/laboratory-reports/" + lab["operation_id"]
+            original = closure.read(report_prefix + "/import.json")
+            lab["report_members"] = deepcopy(original["files"])
+            for name in ("identity.json", "import.json"):
+                relative = report_prefix + "/" + name
+                closure.read(relative)
+                lab["report_members"].append({"path": relative, **{
+                    field: closure.files[relative][field] for field in ("bytes", "sha256")}})
         result["field_sources"].append(row)
     gauge_study_receiving.augment(closure, retained, result)
     ensemble_study_receiving.augment(closure, retained, result)
     report_review_study_receiving.augment(closure, retained, result)
+    report_changes_study_transfer.augment_receiving(closure, retained, result)
     comparability_transfer.augment(closure, retained, result)
     observed_landcover_receiving.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.

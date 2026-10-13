@@ -690,29 +690,12 @@ def operate_locked(args, output):
     record["backup"] = saved
     save(backup=saved, archive_edition_id=edition_id, archive_editions=records)
     restored_root = output / "reopened" / edition_id
-    if record.get("restored"):
-        restored = record["restored"]
-    elif restored_root.exists():
-        def recover_restored():
-            for name, original in manifest["members"].items():
-                actual = restored_root / name
-                if (actual.is_symlink() or not actual.is_file()
-                        or actual.stat().st_size != original["bytes"]
-                        or sha256(actual) != original["sha256"]):
-                    raise ValueError("Existing receiving member differs: " + name)
-            original_project = read_json(restored_root / "workspace" / "workspace.json")
-            if original_project != manifest["project"]:
-                raise ValueError("Existing receiving project differs")
-            return {
-                "schema": "upstate.scientific-workspace-receiving/v1",
-                "project": original_project, "directory": str(restored_root),
-                "workspace": str(restored_root / "workspace"),
-                "application": str(restored_root / "application"),
-                "archive_sha256": saved["sha256"], "members": len(manifest["members"]),
-                "selection": manifest["selection"], "identity": "MATCH",
-                "recovered_existing_receiving": True,
-            }
-        restored = phase("recover_published_receiving", recover_restored)
+    if restored_root.exists() or restored_root.is_symlink():
+        # Reconcile the receiver's durable completion, including its native
+        # registration and full returned artifact descriptors. A prior outer
+        # receipt alone does not establish this archive/destination identity.
+        restored = phase("recover_published_receiving", lambda: portable.resume_restore(
+            archive, restored_root, expected_archive_sha256=saved["sha256"]))
     else:
         restored_root.parent.mkdir(parents=True, exist_ok=True)
         restored = phase("restore", lambda: portable.restore(archive, restored_root))

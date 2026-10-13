@@ -39,6 +39,8 @@ In the destination Workspace:
 
 The completed task and its download/source buttons remain available after reopening the operator. Ordinary task recovery reuses the same selected original file. The receiving Workspace owns the imported source; the source retains the donor's original project, report, plan and table identities. Earlier report editions retain their original content.
 
+Before presenting the handover, open and use this exact outgoing edition as its recipient would. Personally view the generated scientific HTML and every relevant PDF page, inspect the original CSV/JSON attachments and maps in their normal viewers, and open the ZIP’s usable contents. Operate the important source, report-only/add-to-draft, download and receiving controls at the actual presentation width and a narrow width where relevant; receive and reopen the same exported source and any delivered editable Study. Play and listen to any delivered audiovisual attachment. Fix unreadable tables, clipped or overflowing content and broken controls directly. This is Bryce’s standing all-attachments instruction in the application’s `AGENTS.md`: source inspection or captured-but-unviewed screenshots do not replace seeing and using the actual result. Keep this focused on the changed output and continue the original delivery.
+
 The same operation is available to a native receiver through the maintained model API:
 
 ```python
@@ -69,10 +71,10 @@ This route first uses the maintained archived-report receiver to verify the full
 From the actual application root, the corresponding command is:
 
 ```sh
-python -B -m model.community_report_handover \\
-  --workspace ACTUAL_RECEIVING_WORKSPACE pack-archive ORIGINAL_REPORT_ZIP \\
-  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \\
-  --original-project-id ORIGINAL_PROJECT_UUID \\
+python -B -m model.community_report_handover \
+  --workspace ACTUAL_RECEIVING_WORKSPACE pack-archive ORIGINAL_REPORT_ZIP \
+  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \
+  --original-project-id ORIGINAL_PROJECT_UUID \
   --report-sha256 ORIGINAL_REPORT_JSON_SHA256
 ```
 
@@ -196,3 +198,12 @@ For an explicit mapping, each plan field retains its original received column na
 These sections read the saved import record directly. They do not parse the CSV again or substitute current editor values for the original intake. Reports without explicit mapping metadata keep their original source identity and recorded rows without inferring a mapping. The unchanged **received-interventions.csv** and **INTERVENTION_IMPORT.json**, complete original report ZIP and saved plan travel through the existing one-file source handover, ordered composer, scientific exports and independent reopening. A new producer source hash creates its own scientific source edition while earlier saved reports and sources retain their original identities.
 
 For the current mapped-CSV receiving course, save the actual mapped programme and format7 report, prepare that report's scientific source, and operate either **Open this report only** or **Add to current report**. In the generated PDF/HTML, compare a mapped field and its recorded CSV column/line with the attached original CSV and import JSON, then open the exported report and source handover in the existing receiving Workspace. Use the same native case and original files; the intake, model and renderer remain their existing maintained implementations.
+
+
+## Opening retained Community work while reads finish
+
+Communities uses the latest explicit opening choice across original table details, block groups, comparisons, saved plans, reports, revision handovers and report-source handovers. If you select another item or tab while an earlier read is pending, the current choice stays selected. Returning to the same Workspace after visiting another also starts a new opening context. A delayed earlier response cannot replace a newer form, preview, report or saved Community selection.
+
+Plan and report forms retain their original Workspace, project and actual form body through saving. Original CSV mapping, regional context, immutable revision IDs and queued native actions keep their existing meanings. Ordinary background refresh and the completed task's own refresh remain available; they do not count as a new user selection. A current read error remains actionable, while an obsolete response cannot cover the current view with its old error.
+
+In the existing equipped receiving course, operate these real selections using the actual saved plans and reports. Open another record before the first read completes, switch away and back, open a revision or handover, then save the chosen plan, use both scientific composer choices, download and reopen its original files. Personally view the resulting populated desktop/narrow screens and all affected exported attachments, repairing actual product defects within the same course. This changes navigation continuity; it does not start another scientific calculation.

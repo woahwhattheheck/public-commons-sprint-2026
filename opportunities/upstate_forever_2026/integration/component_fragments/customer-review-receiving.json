@@ -7,16 +7,23 @@
       "paths": [
         "source_tools/receive_scientific_report_review.py",
         "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
-        "integration/component_fragments/customer-review-receiving.json"
+        "integration/component_fragments/customer-review-receiving.json",
+        "model/scientific_report_capture.py",
+        "model/scientific_report_editions.py",
+        "model/observed_report_render.py"
       ],
       "requires": [
-        "study-transfer"
+        "study-transfer",
+        "scientific-report-editions"
       ]
     },
     "study-transfer": {
       "paths": [
         "source_tools/receive_scientific_report_review.py",
-        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md"
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+        "model/scientific_report_capture.py",
+        "model/scientific_report_editions.py",
+        "model/observed_report_render.py"
       ]
     }
   },

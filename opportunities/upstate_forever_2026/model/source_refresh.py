@@ -687,6 +687,22 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
         retained_path = directory / "comparison.json"
         if retained_path.exists():
             retained = read_json(retained_path)
+            # The original coverage loop used the comparison variable for its
+            # final count name. Recover only that exact predecessor after the
+            # normal reader verifies every original context/output descriptor.
+            if retained.get("id") == "neither_valid_cells":
+                from .source_refresh_comparison import validate
+                from .reuse import copy_verified
+                repaired = {**retained, "id": key}
+                validate(workspace, repaired, expected_id=key)
+                if repaired.get("source_refresh_context") != context:
+                    raise ValueError("The retained predecessor belongs to another source update")
+                original_descriptor = describe_file(directory, retained_path)
+                copy_verified(directory, original_descriptor, directory,
+                              path="history/coverage-key-predecessor-" +
+                                   original_descriptor["sha256"] + ".json")
+                atomic_json(retained_path, repaired)
+                retained = repaired
             alternatives = retained.get("alternatives") or []
             if (retained.get("schema") != "upstate.run-comparison/v1"
                     or retained.get("id") != key
@@ -758,11 +774,11 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
                     common = left_valid & right_valid
                     baseline_only, alternative_only = left_valid & ~right_valid, right_valid & ~left_valid
                     neither = ~(left_valid | right_valid)
-                    for key, mask in (("common_valid_cells", common),
+                    for coverage_key, mask in (("common_valid_cells", common),
                                       ("baseline_only_cells", baseline_only),
                                       ("alternative_only_cells", alternative_only),
                                       ("neither_valid_cells", neither)):
-                        coverage[key] += int(np.count_nonzero(mask))
+                        coverage[coverage_key] += int(np.count_nonzero(mask))
                     coverage["baseline_only_mass"] += float(np.sum(left_data[baseline_only], dtype=np.float64))
                     coverage["alternative_only_mass"] += float(np.sum(right_data[alternative_only], dtype=np.float64))
             if not coverage["common_valid_cells"]:

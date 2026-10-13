@@ -1,5 +1,9 @@
 # Owner-directed rendered-product inspection
 
+<!-- ecosystem-current-owner-direction:begin -->
+Read [CURRENT_OWNER_DIRECTION.md](CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`, for the active Ecosystem demo/presentation/build direction. Execute the prepared simulated model on the verified native runtime and show actual outputs and editable handoff. Carry the complete brief into current child/provider/cloud work orders and handoffs, include its path/version with the next result, and relay it onward at the actual coordination surface. Keep active compute and the broad product build moving; preserve the October 13, 10 a.m. Eastern / 14:00 UTC cutoff and every existing owner control.
+<!-- ecosystem-current-owner-direction:end -->
+
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
 Scope: owner-controlled work across providers, local and cloud runtimes, and current and future workers. Existing owner controls remain in force.
 

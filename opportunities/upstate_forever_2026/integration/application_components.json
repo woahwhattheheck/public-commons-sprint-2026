@@ -175,10 +175,26 @@
       "title": "assessment context",
       "paths": [
         "model/assessment_report_context.py",
-        "operator/extensions/assessment-context.json"
+        "operator/extensions/assessment-context.json",
+        "source/water-quality-assessments/20261013/ASSESSMENT_PORTFOLIO.md",
+        "source/water-quality-assessments/20261013/assessment-portfolio-matches.csv",
+        "source/water-quality-assessments/20261013/assessment-portfolio-records.csv",
+        "source/water-quality-assessments/20261013/assessment-portfolio.json",
+        "source/water-quality-assessments/20261013/assessment-portfolio.recipe.json",
+        "source/water-quality-assessments/20261013/assessment-portfolio.sources.json",
+        "source/water-quality-assessments/20261013/assessment_portfolio.mjs",
+        "source/water-quality-assessments/20261013/inputs/303d-2024-pdf-table-normalized.json",
+        "source/water-quality-assessments/20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+        "source/water-quality-assessments/20261013/inputs/domain-huc12s.json",
+        "source/water-quality-assessments/20261013/inputs/tmdl-attainment-native-20260728.json",
+        "source/water-quality-assessments/20261013/source-selection-boundary.json",
+        "source/water-quality-assessments/20261013/sources.json"
       ],
       "requires": [
         "core"
+      ],
+      "source_manifests": [
+        "source/water-quality-assessments/20261013/assessment-portfolio.sources.json"
       ]
     },
     "calibration": {
@@ -781,7 +797,9 @@
         "model/gis_vector_review.py",
         "operator/gis_vector_reviews.py",
         "operator/extensions/gis-vector-reviews.json",
-        "AGENTS.md"
+        "AGENTS.md",
+        "model/gis_review_raster.py",
+        "model/gis_review_raster_view.html"
       ],
       "requires": [
         "core",

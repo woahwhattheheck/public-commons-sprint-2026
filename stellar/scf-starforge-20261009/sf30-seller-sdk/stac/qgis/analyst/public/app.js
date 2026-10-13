@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Original QGIS analyst workspace. Every mutation retains its original request.
 import {renderParcels, acceptParcelResult, acceptParcelCaptureResult} from './parcels.js';
+import {createEvidenceWorkbench} from './evidence.js';
+const evidenceStyles = document.createElement('link');
+evidenceStyles.rel = 'stylesheet'; evidenceStyles.href = '/evidence.css';
+document.head.append(evidenceStyles);
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 const clean = value => value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -13,6 +17,7 @@ let renderEpoch = 0, pollTimer, sourcePage = 0, assetPage = 0, historyPage = 0, 
 let sourceRows, assetRows, comparison, fieldReview, nativeInspection, mapView, featureView;
 let currentTab = 'sources', sourceId = '', selectedScene = '', uploadRunning = false, uploadStopRequested = false;
 const consumedResults = new Set();
+let evidenceWorkbench=null;
 const AUTH = 'X-Starforge-Qgis-Workspace';
 let token = /^#[a-f0-9]{64}$/.test(location.hash) ? location.hash.slice(1) : sessionStorage.getItem('qgis-token:' + location.origin);
 if (/^#[a-f0-9]{64}$/.test(location.hash)) {
@@ -237,17 +242,18 @@ function renderOperation() {
   host.hidden = !body.length; host.replaceChildren(...body);
 }
 async function render() {
+  if(currentTab!=='evidence') evidenceWorkbench?.detach();
   const epoch = ++renderEpoch, host = $('#content');
   // A reopened form must not accept edits into the previous draft while its
   // current source and saved decision are still being read.
   host.inert = true;
   host.setAttribute('aria-busy', 'true');
   try {
-    $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
+    $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'evidence', 'transfers', 'history'].map(tab =>
       button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
         {'aria-current': currentTab === tab ? 'page' : undefined})));
     const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
-      field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
+      field: fieldPane, parcels: parcelsPane, evidence: evidencePane, transfers: transfersPane, history: historyPane})[currentTab]();
     if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
     renderOperation();
   } finally {
@@ -258,6 +264,15 @@ async function render() {
   }
 }
 
+
+async function evidencePane() {
+  evidenceWorkbench ||= createEvidenceWorkbench({
+    getState:()=>state, getActor:()=>draft.actor, getCapabilities:()=>capabilities, getDirectory:()=>connection.directory,
+    request, notice, refreshState,
+    openTab:async tab=>{currentTab=tab;setDraft('tab',tab);await render();}
+  });
+  return evidenceWorkbench.pane();
+}
 
 async function parcelsPane() {
   if (!draft.parcels || typeof draft.parcels !== 'object' || Array.isArray(draft.parcels)) draft.parcels = {};
@@ -950,7 +965,7 @@ async function initialize() {
   storageKey = 'starforge-qgis-analyst:' + launch.workspaceId;
   try { draft = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { draft = {}; }
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) draft = {};
-  currentTab = ['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].includes(draft.tab) ? draft.tab : 'sources';
+  currentTab = ['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'evidence', 'transfers', 'history'].includes(draft.tab) ? draft.tab : 'sources';
   $('#actor-control').replaceChildren(label('Responsible analyst', inputValue(draft.actor || '', value => setDraft('actor', value), {autocomplete: 'name'})));
   $('#global-actions').replaceChildren(button('Refresh saved workspace', () => refreshState()),
     button('Export browser draft', () => jsonDownload('qgis-analyst-draft.json', {schema: 'starforge.stac-qgis-analyst-draft.v1', workspaceId: state.id, draft})));

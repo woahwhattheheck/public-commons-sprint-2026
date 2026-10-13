@@ -1,0 +1,254 @@
+{
+  "schema": "upstate.observation-sources/v1",
+  "title": "Three and Twenty Creek retained full original cohort",
+  "record_count": 766,
+  "activity_count": 65,
+  "sample_support": "Original South Carolina DES routine stream-water sampling activities; full retained bodies precede exact result-ID selection",
+  "sources": [
+    {
+      "path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 44491,
+      "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "date_start": "2026-01-21",
+      "date_end": "2026-06-01",
+      "station_ids": [
+        "21SC60WQ_WQX-RS-26250"
+      ],
+      "characteristics": [
+        "Alkalinity, total",
+        "Biochemical oxygen demand, standard conditions",
+        "Conductivity",
+        "Depth",
+        "Dissolved oxygen (DO)",
+        "Escherichia coli",
+        "Kjeldahl nitrogen",
+        "Nitrate + Nitrite",
+        "Phosphorus",
+        "Temperature, water",
+        "Total suspended solids",
+        "Turbidity",
+        "pH"
+      ],
+      "record_count": 87,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835",
+          "record_count": 5,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5",
+          "record_count": 87,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    },
+    {
+      "path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 11086,
+      "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "date_start": "2026-01-14",
+      "date_end": "2026-01-14",
+      "station_ids": [
+        "21SC60WQ_WQX-SV-735"
+      ],
+      "characteristics": [
+        "Conductivity",
+        "Depth",
+        "Dissolved oxygen (DO)",
+        "Escherichia coli",
+        "Kjeldahl nitrogen",
+        "Nitrate + Nitrite",
+        "Phosphorus",
+        "Temperature, water",
+        "Turbidity",
+        "pH"
+      ],
+      "record_count": 19,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c",
+          "record_count": 1,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70",
+          "record_count": 19,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    },
+    {
+      "path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 26502,
+      "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "date_start": "2026-01-07",
+      "date_end": "2026-07-08",
+      "station_ids": [
+        "21SC60WQ_WQX-SV-111"
+      ],
+      "characteristics": [
+        "Alkalinity, total",
+        "Biochemical oxygen demand, standard conditions",
+        "Conductivity",
+        "Depth",
+        "Dissolved oxygen (DO)",
+        "Escherichia coli",
+        "Kjeldahl nitrogen",
+        "Nitrate + Nitrite",
+        "Phosphorus",
+        "Temperature, water",
+        "Turbidity",
+        "pH"
+      ],
+      "record_count": 50,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f",
+          "record_count": 3,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189",
+          "record_count": 50,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    },
+    {
+      "path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 133399,
+      "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "date_start": "2021-01-20",
+      "date_end": "2026-06-24",
+      "station_ids": [
+        "21SC60WQ_WQX-SV-833"
+      ],
+      "characteristics": [
+        "Conductivity",
+        "Depth",
+        "Dissolved oxygen (DO)",
+        "Temperature, water",
+        "Turbidity",
+        "pH"
+      ],
+      "record_count": 342,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Physical&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4",
+          "record_count": 56,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1",
+          "record_count": 606,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    },
+    {
+      "path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 104616,
+      "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "date_start": "2021-01-20",
+      "date_end": "2026-04-01",
+      "station_ids": [
+        "21SC60WQ_WQX-SV-833"
+      ],
+      "characteristics": [
+        "Ammonia",
+        "Kjeldahl nitrogen",
+        "Nitrate + Nitrite",
+        "Nitrogen",
+        "Phosphorus"
+      ],
+      "record_count": 208,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Nutrient&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4",
+          "record_count": 56,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1",
+          "record_count": 606,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    },
+    {
+      "path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "format": "wqp-narrow-result-csv",
+      "bytes": 37404,
+      "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "date_start": "2021-01-20",
+      "date_end": "2026-06-24",
+      "station_ids": [
+        "21SC60WQ_WQX-SV-833"
+      ],
+      "characteristics": [
+        "Escherichia coli"
+      ],
+      "record_count": 60,
+      "source_url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Microbiological&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "metadata_sources": [
+        {
+          "role": "wqp-activity-csv",
+          "path": "original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4",
+          "record_count": 56,
+          "source_url": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        },
+        {
+          "role": "wqp-result-limit-csv",
+          "path": "original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1",
+          "record_count": 606,
+          "source_url": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+        }
+      ]
+    }
+  ]
+}

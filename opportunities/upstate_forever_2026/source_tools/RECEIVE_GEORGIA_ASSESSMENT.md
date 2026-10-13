@@ -76,3 +76,10 @@ Preserve the source import, saved view and completed report with the existing wh
 The source's full publisher Savannah Basin has124 Supporting,143 Not Supporting and28 Assessment Pending reaches, with50 distinct Category5/5R listings. Those whole-basin counts include lower and coastal waters. The completed geographic output supplies the actual project subset.
 
 Overall assessment is a reach-level summary across potentially different designated uses and pollutants. Hartwell's Fishing/PCB impairment coexists with Drinking Water and Recreation uses meeting their criteria. All category, cause, use and source notes remain associated with their original row. These listing records provide assessment context; nutrient and sediment model comparisons use the separate original measured targets and actual model outputs.
+
+
+## Save and independently reopen the scientific report
+
+Continue this same command with `--report` to publish the source through the maintained saved scientific-report edition, report-file ZIP, selected Study archive and independent archived-application reopening. Add `--report-with-operation` for the other completed jurisdiction's original operation JSON; `--report-selection` preserves an existing ordered source list.
+
+For already completed source operations, run `python -B -m source_tools.assessment_report_receiving` with their exact original operation files. The complete command, resumption behavior, scientific interpretation and actual rendered-product course are in [ASSESSMENT_REPORT_RECEIVING.md](ASSESSMENT_REPORT_RECEIVING.md). Both entry points use the same original report publisher and Study transfer implementation.

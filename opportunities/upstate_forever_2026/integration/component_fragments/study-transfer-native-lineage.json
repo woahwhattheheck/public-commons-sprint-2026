@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "study-transfer-native-lineage",
-  "source_reference": "ES26 native lineage closure, composed at PR3842/a774fd2cec90235d5730a522d503acc58c90bde8. Select original Implementation store, schema, report, observations, outcomes and field crew offline source members directly; keep original Conservation editor closure. The full Implementation desk depends on scientific-report-editions, so Study's native readers do not depend on that higher-level desk.",
+  "source_reference": "ES26 native lineage closure, composed at PR3842/a774fd2cec90235d5730a522d503acc58c90bde8. Select original Implementation store, schema, report, observations, outcomes and field crew offline source members directly; keep original Conservation editor closure. The full Implementation desk depends on scientific-report-editions, so Study's native readers do not depend on that higher-level desk. Laboratory scientific sources additionally retain their original dispatch request, frozen result reconciliation and completed report-source operation; native reader dependencies remain direct paths, without a dependency on the full desk.",
   "extend_components": {
     "study-transfer": {
       "paths": [
@@ -41,7 +41,10 @@
         "operator/web/implementation_site_visit.mjs",
         "operator/web/implementation.mjs",
         "operator/web/implementation.css",
-        "operator/web/implementation_catalog.json"
+        "operator/web/implementation_catalog.json",
+        "model/implementation_lab_dispatch.py",
+        "model/implementation_dispatch_report.py",
+        "model/implementation_lab_results.py"
       ],
       "requires": []
     }

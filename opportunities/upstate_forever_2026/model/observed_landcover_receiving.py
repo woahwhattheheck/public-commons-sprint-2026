@@ -135,5 +135,7 @@ def augment(closure, retained, result):
             }
         elif captured["relationship"] != "external_project":
             raise ValueError("Choose a supported original watershed source relationship.")
+        from .observed_landcover_local_copy import list_copies
+        row["local_copies"] = list_copies(closure.workspace, study_id=retained["id"], source=source)
         result["observed_landcover_sources"].append(row)
     return result

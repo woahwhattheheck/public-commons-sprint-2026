@@ -70,7 +70,8 @@
     "merchant-console",
     "worldbank-programmes",
     "grant-workspace",
-    "merchant-provider-grant-workspaces"
+    "merchant-provider-grant-workspaces",
+    "operator-discovery"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
@@ -120,7 +121,8 @@
     "stellar-forge/mcp-merchant-operator/examples/worldbank-native-receiving.mjs",
     "stellar-forge/mcp-merchant-operator/examples/worldbank-reference-capture.json",
     "stellar-forge/developer-site/grant-chapters/worldbank-customer-programmes.md",
-    "stellar-forge/developer-site/grant-products/worldbank-customer-programmes.json"
+    "stellar-forge/developer-site/grant-products/worldbank-customer-programmes.json",
+    "products/x402api-merchant-workspace/process_family.py"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"

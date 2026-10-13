@@ -256,9 +256,12 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    entry={request:{workspace,action:'chemistry.run',payload,operation_id:'measured-chemistry-'+crypto.randomUUID()},prepared_at:new Date().toISOString()};
    try{localStorage.setItem(key,JSON.stringify(entry));}catch{throw Error('The browser cannot retain this operation before sending; enable storage or export the native request.');}
   }
-  let task=entry.task_id?await host.api('/api/task?id='+encodeURIComponent(entry.task_id)):await host.api('/api/actions',{method:'POST',body:entry.request});
+  const retainedTaskId=entry.task_id;
+  let task=retainedTaskId?await host.api('/api/task?id='+encodeURIComponent(retainedTaskId)):await host.api('/api/actions',{method:'POST',body:entry.request});
+  if(retainedTaskId&&task.id!==retainedTaskId)throw Error('The retained native task identity differs from its original journal.');
   if(task.workspace!==workspace||task.action!=='chemistry.run'||canonical(task.payload)!==canonical(payload))throw Error('The retained native task belongs to another request.');
   entry.task_id=task.id;entry.state=task.state;localStorage.setItem(key,JSON.stringify(entry));
+  if(!active())return;
   if(['failed','interrupted','cancelled'].includes(task.state)){
    task=await host.api('/api/task/resume',{method:'POST',body:{id:task.id}});
    entry.state=task.state;localStorage.setItem(key,JSON.stringify(entry));

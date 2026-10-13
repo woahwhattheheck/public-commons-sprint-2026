@@ -16,7 +16,8 @@
         "operator/web/observation_comparability.mjs",
         "operator/web/observation_comparability.css",
         "model/observation_comparability_study_transfer.py",
-        "operator/web/comparability_received_studies.mjs"
+        "operator/web/comparability_received_studies.mjs",
+        "source_tools/receive_observation_comparability.py"
       ],
       "requires": [
         "observed-context",
@@ -42,7 +43,8 @@
         "operator/web/observation_comparability.mjs",
         "operator/web/observation_comparability.css",
         "model/observation_comparability_study_transfer.py",
-        "operator/web/comparability_received_studies.mjs"
+        "operator/web/comparability_received_studies.mjs",
+        "source_tools/receive_observation_comparability.py"
       ]
     }
   }

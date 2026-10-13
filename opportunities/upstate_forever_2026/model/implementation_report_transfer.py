@@ -564,6 +564,135 @@ def _native_source_receipt(closure, collection_id, entry, key, identity, members
     closure.tree(prefix)
 
 
+
+def _dispatch_source_identity(closure, entry):
+    """Resolve the retained laboratory recipe without recomputing its results."""
+    metadata = entry.get("metadata", {})
+    if not str(entry.get("id", "")).startswith("laboratory-report-"):
+        return None
+    recipe, members = _recipe_members(closure, entry)
+    identity = recipe.get("implementation_dispatch_report_identity")
+    if (not isinstance(identity, dict)
+            or identity.get("schema") != "upstate.implementation-lab-dispatch-report-identity/v1"):
+        raise ValueError("The laboratory report needs its original dispatch identity.")
+    key = digest(identity)
+    dispatch_id = identifier(identity.get("dispatch_id"))
+    if (entry.get("id") != "laboratory-report-" + key[:24]
+            or entry.get("uri") != "urn:upstate:field-laboratory-report:" + key
+            or metadata.get("laboratory_report_operation") != key
+            or metadata.get("laboratory_dispatch_id") != dispatch_id
+            or metadata.get("implementation_plan") != identity.get("plan")
+            or _json_member(closure, members, "laboratory/identity.json") != identity):
+        raise ValueError("The laboratory report changed its source or dispatch identity.")
+    plan = validate_plan(_json_member(closure, members, "laboratory/current/plan.json"))
+    binding = identity["plan"]
+    if any(binding.get(name) != value for name, value in {
+            "id": plan["id"], "revision": plan["revision"], "title": plan["title"],
+            "document_digest": document_digest(plan)}.items()):
+        raise ValueError("The laboratory report changed its exact saved plan revision.")
+    revision = _json_member(closure, members, "laboratory/current/revision.json")
+    reconciliation = _json_member(closure, members, "laboratory/reconciliation.json")
+    package = _json_member(closure, members, "laboratory/dispatch-package.json")
+    if (not _same_json(revision.get("plan"), plan)
+            or _expected(members["laboratory/current/revision.json"]) != _expected(identity["revision_file"])
+            or digest(reconciliation) != identity.get("reconciliation_sha256")
+            or reconciliation.get("plan") != binding
+            or reconciliation.get("dispatch_id") != dispatch_id
+            or package.get("dispatch_id") != dispatch_id
+            or package.get("plan") != identity.get("dispatch_plan")
+            or package.get("files") != identity.get("package_files")
+            or _json_member(closure, members, "original-delivery-selection.json")
+               != identity.get("original_delivery_selection")
+            or _json_member(closure, members, "laboratory/current/attachment-inventory.json")
+               != identity.get("attachment_inventory")):
+        raise ValueError("The laboratory report lost its original revision, requests or result reconciliation.")
+    for item in identity["package_files"]:
+        name = "laboratory/dispatch/" + _relative(item.get("path"))
+        if name not in members or _expected(members[name]) != _expected(item):
+            raise ValueError("The laboratory report lost an original request package member.")
+    return key, identity, plan, members
+
+
+def _dispatch_operation(closure, collection_id, entry, key, identity, members):
+    """Retain the existing editable request and the completed source operation."""
+    from .implementation_lab_dispatch import dispatch_files
+    plan_id, dispatch_id = identity["plan"]["id"], identity["dispatch_id"]
+    package, files = dispatch_files(closure.workspace, plan_id, dispatch_id)
+    if package != _json_member(closure, members, "laboratory/dispatch-package.json"):
+        raise ValueError("The native laboratory request differs from its retained report source.")
+    store = _OriginalStore(closure.workspace)
+    original = store.get(plan_id, identity["dispatch_plan"]["revision"])
+    if (document_digest(original) != identity["dispatch_plan"]["document_digest"]
+            or original != _json_member(closure, members, "laboratory/dispatch/original-plan.json")):
+        raise ValueError("The laboratory request lost its original saved sample revision.")
+    dispatch_prefix = "implementation/laboratory-dispatch/" + dispatch_id
+    for descriptor, path in files:
+        relative = path.relative_to(closure.root).as_posix()
+        if relative != dispatch_prefix + "/" + _relative(descriptor["path"]):
+            raise ValueError("The laboratory package left its original native directory.")
+        closure.add_file(relative, _expected(descriptor))
+    closure.read(dispatch_prefix + "/receipt.json")
+    _operations(closure).add(dispatch_prefix + "/operation.lock")
+    closure.tree(dispatch_prefix)
+    prefix = "implementation/laboratory-reports/" + key
+    retained = closure.read(prefix + "/import.json")
+    report = retained.get("report_source", {})
+    if (retained.get("schema") != "upstate.implementation-lab-dispatch-report/v1"
+            or retained.get("operation_id") != key or retained.get("state") != "imported"
+            or retained.get("plan") != identity["plan"]
+            or retained.get("dispatch_plan") != identity["dispatch_plan"]
+            or retained.get("dispatch_id") != dispatch_id
+            or retained.get("source_collection_id") != collection_id
+            or closure.read(prefix + "/identity.json") != identity
+            or report.get("source_collection_id") != collection_id
+            or report.get("source_id") != entry["id"]
+            or report.get("directory") != prefix + "/report"
+            or report.get("delivery_selection") != retained.get("delivery_selection")):
+        raise ValueError("The laboratory report lost its original native registration.")
+    for item in retained.get("files", []):
+        relative = _relative(item.get("path"))
+        if not relative.startswith(prefix + "/"):
+            raise ValueError("A laboratory report member left its original operation.")
+        closure.add_file(relative, _expected(item))
+    for name, item in members.items():
+        closure.add_file(prefix + "/report/" + name, _expected(item))
+    declared = report.get("binding", {})
+    choices = declared.get("reports", []) if declared.get("schema") == "upstate.observed-report-set-binding/v2" else [declared]
+    found = [row for row in choices if row.get("source_collection_id") == collection_id
+             and row.get("source_id") == entry["id"]]
+    expected = {"body_sha256": entry["body"]["sha256"],
+                "member_sha256": {name: members[name]["sha256"] for name in sorted(members)}}
+    if (len(found) != 1 or any(found[0].get(name) != value for name, value in expected.items())
+            or report.get("original_binding") != identity.get("original_observed_context_binding")):
+        raise ValueError("The native laboratory report changed its original ordered source binding.")
+    selection_path = prefix + "/report/delivery-selection.json"
+    if (report.get("delivery_selection_path") != selection_path
+            or closure.read(selection_path) != report.get("delivery_selection")):
+        raise ValueError("The laboratory report lost its retained complete source selection.")
+    closure._source_refs(identity.get("original_delivery_selection"), "Original laboratory report context")
+    closure._source_refs(report["delivery_selection"], "Original completed laboratory report sources")
+    # Retain editable producer history behind the nested recipe; its scientific
+    # sections already reside in the laboratory source and are not appended again.
+    from . import observed_context
+    for choice in observed_context.source_choices(identity.get("original_delivery_selection") or {}):
+        original_id = identifier(choice["source_collection_id"])
+        original_collection = closure.read("sources/" + original_id + ".json")
+        if original_collection.get("schema") != "upstate.sources/v1" or digest(original_collection) != original_id:
+            raise ValueError("The inherited laboratory context changed its original source collection.")
+        originals = [item for item in original_collection["entries"] if item["id"] == choice["source_id"]]
+        if len(originals) != 1 or (original_id, choice["source_id"]) == (collection_id, entry["id"]):
+            raise ValueError("The laboratory report has an invalid inherited source.")
+        include_source(closure, original_id, originals[0])
+    _operations(closure).add(prefix + "/operation.lock")
+    closure.tree(prefix)
+    return {"dispatch_id": dispatch_id, "operation_id": key,
+            "request_revision": identity["dispatch_plan"]["revision"],
+            "result_revision": identity["plan"]["revision"],
+            "source_collection_id": collection_id, "source_id": entry["id"],
+            "delivery_selection": deepcopy(report["delivery_selection"]),
+            "delivery_selection_path": selection_path}
+
+
 def include_source(closure, collection_id, entry):
     """Join declared plan, outcome and field sources to their native editable lineage."""
     metadata = entry.get("metadata", {})
@@ -574,6 +703,11 @@ def include_source(closure, collection_id, entry):
         family, parsed = "outcome", _outcome_source_identity(closure, entry)
     elif str(entry.get("id", "")).startswith("field-observed-report-"):
         family, parsed = "field", _field_source_identity(closure, entry)
+    elif str(entry.get("id", "")).startswith("laboratory-report-"):
+        captured = getattr(closure, "implementation_source_keys", None)
+        if captured is not None and (collection_id, entry["id"]) not in captured:
+            return False  # Preserve the actual dependency set of older received Studies.
+        family, parsed = "laboratory", _dispatch_source_identity(closure, entry)
     else:
         return False
     key, identity, plan, members = parsed[:4]
@@ -586,13 +720,15 @@ def include_source(closure, collection_id, entry):
            "source_key": key, "source_family": family, "native_plan": None}
     if identity["project_id"] == closure.workspace.project["id"]:
         native_identity = identity
-        if family == "field":
+        if family in {"field", "laboratory"}:
             native_identity = {"plan_binding": {
                 "plan_id": plan["id"], "revision": plan["revision"], "title": plan["title"],
                 "document_digest": document_digest(plan)}}
         row["native_plan"] = _native_plan(closure, native_identity, plan)
         if family == "field":
             _field_operation(closure, collection_id, entry, key, identity, members, parsed[4])
+        elif family == "laboratory":
+            row["laboratory"] = _dispatch_operation(closure, collection_id, entry, key, identity, members)
         else:
             _native_source_receipt(closure, collection_id, entry, key, identity, members, family=family)
             if family == "outcome":

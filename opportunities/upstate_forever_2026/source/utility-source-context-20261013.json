@@ -36,18 +36,18 @@
         },
         {
           "path": "utility-source-context/20261013/utility-source-context.html",
-          "bytes": 14676,
-          "sha256": "947372cd784e376ec2b5ed312a03172006c5292a4685b6b3eeeb0b29b7282ba5"
+          "bytes": 18632,
+          "sha256": "1e6cb3c45c654983ccf1e7cde370a5b6dc4606aa86b4122791aa7bcf6919c491"
         },
         {
           "path": "utility-source-context/20261013/README.md",
-          "bytes": 8679,
-          "sha256": "7e5954864310a0119fff11851fffc3d8380e65426635196f43750335837511ba"
+          "bytes": 17056,
+          "sha256": "6fe3d1605fcbec2ecd9021b376272118620220bd92f616b47800642e3caac89b"
         },
         {
           "path": "utility-source-context/20261013/explorer.html",
-          "bytes": 86144,
-          "sha256": "752e31018396f8768160343716ca20b993f4563287632b581e1b4198d64c1aed"
+          "bytes": 96822,
+          "sha256": "68cac8ba2cb46624ae0bf4d0faedfe13bd0258c8a7913bef10a12e9b493f93d2"
         },
         {
           "path": "receptor-topology/20261013/utility-topology-results.json",
@@ -75,19 +75,20 @@
         "method_version": "1.0.0",
         "implementation": {
           "path": "source_tools/utility_source_context.mjs",
-          "bytes": 18923,
-          "sha256": "f2cbcba20ad65c7d0c8de8c6dd128d9c9b45db7cca7163b23e51a08fef8519b8"
+          "bytes": 32405,
+          "sha256": "fceb634909674bb92112573157d921b1d980d70db0868bb670bc57f2613af9ea"
         },
         "geography": "Whole-HUC planning context; published protection polygons and native reporting masks retain separate geometry",
         "models": "Source-only programme and designation context; native model quantities retain their own run/support",
         "csv_row_granularity": "Utility/HUC12/state; whole-HUC areas and classification counts repeat across state rows",
         "native_receiving_command": {
           "path": "source_tools/receive_utility_source_context.py",
-          "bytes": 8497,
-          "sha256": "6121aaa5580d20e5224bcd553557d9efaa898300403c8a06a802d39bcd43e913",
+          "bytes": 8661,
+          "sha256": "8b0028fa30e289bed818aa9c34a93f0bf4d907d56f3826c78d107f8c634ced22",
           "minimum_python": "3.10",
           "purpose": "Rebuild the retained regional network context and both original utility exports through the maintained Python modules"
-        }
+        },
+        "presentation_version": "2026-10-13-responsive-designations-1"
       }
     }
   ]

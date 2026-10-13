@@ -20,9 +20,12 @@
         "measurement_workspace/engine/workspace.mjs",
         "measurement_workspace/engine/http.mjs",
         "measurement_workspace/ATOMIC_SNAPSHOT.md",
+        "source/run_measured_chemistry_receiving.py",
+        "source/MEASURED_CHEMISTRY_RECEIVING.md",
         "operator/install_measurements.py",
         "integration/measurements/INSTALLATION.json",
-        "operator/MEASUREMENTS_INSTALLATION.md"
+        "operator/MEASUREMENTS_INSTALLATION.md",
+        "CURRENT_OWNER_DIRECTION.md"
       ],
       "requires": [
         "measurement-collections",
