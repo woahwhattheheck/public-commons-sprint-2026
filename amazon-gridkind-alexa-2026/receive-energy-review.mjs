@@ -150,7 +150,10 @@ async function coldReceive(page,root,bundle,selected){
  }
  const received=await api(page,'/api/workspace/export');
  need(received.payload.household.origin?.householdId===bundle.payload.household.id&&received.payload.household.origin.sha256===bundle.sha256,'Cold receiving origin differs.');
- need(same(received.payload.records,bundle.payload.records)&&same(received.payload.assistantRequests??[],bundle.payload.assistantRequests??[]),'Cold receive lost original records or request receipts.');
+ need(same(received.payload.records,bundle.payload.records),'Cold receive lost original saved records.');
+ const wrapped=(bundle.payload.assistantRequests??[]).map(row=>{const {sha256,...source}=row;const body={...source,receivedFrom:{householdId:bundle.payload.household.id,sha256,sourceReceipt:row}};return {...body,sha256:energyDigest(body)};});
+ need(same(received.payload.assistantRequests??[],wrapped),'Cold receive lost exact original assistant receipt lineage.');
+ await api(page,'/api/workspace',{action:'preview-import',bundle:received,context:context(state)});
  need(!state.approved&&!state.receipt,'Receiving must not activate original device execution.');
  const source=await api(page,'/api/workspace/record?id='+selected.source.id),week=await api(page,'/api/workspace/record?id='+selected.week.id),review=await api(page,'/api/workspace/record?id='+selected.review.id);
  need(same(source,selected.source)&&same(week,selected.week)&&same(review,selected.review),'Cold received energy source/plan/review identities differ.');inspectEnergyReview(review.detail.review,source,week);
@@ -172,7 +175,11 @@ export async function receiveEnergyReview({page,receivingPage,source,weekId,titl
  }
  const evidence=[],names=new Set();for(const filename of sourceCompanions){const name=path.basename(filename);need(!names.has(name),'Source evidence filenames must be unique.');names.add(name);const bytes=await fs.readFile(filename);evidence.push({file:name,path:filename,bytes:bytes.length,sha256:sha(bytes)});}
  const author=await selectedIdentity(page),receiver=await selectedIdentity(receivingPage);need(author.identity!==receiver.identity||author.origin!==receiver.origin,'Author and receiver must be independent original workspaces.');
- const home=author.state.workspace.selectedId;let week;
+ const home=author.state.workspace.selectedId;
+ const authoredBytes=authoredWeek?await fs.readFile(authoredWeek):null;
+ const selection={schema:'gridkind-energy-original-selection/v1',operation_id:operationId,source_input_sha256:sha(raw),source_companions:evidence.map(({path,...x})=>x),application_sha256:sha(packetRaw),author_identity:author.identity,receiver_identity:receiver.identity,household_id:home,week_id:weekId??null,authored_week_sha256:authoredBytes?sha(authoredBytes):null,title,note};
+ await keep(root,'Selection.json',json(selection));await keep(root,'Original_Source_Input.json',raw);if(authoredBytes)await keep(root,'Original_Authored_Week.json',authoredBytes);
+ let week;
  need(Boolean(weekId)!==Boolean(authoredWeek),'Choose an original saved week ID or one explicit authored week file.');
  if(authoredWeek){const authored=await readJSON(authoredWeek);week=await ensureAuthoredWeek({read:route=>api(page,route),post:(route,body)=>api(page,route,body),input:authored,output:path.join(root,'authored-week')});weekId=week.id;}
  else week=await api(page,'/api/workspace/record?householdId='+home+'&id='+weekId);
@@ -211,6 +218,7 @@ export async function receiveEnergyReview({page,receivingPage,source,weekId,titl
   let bundle;const backup=path.join(root,'Complete_Household.json');
   if(await exists(backup)){bundle=await readJSON(backup);const current=await api(page,'/api/workspace/export?householdId='+home);need(same(current.payload,bundle.payload)&&current.sha256===bundle.sha256,'Author household advanced after its frozen complete export.');}
   else{
+   await selectSaved(page,'review',review.id);await page.locator('#load-review').click();await idle(page);
    const d=await download(page,root,'Complete_Household.json',()=>page.getByRole('link',{name:'Complete household with all sources',exact:true}).click());bundle=JSON.parse(await verifyFile(d));
    need(bundle.payload.household.id===home&&bundle.payload.records.some(r=>r.id===review.id),'Downloaded household omitted the actual selected review.');
   }
