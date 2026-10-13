@@ -123,11 +123,11 @@ class ColdReopenError(RuntimeError):
     """The actual isolated receiving attempt did not complete."""
 
 
-def cold_reopen(restored, manifest, receipt, output, extra_checks=None):
+def cold_reopen(restored, manifest, receipt, output, extra_checks=None, *, selected_study=None):
     """Verify restored source and inspect selected results in a new interpreter.
 
-    extra_checks is an explicit list of parameter_course, field_campaign or
-    customer_review selections. Each may carry an expected dictionary of stable original keys.
+    extra_checks names original parameter, field, customer, source or report identities.
+    selected_study selects the same saved report's editable dependency archive.
     A new attempt is retained for every invocation.
     """
     root = Path(restored["directory"]).resolve(strict=True)
@@ -154,6 +154,7 @@ def cold_reopen(restored, manifest, receipt, output, extra_checks=None):
             "application": str(application), "workspace": str(workspace),
             "project": manifest["project"], "members": manifest["members"],
             "receipt": receipt, "extra_checks": [] if extra_checks is None else extra_checks,
+            "selected_study": selected_study,
         }
         _write(request_path, request)
         request_sha = hashlib.sha256(request_path.read_bytes()).hexdigest()
@@ -414,6 +415,179 @@ def _parameter_course(ws, files, check, case):
             "decision_report_ids": [item["report_id"] for item in products]}
 
 
+def _native_study_source(ws, files, check, case, delivery=None, *, report_selection=None):
+    """Reopen the report-bound study source from the same captured native course."""
+    from model.common import digest, identifier
+    from model import observed_context
+    from model.ensemble_study_source import DIRECTORY, SOURCE_ID
+
+    key = identifier(check["ensemble_id"])
+    operation_id = identifier(check["source_operation_id"])
+    captured = case.get("scientific_study")
+    if (not isinstance(captured, dict) or captured.get("ensemble_id") != key
+            or captured.get("source_operation_id") != operation_id
+            or case.get("ensemble_id") != key):
+        raise ValueError("The scientific source belongs to a different captured parameter course")
+    if check.get("expected") != captured:
+        raise ValueError("Select the original captured scientific source and report signature")
+    relative = DIRECTORY + "/" + operation_id
+    operation = files.json(relative + "/operation.json")
+    selection = operation.get("selection", {})
+    if (operation.get("schema") != "upstate.ensemble-study-source/v1"
+            or operation.get("id") != operation_id or digest(selection) != operation_id
+            or operation.get("state") != "complete" or operation.get("native_state") != "complete"
+            or operation.get("workspace_id") != ws.project["id"]
+            or selection.get("workspace_id") != ws.project["id"]
+            or operation.get("ensemble_id") != key or selection.get("ensemble_id") != key):
+        raise ValueError("Receiving changed the original completed scientific study operation")
+    pointer = files.json("ensemble_results/" + key + "/latest-scientific-study.json")
+    if pointer != {"ensemble_id": key, "source_operation_id": operation_id}:
+        raise ValueError("The captured study points to a different scientific source edition")
+    source = operation["source"]
+    rendered = operation["report"]
+    actual = {
+        "source_operation_id": operation_id, "source": source, "ensemble_id": key,
+        "report_id": selection["report_id"],
+        "summary_signature": selection["summary_signature"],
+        "run_signature": selection["run_signature"],
+        "report_signature": rendered["signature"],
+        "figure_count": operation["figure_count"],
+    }
+    if actual != captured or rendered.get("source") != source or source.get("source_id") != SOURCE_ID:
+        raise ValueError("Receiving changed the retained scientific source, figures or rendering edition")
+    files.descriptors(ws.root, operation["files"])
+    recipe_path = files.file(ws.root, operation["files"]["source_recipe"])
+    if recipe_path != ws.root / relative / "source" / "scientific-report.json":
+        raise ValueError("The study recipe is outside its original operation")
+    recipe = files.json(recipe_path.relative_to(ws.root).as_posix())
+    if recipe.get("schema") != "upstate.observed-report/v1" or recipe.get("basis") != selection:
+        raise ValueError("Receiving changed the scientific recipe's original native result basis")
+    if len(recipe.get("figures", [])) != actual["figure_count"]:
+        raise ValueError("Receiving changed the retained scientific figure selection")
+    for item in recipe["inputs"]:
+        files.file(recipe_path.parent, item)
+    _sources(ws, files, identifier(source["source_collection_id"]))
+    collection = ws._get("sources", source["source_collection_id"])
+    entries = [entry for entry in collection["entries"] if entry["id"] == SOURCE_ID]
+    if len(entries) != 1:
+        raise ValueError("Retain this scientific source in its original collection")
+    entry = entries[0]
+    metadata = entry.get("metadata", {})
+    if (metadata.get("source_basis") != "saved_native_ensemble"
+            or metadata.get("workspace_id") != ws.project["id"]
+            or metadata.get("ensemble_id") != key
+            or metadata.get("report_id") != selection["report_id"]
+            or metadata.get("source_operation_id") != operation_id
+            or any(entry["body"][name] != operation["files"]["source_recipe"][name]
+                   for name in ("bytes", "sha256"))):
+        raise ValueError("The retained source entry differs from the captured scientific recipe")
+    pdf = files.file(ws.root, rendered["files"]["report.pdf"])
+    release = files.json((pdf.parent / "release.json").relative_to(ws.root).as_posix())
+    if release != rendered:
+        raise ValueError("Receiving changed the original standalone scientific report release")
+    chosen = observed_context.source_choices(
+        report_selection if report_selection is not None else delivery["selection"])
+    if chosen.count(source) != 1:
+        raise ValueError("The final mapped report does not contain this exact scientific study source")
+    return {
+        "kind": "native_study_source", **actual,
+        "state": "complete", "delivery_id": delivery["id"] if delivery is not None else None,
+        "ordered_report_sources": chosen,
+        "retained_source_members": len(recipe["inputs"]),
+        "report_files": rendered["files"],
+    }
+
+
+def restore_selected_study(archive, saved, destination):
+    """Reuse or restore the same original selected-study archive and its source."""
+    from model import portable, study_transfer
+    archive = Path(archive).resolve(strict=True)
+    destination = Path(destination).absolute()
+    _check_file(archive, saved)
+    inspected = study_transfer.inspect_transfer_archive(archive, verify=False)
+    manifest = inspected["manifest"]
+    if inspected["study"]["id"] != saved["id"]:
+        raise ValueError("The selected archive contains another original Study transfer")
+    if destination.is_symlink():
+        raise ValueError("Keep selected-study receiving in its own actual directory")
+    if destination.exists():
+        for name, expected in manifest["members"].items():
+            _check_file(_member(destination, name), expected)
+        if _read(destination / "workspace" / "workspace.json") != manifest["project"]:
+            raise ValueError("Reopened selected-study project identity differs")
+        restored = {
+            "schema": "upstate.scientific-workspace-receiving/v1",
+            "project": manifest["project"], "directory": str(destination),
+            "workspace": str(destination / "workspace"),
+            "application": str(destination / "application"),
+            "archive_sha256": saved["sha256"], "members": len(manifest["members"]),
+            "selection": manifest["selection"], "identity": "MATCH",
+            "recovered_existing_receiving": True,
+        }
+    else:
+        restored = portable.restore(archive, destination)
+    return restored, manifest
+
+
+def _scientific_report(ws, files, captured):
+    """Inspect the original ordered edition; the receiving child never renders."""
+    from model import observed_context, scientific_report_editions
+    from model.common import identifier
+    key = identifier(captured["id"])
+    files.json("scientific-report-editions/" + key + "/edition.json")
+    value, selected, operation = scientific_report_editions.inspect(ws, key)
+    for name in ("operation.json", "selection.json"):
+        files.json((selected / name).relative_to(ws.root).as_posix())
+    choices = observed_context.source_choices(value["render_identity"]["selection"])
+    actual = {"id": key, "title": value["title"], "sources": choices,
+              "source_count": value["source_count"], "figure_count": value["figure_count"]}
+    if actual != captured or value["state"] != "complete" or value["project_id"] != ws.project["id"]:
+        raise ValueError("Receiving changed the saved ordered scientific report")
+    files.descriptors(selected, scientific_report_editions.files(value, selected))
+    for source in choices:
+        _sources(ws, files, source["source_collection_id"])
+    return value, actual
+
+
+def _selected_study(ws, files, selected, case):
+    """Validate selected editable report dependencies in the archived application."""
+    from model.common import digest, identifier
+    from model import study_transfer
+
+    key = identifier(selected["transfer_id"])
+    captured = files.json("study-transfers/" + key + ".json")
+    expected_selection = {
+        "schema": "upstate.study-selection/v1",
+        "title": selected["selection"]["title"],
+        "roots": [{"kind": "scientific-report-editions", "id": case["scientific_report"]["id"]}],
+        "include_related_results": False,
+    }
+    if (selected["selection"] != expected_selection
+            or captured.get("schema") != "upstate.study-transfer/v1"
+            or captured.get("id") != key or digest(captured["identity"]) != key
+            or captured["identity"]["project_id"] != ws.project["id"]
+            or captured["identity"]["selection"] != expected_selection):
+        raise ValueError("The selected archive identifies a different saved scientific report")
+    verified = study_transfer.verify_received_studies(ws)
+    matching = [row for row in verified if row["id"] == key]
+    if len(matching) != 1 or matching[0]["identity"] != "MATCH":
+        raise ValueError("Reopen every original selected scientific dependency")
+    edition, report = _scientific_report(ws, files, case["scientific_report"])
+    source = _native_study_source(ws, files, {
+        "ensemble_id": case["ensemble_id"],
+        "source_operation_id": case["scientific_study"]["source_operation_id"],
+        "expected": case["scientific_study"],
+    }, case, report_selection=edition["render_identity"]["selection"])
+    course = _parameter_course(ws, files, {
+        "ensemble_id": case["ensemble_id"], "expected": {"project_id": ws.project["id"]},
+    }, case)
+    return {
+        "scope": "selected_scientific_study", "study_transfer_id": key,
+        "scientific_report": report, "scientific_study": source,
+        "parameter_course": course, "study_verification": matching[0],
+    }
+
+
 def _sources(ws, files, key):
     files.json("sources/" + key + ".json")
     source = ws._get("sources", key)
@@ -469,6 +643,37 @@ def _customer_review(ws, files, check, receipt):
             "inspection": result, "receiving": received}
 
 
+def _finish(request, application, ws, files, payload):
+    imported = {}
+    for name, module in list(sys.modules.items()):
+        filename = getattr(module, "__file__", None)
+        if filename is None:
+            continue
+        path = Path(filename).resolve()
+        belongs = path == application or application in path.parents
+        if not belongs:
+            if name == "model" or name.startswith(("model.", "source_tools.", "ecsa_runs.")):
+                raise ValueError("Receiving imported application code from another edition: " + name)
+            continue
+        relative = path.relative_to(application).as_posix()
+        expected = request["members"].get("application/" + relative)
+        if expected is None:
+            raise ValueError("Imported application source is absent from its archive: " + relative)
+        _check_file(path, expected)
+        imported[name] = {"path": relative, "sha256": expected["sha256"]}
+    for relative, identity in files.checked.items():
+        if _identity(_member(ws.root, relative).lstat()) != identity:
+            raise ValueError("Scientific file changed during receiving: " + relative)
+    return {
+        "schema": SCHEMA, "attempt_id": request["attempt_id"], "state": "complete",
+        "completed_at": _now(), "project": ws.project,
+        "application": str(application), "workspace": str(ws.root),
+        **payload,
+        "verified_scientific_files": len(files.checked), "imported_modules": imported,
+        "process": {"pid": os.getpid(), "python": sys.executable, "isolated": bool(sys.flags.isolated)},
+    }
+
+
 def _inspect(request):
     application = Path(request["application"]).resolve(strict=True)
     if Path(__file__).resolve() != application / HELPER:
@@ -485,6 +690,9 @@ def _inspect(request):
     if project != request["project"] or ws.project != project:
         raise ValueError("Receiving changed the original project identity")
     receipt = request["receipt"]
+    if request.get("selected_study") is not None:
+        return _finish(request, application, ws, files,
+                       _selected_study(ws, files, request["selected_study"], receipt))
     run_ids = [receipt["baseline_run_id"], *receipt["alternative_run_ids"]]
     scenarios = [receipt["baseline_scenario_id"], *receipt["alternative_scenario_ids"]]
     if len(run_ids) != len(scenarios) or len(set(run_ids)) != len(run_ids):
@@ -545,6 +753,13 @@ def _inspect(request):
             raise ValueError("Each receiving check must identify an original product")
         if check.get("kind") == "parameter_course":
             extra.append(_parameter_course(ws, files, check, receipt))
+        elif check.get("kind") == "native_study_source":
+            extra.append(_native_study_source(ws, files, check, receipt, delivery))
+        elif check.get("kind") == "scientific_report":
+            if check.get("expected") != receipt["scientific_report"]:
+                raise ValueError("Select the captured ordered scientific report")
+            _, report = _scientific_report(ws, files, receipt["scientific_report"])
+            extra.append({"kind": "scientific_report", **report})
         elif check.get("kind") == "customer_review":
             extra.append(_customer_review(ws, files, check, receipt))
         elif check.get("kind") == "field_campaign":
@@ -564,36 +779,11 @@ def _inspect(request):
                           "inspection": result})
         else:
             raise ValueError("Unknown receiving check: " + str(check.get("kind")))
-    imported = {}
-    for name, module in list(sys.modules.items()):
-        filename = getattr(module, "__file__", None)
-        if filename is None:
-            continue
-        path = Path(filename).resolve()
-        belongs = path == application or application in path.parents
-        if not belongs:
-            if name == "model" or name.startswith(("model.", "source_tools.", "ecsa_runs.")):
-                raise ValueError("Receiving imported application code from another edition: " + name)
-            continue
-        relative = path.relative_to(application).as_posix()
-        expected = request["members"].get("application/" + relative)
-        if expected is None:
-            raise ValueError("Imported application source is absent from its archive: " + relative)
-        _check_file(path, expected)
-        imported[name] = {"path": relative, "sha256": expected["sha256"]}
-    for relative, identity in files.checked.items():
-        if _identity(_member(ws.root, relative).lstat()) != identity:
-            raise ValueError("Scientific file changed during receiving: " + relative)
-    return {
-        "schema": SCHEMA, "attempt_id": request["attempt_id"], "state": "complete",
-        "completed_at": _now(), "project": ws.project,
-        "application": str(application), "workspace": str(ws.root),
+    return _finish(request, application, ws, files, {
         "run_ids": run_ids, "comparison_id": comparison["id"],
         "native_process_report_id": process_id, "delivery_id": delivery_id,
         "footprints": footprints, "spatial_reviews": spatial_reviews, "extra_checks": extra,
-        "verified_scientific_files": len(files.checked), "imported_modules": imported,
-        "process": {"pid": os.getpid(), "python": sys.executable, "isolated": bool(sys.flags.isolated)},
-    }
+    })
 
 
 def main(argv=None):
