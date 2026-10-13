@@ -16,7 +16,7 @@ import traceback
 
 APP = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(APP), str(APP / "operator")]
-from model.common import atomic_json, describe_file, digest, held, now, read_json
+from model.common import atomic_bytes, atomic_json, describe_file, digest, held, now, read_json
 from model.workspace import Workspace
 from model import source_refresh
 from source_tools import open_regional_workflow as regional
@@ -414,14 +414,7 @@ class Progression:
         require(hashlib.sha256(body).hexdigest() == descriptor["sha256"],
                 "The selected scientific input changed: " + str(source))
         target = self.output / "inputs" / filename
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            require(target.read_bytes() == body, "The retained scientific input copy differs: " + filename)
-        else:
-            with target.open("xb") as stream:
-                stream.write(body)
-                stream.flush()
-                os.fsync(stream.fileno())
+        atomic_bytes(target, body, immutable=True)
         return target
 
     def chemistry(self):
