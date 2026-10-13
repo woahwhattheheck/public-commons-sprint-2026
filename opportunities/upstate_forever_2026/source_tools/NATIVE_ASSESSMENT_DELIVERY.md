@@ -174,6 +174,12 @@ Open **Annual reference yields** in the existing interactive report, or select t
 
 Once native calibration completes, the maintained catchment interpretation adds actual model yields, support status and calibration/held-out context through that existing workflow. This reference-only view does not change model selection, fit metrics, nominal ranks, validation groups or source admission.
 
+## Reproduce the frozen microbial source edition from a current checkout
+
+The optional seventeen-source delivery binds the original microbial presentation edition, including its original source manifest, compiler and observation explorer. Those three files have newer maintained editions at their ordinary source paths. The existing CLI therefore reads the exact retained bodies under `source/ecoli_utility_context/20261013/original-b91a8dd8/` using each descriptor's explicit `application_path`. The resulting archive still uses the original logical paths, original hashes and source IDs. Current microbial source files and their newer standalone reports remain intact.
+
+This separation is required for reproducibility: the original b91a8dd8 manifest is 23,194 bytes/SHA256 ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23; compiler45,810 bytes/5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5; explorer568,315 bytes/1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26. The source importer continues to validate those exact bytes. The retained companion subdirectory is producer input; open the assembled report's ordinary paths after extraction to use its working local links.
+
 ## Inspect the outgoing populated delivery
 
 Owner instruction 2026-10-13.1 applies to this current producing/receiving course. Before readiness, the producing worker must open/run/render the exact outgoing version, LOOK at actual populated pixels or its real screenshots, and operate important controls. Check the actual screenshare and narrow widths where relevant; populated/empty/loading/error states; source and basin filters; the original station-detail handoff; all three new yield downloads; saved HTML and complete ZIP; PDF export; and reopening through the existing source/archive continuation. Capturing screenshots without viewing them, code or DOM checks, HTTP 200, unit checks or another worker's approval do not replace this inspection.
