@@ -83,7 +83,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const selected = () => data?.applications.find(item => item.id === selectedId) ?? null;
   const currentType = () => data?.catalog.find(item => item.id === kind.value);
   const header = element('div', undefined, 'section-title');
-  header.append(element('h2', 'Applications'), button('New application', () => edit(null)));
+  header.append(element('h2', 'Applications'), button('Refresh applications', () => refresh().catch(error)),
+    button('New application', () => edit(null)));
   const intro = element('p', 'Open the original merchant and buyer tools using an installed runtime. Application data, private URLs and process history stay with this workspace.', 'note');
   const libraryRoot = element('div'); libraryRoot.id = 'application-library';
   const draftRoot = element('div'); draftRoot.id = 'application-setup-drafts';
@@ -155,7 +156,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const relatedApplications = element('div', undefined, 'actions');
   relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
-    const app = selected(); if (!app) return;
+    const app = selected(); if (!canStartApplication(app)) return;
     startReview = await api('/api/applications/start-review', { applicationId: app.id });
     renderStartReview();
   }));
@@ -456,16 +457,21 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       reviewResult.hidden = false;
     });
   });
+  function canStartApplication(app = selected()) {
+    return Boolean(app && (app.connectionReady ?? Boolean(app.release))) && !app.error &&
+      app.adoption?.active !== null && app.current?.active !== null && !app.current?.active &&
+      !['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED', 'OBSERVATION_UNAVAILABLE'].includes(app.current?.phase);
+  }
   function renderStartReview() {
     if (!startReview || selected()?.id !== startReview.applicationId) { operationReview.hidden = true; return; }
     const reviewed = startReview;
     const start = button('Start reviewed application', () => act(async () => {
-      if (startReview !== reviewed) return;
+      if (startReview !== reviewed || selected()?.id !== reviewed.applicationId || !canStartApplication()) return;
       const submitted = { scope, navigationVersion };
       start.disabled = true;
       let result;
       try { result = await retainedRequest('/api/applications/start', { applicationId: reviewed.applicationId, reviewId: reviewed.id }); }
-      finally { start.disabled = false; }
+      finally { start.disabled = !canStartApplication(); }
       if (submitted.scope !== scope) return;
       if (submitted.navigationVersion === navigationVersion) followOperation(reviewed.applicationId, result.operationId);
       if (startReview === reviewed) startReview = null;
@@ -473,6 +479,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         'The original workbook command is starting. Its operating result and output appear below.' :
         'The original application is starting. Its private URL will appear when its CLI prints it.');
     }));
+    start.disabled = !canStartApplication();
     operationReview.replaceChildren(element('h3', 'Start review'), facts([
       ['Original command', reviewed.command.pythonCommand ? reviewed.command.pythonCommand.executable + ' ' +
         reviewed.command.pythonCommand.argv.map(value => JSON.stringify(value)).join(' ') :
@@ -509,18 +516,26 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       details.append(element('p', app.adoption.state.error.message, 'note'));
     if (app.adoption?.state?.error?.flock)
       details.append(element('pre', JSON.stringify(app.adoption.state.error.flock, null, 2)));
-    const current = app.current, active = Boolean(current?.active), unsettled = ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(current?.phase);
-    reviewStart.disabled = !connected || active || unsettled;
+    const current = app.current, active = Boolean(current?.active), unknown = current?.active === null,
+      unsettled = ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED', 'OBSERVATION_UNAVAILABLE'].includes(current?.phase);
+    for (const observed of [app.adoption, current]) {
+      if (observed?.observation?.status !== 'UNAVAILABLE') continue;
+      details.append(element('p', 'Process status is unavailable for ' + observed.id + '. Its saved configuration and output remain accessible.', 'note'));
+      if (observed.observation.error) details.append(element('p', observed.observation.error.code + ': ' + observed.observation.error.message, 'note'));
+      if (observed.observation.error?.flock)
+        details.append(element('pre', JSON.stringify(observed.observation.error.flock, null, 2)));
+    }
+    reviewStart.disabled = !canStartApplication(app);
     stop.disabled = !current || !active && !unsettled;
     stop.textContent = current?.phase === 'PENDING' || current?.phase === 'QUEUED' ? 'Cancel pending start' : 'Stop application';
     reconnect.hidden = connected;
-    reconnect.disabled = Boolean(app.adoption?.active);
+    reconnect.disabled = Boolean(app.adoption?.active) || app.adoption?.active === null;
     reconnect.textContent = app.adoption?.active ? 'Connecting runtime…' :
       app.adoption?.phase === 'FAILED' ? 'Retry runtime connection' :
         ['QUEUED', 'INTERRUPTED'].includes(app.adoption?.phase) ? 'Resume runtime connection' : 'Continue runtime connection';
-    continueRun.hidden = !current || active || !unsettled;
+    continueRun.hidden = !current || active || unknown || !unsettled;
     continueRun.textContent = current?.phase === 'INTERRUPTED' ? 'Reconcile original operation' : 'Continue original start';
-    editButton.disabled = active || unsettled;
+    editButton.disabled = active || unknown || app.adoption?.active === null || unsettled;
     const woo = app.kind === 'woo-merchant';
     open.rel = woo ? 'noopener' : 'noopener noreferrer';
     open.referrerPolicy = woo ? 'origin' : 'no-referrer';
@@ -568,7 +583,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       navigationRecovery.replaceChildren(); delete navigationRecovery.dataset.signature;
     }
     const workbookCommand = isWorkbookApplication(app, current);
-    urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
+    urlNote.textContent = unknown ? 'Current process status is unavailable. Any address shown is the original saved address; refresh status to observe the current process. Retained output remains accessible.' : workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
       'Review a start to run this original workbook command.') : navigationChanged ?
       'The original process and saved addresses are still attached to this operation. To restore direct Open buttons here, stop it and review a new start from this Applications address.' :
@@ -587,7 +602,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         row.append(element('h3', run.command + ' · ' + run.phase),
           element('p', run.id + ' · ' + run.createdAt),
           element('p', run.result || run.resultSource ? outcomeText(run.result, run.resultSource) :
-            run.active ? 'The original worker lease is held.' : 'Original operation retained.'),
+            run.active === null ? 'Current process status is unavailable. Original operation retained.' :
+              run.active ? 'The original worker or command is active.' : 'Original operation retained.'),
           actions);
         if (run.result || run.resultSource) {
           const receipt = element('details'); receipt.append(element('summary', 'Complete retained outcome'),
@@ -595,9 +611,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
               commandResult: run.commandResult ?? null }, null, 2)));
           row.append(receipt);
         }
-        if (run.state?.error?.flock || run.result?.error?.flock) {
+        if (run.observation?.error) row.append(element('p', run.observation.error.code + ': ' + run.observation.error.message, 'note'));
+        if (run.observation?.error?.flock || run.state?.error?.flock || run.result?.error?.flock) {
           const diagnostic = element('details'); diagnostic.append(element('summary', 'Original lock process diagnostics'),
-            element('pre', JSON.stringify(run.state?.error?.flock ?? run.result.error.flock, null, 2)));
+            element('pre', JSON.stringify(run.observation?.error?.flock ?? run.state?.error?.flock ?? run.result.error.flock, null, 2)));
           row.append(diagnostic);
         }
         return row;
@@ -615,10 +632,15 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     outputPanel.hidden = false;
     const bottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 40;
-    output.textContent = readable(response.output.text);
+    output.textContent = response.output.available === false
+      ? readable(response.output.error.code + ': ' + response.output.error.message) : readable(response.output.text);
     if (bottom) output.scrollTop = output.scrollHeight;
-    outputDescription.textContent = id + ' · ' + response.output.totalBytes + ' retained output bytes' +
-      (response.output.offset ? ' · showing the last ' + (response.output.totalBytes - response.output.offset) + ' bytes' : '');
+    outputDescription.textContent = id + (response.output.available === false
+      ? response.output.state === 'NOT_CREATED' ? ' · worker output has not been created yet' : ' · retained output is currently unavailable'
+      : ' · ' + response.output.totalBytes + ' retained output bytes' +
+        (response.output.offset ? ' · showing the last ' + (response.output.totalBytes - response.output.offset) + ' bytes' : ''));
+    if (response.observation?.status === 'UNAVAILABLE')
+      outputDescription.textContent += ' · Current process status is unavailable; retained output and results remain attached.';
     const outcome = run.terminal ? response.managedOutcome : response;
     if (outcome?.result || outcome?.resultSource) outputDescription.textContent += ' · ' + outcomeText(outcome.result, outcome.resultSource);
     await workbookResults.update(app, run, response);

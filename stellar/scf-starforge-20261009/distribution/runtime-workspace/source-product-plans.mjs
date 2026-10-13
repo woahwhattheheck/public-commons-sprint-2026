@@ -7,7 +7,7 @@ import { initializeSourceBuildWorkspace, sourceBuildCatalog, sourceBuildProduct,
 import { normalizeProductRequirements, productReviewRequest, productRequirementIndex } from '../discovery/product-requirements.mjs';
 import { sourceSelectionPath } from '../source-selection.mjs';
 import { plain, need, now, canonical, json, digest, recordId, operationId, absolute,
-  privateDirectory, makePrivate, regular, readJSON, saveJSON, operationLease } from './storage.mjs';
+  privateDirectory, optionalPrivateEntries, makePrivate, regular, readJSON, saveJSON, operationLease } from './storage.mjs';
 
 export const PRODUCT_PLAN_SCHEMA = 'stellar-forge.runtime-product-plan.v1';
 export const PRODUCT_PLAN_BUNDLE_SCHEMA = 'stellar-forge.runtime-product-plan-bundle.v1';
@@ -122,11 +122,14 @@ async function directory(path) {
   try { return await makePrivate(path); }
   catch (error) { if (error.code !== 'EEXIST') throw error; return privateDirectory(path); }
 }
-async function rootContext(root) {
-  const base = await initializeSourceBuildWorkspace(root), config = await readJSON(join(root, 'workspace.json'));
+async function rootContext(root, create = true) {
+  await privateDirectory(root);
+  const base = create ? await initializeSourceBuildWorkspace(root) : join(root, 'source-builds');
+  const config = await readJSON(join(root, 'workspace.json'));
   need(config.schema === 'stellar-forge.runtime-workspace.v1' && config.directory === root, 'PRODUCT_PLAN_WORKSPACE_INVALID');
   operationId(config.workspaceId);
-  const plans = await directory(join(base, 'plans')), receiving = await directory(join(base, 'plan-receiving'));
+  const plans = create ? await directory(join(base, 'plans')) : join(base, 'plans');
+  const receiving = create ? await directory(join(base, 'plan-receiving')) : join(base, 'plan-receiving');
   return { root, plans, receiving, workspaceId: config.workspaceId };
 }
 async function planDirectory(context, id, create = false) {
@@ -207,7 +210,7 @@ async function selectLocal(context, path, plan, bindingId) {
   return { selected, origins };
 }
 export async function readSourceProductPlan(root, { planId, bindingId } = {}) {
-  const context = await rootContext(root), { path, plan } = await savedPlan(context, recordId(planId));
+  const context = await rootContext(root, false), { path, plan } = await savedPlan(context, recordId(planId));
   const { selected, origins } = await selectLocal(context, path, plan, bindingId);
   const all = (await records(join(path, 'origins'))).map(item => validateOrigin(item, plan));
   const reviews = await sourceBuildWorkspaceState(root);
@@ -334,7 +337,7 @@ async function receivingRecord(context, id) {
   return { path, input, state };
 }
 export async function readProductPlanReceiving(root, { receiptId } = {}) {
-  const context = await rootContext(root), { input, state } = await receivingRecord(context, recordId(receiptId));
+  const context = await rootContext(root, false), { input, state } = await receivingRecord(context, recordId(receiptId));
   return { input, state: state ?? { receiptId, status: 'RECEIVED' } };
 }
 export async function receiveSourceProductPlan(root, input) {
@@ -431,9 +434,9 @@ export async function sourceProductPlansState(root, input = {}) {
   need(Number.isInteger(receivingLimit) && receivingLimit >= 1 && receivingLimit <= 100, 'PRODUCT_PLAN_RECEIVING_LIMIT_INVALID');
   if (input.receivingCursor !== undefined) recordId(input.receivingCursor);
   const receivingWords = receivingQuery.toLocaleLowerCase('en').trim().split(/\s+/).filter(Boolean);
-  const context = await rootContext(root), plans = [], receiving = [];
+  const context = await rootContext(root, false), plans = [], receiving = [];
   const words = query.toLocaleLowerCase('en').trim().split(/\s+/).filter(Boolean);
-  for (const id of (await readdir(context.plans)).filter(name => /^[a-f0-9]{24}$/.test(name))) {
+  for (const id of (await optionalPrivateEntries(context.plans)).filter(name => /^[a-f0-9]{24}$/.test(name))) {
     let retained;
     try { retained = await savedPlan(context, id); }
     catch (error) { if (error.code === 'ENOENT') continue; throw error; }
@@ -452,7 +455,7 @@ export async function sourceProductPlansState(root, input = {}) {
   const start = input.cursor === undefined ? 0 : plans.findIndex(item => item.planId === input.cursor) + 1;
   need(input.cursor === undefined || start > 0, 'PRODUCT_PLANS_CURSOR_CHANGED', 'Refresh the saved plan list for this search.');
   const selected = plans.slice(start, start + limit);
-  for (const id of (await readdir(context.receiving)).filter(name => /^[a-f0-9]{24}$/.test(name))) {
+  for (const id of (await optionalPrivateEntries(context.receiving)).filter(name => /^[a-f0-9]{24}$/.test(name))) {
     const summary = await receivingSummary(context, id);
     if (!summary || receivingStatus !== 'all' && summary.status !== receivingStatus) continue;
     const text = [summary.label, summary.selection, summary.planId, summary.sourceCommit, summary.repository, id].join(' ').toLocaleLowerCase('en');
