@@ -124,7 +124,8 @@ the current page, then choose their catchment source:
 
 | Choice | Source relationship |
 | --- | --- |
-| Retained source reach | Use the original feature and full upstream basin retained with the selected regional source edition. |\n| Retained published reach | Match the original annual row's COMID to the retained original full-reach NLDI feature and basin. Use the explicit reviewed source component. |
+| Retained source reach | Use the original feature and full upstream basin retained with the selected regional source edition. |
+| Retained published reach | Match the original annual row's COMID to the retained original full-reach NLDI feature and basin. Use the explicit reviewed source component. |
 | Receive published reach | Receive the original NLDI feature and full upstream basin for that exact published COMID. |
 | Water-quality station | Receive the original NLDI feature and full basin for the row's actual USGS water-quality station ID. |
 | Published flow station | Receive the original NLDI feature and full basin for its distinct published USGS flow station ID. |
@@ -210,6 +211,33 @@ between writing that manifest and completing result.json. Retrying the same
 verified plan therefore preserves its existing immutable source edition.
 Retained and freshly received catchment contexts both expose catchment_id for
 the source-context join.
+
+## Physical assessment coverage of the annual references
+
+The completed original-geometry join is in
+[Annual load references and physical assessment coverage](../source/annual-reference-assessment-20261013/README.md).
+It links the eleven regional targets to the selected 159 assessment stations
+and 192 original records, and preserves assessment-publisher, station-publisher
+and physical watershed membership separately.
+
+Both downstream Savannah basins contain all 159 selected stations. Chattooga
+contains one, Broad contains zero of this South Carolina cohort, and Stevens
+Creek contains eighteen. The tributary basins are mutually disjoint and nested
+inside both downstream basins. Keep those relationships in the existing
+calibration/validation groups.
+
+The same native comparison resolves physical utility coverage: ARJWS contains
+six selected stations and ten records; PRWD contains eighteen and twenty-two.
+PRWD's assessment-publisher HUC selection remains seventeen stations and
+twenty-one records. The additional physical site is SV-809, whose original
+July 2026 HUC differs from its original point location. RS-21014 has only an
+eight-digit station HUC; its point and three assessment records identify
+Little Beaverdam Creek in the PRWD upstream selection.
+
+Import the result folder's `sources.json` through the existing source operation
+to open its derived point layer in Spatial Review and download the complete
+station/record crosswalks. Annual target import continues through the existing
+annual-reference actions above.
 
 ## Scientific sources
 
