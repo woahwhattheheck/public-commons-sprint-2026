@@ -54,3 +54,23 @@ The separate customer Analysis programme continues its own analytical directory,
 ## Browser bindings after host recovery
 
 When the same retained workspace moves to a recovered host, `playwrightModule` and `browserExecutable` may select the Playwright installation and Chromium executable available on that host. The original `state.input` remains unchanged, and the source commit, repository, publisher and receiving workspaces, output directory, workspace identity, and ports must still match the saved programme. `browserRuntimeSelections` records the original browser binding and each changed binding with its timestamp and preceding selection. Each `browserAttempts` entry records the selected Playwright module, actual executable path, and executable version used for that attempt. Continue the same output directory and journal to retain the original programme and browser profile.
+
+## Save the installed runtime before managed adoption
+
+The original delivery controller selects `installedCheckpoint: {protocol: "controller-stdio-v1", operation: "SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012"}` as an execution option. This transport selection stays outside the retained business input. Standalone invocations may omit it; the complete delivery controller always selects it.
+
+After the complete selected distribution is built, installed, reopened as READY, and its source/types/commands verified, the runner retains `INSTALLED_SOURCE_VERIFIED` and a stable request in `installedCheckpoints`. The request binds the original journal and workspace IDs, exact source commit, complete build archive path/bytes/SHA, installed runtime directory and source root. The runner then waits on its existing stdin for the matching controller acknowledgment before importing the application workspace or starting managed adoption.
+
+Only this installed child receives a stdin pipe. Its original Python controller reads the request from stderr, validates the current journal and full build archive, and calls its existing `persist_complete_phase` under the original delivery lock. The same complete root, operating report, original journals, source, Git objects, installed runtime and build output are preserved. The checkpoint has the honest `INSTALLED_SOURCE_VERIFIED` state and distinct filenames:
+
+- `Datasette_Installed_Ready_Result.json`
+- `Datasette_Installed_Ready_Checkpoint.zip`
+- `Datasette_Installed_Ready_Checkpoint_Parts.json` when complete part delivery is needed
+
+Existing publisher and final operating filenames keep their behavior. The controller retains its complete archive or complete ordered parts receipt at `run-history/installed-ready-checkpoints/<request-id>.json`, saves that receipt with the same maintained helper, and records the upload identity beside it. Only then does it send a successful acknowledgment. The runner records that receipt, saves `INSTALLED_SOURCE_CHECKPOINT_SAVED`, and continues its original Applications/browser journal. Checkpoint latency counts toward the selected installed invocation timeout; a save that returns after that timeout receives a failed acknowledgment and cannot release managed adoption.
+
+A controller failure, closed control pipe, mismatched identity or failed save rejects the wait and preserves the runner's original interrupted state. A resumed request with the same local saved receipt reuses its complete checkpoint. When restoring this checkpoint, also restore its separately saved receipt to the exact run-history path; the complete archive necessarily contains the pending request that preceded its own upload. Carry the matching upload sidecar when available. Without that sidecar, the controller saves the existing small receipt again. Without the receipt, the complete root remains reopenable and the same stable request saves another full checkpoint before proceeding. An already acknowledged journal reuses its exact saved delivery. No path, original input, source ref or completed application state is substituted.
+
+## Pinned following source
+
+The complete controller also accepts an optional `after_installed_source` object with full `content` and its `sha256`. It executes only after the installed journal reaches COMPLETE, the final complete checkpoint is saved, and the original delivery lease is closed. The controller checks and retains the full source under `continuation-source/<sha256>.py`, then invokes it with `delivery_payload` and `delivery_root`. Start, return and failure events remain on the existing receiving stream; a following-source failure keeps the retained receiver available. The following operation owns its own original lock, journal and output saving.
