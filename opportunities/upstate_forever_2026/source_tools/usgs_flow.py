@@ -707,7 +707,7 @@ def capture(directory, *, start, end, domain=None, domain_member=None,
                     raise ValueError("USGS series query returned a different observed property")
                 if str(prop.get("computation_period_identifier", "")).lower() != "daily":
                     continue
-                begin, finish = str(prop.get("begin", ""))[:10], str(prop.get("end", ""))[:10]
+                begin, finish = str(prop.get("begin") or "")[:10], str(prop.get("end") or "")[:10]
                 if (begin and dt.date.fromisoformat(begin) > end) or (
                         finish and dt.date.fromisoformat(finish) < start):
                     continue

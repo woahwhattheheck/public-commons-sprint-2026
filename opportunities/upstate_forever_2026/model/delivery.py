@@ -13,7 +13,7 @@ from . import atlas_browser, cartography, map_atlas, native_study, portable, ras
 import tempfile
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
-from . import receiving_water_delivery, scientific_report
+from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
                                retain_economic, scientific_sections)
@@ -251,6 +251,11 @@ def build(workspace, selection):
     if economic_link is not None:
         selection["economic_edition_sha256"] = economic_link["edition_sha256"]
     selection["client_report_edition"] = CLIENT_REPORT_EDITION
+    observed_link = observed_context.bind(workspace, selection)
+    if observed_link is not None:
+        selection["observed_context_binding"] = observed_link
+    else:
+        selection.pop("observed_context_binding", None)
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -330,6 +335,17 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            observed_product = observed_context.collect(workspace, selection, directory, state)
+            if (observed_product is None) != (observed_link is None):
+                raise ValueError("Observed report context does not match the selected source")
+            if observed_product is not None:
+                if observed_product["binding"] != observed_link:
+                    raise ValueError("Observed report context differs from its selected source binding")
+                for name, item in observed_product["files"].items():
+                    verify_file(directory, item)
+                    state["files"]["observed_context_" + name] = item
+                state["observed_context"] = observed_product["binding"]
+                atomic_json(state_path, state)
             analysis_product = analysis_delivery.retain_analysis(workspace, directory, state, analysis_link)
             if analysis_product is not None:
                 atomic_json(state_path, state)
@@ -668,6 +684,8 @@ def build(workspace, selection):
                 sections.extend(scientific_report.receiving_sections(water_product))
                 sections.extend(analysis_delivery.report_sections(analysis_product))
                 sections.extend(scientific_sections(economic_decision, state))
+                if observed_product is not None:
+                    sections.extend(observed_product["sections"])
                 sections.extend(scientific_report.economic_coverage_sections(economic_decision))
                 sections.extend(scientific_report.delivery_sections(state))
                 target = directory / "report.pdf"
@@ -690,6 +708,7 @@ def build(workspace, selection):
                         "source_report_sha256": selection.get("source_report_sha256"),
                         "source_report": report_link, "economic_decision": economic_link,
                         "client_report_edition": CLIENT_REPORT_EDITION,
+                        "observed_context": observed_link,
                     },
                 ))
                 state["files"]["report"] = describe_file(directory, target)
@@ -721,7 +740,8 @@ def build(workspace, selection):
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
             manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
                                              if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_",
-                                                                 "map_atlas", "source_report_", "economic_", "native_study_")))
+                                                                 "map_atlas", "source_report_", "economic_", "native_study_",
+                                                                 "observed_context_")))
             if report_link is not None:
                 manifest["source_report"] = report_link
             if economic_link is not None:

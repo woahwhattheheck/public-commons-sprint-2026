@@ -1,0 +1,67 @@
+{
+ "displayFieldName": "SiteName",
+ "fieldAliases": {
+  "OBJECTID": "OBJECTID",
+  "PrmtPrmtNum": "PrmtPrmtNum"
+ },
+ "geometryType": "esriGeometryPoint",
+ "spatialReference": {
+  "wkid": 4326,
+  "latestWkid": 4326
+ },
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID"
+  },
+  {
+   "name": "PrmtPrmtNum",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtNum",
+   "length": 1073741822
+  }
+ ],
+ "features": [
+  {
+   "attributes": {
+    "OBJECTID": 1812,
+    "PrmtPrmtNum": "SC0000477"
+   },
+   "geometry": {
+    "x": -82.800603789735121,
+    "y": 34.656706687286331
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2027,
+    "PrmtPrmtNum": "SC0035700"
+   },
+   "geometry": {
+    "x": -82.801503788833642,
+    "y": 34.635406682716756
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2036,
+    "PrmtPrmtNum": "SC0042994"
+   },
+   "geometry": {
+    "x": -82.682803760943031,
+    "y": 34.762206714143261
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2038,
+    "PrmtPrmtNum": "SC0047856"
+   },
+   "geometry": {
+    "x": -82.77140378294807,
+    "y": 34.689206695296548
+   }
+  }
+ ]
+}
