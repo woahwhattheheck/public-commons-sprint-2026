@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-5"
+DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-6"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -92,6 +92,20 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
             "source": {"uri": entry["uri"], "vintage": entry["vintage"],
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
+
+def _delivery_audit_scope(selection, grid):
+    """Keep an explicit contract, otherwise follow the original prepared grid."""
+    chosen = selection.get("audit_scope")
+    if chosen is not None:
+        if chosen not in ("regional-30m", "source-native"):
+            raise ValueError("Select regional-30m or source-native delivery audit scope")
+        return chosen
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    regional = (math.isclose(abs(a), 30, rel_tol=0, abs_tol=1e-6)
+                and math.isclose(abs(e), 30, rel_tol=0, abs_tol=1e-6)
+                and abs(b) < 1e-8 and abs(d) < 1e-8
+                and grid["spec"]["upstream_buffer_m"] > 0)
+    return "regional-30m" if regional else "source-native"
 
 def _grid_measurements(grid):
     """Describe the actual retained pixel geometry and physical area."""
@@ -262,9 +276,15 @@ def build(workspace, selection):
     if baseline["state"] != "complete":
         raise ValueError("Complete the selected baseline native run")
     require_complete_delivery(baseline)
+    if workspace._get("scenarios", baseline["selection"]["scenario_id"])["kind"] != "baseline":
+        raise ValueError("Choose an original baseline scenario for the current-export maps")
     scenario_ids = selection.get("scenario_run_ids", [])
-    if not scenario_ids:
+    if not isinstance(scenario_ids, list) or not scenario_ids:
         raise ValueError("Select completed explicit future land-cover scenarios for the future-service maps")
+    scenario_ids = [identifier(value) for value in scenario_ids]
+    if len(scenario_ids) != len(set(scenario_ids)) or baseline["id"] in scenario_ids:
+        raise ValueError("Choose distinct future land-cover alternatives, each different from the baseline")
+    selection["scenario_run_ids"] = scenario_ids
     alternatives = [workspace.inspect_run(i) for i in scenario_ids]
     for run in alternatives:
         require_complete_delivery(run)
@@ -520,6 +540,17 @@ def build(workspace, selection):
                                    for value in selection.get("observation_comparison_ids", [])]
             if any(v["run_id"] not in [baseline["id"]] + scenario_ids for v in observation_results):
                 raise ValueError("Observation comparison is not bound to a selected delivery run")
+            working = directory / "working" / "scientific-workspace.zip"
+            if "working_archive" not in state["files"]:
+                working.parent.mkdir(parents=True, exist_ok=True)
+                if working.exists():
+                    previous = portable.inspect_archive(working, verify=True)
+                    if previous["project"] != workspace.project:
+                        raise ValueError("Existing working archive belongs to another original project")
+                else:
+                    portable.backup(workspace, working, include_intermediates=True, include_deliveries=False)
+                state["files"]["working_archive"] = describe_file(directory, working)
+                atomic_json(state_path, state)
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
@@ -532,7 +563,8 @@ def build(workspace, selection):
                      "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
                      "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
                      "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
-                     "NDR guide: " + NDR_GUIDE, "SDR guide: " + SDR_GUIDE]),
+                     scientific_report.link("Original InVEST NDR guide", NDR_GUIDE),
+                     scientific_report.link("Original InVEST SDR guide", SDR_GUIDE)]),
                     ("Selected parameter profile", [profile["title"],
                      json.dumps({"ndr": profile["ndr"], "sdr": profile["sdr"]}, sort_keys=True),
                      "Original profile references: " + json.dumps(profile["references"], ensure_ascii=False)]),
@@ -606,6 +638,8 @@ def build(workspace, selection):
                 sections.extend(scientific_report.receiving_sections(water_product))
                 sections.extend(analysis_delivery.report_sections(analysis_product))
                 sections.extend(scientific_sections(economic_decision, state))
+                sections.extend(scientific_report.economic_coverage_sections(economic_decision))
+                sections.extend(scientific_report.delivery_sections(state))
                 target = directory / "report.pdf"
                 scientific_report.report_pdf(target, selection.get("title", workspace.project["title"]),
                                              sections, contact=contact, source_records=records)
@@ -629,25 +663,22 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
-            working = directory / "working" / "scientific-workspace.zip"
-            if "working_archive" not in state["files"]:
-                working.parent.mkdir(parents=True, exist_ok=True)
-                if working.exists():
-                    previous = portable.inspect_archive(working, verify=True)
-                    if previous["project"] != workspace.project:
-                        raise ValueError("Existing working archive belongs to another original project")
-                else:
-                    portable.backup(workspace, working, include_intermediates=True, include_deliveries=False)
-                state["files"]["working_archive"] = describe_file(directory, working)
-                atomic_json(state_path, state)
+            original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+            grid_path = directory / "grid" / "grid.json"
+            _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+            state["files"]["native_grid_record"] = describe_file(directory, grid_path)
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                         "record": state["files"]["native_grid_record"]["path"],
+                         "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "project_assets": [state["files"]["combined_priority"]["path"],
+                "project_assets": [state["files"]["native_grid_record"]["path"],
+                                   state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
@@ -666,13 +697,14 @@ def build(workspace, selection):
                    ("report", "report_html", "report_markdown", "report_data")}}
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
-            atlas_browser.write(directory, state, manifest)
-            atomic_json(state_path, state)
             analysis_delivery.extend_assets(manifest, state)
             for report_name in ("report_html", "report_markdown", "report_data"):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
+            # The browser snapshots the final captured members, including reports and analyses.
+            atlas_browser.write(directory, state, manifest)
+            atomic_json(state_path, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:

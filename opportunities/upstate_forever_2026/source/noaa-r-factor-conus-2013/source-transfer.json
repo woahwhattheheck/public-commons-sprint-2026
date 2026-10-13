@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "schema": "commons.source-artifact-transfer.v1",
+  "operation_id": "DBC61-UPSTATE-NOAA-R-ORIGINAL-20261012",
+  "phase": "COMPLETE",
+  "source": {
+    "bytes": 47143128,
+    "content_type": "application/zip",
+    "etag": "0x8D736D0673CC5A7",
+    "final_url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip",
+    "last_modified": "Wed, 11 Sep 2019 15:55:00 GMT",
+    "observed_at": "2026-10-12T07:32:58.890849Z",
+    "url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip"
+  },
+  "body": {
+    "bytes": 47143128,
+    "complete": true,
+    "git_blob_sha1": "db282740566dd0316a01cc1c7ad2972f30bae7ff",
+    "sha256": "157bbcaa54b445f96506fb1caffda4bbaea6b28f71bc7199235705e69cd00596",
+    "streamed_at": "2026-10-12T07:33:33.836546Z"
+  },
+  "file_id": "F0C9BC7MKME",
+  "destination": {
+    "channel_id": "C0BTTA66TK3",
+    "thread_ts": "1791724121.853269"
+  },
+  "receipt": {
+    "file_id": "F0C9BC7MKME",
+    "bytes": 47143128,
+    "sha256": "157bbcaa54b445f96506fb1caffda4bbaea6b28f71bc7199235705e69cd00596",
+    "upload_receipt": {
+      "acknowledged_bytes": 47143128,
+      "bytes_uploaded": 47143128,
+      "http_status": 200,
+      "ok": true
+    },
+    "git_blob_sha1": "db282740566dd0316a01cc1c7ad2972f30bae7ff",
+    "source": {
+      "bytes": 47143128,
+      "content_type": "application/zip",
+      "etag": "0x8D736D0673CC5A7",
+      "final_url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip",
+      "last_modified": "Wed, 11 Sep 2019 15:55:00 GMT",
+      "observed_at": "2026-10-12T07:32:58.890849Z",
+      "url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip"
+    },
+    "channel_id": "C0BTTA66TK3",
+    "thread_ts": "1791724121.853269",
+    "filename": "NOAA-R-Factor-CONUS-original.zip",
+    "attribution": "NOAA Office for Coastal Management, InPort 48224; 2013 publication of original 1975–1997/AH703 isoerodent source. Preserve original metadata, units and archive identity.",
+    "provider_completion": {
+      "files": [
+        {
+          "id": "F0C9BC7MKME"
+        }
+      ],
+      "ok": true,
+      "permalink": "https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C9BC7MKME/noaa-r-factor-conus-original.zip"
+    },
+    "readback": {
+      "ok": true,
+      "file_id": "F0C9BC7MKME",
+      "channel_id": "C0BTTA66TK3",
+      "thread_ts": "1791724121.853269",
+      "message_ts": "1791790447.186589",
+      "permalink": "https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C9BC7MKME/noaa-r-factor-conus-original.zip",
+      "readback": "original_thread_file_metadata"
+    },
+    "completed_at": "2026-10-12T07:38:29.001123Z"
+  },
+  "failure": null,
+  "unshared_attempts": [],
+  "updated_at": "2026-10-12T07:38:29.001138Z"
+}

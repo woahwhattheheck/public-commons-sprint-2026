@@ -95,6 +95,8 @@ The maintained nlcd_wcs receiver checks the exact saved GET URL, actual bytes an
 
 This command adopts and inspects the named tile without starting other HTTP requests. Resume then reuses that tile and continues the same operation.
 
+Execute new WPS requests with the direct native caller. Generic URL attachment loaders may send a preliminary HEAD before GET; do not use that two-request sequence to launch WPS jobs. This receiving command is for a completed original response already held by its owner.
+
 ## Import and select the complete source
 
 The output entry has kind raster, role NLCD, units class and resampling nearest. Its distinct usgs-annual-nlcd-wps-2025-… identity derives from this exact operation. It retains the year, named coverage, dated-basename filter, publication references, original plan/description/domain, all requests/responses/receipts/observations, native mosaic, normalized raster and per-feature support report.

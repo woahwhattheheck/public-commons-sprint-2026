@@ -978,6 +978,10 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
                 economics = result["economic_editions"]
                 completed_at = result["completed_at"]
                 result_path = directory / "result.json"
+                if read_json(result_path) != result:
+                    # A relocated completed result is current even when this
+                    # invocation does not request another Workspace archive.
+                    atomic_json(result_path, result)
             if backup is not None:
                 backup_path = Path(backup).resolve()
                 if backup_path.is_relative_to(ws.root):
