@@ -8,7 +8,7 @@
       "title": "Utility-focus microbial observations: temporal, calendar-support and same-station flow context",
       "kind": "document",
       "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
-      "sha256": "33f2e1de6c004efe3af90230a0b42d422e547fefaf0b6a4fb73e4c76495df391",
+      "sha256": "f7ca4701b444a12754a6f7b012f76d5c7061082bb8fbc5b59098bc4338cbce37",
       "metadata": {
         "report_schema": "upstate.observed-report/v1",
         "source_operation": "ECO-MICROBIAL-EXPLORER-20261013",
@@ -161,7 +161,7 @@
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/render-publication-svg.mjs",
-          "sha256": "0b7ddda353a26000a299bfc3ed3bce43a3ba8099f8ff4c0446ccf38a696fbf9e"
+          "sha256": "c26e81ab16d84e65ff9d8e644ade0c75b34b16e3862b4c432f0254c8b7585419"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/figures/sampling-coverage.svg",
@@ -173,11 +173,11 @@
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/figures/same-station-flow.svg",
-          "sha256": "0d699ed26f4a46dca2fdf8f92c732751e257d5bf9c3f06dc4e99b2673ca64419"
+          "sha256": "64a9f97ca15715a95cb6498cb891e90bf4f44e75a3eb89796683c588e59d7acd"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/publication-figures.html",
-          "sha256": "f11981a5024cbcfe1506e424694be43c3e29ebe05071ed50807e7097123d446c"
+          "sha256": "07e6748a9fc51b00eb2f9d5ab5b62f454466828395b2f019cae69cb2460ed738"
         },
         {
           "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
