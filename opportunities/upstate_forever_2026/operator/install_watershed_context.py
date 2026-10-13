@@ -7,7 +7,7 @@ import ast
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import tempfile
 from datetime import datetime, timezone
 
@@ -18,6 +18,7 @@ FILES = (
     "source_tools/prepare_watershed_context.py",
     "source_tools/receive_watershed_context.py",
     "source_tools/watershed_source_entry.py",
+    "source_tools/watershed_source_validation.py",
     "operator/watershed_context.py",
     "operator/web/watershed_context.mjs",
     "operator/web/watershed_context.css",
@@ -26,6 +27,8 @@ FILES = (
     "operator/WATERSHED_CONTEXT.md",
 )
 OPTIONAL = (
+    "integration/run_watershed_context_operator.py",
+    "integration/WATERSHED_CONTEXT_RECEIVING.md",
     "integration/watershed_completed_receiving.json",
     "model/WATERSHED_BRIEF.md",
     "model/WATERSHED_CONTEXT.md",
@@ -39,6 +42,56 @@ OPTIONAL = (
     "source/water_context/20261013/scdes-domain217-source-coverage.json",
     "source_tools/WATERSHED_SOURCE_IMPORT.md",
 )
+
+
+SOURCE_MANIFESTS = (
+    "source/water_context/sources-20261013.json",
+    "source/water_context/20261013/complete-sources.json",
+    "source/water_context/20261013/complete-native-sources.json",
+)
+
+
+def source_manifest_files(source_root):
+    """Snapshot each available source manifest and its exact native members."""
+    result = {}
+    for manifest_name in SOURCE_MANIFESTS:
+        manifest_path = source_root / manifest_name
+        if not manifest_path.exists():
+            continue
+        if not manifest_path.resolve(strict=True).is_relative_to(source_root):
+            raise ValueError("Source manifest leaves the prepared application: " + manifest_name)
+        manifest_body = manifest_path.read_bytes()
+        manifest = json.loads(manifest_body)
+        if (not isinstance(manifest, dict) or manifest.get("schema") != "upstate.sources/v1"
+                or not isinstance(manifest.get("entries"), list)):
+            raise ValueError("Choose an original upstate.sources/v1 manifest: " + manifest_name)
+        result[manifest_name] = manifest_body
+        for entry in manifest["entries"]:
+            if not isinstance(entry, dict) or not isinstance(entry.get("companions", []), list):
+                raise ValueError("Source entries must declare their native companions")
+            for row in [entry] + entry.get("companions", []):
+                name = row.get("path") if isinstance(row, dict) else None
+                if (not isinstance(name, str) or not name or "\\" in name
+                        or any(ord(char) < 32 for char in name)):
+                    raise ValueError("Source manifest needs a canonical relative member")
+                relative = PurePosixPath(name)
+                if (relative.is_absolute() or relative.as_posix() != name
+                        or any(part in ("", ".", "..") for part in name.split("/"))):
+                    raise ValueError("Source manifest member leaves its native directory: " + name)
+                path = manifest_path.parent / name
+                resolved = path.resolve(strict=True)
+                if not resolved.is_relative_to(source_root) or not resolved.is_file():
+                    raise ValueError("Source member leaves the prepared application: " + name)
+                body = resolved.read_bytes()
+                if row.get("bytes") is not None and row["bytes"] != len(body):
+                    raise ValueError("Source member byte count changed: " + name)
+                if row.get("sha256") is not None and row["sha256"] != digest(body):
+                    raise ValueError("Source member hash changed: " + name)
+                member = path.relative_to(source_root).as_posix()
+                if member in result and result[member] != body:
+                    raise ValueError("Source manifests name conflicting member bytes: " + member)
+                result[member] = body
+    return result
 
 
 def digest(body):
@@ -67,9 +120,12 @@ def install(application, source_root, *, dry_run=False):
             raise ValueError("Install the current shared extension host first: missing " + required)
     originals = {}
     prepared = {}
-    for name in FILES + tuple(name for name in OPTIONAL if (source_root / name).is_file()):
+    source_bodies = source_manifest_files(source_root)
+    names = dict.fromkeys(FILES + tuple(
+        name for name in OPTIONAL if (source_root / name).is_file()) + tuple(source_bodies))
+    for name in names:
         source = source_root / name
-        body = source.read_bytes()
+        body = source_bodies[name] if name in source_bodies else source.read_bytes()
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"), filename=name)
         if name.endswith(".json"):

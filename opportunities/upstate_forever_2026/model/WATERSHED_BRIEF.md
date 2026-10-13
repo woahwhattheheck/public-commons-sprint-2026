@@ -43,3 +43,38 @@ Selected-class records use the source publisher's HUC12 attributes and the origi
 - render_selection_brief(selection) returns Markdown.
 - render_selection_html(selection) returns a complete accessible HTML document.
 - write_selection_brief(directory, selection) writes watershed-selection-brief.md and watershed-selection-brief.html and returns the existing operator's relative filename/file-descriptor mapping.
+
+
+## Distinct contributing membership (brief v2)
+
+Selections with retained native upstream membership now include a contributing-area union. The implementation joins every member to the full original regional report and calls the native model's summary function on distinct rows. Each focal watershed keeps its individual contributing set. The union counts a shared HUC once and retains the repeated memberships separately.
+
+The original completed connectivity output can enrich its exact original report without rerunning the network analysis:
+
+    python -B -m model.watershed_brief \
+      --report /actual/receiving/watershed-context.json \
+      --connectivity-csv outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv \
+      --connectivity-summary outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json \
+      --huc12 030601010703 --huc12 030601010704 \
+      --huc12 030601020502 --huc12 030601020507 \
+      --output-dir /actual/receiving/watershed-rfp-focus
+
+Both connectivity arguments are required together. The summary must identify the original report ID and exact report-file SHA256. The loader checks all domain IDs, focal attributes, ancestor membership and contributing totals against the retained report. It preserves the source-file hashes and original USGS source references.
+
+The original completed four-focus case has 36 distinct contributing HUC12s, 739,086.63 acres, three NRCS priority HUCs and 1,002 selected-class records (879 ORW, 71 TN and 52 TPGT). Its individual contributing areas sum to 782,778.80 acres; Upper Six And Twenty Creek and Choestoea Creek account for 43,692.17 acres of repeated membership. These are drainage membership quantities. Source classifications retain their publisher-assigned HUC12 and named-reach scope. Expert interpretation uses the cited classification regulations and the exact source reaches.
+
+The current installer already retains the completed connectivity CSV and summary. The provider first uses native report membership; otherwise, it uses those installed outputs only when their report ID and SHA256 match the selected report. Other reports keep their original focal brief. Each union export includes:
+
+- The original selected-watersheds.json and selected-watersheds.csv with focal membership unchanged.
+- The contributing_context object retained in the selected JSON, with distinct member rows, each focal set, the native summaries, repeated memberships and original source identities.
+- watershed-selection-brief.html and watershed-selection-brief.md, with the union, per-focal areas, priority names and expanded source-class labels.
+- watershed-contributing-hucs.csv, with one row per distinct contributing HUC, original area and priority fields, class counts, focal membership and the selected-HUC flag.
+
+The provider includes both brief_format v2 and a digest of the retained contributing context in the export identity. Reopening an existing export continues to return its original files. A saved enriched selection renders independently of the live report and connectivity files.
+
+### Additional module API
+
+- load_completed_connectivity(report, report_sha256, csv_path, summary_path) returns original upstream membership and bound source metadata.
+- add_contributing_context(selection, report, upstream_by_huc=None, source=None) returns the selection with its union when membership is available.
+- selection_with_contributing_context(report, selected_huc12s, report_sha256, completed_directory=None) provides the operator's native-or-bound-completed result path.
+- write_selection_brief also returns the contributing CSV descriptor when the saved selection retains a union.
