@@ -90,7 +90,73 @@ high-quality waters.
 For source bundles stored under a different original URI, pass --selectors.
 That JSON object maps profile IDs to real source descriptors copied from the
 Workspace source inventory. A descriptor contains source_collection_id and
-source_id, and may include layer. The source's original identity is retained.
+source_id, and may include layer, an equality where object, and exact native
+feature_ids. Inventory reads apply all three restrictions through the same
+loader used for compilation.
+
+A profile selector may also be a full source selection containing source,
+field_map and one of the metadata selectors below. This lets the inspector
+show the actual scoped records, original coded domains, and explicit field
+resolutions before compiling. For example:
+
+    {
+      "scdes_source_water_areas": {
+        "source": {
+          "source_collection_id": "<actual imported 64-character collection ID>",
+          "source_id": "scdes-arjws-prwd-swpa-20261012",
+          "where": {"OBJECTID": 11}
+        },
+        "layer_metadata_companion": "metadata/public-water-2.json"
+      }
+    }
+
+The inventory lists metadata_companions with their exact source_path, hash,
+and bytes, plus the selected metadata_provenance and complete layer_metadata.
+A field with ambiguous candidates requests an explicit field_map entry.
+
+## Original metadata companions
+
+The public-water source manifests already declare their ArcGIS layer metadata
+as companions of the original vector source. The compiler reads those retained
+objects directly, verifies their SHA256 and byte length through Workspace, and
+matches each companion's exact source_path to the verified original manifest.
+It recovers the original metadata URL from that manifest; native source-view
+directory layouts do not determine the association.
+
+With no explicit metadata selector, the compiler selects one original ArcGIS
+layer metadata object whose declared URL and layer ID match the vector source.
+If an older manifest has no companion URL, the explicit original companion
+binding and matching layer ID still apply. The original layer response takes
+precedence over a derived source dictionary. A dictionary is eligible for
+automatic selection only when sources.scdes.layer_url matches the vector's
+original service layer. Distinct plausible metadata bodies require an explicit
+choice; two copies of the exact same retained body are treated as one.
+
+Use layer_metadata_companion with the exact retained source_path when a source
+has more than one matching metadata edition. For the public native input set:
+
+| Vector source | Exact metadata companion |
+| --- | --- |
+| scdes-public-surface-intakes-20261012 | metadata/public-water-0.json |
+| scdes-arjws-prwd-swpa-20261012 | metadata/public-water-2.json |
+
+The precedence is an explicit layer_metadata_source or
+layer_metadata_companion, then request layer_metadata, then original
+entry.metadata.layer_metadata, then automatic retained companion selection.
+The two explicit reference mechanisms are mutually exclusive. JSON input
+supports UTF-8 BOMs and gzip detected from its bytes.
+
+Catalog metadata_provenance retains the original manifest object identity,
+companion object identity, exact original companion declaration and source
+descriptor. Automatic selection never reacquires a service or substitutes a
+newer online metadata edition.
+
+The actual public-water identifiers PWSNO, SYSTEM and INTAKE resolve to
+system_id and intake_id. DESC_ is recognized as the original protection-zone
+description. PWSSTATUS and INTAKESTAT remain separate source properties: when
+both exist, choose the intended exact status field in status_filter.field or
+field_map.status. The compiler does not conflate an intake's operational state
+with the public water system's operational state.
 
 ## Source-selection request
 

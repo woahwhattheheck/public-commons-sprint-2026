@@ -10,8 +10,8 @@ const active = value => ['queued', 'running'].includes(value);
 const ticketURL = ticket => /^\/api\/file\/[a-f0-9]{64}$/.test(ticket?.url || '') ? ticket.url : '';
 const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'}[key] || label(key));
 
-export function attachReceptorWorkbench({getState, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem}) {
-  let root=null, frame=null, workspace=null, generation=0, catalog=null;
+export function attachReceptorWorkbench({getState, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail}) {
+  let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
   let filters={profile:'',scenario:'',area:'',pollutant:'',search:''}, page=0;
@@ -351,6 +351,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       if(!catalog.experiments?.length&&draft.mode==='experiment')draft.mode=catalog.runs?.length?'inventory':'network';
       if(draft.mode==='network'&&draft.title==='Source-water scenario comparisons')draft.title='Original watershed connections';
       syncControls();remember();status('Retained workspace results are ready.');
+      await openTaskTarget();
     }catch(error){if(epoch===generation)status(error.message||String(error),true);}
     finally{if(epoch===generation)fetching=false;}
   }
@@ -848,6 +849,54 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     node('[data-rc-downloads]').innerHTML='<details class="rc-detail" open><summary>Prepared sources and original records</summary><p class="rc-download-links">'+downloadLinks(files.filter(file=>!file.filename.endsWith('.html')))+'</p><p>Original source body: <code>'+esc(prepared.source_binding.body_sha256)+'</code></p></details>';
   }
 
+
+  function taskActions(task) {
+    if(task?.state!=='complete'||!task.result||task.workspace!==currentWorkspace())return '';
+    const saved=task.result,buttons=[];
+    const choices={
+      'receptor.network.build':['network','Open watershed study'],
+      'receptor.inventory.build':['inventory','Open source-water inventory'],
+      'receptor.experiment.build':['comparison','Open profile comparisons'],
+      'receptor.source-areas.prepare':['source-areas','Open prepared scenario areas']
+    };
+    const valid=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
+    const resultButton=(kind,id,title)=>{
+      if(!['network','inventory','comparison','source-areas'].includes(kind)||!valid(id))return;
+      buttons.push('<button type="button" data-action="receptor-result-open" data-workspace="'+esc(task.workspace)+
+        '" data-kind="'+kind+'" data-id="'+id+'">'+esc(title)+'</button>');
+    };
+    if(choices[task.action])resultButton(choices[task.action][0],saved.id,choices[task.action][1]);
+    if(task.action==='receptor.package.export')resultButton(saved.kind,saved.result_id,'Open packaged source-water results');
+    if(task.action==='receptor.scenario.save'){
+      if(valid(saved.id))buttons.push('<button type="button" data-action="receptor-result-scenario" data-workspace="'+
+        esc(task.workspace)+'" data-id="'+saved.id+'">Open saved land-cover scenario</button>');
+      resultButton('source-areas',saved.preparation_id,'Open scenario areas and native runs');
+    }
+    return buttons.length?'<div class="page-actions">'+buttons.join('')+'</div>':'';
+  }
+  async function openTaskTarget() {
+    const selected=taskTarget;
+    if(!selected||!frame||!catalog||workspace!==selected.workspace||currentWorkspace()!==selected.workspace)return;
+    taskTarget=null;
+    await openResult(selected.kind,selected.id);
+    if(workspace===selected.workspace)node('[data-rc-result]')?.scrollIntoView({block:'start'});
+  }
+  async function dispatch(button) {
+    const action=button?.dataset?.action,id=button?.dataset?.id,requested=currentWorkspace();
+    if(button?.dataset?.workspace!==requested)throw Error('Open this task in its original workspace.');
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose a retained source-water result.');
+    if(action==='receptor-result-scenario'){
+      closeDetail();
+      return openItem('scenarios',id);
+    }
+    if(action!=='receptor-result-open'||!['network','inventory','comparison','source-areas'].includes(button.dataset.kind))
+      throw Error('Choose a registered source-water task result.');
+    taskTarget={workspace:requested,kind:button.dataset.kind,id};
+    closeDetail();
+    navigate('source-water');
+    return openTaskTarget();
+  }
+
   async function act(action,target) {
     if(action==='prepare-areas')return prepareAreaForm();
     if(action==='prepared-analysis')return usePreparedAnalysis();
@@ -953,6 +1002,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
   function mount(container) {
     if(root===container&&frame?.isConnected&&workspace===currentWorkspace()){update();return;}
     detach();root=container;workspace=currentWorkspace();
+    if(taskTarget&&taskTarget.workspace!==workspace)taskTarget=null;
     draft=defaultDraft();customProfile=null;pending=null;result=null;catalog=null;packageFiles=[];
     planned=null;profileOptions=[];scenarioOptions=[];observing=false;pathSelection=null;selectedMapHuc='';
     try{const saved=JSON.parse(localStorage.getItem(storageKey())||'null');if(saved){draft={...draft,...saved.draft};customProfile=saved.customProfile||null;pending=saved.pending||null;}}catch(_){}
@@ -1050,5 +1100,5 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
   function detach() {
     remember();generation++;root=null;frame=null;fetching=false;observing=false;
   }
-  return {mount,update,detach};
+  return {mount,update,detach,taskActions,dispatch};
 }

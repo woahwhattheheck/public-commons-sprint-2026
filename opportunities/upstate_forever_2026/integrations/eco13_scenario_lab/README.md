@@ -2,6 +2,10 @@
 
 Version 0.1.2 receives saved native experiments, keeps original scientific results and supporting files, adds explicit planning costs and objectives, and exports a complete edition that another operator can reopen. It composes with the original Upper Savannah application and the existing ECO13 workspace bridge.
 
+## Scientific interpretation
+
+**Needs expert review.** A qualified watershed modeler should review the selected data, grid resolution, model parameters, paired coverage and uncertainty for the study before the modeled quantities and planning comparisons inform real-world decisions. The workbench retains those source assumptions and original results for that review.
+
 ## Receive a saved native experiment
 
 From the original application's root, use its installed Python and the existing package path:

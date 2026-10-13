@@ -133,6 +133,29 @@ def source_identity():
 
 
 def original_inputs(args):
+    manifest_path = args.source_directory / "sources.json"
+    if manifest_path.exists():
+        manifest = read_json(manifest_path)
+        if manifest.get("schema") != "upstate.sources/v1":
+            raise ValueError("Select the retained original source manifest")
+        entries = {entry["id"]: entry for entry in manifest["entries"]}
+        found = {}
+        for role, source_id in (
+                ("ndr_archive", "GURA_ORIGINAL_NDR_ZIP"),
+                ("sdr_archive", "GURA_ORIGINAL_SDR_ZIP"),
+                ("ndr_table", "GURA_NDR_TABLE"),
+                ("sdr_table", "GURA_SDR_TABLE")):
+            entry = entries[source_id]
+            path = (args.source_directory / entry["path"]).resolve(strict=True)
+            if not path.is_relative_to(args.source_directory):
+                raise ValueError("Retain original input bytes within the source directory")
+            item = describe(path)
+            if item["sha256"] != entry["sha256"]:
+                raise ValueError("Retained original input changed: " + str(path))
+            if role.endswith("_table") and item["sha256"] != SOURCES[role]["sha256"]:
+                raise ValueError("Retain the original pinned " + role + " source table")
+            found[role] = {**item, "uri": entry["uri"], "edition": entry["vintage"]}
+        return found
     if args.archives is None:
         raise ValueError("Select the retained original archive directory with --archives")
     table_root = args.tables.resolve(strict=True)
@@ -144,7 +167,7 @@ def original_inputs(args):
         if item["sha256"] != source["sha256"]:
             raise ValueError("The selected " + role + " differs from the retained original 3.20.0 source: "
                              + item["path"])
-        found[role] = {**item, "uri": source["uri"]}
+        found[role] = {**item, "uri": source["uri"], "edition": SOURCE_EDITION}
     return found
 
 
@@ -183,8 +206,13 @@ def check_receiving(path, workspace):
     for model in ("ndr", "sdr"):
         role = model + "_archive"
         archived = receipt.get("archives", {}).get(model, {})
-        if archived.get("sha256") != SOURCES[role]["sha256"]:
-            raise ValueError("The receiving record selects another original " + model.upper() + " source edition")
+        retained_path, retained_entry = ws.source_file(
+            collection["id"], "GURA_ORIGINAL_" + model.upper() + "_ZIP")
+        retained = describe(retained_path)
+        if (retained["sha256"] != archived.get("sha256")
+                or retained["bytes"] != archived.get("bytes")
+                or retained["sha256"] != retained_entry.get("sha256")):
+            raise ValueError("The original " + model.upper() + " archive differs from its retained source collection")
         table = receipt.get("original_tables", {}).get(model, {})
         if table.get("sha256") != SOURCES[model + "_table"]["sha256"]:
             raise ValueError("The receiving record selects another pinned original " + model.upper() + " table")
@@ -297,15 +325,22 @@ def prepare(args, identity):
               programme_id=receipt["programme_id"], grid_id=receipt["grid_id"])
         return receipt
     inputs = original_inputs(args)
+    selection_path = args.source_directory / "programme-selection.json"
+    prior_selection = read_json(selection_path) if selection_path.exists() else None
+    source_reference = (prior_selection.get("source_reference") if prior_selection else None)
+    source_reference = source_reference or getattr(args, "_retained_source_reference", None)
+    if args.source_reference and source_reference and args.source_reference != source_reference:
+        raise ValueError("Continue the saved original source reference: " + source_reference)
+    source_reference = source_reference or args.source_reference or "retained-application-sha256:" + identity["sha256"]
     selected = SimpleNamespace(
         workspace=args.workspace, source_directory=args.source_directory,
         ndr_archive=Path(inputs["ndr_archive"]["path"]),
         sdr_archive=Path(inputs["sdr_archive"]["path"]),
         ndr_table=Path(inputs["ndr_table"]["path"]), sdr_table=Path(inputs["sdr_table"]["path"]),
-        ndr_source_uri=SOURCES["ndr_archive"]["uri"], sdr_source_uri=SOURCES["sdr_archive"]["uri"],
-        ndr_table_source_uri=SOURCES["ndr_table"]["uri"], sdr_table_source_uri=SOURCES["sdr_table"]["uri"],
-        source_edition=SOURCE_EDITION,
-        source_reference=args.source_reference or "retained-application-sha256:" + identity["sha256"],
+        ndr_source_uri=inputs["ndr_archive"]["uri"], sdr_source_uri=inputs["sdr_archive"]["uri"],
+        ndr_table_source_uri=inputs["ndr_table"]["uri"], sdr_table_source_uri=inputs["sdr_table"]["uri"],
+        source_edition=inputs["ndr_archive"]["edition"],
+        source_reference=source_reference,
         expected_resolution_m=300.0, upstream_buffer_m=300.0,
     )
     event("preparing_original_inputs", workspace=str(args.workspace),
@@ -361,27 +396,38 @@ def plan_and_catalog(args):
 
 
 def run_original_programme(args, receipt, state, state_path):
-    command = [sys.executable, "-B", "-m", "model.compute_programme_cli",
-               "--workspace", str(args.workspace), "execute", receipt["programme_id"]]
-    process = {"argv": command, "cwd": str(APPLICATION_ROOT),
-               "programme_id": receipt["programme_id"], "hostname": socket.gethostname(),
-               "started_at": now(), "log": str(args.source_directory / "original-native-programme.log")}
-    state.update(phase="original native programme", original_native_process=process, updated_at=now())
-    atomic_json(state_path, state)
-    with Path(process["log"]).open("ab") as log:
-        child = subprocess.Popen(command, cwd=APPLICATION_ROOT, stdout=log, stderr=subprocess.STDOUT)
-        process["pid"] = child.pid
-        state.update(original_native_process=process, updated_at=now())
+    from model.compute_programme import ComputeProgrammes
+    from model.workspace import Workspace
+    from source_tools.gura_comparison import run_retained_programme
+    manager = ComputeProgrammes(Workspace(args.workspace))
+    programme_id = state.get("active_original_programme_id", receipt["programme_id"])
+    if programme_id != receipt["programme_id"]:
+        original = manager._load(receipt["programme_id"])
+        active = manager._load(programme_id)
+        if active["selection"] != original["selection"]:
+            raise ValueError("The retained active programme differs from the original Gura selection")
+
+    def observe(process, observation):
+        state.update(phase="original native programme",
+                     active_original_programme_id=observation["programme_id"],
+                     original_native_observation=observation, updated_at=now())
+        if process is not None:
+            state["original_native_process"] = process
         atomic_json(state_path, state)
-        event("original_native_programme_started", **process)
-        returncode = child.wait()
-    process.update(returncode=returncode, finished_at=now())
-    state.update(original_native_process=process, updated_at=now())
-    atomic_json(state_path, state)
-    if returncode:
-        raise RuntimeError("Original native programme exited " + str(returncode)
-                           + ". Continue the retained programme after reading " + process["log"])
-    event("original_native_programme_complete", **process)
+        event("original_native_programme_status",
+              programme_id=receipt["programme_id"],
+              observation=observation,
+              process=state.get("original_native_process"))
+
+    result = run_retained_programme(
+        manager, programme_id, args.source_directory,
+        record_name="original-native-command.json",
+        log_name="original-native-programme.log",
+        previous_record=state.get("original_native_process"),
+        original_programme_id=receipt["programme_id"], notify=observe)
+    event("original_native_programme_complete",
+          programme_id=result["programme_id"], state=result["state"],
+          process=state.get("original_native_process"))
 
 
 def operator_command(args):
@@ -398,8 +444,16 @@ def operator_command(args):
 
 def serve(args):
     command = operator_command(args)
-    event("operator_starting", argv=command)
-    return subprocess.call(command, cwd=APPLICATION_ROOT)
+    event("operator_starting", argv=command,
+          ready_file=str(args.operator_ready_file) if args.operator_ready_file else None)
+    if args.operator_ready_file is None:
+        return subprocess.call(command, cwd=APPLICATION_ROOT)
+    ready_path = args.operator_ready_file.resolve()
+    ready_path.parent.mkdir(parents=True, exist_ok=True)
+    # Keep the single original server receipt separate from workflow JSONL.
+    # An existing receipt may belong to a server already serving this study.
+    with ready_path.open("x", encoding="utf-8") as ready:
+        return subprocess.call(command, cwd=APPLICATION_ROOT, stdout=ready)
 
 
 def status(args):
@@ -432,6 +486,9 @@ def workflow(args):
             state.update(previous_workspace=state.get("workspace"),
                          workspace=str(args.workspace),
                          source_directory=str(args.source_directory))
+        previous_application = state.get("application", {}).get("sha256")
+        args._retained_source_reference = state.get("source_reference") or (
+            "retained-application-sha256:" + previous_application if previous_application else None)
         try:
             state.update(state="running", phase="runtime", updated_at=now(),
                          source_directory=str(args.source_directory),
@@ -440,7 +497,11 @@ def workflow(args):
             atomic_json(state_path, state)
             identity = source_identity()
             available = runtime(require_native=needs_native)
-            state.update(runtime=available, application=identity)
+            source_reference = args._retained_source_reference or args.source_reference or (
+                "retained-application-sha256:" + identity["sha256"])
+            state.update(runtime=available, application=identity, source_reference=source_reference,
+                         execution_environment={name: os.environ.get(name) for name in
+                                                ("GDAL_CACHEMAX", "GDAL_NUM_THREADS")})
             atomic_json(state_path, state)
             if available["errors"]:
                 issues = "; ".join(name + ": " + item["message"] for name, item in available["errors"].items())
@@ -448,7 +509,9 @@ def workflow(args):
             state.update(phase="original inputs", updated_at=now())
             atomic_json(state_path, state)
             receipt = prepare(args, identity)
+            saved_selection = read_json(Path(receipt["selection_path"]))
             state.update(original_programme_id=receipt["programme_id"],
+                         source_reference=saved_selection.get("source_reference"),
                          grid_id=receipt["grid_id"], profile_id=receipt["profile_id"],
                          phase="scenario catalogue", updated_at=now())
             atomic_json(state_path, state)
@@ -491,6 +554,10 @@ def workflow(args):
 
 
 def main(argv=None):
+    # Configure the inherited native child before any GIS/native imports.
+    # Explicit caller settings remain visible and take precedence.
+    os.environ.setdefault("GDAL_CACHEMAX", "16")
+    os.environ.setdefault("GDAL_NUM_THREADS", "1")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("status", "prepare", "run", "serve"))
     parser.add_argument("--workspace", type=Path, required=True)
@@ -509,6 +576,8 @@ def main(argv=None):
     parser.add_argument("--physical-only", action="store_true",
                         help="Produce the native watershed report without the economic companion")
     parser.add_argument("--operator-state", type=Path)
+    parser.add_argument("--operator-ready-file", type=Path,
+                        help="Write only the original server startup receipt to a new local file")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--serve", action="store_true",
                         help="Open the operator server after the native run and archive finish")
@@ -518,7 +587,8 @@ def main(argv=None):
     args.workspace = args.workspace.resolve()
     args.source_directory = args.source_directory.resolve()
     args.operator_state = (args.operator_state or args.workspace.with_name(args.workspace.name + "-operator")).resolve()
-    args.backup = (args.backup or args.workspace.with_name(args.workspace.name + "-complete.zip")).resolve()
+    args.backup = (args.backup or args.workspace.with_name(
+        args.workspace.name + ("-physical-complete.zip" if args.physical_only else "-complete.zip"))).resolve()
     if not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535")
     if args.backup.is_relative_to(args.workspace):

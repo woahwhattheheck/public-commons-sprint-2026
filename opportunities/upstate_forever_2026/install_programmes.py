@@ -23,6 +23,10 @@ FILES = (
     "model/programme_experiments.py",
     "model/PAIR_COMPLETION.md",
     "source_tools/receive_gura.py",
+    "source_tools/gura_workflow.py",
+    "source_tools/gura_comparison.py",
+    "source_tools/GURA_COMPARISON.md",
+    "GURA_NATIVE_WORKFLOW.md",
     "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv",
     "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv",
     "source/gura-original-tables-3.20/source.json",
@@ -39,7 +43,8 @@ PREVIOUS_EDITIONS = {
     "f3ffdf5ed39aa827e83ed67b73fabad894f6219e46509e18da8f5a7c88512bce",
     "b118d793dc2b2cc2de8ea0016ccb8b0e0e18af422a1f154e8dd822801c6387c1",
     "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5",
-    "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1"
+    "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1",
+    "efdf95c8c2f31b1a0b288b10c80a8e33f57ee06639535d8165c92cda5df068bf"
   ],
   "model/compute_programme_cli.py": [
     "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
@@ -50,7 +55,8 @@ PREVIOUS_EDITIONS = {
   "operator/programmes.py": [
     "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61",
     "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7",
-    "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4"
+    "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4",
+    "0741c15a214d01880a35bc1ff62198b36af20dcabe3e2fba321ef0bfb53e8aef"
   ],
   "operator/web/programmes.mjs": [
     "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
@@ -58,7 +64,8 @@ PREVIOUS_EDITIONS = {
     "2e0438a63ee057ecef5bf36d14a9053701b98f83f09cea3a14a57dffa9432571",
     "5a3f6d32cc1de2a8a4dc86550684c240cb51be5dad675eb6d3c7fe6e96bb3f0d",
     "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30",
-    "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443"
+    "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443",
+    "8f415ee9049807121bc842c27a0cbd465eb7702a747540f82a6c5fa52cd8d493"
   ],
   "operator/web/programmes.css": [
     "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf",
@@ -67,12 +74,14 @@ PREVIOUS_EDITIONS = {
   "install_programmes.py": [
     "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0",
     "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508",
-    "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06"
+    "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06",
+    "cdac9d9f0d358ef788e3707618bc2a8526a72d47bbb1e4a312374741946f3055"
   ],
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
     "59c5602aac0a6d476610cea86f7481087b808f9dec67522e5b8e0da11d2090be",
-    "8820d98e4c7b02ab587fae65cb9e36010ef2cc24b1ce7b1978d1de08a80a44f8"
+    "8820d98e4c7b02ab587fae65cb9e36010ef2cc24b1ce7b1978d1de08a80a44f8",
+    "4f21691ce7d25e64e6bfb76862d8ab8baa0a12474b37fbc56cef5c894f8e6793"
   ],
   "model/programme_experiments.py": [
     "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
@@ -91,7 +100,28 @@ PREVIOUS_EDITIONS = {
   "source/gura-original-tables-3.20/source.json": [
     "40aba1995f45941b0391db17b94bceb36d6478b07339d2fb486644c3624e35d2"
   ],
-  "model/PAIR_COMPLETION.md": []
+  "model/PAIR_COMPLETION.md": [
+    "95cbf57c338b0a83ff04bc2f353bf8ab323de6b080dfd2db128ee434de79237b"
+  ],
+  "source_tools/gura_workflow.py": [
+    "9b5eff5099256c301ae09419d7a8f1ef83c81a3b89256340630649f6b6c49af2",
+    "b96e4c9a66c1d32ba54bbb290a48cd7866f000bc3f12f23c007a45417f48b97f",
+    "26eaf937a2a54ebcf3bc2170ccdc18f14fc3867c180133487f0f64ee2cf3adc0"
+  ],
+  "source_tools/gura_comparison.py": [
+    "1df9249eb00e096d58cd7f63a24a7beaab4be0a00f8eb6aca000c275237feeb4",
+    "13f15c6c55eec76ccb3ccee918c4e4aa131ad8153b959e9dcbec558b99b04423",
+    "27b3c2a6e03459e67dafb2d8bba6555d5f433a18e3304bb40d74c38fe8dc0af4"
+  ],
+  "source_tools/GURA_COMPARISON.md": [
+    "096a9093940fbf14736421f167c875a3ed91d02c66d0b10d5330962dfdeb445c",
+    "29dea0a2c7634aa325337960a0fac7bd6ad663a54cb0cca65310b729d5927c68"
+  ],
+  "GURA_NATIVE_WORKFLOW.md": [
+    "3cc684db0f9ff7f4ef17e56826fece82947225709c3543c43e0136d2a1cc41a9",
+    "29e08e1ccd4c23d8d9df986ecfebdc7474bb4f76dc48f11f4958e0e74bf12637",
+    "36844187971332a94ef0858ead1305880710b3126b4d9afcf09dc3f0185c99e8"
+  ]
 }
 
 def sha(data):
@@ -185,8 +215,12 @@ def patch_app(source):
                  "const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,"
                  "refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});\n",
                  "programme browser instance", after=False)
-    source = replace(source, "if(view==='spatial'){community.detach();customerReviews.detach();",
-                     "if(view==='spatial'){programmes.detach();community.detach();customerReviews.detach();", "programme spatial lifecycle")
+    spatial = list(re.finditer(r"if\(view==='spatial'\)\{[^\n]*", source))
+    if len(spatial) != 1:
+        raise ValueError("Programme spatial lifecycle: expected one maintained spatial view")
+    if "programmes.detach();" not in spatial[0].group(0):
+        start = spatial[0].start() + len("if(view==='spatial'){")
+        source = source[:start] + "programmes.detach();" + source[start:]
     source = add(source, "  const d=state.data;let html='';\n",
                  "  if(view==='programmes'){community.detach();customerReviews.detach();programmes.mount($('#content'),state);return;}\n"
                  "  programmes.detach();\n", "programme view mount", after=False)

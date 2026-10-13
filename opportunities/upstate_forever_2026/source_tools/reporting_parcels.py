@@ -180,6 +180,31 @@ def _receive_original_reporting(root):
             if file_digest(target) != expected:
                 raise ValueError("Received reporting member has another original identity: " + name)
             continue
+        # The cumulative application carries these exact original companions.
+        # Reuse them before requesting the same pinned bytes from the network.
+        bundled = _SOURCE/"geography"/"planning_basins2023"/name
+        if bundled.exists():
+            if not bundled.is_file():
+                raise ValueError("Bundled reporting member is not a file: " + name)
+            body = bundled.read_bytes()
+            if hashlib.sha256(body).hexdigest() != expected:
+                raise ValueError("Bundled reporting member has another original identity: " + name)
+            receipt = {"uri": prefix+name, "received_at": now(),
+                       "transfer": "bundled-original-source", "retained_from": str(bundled),
+                       "bytes": len(body), "sha256": expected, "expected_sha256": expected}
+            receipt_path = responses/(name + ".bundled.json")
+            if receipt_path.exists():
+                previous = read_json(receipt_path)
+                for key in ("uri", "transfer", "bytes", "sha256", "expected_sha256"):
+                    if previous.get(key) != receipt[key]:
+                        raise ValueError("Bundled reporting receipt differs: " + name)
+            else:
+                atomic_json(receipt_path, receipt, immutable=True)
+            atomic_bytes(target, body, immutable=True)
+            print(json.dumps({"stage": "reporting-original", "path": str(target),
+                              "bytes": len(body), "sha256": expected,
+                              "transfer": "bundled-original-source"}), flush=True)
+            continue
         attempts = sorted(responses.glob(name + ".attempt-*.json"))
         if attempts:
             previous = read_json(attempts[-1])
