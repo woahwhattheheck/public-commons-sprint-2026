@@ -9,7 +9,7 @@
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
   "source_files": 43,
   "installed_files": 38,
-  "source_bytes": 915538,
+  "source_bytes": 917324,
   "parts": [
     {
       "path": "source-01.json",
@@ -20,10 +20,10 @@
     },
     {
       "path": "source-02.json",
-      "bytes": 332676,
-      "sha256": "22fb42de0dc58cc84f256a6a7b57477bb07416e5fb71b7dc9d35015ef4b96278",
+      "bytes": 335614,
+      "sha256": "406af39bd02995cea7e27b21caad1405c8100aba9fc9c5dce4c29e4c4c2c9c8d",
       "members": 15,
-      "source_bytes": 246720
+      "source_bytes": 248506
     },
     {
       "path": "source-03.json",
@@ -311,21 +311,23 @@
     },
     {
       "path": "source/chemistry-report-receiving/README.md",
-      "bytes": 26631,
-      "sha256": "f043190e6fb2c29e904270c2f223ed97902f39e3448d1a37ad158d278031778b",
+      "bytes": 27232,
+      "sha256": "dd100a3e8c4b99fb0ab105076654160c53c347c94349b166c1a98e9a38e4601e",
       "role": "receiving_driver",
-      "source_git_blob": "182846a71a40ca7f491a0206cb799bff62001e16",
+      "source_git_blob": "69a457a2ed0d469c216552e8b3b0a73f2d532d50",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
-      "source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
+      "source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332",
+      "previous_source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
       "path": "source/chemistry-report-receiving/browser.mjs",
-      "bytes": 41284,
-      "sha256": "3147e80270db7d1166a32e40d60e7bef5f7bdea90d2ee9a44d2cdba5a5c5f455",
+      "bytes": 42469,
+      "sha256": "06989e94b736299eaf40fd81e44b109eb5bbe0e176e9546d1ffd61c56472f14c",
       "role": "receiving_driver",
-      "source_git_blob": "7a8340a6a6cdf0693e258c5fd58208be35acd7a3",
+      "source_git_blob": "4fd99c9d2644ecf2dd027efbb7e03aa536257b0e",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
-      "source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
+      "source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332",
+      "previous_source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
       "path": "source/chemistry-report-receiving/chemistry-source-bank.json",
@@ -441,6 +443,7 @@
       "scientific-preview.json"
     ],
     "configuration": "--from-native OUTPUT --workspace-key KEY --write-config NEW_FILE",
-    "scientific_report_edition_id": "Retain the exact completed native edition, original source order, title, contact and selected Study identity."
+    "scientific_report_edition_id": "Retain the exact completed native edition, original source order, title, contact and selected Study identity.",
+    "request_recovery_source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332"
   }
 }
