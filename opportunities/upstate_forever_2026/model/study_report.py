@@ -231,16 +231,20 @@ def _decision_section(value):
         + '</details></section>')
 
 
-def _interpretation_section(value):
+def _interpretation_section(value, profiles=None):
     if not value:
         return ""
+    names = _aliases(profiles)
     sources = {row["profile_id"]: row for row in value["table_sources"]}
     rows = []
     for row in value["profiles"]:
         source = sources.get(row["profile_id"], {})
         checksum = source.get("sha256", "")
         rows.append([
-            _text(row["title"]), str(row["class_count"]), str(row["changed_coefficient_cells"]),
+            _text(names.get(row["profile_id"], row["title"]))
+            + '<details><summary>Original profile definition</summary><p>'
+            + _text(row["title"]) + '</p><code>' + _text(row["profile_id"]) + '</code></details>',
+            str(row["class_count"]), str(row["changed_coefficient_cells"]),
             str(row["changed_native_parameters"]),
             '<code title="' + _text(checksum) + '">' + _text(checksum[:12]) + '</code>',
         ])
@@ -254,7 +258,7 @@ def _interpretation_section(value):
         content += (
             '<details><summary>Changed native settings</summary>'
             + _table(["Profile", "Model", "Setting", "Baseline", "Alternative"], [
-                [_text(row["profile"]), _text(row["model"].upper()), _text(row["parameter"]),
+                [_text(names.get(row["profile_id"], row["profile"])), _text(row["model"].upper()), _text(row["parameter"]),
                  _text(row["baseline"]), _text(row["alternative"])]
                 for row in value["native_parameter_changes"]]) + '</details>')
     if value["transitions"]:
@@ -272,7 +276,7 @@ def _interpretation_section(value):
             'the completed native effects below.</p>'
             + _table(["Profile", "Alternative", "Class change", "Changed ha",
                       "N load before → after", "P load before → after", "C × P before → after"], [
-                [_text(row["profile"]), _text(row["scenario"]),
+                [_text(names.get(row["profile_id"], row["profile"])), _text(row["scenario"]),
                  str(row["from_lucode"]) + " → " + str(row["to_lucode"]),
                  _number(row["changed_area_ha"]),
                  loading(row, "n"),
@@ -427,12 +431,24 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
     completed = summary["progress"]["complete"]
     names = _aliases(profiles)
     title = str(summary.get("title") or "Scientific watershed study")
+    if total == 0:
+        description = "Published coefficient sources and settings retained with the selected scientific profiles."
+    elif completed == total:
+        description = (
+            "Published source alternatives and land-cover scenarios with completed results for all "
+            + str(total) + " selected native cases."
+        )
+    else:
+        description = (
+            "Published source alternatives and land-cover scenarios with completed results for "
+            + str(completed) + " of " + str(total) + " selected native cases. "
+            "Each completed comparison retains its actual paired-cell support."
+        )
     sections = []
     sections.append(
         "<header><p class=\"eyebrow\">TokenJunkieLabs · Ecosystem Sciences</p>"
         "<h1>" + _text(title) + "</h1>"
-        "<p>Published source alternatives and land-cover scenarios, calculated through "
-        "the selected native InVEST models.</p></header>")
+        "<p>" + _text(description) + "</p></header>")
     sections.append(
         "<section aria-labelledby=\"status\"><h2 id=\"status\">Programme status</h2>"
         "<div class=\"status-grid\"><div><span>Completed cases</span><strong>"
@@ -449,7 +465,7 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
         "is paired with the baseline using the same coefficient profile. Percent change "
         "uses alternative minus baseline.</p></section>")
     sections.extend((_execution_section(execution), _geography_section(geography),
-                     _interpretation_section(interpretation)))
+                     _interpretation_section(interpretation, profiles)))
     spatial = (profiles or {}).get("spatial_programme", {})
     if spatial.get("scenarios"):
         values = []
