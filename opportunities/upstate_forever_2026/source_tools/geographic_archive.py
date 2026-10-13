@@ -125,9 +125,22 @@ def reference_snapshot(workspace, prepared, reference_basis):
     for alternative in comparison["alternatives"]:
         artifacts("comparisons/" + comparison["id"], alternative["artifacts"])
     scalar = course["operation"].get("report")
-    _require(scalar and scalar.get("state") == "complete",
-             "Retain the actual rendered scalar report for the reference edition")
-    artifacts("ensemble_reports/" + scalar["id"], scalar["files"])
+    _require(scalar and scalar.get("state") in {"partial", "complete"}
+             and scalar["state"] == plan["state"]
+             and scalar.get("report_state") == "current"
+             and course["operation"].get("native_progress") == plan["progress"],
+             "Retain the current rendered scalar report for the reference edition")
+    scalar_directory = "ensemble_reports/" + identifier(scalar["id"])
+    scalar_content = keep(scalar_directory + "/report.json")
+    native_report = scalar_content.get("report", {})
+    _require(scalar_content.get("ensemble_id") == plan["id"]
+             and native_report.get("id") == plan["id"]
+             and native_report.get("state") == plan["state"]
+             and native_report.get("report_state") == "current"
+             and native_report.get("progress") == plan["progress"]
+             and native_report.get("run_signature") == plan["run_signature"],
+             "The reference scalar report differs from the retained native course")
+    artifacts(scalar_directory, scalar["files"])
     joint = course["joint_decisions"]
     for product in joint.get("support_group_reports") or [joint["report"]]:
         report_id = identifier(product["report_id"])
