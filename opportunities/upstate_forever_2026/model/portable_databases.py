@@ -20,6 +20,8 @@ MUTABLE_DATABASE_MEMBERS = {
     "workspace/intelligence/investigations.sqlite3",
     "workspace/robust_decisions/robust_decisions.sqlite3",
     "workspace/conservation-design/editor/projects.sqlite",
+    # The managed Measurements Node service commits independently in WAL mode.
+    "workspace/measurement-observations/measurements.sqlite",
 }
 SIDECARS = ("-wal", "-shm", "-journal")
 
