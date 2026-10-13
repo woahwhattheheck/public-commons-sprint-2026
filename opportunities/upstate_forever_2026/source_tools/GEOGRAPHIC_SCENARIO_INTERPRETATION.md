@@ -13,7 +13,7 @@ The helper derives those coefficients from the actual retained CSV, including th
 - Signed source-loading difference: corridor reduction minus control reduction.
 - Absolute source-loading difference bound: sum over classes of area per cell × absolute coefficient difference × sum of absolute paired rainfall residuals / the same mean.
 
-The preparation-domain normalization is explicitly named. The native NDR solver may have different actual valid support or runoff normalization after preparation; its completed output comparison supplies native stream-delivered quantities. This source calculation does not replace that comparison.
+The signed difference uses the retained sum of paired rainfall residuals to avoid subtracting large, nearly equal totals; the accompanying aggregation-roundoff column preserves the numerical closure difference. The preparation-domain normalization is explicitly named. The native NDR solver may have different actual valid support or runoff normalization after preparation; its completed output comparison supplies native stream-delivered quantities. This source calculation does not replace that comparison.
 
 Sediment source generation also responds to R, K and LS. Class/rainfall matching does not hold those fields, native stream distance or contributing area constant. Interpret the final sediment contrast as the response of the declared siting alternatives under the same physical scenario; inspect erosion generation and stream delivery together.
 
