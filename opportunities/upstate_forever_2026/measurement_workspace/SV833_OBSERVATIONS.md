@@ -57,3 +57,11 @@ Use the existing Workspace path when one has already been chosen. The explicit c
 The command prints its actual PID, operation ID, Workspace identity and each completed phase immediately. operation.json retains the exact source edition and selection. A rerun reconnects those same identities, preserves saved selected-report/complete-study outputs, and resumes project receiving. Changed source editions or selections use a new output directory. Original source files and saved Workspace histories remain under their native ownership.
 
 Selected files remain in Workspace/published_study_exports/OPERATION_ID. The complete project archive and reopened-project directory are under the explicit output path. The receiving result returns actual study/version/collection IDs and resolves the first original CSV through the restored Workspace source selector. Open the restored application and original Published studies view to inspect the same source-bound records and report/figure links.
+
+## Original hydrologic context
+
+When the application contains `sv833_hydrologic_context.sources.json`, the SV-833 builtin imports the seven original native entries and their complete 26-file source family. The four vectors, HTML report, SVG map and downstream site table retain their application-relative paths, original coordinates and immutable native source selectors. The existing cold installer uses the same source registry, so its installed study, complete study ZIP and portable Workspace retain the same report closure.
+
+The network context contains 45 whole upstream reaches and an unsimplified whole-catchment polygon. Its original 100 km navigation responses contain zero upstream NWIS sites and 14 downstream indexed sites. The downstream stations remain separate monitoring locations. This context leaves the observation cohort at 610 original results, 56 activities and 606 original limit records.
+
+Import the installed cohort again to create the new source edition. For a native receiving continuation, use the same Workspace with a new `--output` directory: the completed operation preserves its exact earlier source edition. In Published studies, choose the hydrologic report under retained reports, inspect its original map/source table, export the complete study and reopen it. The report links resolve within the retained application layout.
