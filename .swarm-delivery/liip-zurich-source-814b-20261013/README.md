@@ -14,3 +14,15 @@ The packet is source transport for the same original operation. The maintained o
 The accepting Linux worker needs the original Python environment with openpyxl and a private writable temporary directory. The full publisher is already complete in the saved customer continuation; the remaining action is the explicit original workbook retry followed by the original customer workspace archive and cold receiving. The receiving owner supplies the current saved checkpoint through the existing authorized transfer. Source materialization should reject absolute/traversing paths and verify every retained member before loading the native modules.
 
 Keep the original C271 technical operation and Liip company thread as the coordination destinations. This source packet does not replace the maintained Merchant source or establish a second customer run.
+
+## Continue on the accepting Linux worker
+
+`run-customer-continuation.py` is the complete original receiving command. Run it with Python in the accepting worker's private runtime:
+
+    python -u run-customer-continuation.py < original-private-continuation.frame
+
+The frame is the UTF-8 byte length followed by a newline and one JSON payload. The existing execution owner supplies it through the authorized private transfer. It contains the current original capture/checkpoint transfers, their expected identities, the unchanged official Library helper sources, and the existing destination identities. Keep this private payload out of source repositories and command arguments.
+
+The command receives and hashes this complete pinned source packet, restores the same owned project, reuses the completed native publisher, and runs only the remaining customer continuation. The workbook uses a private TMPDIR. It preserves native status and saves the complete current archive and summary to their existing guarded versions before returning. Successful customer completion also saves the HTML report, XLSX workbook and full native customer archive. The initial private input waits at most 120 seconds; the actual customer operation follows the original application lifecycle.
+
+The accepting worker should coordinate its actual process identity with the original owner before this command begins. Source transport and customer receiving preserve the original operation rather than introducing a second run.
