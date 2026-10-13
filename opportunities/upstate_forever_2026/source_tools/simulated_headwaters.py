@@ -401,6 +401,20 @@ def operate_locked(args, output):
          fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
     atomic_json(output / "fieldwork-campaign.json", campaign)
 
+    from model.simulated_customer_review import continue_review, export_review_case
+    customer = phase("customer_review_ready", lambda: continue_review(
+        ws, campaign["operation_id"], through="ready"))
+    if (customer["phase"] != "ready" or customer["project_id"] != ws.project["id"]
+            or customer["field_operation_id"] != campaign["operation_id"]):
+        raise ValueError("Complete the original field case's exact customer engineering handback")
+    customer_identity = {key: customer[key] for key in (
+        "operation_id", "original_review_id", "response_id", "planning_handback_id",
+        "revised_review_id", "handback_id")}
+    customer_packages = phase("customer_review_packages", lambda: export_review_case(
+        ws, customer["operation_id"], output / "customer-review" / customer["operation_id"]))
+    save(customer_review=customer_identity, customer_review_packages=customer_packages)
+    atomic_json(output / "customer-review-case.json", customer)
+
     if args.field_only:
         save(state="field_complete", active_stage=None)
         return receipt
@@ -486,6 +500,8 @@ def operate_locked(args, output):
         "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
+        "customer_review": customer_identity,
+        "customer_review_source_sha256": sha256(APP / "model" / "simulated_customer_review.py"),
         "ensemble_id": parameter_plan["ensemble_id"],
         "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
@@ -503,6 +519,12 @@ def operate_locked(args, output):
         "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
         *["workspace/spatial-reviews/" + key + ".json" for key in spatial_reviews.values()],
         "workspace/implementation/simulated-fieldwork/" + campaign["operation_id"] + "/completed.json",
+        "workspace/" + customer["directory"] + "/06-ready-handback.result.json",
+        *["workspace/reviews/" + customer[key] + ".json"
+          for key in ("original_review_id", "revised_review_id")],
+        "workspace/review-responses/" + customer["response_id"] + ".json",
+        *["workspace/review-handbacks/" + customer[key] + ".json"
+          for key in ("planning_handback_id", "handback_id")],
         "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/headwaters-results.json",
 
     ]
@@ -594,6 +616,11 @@ def operate_locked(args, output):
     from source_tools.simulated_headwaters_receiving import cold_reopen
     cold_receiving = phase("cold_reopen", lambda: cold_reopen(
         restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            {"kind": "customer_review", "operation_id": customer["operation_id"],
+             "expected": {**customer_identity, "project_id": ws.project["id"],
+                          "field_operation_id": campaign["operation_id"]},
+             "source": customer_packages["directory"],
+             "output": str(output / "customer-review-reopened" / edition_id)},
             {"kind": "parameter_course", "ensemble_id": receipt["ensemble_id"],
              "expected": {"project_id": ws.project["id"]}},
             {"kind": "field_campaign", "operation_id": campaign["operation_id"],
