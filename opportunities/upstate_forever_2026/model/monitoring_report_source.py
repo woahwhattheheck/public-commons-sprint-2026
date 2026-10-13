@@ -512,6 +512,8 @@ def prepare(workspace, selection, *, progress=None):
         from . import monitoring_comparison_report
         identity["comparison_producer_sha256"] = file_digest(Path(monitoring_comparison_report.__file__))
         identity["comparison_figure_sources"] = monitoring_comparison_report.figure_implementation()
+        from . import utility_monitoring_comparison
+        identity["utility_comparison_implementation"] = utility_monitoring_comparison.implementation()
     if not selected.get("comparison_id"):
         from . import utility_monitoring_report
         identity["utility_report_producer_sha256"] = file_digest(utility_monitoring_report.__file__)
