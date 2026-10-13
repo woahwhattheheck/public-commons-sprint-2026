@@ -62,7 +62,9 @@ def _member_name(name):
 def _record_contract(record, report_id, report_sha256):
     """Validate the original registry record without adding or changing fields."""
     if (record.get("schema") != "upstate.community-reports/v1"
-            or "id" in record or digest(record) != identifier(report_id)):
+            or ("id" in record and record["id"] != identifier(report_id))
+            or digest({key: value for key, value in record.items() if key != "id"})
+               != identifier(report_id)):
         raise ValueError("The original Community report registry record changed")
     for field in ("plan_id", "table_id", "selection_id"):
         identifier(record.get(field))
@@ -242,8 +244,36 @@ def export(workspace, report_id, *, report_sha256):
     files = _record_contract(record, report_id, report_sha256)
     # Verify the actual saved report's full inventory before its public handover.
     paths = {name: verify_file(workspace.root, item) for name, item in files.items()}
+    return _package(workspace, record_bytes, report_id, report_sha256,
+                    workspace.project["id"], paths[REPORT_ARCHIVE])
+
+
+def export_archive(workspace, archive_path, report_record, *, original_project_id,
+                   report_sha256):
+    """Package a received original report when its donor Workspace is offline."""
+    from . import community_report_context as context
+
+    # The maintained archive receiver verifies the original saved record, every
+    # ZIP member and scientific context in this actual receiving Workspace.
+    prepared = context.prepare_archive(
+        workspace, archive_path, report_record, original_project_id=original_project_id,
+        report_sha256=report_sha256, import_source=False)
+    archive = verify_file(workspace.root, next(
+        item for item in prepared["files"]
+        if item["path"].endswith("/retained/" + REPORT_ARCHIVE)))
+    original_record = archive.parent / RECORD
+    if original_record.stat().st_size > MAX_METADATA_BYTES:
+        raise ValueError("A source handover metadata record exceeds 8 MiB")
+    record_bytes = original_record.read_bytes()
+    return _package(workspace, record_bytes, prepared["community_report_id"],
+                    report_sha256, original_project_id, archive)
+
+
+def _package(workspace, record_bytes, report_id, report_sha256, donor, archive_path):
+    record = _json(record_bytes)
+    files = _record_contract(record, report_id, report_sha256)
     manifest = {
-        "schema": SCHEMA, "version": VERSION, "original_project_id": workspace.project["id"],
+        "schema": SCHEMA, "version": VERSION, "original_project_id": donor,
         "report_id": report_id, "report_sha256": report_sha256,
         "title": record["title"], "format_version": record["format_version"],
         "plan_id": record["plan_id"], "table_id": record["table_id"],
@@ -260,12 +290,12 @@ def export(workspace, report_id, *, report_sha256):
         if not path.exists():
             pending = None
             try:
-                with tempfile.NamedTemporaryFile(dir=directory, prefix=".handover-", delete=False) as output:
+                with tempfile.NamedTemporaryFile(dir=directory, prefix=".write-community-handover-", delete=False) as output:
                     pending = Path(output.name)
                     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
                         bundle.writestr(_zip_info(MANIFEST), canonical(manifest) + b"\n")
                         bundle.writestr(_zip_info(RECORD), record_bytes)
-                        with paths[REPORT_ARCHIVE].open("rb") as source:
+                        with archive_path.open("rb") as source:
                             with bundle.open(_zip_info(REPORT_ARCHIVE, stored=True), "w", force_zip64=True) as target:
                                 _stream(source, target, manifest["files"][REPORT_ARCHIVE])
                     output.flush()
@@ -325,6 +355,11 @@ def main(argv=None):
     exporting = commands.add_parser("export")
     exporting.add_argument("report_id")
     exporting.add_argument("--report-sha256", required=True)
+    packing = commands.add_parser("pack-archive")
+    packing.add_argument("archive", type=Path)
+    packing.add_argument("--report-record", type=Path, required=True)
+    packing.add_argument("--original-project-id", required=True)
+    packing.add_argument("--report-sha256", required=True)
     inspecting = commands.add_parser("inspect")
     inspecting.add_argument("archive", type=Path)
     inspecting.add_argument("--sha256", required=True)
@@ -337,11 +372,15 @@ def main(argv=None):
         result = inspect_archive(args.archive, expected_sha256=args.sha256)
     else:
         if not args.workspace:
-            parser.error("--workspace is required for export and receive")
+            parser.error("--workspace is required for export, pack-archive and receive")
         from .workspace import Workspace
         workspace = Workspace(args.workspace)
         if args.command == "export":
             result = export(workspace, args.report_id, report_sha256=args.report_sha256)
+        elif args.command == "pack-archive":
+            result = export_archive(workspace, args.archive, args.report_record,
+                                    original_project_id=args.original_project_id,
+                                    report_sha256=args.report_sha256)
         else:
             result = receive(workspace, args.archive, expected_sha256=args.sha256,
                              delivery_id=args.delivery_id)
