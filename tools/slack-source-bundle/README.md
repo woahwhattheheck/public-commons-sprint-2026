@@ -65,3 +65,9 @@ MIT. No customer source or secret is bundled with this reusable tool.
 For a complete UTF-8 JSON/source document that repeats long source strings inside HTML, application banks or native handovers, use [the exact-string transport](EXACT_SOURCE_TRANSPORT.md). Its JavaScript pack/unpack/inspect command preserves the complete original text and byte identity, including original JSON spelling. It does not replace the explicit-file Python bundle above.
 
 The implementation is shared with the maintained Ecosystem source-bank receiver. Existing `source_bank_cli.mjs inspect` and `extract` accept its `commons.exact-source-envelope/v1` output and then apply their original member/path/hash checks. The standalone application component includes the same helper. Reuse the existing source installer or importer after recovery; decoding never executes the recovered content.
+
+## Ordinary files in the receiving session
+
+[Native complete-source transfer](NATIVE_SOURCE_TRANSFER.md) provides the existing connected Gmail/Notion route, a durable private journal and a runnable command. It creates one recipient-free internal draft, obtains original attachment file references, and continues uncertain operations through their original provider identities. A receiving session can use `receive` against the existing parent message to obtain its own original file handle when another session's alias is invisible. Optional Notion delivery retains a renewable ordinary download on the explicitly selected authorized page. Source decoding preserves complete bytes; the existing source-bank installer remains responsible for extraction and adoption.
+
+Use the same operation/account and journal on resumption. The tool cannot send mail, choose another account, infer provider acceptance, or turn an attachment receipt into a completed native run. The full implementation and guide are available together in `transfers/native-source-transfer-20261013/source.json`.
