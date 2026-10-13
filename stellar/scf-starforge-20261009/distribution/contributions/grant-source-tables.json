@@ -28,7 +28,9 @@
     "stellar-forge/developer-site/dist/source-table-intake.mjs",
     "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/receive-current-budget.mjs",
     "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-reader-budget.csv",
-    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-reader-budget.binding.json"
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-reader-budget.binding.json",
+    "stellar-forge/developer-site/dist/source-delimited.mjs",
+    "stellar-forge/developer-site/dist/source-table-corrections.mjs"
   ],
   "commands": {
     "grant-source-tables": "stellar/scf_2026/sf47_budget_model/workspace/source-tables-cli.mjs"

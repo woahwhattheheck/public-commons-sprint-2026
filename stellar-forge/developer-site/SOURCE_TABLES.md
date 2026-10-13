@@ -1,6 +1,6 @@
 # Source tables
 
-Prepare a CSV or TSV resource for the existing Stellar Forge merchant. The same project opens in the browser and the native CLI. It retains the original source text, explicit field mapping, every reviewed edition, complete changes and the original merchant settings.
+Prepare a delimited or document-table resource for the existing Stellar Forge merchant. The same project opens in the browser and the native CLI. It retains the original source text, explicit field mapping, every reviewed edition, complete changes and the original merchant settings.
 
 The workbench produces a native dataset workspace through [onboarding.mjs](dist/onboarding.mjs). Its seller configuration, workspace files, ordered payment choices and ZIP writer are the maintained implementation. The table resource adds a declared field schema and source identity around the complete mapped rows.
 
@@ -39,6 +39,143 @@ Use Node.js 22.16 or later. The browser needs modules, Web Crypto and IndexedDB.
 Imported native route choices retain their original order and per-choice fields. Shared terms apply to resources using the shared mode. Edit complex payment choices in the original merchant editor, save that draft, then import it here with the same bound resource IDs. The workbench also retains native resources that have no source-table binding.
 
 The source preview shows twenty rows and shortens long cells for display. The review, project, comparison downloads and native resource contain the complete selected data.
+
+## Receive tables extracted from a document
+
+The same workbench receives table-preserving HTML or Markdown from a document extraction. Choose the complete extracted file or a retained document-source JSON. Keep the original public URL, filename, page locations and available document identity with that source. The source is parsed as data; its markup is never executed or inserted as page content.
+
+This intake starts with the extraction's actual HTML tables. It retains the complete input text, every original table cell, row and column span, and character offsets. It does not guess a table from loosely aligned prose. A text-only extraction with no HTML tables needs a table-preserving extraction from its original document.
+
+1. Open the document source and inspect its original table dimensions and supplied page locations.
+2. Select the table, header rows, data rows and columns. Coordinates are one-based. The chosen order becomes the output order.
+3. Choose how merged cells contribute values and whether to preserve, trim or collapse cell whitespace.
+4. Inspect the selected header/data cells beside their original origins. Rows outside the selection are listed automatically and remain in the source. Exclusion notes are optional.
+5. Prepare the projection, then receive it as a new resource or a next edition of the selected existing table.
+6. Continue through existing field mapping, retained review, comparison, project save and native ZIP export.
+
+| Merged-cell choice | Projected value |
+| --- | --- |
+| Keep anchor | The original top-left coordinate keeps its value; other selected positions covered by the span become empty text. |
+| Repeat source value | Every selected coordinate covered by the span receives that cell's original value and retains the same original origin. |
+| Reject merged cells | A selection intersecting a merged cell asks for another explicit choice before projection. |
+
+The same choice applies to headers and data. Multiple selected header rows join nonempty labels with ` / ` and keep all original header cells separately. A repeated span origin contributes once to a column's heading. With no header, headings are `Column 1`, `Column 2` and so on for the selected original columns. Rename fields through the ordinary mapping controls.
+
+**Preserve** keeps decoded text and line breaks. **Trim** removes outer whitespace. **Collapse** replaces whitespace runs with one space and trims the result. Original text and cell HTML remain available. A missing cell projects empty text with a missing-cell marker, separately from an explicitly empty cell. Unrecognized named HTML entities remain literal and appear in the inspection.
+
+The extracted text has its own byte count and SHA-256. Its retained identity also includes document and extraction metadata. Projection identity includes that source, complete selection, header/data origins and exact CSV. Equal CSV from different source documents or selections remains a distinct document-table edition.
+
+### Complete supplier document example
+
+The committed example uses six unmodified HTML table segments from [AutomationDirect's five-page WAGO 221 and Gelbox catalogue](https://cdn.automationdirect.com/static/specs/221serieslevernuts.pdf). Its source names the original PDF and supplies page locations. The extraction contains 356 original cells, including merged cells:
+
+- `examples/document-tables/wago221-document-source.json`
+- `examples/document-tables/wago221-table-selections.json`
+
+Paths are relative to `stellar-forge/developer-site/`.
+
+| Table | Header rows | Data rows | Result |
+| --- | --- | --- | --- |
+| 1: connector sales | 2 | 4–11, 13–15 | 11 distinct supplier SKUs |
+| 2: connector specifications | 2 | 3–16 | 14 specification rows |
+| 3: first compatibility matrix | 2 | 3–8 | 6 original Gelbox rows |
+| 4: Gelbox sales | 2 | 3–8 | 6 distinct supplier SKUs |
+| 5: second compatibility matrix | 2 | 3–8 | 6 original Gelbox rows |
+| 6: Gelbox specifications | None | 2–10 | 9 specification rows |
+
+All selections use **Repeat source value** and **Trim**. Title/section rows remain in the original. Sales quantities describe packages; prices remain the catalogue's published observations. Its notice directs readers to the supplier for latest prices. This projection does not convert package prices to per-item prices. The existing e-proCAT preparation separately retains verified package/unit mappings.
+
+All 17 sales SKUs remain distinct, including four slash-suffixed package variants. Compatibility dashes remain original text; additional matrix part numbers remain references rather than new sales records. Duplicate `Nominal Current` labels remain separate rows under their original UL/IEC context; avoid choosing that label alone as a unique key. Use whole-row comparison unless a suitable unique key is explicitly prepared.
+
+PDF metadata and extraction acquisition date are distinct from a price-effective date. Keep displayed numbers, including the retained metric/inch discrepancies, until a documented operator correction is selected.
+
+
+### Complete native document receiving programme
+
+Run `node stellar-forge/developer-site/examples/document-tables/receive-wago221.mjs /absolute/new/wago-receiving-directory [/absolute/existing/starter-input.json]` from the complete source checkout. The optional final argument supplies the original merchant draft; otherwise the existing generator's explicit example settings remain. The programme requires Node.js 22.16 or later and Python 3's standard `zipfile` reader (`PYTHON` selects the interpreter).
+
+It receives and reviews all six original selections, writes and reopens the project, exports the full native ZIP and verifies every actual member, CRC and hash before reopening its embedded project. It then saves the explicit connector alternative omitting Drawing Link, compares the same eleven sales identities, and exports and reopens the full successor. Original supplier data and every source cell remain retained. The new output directory contains both archives, all native and source files, initial and final projects, full source, choices and comparison, and `DOCUMENT_TABLE_RECEIVING.json` with actual runtime and archive identities. A destination must be new; preserve interrupted output for diagnosis.
+
+### Document intake through the existing CLI
+
+`document-inspect` accepts extracted HTML/Markdown or retained source JSON. Optional raw-input metadata supplies `sourceUrl`, `document`, `extraction` and `tableLocations`; the actual basename becomes the extraction filename. `--out` saves the complete retained source.
+
+~~~sh
+starforge source-tables document-inspect \
+  --source /work/original-extraction.html \
+  --metadata /work/document-metadata.json \
+  --out /work/document-source.json
+
+starforge source-tables document-init \
+  --source /work/document-source.json \
+  --selection /work/selected-table.json \
+  --name "Supplier tables" \
+  --out /work/supplier-project-01.json
+
+starforge source-tables document-add \
+  --project /work/supplier-project-01.json \
+  --source /work/document-source.json \
+  --selection /work/another-selected-table.json \
+  --out /work/supplier-project-02.json
+
+starforge source-tables document-edition \
+  --project /work/supplier-project-02.json \
+  --document TABLE_ID \
+  --source /work/next-document-source.json \
+  --selection /work/next-selected-table.json \
+  --out /work/supplier-project-03.json
+~~~
+
+For the complete committed WAGO array, pass `--table` to choose its original table number:
+
+~~~sh
+starforge source-tables document-init \
+  --source stellar-forge/developer-site/examples/document-tables/wago221-document-source.json \
+  --selection stellar-forge/developer-site/examples/document-tables/wago221-table-selections.json \
+  --table 1 --name "WAGO connector catalogue" \
+  --out /work/wago-connectors-01.json
+~~~
+
+`document-init` accepts the existing `--merchant` draft and `--resource` binding; `document-add` accepts `--resource`. All three receiving commands accept `--filename` for the projected CSV. A single selection object needs no `--table`. Continue through ordinary `mapping`, `map`, `review`, `show`, `compare` and `export` commands.
+
+### Source and projection programming interface
+
+~~~js
+import {
+  createDocumentTableSource, inspectDocumentTables,
+  projectDocumentTable, validateDocumentTableProjection
+} from './stellar-forge/developer-site/dist/source-document-tables.mjs';
+import {
+  createProject, addDocumentTable, freezeReview, importProject
+} from './stellar-forge/developer-site/dist/source-table-workspace.mjs';
+
+const source = await createDocumentTableSource({
+  filename: originalExtractionFilename,
+  sourceText: originalExtractedHtmlOrMarkdown,
+  sourceUrl: originalPublicSourceUrl,
+  document: originalDocumentMetadata,
+  extraction: originalExtractionMetadata,
+  tableLocations: originalTableLocations
+});
+const inspection = await inspectDocumentTables(source);
+const projection = await projectDocumentTable(source, selectedTableChoices);
+await validateDocumentTableProjection({ source, projection });
+
+let { project, documentId } = await addDocumentTable(
+  createProject({ name: 'Supplier tables', starter: originalMerchantDraft }),
+  { source, projection, filename: 'supplier-table.csv' }
+);
+// Configure the ordinary field mapping before retaining its reviewed output.
+({ project } = await freezeReview(project, documentId));
+const reopened = await importProject(JSON.stringify(project));
+~~~
+
+Pass an existing `documentId` to receive a following edition. The method returns project, original document/edition IDs, reuse outcome and source/projection IDs. Reopening and exporting replay projections against their retained complete source before accepting CSV and row origins.
+
+The complete project retains unique document sources and each CSV edition's selection/projection. Native ZIP authoring materials include extraction input, original metadata, complete projection and row/cell locations alongside ordinary mappings, reviews and comparisons. Reopen that project to change choices or receive another source. The original document URL and supplied identity remain in metadata; the extraction file has its own distinct exact identity.
+
+Extraction capacity is 16 MiB UTF-8, 256 tables, 100,000 rows per table, 512 columns and two million expanded cell positions. Existing project and native-resource capacities continue to apply.
+
 
 ## Field meaning
 
@@ -207,4 +344,53 @@ The source-table ZIP and project supply the editable source and normalization de
 
 The table-authoring limits apply before native export. The original SF49 retained-bundle admission has its own current capacity. A larger source can use the maintained database or dataset workflow; export never silently cuts off rows to fit a native resource.
 
-The source-owned registration is [source-tables.json](../../stellar/scf-starforge-20261009/distribution/contributions/source-tables.json). It declares the native command, typed interface, complete guide and original browser server/manifest pair. The static page, its three browser dependencies and this operating guide are registered in the existing asset manifest. The same-source front door links to `/source-tables.html`; the current site publisher can publish the merged source on its existing project.
+The source-owned registration is [source-tables.json](../../stellar/scf-starforge-20261009/distribution/contributions/source-tables.json). It declares the native command, typed interface, complete guide and original browser server/manifest pair. The static page, its browser dependencies and this operating guide are registered in the existing asset manifest. The same-source front door links to `/source-tables.html`; the current site publisher can publish the merged source on its existing project.
+
+## Retain unfinished document preparations
+
+Every opened extraction and its per-table preparation now travels in the editable project before it is received into field mapping. Header/data ranges, columns, exclusion notes, merged-cell and whitespace choices, preview position, destination and CSV filename remain separate for each original table. Incomplete range text remains editable. Switching the retained extraction or table reopens its preceding choices.
+
+Use **Save in browser**, **Save as copy** or **Download project** for the complete project, including unfinished intake. The existing browser revision comparison preserves conflicting saves. The unload prompt includes intake edits. Opening another project first asks about unsaved changes, then restores that project's own sources and preparations.
+
+**Download all preparations** produces a complete document-intake JSON with original extractions and every table's working choices. Open that file through **Open extracted text / source JSON**. Receiving keeps preceding different choices in **Earlier preparation**, and restoring an earlier preparation retains the work it replaces. The original source identity is revalidated; arbitrary changed source bytes cannot be substituted. Project downloads remain available when browser storage is unavailable.
+
+A restored target from another project remains visibly unresolved until an existing current destination is selected. Preparing the CSV always uses the original document projection engine, and **Use in field mapping** continues through the original source-edition/mapping/review path. Native workspace export still requires every received resource's current review. Unreceived preparations remain source material in the complete project; they do not become a merchant resource implicitly.
+
+The same complete intake can move through the installed CLI:
+
+```sh
+starforge source-tables intake-export --project project.json --out new-preparations.json
+starforge source-tables intake-open --project another-project.json --source new-preparations.json --out new-project-with-preparations.json
+```
+
+All CLI outputs use a new path and preserve their input files. Earlier projects without the optional intake field keep their original shape and behavior. Complete preparation files use the existing 128 MiB project receiving limit.
+
+
+## Reviewed corrections within an original source
+
+The **Review individual source records** panel pages through every parsed data record and source column. Select a cell to see its complete original and selected text. A named reviewer and a reason are required for a replacement, row exclusion or restoration. Empty replacement text is an explicit value; the existing field type and empty-value policy still determine the mapped result. Record numbers are physical CSV records (the header normally occupies record 1); columns in the API and CLI are zero based. The browser labels columns from 1.
+
+The correction register binds to the original source edition, its SHA-256 and the parsing choices (delimiter, header and empty-record handling). A new source edition or a changed dialect does not inherit decisions. Returning to that same edition and dialect restores its retained decisions. A mapped field rename or type change keeps decisions at their original source coordinates.
+
+Each decision retains its original value, prior selected decision, replacement or restoration, reviewer, timestamp and reason. IDs can be retried with identical content; reusing an ID for different content is rejected. Restoring a cell or row appends an event and leaves earlier reviews intact. A decision makes the current review stale. Use **Review and retain complete output** to create the successor and compare it with the previous review. The complete project and native ZIP contain original source bytes, all correction histories, every historical review and its exact correction snapshot.
+
+CLI example, after choosing the original document ID with `show`:
+
+```sh
+node stellar-forge/developer-site/dist/source-table-cli.mjs records --project project.json --document TABLE_ID --offset 0 --limit 20
+node stellar-forge/developer-site/dist/source-table-cli.mjs correct --project project.json --document TABLE_ID --decision decision.json --out corrected-project.json
+node stellar-forge/developer-site/dist/source-table-cli.mjs review --project corrected-project.json --document TABLE_ID --out reviewed-project.json
+node stellar-forge/developer-site/dist/source-table-cli.mjs corrections --project reviewed-project.json --document TABLE_ID --csv --out decision-history.csv
+```
+
+A complete decision input is:
+
+```json
+{"id":"operator-decision-001","action":"set-cell","record":3,"column":1,"value":"14.50","actor":"Receiving operator","reason":"Confirmed against the supplier correction","at":"2026-10-13T13:00:00Z"}
+```
+
+Use `exclude-row` or `restore-row` without a column/value, and `restore-cell` with a column but no value. These examples describe operator inputs; no changes to the supplied WAGO observations are preselected. Public source discrepancies stay literal until the responsible operator confirms a correction.
+
+### Installed and rendered receiving
+
+Use the existing Source Tables installation and original receiving case. Open the exact published `source-tables.html` at desktop and 390px, inspect actual pixels, and operate selection of a multiline source cell, a reasoned replacement, row exclusion, a new retained review and its comparison. Download the complete project and native ZIP, reopen the saved project, restore both decisions, retain the next review and confirm that the first review and original source are still available. Inspect text contrast, narrow actions, long source values and downloaded history. Source execution alone is not a rendered receiving result. Keep the original merchant resource, terms and native commissioning owner.
