@@ -54,3 +54,9 @@ Use the same original OACAA native operation and current complete source capsule
 Open and view every outgoing PDF page and member graphic. Check actual desktop and narrow-width Report data and report editor screens. Operate dataset save, mapping preview, explicit apply, member keep/replace, proof, edition download and export/reopen controls on the actual saved workspace. Confirm that a restored edition retains its original bytes and source references. Record findings and fix the same source before presenting the product.
 
 The complete handover retains the original source representations, all editable datasets, transformation source, report plan, source lock, source-bound member programme, saved history, actual PDFs/graphics and the installed workspace archive.
+
+## Historical methodology boundary
+
+The actual Healthy Northeast Ohio child-food-insecurity indicator (2108) states that methodology changes made in 2020 mean the 2018 estimates should not be compared with earlier periods. Keep this boundary explicit when using the retained 2013–2024 directory. The selected 2023/2024 comparison remains within the later period. The underlying observations and original measurement years are unchanged.
+
+Source: https://embed-cuyahoga.thehcn.net/indicators/index/view?indicatorId=2108&localeId=38 , Changes Over Time, “Change in methodology for 2018” (received October 13, 2026).
