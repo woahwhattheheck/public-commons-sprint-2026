@@ -16,11 +16,11 @@ function run(fn){return D.run(fn);}
 async function retain(s,rerender=false){await D.retainState(s);if(rerender)render();}
 function mutate(fn,rerender=false){const s=state(),d=selected(s);C.need(d,"Choose or create a complete review working copy.");C.need(!d.pending,"Recover the original saved request before changing this review working copy.");fn(d,s);d.plan=null;d.request=null;D.retainState(s).then(()=>{if(rerender)render();}).catch(e=>message(e.message,true));}
 function controls(){
- const d=selected(),pending=!!d?.pending;
- document.querySelectorAll("[data-return-edit]").forEach(e=>e.disabled=!d||pending);
- $("return-recover").disabled=!pending;$("return-rebase").disabled=!pending;
- $("return-apply").disabled=!d?.plan||pending||!!d?.plan?.unresolved?.length;
- $("issue-recover").disabled=!state().pendingIssue;
+ const d=selected(),pending=!!d?.pending,busy=HCPSDesk.storageState().busy;
+ document.querySelectorAll("[data-return-edit]").forEach(e=>e.disabled=busy||!d||pending);
+ $("return-recover").disabled=busy||!pending;$("return-rebase").disabled=busy||!pending;
+ $("return-apply").disabled=busy||!d?.plan||pending||!!d?.plan?.unresolved?.length;
+ $("issue-recover").disabled=busy||!state().pendingIssue;
 }
 function renderRows(d){
  const holder=$("return-changes");holder.replaceChildren();
@@ -108,7 +108,7 @@ $("issue-note").oninput=()=>{const s=state();s.issueNote=$("issue-note").value;D
 $("issue-create").onclick=()=>run(async()=>{
  const s=state();C.need(!s.pendingIssue,"Recover the original pending issue.");const snap=await D.snapshot();C.need(!snap.unapplied.length,"Apply or explicitly discard unfinished author editors before issuing a reviewed edition.");
  const inputs={requestId:C.id(),at:new Date().toISOString(),actor:snap.workspace.draft.actor,note:$("issue-note").value,editionId:$("issue-edition").value,expectedWorkspaceSha256:await C.sha(C.canonical(snap.workspace))};
- s.pendingIssue={kind:"issue",copyId:snap.copyId,at:inputs.at,inputs};await retain(s,true);await recoverIssue();
+ await R.issue(snap.workspace,inputs);s.pendingIssue={kind:"issue",copyId:snap.copyId,at:inputs.at,inputs};await retain(s,true);await recoverIssue();
 });
 $("issue-recover").onclick=()=>run(recoverIssue);
 $("return-new").onclick=()=>run(newDraft);

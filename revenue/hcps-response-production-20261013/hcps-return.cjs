@@ -160,6 +160,7 @@ async function plan(w,inputs){
  const objects={...w.objects};
  for(const [sha,value] of Object.entries(b.returned.objects)){if(objects[sha])C.need(C.equal(objects[sha],value),"The same original document hash has conflicting whole bytes.");else objects[sha]=C.clone(value);}
  await C.verifyDocuments(result.draft,objects);
+ C.need(w.editions.length<128,"The complete original edition history is full; retain this working copy before beginning another author source.");const budget=copyWithHistory(w);budget.objects=objects;await archive(budget,inputs.raw,"returned");
  const value={format:"commons.hcps.return-plan.v1",workspaceId:w.workspaceId,requestId:inputs.requestId,at:inputs.at,actor:inputs.actor,note:inputs.note,issueId:inputs.issueId,issueSha256:p.issue.archiveSha256,previewSha256:p.previewSha256,currentWorkspaceSha256:p.currentWorkspaceSha256,beforeDraftSha256:p.currentDraftSha256,returnedSha256:p.returned.sha256,returnedBytes:p.returned.bytes,baselineEditionId:p.baseline.id,baselineEditionSha256:p.baseline.sha256,acknowledgeUnapplied:inputs.acknowledgeUnapplied===true,unappliedEditors:p.returned.unappliedEditors,changes:p.changes,choices:C.clone(inputs.choices),materialReviews:C.clone(inputs.materialReviews||[]),requiredMaterialReviews:result.materialReviews,unresolved:result.unresolved,beforeDraft:C.clone(w.draft),draft:result.draft,draftSha256:await hash(result.draft)};
  value.planSha256=await hash(value);return{plan:value,objects};
 }

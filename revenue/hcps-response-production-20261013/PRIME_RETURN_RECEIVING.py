@@ -18,6 +18,26 @@ def verify_result(root):
     if result.get("status")!="complete": raise ValueError("Continue the same original complete course.")
     for name in result["stages"]: verify_stage(root/"stages"/(name+".json"))
     return result
+
+def verify_original_closure(case,operation,preceding):
+    visual=read(case/"VISUAL_COMPLETE.json")
+    if visual.get("operationId")!=operation["operationId"] or visual.get("workspaceId")!=preceding["workspaceId"]:
+        raise ValueError("Complete the original case's full rendered-PDF phase before its following review.")
+    if not visual.get("completePdfRenderings"):raise ValueError("The original complete PDF rendering inventory is absent.")
+    for rendering in visual["completePdfRenderings"]:
+        for member in [rendering["source"],*rendering["files"]]:
+            file=pathlib.Path(member["path"])
+            if file.is_symlink() or not file.is_file() or identity(file.read_bytes())!={"bytes":member["bytes"],"sha256":member["sha256"]}:raise ValueError("An original full-PDF rendering/source differs: "+str(file))
+    receipt=read(case/"archive.json");archive=case/"HCPS_Complete_Original_Receiving.tar.gz"
+    if receipt.get("operationId")!=operation["operationId"] or receipt.get("workspaceId")!=preceding["workspaceId"] or pathlib.Path(receipt["archive"]["path"])!=archive:
+        raise ValueError("Keep the completed original archive and same operation identity.")
+    if archive.is_symlink() or identity(archive.read_bytes())!={"bytes":receipt["archive"]["bytes"],"sha256":receipt["archive"]["sha256"]}:raise ValueError("The completed original full archive differs.")
+    with tarfile.open(archive,"r:gz") as package:
+        inventory=json.load(package.extractfile("complete-inventory.json"))
+        for member in inventory["files"]:
+            if identity(package.extractfile(member["path"]).read())!={"bytes":member["bytes"],"sha256":member["sha256"]}:raise ValueError("An original complete archived member differs.")
+    return {"visual":visual,"archive":receipt}
+
 def alive(group):
     try: os.killpg(group,0);return True
     except ProcessLookupError:return False
@@ -47,13 +67,16 @@ def main():
         original=read(case/"operation.json")
         if original["case"]!=str(case):raise ValueError("The original case path differs.")
         preceding=verify_result(case)
+        verify_original_closure(case,original,preceding)
         root=case/"prime-review";root.mkdir(exist_ok=True)
         archive=root/"HCPS_Complete_Original_And_Prime_Review.tar.gz"
         receipt=root/"archive.json"
         if archive.exists():
             following=verify_result(root)
+            if following["operationId"]!=original["operationId"] or following["workspaceId"]!=preceding["workspaceId"]:raise ValueError("The retained following result changed its original operation or workspace.")
             with tarfile.open(archive,"r:gz") as package:
                 inventory=json.load(package.extractfile("complete-prime-review-inventory.json"))
+                if inventory.get("operationId")!=original["operationId"]:raise ValueError("The complete adopted archive belongs to another original operation.")
                 for item in inventory["files"]:
                     if identity(package.extractfile(item["path"]).read())!={"bytes":item["bytes"],"sha256":item["sha256"]}:raise ValueError("The complete original archive differs.")
             outcome={"format":"commons.hcps.prime-review-case-delivery.v1","operationId":original["operationId"],"workspaceId":following["workspaceId"],"archive":{"path":str(archive),**identity(archive.read_bytes())},"members":len(inventory["files"])+1}
@@ -76,9 +99,9 @@ def main():
         names=["hcps-core.cjs","hcps-return.cjs","hcps-app.js","hcps-return-ui.js","hcps.css","index.template.html","production-seed.json","BUILD.cjs","VERIFY.cjs","ASSEMBLE.py","RECEIVING.cjs","RECEIVING.py","PRIME_RETURN_RECEIVING.cjs","PRIME_RETURN_RECEIVING.py","OPERATING.md","application/HCPS_Response_Desk.html","application/application.json"]
         for name in names:retain(root/"complete-application-source"/name,(source/name).read_bytes())
         # Every earlier original file and actual following output is included.
-        # Already-complete tar archives are verified above where applicable; their expanded originals are retained once here.
+        # The exact preceding compressed archive is an original dependency and remains inside the complete following archive.
         excluded={str(archive),str(receipt),str(root/"complete-prime-review-inventory.json")}
-        files=sorted(p for p in case.rglob("*") if p.is_file() and not p.is_symlink() and str(p) not in excluded and p.name!="operation.lock" and not p.name.endswith((".receiving",".tar.gz")))
+        files=sorted(p for p in case.rglob("*") if p.is_file() and not p.is_symlink() and str(p) not in excluded and p.name!="operation.lock" and not p.name.endswith(".receiving"))
         inventory={"format":"commons.hcps.complete-prime-review-case.v1","operationId":original["operationId"],"files":[{"path":str(p.relative_to(case)),**identity(p.read_bytes())} for p in files]}
         inventory_file=root/"complete-prime-review-inventory.json";write(inventory_file,inventory)
         candidate=root/("."+archive.name+"."+str(uuid.uuid4())+".receiving")
