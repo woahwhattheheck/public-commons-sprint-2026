@@ -1,0 +1,132 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "flow-routing",
+  "title": "Flow routes",
+  "version": "1",
+  "order": 76,
+  "assets": [
+    "flow-routing.mjs",
+    "flow-routing.css"
+  ],
+  "backend": {
+    "module": "flow_routing",
+    "actions": [
+      "flow-route.trace"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/flow-routing/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/flow-routing/source",
+        "operation": "source",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/flow-routing/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "flow-routing-reports",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/flow-routing/{workspace_key}/{report_id}/index.html",
+        "response": "ticket_policy_pair",
+        "handler": "report_preview",
+        "args": [
+          "operator",
+          "workspace_key",
+          "route.report_id"
+        ]
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/flow-routing.mjs",
+    "factory": "attachFlowRouting",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "showTask"
+    ],
+    "styles": [
+      "/web/flow-routing.css"
+    ],
+    "view": {
+      "id": "flow-routing",
+      "title": "Flow routes",
+      "after": "runs"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
