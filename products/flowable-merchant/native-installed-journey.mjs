@@ -334,7 +334,7 @@ export async function runInstalledFlowableJourney({
     need(canonical(reviewValue)===canonical(originalReview),'The CLI receives the complete original field review.');
     report.files.push(await checkedFile(reviewFile));
     mark('Installed SDK, original CLI and exact deployment source',{release:ref(selectedRelease),source:sourceReference,
-      actions:41,reviewSha256:hash(reviewBytes)});
+      actions:expectedActionNames.length,reviewSha256:hash(reviewBytes)});
     const laterInput={requestId:request('later-portfolio'),connectionId:senderStatus.connections.find(item=>item.connection.id===configuration.connection.id)?.id,
       label:'Installed operator continuation of original native portfolio'};
     need(laterInput.connectionId,'Select the original saved native engine.');
