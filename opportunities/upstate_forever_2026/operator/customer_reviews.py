@@ -144,7 +144,10 @@ class CustomerReviews:
             for candidate in self.operator.task_list(task["workspace"]):
                 if candidate.get("action") != task["action"] or candidate.get("state") != "complete":
                     continue
-                if source_id in self._export_identity(candidate):
+                origin = candidate.get("transfer_origin")
+                while isinstance(origin, dict) and origin.get("task_id") != source_id:
+                    origin = origin.get("previous")
+                if isinstance(origin, dict) and source_id in self._export_identity(candidate):
                     matches.append(candidate)
             if len(matches) != 1:
                 raise ValueError("Restore the original completed export task before rebuilding its selected edition")
