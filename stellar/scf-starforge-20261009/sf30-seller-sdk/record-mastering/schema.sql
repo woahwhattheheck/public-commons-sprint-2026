@@ -1,0 +1,15 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE IF NOT EXISTS workspace(id TEXT PRIMARY KEY, title TEXT NOT NULL, revision INTEGER NOT NULL, created TEXT NOT NULL, format INTEGER NOT NULL CHECK(format=1));
+CREATE TABLE IF NOT EXISTS feeds(id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, mapping TEXT NOT NULL, keys_json TEXT NOT NULL, active_edition TEXT, created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS source_editions(id TEXT PRIMARY KEY, feed_id TEXT NOT NULL REFERENCES feeds(id), label TEXT NOT NULL, created TEXT NOT NULL, sha256 TEXT NOT NULL, original BLOB NOT NULL, headers TEXT NOT NULL, row_count INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY, feed_id TEXT NOT NULL REFERENCES feeds(id), source_key TEXT NOT NULL, excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), reason TEXT NOT NULL DEFAULT '', created TEXT NOT NULL, UNIQUE(feed_id,source_key));
+CREATE TABLE IF NOT EXISTS observations(edition_id TEXT NOT NULL REFERENCES source_editions(id),record_id TEXT NOT NULL REFERENCES records(id),row_number INTEGER NOT NULL,raw_json TEXT NOT NULL,values_json TEXT NOT NULL,PRIMARY KEY(edition_id,record_id));
+CREATE INDEX IF NOT EXISTS observation_record ON observations(record_id,edition_id);
+CREATE TABLE IF NOT EXISTS entities(id TEXT PRIMARY KEY,label TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0,1)));
+CREATE TABLE IF NOT EXISTS members(record_id TEXT PRIMARY KEY REFERENCES records(id), entity_id TEXT NOT NULL REFERENCES entities(id));
+CREATE INDEX IF NOT EXISTS member_entity ON members(entity_id);
+CREATE TABLE IF NOT EXISTS choices(entity_id TEXT NOT NULL REFERENCES entities(id),field TEXT NOT NULL,decision TEXT NOT NULL,PRIMARY KEY(entity_id,field));
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS dismissed(signature TEXT PRIMARY KEY,reason TEXT NOT NULL,created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY,request_sha TEXT NOT NULL,kind TEXT NOT NULL,request TEXT NOT NULL,result TEXT NOT NULL,created TEXT NOT NULL,revision INTEGER NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS deliveries(id TEXT PRIMARY KEY,title TEXT NOT NULL,created TEXT NOT NULL,source_revision INTEGER NOT NULL,mode TEXT NOT NULL,row_count INTEGER NOT NULL,conflict_count INTEGER NOT NULL,files_json TEXT NOT NULL);

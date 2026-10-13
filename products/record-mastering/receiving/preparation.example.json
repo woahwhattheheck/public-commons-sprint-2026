@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.record-mastering-installed-preparation.v1",
+  "operationId": "record-mastering-installed-receiving-example",
+  "directory": "/absolute/private/preparation",
+  "sourceDirectory": "/absolute/maintained-source",
+  "gitRepository": "/absolute/original-git-checkout",
+  "buildDirectory": "/absolute/private/build",
+  "runtimeDirectory": "/absolute/private/runtime",
+  "receivingDirectory": "/absolute/private/native",
+  "sourceCommit": "07d00d929cc66ba51576c4e7f0422fb568759522",
+  "offline": true,
+  "playwright": "/absolute/retained/playwright/index.mjs",
+  "chromium": "/absolute/retained/chrome-headless-shell"
+}
