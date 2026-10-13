@@ -21,6 +21,13 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/geographic_study_transfer.py",
+    "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+    "source_tools/geographic_scenario_context.py",
+    "source_tools/geographic_scenario_interpretation.mjs",
+    "source_tools/geographic_headwaters_reopen.py",
+    "source_tools/receive_geographic_headwaters.py",
+    "integration/component_fragments/geographic-study-transfer.json",
     "model/geographic_siting_contrasts.py",
     "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
@@ -280,6 +287,13 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/geographic_study_transfer.py",
+    "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+    "source_tools/geographic_scenario_context.py",
+    "source_tools/geographic_scenario_interpretation.mjs",
+    "source_tools/geographic_headwaters_reopen.py",
+    "source_tools/receive_geographic_headwaters.py",
+    "integration/component_fragments/geographic-study-transfer.json",
     "model/geographic_siting_contrasts.py",
     "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
@@ -998,7 +1012,60 @@ def verify_geographic_operator_dependencies(application, pending):
         raise ValueError("Retain the allocation view in the complete original Geographic operator family")
 
 
+def verify_geographic_study_dependencies(application, pending):
+    """Retain the original editable Geographic course behind saved reports."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    helper = source("model/geographic_study_transfer.py")
+    callers = (source("model/study_transfer.py"),
+               source("model/scientific_report_study_transfer.py"))
+    if helper is None and not any(
+            body is not None and b"geographic_study_transfer" in body for body in callers):
+        return
+    members = (
+        "model/geographic_study_transfer.py",
+        "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+        "model/geographic_headwaters.py",
+        "model/geographic_receiving_context.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_scenario_allocation_report.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_siting_contrasts.py",
+        "model/geographic_utility_groups.py",
+        "model/ensemble_study_transfer.py",
+        "model/receiving_water_report_transfer.py",
+        "model/scenario_footprint.py",
+        "model/ensembles.py",
+        "model/ensemble_operations.py",
+        "model/ensemble_report.py",
+        "source_tools/headwaters_parameter_course.py",
+        "source_tools/geographic_scenario_context.py",
+        "source_tools/geographic_scenario_interpretation.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/receive_geographic_headwaters.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    )
+    for name in (*members,
+                 "integration/component_fragments/geographic-study-transfer.json",
+                 "model/common.py", "model/native_versions.py",
+                 "model/paired_ensemble/__init__.py",
+                 "model/paired_ensemble/ensemble_store.py",
+                 "model/paired_ensemble/ensemble_workspace.py",
+                 "model/paired_ensemble/designs.py"):
+        assembled_data(application, pending, name)
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-study-transfer.json"))
+    family = fragment.get("extend_components", {}).get("study-transfer", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-study-transfer"
+            or "study-transfer" in fragment.get("components", {})
+            or not set(members).issubset(set(family.get("paths", [])))):
+        raise ValueError("Retain Geographic source history in the existing Study-transfer family")
+
+
 def verify_composition(application, pending):
+    verify_geographic_study_dependencies(application, pending)
     verify_geographic_allocation_dependencies(application, pending)
     verify_geographic_operator_dependencies(application, pending)
     verify_received_study_dependencies(application, pending)
@@ -1025,7 +1092,8 @@ def verify_composition(application, pending):
                        "paired_ensemble_study_transfer", "report_changes_study_transfer",
                        "chemistry_study_transfer", "ensemble_study_transfer",
                        "gauge_study_transfer", "landcover_study_transfer",
-                       "published_review_study_transfer", "implementation_report_transfer"):
+                       "published_review_study_transfer", "implementation_report_transfer",
+                       "geographic_study_transfer"):
             if module.encode("ascii") in transfer:
                 assembled_data(application, pending, "model/" + module + ".py")
         if b"receptor_study_transfer" in transfer:
