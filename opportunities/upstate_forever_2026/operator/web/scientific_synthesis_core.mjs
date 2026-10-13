@@ -52,7 +52,7 @@ export function validateWorking(value){
   if(p.payload.base_collection_id!==null)hash(p.payload.base_collection_id,'Original prior collection');
   if(p.task_id!==null&&typeof p.task_id!=='string')throw Error('Retain the accepted original task ID.');
   if(stableJSON(p.payload.document)!==stableJSON(v.document)||p.payload.base_collection_id!==v.base_collection_id||p.payload.catalog_sha256!==v.catalog?.catalog_sha256)throw Error('The complete working copy differs from its retained original save request.');}
- const bytes=new TextEncoder().encode(JSON.stringify(v)).length;
+ const bytes=new TextEncoder().encode(JSON.stringify(v,null,2)+'\n').length;
  if(bytes>WORK_BYTES)throw Error('The complete portable working copy exceeds the visible 16 MiB limit.');
  return v;
 }

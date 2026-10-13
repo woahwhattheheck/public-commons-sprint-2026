@@ -59,17 +59,18 @@ export function attachScientificSynthesis(host){
    panel.innerHTML='<h3>Scientist-authored synthesis</h3><p>Write a decision question and attributed findings against exact original studies. Saved chapters use the normal report composer and retain complete source editions.</p><p data-synthesis-status role="status"></p><div data-synthesis-toolbar></div><div data-synthesis-editor></div><div data-synthesis-history></div>';
    panel.addEventListener('click',event=>{const b=event.target.closest('[data-synthesis-action]');if(!b||!panel.contains(b))return;event.preventDefault();event.stopPropagation();act(b).catch(showError);});
    panel.addEventListener('input',event=>{const el=event.target;if(!el.dataset.synthesisField)return;if(locked())return;
-    const field=el.dataset.synthesisField;
+    const before=clone(work),field=el.dataset.synthesisField;
     if(field.startsWith('author.'))work.document.author[field.slice(7)]=el.value;
     else if(el.dataset.section){const s=work.document.sections.find(r=>r.id===el.dataset.section);if(s)s[field]=el.value;}
     else work.document[field]=el.value;
+    try{validateWorking(work);}catch(reason){work=before;error=reason.message;render();return;}
     changed();
    });
    panel.addEventListener('change',event=>{
     const el=event.target;
     if(el.matches('[data-synthesis-open]')){const file=el.files[0];el.value='';if(file)openFile(file).catch(showError);return;}
     if(el.dataset.synthesisKind&&!locked()){const s=work.document.sections.find(r=>r.id===el.dataset.synthesisKind);s.kind=el.value;changed();return;}
-    if(el.dataset.synthesisRef&&!locked()){const s=work.document.sections.find(r=>r.id===el.dataset.section);if(el.checked){if(!s.reference_ids.includes(el.dataset.synthesisRef))s.reference_ids.push(el.dataset.synthesisRef);}else{s.reference_ids=s.reference_ids.filter(x=>x!==el.dataset.synthesisRef);}changed();}
+    if(el.dataset.synthesisRef&&!locked()){const before=clone(work),s=work.document.sections.find(r=>r.id===el.dataset.section);if(el.checked){if(!s.reference_ids.includes(el.dataset.synthesisRef))s.reference_ids.push(el.dataset.synthesisRef);}else{s.reference_ids=s.reference_ids.filter(x=>x!==el.dataset.synthesisRef);}try{validateWorking(work);}catch(reason){work=before;error=reason.message;render();return;}changed();}
    });
   }
   if(panel.parentNode!==container)container.append(panel);panel.hidden=false;
@@ -128,7 +129,7 @@ export function attachScientificSynthesis(host){
   const ws=workspace,t=turn,version=edit,result=await request('/api/source-reports/synthesis-edition',{collection_id:id});
   if(!current(ws,t)||version!==edit)return;
   if(result.workspace_key!==ws||result.collection_id!==id)throw Error('The saved chapter selection differs.');
-  const doc=clone(result.record.document);work=newWork(doc,result.catalog);work.base_collection_id=id;opened=result;edit++;
+  const doc=clone(result.record.document),next={...newWork(doc,result.catalog),base_collection_id:id};validateWorking(next);work=next;opened=result;edit++;
   await persist();render();
  }
  async function newFromSelection(){
@@ -136,12 +137,12 @@ export function attachScientificSynthesis(host){
   if(!choices.length)throw Error('Choose original studies in the report composer above.');
   const doc=blankDocument({seriesId:crypto.randomUUID(),sources:choices});
   work=newWork(doc);opened=null;edit++;await persist();if(!current(ws,t))return;render();
-  const result=await loadReferences(choices);if(result){work.catalog=result;await persist();if(current(ws,t))render();}
+  const result=await loadReferences(choices);if(result){const next={...work,catalog:result};validateWorking(next);work=next;await persist();if(current(ws,t))render();}
  }
  async function selectReferences(){
   const choices=clone(host.getReportSources());if(!choices.length)throw Error('Choose the original source studies above.');
   const refs=await loadReferences(choices);if(!refs)return;
-  work.document.sources=choices;work.catalog=refs;edit++;await persist();render();
+  const next={...work,document:{...work.document,sources:choices},catalog:refs};validateWorking(next);work=next;edit++;await persist();render();
  }
  async function finishTask(original){
   const ws=workspace,t=turn;
@@ -165,8 +166,9 @@ export function attachScientificSynthesis(host){
  async function submit(){
   if(!work.pending){
    const doc=validateDocument(work.document,{complete:true});validateReferences(doc,work.catalog);
-   const id=crypto.randomUUID();work.pending={operation_id:id,action:'source-reports.synthesis-save',task_id:null,
+   const id=crypto.randomUUID(),pending={operation_id:id,action:'source-reports.synthesis-save',task_id:null,
     payload:{operation_id:id,document:doc,base_collection_id:work.base_collection_id,catalog_sha256:work.catalog.catalog_sha256}};
+   validateWorking({...work,pending});work.pending=pending;
   }
   const original=work.pending,ws=workspace,t=turn;await persist();
   if(!current(ws,t)||work.pending!==original)return;
@@ -209,7 +211,7 @@ export function attachScientificSynthesis(host){
     const prior=opened;const doc=clone(work.document);doc.series_id=crypto.randomUUID();doc.fork_origin={collection_id:prior.collection_id,revision_id:prior.record.revision_id};doc.revision_name='Forked first edition';doc.change_note='Forked from '+prior.record.document.revision_name;work=newWork(doc,work.catalog);opened=null;edit++;await persist();
    }
    else if(action==='compose'){await host.compose({workspace_key:ws,sources:[opened.source,...opened.record.document.sources],selection_mode:'replace',title:opened.record.document.title});}
-   else if(action==='add'){work.document.sections.push({id:crypto.randomUUID(),kind:b.dataset.kind,heading:'',text:'',reference_ids:[]});changed();}
+   else if(action==='add'){const next=clone(work);next.document.sections.push({id:crypto.randomUUID(),kind:b.dataset.kind,heading:'',text:'',reference_ids:[]});validateWorking(next);work=next;changed();}
    else if(['remove','up','down'].includes(action)){const i=work.document.sections.findIndex(r=>r.id===b.dataset.section);if(i<0)throw Error('Choose an authored section.');if(action==='remove')work.document.sections.splice(i,1);else{const j=i+(action==='up'?-1:1);if(j<0||j>=work.document.sections.length)throw Error('Choose an available section order.');[work.document.sections[i],work.document.sections[j]]=[work.document.sections[j],work.document.sections[i]];}changed();}
   }finally{if(current(ws,t)){busy=false;render();}}
  }
