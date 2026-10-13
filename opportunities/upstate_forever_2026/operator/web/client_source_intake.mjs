@@ -271,6 +271,7 @@ export function createClientSourceIntake(host){
     area.innerHTML='<h2>Saved scientific source edition</h2><p>'+esc(result.title)+' · '+esc(result.state)+'</p>'+
       (result.source_collection_id?'<p>These originals and reviewed interpretations are available in the existing source, grid, profile and run controls.</p>'+actionButton('source','Open exact saved source edition','data-ci-id="'+result.source_collection_id+'"'):'')+
       '<ol>'+arr(result.next_steps).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="ci-actions">'+
+      actionButton('navigate','Prepare workbook measurements','data-ci-view="client-measurement-sources"')+
       actionButton('navigate','Prepare study inputs','data-ci-view="source-preparation"')+
       actionButton('navigate','Choose native model grid','data-ci-view="grids"')+
       actionButton('navigate','Profiles and scientific settings','data-ci-view="profiles"')+

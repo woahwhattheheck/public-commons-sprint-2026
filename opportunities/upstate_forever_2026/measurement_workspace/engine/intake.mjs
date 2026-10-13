@@ -1,5 +1,6 @@
 /** Guided preparation around the original Measurements parser and importer. */
 import {randomUUID} from 'node:crypto';
+import {initialiseLineage,originalMap,retainOriginals,readOriginal,validateStoredLineage,exportOriginals,validateLineagePacket,sourceLineages} from './source_lineage.mjs';
 import {parseCSV, safeJSON, InputError} from './parse.mjs';
 import {FIELDS, fieldReader, hash, stable, parseSource, WQP_DETECTION_EDITION, USGS_DAILY_EDITION} from './normalise.mjs';
 export const INTAKE_FORMAT='upper-savannah-measurement-intake/v1';
@@ -8,6 +9,7 @@ const idOK=x=>typeof x==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/.test(x);
 const fail=(s,status=400)=>{throw new InputError(s,status);};
 const object=x=>x&&typeof x==='object'&&!Array.isArray(x);
 export function initialiseIntake(s){
+  initialiseLineage(s);
   s.db.exec('CREATE TABLE IF NOT EXISTS intake_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS intake_sources(sha TEXT PRIMARY KEY,content TEXT NOT NULL); CREATE TABLE IF NOT EXISTS intake_editions(id TEXT NOT NULL,revision INTEGER NOT NULL,created_at TEXT NOT NULL,digest TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(id,revision)); CREATE TABLE IF NOT EXISTS intake_receipts(id TEXT NOT NULL,revision INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(id,revision)); CREATE TABLE IF NOT EXISTS intake_origins(id TEXT PRIMARY KEY,data TEXT NOT NULL);');
   s.db.prepare("INSERT OR IGNORE INTO intake_meta VALUES('workspace',?)").run(randomUUID());
 }
@@ -27,6 +29,7 @@ function draft(value){
     if(!Object.hasOwn(FIELDS,k)||typeof x!=='string')fail('Invalid preparation mapping: '+k);
     v.mapping[k]=x;
   }
+  if(value.lineage!==undefined){if(!object(value.lineage))fail('Keep complete original worksheet lineage.');v.lineage=JSON.parse(JSON.stringify(value.lineage));}
   return v;
 }
 function source(s,sha){const x=s.db.prepare('SELECT content FROM intake_sources WHERE sha=?').get(sha);if(!x)fail('The complete original preparation file is absent.',404);return x.content;}
@@ -35,8 +38,9 @@ export function readIntake(s,id,revision){
   if(!idOK(id))fail('Invalid preparation identity.');
   const row=revision===undefined?s.db.prepare('SELECT * FROM intake_editions WHERE id=? ORDER BY revision DESC LIMIT 1').get(id):s.db.prepare('SELECT * FROM intake_editions WHERE id=? AND revision=?').get(id,revision);
   if(!row)fail('Saved preparation not found.',404);
-  const result=rowValue(row);
-  return {...result,text:source(s,result.value.sourceSha),receipt:receipt(s,id,result.revision),workspaceId:intakeIdentity(s)};
+  const result=rowValue(row),text=source(s,result.value.sourceSha);
+  validateStoredLineage(s,result.value,text);
+  return {...result,text,originals:exportOriginals(s,[result]),receipt:receipt(s,id,result.revision),workspaceId:intakeIdentity(s)};
 }
 function receipt(s,id,revision){const row=s.db.prepare('SELECT data FROM intake_receipts WHERE id=? AND revision=?').get(id,revision);return row?JSON.parse(row.data):null;}
 export function listIntakes(s){
@@ -47,6 +51,8 @@ export function saveIntake(s,input){
   if(!idOK(input?.id)||!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<0)fail('Save requires the preparation identity and its last saved revision.');
   const value=draft(input.value),digest=hash(stable(value));
   if(input.text!==undefined&&(typeof input.text!=='string'||hash(input.text)!==value.sourceSha))fail('The complete original file does not match its checksum.');
+  const suppliedOriginals=originalMap(input.originals||[]);
+  if([...suppliedOriginals.keys()].some(sha=>sha!==value.lineage?.original?.sha256))fail('Retain only the complete original bound to this worksheet.');
   return writeIntake(s,changed=>{
     const current=rowValue(s.db.prepare('SELECT * FROM intake_editions WHERE id=? ORDER BY revision DESC LIMIT 1').get(input.id));
     const priorRevision=current?.revision||0;
@@ -60,12 +66,20 @@ export function saveIntake(s,input){
       if(prior&&prior.content!==input.text)fail('Original source identity conflict.');
       s.db.prepare('INSERT OR IGNORE INTO intake_sources VALUES(?,?)').run(value.sourceSha,input.text);
     }
-    source(s,value.sourceSha);
+    retainOriginals(s,[...suppliedOriginals.values()]);
+    validateStoredLineage(s,value,source(s,value.sourceSha));
     if(current?.digest===digest)return readIntake(s,input.id);
     s.db.prepare('INSERT INTO intake_editions VALUES(?,?,?,?,?)').run(input.id,priorRevision+1,new Date().toISOString(),digest,JSON.stringify(value));
+    preparationCapacity(s,input.id);
     s.event('intake-preparation',input.id,{revision:priorRevision+1,digest,sourceSha:value.sourceSha});changed();
     return readIntake(s,input.id);
   });
+}
+export function validateWorkingIntake(input){
+  const value=draft(input?.value);
+  if(typeof input.text!=='string'||hash(input.text)!==value.sourceSha)fail('The complete working source differs from its checksum.');
+  validateLineagePacket({originals:input.originals||[],editions:[{value}]},new Map([[value.sourceSha,input.text]]));
+  return {value,text:input.text,originals:input.originals||[]};
 }
 export function inspectIntake(s,input){
   if(typeof input?.text!=='string'||!kinds.includes(input.kind))fail('Choose a complete UTF-8 CSV or USGS GeoJSON source.');
@@ -111,7 +125,7 @@ export function importIntake(s,id,input){
   const value=saved.value;
   // Original import identity is kind + original content + original resolved mapping.
   // If the process stops after import, the same saved edition recovers that import.
-  const imported=s.import({kind:value.kind,text:saved.text,label:value.label,mapping:value.mapping,contentSha:value.sourceSha,origin:{type:'guided-file',filename:value.sourceName,context:value.context,intake:{id,revision:input.revision,reviewer:value.reviewer,note:value.note}}});
+  const imported=s.import({kind:value.kind,text:saved.text,label:value.label,mapping:value.mapping,contentSha:value.sourceSha,origin:{type:'guided-file',filename:value.sourceName,context:value.context,...(value.lineage?{lineage:value.lineage}:{}),intake:{id,revision:input.revision,reviewer:value.reviewer,note:value.note}}});
   const completed={id,revision:input.revision,previewSha:input.previewSha,importId:imported.id,sourceSha:value.sourceSha,rows:imported.rows,rejectedCount:imported.rejectedCount,completedAt:new Date().toISOString()};
   return s.atomic(()=>{
     const existing=receipt(s,id,input.revision);if(existing)return existing;
@@ -123,7 +137,12 @@ export function exportIntakes(s,selectedId){
   const editions=s.db.prepare('SELECT * FROM intake_editions ORDER BY id,revision').all().filter(x=>!selectedId||x.id===selectedId).map(rowValue);
   if(selectedId&&!editions.length)fail('Preparation not found.',404);
   const hashes=new Set(editions.map(x=>x.value.sourceSha));
-  return {format:INTAKE_FORMAT,workspaceId:intakeIdentity(s),sources:[...hashes].sort().map(sha=>({sha,text:source(s,sha)})),editions,origins:s.db.prepare('SELECT * FROM intake_origins ORDER BY id').all().filter(x=>!selectedId||x.id===selectedId).map(x=>({id:x.id,project:JSON.parse(x.data)})),receipts:s.db.prepare('SELECT * FROM intake_receipts ORDER BY id,revision').all().filter(x=>!selectedId||x.id===selectedId).map(x=>JSON.parse(x.data))};
+  return {format:INTAKE_FORMAT,workspaceId:intakeIdentity(s),originals:exportOriginals(s,editions),sources:[...hashes].sort().map(sha=>({sha,text:source(s,sha)})),editions,origins:s.db.prepare('SELECT * FROM intake_origins ORDER BY id').all().filter(x=>!selectedId||x.id===selectedId).map(x=>({id:x.id,project:JSON.parse(x.data)})),receipts:s.db.prepare('SELECT * FROM intake_receipts ORDER BY id,revision').all().filter(x=>!selectedId||x.id===selectedId).map(x=>JSON.parse(x.data))};
+}
+function preparationCapacity(s,id){
+  const packet=exportIntakes(s,id);
+  if(Buffer.byteLength(JSON.stringify({id:'x'.repeat(120),project:packet}))>128*1024*1024)
+    fail('This complete preparation history exceeds the original receiving route. The preceding original history remains unchanged; retain it and begin a separately named preparation.',413);
 }
 export function validateIntakes(value,imports=null,depth=0){
   if(depth>32)fail('Preparation ancestry is too deeply nested. Retain the full original project separately.',413);
@@ -136,6 +155,7 @@ export function validateIntakes(value,imports=null,depth=0){
     const v=draft(e.value);if(stable(v)!==stable(e.value)||hash(stable(v))!==e.digest||!sources.has(v.sourceSha))fail('Preparation edition/source identity mismatch.');
     revisions.set(e.id,e.revision);editions.set(e.id+':'+e.revision,e);
   }
+  validateLineagePacket(value,sources);
   const receipts=new Set();
   for(const r of value.receipts){
     const key=r.id+':'+r.revision,e=editions.get(key),imp=imports?.find(x=>x.id===r.importId);
@@ -155,6 +175,7 @@ export function receiveIntakes(s,value){
   // Called inside the existing receive transaction, after native original validation.
   validateIntakes(value,s.db.prepare('SELECT * FROM imports').all());
   if(s.db.prepare('SELECT COUNT(*) n FROM intake_editions').get().n)fail('Receive into an empty preparation workspace.',409);
+  retainOriginals(s,value.originals||[]);
   for(const x of value.sources)s.db.prepare('INSERT OR IGNORE INTO intake_sources VALUES(?,?)').run(x.sha,x.text);
   for(const e of value.editions)s.db.prepare('INSERT INTO intake_editions VALUES(?,?,?,?,?)').run(e.id,e.revision,e.createdAt,e.digest,JSON.stringify(e.value));
   for(const origin of value.origins||[])s.db.prepare('INSERT INTO intake_origins VALUES(?,?)').run(origin.id,JSON.stringify(origin.project));
@@ -168,6 +189,7 @@ export function copyIntake(s,input){
     const existing=s.db.prepare('SELECT data FROM intake_origins WHERE id=?').get(input.id);
     if(existing){if(stable(JSON.parse(existing.data))===stable(packet))return readIntake(s,input.id,packet.editions.at(-1).revision);fail('Copy identity belongs to a different original project.',409);}
     if(s.db.prepare('SELECT id FROM intake_editions WHERE id=? LIMIT 1').get(input.id))fail('Choose a new copy identity.',409);
+    retainOriginals(s,packet.originals||[]);
     for(const file of packet.sources){
       const old=s.db.prepare('SELECT content FROM intake_sources WHERE sha=?').get(file.sha);
       if(old&&old.content!==file.text)fail('Original source identity conflict.');
@@ -175,12 +197,16 @@ export function copyIntake(s,input){
     }
     for(const e of packet.editions)s.db.prepare('INSERT INTO intake_editions VALUES(?,?,?,?,?)').run(input.id,e.revision,e.createdAt,e.digest,JSON.stringify(e.value));
     s.db.prepare('INSERT INTO intake_origins VALUES(?,?)').run(input.id,JSON.stringify(packet));
+    preparationCapacity(s,input.id);
     s.event('intake-copy',input.id,{sourceWorkspace:packet.workspaceId,sourceId:packet.editions[0].id,editions:packet.editions.length});changed();
     return readIntake(s,input.id);
   });
 }
 export function intakeOperation(s,method,parts,input={}){
   if(method==='GET'&&!parts.length)return listIntakes(s);
+  if(method==='GET'&&parts[0]==='source-lineages'&&parts.length===2)return sourceLineages(s,parts[1]);
+  if(method==='GET'&&parts[1]==='original'&&parts.length===2){const saved=readIntake(s,parts[0]);if(!saved.value.lineage)fail('This preparation uses an original text source.',404);return {...readOriginal(s,saved.value.lineage.original.sha256),filename:saved.value.lineage.original.filename};}
+  if(method==='POST'&&parts[0]==='validate-working')return validateWorkingIntake(input);
   if(method==='POST'&&parts[0]==='inspect')return inspectIntake(s,input);
   if(method==='POST'&&parts[0]==='copy')return copyIntake(s,input);
   if(method==='PUT'&&parts.length===1)return saveIntake(s,{...input,id:parts[0]});
