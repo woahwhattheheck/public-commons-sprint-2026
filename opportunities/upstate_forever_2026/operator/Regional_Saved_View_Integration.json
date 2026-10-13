@@ -5,7 +5,9 @@
     "registered_journey": "F0C8QBS37TL",
     "regional_predecessor": "F0C8QRG6K26",
     "current_watershed": "F0C8JLUBR19",
-    "decision_browser": "F0C8QM4TW5Q"
+    "decision_browser": "F0C8QM4TW5Q",
+    "task_poll_authentication": "R3: original Bearer capability for queued native backup/restore task reads; same-origin polling without redirects",
+    "current_host_reinstall": "Preserve exact known current Decision studies diagnostic opener and native Save view / Project continuity handoff variants."
   },
   "owned_files": {
     "operator/web/regional_journey.mjs": {
@@ -26,12 +28,18 @@
       ]
     },
     "operator/REGIONAL_SAVED_VIEW.md": {
-      "bytes": 10133,
-      "sha256": "8429cba1e60172b8b2eb52a6761eb940e0627f2a8dd45135b3537d4025b5af37"
+      "bytes": 10513,
+      "sha256": "e3dafa8346614b01a210d5121c13f324fa8b2801771fa0da126ae88300d90851",
+      "previous_sha256": [
+        "8429cba1e60172b8b2eb52a6761eb940e0627f2a8dd45135b3537d4025b5af37"
+      ]
     },
     "source/run_saved_regional_view_browser.mjs": {
-      "bytes": 28400,
-      "sha256": "981211e61884200e30001b746b24771a96385761b040f6871a7515b0ec01f9c5"
+      "bytes": 28572,
+      "sha256": "5219575547ecf6b33d420327018efa74f20b98a61772379d81a45b9dd2cfb74e",
+      "previous_sha256": [
+        "981211e61884200e30001b746b24771a96385761b040f6871a7515b0ec01f9c5"
+      ]
     }
   },
   "component_members": [
@@ -288,7 +296,10 @@
       "id": "decision_prepare_public",
       "before": " return {mount,update,detach,open:openStudy};",
       "after": " return {mount,update,detach,open:openStudy,prepare:configureExperiment};",
-      "marker": "open:openStudy,prepare:configureExperiment"
+      "marker": "open:openStudy,prepare:configureExperiment",
+      "present": [
+        " return {mount,update,detach,open:openStudy,prepare:configureExperiment,openForDiagnostic};"
+      ]
     },
     {
       "path": "operator/web/extension_host.mjs",
@@ -375,7 +386,10 @@
       "id": "native_saved_view_dispatch",
       "before": "  if(name==='save-view'){",
       "after": "  if(name==='open-saved-view'){\n   const saved=state()?.data?.operator_session;\n   if(!saved?.journey)throw Error('Save a project view before opening it.');\n   return openRetainedView(saved.journey,{projectRevision:saved.revision});\n  }\n  if(name==='swap-browser-view'){\n   if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');\n   return openRetainedView(preferences.browser_view_draft);\n  }\n  if(name==='save-view'){",
-      "marker": "if(name==='open-saved-view')"
+      "marker": "if(name==='open-saved-view')",
+      "present": [
+        "  if(name==='open-saved-view'){\n   const saved=state()?.data?.operator_session;\n   if(!saved?.journey)throw Error('Save a project view before opening it.');\n   return openRetainedView(saved.journey,{projectRevision:saved.revision});\n  }\n  if(name==='swap-browser-view'){\n   if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');\n   return openRetainedView(preferences.browser_view_draft);\n  }\n  if(name==='save-view'||name==='handoff'){"
+      ]
     },
     {
       "path": "operator/web/journey.mjs",
@@ -401,7 +415,9 @@
   ],
   "previous_integration_sha256": {
     "operator/Regional_Saved_View_Integration.json": [
-      "b7869f1d5d02b284a88c5cd33989edc8f182c6866c77db099907687f666c03f3"
+      "b7869f1d5d02b284a88c5cd33989edc8f182c6866c77db099907687f666c03f3",
+      "af1a99bfff90171aaad3068b0d47700985ec7a370d9b2b27484230df80068079",
+      "e8448255cdfb00d71bcb4c764a9ab7362a559d9971d997e8188a47a9d1ebc87c"
     ],
     "operator/install_regional_saved_view.py": [
       "af026482f78424aa37d26f9cfb8acbffd34a7ce46e53057ad1c09e89a52cc8e2"
