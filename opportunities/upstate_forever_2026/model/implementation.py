@@ -21,6 +21,41 @@ from .implementation_schema import (
 from .implementation_reporting import render_report_html, report_csv
 
 
+def _source_references(row):
+    """Exact maintained file/source associations, without interpreting arbitrary text."""
+    if not isinstance(row, dict):
+        return set()
+    refs = []
+    for key in ("source_link_id", "audit_source_link_id", "source_ref", "custody_ref"):
+        if isinstance(row.get(key), str):
+            refs.append(row[key])
+    if isinstance(row.get("evidence_refs"), list):
+        refs.extend(row["evidence_refs"])
+    for key in ("original_source", "lab_source"):
+        source = row.get(key)
+        if isinstance(source, dict):
+            for field in ("source_link_id", "audit_source_link_id", "source_ref"):
+                if isinstance(source.get(field), str):
+                    refs.append(source[field])
+    response = row.get("form_response")
+    if isinstance(response, dict):
+        template, answers = response.get("template", {}), response.get("answers", {})
+        fields = template.get("fields", []) if isinstance(template, dict) else []
+        if isinstance(fields, list) and isinstance(answers, dict):
+            for field in fields:
+                if not isinstance(field, dict):
+                    continue
+                answer = answers.get(field.get("key"))
+                if field.get("type") == "attachment_ref" and isinstance(answer, str):
+                    refs.append(answer)
+                elif field.get("type") == "attachment_refs":
+                    if isinstance(answer, list):
+                        refs.extend(answer)
+                    elif isinstance(answer, dict) and isinstance(answer.get("references"), list):
+                        refs.extend(answer["references"])
+    return {ref for ref in refs if isinstance(ref, str)}
+
+
 def _same_json(left, right) -> bool:
     """JSON value equality: equal int/float values, distinct booleans."""
     if isinstance(left, bool) or isinstance(right, bool):
@@ -227,6 +262,22 @@ class ImplementationStore:
                                 f"{collection} ID {old['id']!r} already names a historical source. "
                                 "Use a new ID for the new source selection."
                             )
+        removed_sources = ({row["id"] for row in previous["source_links"]} -
+                           {row["id"] for row in incoming["source_links"]})
+        if removed_sources:
+            collections = [(name, incoming[name]) for name in COLLECTIONS]
+            collections.append(("field12_lab_imports", incoming.get("field12_lab_imports", [])))
+            for collection, rows in collections:
+                if not isinstance(rows, list):
+                    continue
+                for index, row in enumerate(rows):
+                    dangling = sorted(_source_references(row) & removed_sources)
+                    if dangling:
+                        row_id = row.get("id", str(index)) if isinstance(row, dict) else str(index)
+                        raise ImplementationError(
+                            f"{collection} ID {row_id!r} still refers to removed source links: " +
+                            ", ".join(dangling) + ". Remove those associations before deleting the source."
+                        )
         if incoming["created_at"] != previous["created_at"]:
             raise ImplementationError("created_at is immutable for an existing plan.")
 

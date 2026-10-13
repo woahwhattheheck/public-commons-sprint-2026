@@ -26,10 +26,11 @@ ACTIONS = frozenset({
     "implementation.plan.save", "implementation.plan.report",
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
+    "implementation.evidence.import", "implementation.evidence.export",
     "implementation.observations.import", "implementation.lab.import", "implementation.briefing.import",
     "implementation.lab.dispatch", "implementation.lab.dispatch-report",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview"})
+READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -39,6 +40,8 @@ WRITE_ROUTES = {
     "attach": "implementation.source.attach",
     "source-import": "implementation.source.import",
     "selection-import": "implementation.selection.import",
+    "evidence-import": "implementation.evidence.import",
+    "evidence-export": "implementation.evidence.export",
     "observations-import": "implementation.observations.import",
     "lab-import": "implementation.lab.import",
     "briefing-import": "implementation.briefing.import",
@@ -193,6 +196,9 @@ class ImplementationOperator:
         revision = self._integer(revision, "revision", optional=True)
         plan = store.get(plan_id, revision)
         downloads = [self._snapshot_download(workspace, plan)]
+        evidence_download = self._evidence_download(workspace, plan)
+        if evidence_download:
+            downloads.append(evidence_download)
         for source in plan["source_links"]:
             if source.get("kind") != "local_file" or not source.get("reference"):
                 continue
@@ -247,6 +253,8 @@ class ImplementationOperator:
             return self._lab(workspace, payload, operation=operation)
         if operation == "observations-preview":
             return self._observations(workspace, payload, preview=True)
+        if operation == "selection-preview":
+            return self.selection_preview(workspace, payload)
         if operation == "catalog":
             self.operator.ws(workspace)
             path = Path(__file__).resolve().parent / "web" / "implementation_catalog.json"
@@ -788,26 +796,22 @@ class ImplementationOperator:
         except (SourceImportError, OSError, ValueError, KeyError, TypeError) as error:
             raise self.Fault("IMPLEMENTATION_ECONOMIC_SOURCE", str(error)) from error
 
-    def _source_import(self, store, task, plan_id, expected, actor):
-        from model.implementation_sources import SourceImportError, import_selection
-        value = task["payload"]
+    def _resolve_source(self, workspace, value):
+        """Read the same original source for preview and queued import."""
         kind = value.get("kind", value.get("source_kind", "community_plan"))
         source_id = value.get("source_id")
-        imported = None
-        if kind == "economic_scenario":
-            imported = self._economic_import(task)
-        elif (kind in ("community_plan", "community_plans")
+        if (kind in ("community_plan", "community_plans")
                 and value.get("source_document") is None and value.get("upload_id") is None):
             if not isinstance(source_id, str):
                 raise self.Fault("IMPLEMENTATION_SOURCE_ID", "Choose a retained community plan.")
-            document = self.operator.item(task["workspace"], "community_plans", source_id)
-            source_ref = str(self.operator.ws(task["workspace"]).root /
+            document = self.operator.item(workspace, "community_plans", source_id)
+            source_ref = str(self.operator.ws(workspace).root /
                              "community-plans" / (source_id + ".json"))
             kind = "community_plan"
         elif (kind == "conservation_portfolio"
               and value.get("source_document") is None and value.get("upload_id") is None):
             from model import conservation, conservation_bindings
-            ws = self.operator.ws(task["workspace"])
+            ws = self.operator.ws(workspace)
             binding = conservation_bindings.bind_plan(ws, source_id, include_geometry=False)
             original_plan = binding["plan"]
             if original_plan.get("state") != "complete":
@@ -832,7 +836,93 @@ class ImplementationOperator:
             source_ref = value.get("source_ref")
             if "upload_id" in supplied:
                 source_ref = self.operator.upload(value["upload_id"])["path"]
-        if imported is None:
+        return dict(kind=kind, source_id=source_id, source_ref=source_ref,
+                    document=document)
+
+    def selection_preview(self, workspace, value):
+        """Show original native rows without creating an implementation revision."""
+        from model.implementation_sources import SourceImportError, import_selection
+
+        kind = value.get("kind", value.get("source_kind", "community_plan"))
+        if kind not in ("community_plan", "community_plans", "conservation_portfolio"):
+            raise self.Fault("IMPLEMENTATION_PREVIEW_KIND",
+                             "Choose a retained community plan or conservation portfolio.")
+        if value.get("source_document") is not None or value.get("upload_id") is not None:
+            raise self.Fault("IMPLEMENTATION_PREVIEW_SOURCE",
+                             "Choose a retained native source for this selection preview.")
+        resolved = self._resolve_source(workspace, value)
+        try:
+            inspected = import_selection(
+                resolved["document"], resolved["source_id"], resolved["kind"],
+                source_ref=resolved["source_ref"], selected_ids=[],
+            )
+        except SourceImportError as error:
+            raise self.Fault("IMPLEMENTATION_SOURCE_INVALID", str(error)) from error
+        link = inspected["source_links"][0]
+        source = link["snapshot"]
+        kind = link["kind"]
+        rows = []
+        if kind == "community_plan":
+            for original in source["interventions"]:
+                rows.append(dict(
+                    id=str(original["id"]), label=original["title"],
+                    status=original["status"], area_ha=None, reporting_area_ha=None,
+                    default_selected=original["status"] in
+                        ("selected", "in_progress", "complete"),
+                    source_context={key: copy.deepcopy(original.get(key)) for key in
+                        ("strategy", "priority", "utility_id", "watershed_id", "geoids",
+                         "reason", "owner", "next_step", "cost_estimate_usd",
+                         "community_context")},
+                ))
+            context = {key: copy.deepcopy(source.get(key)) for key in
+                       ("table_id", "purpose", "revision_number", "selected_groups")}
+        else:
+            portfolio = source["portfolio"]
+            for original in portfolio["selected_candidates"]:
+                rows.append(dict(
+                    id=original["id"], label=original["label"],
+                    status=original.get("status"), area_ha=original["area_ha"],
+                    reporting_area_ha=original["reporting_area_ha"],
+                    default_selected=True,
+                    source_context={key: copy.deepcopy(original.get(key)) for key in
+                        ("source_identity", "unit_type", "metric_state", "eligible",
+                         "cost", "currency", "score", "rank", "pollutants", "context")},
+                ))
+            context = dict(study_id=portfolio["study_id"],
+                           selected_ids=copy.deepcopy(portfolio["selected_ids"]),
+                           summary=copy.deepcopy(portfolio["summary"]),
+                           source_reference=copy.deepcopy(source["binding"]["source_reference"]))
+        return dict(
+            schema="upstate.implementation-selection-preview/v1", kind=kind,
+            source_id=resolved["source_id"], source_ref=resolved["source_ref"],
+            source_digest=inspected["source_digest"], title=link["label"],
+            rows=rows, context=context,
+        )
+
+    def _source_import(self, store, task, plan_id, expected, actor):
+        from model.implementation_sources import SourceImportError, import_selection
+        value = task["payload"]
+        selected = value.get("selected_ids")
+        expected_digest = value.get("expected_source_digest")
+        if task["action"] == "implementation.selection.import":
+            if (not isinstance(selected, list) or not selected
+                    or any(not isinstance(key, str) or not key.strip() for key in selected)):
+                raise self.Fault("IMPLEMENTATION_SELECTION_EMPTY",
+                                 "Choose at least one original row in the source preview.")
+            if not isinstance(expected_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
+                raise self.Fault("IMPLEMENTATION_SOURCE_PREVIEW",
+                                 "Open the source preview and choose its original rows before importing.")
+        elif expected_digest is not None and (
+                not isinstance(expected_digest, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", expected_digest)):
+            raise self.Fault("IMPLEMENTATION_SOURCE_PREVIEW",
+                             "expected_source_digest must be the SHA256 from the source preview.")
+        if value.get("kind", value.get("source_kind")) == "economic_scenario":
+            imported = self._economic_import(task)
+        else:
+            resolved = self._resolve_source(task["workspace"], value)
+            document, source_id = resolved["document"], resolved["source_id"]
+            kind, source_ref = resolved["kind"], resolved["source_ref"]
             try:
                 imported = import_selection(
                     document, source_id, kind, source_ref=source_ref,
@@ -841,6 +931,12 @@ class ImplementationOperator:
                 )
             except SourceImportError as error:
                 raise self.Fault("IMPLEMENTATION_SOURCE_INVALID", str(error)) from error
+        if expected_digest is not None and imported["source_digest"] != expected_digest:
+            raise self.Fault("IMPLEMENTATION_SOURCE_CHANGED",
+                             "The original source changed after preview. Refresh the preview and choose its current rows.", 409)
+        if not imported["candidates"]:
+            raise self.Fault("IMPLEMENTATION_SELECTION_EMPTY",
+                             "The selection contains no original rows. Choose at least one row explicitly.")
         plan = store.get(plan_id)
         if plan["revision"] != expected:
             raise RevisionConflict(plan_id, expected, plan["revision"])
@@ -870,6 +966,64 @@ class ImplementationOperator:
             selection=imported.get("selection", {}),
         )
 
+    def _evidence_download(self, workspace, plan):
+        from model.implementation_evidence import exported_package
+        store = self.store(workspace)
+        descriptor = exported_package(store, plan)
+        if descriptor is None:
+            return None
+        return self._ticket(
+            workspace, store.root / descriptor["reference"],
+            "Complete plan and original field evidence ZIP", descriptor,
+        )
+
+    def _evidence_import(self, store, task, actor):
+        from model.implementation_evidence import import_package
+        value = task["payload"]
+        uploaded = self.operator.upload(value.get("upload_id"))
+        expected = value.get("expected_revision")
+        if isinstance(expected, str) and re.fullmatch(r"\d+", expected):
+            expected = int(expected)
+        if expected is not None and not _integer(expected):
+            raise self.Fault("IMPLEMENTATION_REVISION",
+                             "expected_revision must be a nonnegative whole number.")
+        selected_id = value.get("plan_id", value.get("id"))
+        if selected_id is not None:
+            selected_id = self._id(selected_id)
+            if not task.get("attempts") or len(task["attempts"]) > 1:
+                replay = self._replay(store, selected_id, actor)
+                if replay is not None:
+                    return self._plan_result(
+                        task["workspace"], replay, status="reused",
+                        reused_completed_output=True,
+                    )
+        try:
+            result = import_package(
+                store, uploaded["path"], expected_revision=expected, actor=actor,
+                expected_plan_id=selected_id,
+            )
+        except RevisionConflict as error:
+            if error.conflict_ref:
+                error.conflict_download = self._ticket(
+                    task["workspace"], error.conflict_ref,
+                    "Preserved incoming implementation conflict",
+                )
+            raise
+        extra = {key: item for key, item in result.items() if key not in ("plan", "status")}
+        return self._plan_result(task["workspace"], result["plan"], status=result["status"], **extra)
+
+    def _evidence_export(self, store, task, plan_id):
+        from model.implementation_evidence import export_package
+        # Pin once using the existing immutable per-task report selection mechanism.
+        _directory, selected = self._report_selection(store, task, plan_id)
+        descriptor = export_package(store, plan_id, revision=selected["revision"])
+        plan = store.get(plan_id, selected["revision"])
+        download = self._evidence_download(task["workspace"], plan)
+        return self._plan_result(
+            task["workspace"], plan, status="evidence_exported",
+            evidence=descriptor, _downloads=[download],
+        )
+
     def invoke(self, task):
         if task["action"] not in ACTIONS:
             raise self.Fault("IMPLEMENTATION_ACTION", "Choose a supported implementation action.")
@@ -878,6 +1032,8 @@ class ImplementationOperator:
         value = task["payload"]
         actor = self._actor(task)
         action = task["action"]
+        if action == "implementation.evidence.import":
+            return self._evidence_import(store, task, actor)
         if action == "implementation.plan.create":
             document = self._create_document(value, task)
             plan_id = document["id"]
@@ -887,7 +1043,7 @@ class ImplementationOperator:
         else:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
-        if (action not in ("implementation.plan.report", "implementation.observations.import",
+        if (action not in ("implementation.plan.report", "implementation.evidence.export", "implementation.observations.import",
                            "implementation.lab.import", "implementation.lab.dispatch",
                            "implementation.lab.dispatch-report", "implementation.briefing.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
@@ -926,6 +1082,8 @@ class ImplementationOperator:
             if action in ("implementation.source.import", "implementation.selection.import"):
                 expected = self._integer(value.get("expected_revision"), "expected_revision")
                 return self._source_import(store, task, plan_id, expected, actor)
+            if action == "implementation.evidence.export":
+                return self._evidence_export(store, task, plan_id)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
             if action == "implementation.lab.dispatch-report":
@@ -969,6 +1127,9 @@ class ImplementationOperator:
                     expected_revision=result["revision"],
                 )
                 task["_downloads"] = refreshed["_downloads"]
+            elif task["action"] == "implementation.evidence.export":
+                plan = self.store(workspace).get(result["plan_id"], result["revision"])
+                task["_downloads"] = [self._evidence_download(workspace, plan)]
             elif result.get("plan_id") and result.get("revision"):
                 plan = self.store(workspace).get(result["plan_id"], result["revision"])
                 task["_downloads"] = [self._snapshot_download(workspace, plan)]
