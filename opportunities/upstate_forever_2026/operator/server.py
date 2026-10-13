@@ -810,13 +810,17 @@ class Operator:
             study.pop("cases", None)
         from programme_activity import ProgrammeActivity
         state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
-        for row in state["observations"]:
-            row["row_count"] = len(row["rows"])
-            row.pop("rows")
+        # Compact core readers already retain these exact summaries without
+        # repeatedly reading the original rows and stage file inventories.
+        if not compact:
+            for row in state["observations"]:
+                row["row_count"] = len(row["rows"])
+                row.pop("rows")
         for row in state["runs"]:
-            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at"}}
-                                    | {"file_count": len(stage.get("files", {}))}
-                                    for k, stage in row.get("stages", {}).items()}
+            if not compact:
+                row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at", "runtime"}}
+                                        | {"file_count": len(stage.get("files", {}))}
+                                        for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
         return {"workspace_key": workspace, "workspaces": self.public_workspaces(), "data": state,
                 "tasks": self.task_list(workspace, compact=compact), "registered_sources": [
