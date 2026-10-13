@@ -668,7 +668,7 @@ class Operator:
             row["row_count"] = len(row["rows"])
             row.pop("rows")
         for row in state["runs"]:
-            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at"}}
+            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at"}}
                                     | {"file_count": len(stage.get("files", {}))}
                                     for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
