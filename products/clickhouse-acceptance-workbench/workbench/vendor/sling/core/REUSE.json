@@ -1,0 +1,17 @@
+{
+  "schema": "commons.source-reuse.v1",
+  "repository": "woahwhattheheck/commons",
+  "sourceRef": "aa4936b017a5e7f73a77ce9132e70fb7aca07a1e",
+  "prefix": "revenue/tiptap_hocuspocus_workshare_20261012/",
+  "files": [
+    "core/common.mjs",
+    "core/objects.mjs",
+    "core/uploads.mjs"
+  ],
+  "status": "Original generic byte/object/upload primitives with explicitly listed local adaptations",
+  "notes": "The original Stellar lease/private-directory closure is also retained unchanged under vendor/stellar-expert. Domain state and native Sling execution are separate source in this component.",
+  "localAdaptations": [
+    "core/uploads.mjs raises the unchanged actor-bound upload ceiling to 2 GiB for complete original runtime and historical native archives.",
+    "core/common.mjs includes original CSV/TSV/SQL and Go/module source files in the editable source closure."
+  ]
+}

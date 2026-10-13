@@ -1,0 +1,105 @@
+{
+  "schema": "altinity.acceptance-input.v1",
+  "title": "Original ClickHouse transfers to retained acceptance candidate",
+  "source": {
+    "id": "reference_original",
+    "endpointEnv": "ALTINITY_SOURCE_URL",
+    "userEnv": "ALTINITY_SOURCE_USER",
+    "passwordEnv": "ALTINITY_SOURCE_PASSWORD",
+    "allowLocal": true,
+    "databases": [
+      "starforge_example"
+    ],
+    "versions": [
+      "26.8.24.9"
+    ],
+    "mode": "read"
+  },
+  "target": {
+    "id": "reference_candidate",
+    "endpointEnv": "ALTINITY_TARGET_URL",
+    "userEnv": "ALTINITY_TARGET_USER",
+    "passwordEnv": "ALTINITY_TARGET_PASSWORD",
+    "allowLocal": true,
+    "databases": [
+      "altinity_acceptance"
+    ],
+    "versions": [
+      "26.8.24.9"
+    ],
+    "mode": "write"
+  },
+  "tables": [
+    {
+      "source": [
+        "starforge_example",
+        "transfers"
+      ],
+      "target": [
+        "altinity_acceptance",
+        "commission_transfers_v1"
+      ],
+      "columns": [
+        {
+          "name": "record_id",
+          "type": "UInt64"
+        },
+        {
+          "name": "ledger",
+          "type": "UInt64"
+        },
+        {
+          "name": "account",
+          "type": "String"
+        },
+        {
+          "name": "amount",
+          "type": "Decimal(38, 7)"
+        },
+        {
+          "name": "memo",
+          "type": "Nullable(String)"
+        },
+        {
+          "name": "successful",
+          "type": "Bool"
+        },
+        {
+          "name": "observed_at",
+          "type": "DateTime64(6, 'UTC')"
+        }
+      ],
+      "primaryKey": [
+        "ledger",
+        "record_id"
+      ],
+      "orderBy": [
+        "ledger",
+        "record_id"
+      ],
+      "engine": "MergeTree",
+      "sourceFinal": false,
+      "final": false,
+      "phase": "baseline",
+      "maxRows": 250000,
+      "maxBytes": 536870912,
+      "sourceBoundary": "The reference owner loads the original ce4fd5b seed into its private ClickHouse 26.8.24.9 instance, compares all three ordered exact rows, and grants the source account SELECT only. No source writes occur while the receiving programme owns that instance."
+    }
+  ],
+  "sourceEvidence": [
+    {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "ce4fd5b79c7d098305a00567cf2c3cb983d4065d",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/examples/seed.sql",
+      "gitBlob": "6f3174f20e9fd35cd078ffb36180369d28b5b7cb",
+      "bytes": 779,
+      "sha256": "443b0c3b4add59aa60a5d97b296e3721f5192562b9684399da9f7b155074661e",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/ce4fd5b79c7d098305a00567cf2c3cb983d4065d/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/examples/seed.sql"
+    },
+    {
+      "url": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791753959591409",
+      "description": "Original completed merchant/fleet exercise and retained exact runtime; this configuration adds migration acceptance using its original demonstration data."
+    }
+  ],
+  "notes": "The original public demonstration rows exercise UInt64, Decimal(38,7), Nullable(String), literal backslash-N, Unicode, Bool and UTC microseconds. The composite primary key is ledger plus record_id; record_id alone repeats. The candidate is retained in a separate Atomic database, and rollback selects the retained source results without downgrading ClickHouse."
+}
