@@ -115,3 +115,7 @@ The new root manifest binds the three additional summary tables without changing
 ## Complete retained-source installation
 
 The additive installer validates and installs every primary body and companion in its selected native source manifests. If the application includes the observed hydrology report, supply its current root report recipe and source manifest together in `--source-root`; their complete source closure and calibration binding are validated before publication. `--dry-run` returns changed paths, selected native manifests and retained-source member count. Existing identical originals are reused, generated report/calibration bindings move together, and previous changed files retain the existing backup.
+
+## Original WBD coordinate context
+
+Import `observations/wbd_station_join_20261013/station-context.sources.json` alongside the three study manifests. All nine choices retain their original site and measurement selections and attach the 184-row source table through the existing `site_tables` selection. Saved CSV, GeoJSON, printable report and portable receiving distinguish exact selected native coordinates from alternative original coordinates. The complete source and executed join are described in `observations/wbd_station_join_20261013/STATION_CONTEXT.md`.
