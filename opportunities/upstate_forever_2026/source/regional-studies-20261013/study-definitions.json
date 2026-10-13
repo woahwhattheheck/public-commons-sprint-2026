@@ -1,0 +1,356 @@
+{
+  "schema": "upstate.published-study-programme/v1",
+  "title": "Upper Savannah published regional source alternatives",
+  "albright_2023": {
+    "reference": {
+      "authors": [
+        "Mary Grace Albright",
+        "Caroline Vickery",
+        "Roy Bower",
+        "John E. Quinn"
+      ],
+      "title": "Patterns of land use change, land governance, and the supply of ecosystem services in a multifunctional landscape: A case study from Upstate SC, USA",
+      "doi": "10.1080/1747423X.2023.2234903",
+      "url": "https://www.tandfonline.com/doi/full/10.1080/1747423X.2023.2234903",
+      "accessible_fulltext": "https://www.researchgate.net/publication/372675263_Patterns_of_land_use_change_land_governance_and_the_supply_of_ecosystem_services_in_a_multifunctional_landscape_A_case_study_from_Upstate_SC_USA",
+      "location": "Appendix 1, final biophysical table",
+      "study_model_version": "3.9.0"
+    },
+    "table": {
+      "path": "albright-2023-biophysical.csv",
+      "bytes": 829,
+      "sha256": "64c5c803e09d50d9f51c029ece199a06c01d19951ae3fdce52b7fca7bb13bf8c",
+      "lucodes": [
+        11,
+        21,
+        22,
+        23,
+        24,
+        31,
+        41,
+        42,
+        43,
+        52,
+        71,
+        81,
+        82,
+        90,
+        95
+      ],
+      "representation": "Numerical transcription of the published table with spelling corrected in descriptive labels."
+    },
+    "units": {
+      "load_n": "kg/ha/year",
+      "load_p": "kg/ha/year",
+      "eff_n": "ratio",
+      "eff_p": "ratio",
+      "crit_len_n": "m",
+      "crit_len_p": "m",
+      "usle_c": "dimensionless",
+      "usle_p": "dimensionless"
+    },
+    "compatibility": {
+      "load_type_n": "measured-runoff",
+      "load_type_p": "measured-runoff",
+      "reason": "Preserve the direct per-area load mapping of the original InVEST 3.9.0 implementation when using the native 3.20.0 input schema.",
+      "proportion_subsurface_n": "Retain the selected original baseline values; the published table does not report this field.",
+      "native_parameters": "Retain explicit baseline settings for the table-only alternative."
+    },
+    "original_preparation": {
+      "projection": "NAD 1983 UTM 17N",
+      "dem_resolution_m": 30,
+      "precipitation_period": "1981–2010",
+      "precipitation_conversion": "Inches converted to millimetres",
+      "erosivity_conversion_to_native": 17.02,
+      "erodibility_conversion_to_native": 0.127,
+      "legacy_scaled_K_divisor": 100,
+      "application": "These transformations describe the paper's inputs. Current already-normalized regional inputs keep their recorded units and must not receive these conversions again."
+    }
+  },
+  "vickery_quinn_2023": {
+    "schema": "upstate.published-study-definition/v1",
+    "id": "vickery-quinn-2023-upstate",
+    "title": "Upstate development, afforestation and steep agricultural restoration",
+    "reference": {
+      "doi": "10.1007/s00267-023-01861-6",
+      "url": "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+      "authors": [
+        "Caroline E. Vickery",
+        "John E. Quinn"
+      ],
+      "published": "2023-07-27",
+      "locations": [
+        "Appendix 1",
+        "Appendix 2",
+        "Appendix 4"
+      ],
+      "title": "Climate-altered Precipitation is more Important than Land Use when Modeling Ecosystem Services Associated with Surficial Processes"
+    },
+    "model_target": "InVEST 3.20.0",
+    "native_profile": {
+      "title": "Vickery–Quinn 2023 reported native parameters",
+      "reason": "Evaluate the published Upstate parameter combination using the retained Upper Savannah baseline and source table.",
+      "design": "factorial",
+      "factors": [
+        {
+          "name": "Vickery–Quinn 2023 ndr.subsurface_critical_length_n",
+          "target": "ndr.subsurface_critical_length_n",
+          "levels": [
+            {
+              "label": "200 m",
+              "value": 200,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 ndr.subsurface_eff_n",
+          "target": "ndr.subsurface_eff_n",
+          "levels": [
+            {
+              "label": "0.8 ratio",
+              "value": 0.8,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 ndr.k_param",
+          "target": "ndr.k_param",
+          "levels": [
+            {
+              "label": "2 dimensionless",
+              "value": 2,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 ndr.threshold_flow_accumulation",
+          "target": "ndr.threshold_flow_accumulation",
+          "levels": [
+            {
+              "label": "1000 upstream pixels",
+              "value": 1000,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 sdr.ic_0_param",
+          "target": "sdr.ic_0_param",
+          "levels": [
+            {
+              "label": "0.5 dimensionless",
+              "value": 0.5,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 sdr.sdr_max",
+          "target": "sdr.sdr_max",
+          "levels": [
+            {
+              "label": "0.8 ratio",
+              "value": 0.8,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 sdr.k_param",
+          "target": "sdr.k_param",
+          "levels": [
+            {
+              "label": "2 dimensionless",
+              "value": 2,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        },
+        {
+          "name": "Vickery–Quinn 2023 sdr.threshold_flow_accumulation",
+          "target": "sdr.threshold_flow_accumulation",
+          "levels": [
+            {
+              "label": "1000 upstream pixels",
+              "value": 1000,
+              "references": [
+                "https://link.springer.com/article/10.1007/s00267-023-01861-6",
+                "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+              ],
+              "reason": "Appendix 1 reports this setting for the Upstate study. Apply it as one joined published parameter profile on the retained regional grid."
+            }
+          ]
+        }
+      ]
+    },
+    "source_parameter_notes": [
+      "The published phosphorus subsurface values are recorded in Appendix 1. InVEST 3.20.0 models nitrogen subsurface transport only; the native profile therefore supplies only the supported nitrogen settings.",
+      "The appendix does not specify flow-direction algorithm or SDR l_max; those settings remain the explicit values in the retained baseline profile.",
+      "The stream threshold is 1000 contributing pixels. At the regional 30 m grid this corresponds to 90 ha, before flow-routing fractional contributions. It must not be treated as 1000 hectares.",
+      "Runoff normalization is retained from the selected baseline. Any future climate comparison must use an explicit common normalization decision on the actual masked study domain."
+    ],
+    "scenarios": [
+      {
+        "key": "forest_to_low_development",
+        "title": "Forest loss to low-density development",
+        "from_codes": [
+          41,
+          42,
+          43
+        ],
+        "to_codes": [
+          22
+        ],
+        "quantity": {
+          "kind": "fraction_of_baseline_class_area",
+          "baseline_codes": [
+            41,
+            42,
+            43
+          ],
+          "fraction": 0.05
+        },
+        "source_section": "Appendix 2 scenario 1"
+      },
+      {
+        "key": "forest_to_medium_development",
+        "title": "Forest loss to medium-density development",
+        "from_codes": [
+          41,
+          42,
+          43
+        ],
+        "to_codes": [
+          23
+        ],
+        "quantity": {
+          "kind": "fraction_of_baseline_class_area",
+          "baseline_codes": [
+            41,
+            42,
+            43
+          ],
+          "fraction": 0.02
+        },
+        "source_section": "Appendix 2 scenario 2"
+      },
+      {
+        "key": "forest_increase",
+        "title": "Forest expansion",
+        "eligibility": {
+          "exclude_codes": [
+            11,
+            41,
+            42,
+            43
+          ]
+        },
+        "to_codes": [
+          41,
+          42,
+          43
+        ],
+        "destination_shares": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "quantity": {
+          "kind": "fraction_of_baseline_class_area",
+          "baseline_codes": [
+            41,
+            42,
+            43
+          ],
+          "fraction": 0.05
+        },
+        "source_section": "Appendix 2 scenario 3"
+      },
+      {
+        "key": "steep_agricultural_restoration",
+        "title": "Steep agricultural restoration",
+        "slope": {
+          "units": "percent",
+          "operator": ">=",
+          "value": 10
+        },
+        "transitions": [
+          {
+            "from_codes": [
+              82
+            ],
+            "to_code": 43
+          },
+          {
+            "from_codes": [
+              81
+            ],
+            "to_code": 71
+          }
+        ],
+        "quantity": {
+          "kind": "all_eligible_pixels"
+        },
+        "source_section": "Appendix 2 scenario 4"
+      }
+    ],
+    "regional_application": {
+      "baseline": "Actual retained Annual NLCD 2025 land-cover edition",
+      "domain": "Changes and forest-area quotas use the exact retained reporting mask for the 116 South Carolina reporting HUCs. Native hydrology retains the full 217-HUC contributing domain plus the configured upstream buffer.",
+      "interpretation": "Regional application of published transition and area rules. The paper used a 2016 baseline; retained current regional sources determine the new source extent and eligible counts.",
+      "spatial_allocation": "Use the existing scenario preparation operation with explicit retained suitability/eligibility selections. Store actual requested and converted cell counts and tie/allocation rules with each resulting scenario.",
+      "management_mask": "grid.files.reporting_mask, the same pixel-centre selection used by native reporting"
+    },
+    "climate": {
+      "historical_source_in_study": "Average annual precipitation for 1981–2010; the publisher abstract gives this period without attributing the historical source to WorldClim.",
+      "future_periods_in_study": [
+        "2021–2040",
+        "2041–2060"
+      ],
+      "native_ndr_normalization": {
+        "formula": "RPI_i = P_i / mean(P over valid cells in the native masked runoff proxy)",
+        "uniform_scaling_result": "For an unchanged validity mask and auto-computed average, a uniform positive multiplier cancels from numerator and denominator.",
+        "fixed_average_source": "Use the mean of the retained native baseline masked_runoff_proxy raster for an explicitly selected common-reference comparison.",
+        "references": [
+          "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html",
+          "https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/ndr/ndr.py"
+        ]
+      },
+      "sdr": "The paper lists six sediment output models with precipitation marked n/a. Separate rainfall-erosivity inputs control SDR; annual precipitation is not its erosivity input.",
+      "references": [
+        "https://link.springer.com/article/10.1007/s00267-023-01861-6"
+      ]
+    }
+  }
+}

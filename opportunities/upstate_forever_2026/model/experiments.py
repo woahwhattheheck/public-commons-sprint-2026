@@ -1000,6 +1000,18 @@ def read_summary(workspace, experiment_id):
                                  "json": describe_file(directory, path)}}
 
 
+def _remember_reuse_source(candidates, case):
+    """Keep the reference and recent same-scenario donors while streaming cases."""
+    values = candidates.setdefault(case["scenario_id"], [])
+    if case["run_id"] not in values:
+        values.append(case["run_id"])
+        # This is an opportunistic cache, not a limit on the experiment matrix.
+        # Preserve the first profile and the latest fifteen; the native indexed
+        # cache continues to find exact inputs throughout the entire workspace.
+        if len(values) > 16:
+            del values[1]
+
+
 def execute(workspace, experiment_id, *, completed_only=False):
     if type(completed_only) is not bool:
         raise ValueError("Choose whether to synchronize completed native runs only")
@@ -1024,6 +1036,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
         state.pop("error", None)
         atomic_json(directory / "state.json", state)
         active = None
+        reuse_sources = {}
         try:
             if "reporting_cells" not in state:
                 count, area = _reporting_cells(workspace, plan["baseline"]["grid_id"])
@@ -1032,6 +1045,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
             for expected, option in _case_definitions(workspace, plan):
                 case = _retained_case(directory, expected)
                 if case["state"] == "complete":
+                    _remember_reuse_source(reuse_sources, case)
                     continue
                 active = case
                 if case["state"] == "failed":
@@ -1044,12 +1058,21 @@ def execute(workspace, experiment_id, *, completed_only=False):
                 state["progress"]["active_case_id"] = case["id"]
                 state["updated_at"] = now()
                 atomic_json(directory / "state.json", state)
+                run = None
                 try:
                     run = _prepare_case_run(workspace, case, option)
                     if run["state"] != "complete":
                         if completed_only:
                             raise RuntimeError("Complete the selected native run before synchronizing experiment results")
-                        run = workspace.run(run["id"])
+                        # Profile tables can differ only in the other model's
+                        # columns. Retain explicit same-scenario candidates so
+                        # the native matcher can compare the relevant inputs.
+                        donors = list(dict.fromkeys(
+                            list(run.get("reuse_source_run_ids", [])) +
+                            list(reversed(reuse_sources.get(case["scenario_id"], [])))))
+                        donors = [key for key in donors if key != run["id"]]
+                        run = (workspace.run(run["id"], reuse_source_run_ids=donors)
+                               if donors else workspace.run(run["id"]))
                     if run["state"] != "complete":
                         raise RuntimeError("The selected native model run has not completed")
                     reference = workspace.inspect_run(case["baseline_run_id"])
@@ -1064,12 +1087,19 @@ def execute(workspace, experiment_id, *, completed_only=False):
                                 comparison_id=comparison["id"] if comparison else None,
                                 native_completed_at=run["completed_at"],
                                 native_runtime=run.get("runtime"),
+                                native_stage_reuse={model: stage["reused_from"]
+                                    for model, stage in run.get("stages", {}).items()
+                                    if stage.get("reused_from")},
                                 output_artifacts=run["artifacts"])
                     state["progress"]["complete"] += 1
                 except Exception as exc:
                     case.update(state="failed", updated_at=now(),
                                 error={"type": type(exc).__name__, "message": str(exc)})
                     state["progress"]["failed"] += 1
+                if run is not None:
+                    # A failed later model may still leave a complete reusable
+                    # earlier stage. The native matcher verifies each stage.
+                    _remember_reuse_source(reuse_sources, case)
                 state["progress"]["pending"] -= 1
                 state["progress"]["active_case_id"] = None
                 state["updated_at"] = now()

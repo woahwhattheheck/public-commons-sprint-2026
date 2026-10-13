@@ -22,7 +22,7 @@ The optional keyword is passed directly from `Workspace.run` to `native.execute_
 
 After the actual scenario raster and native runtime are retained, the native loop constructs one `NativeInputMatcher` and passes the saved candidates to the existing `stage_cache.recover` primitive. Indexed matches, semantic matches from explicit older runs, validation and original native execution follow the same maintained path. Reused stages retain `stages[model].reused_from.run_id`, their original runtime and arguments, all native registry files and companions, and the matching decision. This also retains SDR's original computed LS raster. The ordinary reporting-mask and affine-area conversion then produces the target annual mass exports.
 
-This packet joins the current 70CB native loop and the latest 7F24 Workspace with native-resolution forwarding (Canvas F0C8N1N4VF0). Its exact context joins can be composed with disjoint cache-copy and input-signature repairs. Receiving code must install the complete packet so the Workspace keyword, native call and cache signature agree.
+This revision composes the published shared-stage reuse source from public commit c59ff390640dbc896486f067752d5a7c960326c3. It preserves native_arguments.py, Workspace.combine_runs, per-signature calculation locks, scheduling-independent scientific signatures, legacy index lookup, actual input companions, original registry directories and additional files, reflink/copy transfer accounting, and deferred cache indexing after a successful native run. The complete reuse.py remains byte-for-byte identical to that commit. The native loop additionally composes the NativeExecution lifecycle published at dd79fd07d244318cb9e3ca77ee955c524331def9. Donor choices are normalized and persisted inside its recoverable reuse_selection phase; the matcher is created only when a native stage remains unfinished. Export-only continuation therefore keeps using completed original stages without loading InVEST. Apply each accompanying guarded join over its declared file base; retain the current Workspace.run keyword adapter and newer scenario-mask and delivery work.
 
 
 The selected-model core prepares NDR and SDR independently. A completed NDR run can therefore have a different grid or profile identifier from the later combined NDR/SDR selection, even when the actual NDR calculation is unchanged. `model/native_equivalence.py` compares the scientific inputs needed for that join.
@@ -71,7 +71,7 @@ The native version remains InVEST3.20.0. Its [NDR source](https://github.com/nat
 
 ## Explicit source runs in the maintained cache
 
-The accompanying five exact context edits extend the existing `stage_cache.recover` entrypoint:
+The accompanying exact context edits extend the existing `stage_cache.recover` entrypoint:
 
 ```python
 stage, observations = recover(
@@ -83,7 +83,7 @@ stage, observations = recover(
                                target_runtime=runtime_source))
 ```
 
-The current native run loop already has these arguments after its land-cover stage and before dispatch. Its completed-run assembler supplies the explicitly selected original run IDs. Indexed exact matches retain the existing fast path. Explicit historical or differently packaged inputs use the semantic matcher and the same current importer, including original native outputs, SDR LS, Shapefile companions, runtime and argument files. A mismatch becomes a candidate observation and lets the remaining index or original native execution continue.
+The current native run loop already has these arguments after its land-cover stage and before dispatch. The normal Workspace.run keyword supplies the explicitly selected original run IDs. Indexed exact matches retain the existing fast path. Explicit historical or differently packaged inputs use the semantic matcher and the same current importer, including original native outputs, SDR LS, Shapefile companions, runtime and argument files. A mismatch becomes a candidate observation and lets the remaining index or original native execution continue.
 
 The imported stage retains `reused_from.original_input_signature` and `reused_from.input_equivalence` beside the existing original run ID, arguments and reuse chain. The target input signature belongs to the actual receiving arguments and environment.
 
@@ -93,4 +93,27 @@ Receive with the existing fourteen-file selected-model source receiver, from the
 python -B model/receive_selected_model_source.py --application . --packet native-stage-inputs-source.json
 ```
 
-The cache file includes full exact-base content plus function-local joins. When ES-EXP-2319's newer copy/input-signature/fallback source is present, use the guarded joins so those current implementations remain composed. Every selected Python source is parsed before publication by this existing receiver.
+The cache file includes full exact-base content plus function-local joins. Input companion identities from the current owner source remain in place. The independent-copy and candidate-fallback repairs are composed into these full postimages. Preserve other later owner changes with the guarded joins. Every selected Python source is parsed by the existing receiving installer before it publishes the installed application.
+
+
+## Copy isolation and recovery
+
+The maintained `reuse.copy_verified` first tries an independent copy-on-write reflink, falling back to a verified streamed copy when the filesystem cannot clone. It verifies length and SHA-256 before atomic publication. Existing matching destinations with multiple hardlinks are detached to independent inodes. Original source files remain untouched. The shared source records transfer counts, byte totals and whether each file was cloned, copied or already independently retained.
+
+A candidate's files are published through that same primitive under the receiving run lock and the shared signature lock. The importer tracks adopted inode identities, including publication followed by a late filesystem-sync failure. If the candidate fails, it removes only its still-owned adopted destination inodes before trying another donor. This avoids retaining a failed donor's external mask or PAM metadata alongside another donor's TIFF, without making a second full raster copy in a private staging directory.
+
+After a candidate transfers successfully, the importer removes destination dataset sidecars that are absent from the selected original registry and companion inventory. This also clears stale sidecars left by an earlier interrupted process. All such files are restricted to the receiving unfinished model's directory. It preserves the source's recorded companion hashes, registry file IDs, directory outputs, additional files and original argument file under a content-specific name. A cleanup failure interrupts adoption rather than carrying mixed dataset files into a completed stage.
+
+The existing original execution path executes any missing native model and regenerates annual mass rasters against the receiving reporting mask. Calculation locks cover recovery and original production; the importer does not acquire a second donor run lock. Completed native stages remain available even if refreshing their cache index fails.
+
+The original revision-3 completed-stage assembly is also retained:
+
+```python
+result = workspace.combine_runs(
+    {"grid_id": full_grid_id, "profile_id": full_profile_id,
+     "scenario_id": original_scenario_id},
+    {"ndr": completed_ndr_run_id, "sdr": completed_sdr_run_id},
+    execute=True)
+```
+
+Its explicit two-stage assembly and the normal native cache both use the same independent-copy primitive. The run keyword additionally lets the current native loop evaluate model-specific scientific equivalence for explicit historical candidates and finish any missing selected model. Both retain the ordinary complete run consumed by delivery.
