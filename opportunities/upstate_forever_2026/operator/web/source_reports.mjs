@@ -143,6 +143,7 @@ export function attachSourceReports(host) {
       filtered.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(labels[row.role]||row.role||row.kind)+
         ' · '+esc(row.kind)+'</small><small>'+esc(row.source_id)+'</small>'+
         (descriptions[row.role]?'<p>'+esc(descriptions[row.role])+'</p>':'')+
+        ((row.scientific_reports||[]).length?'<small>Source-bound interpretation available in scientific delivery</small>':'')+
         '</td><td>'+esc(row.vintage)+'<small>'+esc(row.collection_title)+'</small></td><td>'+
         row.member_count.toLocaleString()+'</td><td><button type="button" data-source-report-action="open" data-report-key="'+
         esc(rowKey(row))+'">'+(selected&&rowKey(selected)===rowKey(row)?'Return to report':'Open report')+'</button></td></tr>').join('')+
@@ -189,6 +190,11 @@ export function attachSourceReports(host) {
       download(selected.original_manifest.url,'Original import manifest')+'</div>'+
       '<p class="note">This view uses the retained report bytes. Saved review files and selected CSV / JSON downloads remain available in its original controls.</p>'+
       '<p data-source-report-archive-status role="status"></p>'+
+      ((selected.scientific_reports||[]).length?'<section class="source-report-editions"><h3>Include this interpretation in the client report</h3>'+
+        '<p>The existing ordered scientific-report picker can include these retained source documents with the selected model delivery.</p><ul>'+
+        selected.scientific_reports.map(row=>'<li><strong>'+esc(row.title)+'</strong> · '+esc(row.vintage)+
+          '<small>'+esc(row.source_id)+'</small></li>').join('')+'</ul>'+
+        '<button type="button" data-source-report-action="deliveries">Open Maps and delivery</button></section>':'')+
       '<details><summary>Source identity and related entries</summary><dl><dt>Source ID</dt><dd>'+esc(selected.source_id)+
       '</dd><dt>Source body SHA256</dt><dd class="mono">'+esc(selected.body_sha256)+'</dd>'+
       '<dt>Retained edition</dt><dd class="mono">'+esc(selected.collection_id)+'</dd></dl>'+
@@ -260,6 +266,7 @@ export function attachSourceReports(host) {
     if(action==='import')return host.openSourceImport({mode:'archive',manifestMember:'sources.json'});
     if(action==='regional')return host.navigate('watershed-context');
     if(action==='stations')return host.navigate('station-geography');
+    if(action==='deliveries')return host.navigate('deliveries');
     if(action==='open')return open(button.dataset.reportKey);
     if(action==='close'){detailGeneration++;clearSelection();renderCatalog();return;}
     if(action==='edition'&&selected)return host.openItem('sources',selected.collection_id);
