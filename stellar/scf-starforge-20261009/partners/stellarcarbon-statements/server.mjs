@@ -60,8 +60,9 @@ export async function createStellarcarbonServer({directory,port=0,expectedWorksp
       const parts=url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
       need(parts[0]==='api','NOT_FOUND','Choose a workspace page.',404);
       if(request.method==='GET'){
-        if(parts[1]==='health'){send(response,200,{schema:SCHEMA,workspaceId:workspace.state.workspaceId,directory:workspace.directory});return;}
+        if(parts[1]==='health'){send(response,200,{schema:SCHEMA,workspaceId:workspace.state.workspaceId,directory:workspace.directory,capabilities:{customerAgent:'v1'}});return;}
         if(parts[1]==='capture'){send(response,200,captureStatus);return;}
+        if(parts[1]==='operations'&&parts[2]){const value=await workspace.serial(()=>workspace.state.operations.find(row=>row.requestId===parts[2])||null);send(response,200,{found:Boolean(value),operation:value,workspaceId:workspace.state.workspaceId,revision:workspace.state.revision});return;}
         if(parts[1]==='state'){
           const state=await workspace.overview();
           send(response,200,{...state,integration:{accounting:Boolean(accounting),accountingWorkspaceId:accountingBinding?.workspaceId||null,
@@ -78,6 +79,7 @@ export async function createStellarcarbonServer({directory,port=0,expectedWorksp
         }
         if(parts[1]==='editions'&&parts[2]){
           const source=editionFor(state,parts[2]);
+          if(parts[3]==='source'&&!parts[4]){file(response,'stellarcarbon-source.json','application/json; charset=utf-8',JSON.stringify(source,null,2)+'\n');return;}
           if(parts[3]==='source'&&parts[4]){
             const table=parts[4].endsWith('.ndjson')?parts[4].slice(0,-7):null;
             if(table&&Object.hasOwn(source.files,table)){file(response,parts[4],'application/x-ndjson; charset=utf-8',source.files[table]);return;}
@@ -115,7 +117,8 @@ export async function createStellarcarbonServer({directory,port=0,expectedWorksp
       need(request.headers['x-stellarcarbon-workspace']===workspace.state.workspaceId,'WORKSPACE_REQUEST_REQUIRED','Refresh this workspace before saving.',403);
       const value=await body(request),options={revision:value.revision,requestId:value.requestId,actor:value.actor};
       if(parts[1]==='import'){
-        const source=value.retained?await readNativeDirectory(fileURLToPath(new URL('./source-edition/',import.meta.url))):receiveBackup(value.files,value.metadata||{});
+        need([Boolean(value.retained),value.source!==undefined,value.files!==undefined].filter(Boolean).length===1,'SOURCE_SELECTION','Choose one complete retained source, original backup or bundled edition.');
+        const source=value.source??(value.retained?await readNativeDirectory(fileURLToPath(new URL('./source-edition/',import.meta.url))):receiveBackup(value.files,value.metadata||{}));
         send(response,200,await workspace.import(source,value.label,options));return;
       }
       if(parts[1]==='receive'){
@@ -135,9 +138,9 @@ export async function createStellarcarbonServer({directory,port=0,expectedWorksp
         need(!captureTask,'CAPTURE_RUNNING','The selected source acquisition is already running.',409);
         need(options.revision===workspace.state.revision,'STALE_WORKSPACE','Refresh the workspace before starting the acquisition.',409);
         const captureOptions=value.value||{};
-        const checkpoint=captureOptions.resume?await workspace.captureCheckpoint():undefined;
+        const checkpoint=(value.resume||captureOptions.resume)?await workspace.captureCheckpoint():undefined;
         captureController=new AbortController();
-        captureStatus={status:'RUNNING',pages:checkpoint?.responses.length||0,startedAt:new Date().toISOString()};
+        captureStatus={status:'RUNNING',requestId:options.requestId||null,pages:checkpoint?.responses.length||0,startedAt:new Date().toISOString()};
         const id=options.requestId||randomUUID();
         captureTask=(async()=>{
           try{
