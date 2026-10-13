@@ -29,3 +29,12 @@ Open the installed operator, reopen a retained inspection or reviewed source edi
 Inspect original worksheets and values, select explicit identifiers, labels, roles, units and periods, and save the reviewed source edition through the existing controls. Preserve the distinction between context material and modeled or measured results. Use the full Workspace backup to carry the application and scientific state, then reopen the restored project.
 
 The preview tables retain every original value in a keyboard-focusable horizontal scroll region. Compact screen rows preserve the complete source URI; printed rows wrap. Scientific selections, request identities and completed native results are unchanged.
+
+
+## Saved original worksheet reuse
+
+Saved CONTEXT and MEASUREMENTS tables now reopen through their original native worksheet inspection. They are not passed to the CSV reader. The saved source screen receives its original sheet, header row, reading options, source format, column labels, physical row numbers, preamble and preview values. Duplicate or blank headers remain distinct through original column-position labels; retained extra cells remain present. Formula/cached-value choice and original encoding/delimiter are preserved. Source meaning and the byte-identical original workbook remain in the existing source record and download.
+
+New source editions carry the compact native inspection inside client_source.inspection, so selected source/Study transfers can keep this preview without the original intake directory. Existing full Workspaces resolve their same complete intake record. The reader binds project, inspection, original filename/sha, selected file/part positions and original fields before presentation. Projected BIOPHYSICAL CSV and ordinary native non-client tables retain the existing reader. Reopening a completed source does not submit or rerun an inspection/model action. Interrupted commits preserve a previously checkpointed manifest's original preview metadata.
+
+Receiving: use the existing saved XLSX context/measurement source; open /api/source-info through the ordinary workbench, check actual sheet/header/reading choices and original values, then open its source report and original workbook download. Repeat after Workspace cold reopen. For a newly saved source edition, export/restore the selected source/Study and confirm the embedded original preview reopens with the same values. Keep actual BIOPHYSICAL original CSV and annual-data receiving in the same existing course.

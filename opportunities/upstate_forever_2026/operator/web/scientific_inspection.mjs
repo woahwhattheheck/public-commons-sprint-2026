@@ -2,6 +2,7 @@
  * Readable inspection of original operator records.
  * Read-only: no requests, model calculation, source edits or task submission.
  */
+import {renderSourceInspectionSummary,SOURCE_INSPECTION_SUMMARY_CSS} from './source_inspection_summary.mjs';
 export const SCIENTIFIC_INSPECTION_VERSION='upstate.scientific-inspection/v1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const own=(v,k)=>v!==null&&typeof v==='object'&&Object.prototype.hasOwnProperty.call(v,k);
@@ -172,11 +173,12 @@ export function scientificRecord(record){
 }
 export function scientificDocument({kind,record,title:heading,data={}}){
  const original=scientificRecord(record),context={data,collectionId:record?.source_collection_id||record?.source?.source_collection_id};
- const view=kind==='runs'?scientificRunContext(original,data):kind==='task'?scientificTask(original,data):'';
+ const sourceView=renderSourceInspectionSummary(original,{data,kind});
+ const view=sourceView||(kind==='runs'?scientificRunContext(original,data):kind==='task'?scientificTask(original,data):'');
  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>'+esc(heading)+'</title><style>'+
- SCIENTIFIC_INSPECTION_CSS+'</style></head><body><main class="scientific-inspection"><p class="scientific-note">Upper Savannah · Retained scientific inspection</p><h1>'+esc(heading)+'</h1>'+
- '<p>This read-only document contains the selected saved '+esc(scientificLabel(kind))+' record. It is not a complete Workspace backup. Original scientific inputs and values are retained below; this document cannot execute tasks. Top-level temporary download controls are omitted; links within the retained scientific provenance stay unchanged.</p>'+view+
- '<section class="scientific-section"><h2>Complete retained fields</h2>'+scientificFields(original,context)+'</section>'+
+ SCIENTIFIC_INSPECTION_CSS+SOURCE_INSPECTION_SUMMARY_CSS+'</style></head><body><main class="scientific-inspection"><p class="scientific-note">Upper Savannah · Retained scientific inspection</p><h1>'+esc(heading)+'</h1>'+
+ (sourceView?'<p>Read the original source contents, saved choices and linked scientific settings below. Expand the provenance for every retained field and the original structured record.</p>':'<p>This read-only document contains the selected saved '+esc(scientificLabel(kind))+' record. It is not a complete Workspace backup. Original scientific inputs and values are retained below; this document cannot execute tasks. Top-level temporary download controls are omitted; links within the retained scientific provenance stay unchanged.</p>')+view+
+ (sourceView?'<details class="scientific-group"><summary>Complete source provenance and retained fields</summary>'+scientificFields(original,context)+'</details>':'<section class="scientific-section"><h2>Complete retained fields</h2>'+scientificFields(original,context)+'</section>')+
  '<details class="scientific-group"><summary>Original structured record</summary><pre>'+esc(JSON.stringify(original,null,2))+'</pre></details>'+
  '<p class="scientific-note">TokenJunkieLabs · '+SCIENTIFIC_INSPECTION_VERSION+'</p></main></body></html>\n';
 }

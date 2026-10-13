@@ -5,6 +5,7 @@
   "version": "2",
   "assets": [
     "scientific_inspection.mjs",
-    "scientific_inspection.css"
+    "scientific_inspection.css",
+    "source_inspection_summary.mjs"
   ]
 }

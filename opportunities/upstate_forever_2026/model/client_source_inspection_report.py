@@ -368,3 +368,84 @@ def render_inspection(record, reviewed_selection=None):
     out.append("<footer>TokenJunkieLabs · Original source inspection · Presentation " + VERSION +
                ". Original files and source meanings remain available in the complete Workspace.</footer></main></body></html>")
     return "".join(out).encode("utf-8")
+
+
+def retained_table_preview(workspace, source):
+    """Read the original native preview of an unchanged client worksheet/table.
+
+    New source editions carry this compact native record through source-only
+    transfers. Older full Workspaces resolve the same original inspection.
+    Projected model CSVs continue through the existing source-info CSV reader.
+    """
+    from copy import deepcopy
+    from model.common import identifier, read_json
+    client = source.get("client_source")
+    if source.get("kind") != "table" or not isinstance(client, dict) or source.get("field_projection"):
+        return None
+    choice = client.get("selection") or {}
+    saved = client.get("inspection")
+    if saved is not None:
+        if not isinstance(saved, dict) or saved.get("schema") != "upstate.client-source-preview/v1":
+            raise ValueError("Restore the original saved worksheet inspection.")
+        if saved.get("source_sha256") != client.get("source_sha256"):
+            raise ValueError("The saved worksheet preview belongs to another original file.")
+        part = saved.get("part")
+        reading = saved.get("options")
+        source_format = saved.get("format")
+    else:
+        key = identifier(client["inspection_id"])
+        record = read_json(workspace.root / "client-source-intake" / key / "operation.json")
+        if (record.get("id") != key or record.get("project_id") != workspace.project["id"]
+                or record.get("action") != "client-source.inspect" or record.get("state") != "complete"):
+            raise ValueError("Open the complete original worksheet inspection in this Workspace.")
+        fi, pi = choice.get("file_index"), choice.get("part_index")
+        files = record.get("files", [])
+        if type(fi) is not int or not 0 <= fi < len(files):
+            raise ValueError("The saved worksheet has no matching original file position.")
+        original = files[fi]
+        if (original.get("original", {}).get("sha256") != client.get("source_sha256")
+                or original.get("filename") != client.get("filename")):
+            raise ValueError("The saved worksheet belongs to another original file.")
+        inspection = original.get("inspection") or {}
+        parts = inspection.get("parts", [])
+        if type(pi) is not int or not 0 <= pi < len(parts):
+            raise ValueError("The saved worksheet has no matching original part position.")
+        part, reading, source_format = parts[pi], original.get("options"), inspection.get("format")
+    if (not isinstance(part, dict) or part.get("kind") != "table" or part.get("error")
+            or part.get("name") != client.get("part_name")
+            or not isinstance(reading, dict)
+            or source.get("body", {}).get("sha256") != client.get("source_sha256")):
+        raise ValueError("Restore the matching original table, reading choices and native inspection.")
+    original_fields = part.get("fields") or []
+    if source.get("original_fields") is not None and source["original_fields"] != original_fields:
+        raise ValueError("The retained worksheet columns differ from the saved source edition.")
+    rows = part.get("rows") or []
+    width = max([len(original_fields)] + [len(row.get("cells") or []) for row in rows])
+    columns = []
+    for index in range(width):
+        field = original_fields[index] if index < len(original_fields) else {}
+        # Native display labels include the original column position, preserving
+        # duplicate/blank headers. Extra cells remain available and unrenamed.
+        label = field.get("display") or field.get("label") or "Unlabeled original column " + str(index + 1)
+        if label in columns:
+            label += " · original column " + str(index + 1)
+        columns.append(label)
+    result = {
+        "columns": columns,
+        "sample": [dict(zip(columns, row.get("cells") or [])) for row in rows],
+        "sample_limit": part.get("sample_limit"),
+        "sample_row_numbers": [row.get("row") for row in rows],
+        "sample_records": deepcopy(rows),
+        "original_fields": deepcopy(original_fields),
+        "original_worksheet": part.get("sheet"),
+        "original_header_row": part.get("header_row"),
+        "original_preamble": deepcopy(part.get("preamble") or []),
+        "reading_options": deepcopy(reading),
+        "source_format": source_format,
+        "preview_basis": "retained-original-native-inspection",
+    }
+    if "more_rows" in part:
+        result["more_rows"] = part["more_rows"]
+    if source_format in ("xlsx", "xlsm"):
+        result["formula_mode"] = part.get("formula_mode", reading.get("formula_mode"))
+    return result
