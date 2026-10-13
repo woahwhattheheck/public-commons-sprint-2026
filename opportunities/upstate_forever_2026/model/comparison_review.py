@@ -287,6 +287,20 @@ def completed(workspace, value, operation_id):
     return detail(workspace, operation["capture_id"]) if operation.get("capture_id") else None
 
 
+
+def _release_capture(workspace, directory, selection, capture_id):
+    """Remove only this committed operation's redundant private capture copy."""
+    operation = read_json(reviews._regular(directory, "operation.json"))
+    if (operation.get("project_id") != workspace.project["id"]
+            or operation.get("selection") != selection or operation.get("capture_id") != capture_id):
+        raise ValueError("Capture cleanup needs the completed original review operation")
+    capture = directory / "capture"
+    if capture.is_symlink() or (capture.exists() and not capture.is_dir()):
+        raise ValueError("The committed capture staging path is not its original directory")
+    if capture.exists():
+        shutil.rmtree(capture)
+
+
 def create(workspace, value, *, operation_id=None, created_at=None):
     selection = normalize(value)
     operation_id = identifier(operation_id) if operation_id else digest({
@@ -295,6 +309,8 @@ def create(workspace, value, *, operation_id=None, created_at=None):
     with held(family / (operation_id + ".lock")):
         existing = completed(workspace, selection, operation_id)
         if existing is not None:
+            with held(workspace.root / ".workspace.lock", blocking=False):
+                _release_capture(workspace, family / operation_id, selection, existing["capture_id"])
             return existing
         with held(workspace.root / ".workspace.lock", blocking=False):
             directory = _directory(family, operation_id, create=True)
@@ -346,7 +362,12 @@ def create(workspace, value, *, operation_id=None, created_at=None):
                 "original_experiment_id": edition_record["original_experiment_id"],
             })
             atomic_json(marker, {**operation, "capture_id": record["id"]})
-    return detail(workspace, record["id"])
+        # Source import owns independent canonical bytes; verify the committed
+        # review before releasing this operation's duplicate archive and copies.
+        result = detail(workspace, record["id"])
+        with held(workspace.root / ".workspace.lock", blocking=False):
+            _release_capture(workspace, directory, selection, record["id"])
+        return result
 
 
 def _summary(workspace, record):
