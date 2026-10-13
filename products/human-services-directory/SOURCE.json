@@ -100,7 +100,11 @@
     "operatingPlansNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plans.py",
     "operatingPlansOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.mjs",
     "operatingPlansNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans.py",
-    "operatingPlansClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans_browser.mjs"
+    "operatingPlansClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans_browser.mjs",
+    "conformanceForeignKeysNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_conformance_foreign_keys.py",
+    "conformanceForeignKeysOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-conformance-foreign-keys.mjs",
+    "conformanceForeignKeysNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_foreign_keys.py",
+    "conformanceForeignKeysClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_foreign_key_clients.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
@@ -117,7 +121,9 @@
     "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md",
     "conformance": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md",
     "conformanceNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md",
-    "operatingPlans": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md"
+    "operatingPlans": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md",
+    "conformanceForeignKeys": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEYS.md",
+    "conformanceForeignKeyClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEY_CLIENTS.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
@@ -207,5 +213,45 @@
       }
     },
     "meaning": "Procedure authoring and history/file receiving do not execute selected commands, acquire provider data or establish external service availability or customer acceptance."
+  },
+  "foreignKeys": {
+    "implementationEdition": "stellar-forge.directory-conformance.hsds-foreign-keys.20261013",
+    "nativeSource": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "capsule": "d20ce33bd105e2eab0f02422320305311215e7fb",
+      "bytes": 244206,
+      "sha256": "99c0d0611cb3bcc31107f4fd2cd7aedc90f767b24fef1870f9009cb6f8269856",
+      "publicMerge": "abe01e450424bd58ebccc0c1e1bfea813776b95b",
+      "productMerge": "39f9068af3fc33dac6609b238aff2839ee57a33f"
+    },
+    "companionBaseline": {
+      "capsule": "16b7ad4c71d195438e1996ae1d4771b6dd8e876a",
+      "bytes": 719577,
+      "sha256": "7ae17277a53e1d4aa2bb1c8b338dd23d58d50451078909a3db7fc2f772e2751f",
+      "publicMerge": "4aecca59fe5cac7b6757ac26d2e0a1d64d43b845",
+      "productMerge": "a4ce150e5082eff0e6a52dbf86d543331f585177"
+    },
+    "fileKinds": [
+      "foreignKeys",
+      "foreignKeyCandidates",
+      "foreignKeyMatches",
+      "foreignKeyCoverage"
+    ],
+    "querySchemas": [
+      "conformance_foreign_keys",
+      "conformance_foreign_key_candidates",
+      "conformance_foreign_key_matches"
+    ],
+    "page": {
+      "maxRows": 250,
+      "maxBytes": 4194304,
+      "order": "original ordinal",
+      "continuation": "nextOffset"
+    },
+    "nativeOperation": "SCF-DIRECTORY-CONFORMANCE-FOREIGN-KEYS-450E-20261013",
+    "clientOperation": "SCF-DIRECTORY-CONFORMANCE-FOREIGN-KEYS-CLIENTS-450E-20261013",
+    "compatibility": "Earlier assessments keep their original implementation and seven original file kinds; current HSD assessments keep their applicable original files. Complete OperatingPlan records and histories remain unchanged.",
+    "receiving": "Read all original records, pages and files through the native operator and Merchant; preserve full source-defined responses; receive the exact browser editable archive through the original Directory receiver in a separate private customer workspace; verify original immutable records and complete indices before exporting the customer packet.",
+    "meaning": "Existence and resolution are separate. Every ambiguous match and original table selection remains explicit. Source publication does not establish native or client operation completion; completed operation records and verified files carry that evidence."
   }
 }

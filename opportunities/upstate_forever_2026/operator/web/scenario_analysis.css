@@ -54,3 +54,14 @@
 .analysis-working h3 { margin-top: 0; }
 .analysis-progress-label { display: grid; gap: .5rem; max-width: 36rem; }
 .analysis-progress-label progress { width: 100%; height: .65rem; accent-color: #59636b; }
+
+
+/* Exact source-area choices in the original scenario form. */
+.analysis-zone-filters { display: grid; gap: .6rem; margin-block: .75rem; }
+.analysis-zone-filter { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, .7fr) auto; gap: .6rem; align-items: end; }
+.analysis-zone-filter label { display: grid; gap: .3rem; min-width: 0; }
+.analysis-zone-filter input, .analysis-zone-filter select { min-width: 0; width: 100%; }
+.analysis-zone .analysis-origin { margin-block: .75rem; padding-block: .65rem; border-block: 1px solid #d7dce1; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .analysis-zone-filter { grid-template-columns: 1fr; align-items: stretch; }
+}

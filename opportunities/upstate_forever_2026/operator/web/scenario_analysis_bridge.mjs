@@ -12,6 +12,8 @@ export function attachScenarioAnalysisExtension(host) {
     },
     update() { if(node)desk.update(); },
     detach() { node=null;desk.detach(); },
-    dispatch:button=>desk.dispatch(button)
+    dispatch:button=>desk.dispatch(button),
+    create:request=>desk.create(request),
+    createForSourceAreas:request=>desk.createForSourceAreas(request)
   };
 }

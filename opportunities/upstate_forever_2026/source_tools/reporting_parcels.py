@@ -33,6 +33,7 @@ from capture_original_overlays import capture_layer, OriginalResponses, oid_fiel
 from capture_upstream_network import PLANNING_SHA
 
 SCHEMA = "upstate.reporting-parcels/v1"
+PREPARATION_METHOD = "upstate.reporting-parcels/whole-original-polygons/v2"
 TRANSFER_SCHEMA = "upstate.reporting-parcel-transfer/v1"
 CATALOG_SCHEMA = "upstate.sc-parcel-providers/v1"
 DEFAULT_CATALOG = Path(__file__).with_name("SC_PARCEL_PROVIDERS.json")
@@ -57,6 +58,9 @@ PARCEL_FIELDS = {
     "source_uri": "str:512", "source_sha256": "str:64",
     "source_edition": "str:100", "source_status": "str:50",
     "record_class": "str:60", "native_class": "str:100", "parcel_candidate": "int",
+    "native_class_field": "str:100", "classification_basis": "str:100",
+    "source_revision_field": "str:100", "source_revision_type": "str:50",
+    "source_revision_value": "str:255",
     "whole_feature_area_ha": "float", "reporting_area_ha": "float",
     "source_county_area_ha": "float", "outside_source_county_ha": "float",
 }
@@ -764,7 +768,13 @@ def _polygonal(geometry):
 def _classify(properties, provider):
     rule = provider.get("classification")
     if not rule:
-        return {"record_class": "parcel", "native_class": None,
+        field = provider.get("native_classification_field")
+        value = properties.get(field) if field else None
+        return {"record_class": "parcel_source" if field else "parcel",
+                "native_class": None if value is None else str(value),
+                "native_class_field": field,
+                "classification_basis": ("uninterpreted_native_code" if field
+                                         else "published_parcel_layer"),
                 "parcel_candidate": 1, "coverage_eligible": True}
     value = properties.get(rule["field"])
     code = None if value is None else str(value)
@@ -778,6 +788,8 @@ def _classify(properties, provider):
     else:
         status = context.get(code, "unclassified_cadastral")
     return {"record_class": status, "native_class": code,
+            "native_class_field": rule["field"],
+            "classification_basis": "published_native_category",
             "parcel_candidate": int(code in parcel), "coverage_eligible": code not in excluded}
 
 
@@ -804,8 +816,12 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
         if not fields.intersection(provider["parcel_id_fields"]):
             raise ValueError("Provider " + key + " no longer publishes its retained parcel reference fields")
         classification = provider.get("classification")
-        if classification and classification["field"] not in fields:
+        classification_field = (classification["field"] if classification
+                                else provider.get("native_classification_field"))
+        if classification_field and classification_field not in fields:
             raise ValueError("Provider " + key + " no longer publishes its native parcel classification")
+        field_types = {field["name"]: field.get("type")
+                       for field in edition["native_fields"]}
         source_rows.append({"county_fips": county["fips"], "county_name": county["name"],
             "provider_id": key, "source_uri": provider["url"],
             "source_sha256": record["sha256"], "native_id_field": record["id_field"],
@@ -841,6 +857,12 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
                 raise ValueError("Parcel reporting intersection is invalid: " + identity)
             parcel_ref, parcel_field = _parcel_reference(row["properties"], provider["parcel_id_fields"])
             category = _classify(row["properties"], provider)
+            revision_fields = [field for field in provider.get("source_date_fields", [])
+                               if field in row["properties"]]
+            revision_field = next((field for field in revision_fields
+                                   if row["properties"][field] is not None),
+                                  revision_fields[0] if revision_fields else None)
+            revision_value = row["properties"].get(revision_field) if revision_field else None
             own = part.intersection(county_geometries[county["fips"]]).area/10000
             properties = {"parcel_id": identity, "county_fips": county["fips"],
                 "county_name": county["name"], "source_id": key, "native_oid": native_oid,
@@ -848,10 +870,18 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
                 "parcel_ref_field": parcel_field, "source_uri": provider["url"],
                 "source_sha256": record["sha256"], "source_edition": edition["captured_at"],
                 "source_status": provider["provenance"],
+                "source_revision_field": revision_field,
+                "source_revision_type": field_types.get(revision_field),
+                "source_revision_value": (None if revision_value is None
+                    else json.dumps(revision_value, ensure_ascii=False, separators=(",", ":"))),
                 "whole_feature_area_ha": full.area/10000, "reporting_area_ha": part.area/10000,
                 "source_county_area_ha": own, "outside_source_county_ha": max(0, part.area/10000-own),
-                **{field: category[field] for field in ("record_class", "native_class", "parcel_candidate")}}
-            prepared = {"id": identity, "properties": properties, "geometry": part,
+                **{field: category[field] for field in (
+                    "record_class", "native_class", "native_class_field",
+                    "classification_basis", "parcel_candidate")}}
+            # The parcel reducer measures original area and performs its own reporting clip.
+            # Keep the complete analytical polygon; original native bodies remain companions.
+            prepared = {"id": identity, "properties": properties, "geometry": full,
                         "coverage_eligible": category["coverage_eligible"]}
             if category["parcel_candidate"]:
                 parcels.append(prepared)
@@ -959,7 +989,9 @@ def prepare(capture_directory):
         failures = {row["provider_id"]: row["exception"] for row in previous.get("counties", [])
                     if row.get("exception") and row.get("provider_id") not in records}
         progress = _capture_manifest(root, plan_value, records, failures)
-        fingerprint = digest({"plan_sha256": digest(plan_value),
+        fingerprint = digest({"preparation_method": PREPARATION_METHOD,
+                              "preparation_revision": "20261013-native-parcel-attributes-v1",
+                              "plan_sha256": digest(plan_value),
                               "sources": {key: record["sha256"] for key, record in sorted(records.items())},
                               "classification": {county["fips"]: county.get("provider", {}).get("classification")
                                   if county.get("provider") else None for county in plan_value["counties"]}})
@@ -990,7 +1022,8 @@ def prepare(capture_directory):
             staging = Path(temporary)/"inventory"
             staging.mkdir()
             atomic_json(staging/"preparation-context.json",
-                {"source_fingerprint": fingerprint, "plan_sha256": digest(plan_value)}, immutable=True)
+                {"source_fingerprint": fingerprint, "plan_sha256": digest(plan_value),
+                 "preparation_method": PREPARATION_METHOD}, immutable=True)
             gpkg = staging/"reporting-parcels.gpkg"
             _write_layer(gpkg, "parcels_reporting", PARCEL_FIELDS, parcels)
             _write_layer(gpkg, "cadastral_context", PARCEL_FIELDS, contexts)
@@ -1015,9 +1048,11 @@ def prepare(capture_directory):
             atomic_json(staging/"geometry-corrections.json",
                 {"schema": SCHEMA, "corrections": corrections}, immutable=True)
             methods = {"schema": SCHEMA, "analysis_crs": "EPSG:5070", "area_units": "hectares",
+                "preparation_method": PREPARATION_METHOD,
                 "native_feature_identity": "county FIPS : provider ID : native OID",
                 "source_identity": "Original URI, response dates, native OID and retained feature SHA256",
-                "parcel_geometry": "Positive-area intersection with original reporting polygon; whole source retained",
+                "parcel_geometry": "Whole source polygons in the analysis CRS, selected by positive reporting intersection; native bodies retained",
+                "reporting_geometry": "Reporting-area intersections are measured separately; the parcel reducer clips whole geometry itself",
                 "parcel_candidate": "Published parcel layer; provider classification rules retained in the catalog",
                 "coverage": "Unique union of available cadastral polygons, including known road/water context",
                 "parcel_coverage": "Unique union of parcel candidates only",
@@ -1060,6 +1095,8 @@ def prepare(capture_directory):
             "vintage": "Original county editions in county-sources.csv",
             **files["gpkg"], "companions": list(by_path.values()),
             "metadata": {"analysis_crs": "EPSG:5070", "area_units": "hectares",
+                         "preparation_method": PREPARATION_METHOD,
+                         "geometry_scope": "whole_source_polygons",
                          "capture_state": progress["state"], "parcel_count": len(parcels),
                          "cadastral_context_count": len(contexts), "plan_sha256": digest(plan_value),
                          "input_sources": source_rows,
@@ -1086,12 +1123,14 @@ def prepare(capture_directory):
         manifest_name = "parcel-sources-" + fingerprint[:20] + ".json"
         atomic_json(root/manifest_name, manifest, immutable=True)
         result = {"schema": SCHEMA, "kind": "reporting-parcel-inventory",
+            "preparation_method": PREPARATION_METHOD,
             "source_fingerprint": fingerprint, "plan_sha256": digest(plan_value),
             "capture_state": progress["state"], "parcel_count": len(parcels),
             "cadastral_context_count": len(contexts), "excluded_record_count": len(excluded),
             "source_manifest": manifest_name, "files": files,
             "county_coverage": [row["properties"] for row in summaries],
-            "model_binding": {"role": "PARCEL", "layer": "parcels_reporting", "id_field": "parcel_id"}}
+            "model_binding": {"source_id": prepared["id"], "role": "PARCEL",
+                              "layer": "parcels_reporting", "id_field": "parcel_id"}}
         atomic_json(inventory_path, result, immutable=True)
         atomic_json(root/"parcel-sources.json", manifest)
         atomic_json(root/"parcel-inventory.json", result)
@@ -1100,9 +1139,120 @@ def prepare(capture_directory):
         return result
 
 
+
+def bind(workspace, capture_directory, output, *, create_workspace=False):
+    """Import the prepared native inventory and write the existing parcel selection."""
+    from model.workspace import Workspace
+    root = Path(capture_directory).resolve(strict=True)
+    manifest_path = root/"parcel-sources.json"
+    original = read_json(manifest_path)
+    candidates = [entry for entry in original.get("entries", [])
+                  if entry.get("role") == "PARCEL"]
+    if original.get("schema") != "upstate.sources/v1" or len(candidates) != 1:
+        raise ValueError("Select the prepared reporting parcel manifest with one PARCEL entry")
+    expected = candidates[0]
+    if (expected.get("kind") != "vector" or expected.get("layer") != "parcels_reporting"
+            or expected.get("id_field") != "parcel_id"):
+        raise ValueError("Use the original prepared parcel layer and qualified native record key")
+    selected_workspace = Workspace(workspace, create=create_workspace)
+    target = Path(output).resolve()
+    selection = None
+    if target.is_file():
+        previous = read_json(target)
+        if (previous.get("source_id") == expected["id"]
+                and previous.get("layer") == "parcels_reporting"
+                and previous.get("id_field") == "parcel_id"
+                and previous.get("source_collection_id")):
+            try:
+                _, retained = selected_workspace.source_file(
+                    previous["source_collection_id"], previous["source_id"])
+            except FileNotFoundError:
+                pass
+            else:
+                if retained["body"]["sha256"] != expected["sha256"]:
+                    raise ValueError("The retained parcel binding has another original source body")
+                selection = previous
+    if selection is None:
+        collection = selected_workspace.import_sources(manifest_path)
+        returned = [entry for entry in collection["entries"] if entry["id"] == expected["id"]]
+        if len(returned) != 1:
+            raise ValueError("The imported parcel source did not retain its original source ID")
+        entry = returned[0]
+        selection = {"source_collection_id": collection["id"], "source_id": entry["id"],
+                     "layer": entry["layer"], "id_field": entry["id_field"]}
+        # Resolve the exact retained body through the API used by priorities.
+        selected_workspace.source_file(selection["source_collection_id"], selection["source_id"])
+    atomic_json(target, selection)
+    result = {"stage": "reporting-parcel-binding", "selection": selection,
+              "selection_path": str(target), "source_manifest": str(manifest_path),
+              "capture_state": expected.get("metadata", {}).get("capture_state"),
+              "parcel_count": expected.get("metadata", {}).get("parcel_count"),
+              "consumer": "model.priorities.parcel_inventory"}
+    print(json.dumps(result), flush=True)
+    return result
+
+
+
+def run(workspace, output, *, catalog=DEFAULT_CATALOG, tile_m=25000,
+        retry_failed=False, create_workspace=False):
+    """Run original county acquisition through the existing parcel analysis binding."""
+    root = Path(output).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    value = _catalog(catalog)
+    catalog_path = Path(catalog).resolve(strict=True)
+    with held(root/"reporting-parcel-run.lock", blocking=False):
+        county_root = root/("counties-" + digest(value["county_boundary"])[:20])
+        retained_catalog = county_root/"provider-catalog.json"
+        # County geometry is shared across provider revisions of the same source.
+        # Its original capture catalog remains immutable.
+        boundary_catalog = retained_catalog if retained_catalog.exists() else catalog_path
+        county_result = boundaries(county_root, catalog=boundary_catalog,
+                                   retry_failed=retry_failed)
+        plan_key = digest({"reporting_sha256": PLANNING_SHA,
+                           "county_source_sha256": county_result["source"]["sha256"],
+                           "catalog_sha256": digest(value), "tile_m": float(tile_m)})
+        plan_root = root/"plans"/plan_key[:20]
+        if (plan_root/"plan-transfer.json").exists():
+            _verify_plan(plan_root)
+        else:
+            plan(reporting=county_root/"original-reporting"/"PlanningBasins2023.shp",
+                 county_capture=county_root, output=plan_root,
+                 catalog=catalog_path, tile_m=tile_m)
+        capture_root = root/"captures"/plan_key[:20]
+        mask_signature = digest(read_json(plan_root/"parcel-masks.json"))
+        earlier = [path for path in sorted((root/"captures").glob("*"))
+                   if path.is_dir() and path != capture_root
+                   and (path/"plan-transfer.json").exists()
+                   and digest(read_json(path/"parcel-masks.json")) == mask_signature]
+        progress = receive(capture_root, plan_directory=plan_root,
+                           retry_failed=retry_failed, reuse_capture=earlier)
+        inventory = prepare(capture_root)
+        binding = bind(workspace, capture_root, root/"parcel-selection.json",
+                       create_workspace=create_workspace)
+        result = {"schema": SCHEMA, "kind": "reporting-parcel-operation",
+                  "state": progress["state"], "county_source_root": str(county_root),
+                  "plan_root": str(plan_root), "capture_root": str(capture_root),
+                  "source_manifest": str(capture_root/"parcel-sources.json"),
+                  "inventory": str(capture_root/"parcel-inventory.json"),
+                  "parcel_count": inventory["parcel_count"],
+                  "county_coverage": inventory["county_coverage"],
+                  "selection": binding["selection"],
+                  "selection_path": binding["selection_path"]}
+        atomic_json(root/"reporting-parcel-run.json", result)
+        print(json.dumps({"stage": "reporting-parcel-operation", **result}), flush=True)
+        return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    p = commands.add_parser("run", help="Acquire, prepare and import the full reporting parcel inventory")
+    p.add_argument("--workspace", required=True)
+    p.add_argument("--output", required=True)
+    p.add_argument("--catalog", default=str(DEFAULT_CATALOG))
+    p.add_argument("--tile-m", type=float, default=25000)
+    p.add_argument("--retry-failed", action="store_true")
+    p.add_argument("--create-workspace", action="store_true")
     p = commands.add_parser("boundaries", help="Stdlib native statewide county acquisition")
     p.add_argument("--output", required=True)
     p.add_argument("--catalog", default=str(DEFAULT_CATALOG))
@@ -1127,6 +1277,11 @@ def main(argv=None):
     p.add_argument("--fresh-provider", action="append")
     p = commands.add_parser("prepare", help="GIS parcel inventory and county coverage")
     p.add_argument("--capture-directory", required=True)
+    p = commands.add_parser("bind", help="Import prepared parcels and write the existing analysis selection")
+    p.add_argument("--workspace", required=True)
+    p.add_argument("--capture-directory", required=True)
+    p.add_argument("--output", required=True)
+    p.add_argument("--create-workspace", action="store_true")
     p = commands.add_parser("bundle", help="Transfer complete plan/capture source files")
     p.add_argument("--directory", required=True)
     p.add_argument("--archive", required=True)
@@ -1136,7 +1291,10 @@ def main(argv=None):
     p.add_argument("--archive-sha256")
     args = vars(parser.parse_args(argv))
     command = args.pop("command")
-    if command == "boundaries":
+    if command == "run":
+        result = run(**args)
+        return 0 if result["state"] == "complete" else 2
+    elif command == "boundaries":
         result = boundaries(**args)
     elif command == "plan":
         result = plan(**args)
@@ -1145,6 +1303,8 @@ def main(argv=None):
         return 0 if result["state"] == "complete" else 2
     elif command == "prepare":
         result = prepare(**args)
+    elif command == "bind":
+        result = bind(**args)
     elif command == "bundle":
         result = bundle(**args)
     else:
