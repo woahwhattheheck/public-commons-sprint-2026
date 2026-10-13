@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "chemistry",
   "title": "Reach chemistry",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "order": 84,
   "assets": [
     "chemistry.mjs",
     "chemistry-native.mjs",
-    "chemistry.css"
+    "chemistry.css",
+    "receiving-water-chemistry.mjs"
   ],
   "backend": {
     "module": "chemistry",
@@ -33,7 +34,9 @@
       "chemistry.report.list",
       "chemistry.report.source.prepare",
       "chemistry.report.source.get",
-      "chemistry.report.source.list"
+      "chemistry.report.source.list",
+      "chemistry.water.prepare",
+      "chemistry.water.get"
     ],
     "invoke": {
       "handler": "invoke",
@@ -128,6 +131,43 @@
         "args": [
           "workspace_key",
           "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/water-source",
+        "operation": "water-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/water-preparation",
+        "operation": "water-preparation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/chemistry/water-preview",
+        "handler": "water_preview",
+        "args": [
+          "workspace_key",
           "payload"
         ]
       }

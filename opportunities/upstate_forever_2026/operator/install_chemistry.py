@@ -13,6 +13,27 @@ from pathlib import Path
 import tempfile
 
 FILES = [
+    "model/receiving_water_chemistry.py",
+    "operator/web/receiving-water-chemistry.mjs",
+    "operator/RECEIVING_WATER_CHEMISTRY.md",
+    "model/reach_chemistry/storage.py",
+    "model/reach_chemistry/VARIABLE_STORAGE.md",
+    "model/reach_chemistry/study_storage.py",
+    "source/receiving-water-hartwell-2025/original/hartwell-inflow-2025q1.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-outflow-2025q1.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-storage-2025q1.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-inflow-2025q2.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-outflow-2025q2.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-storage-2025q2.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-inflow-2025q3.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-outflow-2025q3.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-storage-2025q3.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-inflow-2025q4.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-outflow-2025q4.json",
+    "source/receiving-water-hartwell-2025/original/hartwell-storage-2025q4.json",
+    "source/receiving-water-hartwell-2025/sources.json",
+    "source/receiving-water-hartwell-2025/source-receipts.json",
+    "source/receiving-water-hartwell-2025/selected-source-periods.json",
     "model/chemistry_study_transfer.py",
     "model/CHEMISTRY_STUDY_TRANSFER.md",
     "source_tools/chemistry_study_composition.py",
@@ -100,6 +121,21 @@ FILES = [
     "source_tools/receive_monitoring_field_assignment_browser.mjs",
     "source/monitoring-field-study/source/prepare_field_package_edition.py"
 ]
+
+WATER_PREVIOUS_SHA256 = {
+    "model/chemistry.py": "898f118238f90be7723b448821aba8ca6ba95c26f86642c75f0d05ec79c6d2d2",
+    "model/chemistry_receiving.py": "1922cd3e239d750ccfb00217395eac4e3fd8e732bc2f26e5963dcb95099051e1",
+    "operator/chemistry.py": "f4cff632b8f328a35f650c5644674cd4e9844ba0a283fc1acfef0c23de80577a",
+    "operator/extensions/chemistry.json": "a184f18b3d84e5986e6c8592afb04253908e8a6cbc4fd5f4eb66af2f6a2ca570",
+    "operator/web/chemistry.mjs": "3a80140d808eb0d419641f02b6a25fea1111baf0fe93fd8cdb422b06e4c20065",
+    "operator/web/chemistry.css": "4276c4dca88f4987abc2062cf60ec00121ef97d18d7f9a2a4e247dcc2211aff7",
+    "operator/install_chemistry.py": "83bfb1e3bc8448a812d11c277e510e3f468fd178107d703df317acb98022a861",
+    "model/reach_chemistry/model.py": "d8266d41953cc5a0c9469422c4b6baab083b1dae0abfbbf2b6b67bad32a4e14c",
+    "model/reach_chemistry/solver.py": "0523bdf585a92cd727b8c6db3089b35224bdb8adc39b45411526c5874ca5eb37",
+    "model/reach_chemistry/inference.py": "a211132510f037d9ea4eacfeb034d6cc6447044c691618fb30818d3f03103210",
+    "model/reach_chemistry/io.py": "5089e364db63b90057fbc00685626c747999bedbe9d3fc5978a22411b5019407",
+    "model/reach_chemistry/reporting.py": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1"
+}
 
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
@@ -479,7 +515,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name), CURRENT_DIRECTION_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name), CURRENT_DIRECTION_PREVIOUS_SHA256.get(name), WATER_PREVIOUS_SHA256.get(name)}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:
