@@ -44,3 +44,7 @@ Needs expert review: confirm the chosen Budibase version and import effects, act
 ## Licence
 
 The commissioning implementation uses the repository's MIT licence, copied into [LICENSE](LICENSE). Original Budibase examples retain their upstream licence and provenance. See [THIRD_PARTY.md](THIRD_PARTY.md) and [UPSTREAM_LICENSE.txt](UPSTREAM_LICENSE.txt).
+
+## Complete receiving
+
+The operating guide includes the actual desktop, phone, all-attachment and cold-reopen receiving course. Open and inspect the exact outgoing programme, operate its controls, view its real screenshots and open every emitted attachment before presenting that edition as ready. Preserve the original source/project identities and integrate concrete repairs in the same product.
