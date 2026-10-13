@@ -11,8 +11,9 @@ class NativeBlockCache:
     """Cache first-band native blocks without changing requested cells or masks.
 
     Returned arrays own their bytes. The budget counts retained NumPy data and
-    Boolean masks; caller windows, GDAL buffers and Python object overhead are
-    separate. Zero disables caching. Oversized native blocks use direct reads.
+    Boolean masks; caller windows, temporary batch buffers, GDAL buffers and
+    Python object overhead are separate. Zero disables caching. An aligned
+    request larger than the budget uses the original direct-window read.
     """
 
     def __init__(self, byte_budget=DEFAULT_CACHE_BYTES):
@@ -26,8 +27,8 @@ class NativeBlockCache:
         self._peak = 0
         self._counts = {name: 0 for name in (
             "window_requests", "requested_pixels", "source_reads", "source_pixels",
-            "cache_hits", "cache_misses", "evictions", "direct_reads",
-            "disabled_reads", "oversized_block_reads")}
+            "cache_hits", "cache_misses", "block_read_batches", "evictions", "direct_reads",
+            "disabled_reads", "oversized_block_reads", "oversized_window_reads")}
 
     def _count(self, source, name, amount=1):
         self._counts[name] += amount
@@ -83,46 +84,87 @@ class NativeBlockCache:
             self._count(source, "disabled_reads" if not self.byte_budget else "oversized_block_reads")
             return self._native_read(dataset, window, source)
 
+        if not width or not height:
+            return np.ma.array(np.empty((height, width), dtype=dtype),
+                               mask=np.empty((height, width), dtype=bool), copy=False)
+        first_row, last_row = y0 // bh, (y0 + height - 1) // bh
+        first_col, last_col = x0 // bw, (x0 + width - 1) // bw
+        aligned_width = min(dataset.width, (last_col + 1) * bw) - first_col * bw
+        aligned_height = min(dataset.height, (last_row + 1) * bh) - first_row * bh
+        aligned_bytes = aligned_width * aligned_height * (dtype.itemsize + 1)
+        if aligned_bytes > self.byte_budget:
+            self._count(source, "direct_reads")
+            self._count(source, "oversized_window_reads")
+            return self._native_read(dataset, window, source)
+
         output = np.empty((height, width), dtype=dtype)
         invalid = np.empty((height, width), dtype=bool)
-        if not width or not height:
-            return np.ma.array(output, mask=invalid, copy=False)
-        for row in range(y0 // bh, (y0 + height - 1) // bh + 1):
-            by, block_height = row * bh, min(bh, dataset.height - row * bh)
-            for col in range(x0 // bw, (x0 + width - 1) // bw + 1):
-                bx, block_width = col * bw, min(bw, dataset.width - col * bw)
+
+        def copy_intersection(data, mask, bx, by):
+            block_height, block_width = data.shape
+            left, top = max(x0, bx), max(y0, by)
+            right = min(x0 + width, bx + block_width)
+            bottom = min(y0 + height, by + block_height)
+            dst = (slice(top - y0, bottom - y0), slice(left - x0, right - x0))
+            src = (slice(top - by, bottom - by), slice(left - bx, right - bx))
+            output[dst] = data[src]
+            invalid[dst] = mask[src]
+
+        missing = []
+        for row in range(first_row, last_row + 1):
+            for col in range(first_col, last_col + 1):
                 key = (token, row, col)
                 retained = self._blocks.pop(key, None)
-                if retained is not None:
+                if retained is None:
+                    missing.append((row, col))
+                else:
                     self._count(source, "cache_hits")
                     self._blocks[key] = retained
-                    data, mask = retained
-                else:
-                    self._count(source, "cache_misses")
-                    needed = block_height * block_width * (dtype.itemsize + 1)
-                    self._evict(needed, source)
-                    value = self._native_read(
-                        dataset, Window(bx, by, block_width, block_height), source)
-                    data = np.ma.getdata(value)
-                    mask = np.ma.getmaskarray(value)
-                    if data.shape != (block_height, block_width) or data.dtype != dtype:
-                        raise ValueError("Native block read changed the retained raster shape or dtype")
-                    data.setflags(write=False)
-                    mask.setflags(write=False)
-                    self._blocks[key] = (data, mask)
-                    self._bytes += data.nbytes + mask.nbytes
-                    self._peak = max(self._peak, self._bytes)
-                left, top = max(x0, bx), max(y0, by)
-                right, bottom = min(x0 + width, bx + block_width), min(y0 + height, by + block_height)
-                dst = (slice(top - y0, bottom - y0), slice(left - x0, right - x0))
-                src = (slice(top - by, bottom - by), slice(left - bx, right - bx))
-                output[dst] = data[src]
-                invalid[dst] = mask[src]
+                    copy_intersection(*retained, col * bw, row * bh)
+
+        if missing:
+            # Read a contiguous native-block rectangle once, including for
+            # striped rasters. Repeated single-block reads would turn one
+            # original window into hundreds of Rasterio calls.
+            batch_x = min(col for _, col in missing) * bw
+            batch_y = min(row for row, _ in missing) * bh
+            batch_right = min(dataset.width, (max(col for _, col in missing) + 1) * bw)
+            batch_bottom = min(dataset.height, (max(row for row, _ in missing) + 1) * bh)
+            needed = sum(min(bh, dataset.height - row * bh)
+                         * min(bw, dataset.width - col * bw)
+                         * (dtype.itemsize + 1) for row, col in missing)
+            self._evict(needed, source)
+            self._count(source, "block_read_batches")
+            value = self._native_read(
+                dataset, Window(batch_x, batch_y, batch_right - batch_x,
+                                batch_bottom - batch_y), source)
+            batch_data = np.ma.getdata(value)
+            batch_mask = np.ma.getmaskarray(value)
+            expected_shape = (batch_bottom - batch_y, batch_right - batch_x)
+            if batch_data.shape != expected_shape or batch_data.dtype != dtype:
+                raise ValueError("Native block read changed the retained raster shape or dtype")
+            for row, col in missing:
+                bx, by = col * bw, row * bh
+                block_width = min(bw, dataset.width - bx)
+                block_height = min(bh, dataset.height - by)
+                part = (slice(by - batch_y, by - batch_y + block_height),
+                        slice(bx - batch_x, bx - batch_x + block_width))
+                # Independent block allocations keep retained-byte accounting
+                # exact after evictions; views would retain the whole batch.
+                data = batch_data[part].copy()
+                mask = batch_mask[part].copy()
+                data.setflags(write=False)
+                mask.setflags(write=False)
+                self._blocks[(token, row, col)] = (data, mask)
+                self._bytes += data.nbytes + mask.nbytes
+                self._peak = max(self._peak, self._bytes)
+                self._count(source, "cache_misses")
+                copy_intersection(data, mask, bx, by)
         return np.ma.array(output, mask=invalid, copy=False)
 
     def snapshot(self):
         return {
-            "method": "original-native-block-lru/1",
+            "method": "original-native-block-lru/2",
             "byte_budget": self.byte_budget,
             "retained_array_bytes": self._bytes,
             "peak_retained_array_bytes": self._peak,
@@ -130,7 +172,7 @@ class NativeBlockCache:
             **self._counts,
             "sources": [dict(value) for value in self._sources.values()],
             "counter_meaning": "Actual Rasterio read calls and returned native pixels; OS/GDAL cache hits and physical disk reads are not measured.",
-            "memory_meaning": "Retained data and Boolean mask arrays only; working windows, GDAL buffers and Python object overhead are separate.",
+            "memory_meaning": "Retained data and Boolean mask arrays only; working windows, temporary batch buffers, GDAL buffers and Python object overhead are separate.",
         }
 
     def clear(self):
