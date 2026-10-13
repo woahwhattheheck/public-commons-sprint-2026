@@ -176,7 +176,8 @@ class NativeJobs:
 
     def _new(self, task, ws, run):
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
-                        "model/native.py", "model/workspace.py", "model/common.py")
+                        "model/native.py", "model/workspace.py", "model/common.py",
+                        "model/verified_files.py")
         source = {name: file_digest(APPLICATION / name) for name in source_paths}
         request = {"schema": SCHEMA, "task_id": task["id"],
                    "operation_id": task["operation_id"], "attempt": len(task["attempts"]),
