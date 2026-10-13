@@ -1,20 +1,20 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "0827b03567e3d901c316696471e463bc57da2fd5",
+  "source_commit": "0c039477feefe6c1b6195cb505ffb283727e08b1",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MEASUREMENTS-COMPLETE-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
   "source_files": 59,
   "installed_files": 57,
-  "source_bytes": 720713,
+  "source_bytes": 730392,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 287315,
-      "sha256": "610dda1e69a129e11c55e2b89631ca7940b9719b2302ef2b62cc33efbb4f8df2",
+      "bytes": 289914,
+      "sha256": "2215bcbe16486e508e5d3c2bc9219adcc8497e5878896480c23376c240e49e9c",
       "members": 22,
-      "source_bytes": 211937
+      "source_bytes": 213830
     },
     {
       "path": "source-02.json",
@@ -25,10 +25,10 @@
     },
     {
       "path": "source-03.json",
-      "bytes": 282231,
-      "sha256": "73b5d624a560f4b410e08ea99e45c6120950a36d774da0556e478b800e5f85a6",
+      "bytes": 292689,
+      "sha256": "6a8b3e9aea2366530eb497a08433559f7389d6108b4a142d207a9fe635328053",
       "members": 15,
-      "source_bytes": 209154
+      "source_bytes": 216940
     },
     {
       "path": "source-04.json",
@@ -77,8 +77,8 @@
     },
     {
       "path": "integration/measurements/INSTALLATION.json",
-      "bytes": 22216,
-      "sha256": "d5d4388a88c3eba472a8c807a1280f2a8c7933e968fde148e3067f838e7b4bf1",
+      "bytes": 22443,
+      "sha256": "ea88ad205b8977b629178c22d5ea328dcd7af367a297328830aa596170a29d2e",
       "role": "installed_component"
     },
     {
@@ -95,14 +95,14 @@
     },
     {
       "path": "MEASUREMENT_COLLECTIONS.md",
-      "bytes": 8893,
-      "sha256": "3c30d46f3b46ac1ae51ee40803bc0ba57022db54699514de45772231451b4a97",
+      "bytes": 10308,
+      "sha256": "32dcaf647941c7149bf8a7ab2dab31a5f3eb6fec51b4a257440d7a5a100f611f",
       "role": "installed_component"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 8253,
-      "sha256": "654dbcdddc80bbb0ecbb5cb627d58a1b1a1025b8ad9e28022bcfb1c438bb6671",
+      "bytes": 8504,
+      "sha256": "c375d715e00d67828bdbc3430ca621aa781cb8cf3b9ae14eca2bd3a6283bfd59",
       "role": "installed_component"
     },
     {
@@ -281,8 +281,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 3544,
-      "sha256": "05c7a3e4e45ae89de3c8a27cd819c337c3ba5fe5e20e9496584844d66051ab80",
+      "bytes": 7437,
+      "sha256": "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
       "role": "installed_component"
     },
     {
@@ -353,8 +353,8 @@
     },
     {
       "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 3584,
-      "sha256": "eb87b2fa8832a0245291176cf7a1bc6baad9029f597f5c12864e87ec01567048",
+      "bytes": 7477,
+      "sha256": "e9c156bcf97225c8debda52fa2e1553a0af80e4e237e06350e0bd27613d068b3",
       "role": "installed_component"
     },
     {
@@ -457,5 +457,7 @@
     "source_commit": "e7325cdf"
   },
   "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
-  "original_outer_snapshot_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc"
+  "original_outer_snapshot_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
+  "previous_source_commit": "0827b03567e3d901c316696471e463bc57da2fd5",
+  "workspace_transport": "Delayed form inputs and response admission remain tied to the original mount workspace and generation; the native operation body and identity are preserved once admitted."
 }
