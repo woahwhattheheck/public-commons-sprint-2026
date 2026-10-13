@@ -26,7 +26,7 @@ from . import observed_context
 from .implementation_observation_quality import summarize_field_quality, write_quality_sources, quality_sections
 
 SCHEMA = "upstate.implementation-observation-context/v1"
-EDITION = "field-observations-20261013-v2-quality"
+EDITION = "field-observations-20261013-v3-readable-quality"
 REPORT_IDENTITY = "upstate.implementation-observation-report-source/v1"
 FIELDS = (
     "record_id", "station_id", "site_label", "site_latitude", "site_longitude",
@@ -415,9 +415,16 @@ def _sections(context, rows, summary, observation_ids):
     plan = context["plan"]
     sample_rows = []
     for row in rows[:200]:
-        sample_rows.append([row[key] for key in ("record_id", "station_id", "sample_id", "collected_at",
-                           "parameter", "result_type", "numeric_value", "original_text", "unit", "basis", "fraction",
-                           "qualifier", "qa_status", "custody_ref")])
+        sample_rows.append([
+            _text(row["station_id"]) + "\n" + _text(row["sample_id"]),
+            row["collected_at"], row["parameter"],
+            _text(row["result_type"]) + "\nNumeric: " + _text(row["numeric_value"]) +
+            "\nOriginal: " + _text(row["original_text"]),
+            "\n".join(label + ": " + _text(row[key]) for key, label in
+                      (("unit", "Unit"), ("basis", "Basis"), ("fraction", "Fraction"))),
+            "\n".join(label + ": " + _text(row[key]) for key, label in
+                      (("qa_status", "QA"), ("qualifier", "Qualifier"), ("custody_ref", "Custody"))),
+        ])
     return [
         ["Saved field observation source", [
             plan["title"] + "; revision " + str(plan["revision"]) + "; original plan digest " + context["identity"]["plan"]["sha256"] + ".",
@@ -438,8 +445,10 @@ def _sections(context, rows, summary, observation_ids):
         ["Original field result detail", [
             ("The first 200 rows in original saved order are shown; the complete CSV and saved revision are included."
              if len(rows) > 200 else "All saved observation rows are shown in original order."),
-            {"kind": "table", "columns": ["Observation", "Site", "Sample", "Collected at", "Parameter", "Type",
-                "Numeric value", "Original result", "Unit", "Basis", "Fraction", "Qualifier", "QA", "Custody"], "rows": sample_rows},
+            {"kind": "table", "columns": ["Site / sample", "Collected at", "Parameter",
+                "Original result / type", "Unit / basis / fraction", "QA / qualifier / custody"],
+             "rows": sample_rows, "widths": [1.5, 1.2, 1.3, 1.4, 1.0, 1.1]},
+            "The complete linked CSV retains each exact observation ID, all displayed values and every original relationship.",
             {"kind": "links", "items": [
                 {"title": "Complete field observations with original relationships and limits", "path": "field/field-observations.csv"},
                 {"title": "Exact original saved revision and event", "path": "field/original/revision.json"},
