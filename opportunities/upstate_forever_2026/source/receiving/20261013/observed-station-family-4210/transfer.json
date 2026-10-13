@@ -1,0 +1,37 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ECO-S1-ORIGINAL-NINE-STUDY-FAMILY-4210",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 5,
+  "source_bytes": 400928,
+  "banks": [
+    {
+      "name": "original-nine-study-family-4210",
+      "original_git_blob": "4ca769366a072324187f6abcd865a9d4596a902a",
+      "original_bytes": 423124,
+      "original_sha256": "74df1edb8ce31b41f1a3968c87c37a94738e181a10ced71cdf6b6086bc3e890b",
+      "gzip_bytes": 81087,
+      "gzip_sha256": "62bfce2d8f8a273e865b0d428c9972a2639bce441b618d2e8f39ed6ac3f9b89f",
+      "parts": [
+        {
+          "git_blob": "7b4c1dde2ce79619e23141e17db03661903b717a",
+          "json_bytes": 66896,
+          "json_sha256": "45e9d756040036956ead80851b2e5da7f2da5fb8b678326c22c542c3480b8e9d",
+          "index": 0,
+          "offset": 0,
+          "bytes": 50000,
+          "sha256": "6a90afc7ac5679e73a1bc1204729a4c84fb069cdfc35c83f744533cc07c7db67"
+        },
+        {
+          "git_blob": "9913a4042c70c8a759299d05d6be0cea6ab5aa16",
+          "json_bytes": 41684,
+          "json_sha256": "b4ccb11ace8046b2b0a9f3192767325e79a1b12c64cdf5350915c0ed1ae21b37",
+          "index": 1,
+          "offset": 50000,
+          "bytes": 31087,
+          "sha256": "9333b648844374ad8eba3a213cb38fa1aab9d08bda8cfd22338486dc650e9f18"
+        }
+      ]
+    }
+  ]
+}
