@@ -19,9 +19,9 @@ import sys
 import time
 
 SCHEMA = "principal.reference-build-input.v1"
-CURRENT_SCHEMA = "principal.current-build-input.v2"
-CURRENT_PACKET_BYTES = 7482441
-CURRENT_PACKET_SHA = "17e49d735384874c3db1116de7d449078e0a6f12246eb4598661821bb45c5915"
+CURRENT_SCHEMA = "principal.current-build-input.v3"
+CURRENT_PACKET_BYTES = 7509894
+CURRENT_PACKET_SHA = "71d7d5b9b1adaf6fb4c9a2bb6b49f614cd9c5c101a0454c75985e54f9de9eb04"
 OWNER_SHA = "506634371a87cbdc005b65d4e9c75a480bef18e0f0a762c3de463c859018903c"
 OWNER_BYTES = 29581
 MEMBERS = [{"path":"Cargo.toml","bytes":357,"sha256":"8ddf0f4357c13de0e749c1f3278df9fdc310fda95784278a50fdde53f00d9cd4"},{"path":"Cargo.lock","bytes":45699,"sha256":"93498c4282584371a5042b277cfd182ff1cc07a8e3f69a5c74c70fb74354fe1e"},{"path":"rust-toolchain.toml","bytes":114,"sha256":"434ff6439d1896b5558fb1077c8169c68f1ee596cbb4b7948de2bef68b9688cd"},{"path":"PRINCIPAL_API.json","bytes":13901,"sha256":"ad7d0fc7b58f005fd4f39f450ae5980c878501593cf7554137450e68c2b5531a"},{"path":"contracts/common.rs","bytes":7220,"sha256":"f30e5b831573e7f878169ee4d682784893ca8417f50fcf4b7f39438d7a2443bb"},{"path":"contracts/oracle_adapter/Cargo.toml","bytes":330,"sha256":"62d92060a9c18bee6d5755ed3c6dff940b37a6d62d88be1714adb6005502ddff"},{"path":"contracts/oracle_adapter/src/lib.rs","bytes":3073,"sha256":"c807f877764f6cc1049ae3c62f40bf95262ac20c3ec7ae7adcfcc88d81c6f55c"},{"path":"contracts/permissioning/Cargo.toml","bytes":329,"sha256":"2d479709e9ccde9f86da61a1e4b878694af61d2fa4ea5a123701c54d7e128c6b"},{"path":"contracts/permissioning/src/lib.rs","bytes":2323,"sha256":"842422d798a5e043914e80a1980e8f54448b909f45ccf5f8d3c4b8a5c1b74f3b"},{"path":"contracts/sy_wrapper/Cargo.toml","bytes":326,"sha256":"2e1fa3c2fb6dd4c0e8e0c1bff8a09fbf82e79422d263b1516d6fb6be48e3e3d6"},{"path":"contracts/sy_wrapper/src/lib.rs","bytes":6806,"sha256":"23465d794f38d865759316ec5f399f02fbf8d3ca6bba4e75bf0c59e995470888"},{"path":"contracts/principal_manager/Cargo.toml","bytes":645,"sha256":"fa8a98359c3f13b05603a1ddaf2412d68b3ad51fb8265a6f83e083f725533ae8"},{"path":"contracts/principal_manager/src/lib.rs","bytes":15429,"sha256":"0dab2f71478d22ca232c464afee8d7d08ff9e1c40b5b00d95cee95a267ceb316"},{"path":"contracts/risk_control/Cargo.toml","bytes":328,"sha256":"7b9b05f8327c3d4a9d9f91c768a7335375b3496f4b288698e3e7a265d8500631"},{"path":"contracts/risk_control/src/lib.rs","bytes":3741,"sha256":"ecc8db989983c85c1bac033da6be9b1b5d4e7cd50be5df68c630c34cefdc494a"},{"path":"contracts/principal_manager/tests/lifecycle.rs","bytes":11887,"sha256":"e8bfbebaa583a929a795baacfdedd6af2eb87c8baf2771ca678d8e0010419fa9"},{"path":"CONTRACT_INTEGRATION.md","bytes":16916,"sha256":"ec9fa21d6e0c8fff479d5a9373b5fba62d8d066242d09ad2ea5af30e9cc992b0"}]
@@ -186,10 +186,10 @@ def selected_source(spec):
     if current:
         original=read(spec["sourcePacket"],32*1024*1024)
         need(len(original)==CURRENT_PACKET_BYTES and sha(original)==CURRENT_PACKET_SHA,
-             "Select the exact complete current230 original packet")
+             "Select the exact complete current231 original packet")
         packet=strict_json(original)
-        need(packet["schema"]=="principal.current-accounting-complete.v2" and
-             packet["accountingEdition"]==2 and len(packet["files"])==230,
+        need(packet["schema"]=="principal.current-accounting-complete.v3" and
+             packet["accountingEdition"]==3 and len(packet["files"])==231,
              "Complete current accounting source edition required")
         names=set()
         for member in packet["files"]:
@@ -203,12 +203,12 @@ def selected_source(spec):
                              "contentBase64":base64.b64encode(data).decode("ascii")})
         manifest=strict_json(next(m["content"] for m in packet["files"] if m["path"]=="CURRENT_ACCOUNTING_SOURCE.json"))
         actual={m["path"]:{key:m[key] for key in ("path","bytes","sha256")} for m in selected}
-        need(len(manifest["files"])==229 and len({m["path"] for m in manifest["files"]})==229 and
+        need(len(manifest["files"])==230 and len({m["path"] for m in manifest["files"]})==230 and
              {m["path"] for m in manifest["files"]}==names-{"CURRENT_ACCOUNTING_SOURCE.json"},
              "Complete current source roster required")
         for member in manifest["files"]:
             need(actual[member["path"]]==member,"Current roster member differs")
-        return {"schema":"principal.current-accounting-build-source.v2","files":selected}, original
+        return {"schema":"principal.current-accounting-build-source.v3","files":selected}, original
     for member in MEMBERS:
         data=read(Path(spec["sourceRoot"])/member["path"])
         need(len(data)==member["bytes"] and sha(data)==member["sha256"], "Original complete reference source differs: "+member["path"])
@@ -243,11 +243,12 @@ def main(argv=None):
     root=mkdir(Path(spec["directory"]))
     binding=sha(encode(spec))
     current=spec["schema"]==CURRENT_SCHEMA
-    profile="current-accounting-v2" if current else "reference"
+    profile="current-accounting-v3" if current else "reference"
     wasm=REFERENCE_WASM+["principal_pt_token","principal_yt_token","principal_recovery_escrow"] if current else REFERENCE_WASM
     snapshots=["current-01-live-repeated-claims","current-02-frozen-final",
                "current-03-explicit-pending-recovery","current-04-recovered-final",
-               "current-05-complete-maturity-proof"] if current else REFERENCE_SNAPSHOTS
+               "current-05-complete-maturity-proof","current-06-three-atom-conservation",
+               "current-07-full-unit-conservation"] if current else REFERENCE_SNAPSHOTS
     here=ordinary(Path(__file__).absolute())
     helper_path=ordinary(here.parent/"watershed_process.py")
     helper=read(helper_path)

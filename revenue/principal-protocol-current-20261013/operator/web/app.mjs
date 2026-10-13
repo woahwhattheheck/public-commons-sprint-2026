@@ -137,10 +137,13 @@ const accountingViews=[
  ['Yield paid · cumulative atoms','principal_manager','total_paid_yield',asText],
  ['YT accounting edition','yt_token','accounting_edition',asText],
  ['Stored accounting rate','yt_token','accounting_rate',x=>Market.atomText(x,7)],
- ['Remaining backing credit · underlying atoms','yt_token','total_backing_credit',asText],
+ ['YT notional reserve view · underlying atoms','yt_token','total_backing_credit',asText],
  ['Settled pending yield · underlying atoms','yt_token','total_pending',asText],
  ['Consumed yield · cumulative atoms','yt_token','total_claimed',asText],
- ['Recorded oracle samples','oracle_adapter','sample_count',asText]
+ ['Recorded oracle samples','oracle_adapter','sample_count',asText],
+ ['Inverse liability index · numerator','yt_token','inverse_index',asText],
+ ['Reward denominator','yt_token','reward_scale',asText],
+ ['Maximum supported oracle rate · scaled integer','yt_token','max_accounting_rate',asText]
 ];
 function accounting(host){
  const selected=accountingViews.filter(([,c,m])=>hasAction(c,m));if(!selected.length)return;
@@ -158,13 +161,17 @@ function accountAccounting(host,selected){
  const row=latestValue('yt_token','yield_position',{account:selected}),position=row?.value;
  const values=position&&typeof position==='object'?definitions({
   'YT balance · raw token units':position.balance,
-  'Remaining backing credit · underlying atoms':position.backing_credit,
+  'YT notional reserve view · underlying atoms':position.backing_credit,
   'Settled pending yield · underlying atoms':position.pending,
   'Stored accounting rate':Market.atomText(position.current_rate,7),
   'Unsettled yield at the stored rate · underlying atoms':position.projected_yield,
-  'Last settled factor':position.last_factor
+  'Last settled factor':position.last_factor,
+  'Current inverse index · numerator':position.inverse_index,
+  'Last settled inverse index · numerator':position.last_inverse_index,
+  'Stored earned fractional numerator':position.reward_remainder,
+  'Fraction denominator':position.reward_scale
  }):empty('No yield position has been read for this account and exact deployment.');
- host.append(panel('Account yield accounting',node('p','This single contract result keeps balance, remaining credit and settled pending yield together. Projected yield uses the stored accounting rate in that result. Claiming settles the current eligible rate and the manager measures the actual payout.'),button('Read complete yield position',()=>readSet([['yt_token','yield_position',{account:selected}]]),true),values,...(row?[json('Complete original accounting observation',row)]:[])));
+ host.append(panel('Account yield accounting',node('p','This single contract result keeps balance, the notional reserve view, pending whole yield and the earned fractional numerator together. Ordinary transfers preserve earned whole and fractional yield with the original holder. Projected yield is the additional whole amount at the stored index; its original remainder and denominator remain visible. Claiming settles the current eligible rate and the manager measures the actual payout.'),button('Read complete yield position',()=>readSet([['yt_token','yield_position',{account:selected}]]),true),values,...(row?[json('Complete original accounting observation',row)]:[])));
 }
 function recoveryAccounting(host,escrowId){
  if(!hasAction('recovery_escrow','yield_recovery_count'))return;
@@ -172,7 +179,7 @@ function recoveryAccounting(host,escrowId){
  if(escrowId)queries.push(['yt_token','yield_position',{account:escrowId}]);
  const form=draftForm('yield-recovery-history'),sequence=field(form,'Exact yield recovery sequence','sequence',{value:saved('yield-recovery-history','sequence','1'),required:true}),submit=node('button','Read original yield recovery receipt');submit.type='submit';form.append(submit);
  form.addEventListener('submit',e=>{e.preventDefault();handle(async()=>{capture(form,'yield-recovery-history');const value=sequence.value.trim();if(!/^[1-9][0-9]*$/.test(value))throw failure('RECOVERY_SEQUENCE_REQUIRED','Use an exact positive recovery sequence.');await readSet([['recovery_escrow','yield_recovery_receipt',{sequence:value}]]);});});
- host.append(panel('Recovered yield ledger',node('p','Each receipt retains the original source account, issuer, YT amount, pending underlying and recorded time. Yield-only recovery can move settled pending credit after the source account has transferred all YT.'),nativeCell('recovery_escrow','yield_recovery_count'),button('Read recovery count and escrow yield position',()=>readSet(queries)),form,nativeCell('recovery_escrow','yield_recovery_receipt',{sequence:saved('yield-recovery-history','sequence','1').trim()})));
+ host.append(panel('Recovered yield ledger',node('p','Each receipt retains the original source account, issuer, YT amount, pending underlying, exact fractional numerator and recorded time. Separate issuer-authorized operations recover whole yield and the remaining earned fraction, including after the source account has transferred all YT.'),nativeCell('recovery_escrow','yield_recovery_count'),button('Read recovery count and escrow yield position',()=>readSet(queries)),form,nativeCell('recovery_escrow','yield_recovery_receipt',{sequence:saved('yield-recovery-history','sequence','1').trim()})));
 }
 
 function market(host){
@@ -198,6 +205,18 @@ function market(host){
  host.append(panel('Contract wiring',node('p','Compare observed contract getters with the selected deployment. Every match retains its own source observation; unobserved wiring remains visible.'),button('Read complete contract wiring',()=>readSet(topology.map(r=>[r.contract,r.method]))),table(topology,[{label:'Contract',value:r=>r.contract},{label:'Getter',value:r=>r.method},{label:'Expected',className:'identifier',value:r=>r.expected},{label:'Observed',className:'identifier',value:r=>r.observed},{label:'Result',value:r=>badge(r.status)}])));
  host.append(panel('Configured deployment',table(Market.CONTRACTS.map(contract=>({contract,...state.config?.contracts?.[contract]})),[{label:'Contract',value:r=>r.contract},{label:'Contract ID',className:'identifier',value:r=>r.id},{label:'WASM SHA-256',className:'identifier',value:r=>r.wasmSha256}]),button('Edit configuration',()=>go('settings')),reportButtons()));
 }
+function mintPreview(host,selected){
+ if(!hasAction('principal_manager','preview_mint'))return;
+ const key='mint-preview:'+selected,form=draftForm(key),shares=field(form,'Exact SY shares to split','sy_shares',{value:saved(key,'sy_shares',''),required:true,help:'Positive raw share atoms. The preview shows the exact issued notional and its difference from the original rate formula.'}),submit=node('button','Read mint preview');submit.type='submit';form.append(submit);
+ form.addEventListener('submit',e=>{e.preventDefault();handle(async()=>{capture(form,key);const v=shares.value.trim();if(!/^[1-9][0-9]*$/.test(v))throw failure('SHARES_REQUIRED','Use exact positive SY share atoms.');await readSet([['principal_manager','preview_mint',{sy_shares:v}]]);});});
+ const amount=saved(key,'sy_shares','').trim(),row=latestValue('principal_manager','preview_mint',{sy_shares:amount}),value=row?.value;
+ const section=panel('Preview PT and YT issuance',node('p','Accounting edition 3 uses a conservative inverse index with an immutable denominator. Review both notional formulas and their exact integer difference before preparing the mint. A preview retains its own observation time; the eventual contract call evaluates its current eligible rate.'),form);
+ if(value&&typeof value==='object'){
+  section.append(definitions({'SY shares':value.sy_shares,'Valued underlying atoms':value.underlying,'Oracle rate · scaled integer':value.oracle_rate,'Inverse index':value.inverse_index,'Reward denominator':value.reward_scale,'Original-rate notional atoms':value.original_rate_notional,'Issued PT and YT atoms':value.issued_notional,'Issuance adjustment · notional atoms':value.issuance_adjustment}),json('Complete original mint preview',row),button('Prepare mint from this preview',()=>{const ctx=currentBinding('principal_manager');assertCurrentBinding(Market.observedBinding(row));chooseAction('principal_manager','mint',{from:selected,sy_shares:String(value.sy_shares)},ctx);}));
+ }else section.append(empty('Read a preview for the exact share amount and deployment.'));
+ host.append(section);
+}
+
 function account(host){
  const f=draftForm('account-position'),input=field(f,'Public account or contract address','account',{value:saved('account-position','account',view.selectedAccount??state.config?.sourceAccount?.address??''),required:true});
  const submit=node('button','Read account positions','primary');submit.type='submit';f.append(submit);
@@ -214,6 +233,7 @@ function account(host){
  for(const [label,c,m,fmt]of [['SY balance','sy_wrapper','balance_of',asText],['PT balance','pt_token','balance',v=>Market.atomText(v,Market.decimals(state,currentAPI(),'pt_token'))],['YT balance','yt_token','balance',v=>Market.atomText(v,Market.decimals(state,currentAPI(),'yt_token'))],['Stored accrued yield · underlying raw units','yt_token','pending_claim',asText],['Last accounted yield index','yt_token','last_claimed_index',asText],['Additional account eligibility','permissioning','is_allowed',asText]])grid.append(panel(label,nativeCell(c,m,{account:selected},fmt)));
  host.append(panel('Original account selection',node('p',selected,'identifier')),grid);
  accountAccounting(host,selected);
+ mintPreview(host,selected);
  host.append(panel('Prepare account operations',node('p','Enter exact raw amounts in the operation form. The selected contracts evaluate current authorization, eligibility and available backing.'),actions(operationButton('Deposit underlying','sy_wrapper','deposit',{from:selected}),operationButton('Withdraw SY','sy_wrapper','withdraw',{from:selected,to:selected}),operationButton('Mint PT and YT','principal_manager','mint',{from:selected}),operationButton('Claim accrued yield','principal_manager','claim_yield',{from:selected}),operationButton('Redeem at maturity','principal_manager','redeem',{from:selected})),actions(operationButton('Transfer PT','pt_token','transfer',{from:selected}),operationButton('Transfer YT','yt_token','transfer',{from:selected}),operationButton('Review PT allowance','pt_token','allowance',{from:selected}),operationButton('Review YT allowance','yt_token','allowance',{from:selected}))));
  const rows=(state.observations??[]).filter(r=>Object.values(r.parameters??{}).includes(selected));
  host.append(panel('Original account observation history',table([...rows].reverse(),[{label:'Action',value:r=>r.actionId},{label:'Time',value:r=>r.createdAt},{label:'Status',value:r=>r.status},{label:'Review',value:r=>button('Open complete original',()=>detail('Account observation',json('Retained original',r,true)))}])));
@@ -288,7 +308,7 @@ function escrow(host){
  host.append(panel(selected?(selected.unique?'Current recovery case':'Resolve competing case editions'):'New recovery case',definitions({'Case':caseId,'Selected original basis':basis?.note.id}),f));
  if(selected?.unique){
   const v=selected.value,ctx=v.binding,p=panel('Prepare from this case',node('p','Case stages are retained operator decisions. Inspect the original native result before recording a later stage.'));
-  p.append(actions(...[['Seize SY','seize_sy'],['Seize PT','seize_pt'],['Seize YT','seize_yt'],['Recover settled yield','recover_yield'],['Finalize PT','finalize_pt'],['Finalize YT','finalize_yt'],['Finalize settled yield','finalize_yield']].filter(([,method])=>hasAction('recovery_escrow',method)).map(([label,method])=>button(label,()=>{Market.currentCase(state,{key:selected.key,noteId:selected.note.id});assertCurrentBinding(ctx);chooseAction('recovery_escrow',method,{caller,...((method.startsWith('seize')||method==='recover_yield')?{account:v.account}:{})},ctx,{key:selected.key,noteId:selected.note.id});}))));
+  p.append(actions(...[['Seize SY','seize_sy'],['Seize PT','seize_pt'],['Seize YT','seize_yt'],['Recover settled yield','recover_yield'],['Recover earned fraction','recover_fraction'],['Finalize PT','finalize_pt'],['Finalize YT','finalize_yt'],['Finalize settled yield','finalize_yield']].filter(([,method])=>hasAction('recovery_escrow',method)).map(([label,method])=>button(label,()=>{Market.currentCase(state,{key:selected.key,noteId:selected.note.id});assertCurrentBinding(ctx);chooseAction('recovery_escrow',method,{caller,...((method.startsWith('seize')||method.startsWith('recover_'))?{account:v.account}:{})},ctx,{key:selected.key,noteId:selected.note.id});}))));
   p.append(button('Open retained event history',()=>go('events')));host.append(p);
  }
  host.append(reportButtons());

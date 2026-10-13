@@ -207,8 +207,8 @@
     },
     {
       "path": "native/principal-build.py",
-      "bytes": 26204,
-      "sha256": "c6b9fbc0bab8e59d71bf6263d40ab5cf806c214470c4c3611b76433de678cf92"
+      "bytes": 26293,
+      "sha256": "b2522891884a284aab08f36f88633a69e5a3763d572c20642eda2faa7d9cb1cc"
     },
     {
       "path": "native/PRINCIPAL_BUILD.md",
@@ -217,8 +217,8 @@
     },
     {
       "path": "native/CURRENT_BUILD.md",
-      "bytes": 6405,
-      "sha256": "b36e8ac3ffbff7175a994622ca221efa44d6abba5f7e487fc76a3a850561b4e6"
+      "bytes": 7347,
+      "sha256": "ccc188d71af4ed03f0f37491640e67b01b6064b9028bb0951b39b242641420d3"
     }
   ]
 }
