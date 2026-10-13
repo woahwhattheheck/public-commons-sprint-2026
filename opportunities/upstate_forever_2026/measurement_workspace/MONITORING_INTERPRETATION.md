@@ -75,3 +75,12 @@ It imports the installed complete utility cohort only if not already present, pr
 This feature joins the existing Eco native application and its original receiving operation. Keep the current workspace, original 15227 installer, source editions and completed science outputs. The current native receiver may compose these new files into its retained application after preserving the current shared application files; the full application installer carries the complete profile and browser dependencies.
 
 Carry CURRENT_OWNER_DIRECTION.md version 2026-10-13.4 and AGENTS.md version 2026-10-13.1. The earlier time cutoff is historical. Operate the exact browser controls, view desktop and narrow screens, open every downloaded attachment and use the cold-reopened workspace before presenting the outgoing edition. The meaningful result is the working interpretation and complete received science package; source compilation alone does not replace its actual use.
+
+
+## Readable scientific report
+
+The complete HTML download opens with the selected evidence, date support, separate station/method/unit series, comparison profile and actual applicability state. Station tables retain every metric window, original denominator, numerical-support count, result or censor bounds, measured unit, reference unit and source-support explanation. Excursion fractions distinguish the measurement threshold from the permitted fraction. Overlapping window counts are analytical windows, not independent regulatory events.
+
+Analyst choices, method rationale and every required site/source confirmation are readable fields. Profile rules, minimum-sample basis, minimum spacing, season, contextual frequency and limitations use readable tables and expandable method descriptions. Primary publication links come from the exact saved source index; the report retains its original catalogue when an installed source changes. Reading the result requires no JSON editing.
+
+The full original-row table remains in the report, including laboratory comments and exact CSV locators. CSV, JSON, original-study ZIP and every retained reference file remain ordinary downloads. The complete source ZIP includes the generated report and exact rendering module. This presentation preserves the saved calculation identity, observations, thresholds, numerical comparisons, request and original source bindings.
