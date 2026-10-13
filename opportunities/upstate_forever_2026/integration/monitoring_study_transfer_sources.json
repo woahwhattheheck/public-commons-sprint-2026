@@ -26,10 +26,11 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 17134,
-      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "bytes": 24516,
+      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
       "predecessor_sha256": [
-        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
       ]
     },
     {
@@ -73,20 +74,22 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 25880,
-      "sha256": "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+      "bytes": 26148,
+      "sha256": "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
       "predecessor_sha256": [
         "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361",
-        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7"
+        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
+        "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c"
       ]
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 27202,
-      "sha256": "79985363d3d6b0922d55bc414f91b28c039b21b95678a56fcb813ec6c7d6db9d",
+      "bytes": 27430,
+      "sha256": "acd91457f98fd8d22b72445948f5d38628a501f3c3bc39be2b5294083e3ca095",
       "predecessor_sha256": [
         "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91",
-        "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e"
+        "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e",
+        "79985363d3d6b0922d55bc414f91b28c039b21b95678a56fcb813ec6c7d6db9d"
       ]
     },
     {
