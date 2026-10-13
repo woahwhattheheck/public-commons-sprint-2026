@@ -99,7 +99,7 @@ The public journey records the requested browser kind, executable path or channe
 
 ## Reopen completed analyses from a received full Workspace
 
-Use `--restored-selection` when the native Workspace already contains the chemical case and its completed analyses. This mode opens those original records directly, reads their actual requests and source references, inspects every selected analysis, downloads its original results, and exports the retained editable project. `--receive` additionally receives that project through Original sources and Reach chemistry; `--transfer` continues through the original full Workspace backup and independent receiving workflow.
+Use `--restored-selection` when the native Workspace already contains the chemical case and its completed analyses. This mode opens those original records directly, reads their actual requests and source references, inspects every selected analysis, downloads all of its original result artifacts through native file tickets, and exports the retained editable project. `--receive` additionally receives that project through Original sources and Reach chemistry; `--transfer` continues through the original full Workspace backup and independent receiving workflow.
 
 The native case reader verifies the chemical project fingerprint and the bytes of its original source edition, manifest and companions. The browser checks the actual receiving project's identity, each completed run's case and project selection, and the complete retained case/run fingerprints. Each selected analysis is opened through the current Reach chemistry interface, including its native result collection and result downloads.
 
