@@ -1,0 +1,37 @@
+{
+  "schema": "tjlabs.heritage-training-source-origins.v1",
+  "originalEngine": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "f2277db6",
+    "files": [
+      {
+        "path": "onboarding.mjs",
+        "bytes": 36894,
+        "sha256": "26105d7c671c0dde862d1ef4108872acf49cf4b5b797c9e66f1aab037b593837"
+      },
+      {
+        "path": "source-document-tables.mjs",
+        "bytes": 17473,
+        "sha256": "f5d0d411e38c2af0a0076341651de2ffd9a30c9872f6e8c15d44599b28d8db34"
+      },
+      {
+        "path": "source-table-intake.mjs",
+        "bytes": 8590,
+        "sha256": "b6772b928ae5ce81b6b47d0882feee010dd34121f13e752ccc699819f709d28e"
+      },
+      {
+        "path": "source-table-workspace.mjs",
+        "bytes": 43932,
+        "sha256": "2dede37ae31132894590e721144d7900c521892c9b86a873911aae5f7c99a400"
+      }
+    ]
+  },
+  "officialIntake": {
+    "edition": 3,
+    "bytes": 241918,
+    "sha256": "75b8f28807b49c22131c3c343c844e735225293b4af527f0ae74af456066b715",
+    "files": 23,
+    "sources": 36
+  },
+  "authoredBy": "TJLabs E496 with Actions primary-source intake and independent SCF model review"
+}

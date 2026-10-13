@@ -1,0 +1,13 @@
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {resolve,dirname,join} from 'node:path';
+import {createResearchProject,receiveResearch} from './model.mjs';
+import {renderApplication} from './render.mjs';
+import {archiveFiles} from './io.mjs';
+const root=dirname(fileURLToPath(import.meta.url)),inventory=JSON.parse(await readFile(join(root,'SOURCE_FILES.json'),'utf8'));
+const files=await Promise.all(inventory.files.map(async path=>({path,content:await readFile(join(root,path),'utf8')})));
+const project=process.argv[2]?await receiveResearch(await readFile(resolve(process.argv[2]),'utf8')):await createResearchProject(JSON.parse(await readFile(join(root,'seed.json'),'utf8')));
+const output=resolve(process.argv[3]||join(root,'dist'));if(output===root||root.startsWith(output+'/'))throw Error('Build output must not replace the source application.');
+await mkdir(output,{recursive:true});const html=renderApplication(project,files),zip=await archiveFiles(project,files,html);
+await writeFile(join(output,'index.html'),html);await writeFile(join(output,'project.json'),JSON.stringify(project,null,2)+'\n');await writeFile(join(output,'Heritage_Training_Research.zip'),zip.bytes);await writeFile(join(output,'manifest.json'),JSON.stringify(zip.manifest,null,2)+'\n');
+console.log(JSON.stringify({schema:'tjlabs.heritage-training-build.v1',projectId:project.id,output,sourceFiles:files.length,packageFiles:zip.files.length,zipBytes:zip.bytes.length}));

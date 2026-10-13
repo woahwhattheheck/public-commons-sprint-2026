@@ -1,0 +1,379 @@
+{
+  "schema": "commons.uid370.measure-contracts.v1",
+  "contracts": [
+    {
+      "id": "ofqual_certificates",
+      "sources": [
+        "S09",
+        "S10"
+      ],
+      "metric": "certificates",
+      "grain": [
+        "qualification_number",
+        "recognition_number",
+        "quarter",
+        "country"
+      ],
+      "population": "qualifications included in Ofqual's England quarterly certificate release",
+      "unit": "certificates",
+      "period": "calendar quarter from original column",
+      "cohortRule": "certificate issuance in that quarter; not a learner start cohort",
+      "rounding": "nearest5; source true zero retained",
+      "rawIdentity": [
+        "Qualification Number",
+        "Recognition Number"
+      ],
+      "wideQuarterHeader": "Year.Quarter",
+      "countryMeaning": "country of primary assessment as described in metadata",
+      "tokens": {
+        "0": {
+          "status": "observed_zero",
+          "numericValue": 0
+        },
+        "Fewer than 5": {
+          "status": "disclosed_small_count",
+          "numericValue": null,
+          "lowerInclusive": 1,
+          "upperInclusive": 4
+        },
+        "": {
+          "status": "missing",
+          "numericValue": null
+        }
+      },
+      "numericInterpretation": "Positive numerals retain rounded_published_count status; do not infer exact underlying counts.",
+      "metadataConflict": "CSVW lists0 in null values while its description identifies true zero; this intake explicitly preserves zero and records issueI02.",
+      "notSupported": [
+        "unique_people",
+        "provider",
+        "site",
+        "completion_rate",
+        "heritage_option"
+      ]
+    },
+    {
+      "id": "fe_aim_qar",
+      "sources": [
+        "S13"
+      ],
+      "metrics": [
+        "leavers",
+        "completers",
+        "achievers",
+        "retention_rate",
+        "pass_rate",
+        "achievement_rate"
+      ],
+      "grain": [
+        "time_period",
+        "geographic_level",
+        "country_code",
+        "provision_type",
+        "age_band",
+        "regulated_qualification",
+        "sector_subject_area_t1",
+        "qualification_type",
+        "learning_aim_title_plus_aim_reference",
+        "level"
+      ],
+      "population": "education and training individual qualification aims meeting this release's QAR business rules",
+      "unitByMetric": {
+        "leavers": "aims",
+        "completers": "aims",
+        "achievers": "aims",
+        "retention_rate": "percent",
+        "pass_rate": "percent",
+        "achievement_rate": "percent"
+      },
+      "coverage": [
+        "2022/23",
+        "2023/24",
+        "2024/25"
+      ],
+      "cohortRule": "hybrid end year: later expected end year, actual end year or reporting year; apply actual business-rule exclusions",
+      "formulas": {
+        "retention_rate": "completers / leavers *100",
+        "pass_rate": "achievers / completers *100",
+        "achievement_rate": "achievers / leavers *100"
+      },
+      "rounding": {
+        "volume": "nearest10",
+        "rate": "one decimal from unrounded volumes"
+      },
+      "notSupported": [
+        "provider",
+        "site",
+        "unique_people"
+      ],
+      "ratePolicy": "Use the published rate; do not reconstruct it from rounded displayed counts."
+    },
+    {
+      "id": "apprenticeship_standard_qar",
+      "sources": [
+        "S16"
+      ],
+      "metrics": [
+        "leavers",
+        "completers",
+        "achievers",
+        "retention_rate",
+        "pass_rate",
+        "achievement_rate"
+      ],
+      "grain": [
+        "time_period",
+        "country_code",
+        "std_fwk_flag",
+        "ssa_tier_1",
+        "ssa_tier_2",
+        "std_fwk_name_stcode",
+        "level",
+        "detailed_level",
+        "age_youth_adult",
+        "age_group",
+        "funding_type"
+      ],
+      "population": "apprenticeship programme aims in the selected QAR cohort",
+      "coverage": [
+        "2022/23",
+        "2023/24",
+        "2024/25"
+      ],
+      "cohortRule": "apply selected apprenticeship QAR edition, including achievement year in hybrid-end-year rules",
+      "rounding": {
+        "volume": "read selected file/release footnote; methodology nearest10",
+        "rate": "one decimal from unrounded volumes"
+      },
+      "notSupported": [
+        "option",
+        "site",
+        "unique_people"
+      ]
+    },
+    {
+      "id": "apprenticeship_provider_standard_qar",
+      "sources": [
+        "S17"
+      ],
+      "metrics": [
+        "leavers",
+        "completers",
+        "achievers",
+        "retention_rate",
+        "pass_rate",
+        "achievement_rate"
+      ],
+      "grain": [
+        "time_period",
+        "country_code",
+        "provider_ukprn",
+        "provider_type",
+        "ssa_tier_1",
+        "level",
+        "std_fwk_name_stcode",
+        "age_youth_adult",
+        "age_group"
+      ],
+      "population": "apprenticeship programme aims in provider/standard QAR slices",
+      "coverage": [
+        "2022/23",
+        "2023/24",
+        "2024/25"
+      ],
+      "cohortRule": "hybrid end year: later achievement year, expected end year, actual end year or reporting year; preserve exclusions",
+      "denominators": {
+        "retention_rate": "leavers",
+        "pass_rate": "completers",
+        "achievement_rate": "leavers"
+      },
+      "rounding": {
+        "volume": "read selected file/release footnote; methodology nearest10",
+        "rate": "one decimal from unrounded volumes"
+      },
+      "notSupported": [
+        "option",
+        "site",
+        "unique_people"
+      ],
+      "redactionsSource": "S20"
+    },
+    {
+      "id": "apprenticeship_standard_activity",
+      "sources": [
+        "S15",
+        "S18"
+      ],
+      "metrics": [
+        "starts",
+        "achievements",
+        "enrolments"
+      ],
+      "grain": [
+        "time_period",
+        "country_code",
+        "breakdown_topic",
+        "breakdown",
+        "apps_level_detailed",
+        "ssa_tier_1",
+        "std_fwk_name_stcode"
+      ],
+      "population": "apprenticeship programme activity in the reported interval",
+      "unit": "programme events/enrolments according to metric; not a deduplicated unique-person sum",
+      "periodStatus": {
+        "2025/26": "provisional Aug2025–Apr2026",
+        "earlier": "final Aug–Jul, within selected table"
+      },
+      "notSupported": [
+        "provider",
+        "option",
+        "site",
+        "same-start-cohort completion_rate"
+      ],
+      "ratePolicy": "Do not divide same-period achievements by starts and label completion."
+    },
+    {
+      "id": "apprenticeship_provider_activity",
+      "sources": [
+        "S19"
+      ],
+      "metrics": [
+        "starts",
+        "achievements"
+      ],
+      "grain": [
+        "time_period",
+        "country_code",
+        "provider_ukprn",
+        "apprenticeship_type",
+        "apps_level",
+        "ssa_tier_1"
+      ],
+      "population": "provider apprenticeship programme events in the reported interval",
+      "periodStatus": {
+        "2025/26": "provisional Aug2025–Apr2026",
+        "earlier": "final Aug–Jul"
+      },
+      "notSupported": [
+        "standard",
+        "option",
+        "site",
+        "unique_people",
+        "completion_rate"
+      ]
+    },
+    {
+      "id": "provider_confirmed_cohort",
+      "sources": [],
+      "metrics": [],
+      "grain": [
+        "providerId",
+        "qualificationOrStandardVersion",
+        "optionIfObserved",
+        "siteIfObserved",
+        "startCohort",
+        "followupEnd"
+      ],
+      "population": null,
+      "unit": null,
+      "cohortRule": null,
+      "rounding": null,
+      "status": "awaiting actual authorized aggregate return",
+      "requiredDefinition": [
+        "counting_unit",
+        "start_and_end_dates",
+        "withdrawal_transfer_break_rules",
+        "deduplication",
+        "outcome_cutoff",
+        "denominator",
+        "disclosure",
+        "coverage",
+        "original_source"
+      ],
+      "notSupported": [
+        "inferred values from national data"
+      ]
+    }
+  ],
+  "dfeTokens": {
+    "volume": {
+      "0": {
+        "status": "rounded_published_count",
+        "numericValue": 0,
+        "note": "Never transfer Ofqual true-zero semantics automatically; consult this selected DfE table's disclosure rules."
+      },
+      "low": {
+        "status": "disclosed_small_count",
+        "numericValue": null,
+        "lowerInclusive": 0,
+        "upperInclusive": 4
+      },
+      "x": {
+        "status": "unavailable",
+        "numericValue": null
+      },
+      "z": {
+        "status": "not_applicable",
+        "numericValue": null
+      },
+      "c": {
+        "status": "suppressed",
+        "numericValue": null
+      },
+      "": {
+        "status": "missing_or_source_defined",
+        "numericValue": null
+      }
+    },
+    "percent": {
+      "low": {
+        "status": "disclosed_small_percentage",
+        "numericValue": null,
+        "lowerInclusive": 0,
+        "upperExclusive": 0.5
+      },
+      "x": {
+        "status": "unavailable",
+        "numericValue": null
+      },
+      "z": {
+        "status": "not_applicable",
+        "numericValue": null
+      },
+      "c": {
+        "status": "suppressed",
+        "numericValue": null
+      },
+      "": {
+        "status": "missing_or_source_defined",
+        "numericValue": null
+      }
+    }
+  },
+  "aggregation": {
+    "requireEqual": [
+      "metric",
+      "population",
+      "cohortRule",
+      "coverageStart",
+      "coverageEnd",
+      "unit",
+      "geographyBasis",
+      "sourceReleaseBasis",
+      "rounding",
+      "suppressionRule"
+    ],
+    "requireExplicit": [
+      "nonoverlappingPartitionDeclaration",
+      "completeSourceRowKeys"
+    ],
+    "reject": [
+      "Total plus children",
+      "overlapping age or subject slices",
+      "standard totals allocated to options",
+      "provider totals allocated to sites",
+      "different-period start/achievement ratios",
+      "inference of suppressed cells"
+    ],
+    "publishedRateTreatment": "Retain exactly; do not average unweighted or recalculate from rounded cells."
+  }
+}
