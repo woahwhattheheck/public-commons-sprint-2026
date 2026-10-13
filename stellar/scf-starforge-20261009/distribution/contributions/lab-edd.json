@@ -37,7 +37,11 @@
     },
     "./lab-edd/operator/connection": "./source/stellar-forge/mcp-merchant-operator/lab-edd-connection.mjs",
     "./lab-edd/operator/setup": "./source/stellar-forge/mcp-merchant-operator/lab-edd-setup.mjs",
-    "./lab-edd/operator/receiving": "./source/stellar-forge/mcp-merchant-operator/lab-edd-receiving.mjs"
+    "./lab-edd/operator/receiving": "./source/stellar-forge/mcp-merchant-operator/lab-edd-receiving.mjs",
+    "./seller/lab-edd/received-result": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/received-result.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/received-result.mjs"
+    }
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/README.md",
@@ -98,7 +102,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/LEGACY_XLS.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.legacy.example.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/xlrd/SOURCE.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/xlrd/formula_test_sjmachin.xls"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/xlrd/formula_test_sjmachin.xls",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/received-result.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/RESULT_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/received-result-receiving.mjs"
   ],
   "applicationProviders": {
     "laboratory-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"
