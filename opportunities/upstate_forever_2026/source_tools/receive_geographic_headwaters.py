@@ -31,6 +31,38 @@ def _outside(path, root):
         raise ValueError("Keep receiving output separate from the application and Workspace")
 
 
+def _scientific_source(workspace, ensemble_id, output):
+    """Reuse the verified complete source edition without rewriting its operation.
+
+    The maintained producer decides whether its source/result signatures remain
+    current. Changed signatures still receive a new ordinary producer edition.
+    Every selected snapshot is retained before advancing the receiving pointer.
+    """
+    from model import ensemble_study_source as study_source
+
+    scientific = study_source.latest(workspace, ensemble_id, verify=True)
+    if (scientific is None or scientific.get("state") != "complete"
+            or scientific.get("source_state") != "current"):
+        scientific = study_source.prepare(workspace, ensemble_id, render=True)
+    if scientific.get("state") != "complete":
+        raise ValueError("Continue the original ensemble scientific source until complete")
+    # Verify the selected complete operation and all of its existing native
+    # source/report members after a prepare as well as during a retained reopen.
+    verified = study_source.latest(workspace, ensemble_id, verify=True)
+    if verified != scientific or verified.get("source_state") != "current":
+        raise ValueError("The selected scientific source advanced during receiving; retain this original attempt and reopen")
+    pointer = Path(output) / "scientific-source.json"
+    for value in ([read_json(pointer)] if pointer.exists() else []) + [scientific]:
+        if (value.get("workspace_id") != workspace.project["id"]
+                or value.get("ensemble_id") != ensemble_id
+                or value.get("id") != digest(value.get("selection"))):
+            raise ValueError("Retained scientific snapshot belongs to another original study")
+        atomic_json(Path(output) / "scientific-editions" / value["id"]
+                    / (digest(value) + ".json"), value, immutable=True)
+    atomic_json(pointer, scientific)
+    return scientific
+
+
 def receive(args):
     workspace = Workspace(args.workspace.resolve(), create=True, title="Upper Savannah geographic demonstration")
     # Source intake is explicit; paths name original ordinary Workspace manifests.
@@ -148,13 +180,13 @@ def receive(args):
             receiving_lock_path=output/".geographic-receiving.lock"))
         atomic_json(output/"scenario-source-context.json", interpreted)
         save(scenario_source_context=interpreted)
-        from model.ensemble_study_source import prepare as prepare_study_source
         from model.ensemble_scientific_source import delivery_selection
-        scientific = phase("scientific_report",lambda:prepare_study_source(
-            workspace,prepared["ensemble_id"],render=True))
-        atomic_json(output/"scientific-source.json",scientific)
-        if scientific.get("state") != "complete":
-            raise ValueError("Continue the original ensemble scientific source until complete")
+        scientific = phase("scientific_report", lambda: _scientific_source(
+            workspace, prepared["ensemble_id"], output))
+        save(scientific_source_generation={"id": scientific["id"],
+             "snapshot_digest": digest(scientific),
+             "snapshot": str(Path("scientific-editions") / scientific["id"]
+                             / (digest(scientific) + ".json"))})
         selected = {
             "delivery_mode":"native_study","audit_scope":"source-native",
             "native_study":{"title":selection["title"],"purpose":selection["question"],
