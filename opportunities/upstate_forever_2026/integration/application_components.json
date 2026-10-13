@@ -86,7 +86,8 @@
     "observed-original-report-edition",
     "sampling-flow-coverage",
     "annual-nlcd-native-source",
-    "community-report-context"
+    "community-report-context",
+    "delivery-datasets"
   ],
   "components": {
     "core": {
@@ -5416,6 +5417,23 @@
         "core",
         "observed-context"
       ]
+    },
+    "delivery-datasets": {
+      "title": "Editable GIS datasets and FGDC metadata for original atlas map panels",
+      "paths": [
+        "model/delivery_datasets.py",
+        "model/delivery.py",
+        "model/map_atlas.py",
+        "model/atlas_browser.py",
+        "operator/web/delivery_inspection.mjs",
+        "operator/DELIVERY_DATASETS.md"
+      ],
+      "requires": [
+        "core",
+        "map-atlas",
+        "delivery-inspection"
+      ],
+      "source_reference": "ES-20261013-DELIVERY-DATASETS: exact retained physical exports, signed comparison rasters and selected priorities in the original atlas index and portable delivery."
     }
   }
 }

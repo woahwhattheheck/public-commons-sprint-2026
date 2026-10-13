@@ -7,6 +7,7 @@ import os
 import platform
 import socket
 import sys
+import stat
 import zipfile
 from pathlib import Path
 
@@ -159,6 +160,10 @@ def _archive_snapshot(path, output, workspace, edition, previous):
         with zipfile.ZipFile(source) as archive:
             manifest = portable._inspect_archive(archive, verify=True)
         sha256 = portable._archive_digest(source, before)
+        after = path.lstat()
+        if (not stat.S_ISREG(after.st_mode)
+                or (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns) != before):
+            raise ValueError("Archive pathname changed during receiving")
     descriptor = {"path": path.relative_to(output).as_posix(), "bytes": before[2], "sha256": sha256}
     if previous and not _same_file(previous["archive"], descriptor):
         raise ValueError("The saved Workspace archive changed; preserve the original receiving state")
@@ -175,6 +180,8 @@ def _archive_snapshot(path, output, workspace, edition, previous):
 
 def _verify_reopened(root, manifest):
     """Bind a retained restore, including a lost checkpoint, to every archived member."""
+    if root.is_symlink():
+        raise ValueError("Use the original regular receiving directory")
     root = root.resolve(strict=True)
     for name, record in manifest["members"].items():
         relative = portable.member_name(name)
@@ -211,6 +218,13 @@ def _receive(args):
         "huc_collection": args.huc_collection, "huc_source_id": args.huc_source_id,
         "huc_id_field": args.huc_id_field, "reporting_huc12s": sorted(args.reporting_huc12 or []),
         "utility_selection": str(Path(args.utility_selection).resolve()) if args.utility_selection else None}
+    # Original whole-source receipts keep their exact selection identity.
+    if args.catchment_manifest or args.catchment_collection or args.catchment_source_id != CATCHMENT_ID:
+        identity["catchment_selection"] = {
+            "manifest": str(Path(args.catchment_manifest).resolve()) if args.catchment_manifest else None,
+            "collection_id": args.catchment_collection, "source_id": args.catchment_source_id}
+    if args.support_kind:
+        identity["support_kind"] = args.support_kind
     if receipt_path.exists():
         receipt = read_json(receipt_path)
         if receipt.get("identity") != identity:
@@ -243,6 +257,12 @@ def _receive(args):
             return collection
         daily = imported("coverage_import", manifest)
         nldi = imported("nldi_import", Path(args.nldi_manifest).resolve(strict=True))
+        if args.catchment_manifest:
+            catchment = imported("catchment_import", Path(args.catchment_manifest).resolve(strict=True))
+        elif args.catchment_collection:
+            catchment = workspace._get("sources", args.catchment_collection)
+        else:
+            catchment = nldi
         if args.huc_manifest:
             huc = imported("huc_import", Path(args.huc_manifest).resolve(strict=True))
         else:
@@ -253,8 +273,10 @@ def _receive(args):
         selection = {"title": args.title, "report_id": args.report_id,
             "huc_sources": [huc_ref], "point_source": {
                 **_reference(nldi, POINT_ID), "station_id_field": "station_id"},
-            "catchment_source": _reference(nldi, CATCHMENT_ID),
+            "catchment_source": _reference(catchment, args.catchment_source_id),
             "coverage_source": _reference(daily, COVERAGE_ID)}
+        if args.support_kind:
+            selection["support_kind"] = args.support_kind
         if args.reporting_huc12:
             selection["reporting_huc12s"] = args.reporting_huc12
         if args.utility_selection:
@@ -264,7 +286,9 @@ def _receive(args):
             selection["utility_sources"] = utility
         atomic_json(output / "gauge-support-selection.json", selection, immutable=True)
         checkpoint("selection", path=str(output / "gauge-support-selection.json"),
-            report_id=args.report_id, huc_source_id=args.huc_source_id)
+            report_id=args.report_id, huc_source_id=args.huc_source_id,
+            catchment_source=selection["catchment_source"],
+            declared_support_kind=selection.get("support_kind"))
         if args.prepare_only:
             receipt["state"] = "prepared"
             atomic_json(receipt_path, receipt)
@@ -280,7 +304,9 @@ def _receive(args):
             edition = gauge_support.build(workspace, selection)
             gauge_support.inspect(workspace, edition["id"], verify=True)
         checkpoint("support_build", edition_id=edition["id"], station_edition_id=edition["station_edition_id"],
-            build_id=edition["build_id"], summary=edition["summary"])
+            build_id=edition["build_id"], summary=edition["summary"],
+            support=gauge_support.support_for_result(gauge_support.inspect(workspace,
+                edition["id"], verify=True, include_result=True)["result"]))
         archive = output / ("gauge-support-workspace-" + edition["id"] + ".zip")
         previous_backup = receipt["phases"].get("workspace_backup")
         if not archive.exists():
@@ -335,6 +361,13 @@ def main(argv=None):
     parser.add_argument("--title", default="Upper Savannah original gauge and catchment support")
     parser.add_argument("--daily-source", default=str(application / "source/hydrology-huc05-07-20261013"))
     parser.add_argument("--nldi-manifest", default=str(application / "source/hydrology-huc05-07-20261013/nldi/model-sources.json"))
+    catchment = parser.add_mutually_exclusive_group()
+    catchment.add_argument("--catchment-manifest", help="Exact completed source edition model-sources.json")
+    catchment.add_argument("--catchment-collection", help="Already retained catchment source collection")
+    parser.add_argument("--catchment-source-id", default=CATCHMENT_ID,
+        help="Exact source ID in the selected whole or split edition")
+    parser.add_argument("--support-kind", choices=sorted(gauge_support.SUPPORT_DEFINITIONS),
+        help="Optional explicit expected method, verified against every original feature")
     parser.add_argument("--huc-manifest")
     parser.add_argument("--huc-collection")
     parser.add_argument("--huc-source-id", default="upstate-wbd-upstream-domain-20261012")

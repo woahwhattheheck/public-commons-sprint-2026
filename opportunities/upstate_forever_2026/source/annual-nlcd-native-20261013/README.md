@@ -32,7 +32,7 @@ Select this completed raster as the reference for the maintained A74F source fin
 python -B -m source_tools.soil_region prepare \
   --capture "$UPSTATE_REGIONAL_SOIL_CAPTURE" \
   --reference source/annual-nlcd-native-20261013/source/land-cover.tif \
-  --output "$UPSTATE_SOIL_CAPTURE" \
+  --output "$UPSTATE_SOIL_PREPARED" \
   --null-policy nlcd-water-zero
 ```
 
@@ -60,7 +60,7 @@ The accompanying `source_tools/original_landcover_zonal.mjs` and `source_tools/O
 
 `source/plan.json` retains all 49 exact provider URLs, original PNG hashes, decoded tile hashes, source-description identity, original document references, and grid. All 11,252,658 original PNG bytes remain in the seven source-row documents and original probe notebook; the plan identifies each document and its selected tiles. Normal DOCX exports retain the original PNG dimensions and bytes regardless of display size.
 
-`decode_png.mjs` and `write_geotiff.mjs` are the executed byte decoder and TIFF writer. The decoder accepts a zlib inflate function, such as Node's `inflateSync`. The TIFF writer accepts verified compressed strips and writes AdobeDeflate GeoTIFF with the original GeoKeys, metre units and PixelIsArea. `source/validation.json` preserves point/year checks, the exact overlap result, TIFF tag checks, and full published-source replay.
+`decode_png.mjs` retains the original byte decoder. The checked `write_geotiff.mjs` successor requires an explicit zlib inflater, verifies complete decoded strip lengths and allowed classes, and writes AdobeDeflate GeoTIFF with the original GeoKeys, metre units and PixelIsArea. Its `assembleNativeTiles` entry point also verifies each original PNG and its decoded pixel payload after reading, before copying any tile rows. `source/validation.json` preserves point/year checks, the exact overlap result, TIFF tag checks, and full published-source replay.
 
 The corrected serialized TIFF was inflated and compared cell-for-cell against freshly decoded original PNGs for all 49 tiles: 40,713,317 matched cells, zero mismatches, zero unexpected class-0 cells, and zero source NoData cells.
 
@@ -74,7 +74,30 @@ python -B source/annual-nlcd-native-20261013/receive.py \
   --output /actual/project/sources/nlcd-2025-native-corrected
 ```
 
-The standard-library receiver checks the whole TIFF, every compressed and decoded strip, actual categorical totals, and georeference before retaining the complete source manifest.
+The standard-library receiver checks the whole TIFF, every compressed and decoded strip, actual categorical totals, and georeference before retaining the complete source manifest. It verifies the source plan before materialization, requires exhaustive native tile coverage and exact geometry-derived pixel lengths, and compares all 49 original tile pixel hashes against their windows extracted from the final TIFF. The result records `source_tiles_verified` and `original_pixel_cells`.
+
+## Replay the original PNG tiles
+
+The maintained Node caller supplies the required `inflateSync` dependency to both decoding and serialization. Extract the original PNGs from the retained source documents into a directory tree; filenames can remain as exported. The caller resolves each tile by its retained SHA256, preserving its original dimensions, grid, class values and source year.
+
+```sh
+node source/annual-nlcd-native-20261013/replay.mjs \
+  --png-root /actual/project/original-nlcd-pngs \
+  --output /actual/project/nlcd-original-pixel-replay
+```
+
+The command checks the original plan and all PNG/decoded tile lengths and hashes, reconstructs complete 1,024-row strips, reads those strips back from the final TIFF, and compares their pixel hashes to the corrected retained edition. It writes `replay.tif` and `replay.json` into the separate selected directory and refuses to replace different existing output bytes. The receipt retains original source identity, all original PNG paths and hashes, full tile/strip checks, and the actual Node/zlib versions. Equivalent zlib encodings can have different file hashes: `original_pixels_equal` records verified original-cell equality, while `original_encoding_equal` reports exact TIFF-byte identity. Continue importing the completed original source manifest above; the replay does not replace that source edition.
+
+Direct writer integrations must now provide the inflater explicitly:
+
+```js
+import {inflateSync} from "node:zlib";
+import {writeGeoTiff} from "./write_geotiff.mjs";
+const raster = writeGeoTiff({width, height, transform, strips, description,
+                           inflate: inflateSync});
+```
+
+For assembly from source tiles, use `assembleNativeTiles` as demonstrated in `replay.mjs`; its pre-copy checks prevent an empty cached typed array from silently leaving zero-filled cells. The actual historical defective plan is rejected for tile 24's zero declared pixel length. The corrected 49-tile plan passes the same source-driven preflight.
 
 Original provider: https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms
 

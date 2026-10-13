@@ -12,6 +12,7 @@ export function attachReceivingWatersExtension(context){
       plans:water.receiving_water_plans||[],
       analyses:water.receiving_water_analyses||[],
       monitoring:water.receiving_water_monitoring||[],
+      reports:data.receiving_water_reports?.reports||[],
       runs:(data.runs||[]).map(row=>[row.id,row.state,row.selection]),
       profiles:(data.profiles||[]).map(row=>[row.id,row.title]),
       scenarios:(data.scenarios||[]).map(row=>[row.id,row.title||row.spec?.title]),

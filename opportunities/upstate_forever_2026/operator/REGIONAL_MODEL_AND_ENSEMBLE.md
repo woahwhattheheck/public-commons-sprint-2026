@@ -40,7 +40,7 @@ For a new source-only project, receive the original regional profiles first:
 
 The explicit working example selects the existing source owner’s original regional table, visible working parameters and published Upper Flint alternative. It retains a source comparison, its HTML/CSV/JSON/source ZIP reports and a native-study selection in the actual Workspace. An existing scientific project can instead supply `--baseline-profile`, its original `--workflow-receipt`, or an explicit `--baseline-spec`, together with the chosen profile specifications. These source operations use the standard-library application. Full options and provenance are in `source_tools/RECEIVE_PROFILE_COMPARISON.md`.
 
-The complete 23-file watershed component F0C8SM4T0TB joins the original completed regional run, its network analysis, the current watershed desk and planning briefs. Receive the original embedded archive into the selected Workspace:
+The complete regional source/reporting component F0C8SM4T0TB joins the original completed regional run, its network analysis, the current watershed desk and planning briefs. Receive the original embedded archive into the selected Workspace:
 
 ~~~bash
 "$UPSTATE_PYTHON" -B -m source_tools.receive_watershed_context \
@@ -62,7 +62,7 @@ Reuse the completed original files and their companion metadata.
 | Upstream model domain | libfile_cce17e762e948191be1d226b1dbce00d; complete ZIP 8,800,689 bytes; SHA256 1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04 | 217 selected HUC12 polygons, with the original reporting and upstream context |
 | Precipitation | Slack F0C8H2FGAUV; original ZIP 62,685,097 bytes; SHA256 763f97b677711112ff7b1082c794476e2d9b7abe1f6e55dd4f1166e32523ccd3 | PRISM 1991–2020 precipitation normal, original 30-arcsecond source |
 | Rainfall erosivity | Slack F0C9BC7MKME; original 47,143,128 bytes; SHA256 157bbcaa54b445f96506fb1caffda4bbaea6b28f71bc7199235705e69cd00596 | Retained NOAA R source and its original unit definition |
-| Land cover | Existing national Annual_NLCD_LndCov_2025_CU_C1V2.zip receiving operation | Original 2025 categorical land-cover data; local preparation covers the complete selected domain |
+| Land cover | Original Annual NLCD2025 regional TIFF from the completed source receiver in source/annual-nlcd-native-20261013/ | Original categorical pixels for the full217-HUC domain and1,000m buffer, retained on the published EPSG:5070 grid |
 | Soil erodibility | The regional capture and preparation in section 3 | Source-native USDA mapunit geometry, ratings, survey editions and a grid-aligned K raster |
 | Elevation | The selected retained DEM source in the model plan | Actual elevation and vertical units used by the native terrain calculations |
 
@@ -74,7 +74,7 @@ The equipped receiving host can obtain the complete original domain directly wit
 
 Pass that object to mcp__codex_apps__library_prepare_materialize. Its successful transfer returns either the actual workspace_path or a GET download_url with required headers. Reuse a returned workspace_path directly; otherwise the equipped host retrieves the complete archive into its actual task directory using that returned transfer. Keep signed URLs and headers in the receiving process. Verify the 8,800,689-byte archive against the domain SHA256 above, then extract it for the source commands. This original-domain transfer is available independently of a separate Drive upload.
 
-The national NLCD acquisition and full-domain preparation belong to the current 25FD/DBC61 source operation. Consume its retained national archive and prepared raster. The static product's original TIFF supplies its actual CRS and transform; retain those values through categorical nearest-neighbor preparation. Its metadata is separate from the earlier WCS service contract.
+Use the corrected original Annual NLCD2025 TIFF and eleven-file receiver/metadata component in source/annual-nlcd-native-20261013/ and select the actual output TIFF and source manifest. Its published EPSG:5070 grid, explicit2025 source time, original categorical classes and full217-HUC domain plus1,000m buffer travel with the source. Section21 gives the exact receiving and soil continuation.
 
 The source collection must identify the South Carolina reporting area, complete upstream model domain and the four utility focus watersheds separately. The regional domain's source ID is upstate-wbd-upstream-domain-20261012. The earlier local copy was /dev/shm/dbc61-upstate-model-domain-20261012/sources.json; use the same manifest from its recovered archive when that temporary path is unavailable.
 
@@ -646,13 +646,13 @@ and capture manifest for all request URLs, original dates and geometry details.
 Open **Gauge support** in the shared operator after receiving the complete
 regional watershed and station-geography components. Select the saved regional
 report, original HUC12 polygon source and identity field, original gauge points
-or saved station edition, original whole-catchment source and retained daily-flow
+or saved station edition, original upstream-support source and retained daily-flow
 coverage. Select the reporting HUC12s and any original utility polygon sources.
 Each utility retains its own source and native identity field.
 
 The saved report joins exact original station/series identities to the regional
 HUC geometry. It shows point membership, the point's relationship to its supplied
-whole catchment, individual catchment/HUC intersections, full regional and
+upstream catchment, individual catchment/HUC intersections, full regional and
 selected reporting support, and original calendar coverage. Nested catchments
 are combined by geometric union when reporting covered area. Original approved,
 estimated and provisional counts remain attached to the observed days. All
@@ -697,6 +697,37 @@ nine-file component, including its saved-edition scientific report source:
 Restart the operator to register its descriptor. The complete installation, exact source
 selection schema, commands and interpretation are in
 [operator/GAUGE_SUPPORT.md](GAUGE_SUPPORT.md).
+
+### Select an original split or coordinate-delineated edition
+
+The default receiving course retains the original whole-catchment source.
+After the existing seven-gauge capture completes, use its returned native
+manifest to select either the indexed-gauge split basin or the documented
+upstream delineation at the original gauge coordinate.
+
+| Completed original route | Source ID | Support kind |
+| --- | --- | --- |
+| Indexed-gauge basin | `nldi-seven-gauge-split-basin-20261013` | `nhdplusv2_upstream_gauge_split` |
+| Coordinate delineation | `nldi-seven-gauge-split-process-20261013` | `nhdplusv2_coordinate_delineated_upstream` |
+
+Add `--catchment-manifest "$UPSTATE_SPLIT_MANIFEST"`,
+`--catchment-source-id` and the matching `--support-kind` to the same
+receiving command. An already imported edition can use
+`--catchment-collection "$UPSTATE_CATCHMENT_COLLECTION"` instead of the
+manifest. Choose a separate receiving output for a different source selection;
+repeating that same choice continues its original import/build/archive/reopen.
+
+The desk presents available original source editions and their methods.
+Every selected feature retains its original site, time-series identity,
+request flags, basin method and source geometry. Coordinate delineation binds
+its requested original location to the saved station point. Each edition
+retains its own source-qualified catchment IDs and exact selected station cohort.
+
+The resulting maps, HUC/utility intersections, coverage, report methods,
+PDF/HTML/data and source ZIP show the selected support method. Previous
+whole-catchment results and their saved1.0 report packages reopen through
+the same interface. The nine-file Gauge component supplies this complete
+source-selection and report workflow.
 
 ## 16. Exact daily-flow support for the original annual-reference dates
 
@@ -959,16 +990,156 @@ the entrypoints; no separate plotting operation or Workspace is needed.
 
 ### Complete source installation
 
-The current inventory contains248 paths in12 full families. The study consumer
+The current inventory contains270 paths in14 full families. The study consumer
 has15 files, Gauge support9, source/profile comparison12 and regional reporting96.
 The regional family includes the original utility-observation manifest and all
 its physical companions, plus the native utility-source receiver's own input
 manifest, original topology result and original USGS topology network. Its
 regional context, coverage and utility profile remain the same selected originals.
 
-Compose these full families with `integration/application_components.json`.
-The catalogue preserves the existing peer components and selects the complete
-report producers, scientific figure module and utility-source dependency set.
-The guide, exact file inventory and canonical catalogue are delivered together
-in the existing master source package. Continue the original source/native
-receiving operations and their current actual Workspace identities.
+Compose these full families with the current `integration/application_components.json`
+and its retained `integration/component_fragments/` declarations. The owned
+`a74f-regional-source-composition.json` appends the complete source selections
+to their maintained components. It retains the original annual-reference
+assessment manifest, regional soil preparation, original NLCD receiver and
+current Gauge report source without replacing the shared baseline catalogue.
+The current loader discovers the declarations before native source collection.
+
+The master source package contains this guide, the exact file inventory,
+the current baseline catalogue and all retained fragment declarations. Keep any newer peer
+fragments in the same assembled application. The existing cumulative receiving
+operation checks this composed catalogue and its full retained source members.
+
+## 21. Receive the original native land-cover source and continue soil preparation
+
+The corrected Annual NLCD2025 source is retained at
+`source/annual-nlcd-native-20261013/source/land-cover.tif` with its adjacent
+`source-manifest.json`. The9,443,751-byte TIFF has SHA256
+`3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`
+and source ID `usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`.
+The complete output's40,713,317 cells were compared with all49 original
+PNG tiles; the retained validation records zero mismatches or missing cells.
+Use the coherent source edition returned by the successful receiver: its
+raster path, source ID, byte count and complete TIFF hash stay together.
+Its source plan retains all49 original lossless provider tiles and their
+individual request, PNG and decoded-pixel identities.
+
+The selected source window is6,443 by6,319 cells in EPSG:5070, covering the
+original217-HUC12 domain and selected1,000m buffer. Source time is
+2025-01-01T00:00:00.000Z. The decoder and writer, discrete class style and
+original validation are retained beside the source metadata.
+
+From the complete application and original retained operation:
+
+```sh
+"$UPSTATE_PYTHON" -B source/annual-nlcd-native-20261013/receive.py \
+  --raster source/annual-nlcd-native-20261013/source/land-cover.tif \
+  --output "$UPSTATE_NLCD_RECEIVED"
+```
+
+Use the printed `raster` and `manifest` paths from the completed operation.
+The receiver verifies the original compressed and pixel-strip identities,
+complete TIFF, native georeference and class counts before publishing.
+Import the returned manifest into the chosen existing scientific Workspace.
+Select its returned raster as `UPSTATE_NLCD` for the original saved soil capture.
+
+```sh
+"$UPSTATE_PYTHON" -B -m source_tools.soil_region prepare \
+  --capture "$UPSTATE_SOIL_REGION" \
+  --reference "$UPSTATE_NLCD" \
+  --output "$UPSTATE_SOIL_PREPARED" \
+  --null-policy nlcd-water-zero
+```
+
+Preserve the capture's source index, journal, native ratings and selected
+buffer. The original source cell sizes are29.999999995403137m and
+30.000000026127967m. Each independently meets the maintained nominal30m rule.
+The grid receiver recognizes that case before the generic square-axis
+comparison, preserving the original affine and existing upper-left anchor.
+The maximum normalization corner shift for this full source window is
+0.000167738125m. The prepared model window records its own actual source
+and working grid; other source resolutions retain their existing checks.
+
+The complete regional soil family includes the maintained raster preparer.
+Use the original land-cover time and actual climate periods when selecting
+the native model and annual-reference cases. Retain distinct source editions
+separately in the working project.
+
+## 22. Use physical assessment geography with annual references
+
+The complete original geographic result is
+`source/annual-reference-assessment-20261013/`. Its eight retained files
+contain159 original station points,192 source assessment records, all795
+station-by-reference-basin membership decisions, eleven original annual
+targets, five upstream basin summaries and all ten pairwise basin overlaps.
+
+Import its existing four-entry native source manifest into the same project:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \
+  source-import source/annual-reference-assessment-20261013/sources.json
+```
+
+The vector entry exposes `geometry_huc12`, `ARJWS_geometry`,
+`PRWD_geometry`, `annual_reference_comids` and
+`assessment_geometry_differences` through the existing Spatial Review.
+The tabular entries preserve the original station-ID and source-record-ID
+lookups. All source manifest members travel with the selected annual-reference
+and assessment components.
+
+### Choose the geographic basis explicitly
+
+| Utility | Physical point-in-polygon selection | Assessment-publisher HUC selection | Station-publisher HUC selection |
+| --- | --- | --- | --- |
+| ARJWS | 6 stations / 10 records | 6 stations / 10 records | 6 stations / 10 records |
+| PRWD | 18 stations / 22 records | 17 stations / 21 records | 17 stations / 19 records |
+
+The physical selections use the original four-HUC ARJWS and32-HUC PRWD
+upstream unions. Every one of the159 points lies in exactly one original
+HUC polygon. All152 nonempty station-publisher HUC12 values agree with
+that location. Six July2026 assessment records retain a different original
+assessment attribution; both the original field and geometric result remain
+available. The source README identifies all six records and their boundary
+distances.
+
+These are the159-station assessment cohort's counts. Other retained microbial,
+lake-study and broader station editions carry their own source populations.
+Keep the selected source cohort and geographical basis with every map filter
+and displayed total.
+
+### Group annual calibration by the original basins
+
+| Original reference | COMID | Selected assessment stations / records | Published annual constituents |
+| --- | --- | --- | --- |
+| Chattooga near Clayton | 6269342 | 1 / 1 | nitrogen, phosphorus, suspended solids |
+| Broad near Bell | 6280111 | 0 / 0 | phosphorus, suspended solids |
+| Stevens Creek | 11730084 | 18 / 20 | nitrogen, phosphorus |
+| Savannah at Jackson | 22724211 | 159 / 192 | nitrogen, phosphorus |
+| Savannah at Cohens | 22726623 | 159 / 192 | nitrogen, phosphorus |
+
+The three tributary basins are mutually disjoint and supply seven
+constituent-specific annual targets. Each lies inside both downstream
+Savannah basins. Jackson lies inside Cohens and covers88.6983% of its area.
+The two downstream references therefore share all159 selected stations and
+all192 records. Retain their nested spatial support when assigning calibration
+and validation groups and when presenting regional coverage.
+
+Broad's zero applies to the selected South Carolina assessment cohort;
+the source remains the Georgia basin with its original annual targets.
+The Stevens Creek nitrogen/phosphorus targets and its selected biological
+or bacteria assessment records retain their distinct measured quantities.
+The two sediment targets belong to Chattooga and Broad.
+
+Continue the existing **Annual load observations** intake and saved-study
+calibration using the actual original reference rows and catchments.
+Nitrogen/phosphorus values use `ACTUAL` inkg/year, and sediment uses
+`ACTUAL_MT` inmetric tonnes/year. They are already annual rates.
+Keep the original2012 reference year and1999-10-01 through2014-10-01
+exclusive-end source horizon with them. The2024 assessment source covers
+2018–2022; July2026 status remains its separate edition.
+
+The full [source interpretation](../source/annual-reference-assessment-20261013/README.md)
+retains native coordinates, original request/body hashes, source locators,
+explicit EPSG:5070 transforms and the completed original geometric method.
+The source-import manifest and complete companion set are the working
+application inputs.

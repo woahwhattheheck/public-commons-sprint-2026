@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": "7",
+  "version": "8",
   "order": 65,
   "assets": [
     "receptors.mjs",
@@ -18,7 +18,8 @@
       "receptor.source-areas.prepare",
       "receptor.scenario.save",
       "receptor.programme.create",
-      "receptor.programme.compare"
+      "receptor.programme.compare",
+      "receptor.report-source.build"
     ],
     "invoke": {
       "handler": "invoke",
@@ -155,6 +156,20 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/receptors/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -205,6 +220,17 @@
       {
         "kind": "receptor-programmes",
         "operation": "programme",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "receptor-report-sources",
+        "operation": "report-source",
         "handler": "read",
         "args": [
           "operator",

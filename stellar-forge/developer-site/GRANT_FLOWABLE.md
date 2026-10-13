@@ -6,7 +6,7 @@ The chapter is `products/flowable-merchant/GRANT.md`. Its exact heading is:
 
 > ## Process, decision and adaptive-case commissioning with complete customer receiving
 
-The declaration is `stellar-forge/developer-site/grant-products/flowable-operations.json`. It selects eight complete public source files from the original merged product. All selected guide and client bytes match the retained installed source programme at `24272d9d3ac3a19586769518fb25437cc28568e6`.
+The declaration is `stellar-forge/developer-site/grant-products/flowable-operations.json`. It preserves the eight original public source IDs and adds nine complete programme sources. The two client/installed-receiving selections advance to merged programme edition `888cb09c514ac2f21f76b8b4eb5950eb50003a24`, retaining their earlier measured editions. The other original operating sources stay on their accepted source selections. Each current declaration binds its complete actual bytes.
 
 ## Receive the customer operation
 
@@ -71,6 +71,20 @@ The existing complete native journey exercises the authored two-edition process,
 
 A write programme persists the original request UUID and exact input before dispatch. Prepared operations retain their actual record revision and plan hash. If an operation has already been dispatched, continue that saved request and reconcile its original native response. Review current state before a new purposeful action. The product's existing request and workspace model owns this lifecycle.
 
+## Commission a saved operator programme
+
+Open **Commissioning** in the same application and receive the complete original programme JSON. The merged public reference at `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/case-commissioning.programme.json` contains ten full sources and 73 explicit native operations. Read `products/flowable-merchant/PROGRAMMES.md` for the exact source schema, step bindings, operation controls and receiving ABI.
+
+A programme keeps one selected process, decision or case service. Its source members, authored step inputs and dependencies are immutable. Prepare a step, inspect the existing native review, and use its original dispatch control. Dependent steps use confirmed earlier native identities. The original body text retains exact numeric tokens.
+
+An interrupted preparation reopens its saved child request. After dispatch, refresh and reconcile that original native operation; an unresolved result does not become another dispatch. Deliberately renewing an undispatched failed or stale review preserves all earlier attempts. Acceptance records the actual operator and exact current programme/native result basis, and a later record edition makes that earlier review visibly historical.
+
+The installed SDK and ordinary CLI expose `saveProgramme`, `readProgramme`, `prepareProgrammeStep` and `reviewProgramme`. The merchant provider exposes the corresponding four tools through its existing full-result transport. No new host, customer workspace or engine is created to run a programme.
+
+The maintained `native-programme-receiving.mjs` joins an already selected producer and independent receiver. The equipped owner supplies the complete source, stable input, retained state and atomic checkpoint callback. It uses the original native controllers, exports and downloads the complete workspace, then inspects/adopts it with the original receiver and compares source and native outcome identities. Close and reopen that receiver through the existing installed owner.
+
+The source is merged and the complete reference is authored. The original engine/browser commissioning operation still owns the runtime result. Public grant reporting must attach its actual returned output before claiming the full 73-step course or customer acceptance. Customer-specific source and commercial material remain with the authorized original customer record.
+
 ## Deliver all source and the complete workspace
 
 The original source receiver creates the full source ZIP/manifest, selected installed release and builder receipt. Its native continuation returns the final installed workspace export after subsequent SDK/CLI/MCP/browser work. Select those actual final identities when delivering the complete operating product.
@@ -105,7 +119,7 @@ A customer can receive the editable source before its full native commissioning 
 
 ## Receive the chapter in the original manuscript
 
-The current full manuscript has an earlier overview paragraph titled **Process and decision workflows with portable operating history**. That paragraph describes the earlier process/decision source and 35-tool inventory. Update that single original paragraph to point to the current complete process, decision and adaptive-case product and its 47-tool inventory.
+If an earlier manuscript contains the overview paragraph titled **Process and decision workflows with portable operating history**, update that original paragraph to the complete process, decision, adaptive-case and saved-programme product. The current source provides 51 merchant tools and 45 shared workspace actions. If its later **Process, decision and adaptive-case workflows with portable operating history** overview is already present, update only its programme capability, source and interface inventory. Preserve any later concurrent wording; do not invent an overview paragraph in a reviewer edition that has none.
 
 Receive the whole new H2 from `products/flowable-merchant/GRANT.md` once within the original **Current demonstration and operator journey** section. Preserve the surrounding H1/H2 order and every unrelated section. When the chapter is already present, replace only that original chapter with the accepted current full edition. The product declaration's exact heading must continue to match.
 
@@ -113,7 +127,7 @@ Keep the canonical USD 38,000 request, 400 prospective hours, 150 days, six pack
 
 ## Receive the independent source declaration
 
-The eight existing public source selections are:
+The eight original public source selections remain:
 
 | Stable source ID | Complete original file |
 | --- | --- |
@@ -126,7 +140,21 @@ The eight existing public source selections are:
 | flowable-typed-client | products/flowable-merchant/client.d.mts |
 | flowable-installed-receiving | products/flowable-merchant/native-installed-journey.mjs |
 
-Each declaration carries the original full commit, Git blob, byte length and SHA-256. Its required immutable source link occurs in the complete chapter. The unchanged source receiver retains every preceding indexed source and adds these selected product records when the chapter is present.
+The nine additional programme source selections are:
+
+| Stable source ID | Complete original file |
+| --- | --- |
+| `flowable-programme-operating` | products/flowable-merchant/PROGRAMMES.md |
+| `flowable-programme-source` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-core.mjs |
+| `flowable-programme-operations` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programmes.mjs |
+| `flowable-programme-browser` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-browser.mjs |
+| `flowable-case-programme-compiler` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/case-programme.mjs |
+| `flowable-reference-programme` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/case-commissioning.programme.json |
+| `flowable-programme-receiving` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/native-programme-receiving.mjs |
+| `flowable-workspace-actions` | stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs |
+| `flowable-merchant-catalog` | stellar-forge/mcp-merchant-operator/catalog/flowable-workspace.mjs |
+
+Each declaration carries the original full commit, Git blob, byte length and SHA-256. Its required immutable source link occurs in the complete chapter. The unchanged source receiver retains every preceding indexed source and receives these 17 selected product records when the chapter is present. Source counts in earlier receipts are historical observations, not a cap on the current complete index.
 
 The complete registration is optional for an earlier manuscript in which this chapter is absent. Once the chapter is selected, its required source links bind the exact source editions. An earlier application can therefore retain the declaration without acquiring invented product content.
 
