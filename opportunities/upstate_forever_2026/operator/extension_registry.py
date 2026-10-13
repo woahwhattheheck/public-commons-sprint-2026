@@ -213,7 +213,7 @@ class ExtensionRegistry:
         candidates = []
         identity_paths = {}
         for path in sorted(self.directory.glob("*.json")):
-            extension_id = path.stem
+            recognized_identity = None
             try:
                 manifest = json.loads(path.read_text(encoding="utf-8"))
                 if not isinstance(manifest, dict) or manifest.get("schema") != SCHEMA:
@@ -221,6 +221,7 @@ class ExtensionRegistry:
                 extension_id = manifest.get("id")
                 if not isinstance(extension_id, str) or not _IDENTIFIER.fullmatch(extension_id):
                     raise ValueError("An extension needs a stable lowercase id.")
+                recognized_identity = extension_id
                 identity_paths.setdefault(extension_id, []).append(path.name)
                 required = manifest.get("requires_actions", [])
                 backend = manifest.get("backend") or {}
@@ -240,8 +241,7 @@ class ExtensionRegistry:
                     "required": set(required), "declared": set(declared), "order": order,
                 })
             except Exception as error:
-                key = (extension_id if isinstance(extension_id, str)
-                       and _IDENTIFIER.fullmatch(extension_id) else path.stem)
+                key = recognized_identity or "file:" + path.name
                 self._issue(key, "registration", error)
 
         for extension_id, paths in identity_paths.items():
