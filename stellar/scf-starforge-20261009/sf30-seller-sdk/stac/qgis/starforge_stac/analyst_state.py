@@ -37,6 +37,8 @@ ANALYST_ROOT_FILES = (
     "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
     "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py", "parcel-operation-restore.py",
     "evidence_cli.py", "evidence-native-receiving.py", "EVIDENCE_RECEIVING.md", "PARCEL_EVIDENCE.md", "AGENTS.md",
+    "evidence-native-bootstrap.py", "EVIDENCE_BOOTSTRAP_INPUTS.example.json", "EVIDENCE_BOOTSTRAP.md",
+    "evidence-foreground-receiving.mjs", "EVIDENCE_FOREGROUND.md",
     "evidence-browser-receiving.mjs", "evidence-example/bloomington/parcel.json",
     "evidence-example/bloomington/parcel-metadata.json", "evidence-example/bloomington/flood-source-contract.json",
     "evidence-example/bloomington/README.md", "evidence-example/bloomington/flood-source-contract-superseded.json",
