@@ -93,6 +93,15 @@ Before repeating a mutation, the receiver downloads the actual complete workspac
 The final native-finance-receiving.json at the original root lists the complete receiving selection and retained file identities. Reopening verifies every file, restores a missing file from its exact retained bytes, and returns the same completed result. Retain the whole root, including original source, checkpoints, attempts, receipt and retained-bytes; this is the portable original execution record. Actual screenshot/attachment viewing remains the producing peer's responsibility.
 
 
+## Issuer source, policy decisions and complete Exit
+
+Use the complete joined application and the operator course in ISSUER_REFERENCE.md. Receive the original accounts PDF/workbooks through Exit files, the complete fifteen-member source through Issuer reference, select the actual edition and supporting originals, then record every policy/field disposition explicitly. Actual private IDs, dates, amount scales, full-population declarations and equations remain in the original financial controls. Review Financial basis last, after supporting-source choices.
+
+The same runFinanceReceiving callback takes optional issuerSourcePath, an absolute path to the exact original complete JSON or saved Canvas. Its issuer phase joins the authored six-domain course, all twenty policy controls, full original tables/arithmetic and exact-byte full Exit/reopen. Select the changed application/source edition explicitly inside the original retained programme; preserve its earlier frozen application and operation. The original four FMIS attachments remain unchanged until their complete new edition is selected.
+
+The producing worker must actually open/run/render and LOOK at this changed application and ALL outgoing attachments, including the original source reader, actual PDF pages136/138–140 and policy pages, full report, usable ZIP and downloaded/reopened working files. Use desktop1440 and narrow390, operate important controls and current/error/pending/stale states, view actual returned screenshots and repair visible defects. A screenshot folder, source review or passing course does not substitute for personal observation. From16:00UTC13October2026, Bryce exclusively owns the local Codex in-app browser until his explicit meeting-end release; use an existing isolated cloud browser and the same original EA programme.
+
+
 ## Work orders and costs
 
 Open the added Work orders and costs desk for the complete operational source-to-target workflow. Its source selection, mapping, exact allocations, returned rows, review and history use this same workspace. [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md) covers the whole sequence and bulk schedules. Save working HTML retains both modules and all work-order drafts; Handover includes their original CSVs, event history, expected allocations and actual returned comparisons.
