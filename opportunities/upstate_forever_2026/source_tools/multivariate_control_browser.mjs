@@ -177,11 +177,24 @@ export async function operateMatchedControl(options){
    await screenshot(page,"matched-control-"+kind,1440);await screenshot(page,"matched-control-"+kind,390);
    await closeDialog();
   }
-  await click('[data-mc-action="experiment"]');
-  await waitFor(async()=>await page.locator("#detail-dialog").evaluate(node=>node.open)&&
-   (await page.locator("#detail-dialog").textContent()).includes(design.adoption.experiment_id), "original saved experiment");
+  const [experimentResponse]=await Promise.all([
+   page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname==="/api/experiments/inspect"&&url.searchParams.get("experiment_id")===design.adoption.experiment_id;}),
+   click('[data-mc-action="experiment"]')]);
+  requireValue(experimentResponse.ok(),"The original saved experiment could not be reopened");
+  const experiment=await experimentResponse.json();
+  requireValue(experiment.id===design.adoption.experiment_id,"The experiment desk opened another native design");
+  await waitFor(async()=>await page.locator('#experiment-detail [data-action="experiment-clone"][data-id="'+design.adoption.experiment_id+'"]').count()===1,"original saved experiment");
+  await saveRecord("matched-control-original-experiment",experiment);
+  let summary=null;
+  if(experiment.state==="complete"){
+   summary=await api("/api/experiments/summary",{experiment_id:experiment.id});
+   requireValue(summary.id===experiment.id,"The native report belongs to another experiment");
+   await saveRecord("matched-control-native-summary",summary);
+  }
   await screenshot(page,"matched-control-original-experiment",1440);
   await screenshot(page,"matched-control-original-experiment",390);
+  const files=[...(experiment._downloads||[]),...(summary?._downloads||[])].filter((row,index,rows)=>rows.findIndex(other=>other.id===row.id)===index);
+  if(files.length)await ticketDownloads("#experiment-detail",files,"matched-control-native-experiment-file");
   await openDesk();await openDesign(design.id);
  }
  for(const [id,value] of original)
