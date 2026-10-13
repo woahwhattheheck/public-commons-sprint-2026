@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.6",
+  "version": "2.4.7",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -1163,8 +1163,8 @@
     },
     {
       "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
-      "bytes": 11203,
-      "sha256": "48c0783cc106507682bcb6e1a2384e5bae936b0ea4199c9e4af621e06a6f2429"
+      "bytes": 15804,
+      "sha256": "84aa48061127d302f9873fa65e1cac030db0e9cc498ab784d9b528a87fb6edbd"
     },
     {
       "path": "operator/published_study_operator.py",
