@@ -6,6 +6,7 @@ unchanged; aggregation is a documented modeling choice, never a repair.
 """
 from __future__ import annotations
 from copy import deepcopy
+from bisect import bisect_right
 from datetime import datetime, timezone
 import csv
 import html
@@ -233,7 +234,7 @@ def _series(workspace, binding, *, storage=False):
             "bytes": entry["body"]["bytes"], "values": len(rows),
             "first": _iso(rows[0][0]), "last": _iso(rows[-1][0]),
         })
-    return {"binding": deepcopy(binding), "rows": data, "step": step,
+    return {"binding": deepcopy(binding), "rows": data, "stamps": sorted(data), "step": step,
             "quality_codes": set(codes), "originals": originals, "factor": factor, "original_units": expected_unit}
 
 
@@ -242,27 +243,50 @@ def _flow_period(series, start, end):
     count, remainder = divmod(end - start, step)
     if remainder or count <= 0:
         _fail("Every selected period must contain whole original flow intervals")
-    selected = [series["rows"].get(t) for t in range(start + step, end + 1, step)]
-    missing = [start + (i + 1) * step for i, row in enumerate(selected) if row is None or row[1] is None]
-    rejected = [row[0] for row in selected if row is not None and row[1] is not None and row[2] not in series["quality_codes"]]
-    values = [row[1] for row in selected if row is not None and row[1] is not None]
+    # Iterate actual source records, not every potentially absent timestamp.
+    # Long unsupported selections therefore remain small and return their gaps.
+    stamps = series["stamps"]
+    selected_stamps = stamps[bisect_right(stamps, start):bisect_right(stamps, end)]
+    off_grid = [t for t in selected_stamps if (t - start) % step]
+    aligned = [t for t in selected_stamps if not (t - start) % step]
+    selected = [series["rows"][t] for t in aligned]
+    missing_count = count - len(aligned) + sum(row[1] is None for row in selected)
+    missing_first, expected = [], start + step
+    for stamp, row in zip(aligned, selected):
+        while expected < stamp and len(missing_first) < 12:
+            missing_first.append(expected)
+            expected += step
+        if row[1] is None and len(missing_first) < 12:
+            missing_first.append(stamp)
+        expected = stamp + step
+    while expected <= end and len(missing_first) < 12:
+        missing_first.append(expected)
+        expected += step
+    rejected = [row[0] for row in selected if row[1] is not None and row[2] not in series["quality_codes"]]
+    values = [row[1] for row in selected if row[1] is not None]
     histogram = {}
     for row in selected:
-        if row is not None:
-            histogram[str(row[2])] = histogram.get(str(row[2]), 0) + 1
-    original_mean = math.fsum(values) / count if not missing and not rejected else None
+        histogram[str(row[2])] = histogram.get(str(row[2]), 0) + 1
+    try:
+        original_mean = math.fsum(values) / count if not missing_count and not rejected and not off_grid else None
+    except OverflowError:
+        _fail("Original selected values exceed the supported finite arithmetic range")
     mean = original_mean * series["factor"] if original_mean is not None else None
+    per_day = mean * 86400 if mean is not None else None
+    volume = mean * (end - start) / 1000 if mean is not None else None
+    if any(x is not None and not math.isfinite(x) for x in (original_mean, mean, per_day, volume)):
+        _fail("Selected original values produce a nonfinite flow or period volume")
     return {
         "expected_values": count, "present_values": len(values),
-        "missing_count": len(missing), "missing_first": [_iso(x) for x in missing[:12]],
+        "missing_count": missing_count, "missing_first": [_iso(x) for x in missing_first],
+        "off_grid_count": len(off_grid), "off_grid_first": [_iso(x) for x in off_grid[:12]],
         "rejected_quality_count": len(rejected), "rejected_quality_first": [_iso(x) for x in rejected[:12]],
         "quality_codes": histogram,
         "negative_original_values": sum(x < 0 for x in values),
         "original_units": series["original_units"], "original_mean": original_mean,
         "minimum_original_value": min(values) if values else None,
         "maximum_original_value": max(values) if values else None,
-        "mean_cms": mean, "m3_day": mean * 86400 if mean is not None else None,
-        "volume_m3": mean * (end - start) / 1000 if mean is not None else None,
+        "mean_cms": mean, "m3_day": per_day, "volume_m3": volume,
         "state": "ready" if mean is not None and mean >= 0 else "needs-selection",
     }
 
@@ -350,7 +374,7 @@ def preview(workspace, selection):
         for key, row in support.items():
             if row["state"] != "ready":
                 errors.append({"period": offset + 1, "flow_id": key, "begin": _iso(left), "end": _iso(right),
-                    "reason": "missing/quality-excluded interval or negative aggregated flow", "support": row})
+                    "reason": "missing, off-grid or quality-excluded interval, or negative aggregated flow", "support": row})
             phase["flow_multipliers"][key] = row["m3_day"] if row["state"] == "ready" else 0
         phase["provenance"] = {"kind": "retained-source-period", "reference": _iso(left) + " / " + _iso(right)}
         # Bound source flows use1m3/day so phase multipliers retain their exact derived rate.
