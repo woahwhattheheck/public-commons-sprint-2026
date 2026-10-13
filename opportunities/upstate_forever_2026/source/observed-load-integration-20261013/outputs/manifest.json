@@ -1,0 +1,83 @@
+{
+  "schema": "upstate.observed-load-product/v1",
+  "method": "upstate.observed-load-integration/v1",
+  "source_files": [
+    {
+      "path": "../observed-load-contract.json",
+      "bytes": 3118,
+      "sha256": "288848dcaeb1569f15cb2dab27a80f78de25197756d53b7516a9c990591648a6"
+    },
+    {
+      "path": "../selected-daily-flow.json",
+      "bytes": 2146053,
+      "sha256": "eb6ef6c4aa14776afba9e1b39763f1618dc99f1615122f747e2e8741549b549f"
+    },
+    {
+      "path": "../nutrient-results.csv",
+      "bytes": 199318,
+      "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
+    },
+    {
+      "path": "../station-network-context.csv",
+      "bytes": 1811,
+      "sha256": "4afeaf2ec9bdcac10333109bec8f990a061c83ce0f2e96f0d33a2ffac049ee1a"
+    },
+    {
+      "path": "../source-manifest.json",
+      "bytes": 10479,
+      "sha256": "7b5ab41c035d1aa49c70e4cee707d0dcf97c291d8273deb26466fb6fa3276859"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "observed-loads.json",
+      "bytes": 3345973,
+      "sha256": "a15a7c233a319f803284587879010b1b6a4a8216d82f23ec4b5ed452d392de71"
+    },
+    {
+      "path": "index.html",
+      "bytes": 12746,
+      "sha256": "a5a84e3e56aa1fffd7d812e3ad7cc88831ef9990254c6759d5457c2227f17cc4"
+    },
+    {
+      "path": "concentration-context.csv",
+      "bytes": 1255482,
+      "sha256": "38b1f4837ed7f6f6093c89faa4de8f9040cc5246069368ba2dd974a012e65790"
+    },
+    {
+      "path": "concentration-context.metadata.json",
+      "bytes": 255,
+      "sha256": "00eb3268e56d88f90a70eb2f1bbdb84112c3bbbc5af8d87f83a3fffb2086025d"
+    },
+    {
+      "path": "annual-loads.csv",
+      "bytes": 284,
+      "sha256": "f1c4a2e6bd80887f89ee5cd74074cb368163d8a900fd6c656b0a9a26af9db5ac"
+    },
+    {
+      "path": "annual-loads.metadata.json",
+      "bytes": 321,
+      "sha256": "31e8f616215c50a5c4460f55a9c54604ad4ea04d306daa37760c01e9899fc2fa"
+    },
+    {
+      "path": "daily-loads.csv",
+      "bytes": 70,
+      "sha256": "5dfd920dc8ba5c4414297517ec24a841be2369170e12023c93f2cf54cc3afa7c"
+    },
+    {
+      "path": "period-loads.csv",
+      "bytes": 112,
+      "sha256": "ce10898a5b84dfa34194863003406483789377277ef9c4445d47e807123db392"
+    }
+  ],
+  "counts": {
+    "source_samples": 589,
+    "source_flows": 2192,
+    "series": 19,
+    "support_admitted_series": 0,
+    "context_only_series": 19,
+    "quantified_days": 0
+  },
+  "annual_comparison_rows": 0,
+  "execution": "Pure engine executed against retained full input; physical CLI/rendering remains the original recipient continuation."
+}

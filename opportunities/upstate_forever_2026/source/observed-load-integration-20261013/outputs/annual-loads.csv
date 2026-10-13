@@ -1,0 +1,1 @@
+record_id,station_id,catchment_id,parameter,value,unit,period_start,period_end,qualifier,method,uncertainty,source_records,measurement_support,species,gauge_id,gauge_relation,relation_method,quantity_basis,coverage_days,expected_days,coverage_complete,coverage_detail,source_quantity
