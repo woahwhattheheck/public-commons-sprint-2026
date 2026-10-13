@@ -1,0 +1,101 @@
+{
+  "schema": "upstate.conservation-design-composition/v1",
+  "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-E7A1",
+  "original": {
+    "owner": "ASTRA-DESIGN12",
+    "drive_file_id": "1koOb2ahi1JMEeT15kWOjSreF5PAzwmbJ",
+    "bytes": 69719,
+    "sha256": "77f5a0122d1ffda1512c15ec4f907a90e37c6daa3bbdd622a74a1fcfce3f93b4",
+    "source_canvas": "F0C8KGKBW5B"
+  },
+  "changes": [
+    {
+      "path": "scenario-design/conservation.py",
+      "before": "from engine import (DesignError, digest, encode, export_bundle, new_project,\n                    realize, require, validate_collection, validate_project)",
+      "after": "if __package__:\n    from .engine import (DesignError, digest, encode, export_bundle, new_project,\n                         realize, require, validate_collection, validate_project)\nelse:\n    from engine import (DesignError, digest, encode, export_bundle, new_project,\n                        realize, require, validate_collection, validate_project)"
+    },
+    {
+      "path": "scenario-design/conservation.py",
+      "before": "    from engine import receive_bundle\n",
+      "after": "    if __package__:\n        from .engine import receive_bundle\n    else:\n        from engine import receive_bundle\n"
+    },
+    {
+      "path": "scenario-design/engine.py",
+      "before": "        from conservation import binding_for\n",
+      "after": "        if __package__:\n            from .conservation import binding_for\n        else:\n            from conservation import binding_for\n"
+    }
+  ],
+  "source_before": {
+    "path": "scenario-design/conservation.py",
+    "bytes": 22782,
+    "sha256": "3005a3bf7f2e883e18467018ac7e7163fffe38635dacf67416c2a18a1fe34009"
+  },
+  "source_after": {
+    "path": "scenario-design/conservation.py",
+    "bytes": 23053,
+    "sha256": "d635b010c420c4c55e8ad601407b6293c5b6d329ae2a9b87d009c5a88f02a9fb"
+  },
+  "additive": [
+    "scenario-design/__init__.py",
+    "model/conservation_design.py",
+    "operator/conservation_design.py",
+    "operator/extensions/conservation-design.json",
+    "operator/web/conservation_design.mjs",
+    "operator/web/conservation_design.css",
+    "operator/CONSERVATION_DESIGN.md"
+  ],
+  "portable_application_directory": "scenario-design",
+  "native_dependencies": [
+    "model/conservation.py",
+    "model/conservation_bindings.py",
+    "model/conservation_scenarios.py",
+    "model/workspace.py",
+    "operator/extension_registry.py"
+  ],
+  "shared_host_edits": [],
+  "verification": {
+    "original_archive_manifest": "all original files independently matched",
+    "browser_syntax": "compiled original additive module in JS runtime",
+    "native_execution": "existing receiving operation"
+  },
+  "contract": {
+    "actions": [
+      "conservation.design.prepare",
+      "conservation.design.receive"
+    ],
+    "original_stores": [
+      "conservation",
+      "conservation-plans",
+      "sources",
+      "scenarios",
+      "runs"
+    ]
+  },
+  "source_engine_before": {
+    "path": "scenario-design/engine.py",
+    "bytes": 23867,
+    "sha256": "99a1ba9f99ba102a1be058c693b4b2d339c812f01c01a6a47da66ef0694aa327"
+  },
+  "source_engine_after": {
+    "path": "scenario-design/engine.py",
+    "bytes": 23959,
+    "sha256": "916d8242c1df03e42a784a8cc69833c050eb814a840b13f30194eb46fa99fa2a"
+  },
+  "receiving_browser_guards": [
+    {
+      "path": "operator/web/conservation_design.mjs",
+      "before": "        const bytes=new Uint8Array(await this.file.arrayBuffer());\n        let binary=\"\";",
+      "after": "        const selectedFile=this.file;\n        const bytes=new Uint8Array(await selectedFile.arrayBuffer());\n        if(this.gone||this.host.getState()?.workspace_key!==this.workspace||this.file!==selectedFile)return;\n        let binary=\"\";"
+    },
+    {
+      "path": "operator/web/conservation_design.mjs",
+      "before": "  async queue(action, payload) {\n    if(this.pending)",
+      "after": "  async queue(action, payload) {\n    if(this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    if(this.pending)"
+    },
+    {
+      "path": "operator/web/conservation_design.mjs",
+      "before": "    const pending=this.pending;if(!pending)return;\n    this.busy=true;",
+      "after": "    const pending=this.pending;if(!pending||this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    this.busy=true;"
+    }
+  ]
+}

@@ -73,6 +73,7 @@ APPLICATION_FILES = (
     "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
+    "scenario-design",
     "model",
     "operator",
     "source_tools",
