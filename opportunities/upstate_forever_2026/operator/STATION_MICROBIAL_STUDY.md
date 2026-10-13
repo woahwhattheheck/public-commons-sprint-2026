@@ -4,6 +4,19 @@ Open **Station geography** in the intended Workspace. The **Original utility E. 
 
 The source contains 730 original WQP result records at 36 stations: 142 records at 5 ARJWS stations and 588 at 31 Pioneer stations. Original sampled values, detection and quantitation conditions, activity identifiers, and all source companions remain retained.
 
+## Install the complete study family
+
+Use the current complete application source as SOURCE_ROOT and the existing application as CURRENT_APPLICATION:
+
+```sh
+python SOURCE_ROOT/operator/install_station_geography.py \
+  --application CURRENT_APPLICATION --source-root SOURCE_ROOT
+```
+
+The maintained installer receives all 45 files together: its existing 20 Station geography and Assessment context files, both microbial model/guide files, this operator guide, and all 22 original microbial data/report/compiler/manifest files. It checks all source members before replacing any installed file, preserves predecessor backups and the existing extension-host registration, and writes the complete file inventory to `operator/station-geography-install.json`. Restart the existing operator after installation to load the current registered action.
+
+SOURCE_ROOT is the full application directory containing `model/`, `operator/` and `source/`. Its original-source edition and native coordinate adapter are retained together. The actual full watershed domain is an independent Workspace source selected by the controls below.
+
 ## Choose the geographic context
 
 The default **Use the complete original 217-watershed domain** requires the original model-domain polygon body in this Workspace. The original-source receiver in `source_tools/ORIGINAL_SOURCE_WATER_RECEIVING.md` registers that exact body as the primary vector `original-model-domain`, while retaining the separate 4- and 32-watershed prepared areas.
