@@ -225,7 +225,15 @@ def source_map(application, gis):
              "model/gis_review_raster.py", "model/gis_review_raster_view.html",
              "operator/gis_projects.py", "operator/server.py",
              "source_tools/receive_gis_edition_review.py",
-             "source_tools/receive_gis_edition_review_browser.mjs"]
+             "source_tools/receive_gis_edition_review_browser.mjs",
+             "source_tools/receive_webmap_gis.py",
+             "operator/gis_source_selection_receiving.py",
+             "operator/gis_source_selection_receiving.mjs",
+             "operator/GIS_SOURCE_SELECTION_RECEIVING.md",
+             "operator/web/gis-working-selection.mjs",
+             "operator/web/gis-projects.mjs", "operator/web/gis-projects.css",
+             "operator/extensions/gis-projects.json",
+             "operator/GIS_WORKING_SELECTION.md", "operator/gis-working-selection.schema.json"]
     return [gis.record(application, application / name) for name in paths
             if (application / name).is_file()]
 
