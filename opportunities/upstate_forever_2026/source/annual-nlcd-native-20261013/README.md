@@ -11,7 +11,7 @@ From the application root, the actual files are:
 - Raster: `source/annual-nlcd-native-20261013/source/land-cover.tif`
 - Ordinary Workspace source manifest: `source/annual-nlcd-native-20261013/source/source-manifest.json`
 
-The TIFF is 9,237,060 bytes, SHA256 `a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157`. It is already present in the checkout. A normal source import can use this manifest immediately:
+The TIFF is 9,443,751 bytes, SHA256 `3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`. It is already present in the checkout. A normal source import can use this manifest immediately:
 
 ```python
 from model.workspace import Workspace
@@ -22,7 +22,7 @@ collection = ws.import_sources(
 print(collection["id"])
 ```
 
-Use the current project's actual Workspace path. The source ID is `usgs-annual-nlcd-2025-native-region-a9f6bfedc4bd3936`, role is `NLCD`, units are `class`, and resampling is `nearest`.
+Use the current project's actual Workspace path. The source ID is `usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`, role is `NLCD`, units are `class`, and resampling is `nearest`.
 
 ## Continue the existing native soil operation
 
@@ -62,15 +62,19 @@ The accompanying `source_tools/original_landcover_zonal.mjs` and `source_tools/O
 
 `decode_png.mjs` and `write_geotiff.mjs` are the executed byte decoder and TIFF writer. The decoder accepts a zlib inflate function, such as Node's `inflateSync`. The TIFF writer accepts verified compressed strips and writes AdobeDeflate GeoTIFF with the original GeoKeys, metre units and PixelIsArea. `source/validation.json` preserves point/year checks, the exact overlap result, TIFF tag checks, and full published-source replay.
 
-The complete binary was also reconstructed from all 688 freshly read source parts in 18 durable source volumes. This optional alternative is available through [the original source Page](https://chatgpt.com/space/page_4d1a1acaf17c8191934049834ea8a222). Save the full volume Page responses, then use the standard-library receiver:
+The corrected serialized TIFF was inflated and compared cell-for-cell against freshly decoded original PNGs for all 49 tiles: 40,713,317 matched cells, zero mismatches, zero unexpected class-0 cells, and zero source NoData cells.
+
+The previous `a9f6bfed…` file contained a zero rectangle because tile 24's cached typed array lost its length across persistence. Replaying its published bytes reproduced that defect. This edition rebuilds the affected strip from the original PNG, records the exact correction in `validation.json`, and verifies the actual final serialized pixels. Earlier Page-strip volumes are historical and are superseded by this complete raster.
+
+To verify and retain this exact edition in a separate project source directory:
 
 ```sh
 python -B source/annual-nlcd-native-20261013/receive.py \
-  --parts /actual/retained/nlcd-native-pages \
-  --output /actual/project/sources/nlcd-2025-native
+  --raster source/annual-nlcd-native-20261013/source/land-cover.tif \
+  --output /actual/project/sources/nlcd-2025-native-corrected
 ```
 
-It verifies every part, compressed-strip and decoded-pixel hash, class totals, whole TIFF hash, and georeference before publishing the raster and complete source manifest.
+The standard-library receiver checks the whole TIFF, every compressed and decoded strip, actual categorical totals, and georeference before retaining the complete source manifest.
 
 Original provider: https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms
 
