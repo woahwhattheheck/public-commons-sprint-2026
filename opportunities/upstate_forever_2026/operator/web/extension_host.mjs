@@ -115,6 +115,13 @@ export function createExtensionHost(host) {
       getWorkspace: host.getWorkspace || (() => workspaceKey(host.getState())),
       refresh, refreshState: host.refreshState || refresh,
       getExtension: id => entries.get(id)?.controller || null,
+      getProgramme: () => {
+        const instance = typeof host.getProgramme === 'function' ? host.getProgramme() : null;
+        if (typeof instance?.create === 'function') return instance;
+        const entry = entries.get('programmes');
+        if (!entry) return null;
+        return entry.controller || {create: value => openExtension('programmes', 'create', value)};
+      },
       openExtension: (id, method, ...args) => openExtension(id, method, ...args)
     };
     return capabilities;
