@@ -67,7 +67,7 @@ def _mask_agreement(row):
     return "Yes" if not row["baseline_only_cells"] and not row["alternative_only_cells"] else "No"
 
 
-def _case_tables(field, rows):
+def _case_tables(field, rows, *, reference_label="Baseline"):
     identities = _table(
         ["Pair", "Parameter case", "Original profile", "Reference case / profile"],
         [[_case_key(field, index), row["member_label"], row["profile_id"],
@@ -77,7 +77,7 @@ def _case_tables(field, rows):
          for index, row in rows])
     identities["caption"] = "Figure case key — original report rows and selected profiles"
     coverage = _table(
-        ["Pair", "Baseline valid", "Alternative valid", "Common", "Baseline only", "Alternative only"],
+        ["Pair", reference_label + " valid", "Alternative valid", "Common", reference_label + " only", "Alternative only"],
         [[_case_key(field, index), row["baseline_valid_cells"], row["alternative_valid_cells"],
           row["common_cells"], row["baseline_only_cells"], row["alternative_only_cells"]]
          for index, row in rows])
@@ -114,8 +114,12 @@ def _study_svg(figure):
     return ET.tostring(original, encoding="unicode") + "\n"
 
 
-def _snapshot(workspace, ensemble_id):
-    release = ensemble_report.build(workspace, identifier(ensemble_id))
+def _snapshot(workspace, ensemble_id, scenario_reference=None):
+    if scenario_reference is None:
+        release = ensemble_report.build(workspace, identifier(ensemble_id))
+    else:
+        from . import ensemble_scenario_contrasts
+        release = ensemble_scenario_contrasts.build(workspace, identifier(ensemble_id), scenario_reference)
     directory = workspace.root / "ensemble_reports" / release["id"]
     original = read_json(verify_file(directory, release["files"]["report.json"]))
     plan = workspace._get("ensembles", identifier(ensemble_id))
@@ -135,6 +139,9 @@ def _snapshot(workspace, ensemble_id):
                  "producer_sha256": file_digest(Path(__file__)),
                  "figure_helper_sha256": file_digest(Path(drawing.__file__)),
                  "source_scope_helper_sha256": file_digest(Path(source_scope.__file__))}
+    if scenario_reference is not None:
+        selection["scenario_reference"] = deepcopy(report["scenario_reference"])
+        selection["scenario_contrast_helper_sha256"] = file_digest(Path(ensemble_scenario_contrasts.__file__))
     return selection, plan, release, original, runs
 
 
@@ -244,6 +251,8 @@ def _package(workspace, directory, plan, release, content, runs):
 def _figures(directory, content):
     """Show original contrasts, with each geographic support and physical unit separate."""
     figures, coordinates, omissions = [], [], []
+    direct_reference = content.get("report", {}).get("scenario_reference")
+    reference_word = "reference" if direct_reference else "baseline"
     for field, kind in (("paired_rows", "landcover"), ("parameter_rows", "parameter")):
         groups = defaultdict(list)
         for index, row in enumerate(content[field]):
@@ -272,7 +281,7 @@ def _figures(directory, content):
                     [{"value": start + j + 1, "label": _case_key(field, index)}
                      for j, (index, row) in enumerate(subset)])
                 mass_series, delta_series = [], []
-                fields = (("baseline_common", "Reference baseline" if kind == "parameter" else "Same-profile baseline", "circle"),
+                fields = (("baseline_common", "Reference baseline" if kind == "parameter" else "Same-profile " + reference_word, "circle"),
                           ("alternative_common", "Varied-profile baseline" if kind == "parameter" else "Land-cover alternative", "square-open"))
                 for name, label, marker in fields:
                     points = []
@@ -307,7 +316,7 @@ def _figures(directory, content):
                                         "page": page + 1, "case": start + j + 1,
                                         "field": "delta_common", "value": row["delta_common"], **point})
                 delta_series.append({"geometry": "scatter", "label": "Varied minus reference" if kind == "parameter"
-                                     else "Alternative minus baseline", "marker": "circle", "points": points})
+                                     else "Alternative minus " + reference_word, "marker": "circle", "points": points})
                 panels.append({"title": "Annual mass on the identical common-valid cells", "x": x,
                                "y": drawing._axis("Annual export mass", units, drawing._domain(y_values, zero=True)),
                                "series": mass_series})
@@ -326,12 +335,12 @@ def _figures(directory, content):
                         "original common-support report; negative change means lower export. "
                         + ("Land cover is held fixed; the first selected profile is the reference. "
                            if kind == "parameter" else
-                           "Each land-cover alternative uses its own same-profile baseline. ")
+                           "Each land-cover alternative uses its own same-profile " + reference_word + ". ")
                         + "Other support masks remain separate. Selected cases describe a sensitivity "
                         "set, not a probability distribution or confidence interval."),
                     "panels": panels, "source_record_count": len(subset),
                     "omitted_records": [], "common_support_sha256": support,
-                    "detail_tables": _case_tables(field, subset),
+                    "detail_tables": _case_tables(field, subset, reference_label=reference_word.capitalize()),
                     "case_legend": [
                         "Exact support SHA256: " + support,
                         "Common valid cells: " + str(subset[0][1]["common_cells"])
@@ -342,7 +351,7 @@ def _figures(directory, content):
                         + (("; reference " + str(row.get("reference_member_label") or "Reference")
                             + " / " + str(row.get("reference_profile_id") or "Unspecified")[:12])
                            if kind == "parameter" else "")
-                        + "; baseline valid/only " + str(row["baseline_valid_cells"]) + "/"
+                        + "; " + reference_word + " valid/only " + str(row["baseline_valid_cells"]) + "/"
                         + str(row["baseline_only_cells"]) + "; alternative valid/only "
                         + str(row["alternative_valid_cells"]) + "/" + str(row["alternative_only_cells"])
                         for index, row in subset
@@ -376,6 +385,9 @@ def _figures(directory, content):
 
 def _sections(plan, content, profiles, scenarios, scope=None):
     report = content["report"]
+    if report.get("scenario_reference"):
+        from .ensemble_scenario_contrasts import sections
+        return sections(plan, content, profiles, scenarios, scope)
     progress = report.get("progress", {})
     model_scope = report.get("model_scope", {})
     sections = [
@@ -550,13 +562,17 @@ def _manifest(directory, title, selection, sections, graphics):
     atomic_json(directory / "sources.json", manifest, immutable=True)
 
 
-def latest(workspace, ensemble_id, *, verify=False):
+def latest(workspace, ensemble_id, *, verify=False, scenario_contrast=False, source_operation_id=None):
     """Return the last prepared edition and its relationship to current native results."""
     key = identifier(ensemble_id)
-    pointer = workspace.root / "ensemble_results" / key / "latest-scientific-study.json"
-    if not pointer.exists():
-        return None
-    record = read_json(pointer)
+    pointer_name = "latest-scenario-contrasts.json" if scenario_contrast else "latest-scientific-study.json"
+    pointer = workspace.root / "ensemble_results" / key / pointer_name
+    if source_operation_id is not None:
+        record = {"ensemble_id": key, "source_operation_id": identifier(source_operation_id)}
+    else:
+        if not pointer.exists():
+            return None
+        record = read_json(pointer)
     if record.get("ensemble_id") != key:
         raise ValueError("Scientific study pointer belongs to another design")
     operation = read_json(workspace.root / DIRECTORY / identifier(record["source_operation_id"]) / "operation.json")
@@ -569,6 +585,17 @@ def latest(workspace, ensemble_id, *, verify=False):
                       and operation["selection"]["producer_sha256"] == file_digest(Path(__file__))
                       and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__))
                       and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__)))
+    if operation["selection"].get("scenario_reference"):
+        from . import ensemble_scenario_contrasts
+        source_current = (
+            ensemble_scenario_contrasts.current_signature(
+                workspace, key, operation["selection"]["scenario_reference"])
+            == operation["selection"]["summary_signature"]
+            and operation["selection"].get("scenario_contrast_helper_sha256")
+                == file_digest(Path(ensemble_scenario_contrasts.__file__))
+            and operation["selection"]["producer_sha256"] == file_digest(Path(__file__))
+            and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__))
+            and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__)))
     if verify:
         for item in operation.get("files", {}).values():
             verify_file(workspace.root, item)
@@ -577,11 +604,12 @@ def latest(workspace, ensemble_id, *, verify=False):
     return {**operation, "source_state": "current" if source_current else "stale"}
 
 
-def prepare(workspace, ensemble_id, *, render=True):
+def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
     """Freeze the original report, register its typed source and render ordinary exports."""
     if not isinstance(render, bool):
         raise ValueError("Render must be true or false")
-    selection, plan, release, content, runs = _snapshot(workspace, ensemble_id)
+    selection, plan, release, content, runs = _snapshot(workspace, ensemble_id, scenario_reference)
+    pointer_name = "latest-scenario-contrasts.json" if scenario_reference is not None else "latest-scientific-study.json"
     key = digest(selection)
     directory = workspace.root / DIRECTORY / key
     directory.mkdir(parents=True, exist_ok=True)
@@ -601,7 +629,8 @@ def prepare(workspace, ensemble_id, *, render=True):
                 if not manifest.exists():
                     source_records, profiles, scenarios, scope = _package(workspace, source_directory, plan, release, content, runs)
                     graphics = _figures(source_directory, content)
-                    title = "Native study: " + plan["title"]
+                    title = ("Scenario contrasts: " + content["report"]["title"]
+                             if scenario_reference is not None else "Native study: " + plan["title"])
                     _manifest(source_directory, title, selection, _sections(plan, content, profiles, scenarios, scope), graphics)
                 recipe = read_json(source_directory / "scientific-report.json")
                 if recipe["basis"] != selection:
@@ -632,14 +661,15 @@ def prepare(workspace, ensemble_id, *, render=True):
             operation.pop("error", None)
             operation["updated_at"] = now()
             atomic_json(operation_path, operation)
-            atomic_json(workspace.root / "ensemble_results" / plan["id"] / "latest-scientific-study.json",
+            atomic_json(workspace.root / "ensemble_results" / plan["id"] / pointer_name,
                         {"ensemble_id": plan["id"], "source_operation_id": key})
-            return latest(workspace, plan["id"])
+            return latest(workspace, plan["id"], scenario_contrast=scenario_reference is not None,
+                          source_operation_id=key)
         except BaseException as error:
             operation.update(state="source_ready" if operation.get("source") else "failed",
                              error={"type": type(error).__name__, "message": str(error)}, updated_at=now())
             atomic_json(operation_path, operation)
             if operation.get("source"):
-                atomic_json(workspace.root / "ensemble_results" / plan["id"] / "latest-scientific-study.json",
+                atomic_json(workspace.root / "ensemble_results" / plan["id"] / pointer_name,
                             {"ensemble_id": plan["id"], "source_operation_id": key})
             raise

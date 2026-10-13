@@ -188,6 +188,14 @@ def render_html(report, rows, ranges, sensitivity, release_id):
                              ("Parameter members", len(members)),
                              ("Selected native runs", len(native_runs)),
                              ("Reported complete pairs", len(complete_pairs)))) + "</div>"
+    reference = report.get("scenario_reference")
+    reference_word = "Reference" if reference else "Baseline"
+    if reference:
+        body += ("<h2>Explicit scenario reference</h2><p><strong>" + _h(reference["reference_title"])
+                 + "</strong> is the reference for every same-profile pair below. Signed change is "
+                 "alternative minus this reference on their common valid cells. The native CSV fields "
+                 "named baseline identify this selected pair reference. The original design baseline remains "
+                 + _h(reference["original_baseline_scenario_id"]) + ".</p>")
     selected_models = (report.get("model_scope") or {}).get("selected_models") or report.get("models") or ["ndr", "sdr"]
     body += "<p><strong>Selected models:</strong> " + _h(
         " and ".join("Nutrients" if name == "ndr" else "Sediment" for name in selected_models)) + ".</p>"
@@ -217,8 +225,8 @@ def render_html(report, rows, ranges, sensitivity, release_id):
         body += "<h2>Every paired physical result</h2>"
         body += _table(
             ["Parameter case", "Alternative", "Pollutant", "Units",
-             "Baseline / common cells", "Alternative / common cells", "Annual change",
-             "Change %", "Common cells", "Baseline-only cells", "Alternative-only cells"],
+             reference_word + " / common cells", "Alternative / common cells", "Annual change",
+             "Change %", "Common cells", reference_word + "-only cells", "Alternative-only cells"],
             [(r["member_label"], r["scenario_label"], POLLUTANTS[r["pollutant"]], r["total_units"],
               _n(r["baseline_common"]), _n(r["alternative_common"]), _n(r["delta_common"]),
               _n(r["percent_change"]), format(r["common_cells"], ","),
@@ -227,7 +235,7 @@ def render_html(report, rows, ranges, sensitivity, release_id):
         body += "<h2>Reporting-mask totals for each run</h2>"
         body += _table(
             ["Parameter case", "Alternative", "Pollutant", "Units",
-             "Baseline total", "Alternative total", "Baseline valid cells", "Alternative valid cells"],
+             reference_word + " total", "Alternative total", reference_word + " valid cells", "Alternative valid cells"],
             [(r["member_label"], r["scenario_label"], POLLUTANTS[r["pollutant"]], r["total_units"],
               _n(r["baseline_total"]), _n(r["alternative_total"]),
               format(r["baseline_valid_cells"], ","), format(r["alternative_valid_cells"], ","))
@@ -331,6 +339,12 @@ def build(workspace, ensemble_id):
     report = manager.report_data(ensemble_id, refresh=False)
     if report.get("report_state") != "current":
         report = manager.report_data(ensemble_id, refresh=True)
+    return _build(workspace, report)
+
+
+def _build(workspace, report, *, publish_pointer=True):
+    """Publish an already-bound native report without changing its numerical rows."""
+    ensemble_id = identifier(report["id"])
     rows = _pairs(report)
     sensitivity = _pairs(report, "sensitivity")
     ranges = summarize_ranges(rows)
@@ -372,6 +386,15 @@ def build(workspace, ensemble_id):
                 "The original operator retains native logs, inputs, profiles, scenarios and "
                 "outputs. Use Back up workspace to transfer the complete project and application; "
                 "this report package is its printable numeric companion.\n")
+            if report.get("scenario_reference"):
+                reference = report["scenario_reference"]
+                methods = ("# Explicit scenario reference\n\nReference: " + reference["reference_title"]
+                           + " (" + reference["reference_scenario_id"] + ").\n\n"
+                           "Every native baseline field below identifies this selected same-profile reference. "
+                           "The original ensemble baseline and earlier baseline reports remain retained. "
+                           "The direct contrast is computed by the maintained native pair reducer on its "
+                           "actual common valid cells, rather than subtracting separate baseline effects.\n\n"
+                           + methods)
             contents = {
                 "report.html": render_html(report, rows, ranges, sensitivity, release_id),
                 "pairs.csv": _csv(rows, PAIR_FIELDS),
@@ -409,8 +432,9 @@ def build(workspace, ensemble_id):
                       "paired_results": len(rows), "parameter_results": len(sensitivity),
                       "support_groups": len(ranges)}
             atomic_json(state_path, result, immutable=True)
-        pointer = workspace.root / "ensemble_results" / ensemble_id / "latest-report.json"
-        atomic_json(pointer, {"schema": SCHEMA, "ensemble_id": ensemble_id, "report_id": release_id})
+        if publish_pointer:
+            pointer = workspace.root / "ensemble_results" / ensemble_id / "latest-report.json"
+            atomic_json(pointer, {"schema": SCHEMA, "ensemble_id": ensemble_id, "report_id": release_id})
     return result
 
 def latest(workspace, ensemble_id, *, verify=False):
