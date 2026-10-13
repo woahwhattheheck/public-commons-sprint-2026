@@ -19,8 +19,8 @@
     },
     {
       "path": "research-input.json",
-      "bytes": 16299,
-      "sha256": "7b0a17afde803155656332b25130d25de15e6d6b4856204f783a9b74e67727d0"
+      "bytes": 16495,
+      "sha256": "15f405897947be911b571a9b9e37c4aca7168cc4e52fe84f57f07c433370d921"
     },
     {
       "path": "source-pins.json",
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5683,
-      "sha256": "b4fe3efac2e1115e77ca75a826fb81cde952be8aa96c7ff95b55a7cb13fdfd37"
+      "bytes": 5885,
+      "sha256": "b941fc14cd062deff130b4f8d6a1bb47bdf2003df9ac363700ce09b95e7f6833"
     },
     {
       "path": "customer/sample.csv",
@@ -156,6 +156,11 @@
       "path": "RECEIVING.md",
       "bytes": 4126,
       "sha256": "76e91b6ee30e7b580f30f39c37640a50ddf037cfbacdfe848c58ece53c75558a"
+    },
+    {
+      "path": "buyer-contact.json",
+      "bytes": 440,
+      "sha256": "24616a524de4aa1b255fed5524b2e0da1f0ba3a173bfc02040f56edd7e8b5fc9"
     }
   ]
 }
