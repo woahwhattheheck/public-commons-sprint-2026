@@ -41,6 +41,8 @@ export function createSourceWorkbench(host, configuration = {}) {
   let tasksFingerprint = '', sourcesFingerprint = '', progressBusy = false, state = null;
   let selectedMethod = '', drafts = {}, mergeDraft = {title:'', prepared:[], collections:[], registered:[], import_sources:true};
   let requests = [], browser = null, browserGeneration = 0, controls = null;
+  let inputHistory = [], uploadReceipts = [], editRevision = 0, openingRevision = 0;
+  const uploadsInFlight = new Map();
   let operationView = {query:'', status:'all', offset:0}, operationCache = null;
   let resultTask = null, resultDocument = null, resultBusy = false, resultGeneration = 0;
   const local = () => settings.storageKey + ':' + workspace;
@@ -51,6 +53,8 @@ export function createSourceWorkbench(host, configuration = {}) {
       drafts = saved.drafts || {};
       mergeDraft = {...mergeDraft, ...(saved.merge || {})};
       requests = list(saved.requests);
+      inputHistory = list(saved.input_history);
+      uploadReceipts = list(saved.upload_receipts);
       currentTask = saved.task_id || null;
       operationView = {...operationView, ...(saved.operation_view || {})};
       operationView.offset = Math.max(0, Number(operationView.offset) || 0);
@@ -61,7 +65,8 @@ export function createSourceWorkbench(host, configuration = {}) {
   const save = () => {
     try {
       sessionStorage.setItem(local(), JSON.stringify({method:selectedMethod, drafts, merge:mergeDraft,
-        requests, task_id:currentTask, operation_view:operationView}));
+        requests, task_id:currentTask, operation_view:operationView,
+        input_history:inputHistory, upload_receipts:uploadReceipts}));
     } catch { /* Native tasks remain retained even when browser storage is unavailable. */ }
   };
   const selected = () => list(catalog?.methods).find(method => method.id === selectedMethod);
@@ -97,6 +102,150 @@ export function createSourceWorkbench(host, configuration = {}) {
       method:'POST', body:{workspace:expectedWorkspace, ...payload}
     });
   }
+
+  const copy = value => JSON.parse(JSON.stringify(value));
+  const object = value => value && typeof value === 'object' && !Array.isArray(value);
+  const hasUploads = () => [...uploadsInFlight.values()].some(row => row.workspace === workspace);
+  function currentSelection() { return {method:selectedMethod,...copy(draft())}; }
+  function normalizedSelection(payload) {
+    if (!object(payload) || typeof payload.method !== 'string' || typeof payload.title !== 'string' ||
+        !object(payload.inputs) || !object(payload.options) ||
+        (payload.import_sources !== undefined && typeof payload.import_sources !== 'boolean'))
+      throw new Error('Open a complete source selection with its method, title, inputs and options.');
+    const method = list(catalog?.methods).find(row => row.id === payload.method);
+    if (!method) throw new Error('This installed desk does not provide the selected source method.');
+    const inputs = new Map(list(method.inputs).map(row => [row.name,row]));
+    const options = new Map(list(method.options).map(row => [row.name,row]));
+    for (const [name,value] of Object.entries(payload.inputs)) {
+      if (!inputs.has(name)) throw new Error('The selected method has no input named '+name+'. Keep the original file for its matching source edition.');
+      if (value !== null && (!object(value) || !Object.keys(value).length))
+        throw new Error('Use the complete original selector for '+name+'.');
+    }
+    for (const [name,value] of Object.entries(payload.options)) {
+      const field = options.get(name);
+      if (!field) throw new Error('The selected method has no option named '+name+'. Keep the original file for its matching source edition.');
+      if (value === '' || value == null) continue;
+      if (['number','integer','float'].includes(field.type)) {
+        if (typeof value !== 'number' || !Number.isFinite(value) ||
+            ((field.type === 'integer' || field.integer) && !Number.isInteger(value)))
+          throw new Error('Use a finite '+(field.type === 'integer'?'whole number':'number')+' for '+name+'.');
+        if ((field.min != null && value < Number(field.min)) || (field.max != null && value > Number(field.max)))
+          throw new Error('The value for '+name+' is outside the installed method limits.');
+      } else if (['boolean','checkbox'].includes(field.type)) {
+        if (typeof value !== 'boolean') throw new Error('Use true or false for '+name+'.');
+      } else if (typeof value !== 'string') throw new Error('Use text for '+name+'.');
+      const choices = list(field.choices || field.options);
+      if (choices.length && !choices.some(choice => String(typeof choice === 'object' ? (choice.value ?? choice.id) : choice) === String(value)))
+        throw new Error('Choose an installed option for '+name+'.');
+    }
+    return {method:payload.method,title:payload.title,inputs:copy(payload.inputs),
+      options:copy(payload.options),import_sources:payload.import_sources !== false};
+  }
+  function replaceSelection(payload, {reason='Reopened working inputs',recovered=null}={}) {
+    if (!container || loading || !catalog) throw new Error('Wait for this study’s original source catalogue.');
+    if (busy || hasUploads()) throw new Error('Let the current source intake return before replacing the working inputs.');
+    const next=normalizedSelection(payload),previous=currentSelection();
+    let recoveredHistory=inputHistory,recoveredUploads=uploadReceipts,recoveredRequests=requests;
+    if(recovered){
+      const merge=(before,after,label)=>{
+        if(!Array.isArray(after))throw new Error('The complete '+label+' history is missing.');
+        const rows=new Map(before.map(row=>[row.id,row]));
+        for(const row of after){
+          if(!object(row)||typeof row.id!=='string'||!row.id)throw new Error('Invalid '+label+' history identity.');
+          const existing=rows.get(row.id);
+          if(existing&&canonical(existing)!==canonical(row)){
+            // Later upload state is retained locally; a prior exported receipt remains inside its original working file.
+            if(label==='upload'&&existing.workspace===row.workspace&&existing.method===row.method&&
+               existing.field===row.field&&existing.filename===row.filename&&existing.bytes===row.bytes&&
+               (!existing.result||!row.result||canonical(existing.result)===canonical(row.result)))continue;
+            throw new Error('The imported '+label+' history conflicts with the retained identity.');
+          }
+          if(!existing)rows.set(row.id,copy(row));
+        }
+        return [...rows.values()];
+      };
+      for(const row of list(recovered.input_history))
+        if(!object(row.selection)||typeof row.selection.method!=='string'||!object(row.selection.inputs)||!object(row.selection.options))
+          throw new Error('A previous complete source selection is malformed.');
+      for(const row of list(recovered.upload_receipts))
+        if(row.workspace!==workspace||typeof row.method!=='string'||typeof row.field!=='string'||typeof row.filename!=='string'||
+           !Number.isFinite(row.bytes)||row.bytes<0||(row.result&&typeof row.result.id!=='string'))
+          throw new Error('An upload receipt belongs to another source intake.');
+      for(const row of list(recovered.original_requests)){
+        const request=JSON.parse(row.key);
+        if(request.workspace!==workspace||![settings.prepareAction,settings.composeAction].includes(request.action)||!object(request.payload)||
+           canonical(request)!==row.key)throw new Error('An original request differs from this source desk.');
+      }
+      recoveredHistory=merge(inputHistory,recovered.input_history,'working-input');
+      recoveredUploads=merge(uploadReceipts,recovered.upload_receipts,'upload');
+      recoveredRequests=merge(requests,recovered.original_requests,'request');
+    }
+    const nextDrafts={...drafts,[next.method]:copy(next)};delete nextDrafts[next.method].method;
+    const history=canonical(previous)===canonical(next)?recoveredHistory:
+      [...recoveredHistory,{id:crypto.randomUUID(),at:new Date().toISOString(),reason,selection:previous}];
+    const retained={method:next.method,drafts:nextDrafts,merge:mergeDraft,requests:recoveredRequests,
+      task_id:currentTask,operation_view:operationView,input_history:history,upload_receipts:recoveredUploads};
+    // Retain one complete replacement before changing any live field.
+    const exact=JSON.stringify(retained);sessionStorage.setItem(local(),exact);
+    if(sessionStorage.getItem(local())!==exact)throw new Error('Complete working inputs could not be retained; current choices are unchanged.');
+    selectedMethod=next.method;drafts=nextDrafts;inputHistory=history;uploadReceipts=recoveredUploads;requests=recoveredRequests;editRevision++;openingRevision++;
+    const select=container.querySelector('[data-sp-method]');if(select)select.value=selectedMethod;
+    renderForm();message=reason+'. The previous complete selection remains in Working input history.';error='';notice();
+    container.dispatchEvent(new CustomEvent('source-selection-replaced',{bubbles:true,detail:{method:selectedMethod}}));
+    return copy(next);
+  }
+  function downloadWorking(value,name) {
+    const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download=name;link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  }
+  function workingFile() {
+    return {schema:'upstate.source-working-inputs/v1',namespace:settings.namespace,
+      workspace_key:workspace,selection:currentSelection(),input_history:copy(inputHistory),
+      upload_receipts:copy(uploadReceipts),original_requests:copy(requests)};
+  }
+  function renderWorking() {
+    const target=container?.querySelector('[data-sp-working]');if(!target)return;
+    const opened=target.querySelector('details')?.open===true;
+    target.innerHTML='<details'+(opened?' open':'')+'><summary>Working inputs and original upload history</summary>'+
+      '<p>Download the complete current draft and its previous choices. Uploaded originals remain on this operator even when you choose a different source.</p>'+
+      '<div class="sp-actions">'+textButton('download-working','Download working inputs')+
+      '<label class="sp-upload">Reopen working inputs<input type="file" accept=".json,application/json" data-sp-working-file></label></div>'+
+      (inputHistory.length?'<h3>Previous complete choices</h3><ol>'+inputHistory.map((row,index)=>
+        '<li>'+escapeHTML(row.selection?.title||row.selection?.method)+' · '+escapeHTML(stamp(row.at))+' '+
+        textButton('restore-working','Reopen this choice','data-sp-index="'+index+'"')+' '+
+        textButton('download-prior','Download','data-sp-index="'+index+'"')+'</li>').join('')+'</ol>':'')+
+      (uploadReceipts.length?'<h3>Original upload receipts</h3><div class="table-scroll"><table><thead><tr><th>Original file</th><th>Method / input</th><th>Receiving state</th><th>Use</th></tr></thead><tbody>'+
+        uploadReceipts.map(row=>'<tr><th scope="row">'+escapeHTML(row.filename)+'<small>'+escapeHTML(size(row.bytes))+'</small></th><td>'+
+          escapeHTML(row.method)+' / '+escapeHTML(row.field)+'</td><td>'+escapeHTML(row.state==='receiving'&&!uploadsInFlight.has(row.id)?'Response not received; inspect original uploads before selecting again':row.state)+
+          (row.error?'<small>'+escapeHTML(row.error)+'</small>':'')+'</td><td>'+
+          (row.result?.id?textButton('select-upload','Select retained original','data-sp-upload-id="'+escapeHTML(row.id)+'"'):'')+
+          textButton('download-upload','Download receipt','data-sp-upload-id="'+escapeHTML(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+'</details>';
+    const blocked=busy||hasUploads();
+    for(const node of target.querySelectorAll('[data-sp-action="restore-working"],[data-sp-action="select-upload"],[data-sp-working-file]'))node.disabled=blocked;
+  }
+  function saveUploadReceipt(row) {
+    const key=settings.storageKey+':'+row.workspace;
+    const saved=JSON.parse(sessionStorage.getItem(key)||'{}'),rows=list(saved.upload_receipts);
+    const index=rows.findIndex(item=>item.id===row.id);
+    if(index<0)rows.push(copy(row));else rows[index]=copy(row);
+    saved.upload_receipts=rows;
+    if(workspace===row.workspace){uploadReceipts=rows;renderWorking();}
+    const exact=JSON.stringify(saved);sessionStorage.setItem(key,exact);
+    if(sessionStorage.getItem(key)!==exact)throw new Error('The original upload receipt could not be retained.');
+    if(workspace===row.workspace){uploadReceipts=rows;renderWorking();}
+  }
+  async function reopenWorking(file) {
+    if(!file)return;
+    const expected=workspace,version=generation,revision=editRevision,opening=++openingRevision;
+    const parsed=JSON.parse(await file.text());
+    if(!container||workspace!==expected||generation!==version||openingRevision!==opening)return;
+    if(editRevision!==revision)throw new Error('The working inputs changed while this file was opening. Select the file again to apply it.');
+    if(parsed.schema!=='upstate.source-working-inputs/v1'||parsed.namespace!==settings.namespace||parsed.workspace_key!==expected)
+      throw new Error('Open this working-input file in its original study and source desk. Receive its sources before selecting them in another study.');
+    replaceSelection(parsed.selection,{reason:'Working-input file reopened',recovered:parsed});
+  }
+
   function ownedTasks() {
     return list(state?.tasks).filter(task => [settings.prepareAction,settings.composeAction].includes(task.action));
   }
@@ -249,7 +398,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       '<label class="sp-checkbox sp-import"><input type="checkbox" data-sp-import' + (value.import_sources !== false ? ' checked' : '') +
       '> Import the prepared source into this study when preparation completes</label>' +
       '<p class="sp-help">The original files, native resolution, units and preparation choices stay with the saved source edition.</p>' +
-      '<div class="sp-actions"><button type="submit" class="primary">' + (busy ? 'Saving operation…' : 'Prepare selected source') + '</button>' +
+      '<div class="sp-actions"><button type="submit" class="primary"' + (hasUploads() ? ' disabled' : '') + '>' + (busy ? 'Saving operation…' : 'Prepare selected source') + '</button>' +
       textButton('new-request','Use a new operation for changed input') + '</div></fieldset></form>';
   }
   function selectionBox(kind, id, title, detail, selectedValues) {
@@ -267,7 +416,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       registered.map(row => selectionBox('registered', row.id, displayLabel(row), row.entries + ' registered original sources', mergeDraft.registered)).join('');
     return '<details class="sp-merge" data-sp-merge' + (mergeDraft.open ? ' open' : '') + '><summary>Combine prepared inputs and existing source editions</summary>' +
       '<p>Choose the inputs for one source edition. Include the original study geography and parameter sources alongside the prepared rasters.</p>' +
-      '<form data-sp-compose-form><fieldset' + (busy ? ' disabled' : '') + '><legend>Combined source edition</legend>' +
+      '<form data-sp-compose-form><fieldset' + (busy || hasUploads() ? ' disabled' : '') + '><legend>Combined source edition</legend>' +
       '<div class="sp-field"><label for="sp-compose-title">Source edition title</label><input id="sp-compose-title" data-sp-compose-title value="' +
       escapeHTML(mergeDraft.title) + '" placeholder="Upper Savannah selected model inputs"></div>' +
       '<div class="sp-picks">' + (items || '<p class="sp-empty">Prepare or import a source to make it available here.</p>') + '</div>' +
@@ -281,7 +430,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     if (area) area.innerHTML = methodForm();
     const merge = container.querySelector('[data-sp-merge-area]');
     if (merge) merge.innerHTML = mergeForm();
-    save();
+    save(); renderWorking();
   }
   function renderTasks() {
     if (!container) return;
@@ -511,6 +660,7 @@ export function createSourceWorkbench(host, configuration = {}) {
   }
   async function submit(action, payload) {
     if (busy) return;
+    if (hasUploads()) throw new Error('Wait for the selected original upload to return, then review the current inputs before preparing.');
     const expected = workspace, version = generation, requestKey = canonical({action, payload, workspace:expected});
     let request = requests.find(row => row.key === requestKey);
     if (!request) { request = {key:requestKey, id:'sourceprep-' + crypto.randomUUID(), at:new Date().toISOString()}; requests.push(request); }
@@ -593,23 +743,42 @@ export function createSourceWorkbench(host, configuration = {}) {
     }
   }
   async function upload(field, file) {
-    if (!file) return;
-    const expected = workspace, method = selectedMethod, version = generation;
-    const max = state?.limits?.upload_bytes;
-    if (max && file.size > max) throw new Error('This file exceeds the operator upload limit of ' + size(max) + '. Choose an existing host source file.');
-    busy = true; message = 'Retaining ' + file.name + ' (' + size(file.size) + ')…'; error = ''; notice();
+    if(!file)return;
+    if(busy)throw new Error('The original source operation is being saved; keep its current inputs until it returns.');
+    const expected=workspace,method=selectedMethod,version=generation,revision=editRevision;
+    const max=state?.limits?.upload_bytes || catalog?.limits?.upload_bytes;
+    if(max && file.size>max)throw new Error('This file exceeds the operator upload limit of '+size(max)+'. Choose an existing host source file.');
+    const row={id:crypto.randomUUID(),workspace:expected,method,field,filename:file.name,
+      bytes:file.size,last_modified:file.lastModified,at:new Date().toISOString(),state:'receiving',
+      selected_before:copy(draft().inputs[field]??null)};
+    save();saveUploadReceipt(row);uploadsInFlight.set(row.id,row);
+    message='Retaining '+file.name+' ('+size(file.size)+')… You can review choices; changed choices will not be replaced by this response.';error='';renderForm();notice();
     try {
-      const result = await host.api('/api/upload', {method:'POST', raw:file, filename:file.name});
-      if (workspace !== expected || selectedMethod !== method || version !== generation) return;
-      draft().inputs[field] = {upload_id:result.id}; save();
+      const result=await host.api('/api/upload',{method:'POST',raw:file,filename:file.name});
+      if(!result || typeof result.id!=='string' || !result.id)throw new Error('The original upload response contains no saved file identity.');
+      row.result=copy(result);row.state='retained';
+      saveUploadReceipt(row);
+      if(!container || workspace!==expected || selectedMethod!==method || version!==generation)return;
+      const latest=uploadReceipts.filter(item=>item.method===method&&item.field===field).at(-1);
+      const unchanged=revision===editRevision&&canonical(draft().inputs[field]??null)===canonical(row.selected_before)&&latest?.id===row.id;
+      if(unchanged){draft().inputs[field]={upload_id:result.id};editRevision++;row.state='selected';save();saveUploadReceipt(row);}
+      else {row.state='retained';saveUploadReceipt(row);}
       await loadCatalog();
-      message = file.name + ' is retained and selected.';
+      if(container&&workspace===expected&&version===generation)
+        message=unchanged?file.name+' is retained and selected.':file.name+' is retained in Original upload receipts. Your newer choices remain selected.';
+    } catch(problem) {
+      if(!row.result){row.state='response unavailable';row.error=problem.message;}
+      try{saveUploadReceipt(row);}catch(storageError){problem=new Error(problem.message+' '+storageError.message);}
+      if(container&&workspace===expected&&version===generation)setError(problem);
     } finally {
-      if (workspace === expected && version === generation) {busy=false;renderForm();notice();}
+      uploadsInFlight.delete(row.id);
+      if(container&&workspace===expected&&version===generation){renderForm();notice();}
     }
   }
   function change(event) {
     const node = event.target;
+    if(node.matches('[data-sp-method],[data-sp-input],[data-sp-option],[data-sp-import]'))editRevision++;
+    if(node.matches('[data-sp-working-file]')){const file=node.files?.[0];node.value='';reopenWorking(file).catch(setError);return;}
     if (node.matches('[data-sp-operation-status]')) {operationView.status=node.value;operationView.offset=0;save();renderTasks();}
     else if (node.matches('[data-sp-method]')) {selectedMethod=node.value;error='';message='';renderForm();notice();}
     else if (node.matches('[data-sp-input]')) {draft().inputs[node.dataset.spInput]=node.value ? JSON.parse(node.value) : null;save();}
@@ -635,11 +804,12 @@ export function createSourceWorkbench(host, configuration = {}) {
       save();
       for (const checkbox of container.querySelectorAll('[data-sp-merge-kind]'))
         checkbox.checked = mergeDraft[checkbox.dataset.spMergeKind].includes(checkbox.value);
-    } else if (node.matches('[data-sp-upload]')) upload(node.dataset.spUpload,node.files?.[0]).catch(setError);
+    } else if (node.matches('[data-sp-upload]')) {const file=node.files?.[0];node.value='';upload(node.dataset.spUpload,file).catch(setError);}
     else if (node.matches('[data-sp-root]') && browser) {browser.root_id=node.value;browser.path='';browse('').catch(setError);}
   }
   function input(event) {
     const node=event.target;
+    if(node.matches('[data-sp-title]'))editRevision++;
     if(node.matches('[data-sp-operation-search]')){operationView.query=node.value;operationView.offset=0;save();renderTasks();}
     else if(node.matches('[data-sp-title]')){draft().title=node.value;save();}
     else if(node.matches('[data-sp-compose-title]')){mergeDraft.title=node.value;save();}
@@ -651,11 +821,26 @@ export function createSourceWorkbench(host, configuration = {}) {
     const action=button.dataset.spAction,id=button.dataset.spId;
     try {
       error='';notice();
+      if(action==='download-working'){downloadWorking(workingFile(),'source-working-inputs.json');return;}
+      if(action==='restore-working'||action==='download-prior'){
+        const row=inputHistory[Number(button.dataset.spIndex)];if(!row)throw new Error('Select a retained working choice.');
+        if(action==='download-prior')downloadWorking({...workingFile(),selection:row.selection},'source-prior-inputs.json');
+        else replaceSelection(row.selection,{reason:'Previous working choice reopened'});
+        return;
+      }
+      if(action==='select-upload'||action==='download-upload'){
+        const row=uploadReceipts.find(item=>item.id===button.dataset.spUploadId);
+        if(!row)throw new Error('Select a retained original upload receipt.');
+        if(action==='download-upload'){downloadWorking(row,'source-upload-receipt.json');return;}
+        if(row.method!==selectedMethod)throw new Error('Choose the original source method '+row.method+' before selecting this retained upload.');
+        const payload=currentSelection();payload.inputs[row.field]={upload_id:row.result.id};
+        replaceSelection(payload,{reason:'Retained uploaded original selected'});return;
+      }
       if(action==='reload')return await loadCatalog(true);
       if(action==='go-grids')return host.navigate('grids');
       if(action==='go-sources')return host.navigate('sources');
       if(action==='browse')return await openBrowser(button.dataset.spField);
-      if(action==='clear-input'){draft().inputs[button.dataset.spField]=null;renderForm();return;}
+      if(action==='clear-input'){editRevision++;draft().inputs[button.dataset.spField]=null;renderForm();return;}
       if(action==='open-source'){closeResult();return host.openItem('sources',id);}
       if(action==='open-water-review'){
         const selectedWorkspace=workspace, selectedCollection=id;
@@ -694,7 +879,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       if(action==='browser-directory'&&browser){browser.path=button.dataset.spPath;return await browse('');}
       if(action==='browser-more'&&browser&&browser.next_offset!=null){browser.offset=browser.next_offset;return await browse('',true);}
       if(action==='browser-file'&&browser){
-        draft().inputs[browser.field]={root_id:browser.root_id,path:button.dataset.spPath};save();
+        editRevision++;draft().inputs[browser.field]={root_id:browser.root_id,path:button.dataset.spPath};save();
         container.querySelector('[data-sp-browser]').close();renderForm();return;
       }
     } catch(problem){setError(problem);}
@@ -720,7 +905,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     if(container===target&&workspace===key&&target.querySelector('[data-sp-desk]')){update(currentState);return;}
     suspend();container=target;state=currentState;workspace=key;generation++;catalog=null;progress=null;loading=false;tasksFingerprint='';sourcesFingerprint='';busy=false;error='';message='';
     operationView={query:'',status:'all',offset:0};operationCache=null;resultTask=null;resultDocument=null;resultBusy=false;
-    mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};storageRead();
+    mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};inputHistory=[];uploadReceipts=[];editRevision=0;openingRevision++;storageRead();
     container.innerHTML='<div data-sp-desk class="sp-desk"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>' + escapeHTML(settings.title) + '</h1><p>' + escapeHTML(settings.description) + '</p></div><div class="page-actions">' +
       textButton('go-sources','Original sources')+textButton('reload','Refresh catalogue')+'</div></header>' +
@@ -733,7 +918,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       '<option value="attention">Failed, interrupted or cancelled</option><option value="complete">Complete</option></select></label>' +
       '<p data-sp-operation-count role="status" aria-live="polite"></p></div>' +
       '<div data-sp-tasks></div><section class="sp-progress" data-sp-progress hidden></section></section>' +
-      '<section class="section" data-sp-merge-area></section>' +
+      '<section class="section" data-sp-merge-area></section><section class="section" data-sp-working></section>' +
       '<details class="sp-training"><summary>Explain this step</summary><dl><dt>What you do</dt><dd>Select an original file and the preparation choices, then choose Prepare selected source.</dd>' +
       '<dt>What you see</dt><dd>The real preparation enters the native queue. Its progress, original files, units and imported edition remain available.</dd>' +
       '<dt>What it means</dt><dd>The model receives identified inputs aligned through its original grid workflow. A coarser source keeps its recorded original resolution.</dd>' +
@@ -744,7 +929,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     container.addEventListener('input',input,{signal:controls.signal});
     container.addEventListener('submit',onSubmit,{signal:controls.signal});
     container.addEventListener('toggle',event=>{if(event.target.matches('[data-sp-merge]')){mergeDraft.open=event.target.open;save();}}, {capture:true,signal:controls.signal});
-    renderTasks();loadCatalog().then(fetchProgress);
+    renderTasks();renderWorking();loadCatalog().then(fetchProgress);
   }
   function update(currentState=host.getState()) {
     if(!container||workspace!==host.getWorkspace())return;
@@ -771,5 +956,5 @@ export function createSourceWorkbench(host, configuration = {}) {
     container?.querySelector('[data-sp-browser]')?.close();
     container=null;browser=null;operationCache=null;generation++;browserGeneration++;loading=false;progressBusy=false;
   }
-  return {mount,update,suspend};
+  return {mount,update,suspend,replaceSelection,currentSelection};
 }
