@@ -2,7 +2,7 @@
 import {createMerchantWorkspaceRuntime} from '../../fhir_eltss/connected/runtime.mjs';
 import {gravityReferralNativeRoute,gravityReferralUploadRoute} from '../../fhir_referral/connected/runtime.mjs';
 import {HumanServicesDirectoryConnection} from './connection.mjs';
-import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,
+import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,directoryCorrectionsContract,
   validateHumanServicesDirectoryArguments,nativeInputActions,directoryForeignKeyQueries} from './catalog.mjs';
 import {EXPORT_SCHEMA,RESULT_SCHEMA,MANIFEST_NAME,parseHumanServicesDirectoryExport,checked,SHA} from './contracts.mjs';
 export {humanServicesDirectoryMerchantTools} from './catalog.mjs';
@@ -18,6 +18,11 @@ function filename(member,fallback){
     value:fallback;
 }
 export function humanServicesDirectoryNativeRoute(action,args){
+  if(action==='directory_correction_rows')return {method:'GET',
+    target:query(path(args.collection,args.recordId,'rows'),{offset:args.offset,limit:args.limit})};
+  if(action==='directory_correction_file')return {method:'GET',
+    target:path(args.collection,args.recordId,'files',args.fileKind),kind:'directory-export-file',
+    filename:'Directory_Correction_'+args.recordId+'_'+args.fileKind+(args.fileKind==='changes'?'.jsonl':'.json')};
   if(action==='directory_state')return {method:'GET',target:'/api/state'};
   for(const kind of ['review','comparison','input'])if(action==='directory_operating_return_'+kind)
     return {method:'GET',target:path('operatingPlanReturns',args.recordId,kind)};
@@ -131,6 +136,8 @@ export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
     directory:directoryNativeContract,source:directorySourceContract,conformance:directoryConformanceContract,
     operatingPlans:directoryOperatingPlansContract,
     operatingReturns:directoryOperatingReturnsContract,
+    corrections:directoryCorrectionsContract,
+    correctionSemantics:'Exact original HSDS row/resource/member hashes bind ordered JSON-pointer or physical CSV edits. Original bytes remain retained. Preview produces complete derived sources, an immutable candidate edition and full comparison; acceptance records that exact candidate without replacing a mutable head or writing to a provider.',
     foreignKeySemantics:'Only declarations in the selected immutable HSDS tabular edition are evaluated. Complete outcomes, candidates, matches and coverage remain retained. Existence can pass while resolution is ambiguous; original null markers, physical absence and values stay distinct. Earlier seven-file assessments remain exact and do not gain inferred relationships.',
     operatingPlanSemantics:'The unchanged original OperatingPlan owns full revisions, exact-prefix receiving, copy and registration comparison. Prepared records retain the original complete basis and command catalogue; accepting a preview saves its exact reviewed document. Steps record human procedures and do not execute native commands.',
     recovery:'Read the same directory acquisition after an uncertain response. Source import keeps its saved import profile and complete original file. Receiving retains the original directory UUID, source indices, reviewed mappings, service selection and Gravity records.',

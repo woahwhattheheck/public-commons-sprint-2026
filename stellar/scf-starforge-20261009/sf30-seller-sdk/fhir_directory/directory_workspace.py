@@ -17,6 +17,7 @@ from directory_receiving import DirectoryReceiving
 from directory_conformance import DirectoryConformance
 from directory_operating_plans import DirectoryOperatingPlans
 from directory_operating_returns import DirectoryOperatingReturns
+from directory_corrections import DirectoryCorrections
 
 def digest(kind,record):
     return source.sha(source.jbytes({"kind":kind,"value":{k:v for k,v in record.items()if k not in {"id","createdAt"}}}))
@@ -30,7 +31,7 @@ def clean_record(kind,record):
         raise InputError("The native acquisition must retain its original operation identity")
     return record
 
-class Workspace(DirectoryOperatingReturns,DirectoryOperatingPlans,DirectoryConformance,DirectoryReceiving,DirectoryReferral,DirectorySelection,DirectoryMapping,DirectorySources,BaseWorkspace):
+class Workspace(DirectoryCorrections,DirectoryOperatingReturns,DirectoryOperatingPlans,DirectoryConformance,DirectoryReceiving,DirectoryReferral,DirectorySelection,DirectoryMapping,DirectorySources,BaseWorkspace):
     def __init__(self,root,create=False,credentials_file=None):
         super().__init__(root,create=create,credentials_file=credentials_file)
         try:
@@ -190,6 +191,9 @@ class Workspace(DirectoryOperatingReturns,DirectoryOperatingPlans,DirectoryConfo
             "receivingReviews":["label","handoffId","archiveSha256","disposition","owner","actor"],
             "receives":["state","archiveSha256","workspaceId","kind","handoffId","updatedAt","error"],
             "importProfiles":["profile"],
+            "correctionPlans":["schema","label","editionId","predecessorId","actor","note","summary","files"],
+            "correctionPreviews":["schema","planId","editionId","candidateEditionId","comparisonId","sources","summary","files"],
+            "corrections":["schema","stage","planId","previewId","editionId","beforeEditionId","expectedEditionId","comparisonId","sources","actor","summary","files"],
             "operatingPlanReturns":["schema","workspaceId","stage","reviewId","planId","currentRecordId","predecessorRecordId","appliedPlanRecordId","action","requestSha256","summary","reviewDetails","files","actor"],
             "operatingPlans":["schema","workspaceId","stage","planId","revision","predecessorRecordId","preparedFromId","originRecordId","action","requestSha256","summary","files","actor"],
             "conformancePlans":["label","actor","subjectKind","subjectId","family","tables","profileDisposition"],
