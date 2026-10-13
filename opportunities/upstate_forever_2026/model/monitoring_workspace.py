@@ -378,6 +378,23 @@ class MonitoringWorkspace:
                     from .portable import backup
                     manifest = backup(self.workspace, destination, include_intermediates=True)
             return self._download(destination, {"native_manifest": manifest, "format": "original-workspace"})
+        visits = campaign["calendar"] if campaign else plan["calendar"]["visits"]
+        events = campaign["events"] if campaign else []
+        title = campaign["revision"]["title"] if campaign else plan["title"]
+        report = report_html(title, plan, network, visits, events)
+        if observed_context:
+            context_html = observed.report_html(observed_context).split("</style>", 1)[1].rsplit("</html>", 1)[0]
+            closing = "</body>" if "</body>" in report else "</html>"
+            report = report.replace(closing, "<section id='observed-context'>" + context_html + "</section>" + closing, 1)
+        if format == "html":
+            # A selected report needs no GeoJSON, history export, companion
+            # materialization or observational CSV/archive construction.
+            destination = folder / "monitoring-report.html"
+            destination.write_bytes(report.encode("utf-8"))
+            return self._download(destination, {"format": format, "plan_id": plan["id"], "campaign_id": campaign_id,
+                                                "files": 1, "visits": len(visits), "events": len(events)})
+        from .monitoring_packet import add_member, bytes_member, retain_packet
+        from .monitoring_sources import source_export_members
         selected = set(plan["selected_ids"])
         covered = set(plan["covered_ids"])
         geojson = {"type": "FeatureCollection", "features": [{"type": "Feature", "id": key,
@@ -387,9 +404,6 @@ class MonitoringWorkspace:
             "source_properties": node["source_properties"]}} for key, node in sorted(network["nodes"].items())]}
         station_features = {"type": "FeatureCollection", "features": [{"type": "Feature", "id": s["id"], "geometry": s["geometry"],
             "properties": {k: v for k, v in s.items() if k != "geometry"}} for s in network["stations"]]}
-        visits = campaign["calendar"] if campaign else plan["calendar"]["visits"]
-        events = campaign["events"] if campaign else []
-        title = campaign["revision"]["title"] if campaign else plan["title"]
         files = {"network.json": canonical_bytes(network), "plan.json": canonical_bytes(plan),
                  "catchments.geojson": canonical_bytes(geojson), "source-stations.geojson": canonical_bytes(station_features),
                  "calendar.csv": csv_text(visits, ["visit_key", "site_id", "station_id", "planned_station_id", "round", "date", "start_local", "finish_local", "crew", "status"]).encode(),
@@ -402,33 +416,30 @@ class MonitoringWorkspace:
         if campaign:
             files["campaign.json"] = canonical_bytes(campaign["revision"])
             files["campaign-history.json"] = canonical_bytes(self.history(campaign_id))
-        from .monitoring_sources import export_source
+        # Only generated metadata is held in memory. Native bodies and their
+        # complete original companions remain checked, streamable descriptors.
+        files = {name: bytes_member(body) for name, body in files.items()}
         for label, binding in network["source_bindings"].items():
-            if binding: files.update(export_source(self.workspace, label, binding))
-        files["report.html"] = report_html(title, plan, network, visits, events).encode("utf-8")
+            if binding:
+                for name, member in source_export_members(self.workspace, label, binding):
+                    add_member(files, name, member)
+        add_member(files, "report.html", bytes_member(report.encode("utf-8")))
         if observed_context:
-            files.update(observed.export_files(self.workspace, context_id, plan_id=plan["id"], network_id=network["id"]))
-            context_html = observed.report_html(observed_context).split("</style>", 1)[1].rsplit("</html>", 1)[0]
-            combined = files["report.html"].decode("utf-8")
-            closing = "</body>" if "</body>" in combined else "</html>"
-            combined = combined.replace(closing, "<section id='observed-context'>" + context_html + "</section>" + closing, 1)
-            files["report.html"] = combined.encode("utf-8")
-        files["README.txt"] = ("Monitoring decision and field package\n\n"
+            for name, member in observed._export_members(self.workspace, observed_context):
+                add_member(files, name, member)
+        readme = ("Monitoring decision and field package\n\n"
             "All source catchment geometry, source station geometry, planning costs, visits and field history are included.\n"
             "This report bundle is for review and exchange. For independently editable receiving, export the original\n"
             "complete workspace with format=workspace, then use the original model.portable.restore workflow.\n"
             "Calendar times are local wall times. Travel allowance is explicit, not route optimization.\n"
             "GeoJSON catchment polygons are search areas, not surveyed field station locations.\n").encode()
-        if format == "html":
-            destination = folder / "monitoring-report.html"
-            destination.write_bytes(files["report.html"])
-        else:
-            import hashlib
-            files["manifest.json"] = canonical_bytes({"schema": "eco.monitoring.export/1", "files": [
-                {"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(files.items())]})
-            destination = folder / "monitoring-field-package.zip"
-            with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                for name, data in sorted(files.items()): archive.writestr(name, data)
+        add_member(files, "README.txt", bytes_member(readme))
+        add_member(files, "manifest.json", bytes_member(canonical_bytes({
+            "schema": "eco.monitoring.export/1", "files": [
+                {"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
+                for name, member in sorted(files.items())]})))
+        destination = folder / "monitoring-field-package.zip"
+        retain_packet(destination, files, metadata="export")
         return self._download(destination, {"format": format, "plan_id": plan["id"], "campaign_id": campaign_id,
                                             "files": len(files), "visits": len(visits), "events": len(events)})
 
