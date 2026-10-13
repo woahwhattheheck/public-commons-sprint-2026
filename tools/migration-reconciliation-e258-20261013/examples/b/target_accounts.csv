@@ -1,0 +1,4 @@
+"account_id","customer_id","canonical_customer","currency","status"
+"NA100","NC100","C001","GBP","OPEN"
+"NA200","NC200","C002","GBP","OPEN"
+"NA300","NC300","C003","GBP","CLOSED"
