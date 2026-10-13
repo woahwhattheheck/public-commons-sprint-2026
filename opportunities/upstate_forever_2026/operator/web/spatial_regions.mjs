@@ -200,7 +200,8 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     if(key==='histogram'){model.histogramSeries=target.value;const row=tableSeries(model.result).find(row=>row.key===target.value);node('[data-region-histogram]').innerHTML=histogram(row);}
   },{signal:events.signal});
   model.cohorts||={};
-  const cohorts=createCohortAnalysis({root,model:model.cohorts,workspace,request,alive:current,getSelection,getSources,refreshState,showTask,openRegion:openResult});
+  const cohorts=createCohortAnalysis({root,model:model.cohorts,workspace,request,alive:current,getSelection,getSources,refreshState,showTask,
+    openRegion:async id=>{await openResult(id);if(current()&&model.result?.id===id)node('[data-region-result]')?.scrollIntoView({block:'start',behavior:'smooth'});}});
   restoreFields();
   selection();renderResult();renderHistory();renderTasks();
   return {selectBounds,selectRegion,setState,openResult,updateSources:()=>cohorts.updateSources(),setFeatures:value=>{features=value||[];},dispose:()=>{disposed=true;cohorts.dispose();events.abort();for(const control of reads)control.abort();reads.clear();}};
