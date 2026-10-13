@@ -14,8 +14,11 @@ The coupled core files are:
 - migration_workspace.py — public dispatch, reviewed mappings, corrections, paginated views.
 - migration_cases.py — explicit case/document/link projections, cutoff/destination plans, independent rehearsals, immutable reviews and cutover decisions in the same original store.
 - migration_cli.py — complete native command, original file intake/export, snapshot and portable receiving entry.
+- migration_registers.py — explicit typed register projections, complete population and relationship findings, exact signed financial controls, immutable reviews and cutover decisions.
 
-The full application also includes the maintained server, interface, portable/report modules and guides. Delivery requires the installed complete application roster used by migration_portable.py. The current complete roster is 21 files: the original 16 plus migration_cases.py, public/migration-cases.js, CASE_MIGRATION.md, CASE_RECEIVING.md and case_receiving.py. Its exact application_profile is commons.case-migration-application/v1. Complete old 16-file packages remain valid under their original profile; an already frozen preparation retains that selected roster. Copying only core modules does not produce the whole receiving application.
+REGISTER_MIGRATION.md documents the complete register contract. REGISTER_OPERATOR.md describes the mounted interface. REGISTER_RECEIVING.md covers the native CLI, full delivery/customer-return programme and authored seven-register example.
+
+The full application also includes the maintained server, interfaces, portable/report modules and guides. Delivery selects the complete 48-file APPLICATION_FILES roster in migration_portable.py under commons.migration-workbench-application/v4. This cumulative edition retains file evidence, cases, grants, financial reporting and property continuity, and adds typed register migration and its complete receiving programme. The original 16-, case 21-, grant 24-, financial 31- and property 39-file editions remain valid under their exact historical profiles; an already frozen preparation retains its selected roster. Use the whole selected application when receiving or continuing its original workspace.
 
 The core uses the Python standard library on Linux, Python 3.10 or later. It uses fcntl for the original exclusive owner lock and a held /proc/self/fd path to inspect exact SQLite snapshot bytes. Browser clients do not need Python. No package download is required by the core.
 

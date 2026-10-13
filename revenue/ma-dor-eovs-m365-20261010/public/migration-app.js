@@ -2,7 +2,7 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const model = {state:null,schema:null,view:"overview",source:null,reconciliation:null,correction:null,pending:new Map(),busy:false};
-  const sections = [["overview","Overview"],["sources","Sources"],["rounds","Rounds"],["mappings","Mappings & evidence"],["reconciliations","Reconciliations"],["corrections","Corrections"],["catalogue","All records"],["cases","Cases & cutover"],["handover","Handover & history"]];
+  const sections = [["overview","Overview"],["sources","Sources"],["rounds","Rounds"],["mappings","Mappings & evidence"],["reconciliations","Reconciliations"],["corrections","Corrections"],["catalogue","All records"],["cases","Cases & cutover"],["registers","Register migration"],["handover","Handover & history"]];
   const roles = ["source_inventory","target_inventory","migration_items","migration_failures","summary","structure","purview","mapping","attachment"];
   const checks = ["presence","path","size","hash","principals","label","classification_order"];
   const statuses = ["MATCH","DIFFERENT","UNKNOWN","AMBIGUOUS","MISSING","UNEXPECTED"];
@@ -171,11 +171,14 @@
   function render() {
     if(!model.state)return;
     $("#navigation").replaceChildren(...sections.map(([id,label])=>el("button",{type:"button","aria-current":model.view===id?"page":null,onclick:()=>go(id)},label)));
-    const renderers={overview:overview,sources:sources,rounds:rounds,mappings:mappings,reconciliations:reconciliations,corrections:corrections,catalogue:catalogue,cases:caseDesk,handover:handover};
+    const renderers={overview:overview,sources:sources,rounds:rounds,mappings:mappings,reconciliations:reconciliations,corrections:corrections,catalogue:catalogue,cases:caseDesk,registers:registerDesk,handover:handover};
     $("#main").replaceChildren(renderers[model.view]());
   }
   function caseDesk() {
     return window.MigrationCases.create({model,el,input,area,select,field,button,linkButton,panel,heading,note,details,table,badge,jsonRecord,read,run,setNotice,api,mutate,savePending,refresh,render,go,pageControls});
+  }
+  function registerDesk() {
+    return window.MigrationRegisters.create({model,el,input,area,select,field,button,linkButton,panel,heading,note,details,table,badge,jsonRecord,read,run,setNotice,api,mutate,savePending,refresh,render,go,pageControls});
   }
   function recentColumns(kind,collection) {
     return [
