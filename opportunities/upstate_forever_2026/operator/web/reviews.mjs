@@ -46,7 +46,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   }
   function render(){
     const all=rows(),latest=all.map(x=>outcome(responses(x.id)));
-    return '<header class="page-header"><div><p class="eyebrow">SCIENTIFIC DELIVERY REVIEW</p><h1>Customer reviews</h1><p>Select original source editions, completed saved maps, model runs and deliveries. Retain decisions for the stated purpose and carry their complete files into a portable review desk.</p></div><div class="page-actions">'+button('new','Create review','','',true)+button('compare','Compare selections')+'</div></header>'+
+    return '<header class="page-header"><div><p class="eyebrow">SCIENTIFIC DELIVERY REVIEW</p><h1>Customer reviews</h1><p>Select original source editions, completed saved maps, model runs and deliveries. Retain decisions for the stated purpose and carry their complete files into a portable review desk.</p></div><div class="page-actions">'+button('new','Create review','','',true)+button('compare','Compare selections')+button('packet-receive','Receive review package')+button('packets','Received packages')+'</div></header>'+
       '<div class="cards">'+[
         ['Retained selections',all.length,'Each selection keeps its original files and purpose.'],
         ['Responses received',all.reduce((n,x)=>n+responses(x.id).length,0),'Complete decisions and correction history.'],
@@ -173,7 +173,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   function reviewToolbar(packet){
     const id=packet.review.id;
     return '<div class="page-actions">'+button('export','Export current review',id,'',true)+button('import','Receive response',id)+
-      button('template','Response template',id)+button('new','New selection',id)+'</div>';
+      button('template','Response template',id)+button('new','New selection',id)+button('packet-receive','Receive review package',id)+'</div>';
   }
   function summary(packet){
     const response=currentResponse(packet),review=packet.review;
@@ -415,17 +415,136 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       },()=>{$('#operation-form [name="handback_package"]').addEventListener('change',event=>{const file=event.target.files[0];$('#handback-receive-selection').textContent=file?file.name+' · '+file.size.toLocaleString()+' bytes':'';});});
   }
 
+
+  // Complete ordinary review packages retain their original ZIP and response generation.
+  function ensurePacketWorkspace(workspace){
+    if(workspace!==current())throw Error('The workspace changed. Reopen the received package in its original workspace.');
+  }
+  function receivedDeskURL(value){
+    if(typeof value!=='string'||!value.trim())return null;
+    try{
+      const url=new URL(value,window.location.href);
+      return ['http:','https:'].includes(url.protocol)&&url.origin===window.location.origin&&!url.username&&!url.password?url.href:null;
+    }catch{return null;}
+  }
+  function receivePackage(reviewId=''){
+    const workspace=current(),serial=++generation,review=reviewId?selected(reviewId):null;
+    openForm('Receive complete review package',
+      'Select the complete ordinary review ZIP in its restored source project. The original files, selection and compatible response history will be retained together.',
+      (review?'<div class="review-intro"><h3>'+esc(review.title)+'</h3><p>'+esc(review.purpose)+'</p><p>This package must belong to the selected review.</p></div>':'')+
+      '<label class="review-file-picker"><span>Complete review ZIP</span><input name="received_review_package" type="file" accept=".zip,application/zip" required></label>'+
+      '<p id="received-review-selection" role="status"></p><p class="note">Use the original exported ZIP. For a response JSON or an engineering handback ZIP, use the corresponding receive action in the retained review.</p>',
+      'Receive review package',async()=>{
+        ensurePacketWorkspace(workspace);
+        const form=$('#operation-form'),input=form?.querySelector('[name="received_review_package"]'),file=input?.files[0];
+        if(serial!==generation||!form||!file||form.closest('dialog')?.open===false)throw Error('Choose the complete review ZIP in the current receive form.');
+        const uploaded=await uploadFile(file);
+        ensurePacketWorkspace(workspace);
+        if(serial!==generation||$('#operation-form')!==form||form.querySelector('[name="received_review_package"]')!==input||form.closest('dialog')?.open===false||input.files[0]!==file)throw Error('The receive selection changed while uploading. Reopen the form and select the intended package.');
+        return submitAction('customer.review.packet.receive',{upload_id:uploaded.id,...(reviewId?{review_id:reviewId}:{})});
+      },()=>{
+        const input=$('#operation-form [name="received_review_package"]');
+        input?.addEventListener('change',()=>{
+          const target=$('#received-review-selection'),file=input.files[0];
+          if(target)target.textContent=file?file.name+' · '+file.size.toLocaleString()+' bytes':'';
+        });
+      });
+  }
+  function receivedPackageTable(receipts){
+    return table(['Original review','Received package','Included history',''],receipts.map(row=>
+      '<tr><td class="name-cell"><strong>'+esc(row.title||short(row.review_id))+'</strong><small>'+esc(row.purpose)+'</small><small class="mono">'+esc(short(row.review_id))+'</small></td>'+
+      '<td>'+esc(date(row.received_at))+'<small>'+esc(row.filename||'Complete review ZIP')+'</small><small>'+esc(row.members)+' files · '+esc(Number(row.archive_bytes||0).toLocaleString())+' bytes</small><small class="mono">'+esc(short(row.package_sha256))+'</small></td>'+
+      '<td>'+esc(row.response_count)+' responses<small>'+(row.incoming_response_id?'Through '+esc(short(row.incoming_response_id)):'Initial review before responses')+'</small><small>'+esc(row.artifacts)+' selected files · '+esc(row.requirements)+' requirements</small></td>'+
+      '<td>'+button('packet-detail','Inspect received package',row.id)+'</td></tr>'));
+  }
+  function receivedPackagesBody(receipts,reviewId=''){
+    return '<p class="note">Each received package keeps its original files and included response generation. Later retained responses remain available in the review history.</p>'+
+      '<div class="page-actions">'+button('packet-receive','Receive review package',reviewId,'',true)+
+      (reviewId?button('packets','All received packages'):button('packets','Refresh packages'))+'</div>'+
+      (receipts.length?'<label><span>Find a received package</span><input id="review-received-query" type="search" placeholder="Review, purpose, filename, response or package ID"></label><p id="review-received-count" role="status">'+receipts.length+' received packages</p><div id="review-received-results">'+receivedPackageTable(receipts)+'</div>':
+      '<div class="empty"><h3>No received packages'+(reviewId?' for this review':'')+'</h3><p>Receive an original exported review ZIP to retain its complete selection, files and included history on this computer.</p></div>');
+  }
+  function mountReceivedSearch(receipts){
+    const input=$('#review-received-query'),target=$('#review-received-results'),count=$('#review-received-count');
+    input?.addEventListener('input',()=>{
+      const query=input.value.trim().toLowerCase(),matches=receipts.filter(row=>
+        [row.id,row.review_id,row.title,row.purpose,row.filename,row.package_sha256,row.incoming_response_id].join(' ').toLowerCase().includes(query));
+      if(target)target.innerHTML=matches.length?receivedPackageTable(matches):'<p class="note">No received packages match this search.</p>';
+      if(count)count.textContent=matches.length+' of '+receipts.length+' received packages';
+    });
+  }
+  async function openReceivedPackages(reviewId=''){
+    const serial=++generation,result=await read('packets',reviewId?{review_id:reviewId}:{});
+    if(serial!==generation)return;
+    const receipts=result.receipts??[];
+    detail('Received review packages','<div class="customer-review-detail">'+receivedPackagesBody(receipts,reviewId)+'</div>',{kind:'customer-review-received-packages',id:reviewId||undefined});
+    mountReceivedSearch(receipts);
+  }
+  function receiptGeneration(result){
+    const incoming=result.incoming_response_id??result.receipt.incoming_response_id??null;
+    const latest=result.current_latest_response_id??null;
+    return '<dl class="definition"><dt>Included response generation</dt><dd>'+(incoming?'<span class="mono">'+esc(incoming)+'</span>':'Initial review before responses')+'</dd>'+
+      '<dt>Current retained response</dt><dd>'+(latest?'<span class="mono">'+esc(latest)+'</span>':'Initial review before responses')+'</dd></dl>'+
+      (incoming!==latest?'<p class="notice">The retained review has a different current response generation. This package and its received desk keep the original included history. Open the retained review to inspect subsequent responses.</p>':'');
+  }
+  function receivedDeskControls(result){
+    const row=result.receipt,desk=result._desk??{},url=receivedDeskURL(desk.url);
+    if(desk.status==='error')return '<p class="notice error">'+esc(desk.message||'The saved package could not be opened. Inspect the original package and task details.')+'</p>';
+    if(desk.status==='open_on_this_computer')return '<p class="note">'+esc(desk.message||'Create the received desk on this computer from the retained original ZIP.')+'</p>'+button('packet-open','Open on this computer',row.id,'',true);
+    if(desk.status==='available'&&url)return '<a class="button primary" href="'+esc(url)+'" target="_blank" rel="noopener">Open received desk</a>';
+    return '<p class="notice">The received desk is unavailable. Refresh this package to inspect its current local state.</p>'+button('packet-detail','Refresh package',row.id);
+  }
+  async function openReceivedPackage(id){
+    const serial=++generation,result=await read('packet',{receipt_id:id});
+    if(serial!==generation)return;
+    const row=result.receipt,review=result.review,history=result.responses??[];
+    const artifactRows=(review.artifacts??[]).map(item=>'<tr><td class="name-cell"><strong>'+esc(item.label||item.id)+'</strong><small>'+esc(item.original_path)+'</small></td><td>'+esc(item.group)+'<small>'+esc(item.media_type)+'</small></td><td>'+esc(Number(item.bytes||0).toLocaleString())+' bytes<small class="mono">'+esc(item.sha256)+'</small></td></tr>');
+    const requirementRows=(review.requirements??[]).map(item=>'<tr><td class="name-cell"><strong>'+esc(item.title||item.id)+'</strong><small class="mono">'+esc(item.id)+'</small></td><td class="review-source-detail">'+esc(item.detail||item.description||'')+'</td></tr>');
+    detail('Received package — '+(review.title||row.title||short(row.review_id)),
+      '<div class="customer-review-detail"><div class="page-actions">'+button('packets','All received packages')+
+      button('open','Open retained review',row.review_id)+button('packet-detail','Refresh package',row.id)+'</div>'+
+      '<div class="review-intro"><p class="review-source-detail">'+esc(review.purpose||row.purpose)+'</p><p>Received '+esc(date(row.received_at))+' · original package created '+esc(date(row.package_created_at))+'</p><p>'+esc(row.filename)+' · '+esc(row.members)+' files · '+esc(Number(row.archive_bytes||0).toLocaleString())+' bytes</p>'+
+      receiptGeneration(result)+'</div><section><h3>Received review desk</h3>'+receivedDeskControls(result)+
+      '<p class="note">The received desk opens the original packet data in the maintained review viewer. The complete original ZIP remains available below.</p></section>'+
+      '<section><h3>Complete original package and records</h3>'+fileList(result._downloads??[])+'</section>'+
+      '<section><h3>Included original files</h3>'+(artifactRows.length?table(['Original file','Source group','Original identity'],artifactRows):'<p class="note">No selected files in this review.</p>')+'</section>'+
+      '<section><h3>Included requirements</h3>'+(requirementRows.length?table(['Original requirement','Detail'],requirementRows):'<p class="note">No requirements in this review.</p>')+'</section>'+
+      '<section><h3>Response history included in this package</h3>'+historyTab({responses:history})+'</section>'+
+      '<details><summary>Complete original review and included responses</summary><pre class="json-view">'+esc(pretty({review,responses:history}))+'</pre></details>'+
+      '<details><summary>Received package record</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details></div>',
+      {kind:'customer-review-received-package',id:row.id});
+  }
+  async function openPacketOnComputer(id){
+    const workspace=current(),serial=++generation,result=await read('packet',{receipt_id:id});
+    if(serial!==generation)return;
+    const row=result.receipt;
+    if(result._desk?.status==='error')throw Error(result._desk.message||'Inspect the received package issue before opening its desk.');
+    if(result._desk?.status==='available')return openReceivedPackage(id);
+    if(result._desk?.status!=='open_on_this_computer')throw Error('Refresh the received package to inspect its current local state.');
+    openForm('Open received desk on this computer',
+      'Create the local desk from this complete retained ZIP and its original response generation.',
+      '<div class="review-intro"><h3>'+esc(row.title||result.review.title)+'</h3><p>'+esc(row.filename)+' · '+esc(row.members)+' files</p>'+receiptGeneration(result)+
+      '<p>The original archive remains unchanged. The maintained review viewer opens its original selected work and included responses.</p></div>',
+      'Open received desk',()=>{
+        ensurePacketWorkspace(workspace);
+        if(serial!==generation)throw Error('The selected package changed. Reopen its received detail.');
+        return submitAction('customer.review.packet.open',{receipt_id:id});
+      });
+  }
+
   function drawPacket(packet,tab='files'){
     activePacket=packet;activeTab=tab;
-    const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks']];
-    const body=tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
+    const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks'],['received','Received packages']];
+    const body=tab==='received'?receivedPackagesBody(packet._receipts??[],packet.review.id):tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
     detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+
       '<nav class="review-tabs" aria-label="Review sections">'+tabs.map(([key,title])=>button('tab',title,packet.review.id,'data-tab="'+key+'" aria-pressed="'+(tab===key)+'"')).join('')+'</nav><section>'+body+'</section>'+
       '<details class="technical"><summary>Complete review document</summary>'+fileList([packet._packet_download])+'<dl class="definition"><dt>Review</dt><dd class="mono">'+esc(packet.review.id)+'</dd><dt>Project</dt><dd class="mono">'+esc(packet.review.project.id)+'</dd></dl></details></div>',{kind:'customer-review',id:packet.review.id});
+    if(tab==='received')mountReceivedSearch(packet._receipts??[]);
   }
   async function openReview(id,tab='files'){
     const serial=++generation,packet=await read('review',{review_id:id});
     if(tab==='handbacks'&&!Array.isArray(packet._handbacks)){const result=await read('handbacks',{review_id:id});packet._handbacks=result.handbacks;}
+    if(tab==='received'){const result=await read('packets',{review_id:id});packet._receipts=result.receipts;}
     if(serial!==generation)return;
     drawPacket(packet,tab);
   }
@@ -528,11 +647,16 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(task.action==='spatial.review.export'&&task.state==='complete')return mapActions(task.result);
     if(!task._review)return '';
     const row=task._review,rebuild=rebuildExportControl(task.id,row);
+    if(row.kind==='received-review'&&row.receipt_id){const url=receivedDeskURL(row.desk_url);return '<div class="page-actions">'+button('packet-detail','Open received package',row.receipt_id)+button('open','Open retained review',row.review_id)+(url?'<a class="button primary" href="'+esc(url)+'" target="_blank" rel="noopener">Open received desk</a>':'')+'</div>';}
     if(row.kind==='engineering-handback'&&row.handback_id)return '<div class="page-actions">'+button('handback-open','Open engineering response',row.handback_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open handback desk</a>':'')+'</div>'+rebuild;
     return '<div class="page-actions">'+button('open','Open retained review',row.review_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open review desk</a>':'')+'</div>'+rebuild;
   }
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
+    if(action==='packet-receive')return receivePackage(id||'');
+    if(action==='packets')return openReceivedPackages(id||'');
+    if(action==='packet-detail')return openReceivedPackage(id);
+    if(action==='packet-open')return openPacketOnComputer(id);
     if(action==='rebuild-export')return rebuildExport(id);
     if(action==='handback-reload'){const form=$('#operation-form');if(!form?._reloadHandbackRevision)throw Error('Reopen the engineering response form.');return form._reloadHandbackRevision();}
     if(action==='handback-new')return newHandback(id,null,node.dataset.responseId||null);
@@ -544,7 +668,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='map-preview')return previewMap(node);
     if(action==='open')return openReview(id,node.dataset.tab||'files');
     if(action==='tab'){
-      if(node.dataset.tab==='handbacks')return openReview(id,'handbacks');
+      if(['handbacks','received'].includes(node.dataset.tab))return openReview(id,node.dataset.tab);
       if(!activePacket||activePacket.review.id!==id)return openReview(id,node.dataset.tab);
       return drawPacket(activePacket,node.dataset.tab);
     }
