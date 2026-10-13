@@ -8,6 +8,7 @@ from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, identifier,
                      verify_file)
 from .reuse import copy_verified
+from .fgdc_metadata import validate_contact
 from . import native_versions
 
 SCHEMA = "commons.native-study-delivery/v1"
@@ -54,12 +55,13 @@ def prepare(selection):
     supplied = selection.get("contact", {})
     if not isinstance(supplied, dict):
         raise ValueError("Metadata contact must be an object when supplied")
-    contact = {}
+    contact = deepcopy(supplied)
     for key in ("name", "organization", "email"):
         text = supplied.get(key, "")
         if not isinstance(text, str):
             raise ValueError("Metadata contact fields must be text")
         contact[key] = text.strip()
+    validate_contact(contact)
     selection["contact"] = contact
     selection.setdefault("source_roles", {})
     selection.setdefault("overlays", {})
