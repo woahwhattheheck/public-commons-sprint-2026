@@ -1,0 +1,1086 @@
+{
+  "schema": "upstate.scientific-fieldwork-source-guards/v1",
+  "operation": "ES-EXP-2319-SCIENTIFIC-FIELDWORK-SOURCE",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "application_prefix": "opportunities/upstate_forever_2026",
+  "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+  "owner_direction": {
+    "path": "CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.3",
+    "git_blob": "8cd1c1f3d371a2fb75471813844e31f489aa8272"
+  },
+  "original_application": {
+    "archive_inventory_sha256": "176c272d97dbc890f77cbfe27bf5ffa044b7e5666581829b7223b35a8518098a",
+    "library_file_id": "file_000000003a88820b88095cbc8be34e4d",
+    "member_count": 2849,
+    "project_id": "dc92b8b9-6eda-4362-b12d-3cf2ef6c9007"
+  },
+  "file_count": 99,
+  "source_bytes": 2222844,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 8289,
+      "sha256": "c2ff39b9a18aa6db67637ff0c60c54ffeef8ba25e47a42e069ca81609c37cf45",
+      "git_blob": "150e2d55f9cce9e7a9458aae895cec54ebb09255",
+      "source_commit": "3d01330ee6373ac0e4277937b9d4ecaa1df6efc7",
+      "accepted_preimages": [
+        {
+          "bytes": 7593,
+          "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+          "provenance": "earlier original 57-file source-bank instruction"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "build_implementation_offline.py",
+      "bytes": 12709,
+      "sha256": "691b966b4288bbc5bf8d9bac3c04d34251916c58310fea534171fa5b9bbb4a49",
+      "git_blob": "f244c4ab549ffde3d5ee189a12cb7f352fd47816",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 5157,
+          "mode": "100644",
+          "sha256": "4c4586ebdaa0f69911c247578d9ac03e537423a0f8a431dc9d2ae87b312a5283",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 7593,
+      "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+      "git_blob": "46be323017be913780d0d2850b7658861744508d",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+      "git_blob": "8cd1c1f3d371a2fb75471813844e31f489aa8272",
+      "source_commit": "3d01330ee6373ac0e4277937b9d4ecaa1df6efc7",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "docs/FIELD_CREW_DEPLOYMENT.md",
+      "bytes": 10151,
+      "sha256": "3390250848b290dffee80054e2e771fcf9554ebaca07cd25029add09db898ef2",
+      "git_blob": "fabae8ce86dc12cb03393e2bbbeca3105e01ed37",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "docs/OFFLINE_FIELD_CREW.md",
+      "bytes": 4608,
+      "sha256": "a4971737f80ed821cec9836cf19207ffa01cbd0dfd8219b4510f01def3351371",
+      "git_blob": "0a6acb16460431f989b5480c8fe308eaa588c3cc",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "docs/RECEIVED_STUDY_FIELDWORK.md",
+      "bytes": 4085,
+      "sha256": "5a8c0097e690d8b17a39f7783c39946afb82f5b1a62d4a24d72d784b662eb5b4",
+      "git_blob": "e57dbc901a7ec833f50cc44ab2ec00b9ea9bc96e",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "docs/SCIENTIFIC_FIELDWORK_COURSE.md",
+      "bytes": 7924,
+      "sha256": "1e7ce80d376a910bf90b41261ad3861d494cf6a0e922e881e61ffcc734800579",
+      "git_blob": "82aee8a0740f6f489c081ce33f2c82f8ed227211",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "docs/SCIENTIFIC_REPORT_BRIEFING.md",
+      "bytes": 9482,
+      "sha256": "d79f251034c659e04f006c8c0688b75004883b7aa9a29b7c2abddcd8b2e17f1d",
+      "git_blob": "bff0052f95c891ab4b2b370f078dc1d33fff502c",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "GEMINI.md",
+      "bytes": 7593,
+      "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+      "git_blob": "46be323017be913780d0d2850b7658861744508d",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "install_implementation.py",
+      "bytes": 24445,
+      "sha256": "8c177b8981f8db6068bf90d8be53c7601ccae88e97ea7ff46fbda92e68792090",
+      "git_blob": "2d4b8fec19c68d753d3afd23c0bf47cb33eb48cb",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 16469,
+          "mode": "100644",
+          "sha256": "386d2c8031bb8542f22d5da3ab27fcf8ee08a0fb621fff9111f9cf7a2e70e5cb",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "integration/component_fragments/offline-field-crew.json",
+      "bytes": 620,
+      "sha256": "8e6c485b47da967f9fdee79c3079e371466084dca3fd2b7530c60987e8b50ec6",
+      "git_blob": "4ce0b83f97a182b9720a83ab714fdc8cecdce02e",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "integration/component_fragments/received-study-navigation.json",
+      "bytes": 770,
+      "sha256": "04829a1ce11cfa382efd649a85c70eb4f5b7b324ce5c11356c6b996975178bbb",
+      "git_blob": "2be52ea956d396487784588fdca05b5b54adf6de",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "integration/component_fragments/scientific-fieldwork-course.json",
+      "bytes": 530,
+      "sha256": "47ffac3f25594d8af3ec33137bd3dca7d095742e2bb58cf0020826c64edf10c4",
+      "git_blob": "2f0cfa4521f5353e6342e24d54bb35fb9b9497ce",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/analysis_source_context.py",
+      "git_blob": "9e2af3a59184d3aa01a99e1c81e49e3478287782",
+      "sha256": "559c086a5f59fa20a48266802a818c30d5978efdcdf51987e0a7e5d28fb61887",
+      "bytes": 35286,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/biophysical_evidence.py",
+      "git_blob": "0696fa58bf4a38c3a5aece870719a1127f428bb7",
+      "sha256": "704da95319fb2a0976c8105bdc5b9505cc8610cb3fbcc48a777d7772c78b5cb2",
+      "bytes": 27636,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/briefing_implementation.py",
+      "bytes": 24657,
+      "sha256": "ebb00c9412bfdc749925c43abc0db40d519ebf848db5ae45b7870bd83573910c",
+      "git_blob": "9e242409d8e015941d6b559493fb5a8ad08e18b7",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/calibration_study_transfer.py",
+      "git_blob": "7969e0d6c2aebe3ae9e6e57130a20bade8d40ea7",
+      "sha256": "234ebe30d1afff3a4246fa5f5dc9059e29d24a3e261dabb1d76137d8de840f34",
+      "bytes": 16914,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/chemistry_study_transfer.py",
+      "git_blob": "ccc1d8ed133f7959eb2f16b3145213ae9af4947d",
+      "sha256": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c",
+      "bytes": 23808,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/community_revisions.py",
+      "git_blob": "d45b9877efd0df6aa488729837fbb1be4ce92159",
+      "sha256": "c8d51e2ee79e194fc3357207c6a7a425b2865b1c36d0b23ab81e64b8f0a541e7",
+      "bytes": 34060,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/community_study_transfer.py",
+      "git_blob": "534b3256ef18e3ed509520a9741fb458d5ffec13",
+      "sha256": "791277b39865615ed4f61e47146f9188e90e9e564c8b84f71abb18d3839ac6c0",
+      "bytes": 26339,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/conservation_design_study_transfer.py",
+      "git_blob": "79bd1a39b93896e9d43e5f33709087eae21b573e",
+      "sha256": "45f22cfb4dd240b3eafa2707d1ab545eda38ef50da7c01acc59decc513fa67d6",
+      "bytes": 22082,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/conservation_study_transfer.py",
+      "git_blob": "ae5a03f9c3eb2c2ac1d05a3d0255662e2fbc7427",
+      "sha256": "dfd7342823e17b08329a647712d39249dac00b2c449b19a11161b3af7b6abcdd",
+      "bytes": 36065,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/customer_review_study_transfer.py",
+      "git_blob": "42d4f9d5db635b4a7d188c0bae9d3660e341ce4d",
+      "sha256": "a2a6c2ab407a9f1c48ea61cb0b2f12c2e01034b39633a66b3ab9531f047f4297",
+      "bytes": 24787,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/ensemble_study_receiving.py",
+      "git_blob": "8a0362967fda09058096049b1f6ef43fe23d5938",
+      "sha256": "3065cd519a385c3b74d29efc047f5abea9d482ab6443aa417c845081573d48b2",
+      "bytes": 8319,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/ensemble_study_transfer.py",
+      "git_blob": "6fe5f5b183a0f00842b23862d36e2d9b3c6f12c6",
+      "sha256": "03942245c18d169114db352dbd55d969eff20a01686d521951fc18695350fab2",
+      "bytes": 29999,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/field_deployment.py",
+      "bytes": 38323,
+      "sha256": "2072433044f6be667bf7eb350a579c266aeb5d6ff958c8888062da71419f93f0",
+      "git_blob": "483c7cf253ec8eb95194478df9059511c3561e43",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/gauge_study_receiving.py",
+      "git_blob": "9c5884438c261e47b1425ef3b44571c717a8d82a",
+      "sha256": "83b31e9797e5b2e236d72dea4c1b1d591e0f754897b28b6fd4a536fe833f179c",
+      "bytes": 8213,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/gauge_study_transfer.py",
+      "git_blob": "bd947807f91b3f62c29e22261dbb793f02aa8d27",
+      "sha256": "0c0f2ab84cc27fe498a2d4fd22cb3a9269efa35b8a86a4a3d43bc255683c2b9b",
+      "bytes": 25297,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_evidence.py",
+      "bytes": 22128,
+      "sha256": "ed7481fc038c198228ff3672ceebf2691d0704a82e65e8d687f5c97902561d2b",
+      "git_blob": "fda8bd129a6647dfd130317b96b390919dd30846",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_observation_quality.py",
+      "bytes": 39135,
+      "sha256": "17e9425dcb1c45079fdbb59b58b6415f729e23c80891a4c1e2d55033779b9850",
+      "git_blob": "9084e55a0e4a1ccc14b700242cd4a541085f8fe5",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 25190,
+          "mode": "100644",
+          "sha256": "7abbc3c0e10ce5f0464d1d3fa0da0a22ded847ae8750fa034aed813dbe97852f",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_observations.py",
+      "bytes": 39103,
+      "sha256": "d6ff6e470e1d6bc85bbb12053ea09ed7521bf50c375d801c59b8d3d186eb8e5e",
+      "git_blob": "a135ad9e931b194a270d31b122995420bf2d1ba0",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 32962,
+          "mode": "100644",
+          "sha256": "0b507b71a86d4cb8b1d7e24d34c22403c1d97f3e32897f74f1c746424c21f7ca",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_outcome_figures.py",
+      "git_blob": "09edd7a0c7abd5aaf1b379c7c3e95f256342ea3a",
+      "sha256": "aa9845509ea0c1fa4ec7173b418882b3c29bb7975c4718c36dae4ef94f6a82bc",
+      "bytes": 13423,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_outcomes.py",
+      "git_blob": "8be9a80b8dae6a0ee6fa761571e577efbeb4299f",
+      "sha256": "71ef7fc19bbaff7cf4f276abd2dc66993e5b0944916e8c61332a28a2156fcb3e",
+      "bytes": 53060,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_report_source.py",
+      "bytes": 25440,
+      "sha256": "80528c9acf8f7ceba9e720c03cb71a7882604b95f4d72d2995b1bf461d044643",
+      "git_blob": "24c34d0ae0261577920be9b86f96b3c11a6bb4ca",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_report_transfer.py",
+      "bytes": 38914,
+      "sha256": "d7f3fa53416a2aa0d7b2fbcb6541271d75c77b2f71c32b5953d54839c84b0663",
+      "git_blob": "0a56c3cfc06f6b3e6dd6c9d396ce7341e9edeaf2",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation_reporting.py",
+      "bytes": 26051,
+      "sha256": "4ed4cf30a39220e03196fb6bc57e36fe855ed3cb9466da7dbf8fbb154bfd3bde",
+      "git_blob": "10a913b7166b10ceabd2f1ee0c489730640dc1dd",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 23093,
+          "mode": "100644",
+          "sha256": "fd68d90a860da86c70f38beee0fb9200c7604c7397e28294d528ba29a1c6a2aa",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": [
+        {
+          "bytes": 26876,
+          "sha256": "d9fa2971643ed885cb18e3d411ff2f81f01484a6b6292531bffd61ba60931339",
+          "git_blob": "608721acdec02ecf526a05746348d462e532b54f",
+          "reason": "Exact native-viewed readable report successor from the completed Eighteenmile handover; preserve accessible tables, print/mobile layout and original report behavior."
+        },
+        {
+          "sha256": "9c9327e5db46a1763377b50d5ddc5642b8e1343acf6b553904f64b91cf1934f6",
+          "bytes": 37047,
+          "git_blob": "6f71df58a8c8ca36ae7472a577c39050cd2848c2",
+          "reason": "Current repository report retains original scientific cohorts and native accessible-table fixes; preserve this successor instead of replacing it with the older source-bank reporting body."
+        }
+      ]
+    },
+    {
+      "path": "model/implementation_schema.py",
+      "bytes": 33034,
+      "sha256": "5bcfed020925f0e54ba62fa876e5df5d6345c5bf18fa7f1ef5053e72f48ac6c2",
+      "git_blob": "d88796aab94e05569c7eeb48319b6293b872d295",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 32934,
+          "mode": "100644",
+          "sha256": "461f6ee3ebffbb886c7614533f03e43dde38f982f649f3a3188700ba792261bc",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/implementation.py",
+      "bytes": 35546,
+      "sha256": "30cda1f91ffb417ec36bcd31747e586c6007101a5af5595fe6e3cd82fdb531ba",
+      "git_blob": "64c35fa25749e4156c3a33def242f11b4bdffca4",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/landcover_study_transfer.py",
+      "git_blob": "a376bacc0c14395e60056c6498bf619b03473116",
+      "sha256": "5bb50b2f017d53e36d74b60c45716c3b069d57e6e4e7caec8e5511efe9f4d06a",
+      "bytes": 19161,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/monitoring_field_return.py",
+      "git_blob": "68d959ec37c875d468a767f9b24a9c2e8aafe082",
+      "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b",
+      "bytes": 24812,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/monitoring_frontier_comparison.py",
+      "git_blob": "fe8c7a7e285dfab551b74b08e5dea3687f0efe66",
+      "sha256": "d5f54faa390810e158e18edad57a7382836eea4adf13e32ecf1b42629038644e",
+      "bytes": 32528,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/monitoring_packet.py",
+      "git_blob": "a67748f87ca3f99b7e9c1a80d29d6c7053223297",
+      "sha256": "f207268b6653db1ac92f1c861e2b8497fc4c9e4cddb605b9dec6c36492b0bb26",
+      "bytes": 6625,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/monitoring_sources.py",
+      "bytes": 9136,
+      "sha256": "832279605375c3dc2b2ac9d322d17b3c2556afceceb07e9dc62526317406c53b",
+      "git_blob": "ba690da7bf4de33d81ddef5ae912d779c4be0ba1",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 7315,
+          "mode": "100644",
+          "sha256": "b10e2927d0fd8265d6d36ce12f458ddcd5f2fe554951b0bb531d3e30e244145e",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/monitoring_study_transfer.py",
+      "git_blob": "6bfc2cc28e8ff3d9fb3ba3ae2cb6f7a13ba6f6fd",
+      "sha256": "f3a9da48bbb9865c60b8aacf846ab20f1da0a664002227a3ea7e484a67bbee51",
+      "bytes": 30930,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/native_process_study_transfer.py",
+      "git_blob": "fbd5358c888a25c8a6b55a38dacc9b707bb351fb",
+      "sha256": "c8d215579a20c7f00631511503640591ac2c68c075f05b0a64b0bc04bf95234b",
+      "bytes": 16735,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/native_versions.py",
+      "bytes": 8481,
+      "sha256": "daea8763b9fb965accb7a7d60980ab159e5a09dab42309e8a27a0b22b9e3105c",
+      "git_blob": "33c4bfdfc1866a8684e97d90aae502b8eaf5d002",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 5437,
+          "mode": "100644",
+          "sha256": "695ff7e0ae786a1a9b6892392fc0f17786bcbead5417861e608f36bed3858924",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/observed_context.py",
+      "bytes": 17856,
+      "sha256": "7b7562c9b5b079556520068407f87ac58e98bc625616de52ae84f4347487e6ee",
+      "git_blob": "415a11fad8023d00ed49d3968290c5641c950efe",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 17519,
+          "mode": "100644",
+          "sha256": "164be78a691fd7b6a1749fe86f95658372b362dc524e11897c87bdda7776f802",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/observed_report_render.py",
+      "bytes": 17355,
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695",
+      "git_blob": "68d03f35ffd0354b02c21762620a6fcd017e64a1",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/paired_ensemble_study_transfer.py",
+      "git_blob": "6c2cf228e23b02a7f5b08ede4fa8f3d45fcb7e4f",
+      "sha256": "8c57515a03790077809ebf668027146830911e683cfa591adb424524dca62e26",
+      "bytes": 29107,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/portable_implementation.py",
+      "bytes": 11505,
+      "sha256": "699c40189ce642caf58689c7dc5c46a6e83ca5ff62cee098380563a26ec7a8a0",
+      "git_blob": "b53a4fe98e4c2cc8cd3b7e49dda864bb871d39ae",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/portable.py",
+      "bytes": 61295,
+      "sha256": "d2cff334e0c1fa02fb4fd2fc94804c9a3f94e57a0f93abde453a3755c8d8c556",
+      "git_blob": "209e62d72b7da9bbe49df2418c5945a7feb6cae6",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 49628,
+          "mode": "100644",
+          "sha256": "2e46470a7f0096446a396c96f3ae1e6b26b57228c71da94b9fc6c3cffd3fbb3f",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/project_transfer_workspace.py",
+      "bytes": 10431,
+      "sha256": "941748f49bee18704e6bce858626f921bcd7e2d43859ea169d6d8e9f8ff48334",
+      "git_blob": "b735017326ef64c372c2dd902d733594bc9f40b9",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/project_transfer.py",
+      "bytes": 49483,
+      "sha256": "4645a098c793f9c58eab59dea2b9a7191fe5c4fa7e56d0b68a990492b3c2169a",
+      "git_blob": "eb47e5e7f303c381c3e38ab722c12438d366d0fa",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 48469,
+          "mode": "100644",
+          "sha256": "02633b6e1f8df9221fda10fb15df900cfe9cecdb01eafd3ec58214c7e5c96721",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/published_review_report_source.py",
+      "git_blob": "4223b0062f6b8f4b96edd19c96cbb94cbe6c765e",
+      "sha256": "82657950f516682859ba6f8a31e3fe3f8b7b929e0d895ce50ab3ba6838354d02",
+      "bytes": 33477,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/published_review_study_transfer.py",
+      "git_blob": "26c5abb231cb36eef31f78d5641aa71f4717b32f",
+      "sha256": "3d6716b0b8a915dd85830dcb9e57bdf379fa9fd25c3b3ca13b05242a655ab680",
+      "bytes": 12279,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/receiving_water_report_transfer.py",
+      "git_blob": "282e947833f4c07cdc30168c1f283b4cd09c6999",
+      "sha256": "3730a22ac1c2aef0d73b5b491372cabc205b1a220d192fc97ed1d6971cca7fb4",
+      "bytes": 23053,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/receptor_report_maps.py",
+      "git_blob": "f718e9ec7091138e8cd3a752b5255534068fd989",
+      "sha256": "b81f4ed651bb3eb390efc7f7c2cfb9616f36cb8edb3fba6cc95f027247a8f018",
+      "bytes": 15870,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/receptor_report_source.py",
+      "git_blob": "2c0d335eb8b58db2afad2019a46afa4b7d2fe7dd",
+      "sha256": "abda05efd3803930c96de65966e6498652427b723b806712a69e7373f833ec09",
+      "bytes": 25508,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/receptor_study_transfer.py",
+      "git_blob": "73c8977d2101d145bd9a66e708a256a0e2232a8a",
+      "sha256": "cf2e274105e21fc7aabdd6f644b5551cf576025ab14cb9409e59f5dbf7f9b61e",
+      "bytes": 41525,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/report_changes_study_transfer.py",
+      "git_blob": "3a6eda9723f4977d9e6c2484635251f46917a91c",
+      "sha256": "1315cda9266357e203fb204a447bb1b9f165091d87b5eb977a6aebf35458e686",
+      "bytes": 9058,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/report_changes.py",
+      "git_blob": "b2578dc7b96c879cf38a1e515bdc4c190d28ef9e",
+      "sha256": "670fe2aba91549c478b733faee009030fb03b850998080691c56f3ab901d61d4",
+      "bytes": 53348,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_briefing.py",
+      "bytes": 19823,
+      "sha256": "3984125f33b7ed79ee1a1e6b64f9dba9df480b28fcfa038bf84a8dddb11cc6e2",
+      "git_blob": "023a71a698c8ff7e0e958c785f9985d694f37566",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_figures.py",
+      "bytes": 13833,
+      "sha256": "927331dade754525ae4f72b73385661fbfa8c14845ca2c54d0d0426480299465",
+      "git_blob": "c9d6656417fb8113306b30a9022f81996d95199f",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 13331,
+          "mode": "100644",
+          "sha256": "dc9891ed7a4746bb2d8a8eb125db92f492abc08f3ad7d41bbd5058dd79e74b7f",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_map_figures.py",
+      "git_blob": "d24e4efc10381b62ae14a486ec35c87b71c9feb9",
+      "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302",
+      "bytes": 15526,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_report_editions.py",
+      "bytes": 12249,
+      "sha256": "86470bf7759335c3a4fb3e92ae9ec2443cb798ffd1caef7aa95e3f019112bdff",
+      "git_blob": "2c37ab95943848863fba2fb480e75f25d26d1629",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_report_review.py",
+      "git_blob": "7d15026b7ec838008384637cc458112d5bafed61",
+      "sha256": "a4b78678a41dbaa0672bf6d80190c3a5ff78c48b569744c305bd8dd8322a86eb",
+      "bytes": 14836,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_report_study_transfer.py",
+      "bytes": 15164,
+      "sha256": "04958ff46f50ea1b6db5289c3f63bfd474565766977523b9ae03dff42f65a57e",
+      "git_blob": "2c9629613b7f0f26198dd04453173488d88b044b",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/scientific_report.py",
+      "bytes": 80044,
+      "sha256": "512e8157bc378176a545bef885dc768343ebeee6bdd425f0f499f1507ab71353",
+      "git_blob": "2bdf4a7379d66397c1f858b8e60c8ee4ce58f94f",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 63925,
+          "mode": "100644",
+          "sha256": "b6927a7dc80f39ec25b0b94ec6838c8db4613fc038021c4fd30715910b451c0c",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/study_receiving.py",
+      "bytes": 7759,
+      "sha256": "5a176012a06dc3fa41e98009dafdad7ae23dda1a5bb503faadfcb57d033f7cac",
+      "git_blob": "98ee35bfee1347b1c1aaf6a0f3695fdd772bb603",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/study_report_transfer.py",
+      "git_blob": "2f8987744865c287d8403bd5a418b5c86e0e07c3",
+      "sha256": "69210221bb42b76cc707b592bad54db15d8a69fac8a99f583d2c567c340af2a0",
+      "bytes": 18299,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/study_transfer.py",
+      "bytes": 62180,
+      "sha256": "54d6f27b873b94fb0fe6be8120743134fa2621f87f0e4cbde237411e1ceb2ef6",
+      "git_blob": "0a6149da211a89374a20d864a85f2a1ce6b36254",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 50418,
+          "mode": "100644",
+          "sha256": "9518fbd91208df57b56e9b7390226bfaaea43ffc823400043a95295c0fbe65c2",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "model/utility_monitoring_comparison.py",
+      "git_blob": "124a4727c3f049c494f8b4312a818aea037ce22d",
+      "sha256": "42fdf09fc91c93bab280625aa60b356251fd5df756d5d75f029e6ed84158ada4",
+      "bytes": 22021,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/utility_monitoring_report.py",
+      "git_blob": "ab758a692d633278ba43fc1d314de32e1ccd097a",
+      "sha256": "a556e2dad32fee360262163798b1ebd83fd0f0533da54f99f997eb8b0644b3a8",
+      "bytes": 33833,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "model/utility_monitoring.py",
+      "git_blob": "bb3c754fc773d74e14606dabb5a9052eebaed5d2",
+      "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc",
+      "bytes": 24973,
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/extensions/field-deployment.json",
+      "bytes": 1603,
+      "sha256": "8ac797f59accc01e991021df663443a881db59a39ff8d4362a8d81a2a86603db",
+      "git_blob": "7d99c630f46cc3c7c94800875b4437265fe81f0e",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/extensions/study-transfer.json",
+      "bytes": 3150,
+      "sha256": "b8e39649366dbe4dd938af37e0744197d411fd1cf93ee553a8706f125d2f1b26",
+      "git_blob": "630a9ea11f44ee70813636720641e07afe90c5be",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 2424,
+          "mode": "100644",
+          "sha256": "07515d6075a38a8ac49509575b6a280e8fe064e10b267f5141fb1a6a9a704bc0",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/field_deployment.py",
+      "bytes": 3740,
+      "sha256": "c640bda7b8f60da4e2944c60f3ccdd6c5a0caabd87f03837753fc2a05e7543b2",
+      "git_blob": "938656f8df8890482818b7f5e0491e163b967f95",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/source_report_editions.py",
+      "bytes": 12569,
+      "sha256": "1f394c1ebe2282dc74ea9ea27e82ff39518175261b5bacaf5c2af7e346cc700e",
+      "git_blob": "14decda9a5fd5e34008e25ef6ac6b730ec6f0429",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/study_receiving.py",
+      "bytes": 1374,
+      "sha256": "08b94582991c7967ebd4db7141d67b092d2f91d6ed6d813544c7a3dac6c6df40",
+      "git_blob": "0ef1de07914a480ed1385c84299dd454302ad6da",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/study_transfer.py",
+      "bytes": 6447,
+      "sha256": "810b0bd97da587585195e69477a9f84b77f0b8f2a357a6f0459041252cc02d7d",
+      "git_blob": "ef8044e57ce8345c8bfdaf25517a28f23ee2d2b0",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 6267,
+          "mode": "100644",
+          "sha256": "b76fe966567221c9019dd4d3148b85c016b8243aa4a2460a72917416028f13a3",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/extensions/study_transfer.css",
+      "bytes": 7886,
+      "sha256": "758b64db4bda43e2b9b33bcbb315c5f087baf4285c7d2de398aab68c6b8cc645",
+      "git_blob": "71256806ed1f3cc6752e5caf4807113b5692ca95",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 7399,
+          "mode": "100644",
+          "sha256": "9dcc3c839c31c4046aae7c6e76cad5966a78c2bec826661fb7d001a90e1d1b28",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/extensions/study_transfer.mjs",
+      "bytes": 38317,
+      "sha256": "68b7f61f260e54ca059d5a5382e32819b6cfde4d7704ee2529a2cbcbf62bafd0",
+      "git_blob": "7bd77479597f2d50bbaba0873e250360a8cd7b2a",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 28992,
+          "mode": "100644",
+          "sha256": "5a29a691dbb4cb515e16ae3742748b220a7a2a1c17db9d03fe31304801c3240f",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_briefing.mjs",
+      "bytes": 11692,
+      "sha256": "8561561a1c1db1087569cf84ce59cf478e53e8cee2f7cc839c5abb81f8900204",
+      "git_blob": "ad7c1883b7b7e8c2b6901b8de49e4abeeba1134f",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_catalog.json",
+      "bytes": 44274,
+      "sha256": "832608281c790335691d332f381fe742e9984264750ab731a8a4c311f45242c4",
+      "git_blob": "35b0205cae0a7105db036b4c973a53b8ee9581dc",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_core.mjs",
+      "bytes": 43652,
+      "sha256": "c44aa88c1a6f269c4a52c97f59f4280306234391fcaf0a9fed78a50a8e075f93",
+      "git_blob": "c4b771f6d6a73cee32396b1b307eff3f7af4130d",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 39921,
+          "mode": "100644",
+          "sha256": "54f7dce23496e6d7ca3558dc5d67717d95113ec6c3b29f08df23acca1ce569d3",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_deployment.mjs",
+      "bytes": 13304,
+      "sha256": "781c8c92a039d63f2283996bb4ec0730e9b840b147fae77bc2601e421732eeb8",
+      "git_blob": "c50fc7470d0459bd21d959b98edba82d2c443068",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_evidence_ui.mjs",
+      "bytes": 16862,
+      "sha256": "35948f23a42503674308f4055be12cae91fcf9a3f14074d4c63ae3de196e15ae",
+      "git_blob": "6865a460c5e7f708e9d8a2cd4654d92b9af470b5",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_evidence.mjs",
+      "bytes": 28243,
+      "sha256": "ca97f9c713a29e16c4216b46334cc32a7ae13e185d0641772b4e3f5aa6cef4f1",
+      "git_blob": "b7254e00fa1ce24f3f9c0923f42e76fbec241633",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_field_start.mjs",
+      "bytes": 9995,
+      "sha256": "6e0bea8dffc7c38f9e1b337403ff272f813bd732cffd4f1d8ff0eccfb62ffb8b",
+      "git_blob": "37c84efd23584b5ca39e9e182e58f6950aca9a66",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_forms.mjs",
+      "bytes": 35007,
+      "sha256": "1015a999cc79917a7b1e20df5c79f3622e5f8e3bc018f4514b195400bd37734b",
+      "git_blob": "e61a627ee177665aba3b3cff8203d9941dcb15eb",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 24141,
+          "mode": "100644",
+          "sha256": "fb8ab19a485bf42478280f18040a15f4ce4b7c6f590914a93316a574e0a1109f",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_results.mjs",
+      "bytes": 16427,
+      "sha256": "4b97acf0eb929e4ab6c0e9e67f09864aff5fd0ffeca4c12fce8ad197a49499b8",
+      "git_blob": "10838b242435f5e15c0cf244c069d524605466ed",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_site_visit_csv.mjs",
+      "bytes": 31773,
+      "sha256": "5953113c7a3419edef122acd9353dd9abb6a9a867533fc92b6cd3ea4488f523c",
+      "git_blob": "f26ad68b7adca56eecc134384d435e43b84e82b4",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation_site_visit.mjs",
+      "bytes": 41220,
+      "sha256": "90d8681b826c4b6e9a776ff184b069536848c74911b41184ed0136129c44fb37",
+      "git_blob": "7c7181a8ccfe884001051159c1e0027a8fe8607c",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation.css",
+      "bytes": 7819,
+      "sha256": "3aba9c60c349ebedb1192ce6092fe3b01d01a3a8c76f3eae35cda6e3e3c6536a",
+      "git_blob": "07633327b5b57621fe23ac1bb35ca0d7111cc9a4",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 6702,
+          "mode": "100644",
+          "sha256": "b975972f47ed5815bd1ca2b64ef72bd07568f5e8eeb5e32fb7ab9d136b503a67",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/implementation.mjs",
+      "bytes": 89931,
+      "sha256": "226f443339cb95bb3824f53ebad737d1126f9f4d69da0e1d22a1c871347bd386",
+      "git_blob": "e8d19a031b9e3584f8bd05f0d1d8a026d7991e72",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [
+        {
+          "bytes": 63846,
+          "mode": "100644",
+          "sha256": "50fc26b55c34ef695715d806efc59dafde862b4f894d4130224185496b038449",
+          "provenance": "original native archive application member"
+        }
+      ],
+      "retained_successors": []
+    },
+    {
+      "path": "operator/web/received_studies.mjs",
+      "bytes": 12836,
+      "sha256": "d90aceeac95c639b9949e97908ccfa460357980ff59deb56946882cfd315cc1c",
+      "git_blob": "70e243f71831d38f260b1fff4debeb4059941dcc",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "source_tools/prepare_scientific_briefing.py",
+      "bytes": 1831,
+      "sha256": "c2404079cf0948edd45817664d115dbc532d4f0fe2080636e50001a0f60572c6",
+      "git_blob": "97bedf032431c85480fa7b3a747ec37c6c1a7166",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    },
+    {
+      "path": "source_tools/receive_scientific_fieldwork.py",
+      "bytes": 31377,
+      "sha256": "e7dace1310aed64865fc93bf971933ae658464b687a86a09343e7c965e499cdf",
+      "git_blob": "69cea369ef61c52df95db61ea66f48500b7738af",
+      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "accepted_preimages": [],
+      "retained_successors": []
+    }
+  ]
+}
