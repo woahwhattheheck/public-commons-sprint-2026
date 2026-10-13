@@ -230,6 +230,15 @@
       "original_claim": "1791920117.443899",
       "behavior": "Preserve complete detached browser working states and original persistence leases under their original workspace/account; retain exact pending requests and unload warnings for unfinished inactive copies.",
       "composed_main": "573e503919e673739e02b3e7a983994c26d63fd0"
+    },
+    "large_collection_receiving": {
+      "operation_id": "CEDAR-10212-ECO-COLLECTION-RECEIVING-20261013",
+      "original_claim": "1791921813.488809",
+      "source_base": "a3d269e53cd5fc962aa3326a015b2bd93ac28b38",
+      "collection_product_merge": "513c2582b169655b674e23393a1d931d41bb3996",
+      "entry": "measurement_workspace/engine/reconciliation-receiving.mjs --chapter large-collections",
+      "guide": "measurement_workspace/COLLECTION_RECEIVING.md",
+      "behavior": "The same owned receiver retains complete original requests and automatic browser backups, resumes interrupted checkpoints, reuses exact completed sender outputs, downloads every declared edition member and independently receives the whole selected project."
     }
   },
   "files": [
@@ -265,8 +274,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 11534,
-      "sha256": "ef5d5af29998f156c50efa94aa4cc7965e765ed54835e4decf15fb60162ff20a"
+      "bytes": 14441,
+      "sha256": "30879071849453cb4421a867a547160d43d22224244cb5120b71c51437c64c9d"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
@@ -320,8 +329,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-collections.json",
-      "bytes": 4523,
-      "sha256": "48fc6a72f1ab393f7bba948437800a782d28da21dfb610bbfd66fdba318d4b58"
+      "bytes": 5436,
+      "sha256": "47b9180d89b6f2f6b9cf3c1dbf2da173da39edfdd7d284949667cf29849d38a4"
     },
     {
       "path": "integration/component_fragments/measurement-flow-studies.json",
@@ -710,8 +719,8 @@
     },
     {
       "path": "measurement_workspace/engine/reconciliation-receiving.mjs",
-      "bytes": 32984,
-      "sha256": "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
+      "bytes": 33299,
+      "sha256": "45f7091f13d45683362962c605f78c2fd5026201adb9a3eb30e06864d2ab5f04"
     },
     {
       "path": "measurement_workspace/engine/reconciliation_cli.mjs",
@@ -1882,6 +1891,41 @@
       "path": "source_tools/receive_workbook_measurements.mjs",
       "bytes": 11131,
       "sha256": "a0fb56401dbc7c933ec009f9545baaa6029123c626bc1bcfa3a036b97cd450cf"
+    },
+    {
+      "path": "measurement_workspace/engine/large-collection-receiving.mjs",
+      "bytes": 37594,
+      "sha256": "a70c35049cb0b2424eefbd2d81ab6fbba66bad349483ecedb3cef3ce5ff75e63"
+    },
+    {
+      "path": "measurement_workspace/COLLECTION_RECEIVING.md",
+      "bytes": 14079,
+      "sha256": "9e62ebe1c3bb0311d24cd97f92da28329326b9846d7f2c1df70bef40d8cdf3b3"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+      "bytes": 3640,
+      "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+      "bytes": 4364,
+      "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+      "bytes": 17794,
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+      "bytes": 50756,
+      "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/sources.json",
+      "bytes": 1533,
+      "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
     }
   ],
   "predecessors": {
@@ -2044,7 +2088,8 @@
       "e01d082945f7f9df22d573e5441d0b0ba6235715f1b17fa12cc807170a8b5335",
       "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d",
       "606d146a2c4583c8fadf59d64e2c03a4b45d0e166efe4a034ffd8db309e7acbf",
-      "0c90cebe42be6ffa5c28c54999fbb6471dcf3c22e46a06af407c9f9954ea450c"
+      "0c90cebe42be6ffa5c28c54999fbb6471dcf3c22e46a06af407c9f9954ea450c",
+      "48fc6a72f1ab393f7bba948437800a782d28da21dfb610bbfd66fdba318d4b58"
     ],
     "measurement_workspace/engine/calibration.mjs": [
       "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199"
@@ -2176,7 +2221,8 @@
       "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11",
       "4c0587db9127ece1e122cb45837e112989435b36eb4301f044da11fe642bc3cd",
       "7fa7df0f7d26c0df40cacba16fba18894ae4c879a2b1e5158c2dc952f96bf6ba",
-      "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed"
+      "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed",
+      "ef5d5af29998f156c50efa94aa4cc7965e765ed54835e4decf15fb60162ff20a"
     ],
     "install_measurement_large_files.py": [
       "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
@@ -2413,7 +2459,8 @@
       "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35"
     ],
     "measurement_workspace/engine/reconciliation-receiving.mjs": [
-      "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+      "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1",
+      "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
     ],
     "integration/component_fragments/measurement-observation-editions.json": [
       "8ac32a7130cf57bfd690fb2f6102b4b25821d3255f3ceeeee95368cfb2f70fa7"

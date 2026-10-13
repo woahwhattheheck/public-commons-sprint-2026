@@ -364,11 +364,15 @@ async function stopServer(service){
   }
 }
 export async function runSourceVersionReceiving(options){
+  if(options.chapter==='large-collections'){
+    const {runLargeCollectionReceiving}=await import('./large-collection-receiving.mjs');
+    return runLargeCollectionReceiving(options,{prepareSourceVersionReceiving,assertOwnedTree,exact,atomic,regular,captureDownload,startServer,stopServer});
+  }
   if(options.chapter==='observation-editions'){
     const {runObservationEditionReceiving}=await import('./observation-edition-receiving.mjs');
     return runObservationEditionReceiving(options,{prepareSourceVersionReceiving,assertOwnedTree,exact,atomic,regular,captureDownload,startServer,stopServer});
   }
-  assert(!options.chapter||options.chapter==='source-versions','Choose source-versions or observation-editions.');
+  assert(!options.chapter||options.chapter==='source-versions','Choose source-versions, observation-editions or large-collections.');
   const prepared=await prepareSourceVersionReceiving(options),done=path.join(prepared.root,'COMPLETE.json');
   if(await exists(done)){
     const result=JSON.parse(await fs.readFile(done,'utf8'));
