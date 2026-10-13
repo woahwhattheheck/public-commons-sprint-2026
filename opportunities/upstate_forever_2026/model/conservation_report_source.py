@@ -19,7 +19,7 @@ from .common import (
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.conservation-report-source/v1"
-EDITION = "conservation-saved-plan-report/1"
+EDITION = "conservation-saved-plan-report/2"
 DIRECTORY = "conservation-report-sources"
 
 
@@ -121,14 +121,82 @@ def _retained_rows(workspace, state, plan):
     return rows
 
 
-def _sections(state, plan, rows, packet, sources):
+def _retained_optimization(workspace, state, plan):
+    """Reopen the original saved decision analysis without solving it again."""
+    reference = plan["selection"].get("optimization")
+    if reference is None:
+        return None
+    from . import conservation_optimization
+    if (not isinstance(reference, dict)
+            or reference.get("schema") != conservation_optimization.REFERENCE_SCHEMA
+            or reference.get("study_id") != state["id"]):
+        raise ValueError("Retain the original saved optimization reference")
+    retained = conservation_optimization.get_analysis(
+        workspace, state["id"], identifier(reference.get("analysis_id")))
+    analysis = retained["analysis"]
+    selected = analysis.get("selected_ids")
+    if (retained["state"]["files"] != reference.get("files")
+            or analysis.get("request") != reference.get("request")
+            or analysis.get("engine") != reference.get("engine")
+            or analysis.get("normalization") != reference.get("normalization")
+            or analysis.get("optimization") != reference.get("solver_result")
+            or analysis.get("input", {}).get("study_id") != state["id"]
+            or not isinstance(selected, list)
+            or selected != reference.get("selected_ids")
+            or len(selected) != len(set(selected))
+            or set(selected) != set(plan["selected_ids"])):
+        raise ValueError("The original optimization and selected portfolio differ")
+    return retained
+
+
+def _optimization_section(retained):
+    analysis = retained["analysis"]
+    request = analysis["request"]
+    rows = [
+        ["Original analysis ID", analysis["id"]],
+        ["Objective kind", request["objective"].get("kind")],
+        ["Objective basis", request["objective"].get("basis")],
+        ["Objective scope", analysis["methods"].get("objective_scope")],
+        ["Original candidate count", analysis["counts"].get("inventory")],
+        ["Eligible candidate count", analysis["counts"].get("eligible")],
+        ["Selected candidate count", analysis["counts"].get("selected")],
+        ["Normalized objective score", analysis["selection"].get("objective_score")],
+        ["Original solver module", analysis["engine"].get("module")],
+        ["Original solver SHA-256", analysis["engine"].get("sha256")],
+    ]
+    for group, values in (
+            ("Weight", request.get("weights", {})),
+            ("Constraint", request.get("constraints", {})),
+            ("Solver result", analysis.get("optimization", {}))):
+        rows.extend([group + ": " + name, value] for name, value in values.items()
+                    if not isinstance(value, (dict, list)))
+    return ["Original saved optimization", [
+        "This portfolio was selected by its retained optimization analysis and then "
+        "stored through the original manual-ID plan interface. The storage mode does "
+        "not replace its original objective, solver or constraints.",
+        _table(["Decision record", "Retained value"], rows),
+        _text(analysis["methods"].get("optimality_scope")),
+        _text(analysis["methods"].get("selected_result")),
+        _text(analysis.get("stability", {}).get("interpretation")),
+        "The full normalized candidate table, all declared preference profiles and "
+        "solver details are attached unchanged. Independent-unit objective sums and "
+        "union-recomputed physical quantities retain their original meanings.",
+        _links([
+            ("Original complete optimization analysis", "optimization/analysis.json"),
+            ("Original full optimization candidate table", "optimization/candidates.csv"),
+            ("Original optimization report", "optimization/index.html"),
+        ]),
+    ]]
+
+
+def _sections(state, plan, rows, packet, sources, optimization=None):
     spec, summary = state["selection"]["spec"], plan["summary"]
     context = state["mode"] == "source_context"
     from pyproj import CRS
     analysis_crs = CRS.from_user_input(plan["analysis_crs"]).to_string()
     normalization = state.get("normalization", {})
     decision_rows = [
-        ["Selection algorithm", plan.get("algorithm")],
+        ["Saved-plan selection mode", plan.get("algorithm")],
         ["Ordering objective", plan["selection"].get("objective")],
         ["Include ineligible units", plan["selection"].get("include_ineligible")],
     ]
@@ -208,6 +276,8 @@ def _sections(state, plan, rows, packet, sources):
         "the known subtotal is shown separately from an unavailable total. Original score inputs, "
         "normalization, weights, method prerequisites and missing evidence remain in the attached records.",
     ]])
+    if optimization is not None:
+        sections.append(_optimization_section(optimization))
     sections.append(["Complete selected planning-unit inventory", [
         _table(["Original unit ID", "Label", "Whole area (ha)", "Reporting area (ha)",
                 "Source-water area (ha)"], [
@@ -400,7 +470,12 @@ def prepare(workspace, spec):
     rows = _retained_rows(workspace, state, plan)
     for item in plan["files"].values():
         verify_file(workspace.root, item)
-    packet = conservation.export_packet(workspace, state["id"], plan["id"])
+    optimization = _retained_optimization(workspace, state, plan)
+    if optimization is not None:
+        from . import conservation_optimization
+        packet = conservation_optimization.export(workspace, plan["id"])
+    else:
+        packet = conservation.export_packet(workspace, state["id"], plan["id"])
     originals = _source_entries(workspace, state)
     plan_file = describe_file(workspace.root, workspace.root / "conservation-plans" / plan["id"] / "plan.json")
     study_file = describe_file(workspace.root, workspace.root / "conservation" / state["id"] / "study.json")
@@ -408,7 +483,11 @@ def prepare(workspace, spec):
         "edition": EDITION, "producer_sha256": file_digest(__file__),
         "project_id": workspace.project["id"], "plan_id": plan["id"], "study_id": state["id"],
         "title": title, "plan": plan_file, "study": study_file,
-        "packet": {**_identity_file(packet), "id": packet["id"], "presentation": packet["presentation"]},
+        "packet": {**_identity_file(packet), "id": packet["id"],
+                   "schema": packet["schema"], "presentation": packet.get("presentation")},
+        "optimization": ({"id": optimization["analysis"]["id"],
+                          "files": optimization["state"]["files"]}
+                         if optimization is not None else None),
         "source_entries": originals,
         "native_execution": state.get("native_execution", {}),
     }
@@ -439,6 +518,11 @@ def prepare(workspace, spec):
         retain("records/study.json", study_file)
         retain("records/portfolio.json", plan["files"]["portfolio"])
         retain("records/candidates.json", state["files"]["candidates"])
+        if optimization is not None:
+            names = {"analysis": "analysis.json", "candidates": "candidates.csv",
+                     "report": "index.html"}
+            for role, item in optimization["state"]["files"].items():
+                retain("optimization/" + names[role], item)
         write("records/study-inspection.json", state)
         write("records/source-bindings.json", {"schema": "upstate.conservation-report-originals/v1",
                                               "study_id": state["id"], "sources": originals})
@@ -459,7 +543,7 @@ def prepare(workspace, spec):
                        "mode": state["mode"], "purpose": state["purpose"],
                        "unit_type": state["unit_type"], "planning_unit_label": state["planning_unit_label"]},
             "inputs": [members[name] for name in sorted(members)],
-            "sections": _sections(state, plan, rows, packet, originals),
+            "sections": _sections(state, plan, rows, packet, originals, optimization),
             "source_links": ["records/source-bindings.json", "records/study-inspection.json",
                              "records/plan.json", "records/candidates.json", "decision-packet.zip"],
         }
