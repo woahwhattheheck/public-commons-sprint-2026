@@ -136,6 +136,7 @@ def conservation_lifecycle(text):
         "    if(typeof experiments!=='undefined')experiments.detach();\n",
         "    if(typeof programmes!=='undefined')programmes.detach();\n",
         "    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n",
+        "    if(typeof rehearsal!=='undefined')rehearsal.detach();\n",
         "    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n",
         "    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n",
     )

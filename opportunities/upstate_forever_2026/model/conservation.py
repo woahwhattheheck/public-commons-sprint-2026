@@ -34,15 +34,17 @@ CONTEXT_NAMES = ("protected_lands", "drinking_water", "high_quality_waters")
 CONTEXT_AXES = ("source_water_fraction", "unprotected_fraction", "high_quality_context")
 METHOD = {
     "native_units": "InVEST 3.20 native NDR kg/ha/year and SDR metric tonnes/ha/year.",
+    "native_selection": "Each original run selects NDR, SDR or both. Omitted models retains historical combined behavior; unselected pollutant quantities and native support remain null with explicit reasons.",
+    "comparison_selection": "Alternative quantities retain their own model selection. A paired delta requires that pollutant in both original cases before common-cell support is computed.",
     "aggregation": "Native cell rate multiplied by the polygon-cell intersection area in hectares.",
-    "within_cell_assumption": "The native 30 m cell rate is uniform over each cell; boundary allocation changes area weights, not model resolution.",
+    "within_cell_assumption": "The rate is uniform over each original native cell; boundary allocation changes area weights, not the retained model resolution.",
     "stream_support": "Original NoData coincident with a verified same-stage stream cell is retained as a structural omission; no mass is added.",
     "comparison_support": "Scenario deltas use cells valid in both runs. Common structural omissions contribute coverage, without adding mass.",
     "scenario_direction": "delta = alternative minus baseline; reduction = baseline minus alternative.",
     "scenario_scope": "Each spatial delta is the selected-footprint contribution within the full modeled scenario. A selected-action result comes from running a scenario whose actual change mask is the selected portfolio.",
     "portfolio": "Model quantities and context areas are recomputed on the geometric union of the selected reporting-area footprints.",
     "context": "Fractions describe overlap with the selected retained source editions and their declared relation.",
-    "ranking": "Weighted normalized planning scores retain separate physical quantities and every normalization setting.",
+    "ranking": "Selected physical or context scores retain their normalization; published practice scores retain their criterion points, prerequisites and exact source bindings.",
     "references": GUIDES,
 }
 
@@ -145,17 +147,20 @@ def _spec(value):
     result["rules"] = rules
     score = {"basis": "context" if mode == "source_context" else "current_export", "scale": "total",
              **result.get("score", {})}
-    if score["basis"] not in ("context", "current_export", "scenario_reduction", "disturbance_increase"):
-        raise ValueError("Choose context, current_export, scenario_reduction or disturbance_increase")
+    if score["basis"] not in ("context", "current_export", "scenario_reduction", "disturbance_increase", "published_method"):
+        raise ValueError("Choose context, current_export, scenario_reduction, disturbance_increase or published_method")
     if score["scale"] not in ("total", "per_hectare"):
         raise ValueError("Score scale must be total or per_hectare")
-    if mode == "source_context" and score["basis"] != "context":
+    if mode == "source_context" and score["basis"] not in ("context", "published_method"):
         raise ValueError("A physical score requires a selected native model run")
     if score["basis"] in ("scenario_reduction", "disturbance_increase"):
         score["alternative_run_id"] = identifier(score.get("alternative_run_id"))
         if score["alternative_run_id"] not in alts:
             raise ValueError("Select the scoring alternative among this study's retained alternative runs")
-    if score["basis"] == "context":
+    if score["basis"] == "published_method":
+        from .keowee_priority import normalize_score
+        score = normalize_score(score, result)
+    elif score["basis"] == "context":
         weights = {key: 0 for key in CONTEXT_AXES}
         weights.update(score.get("context_weights", {}))
         if set(weights) != set(CONTEXT_AXES):
@@ -203,10 +208,36 @@ def _source(workspace, choice, *, kind="vector"):
     }
 
 
+def _selected_models(selection):
+    """Use the maintained selection contract, including original combined runs."""
+    from . import common
+    normalizer = getattr(common, "selected_models", None)
+    if normalizer is not None:
+        return normalizer(selection)
+    # The addon also opens the original combined-model Workspace edition.
+    # Its saved selections omit models; later explicit selections use the same
+    # validated names and stable order as the maintained core.
+    values = selection.get("models", ["ndr", "sdr"])
+    if (not isinstance(values, (list, tuple)) or not values
+            or any(not isinstance(value, str) for value in values)):
+        raise ValueError("Select a nonempty native model list containing ndr, sdr")
+    names = [value.strip().lower() for value in values]
+    if len(names) != len(set(names)) or set(names) - {"ndr", "sdr"}:
+        raise ValueError("Select each native model once from ndr, sdr")
+    return [name for name in ("ndr", "sdr") if name in names]
+
+
+def _selected_outputs(selection):
+    models = _selected_models(selection)
+    return [key for key, (model, _, _) in POLLUTANTS.items() if model in models]
+
+
 def _native(workspace, spec):
     result, grid = {}, None
     if spec["mode"] == "source_context":
         return result, grid
+    if INVEST_VERSION != "3.20.0":
+        raise ValueError("Conservation quantities require the original InVEST 3.20.0 output-unit contract")
     for key in [spec["baseline_run_id"]] + spec["alternative_run_ids"]:
         run = workspace.inspect_run(key)
         if run["state"] != "complete":
@@ -218,15 +249,24 @@ def _native(workspace, spec):
             raise ValueError("Baseline and alternatives must share the same retained reporting/model grid")
         grid = selected_grid
         root = workspace.root / "runs" / key
-        outputs = {}
-        for pollutant, (stage_name, output_id, unit) in POLLUTANTS.items():
-            stage = run["stages"][stage_name]
-            arguments = read_json(verify_file(root, stage["arguments"]))
+        outputs, arguments_by_stage, verified = {}, {}, set()
+        for pollutant in _selected_outputs(run["selection"]):
+            stage_name, output_id, unit = POLLUTANTS[pollutant]
+            stage = run.get("stages", {}).get(stage_name)
+            if not isinstance(stage, dict) or "arguments" not in stage or "files" not in stage:
+                raise ValueError("Completed selected native " + stage_name.upper() + " stage is missing from run " + key)
+            if stage_name not in arguments_by_stage:
+                arguments_by_stage[stage_name] = read_json(verify_file(root, stage["arguments"]))
+            arguments = arguments_by_stage[stage_name]
             stream_id = "stream_and_drainage" if stage_name == "sdr" and arguments.get("drainage_path") else "stream"
             for name in (output_id, stream_id):
                 if name not in stage["files"]:
                     raise ValueError("Native " + stage_name + " registry is missing " + name)
-                verify_file(root, stage["files"][name])
+                item = stage["files"][name]
+                identity = (item["path"], item["bytes"], item["sha256"])
+                if identity not in verified:
+                    verify_file(root, item)
+                    verified.add(identity)
             outputs[pollutant] = {
                 "stage": stage_name, "output_id": output_id, "rate": stage["files"][output_id],
                 "stream_id": stream_id, "stream": stage["files"][stream_id],
@@ -238,11 +278,29 @@ def _native(workspace, spec):
         }
     return result, grid
 
-
 def prepare(workspace, value):
     """Bind a reusable immutable selection to original source and native identities."""
     spec = _spec(value)
     native, grid = _native(workspace, spec)
+    if native and spec["score"]["basis"] not in ("context", "published_method"):
+        available = set(native[spec["baseline_run_id"]]["outputs"])
+        if spec["score"]["basis"] in ("scenario_reduction", "disturbance_increase"):
+            available &= set(native[spec["score"]["alternative_run_id"]]["outputs"])
+        if not available:
+            raise ValueError("The selected scoring cases have no shared native pollutant outputs; choose compatible cases or a context score")
+        if "weights" not in value.get("score", {}):
+            spec["score"]["weights"] = {key: 1 if key in available else 0 for key in POLLUTANTS}
+        unavailable = [key for key, weight in spec["score"]["weights"].items()
+                       if weight > 0 and key not in available]
+        if unavailable:
+            raise ValueError("Positive score weights require selected native outputs in every scoring case; set these weights to zero or select matching models: "
+                             + ", ".join(unavailable))
+    if native and spec["score"]["basis"] == "published_method":
+        required = set(spec["score"]["native_required_pollutants"])
+        missing = required - set(native[spec["baseline_run_id"]]["outputs"])
+        if missing:
+            raise ValueError("The selected published export criteria require these baseline native outputs: "
+                             + ", ".join(sorted(missing)))
     sources = {}
     for name, choice in [("parcels", spec["parcels"])] + list(spec["contexts"].items()):
         _, sources[name] = _source(workspace, choice)
@@ -255,6 +313,11 @@ def prepare(workspace, value):
     bindings = {"sources": sources, "runs": native,
                 "grid": {"id": grid["id"], "grid": grid["grid"], "reporting_area": grid["files"]["reporting_area"]}
                 if grid else None}
+    if spec["score"]["basis"] == "published_method":
+        from .keowee_priority import bind
+        bindings["published_method"] = bind(workspace, spec)
+        if bindings["published_method"].get("criteria_source"):
+            sources["priority_metrics"] = bindings["published_method"]["criteria_source"]
     selection = {"version": VERSION, "spec": spec, "bindings": bindings}
     key = digest(selection)
     directory = workspace.root / "conservation" / key
@@ -518,8 +581,13 @@ def _open_native(workspace, state, stack):
         if (reference.count != 1 or reference.transform.b != 0 or reference.transform.d != 0
                 or reference.transform.a <= 0 or reference.transform.e >= 0):
             raise ValueError("Conservation aggregation needs the original north-up single-band model grid")
-        if (abs(reference.transform.a - 30) > 1e-7 or abs(reference.transform.e + 30) > 1e-7):
-            raise ValueError("The selected Upper Savannah native model output must preserve its 30 m cells")
+        grid = state["selection"]["bindings"]["grid"]["grid"]
+        resolution = _number(grid["resolution_m"], "Retained native grid resolution")
+        if resolution <= 0:
+            raise ValueError("The retained native grid resolution must be positive")
+        if (not math.isclose(reference.transform.a, resolution, rel_tol=1e-9, abs_tol=1e-7)
+                or not math.isclose(-reference.transform.e, resolution, rel_tol=1e-9, abs_tol=1e-7)):
+            raise ValueError("Native outputs must preserve the original selected model grid's cell size")
     return reference, result
 
 
@@ -602,19 +670,24 @@ def _aggregate(reference, datasets, geometry, spec):
     import numpy as np
     area = geometry.area
     if reference is None:
+        if spec["mode"] == "native_model":
+            raise ValueError("The native study has no retained selected model outputs")
         return _empty_pollutants(area / 10000)
     baseline = spec["baseline_run_id"]
     ids = [baseline] + spec["alternative_run_ids"]
+    present = {key: set(datasets[key]) & set(POLLUTANTS) for key in ids}
     totals = {key: {pollutant: {"mass": 0., "valid": 0., "structural": 0., "observed": False}
-                    for pollutant in POLLUTANTS} for key in ids}
+                    for pollutant in present[key]} for key in ids}
     paired = {key: {pollutant: {"baseline": 0., "alternative": 0., "valid": 0., "structural": 0., "observed": False}
-                    for pollutant in POLLUTANTS} for key in spec["alternative_run_ids"]}
+                    for pollutant in present[baseline] & present[key]} for key in spec["alternative_run_ids"]}
     for window, weights in _area_windows(reference, geometry):
         inside = weights > 0
         hectares = weights / 10000
         for pollutant in POLLUTANTS:
             cells = {}
             for key in ids:
+                if pollutant not in present[key]:
+                    continue
                 rate = datasets[key][pollutant]["rate"].read(1, window=window, masked=True)
                 stream = datasets[key][pollutant]["stream"].read(1, window=window, masked=True)
                 raw = np.ma.getdata(rate)
@@ -630,8 +703,12 @@ def _aggregate(reference, datasets, geometry, spec):
                 total["structural"] += float(np.sum(weights[structural], dtype="float64"))
                 total["observed"] = total["observed"] or bool(np.any(valid))
                 cells[key] = (raw, valid, structural)
+            if baseline not in cells:
+                continue
             base, base_valid, base_structural = cells[baseline]
             for key in spec["alternative_run_ids"]:
+                if key not in cells:
+                    continue
                 other, other_valid, other_structural = cells[key]
                 common = base_valid & other_valid
                 common_structural = base_structural & other_structural
@@ -641,37 +718,51 @@ def _aggregate(reference, datasets, geometry, spec):
                 pair["valid"] += float(np.sum(weights[common], dtype="float64"))
                 pair["structural"] += float(np.sum(weights[common_structural], dtype="float64"))
                 pair["observed"] = pair["observed"] or bool(np.any(common))
+
     def coverage(row):
         return min(1., max(0., (row["valid"] + row["structural"]) / area)) if area > 0 else None
+
+    def missing_reason(key, pollutant):
+        role = "baseline" if key == baseline else "alternative"
+        return POLLUTANTS[pollutant][0].upper() + " was not selected in " + role + " run " + key
+
+    def quantity(key, pollutant, field):
+        row = totals[key].get(pollutant)
+        value = {
+            "availability": "modeled" if row is not None else "not_selected",
+            "availability_reason": None if row is not None else missing_reason(key, pollutant),
+            field: row["mass"] if row is not None and row["observed"] else None,
+            "coverage_fraction": coverage(row) if row is not None else None,
+            "valid_area_ha": row["valid"] / 10000 if row is not None else None,
+            "selected_area_ha": area / 10000,
+            "structural_stream_area_ha": row["structural"] / 10000 if row is not None else None,
+            "missing_area_ha": max(0., area - row["valid"] - row["structural"]) / 10000 if row is not None else None,
+        }
+        return value
+
     result = {}
     for pollutant, (_, _, unit) in POLLUTANTS.items():
-        base = totals[baseline][pollutant]
-        value = {
-            "unit": unit, "availability": "modeled", "baseline": base["mass"] if base["observed"] else None,
-            "coverage_fraction": coverage(base), "valid_area_ha": base["valid"] / 10000,
-            "selected_area_ha": area / 10000, "structural_stream_area_ha": base["structural"] / 10000,
-            "missing_area_ha": max(0., area - base["valid"] - base["structural"]) / 10000,
-            "alternatives": {},
-        }
+        value = {"unit": unit, **quantity(baseline, pollutant, "baseline"), "alternatives": {}}
         for key in spec["alternative_run_ids"]:
-            alternative, pair = totals[key][pollutant], paired[key][pollutant]
-            delta = pair["alternative"] - pair["baseline"] if pair["observed"] else None
+            pair = paired[key].get(pollutant)
+            observed = pair is not None and pair["observed"]
+            delta = pair["alternative"] - pair["baseline"] if observed else None
+            missing = [missing_reason(run_id, pollutant) for run_id in (baseline, key)
+                       if pollutant not in present[run_id]]
             value["alternatives"][key] = {
-                "value": alternative["mass"] if alternative["observed"] else None,
-                "coverage_fraction": coverage(alternative),
-                "valid_area_ha": alternative["valid"] / 10000,
-                "structural_stream_area_ha": alternative["structural"] / 10000,
+                **quantity(key, pollutant, "value"),
+                "comparison_availability": "modeled" if pair is not None else "not_shared",
+                "comparison_availability_reason": "; ".join(missing) if missing else None,
                 "delta": delta, "reduction": -delta if delta is not None else None,
-                "common_baseline": pair["baseline"] if pair["observed"] else None,
-                "common_alternative": pair["alternative"] if pair["observed"] else None,
-                "common_coverage_fraction": coverage(pair),
-                "common_valid_area_ha": pair["valid"] / 10000,
-                "common_structural_stream_area_ha": pair["structural"] / 10000,
+                "common_baseline": pair["baseline"] if observed else None,
+                "common_alternative": pair["alternative"] if observed else None,
+                "common_coverage_fraction": coverage(pair) if pair is not None else None,
+                "common_valid_area_ha": pair["valid"] / 10000 if pair is not None else None,
+                "common_structural_stream_area_ha": pair["structural"] / 10000 if pair is not None else None,
                 "profile_changed": datasets[key].get("_profile_changed", False),
             }
         result[pollutant] = value
     return result
-
 
 def _eligibility(candidate, spec):
     rules, score = spec["rules"], spec["score"]
@@ -689,7 +780,13 @@ def _eligibility(candidate, spec):
     if rules["require_high_quality_context"] and candidate["high_quality_context"] is not True:
         reasons.append("The selected high-quality-water relation is absent")
     if spec["mode"] == "native_model":
-        required = score.get("weights", {key: 1 for key in POLLUTANTS})
+        if score["basis"] == "published_method":
+            required = {key: 1 for key in score["native_required_pollutants"]}
+        elif score["basis"] == "context":
+            required = {key: 1 for key, metric in candidate["pollutants"].items()
+                        if metric["availability"] == "modeled"}
+        else:
+            required = score["weights"]
         for key, weight in required.items():
             if weight <= 0:
                 continue
@@ -700,7 +797,10 @@ def _eligibility(candidate, spec):
             else:
                 coverage, available = metrics["coverage_fraction"], metrics["baseline"]
             if available is None:
-                reasons.append(key + " has no valid selected native export cells")
+                reason = (pair.get("comparison_availability_reason")
+                          if score["basis"] in ("scenario_reduction", "disturbance_increase")
+                          else metrics.get("availability_reason"))
+                reasons.append(reason or key + " has no valid selected native export cells")
             if coverage is None or coverage + 1e-12 < rules["minimum_coverage_fraction"]:
                 reasons.append(key + " coverage is below the selected minimum")
     return reasons
@@ -719,7 +819,10 @@ def _quantity(candidate, pollutant, score):
     return value
 
 
-def _rank(candidates, spec):
+def _rank(candidates, spec, *, workspace=None, bindings=None):
+    if spec["score"]["basis"] == "published_method":
+        from .keowee_priority import rank
+        return rank(workspace, candidates, spec, bindings["published_method"], bindings)
     import numpy as np
     setting = spec["score"]
     caps = {}
@@ -796,24 +899,34 @@ def _csv_rows(candidates, alternatives):
     fields = [
         "id", "label", "rank", "eligible", "score", "area_ha", "reporting_area_ha",
         "protected_fraction", "source_water_fraction", "high_quality_context",
-        "cost", "currency", "exclusion_reasons",
+        "cost", "currency", "exclusion_reasons", "score_unit", "point_priority", "point_score",
     ]
     for pollutant in POLLUTANTS:
         fields += [pollutant + "_" + key for key in (
-            "baseline", "unit", "coverage_fraction", "valid_area_ha", "structural_stream_area_ha", "missing_area_ha")]
+            "baseline", "unit", "availability", "availability_reason",
+            "coverage_fraction", "valid_area_ha", "structural_stream_area_ha", "missing_area_ha")]
         for alternative in alternatives:
             fields += [pollutant + "_" + alternative + "_" + key for key in (
-                "value", "delta", "reduction", "common_coverage_fraction")]
+                "value", "availability", "availability_reason", "coverage_fraction",
+                "valid_area_ha", "structural_stream_area_ha", "missing_area_ha",
+                "delta", "reduction", "comparison_availability", "comparison_availability_reason",
+                "common_baseline", "common_alternative", "common_coverage_fraction",
+                "common_valid_area_ha", "common_structural_stream_area_ha", "profile_changed")]
     fields += ["score_components", "original_attributes"]
     rows = []
     for candidate in candidates:
         row = {key: candidate.get(key) for key in fields}
         for pollutant, metric in candidate["pollutants"].items():
-            for key in ("baseline", "unit", "coverage_fraction", "valid_area_ha", "structural_stream_area_ha", "missing_area_ha"):
-                row[pollutant + "_" + key] = metric[key]
+            for key in ("baseline", "unit", "availability", "availability_reason",
+            "coverage_fraction", "valid_area_ha", "structural_stream_area_ha", "missing_area_ha"):
+                row[pollutant + "_" + key] = metric.get(key)
             for alternative, comparison in metric["alternatives"].items():
-                for key in ("value", "delta", "reduction", "common_coverage_fraction"):
-                    row[pollutant + "_" + alternative + "_" + key] = comparison[key]
+                for key in ("value", "availability", "availability_reason", "coverage_fraction",
+                "valid_area_ha", "structural_stream_area_ha", "missing_area_ha",
+                "delta", "reduction", "comparison_availability", "comparison_availability_reason",
+                "common_baseline", "common_alternative", "common_coverage_fraction",
+                "common_valid_area_ha", "common_structural_stream_area_ha", "profile_changed"):
+                    row[pollutant + "_" + alternative + "_" + key] = comparison.get(key)
         rows.append(row)
     return fields, rows
 
@@ -841,7 +954,8 @@ def _write_gpkg(path, crs, candidates, geometries, *, selected=None, union=None)
         "score": "float", "area_ha": "float", "reporting_ha": "float",
         "protected_frac": "float", "sourcewater_frac": "float",
         "n_kg_year": "float", "p_kg_year": "float", "sed_t_year": "float",
-        "metrics_json": "str", "source_attributes": "str",
+        "metrics_json": "str", "source_attributes": "str", "score_unit": "str",
+        "point_priority": "str", "point_score": "str",
     }}
     path.unlink(missing_ok=True)
     selected = set(selected) if selected is not None else None
@@ -860,6 +974,8 @@ def _write_gpkg(path, crs, candidates, geometries, *, selected=None, union=None)
                         "sed_t_year": row["pollutants"]["sediment_export"]["baseline"],
                         "metrics_json": json.dumps(row["pollutants"], sort_keys=True, ensure_ascii=False),
                         "source_attributes": json.dumps(row["original_attributes"], sort_keys=True, ensure_ascii=False),
+                        "score_unit": row.get("score_unit"), "point_priority": row.get("point_priority"),
+                        "point_score": json.dumps(row["point_score"], sort_keys=True, ensure_ascii=False) if row.get("point_score") else None,
                     }
                     geometry = wkb.loads(bytes.fromhex(geometries[row["id"]][geometry_key]))
                     dst.write({"geometry": mapping(_multipolygon(geometry)), "properties": props})
@@ -898,6 +1014,13 @@ def _report(state, candidates, *, plan=None):
                         metrics["phosphorus_export"]["coverage_fraction"],
                         metrics["sediment_export"]["coverage_fraction"],
                     )) + "<td>" + html.escape("; ".join(row["exclusion_reasons"]) or "Eligible") + "</td></tr>")
+    published = state.get("normalization", {}) if spec["score"]["basis"] == "published_method" else None
+    point_intro = ""
+    if published:
+        point_intro = ("<p><strong>" + html.escape(published["title"]) + "</strong>: "
+                       + str(published["maximum"]) + " possible points. The candidate CSV and GIS layers retain "
+                       + "every criterion, its source binding, the practice prerequisite and the published priority range. "
+                       + "<a href=\"" + html.escape(published["source_uri"], quote=True) + "\">Published method</a>.</p>")
     sources = []
     for name, source in state["selection"]["bindings"]["sources"].items():
         uri = source["uri"]
@@ -911,15 +1034,21 @@ def _report(state, candidates, *, plan=None):
         "This source-context study uses the retained planning-unit, reporting and context boundaries. "
         "Select a completed native model run to create a quantitative successor study."
         if state["mode"] == "source_context" else
-        "This study aggregates the selected original InVEST 3.20 NDR and SDR outputs over the actual planning-unit boundaries."
+        "This study aggregates each selected original InVEST 3.20 native output over the actual planning-unit boundaries. Each case retains its own selected NDR/SDR models and output availability."
     )
     area_rows = [
         ("Planning units", summary.get("units")),
         ("Unique reporting footprint (ha)", summary.get("union_area_ha", summary.get("unit_footprint_area_ha"))),
         ("Reporting boundary (ha)", state.get("reporting_area_ha")),
         ("Selected protected-source overlap (ha)", summary.get("protected_area_ha")),
-        ("Selected source-water overlap (ha)", summary.get("source_water_area_ha")),
+        ("Selected source-water context overlap (ha)", summary.get("source_water_area_ha")),
     ]
+    if state["selection"]["bindings"]["grid"] is not None:
+        native_grid = state["selection"]["bindings"]["grid"]["grid"]
+        area_rows += [
+            ("Original native cell size (m)", native_grid["resolution_m"]),
+            ("Full native cell area (ha)", native_grid["pixel_area_ha"]),
+        ]
     if plan:
         area_rows += [
             ("Unique whole-unit footprint (ha)", summary["whole_unit_union_area_ha"]),
@@ -936,17 +1065,21 @@ def _report(state, candidates, *, plan=None):
                              + "".join("<td>" + _display(value) + "</td>" for value in (
                                  metric["baseline"], metric["unit"], metric["coverage_fraction"],
                                  metric["valid_area_ha"], metric["structural_stream_area_ha"],
+                                 metric.get("availability_reason") or metric.get("availability", "modeled"),
                              )) + "</tr>")
         for case_id, case in metric["alternatives"].items():
             case_rows.append("<tr><td><code>" + case_id + "</code></td><td>"
                              + html.escape(pollutant.replace("_export", "").title()) + "</td>"
                              + "".join("<td>" + _display(value) + "</td>" for value in (
-                                 case["value"], case["delta"], metric["unit"], case["common_coverage_fraction"],
+                                 case["value"], case["delta"], metric["unit"], case["coverage_fraction"],
+                                 case["common_coverage_fraction"], case["profile_changed"],
+                                 case.get("availability_reason") or case.get("availability", "modeled"),
+                                 case.get("comparison_availability_reason") or case.get("comparison_availability", "modeled"),
                              )) + "</tr>")
-    quantity_table = "<table><thead><tr><th>Pollutant</th><th>Baseline</th><th>Annual unit</th><th>Support fraction</th><th>Valid area (ha)</th><th>Structural stream area (ha)</th></tr></thead><tbody>" + "".join(quantity_rows) + "</tbody></table>"
+    quantity_table = "<table><thead><tr><th>Pollutant</th><th>Baseline</th><th>Annual unit</th><th>Support fraction</th><th>Valid area (ha)</th><th>Structural stream area (ha)</th><th>Availability</th></tr></thead><tbody>" + "".join(quantity_rows) + "</tbody></table>"
     cases_table = (
-        "<h2>Selected modeled cases</h2><p>Each delta is alternative minus baseline on common native support within the selected footprint.</p>"
-        "<div class='scroll'><table><thead><tr><th>Original run</th><th>Pollutant</th><th>Alternative</th><th>Delta</th><th>Annual unit</th><th>Common support fraction</th></tr></thead><tbody>"
+        "<h2>Selected modeled cases</h2><p>Each delta is alternative minus baseline on common native support within the selected footprint. A model omitted from either case has no paired difference; an available alternative quantity keeps its own coverage.</p>"
+        "<div class='scroll'><table><thead><tr><th>Original run</th><th>Pollutant</th><th>Alternative</th><th>Delta</th><th>Annual unit</th><th>Alternative support fraction</th><th>Common support fraction</th><th>Profile changed</th><th>Alternative availability</th><th>Comparison availability</th></tr></thead><tbody>"
         + "".join(case_rows) + "</tbody></table></div>" if case_rows else ""
     )
     return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -968,12 +1101,12 @@ a{color:#203948}footer{border-top:1px solid #cbd0d4;margin-top:30px;padding-top:
 <div class="scroll"><table><thead><tr><th>Original ID</th><th>Unit</th><th>Reporting ha</th><th>Score</th>
 <th>N kg/year</th><th>P kg/year</th><th>Sediment t/year</th><th>N coverage</th><th>P coverage</th><th>Sediment coverage</th><th>Eligibility</th>
 </tr></thead><tbody>""" + "".join(rows) + """</tbody></table></div>
-<h2>Scoring and decision rules</h2><p>The saved purpose, ordering and thresholds determine this selection. Costs represent the supplied whole-unit amounts. Ranked selection follows a deterministic greedy order and checks actual union area as it proceeds.</p><details><summary>Inspect complete weights, normalization and limits</summary><pre>""" + html.escape(json.dumps({
+<h2>Scoring and decision rules</h2>""" + point_intro + """<p>The saved purpose, ordering and thresholds determine this selection. Costs represent the supplied whole-unit amounts. Ranked selection follows a deterministic greedy order and checks actual union area as it proceeds.</p><details><summary>Inspect complete weights, normalization and limits</summary><pre>""" + html.escape(json.dumps({
         "purpose": spec["purpose"], "score": state["normalization"], "rules": spec["rules"],
         "plan": plan["selection"] if plan else None,
     }, indent=2, ensure_ascii=False)) + """</pre></details>
 <h2>Original sources</h2><div class="scroll"><table><thead><tr><th>Role</th><th>Publisher source</th><th>Edition</th><th>Selected relation</th><th>Source SHA-256</th></tr></thead><tbody>""" + "".join(sources) + """</tbody></table></div>
-<h2>Methods and interpretation</h2><details><summary>Inspect original output units, geometry method and scenario interpretation</summary><pre>""" + html.escape(json.dumps(METHOD, indent=2)) + """</pre></details>
+<h2>Methods and interpretation</h2><details><summary>Inspect original output units, geometry method and scenario interpretation</summary><pre>""" + html.escape(json.dumps(state.get("method", METHOD), indent=2)) + """</pre></details>
 <p>Spreadsheet-safe CSV text is prefixed when it begins with a formula control; original typed attributes remain in JSON and GeoPackage.</p>
 <footer>Study <code>""" + state["id"] + "</code>" + (
         " · Portfolio <code>" + plan["id"] + "</code>" if plan else "") + "</footer></main></html>"
@@ -1049,7 +1182,9 @@ def build(workspace, selection):
                 from shapely.ops import unary_union
                 footprint = unary_union([unit["clipped"] for unit in units])
                 total_pollutants = _aggregate(reference, datasets, footprint, spec)
-            state["normalization"] = _rank(candidates, spec)
+            state["normalization"] = _rank(candidates, spec, workspace=workspace, bindings=state["selection"]["bindings"])
+            if spec["score"]["basis"] == "published_method":
+                state["method"] = {**METHOD, "published_priority": state["normalization"]}
             candidates.sort(key=lambda row: (row["rank"] is None, row["rank"] or 0, row["id"]))
             state["summary"] = {
                 "units": len(candidates), "eligible_units": sum(row["eligible"] for row in candidates),
