@@ -70,7 +70,7 @@ export function attachObservationComparability(host){
       '<div class="oc-panel oc-toolbar"><label>Saved comparison<select name="edition"><option value="">Choose a saved edition</option></select></label>'+button('open','Open saved comparison')+'</div>'+
       '<p data-oc-status role="status" aria-live="polite">Loading original source catalogue…</p><div data-oc-summary></div>'+
       '<div data-oc-view hidden><div class="oc-toolbar"><label>Station<select name="station"></select></label><label class="oc-grow">Exact analytical series<select name="series"></select></label><label>View<select name="tab"><option value="comparison">Matched periods</option><option value="calendar">Monthly source support</option><option value="originals">Original measurements</option></select></label></div>'+
-      '<div class="oc-toolbar"><label class="oc-grow">Find original values or identifiers<input name="query" type="search" placeholder="Original result, activity, method, value…"></label>'+button('csv','Download this full view as CSV')+button('compose','Open in Scientific Reports','disabled')+'</div>'+
+      '<div class="oc-toolbar"><label class="oc-grow">Find original values or identifiers<input name="query" type="search" placeholder="Original result, activity, method, value…"></label>'+button('csv','Download this full view as CSV')+button('compose','Open this report only','disabled')+button('append','Add to current report','disabled')+'</div>'+
       '<p class="oc-method">Later year minus earlier year. Every agreeing analytical activity has one weight within its month; each shared complete month has one weight. Complete support means complete among retained source measurements, not continuous calendar coverage. Original reporting-limit bounds remain bounds.</p>'+
       '<div data-oc-downloads class="oc-downloads"></div><div data-oc-result></div></div></section>';
   }
@@ -91,6 +91,7 @@ export function attachObservationComparability(host){
     const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page});
     renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html;
     find('[data-oc-action="compose"]').disabled=!opened;
+    find('[data-oc-action="append"]').disabled=!opened;
     find('[data-oc-downloads]').innerHTML=list(opened?._downloads).map(row=>{
       if(typeof row.url!=='string'||!/^\/api\/file\//.test(row.url))throw Error('An original download ticket is missing.');
       return '<a href="'+esc(row.url+(row.url.includes('?')?'&':'?')+'download=1')+'">'+esc(row.label||row.filename)+'</a>';
@@ -193,9 +194,10 @@ export function attachObservationComparability(host){
     if(name==='load')return loadSource();
     if(name==='save')return save();
     if(name==='open')return openSaved(field('edition').value);
-    if(name==='compose'){
+    if(name==='compose'||name==='append'){
       if(!opened)throw Error('Open a saved comparison before creating its scientific report.');
-      return openScientificReport({workspace_key:workspace,sources:[clone(opened.edition.source)],title:opened.edition.title});
+      return openScientificReport({workspace_key:workspace,sources:[clone(opened.edition.source)],title:opened.edition.title,
+        selection_mode:name==='compose'?'replace':'append'});
     }
     if(name==='csv')return download();
     const c=context(workspace);
