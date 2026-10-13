@@ -14,8 +14,9 @@ from urllib.parse import unquote, urlsplit
 
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters, observation_diagnostics
+from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
 
-REPORT_VERSION = "upstate.scientific-report/v11-observation-diagnostics-v1"
+REPORT_VERSION = "upstate.scientific-report/v12-observation-diagnostics-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -460,6 +461,76 @@ def _receptors(inventory):
     return blocks
 
 
+
+def execution_provenance(baseline, alternatives):
+    """Freeze original producing-model identity without recomputing quantities."""
+    runs = [baseline] + list(alternatives)
+    selected = {run["id"]: models_for_outputs(run.get("artifacts", {})) for run in runs}
+    def source(runtime):
+        return {key: runtime[key] for key in ("version", "declared_source", "modules", "selected_models")
+                if key in (runtime or {})}
+    return {
+        "schema": "upstate.native-execution/v1", "policy": EXECUTION_VERSION_POLICY,
+        "run_order": [run["id"] for run in runs],
+        "models": {key: list(value) for key, value in selected.items()},
+        "runs": {run["id"]: {
+            "selection": run["selection"],
+            "model_versions": model_versions(run, selected[run["id"]]),
+            "run_runtime_source": source(run.get("runtime")),
+            "stage_runtime_sources": {
+                model: source(((run.get("stages") or {}).get(model) or {}).get("runtime"))
+                for model in selected[run["id"]]},
+        } for run in runs},
+        "source_note": "Exact full run, stage, environment and original source records remain in the retained working project.",
+    }
+
+
+def execution_summary(versions, *, include_basis=True):
+    labels = {"completed_stage_runtime": "completed stage",
+              "observed_run_fallback": "observed run fallback",
+              "requested_legacy": "legacy requested", "unavailable": "unavailable"}
+    return "; ".join(
+        name.upper() + " InVEST " + str(value.get("comparison_version") or "not recorded") +
+        ((" (" + labels.get(value.get("basis"), "unavailable") + ")") if include_basis else "")
+        for name, value in versions.items()
+    ) or "Original native InVEST execution; version metadata not recorded"
+
+
+def _native_execution(baseline, alternatives):
+    provenance = execution_provenance(baseline, alternatives)
+    blocks = [
+        "The producing version is read separately for each completed native model stage. "
+        "A later stage can change the run's last recorded runtime without changing earlier completed outputs. "
+        "Fallback and legacy declarations are identified explicitly.",
+        link("Retained native execution records", "native-execution.json"),
+    ]
+    sources = {"completed_stage_runtime": "Completed model stage",
+               "observed_run_fallback": "Observed run fallback; stage version absent",
+               "requested_legacy": "Requested legacy; observed version absent",
+               "unavailable": "Not recorded"}
+    for index, run_id in enumerate(provenance["run_order"]):
+        run = provenance["runs"][run_id]
+        selection = run["selection"]
+        blocks.append(("Reference" if index == 0 else "Alternative " + str(index)) +
+                      " native run " + run_id + ". Scenario " + str(selection.get("scenario_id")) +
+                      "; profile " + str(selection.get("profile_id")) + ".")
+        rows = []
+        for name, value in run["model_versions"].items():
+            rows.append([name.upper(), value.get("comparison_version") or "Not recorded",
+                         sources.get(value.get("basis"), "Not recorded"),
+                         value.get("requested_version") or "Not recorded",
+                         value.get("stage_completed_at") or "Not recorded"])
+        blocks.append(_table(["Model", "Producing InVEST", "Retained source", "Requested", "Stage completed"],
+                             rows, widths=[.6, .9, 1.7, .8, 1.4]))
+        blocks.append("Last recorded run runtime: " +
+                      str(run["run_runtime_source"].get("version") or "Not recorded") + ".")
+        for name, value in run["model_versions"].items():
+            if value.get("reused_from"):
+                blocks.append(_table(
+                    [name.upper() + " reused-stage lineage", "Original retained value"],
+                    list(_retained_rows(value["reused_from"])), widths=[2.2, 3.8]))
+    return blocks
+
 def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
                     profile, grid, priority, observation_results, receptor_inventory=None):
     """Replace machine-record paragraphs and retain independently installed sections."""
@@ -473,7 +544,12 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
     receptor_blocks = _receptors(receptor_inventory)
     if receptor_blocks is not None:
         replacements["Source-water contributing land"] = receptor_blocks
-    return [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
+    replacements["Native execution provenance"] = _native_execution(baseline, alternatives)
+    result = [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
+    if not any(heading == "Native execution provenance" for heading, _ in result):
+        at = next((i + 1 for i, (heading, _) in enumerate(result) if heading == "Model and units"), 0)
+        result.insert(at, ("Native execution provenance", replacements["Native execution provenance"]))
+    return result
 
 
 def _retained_rows(value, prefix=""):

@@ -13,6 +13,7 @@ from . import atlas_browser, cartography, client_report, map_atlas, native_study
 import tempfile
 from .report_release import bind_report, retain_report
 from .source_lineage import LINEAGE_VERSION
+from .native_versions import comparison_versions, model_versions, models_for_outputs
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
@@ -74,7 +75,8 @@ def _source_records(workspace, selection, grid, baseline):
             raise ValueError("The original SDR output registry must retain its computed LS factor")
         records["LS_FACTOR"] = {
             "id": "LS_FACTOR", "title": "Original InVEST SDR topographic LS factor",
-            "vintage": "InVEST " + INVEST_VERSION + "; DEM edition " + str(records["DEM"]["vintage"]),
+            "vintage": scientific_report.execution_summary(model_versions(baseline, ("sdr",))) +
+                       "; DEM edition " + str(records["DEM"]["vintage"]),
             "uri": SDR_GUIDE, "sha256": item["sha256"],
             "derivation": "Original SDR terrain and flow calculation on the selected DEM",
             "source_dem_sha256": records["DEM"]["sha256"],
@@ -131,7 +133,8 @@ def _grid_measurements(grid):
     return {"width": width_text, "height": height_text, "hectares": area_text,
             "pixels": pixels, "resolution": resolution}
 
-def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact):
+def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact,
+          native_execution=None):
     from pyproj import CRS, Transformer
     cells = _grid_measurements(grid)
     crs = CRS.from_user_input(grid["grid"]["crs"])
@@ -149,8 +152,9 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("idinfo/citation/citeinfo/pubdate", day)
     add("idinfo/citation/citeinfo/title", title)
     add("idinfo/citation/citeinfo/geoform", "raster digital data")
-    add("idinfo/descript/abstract", title + " modeled with original InVEST " + INVEST_VERSION +
-        " NDR/SDR engines. Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
+    executed = scientific_report.execution_summary(native_execution or {})
+    add("idinfo/descript/abstract", title + " modeled with " + executed +
+        ". Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
         "are multiplied by " + cells["hectares"] + " hectares. The selected reporting mask preserves original NoData. "
         "Original run: " + selection["baseline_run_id"] + ". Parameter profile: " + profile["id"] + ".")
     add("idinfo/descript/purpose", selection.get("title", "Watershed source-water and land-conservation analysis") +
@@ -185,11 +189,15 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         ET.SubElement(node, "srccontr").text = "Original source SHA256 " + source["sha256"]
     step = ET.SubElement(lineage, "procstep")
     ET.SubElement(step, "procdesc").text = (
-        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, " + cells["resolution"] + " grid "
+        executed + "; source selection, " + cells["resolution"] + " grid "
         "alignment, biophysical parameters, explicit land-cover changes and model settings are retained "
         "in the native working archive. Per-hectare rates converted to " + unit +
         " by multiplication by " + cells["hectares"] + ". Reporting-mask pixel-centre selection; no interpolated output values.")
     ET.SubElement(step, "procdate").text = day
+    if native_execution:
+        add("idinfo/descript/supplinf", "Retained native execution provenance: " +
+            json.dumps(native_execution, ensure_ascii=False, sort_keys=True) +
+            ". Complete per-run records are retained in native-execution.json and the working archive.")
     add("spdoinfo/direct", "Raster")
     add("spdoinfo/rastinfo/rasttype", "Grid Cell")
     add("spdoinfo/rastinfo/rowcount", grid["grid"]["height"])
@@ -317,6 +325,10 @@ def build(workspace, selection):
             raise ValueError("Future land-cover maps require a common parameter profile; parameter sensitivity remains a separate run comparison")
         if workspace._get("scenarios", run["selection"]["scenario_id"])["kind"] != "landcover":
             raise ValueError("Future map alternatives must contain explicit source-bound land-cover changes")
+    comparison_versions([baseline] + alternatives, ("ndr", "sdr"))
+    native_execution = scientific_report.execution_provenance(baseline, alternatives)
+    selection["native_execution_digest"] = digest(native_execution)
+    baseline_versions = native_execution["runs"][baseline["id"]]["model_versions"]
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
     cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
@@ -344,6 +356,15 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            execution_path = directory / "native-execution.json"
+            if "native_execution" not in state["files"]:
+                atomic_json(execution_path, native_execution)
+                state["files"]["native_execution"] = describe_file(directory, execution_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_execution"])
+                if read_json(execution_path) != native_execution:
+                    raise ValueError("The retained execution provenance differs from this delivery selection")
             observed_product = observed_context.collect(workspace, selection, directory, state)
             if (observed_product is None) != (observed_link is None):
                 raise ValueError("Observed report context does not match the selected source")
@@ -429,7 +450,8 @@ def build(workspace, selection):
                 metadata_key = name + "_metadata"
                 if metadata_key not in state["files"]:
                     _fgdc(metadata_path, cartography.LABELS[name], item, unit=item["units"],
-                          grid=grid, sources=records, selection=selection, profile=profile, contact=contact)
+                          grid=grid, sources=records, selection=selection, profile=profile, contact=contact,
+                          native_execution={model: baseline_versions[model] for model in models_for_outputs([name])})
                     state["files"][metadata_key] = describe_file(directory, metadata_path)
                     atomic_json(state_path, state)
             settings = selection.get("map_settings", {})
@@ -548,7 +570,7 @@ def build(workspace, selection):
                                          [overlays["drinking_water"]] if "drinking_water" in overlays else [])
                     future_maps.setdefault(family, []).append(map_key)
             footer = ((selection["native_study"]["title"] + "; " if study_mode else "") +
-                      "Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
+                      scientific_report.execution_summary(baseline_versions) + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
             atlas_pages = []
             for map_key, (panels, selected_overlays) in all_specs.items():
@@ -616,8 +638,9 @@ def build(workspace, selection):
                      "Model outputs and the explicit current-versus-future scenarios use the same original "
                      + cells["resolution"] + " land-cover reference alignment."]),
                     ("Model and units", [
-                     "The original InVEST " + INVEST_VERSION + " Nutrient Delivery Ratio and Sediment Delivery Ratio "
-                     "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
+                     "The original InVEST Nutrient Delivery Ratio and Sediment Delivery Ratio "
+                     "engines were executed with the retained inputs and parameter profile. The producing versions "
+                     "and their original recorded basis are shown separately for every model and run below. Nitrogen and phosphorus "
                      "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
                      "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
                      scientific_report.link("Original InVEST NDR guide", NDR_GUIDE),
@@ -716,6 +739,7 @@ def build(workspace, selection):
                     contact=contact, source_records=records,
                     binding={
                         "delivery_id": key, "delivery_mode": native_study.mode(selection),
+                        "native_execution": state["files"]["native_execution"],
                         "native_study": state.get("native_study"), "baseline_run_id": baseline["id"],
                         "scenario_run_ids": scenario_ids, "profile_id": profile["id"],
                         "grid_id": grid["id"], "grid_measurements": cells, "comparison_id": comparison["id"],
@@ -755,6 +779,8 @@ def build(workspace, selection):
                          "record": state["files"]["native_grid_record"]["path"],
                          "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
+                          "version_basis": "delivery_adapter",
+                          "execution_provenance": state["files"]["native_execution"],
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},

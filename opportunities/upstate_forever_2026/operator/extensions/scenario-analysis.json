@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scenario-analysis",
   "title": "Scenario analysis",
-  "version": "20261013.3",
+  "version": "20261013.4",
   "order": 55,
   "assets": [
     "scenario_analysis.mjs",
     "scenario_analysis_bridge.mjs",
-    "scenario_analysis.css"
+    "scenario_analysis.css",
+    "native_versions.mjs"
   ],
   "backend": {
     "module": "scenario_analysis_operator",

@@ -7,6 +7,7 @@ from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, identifier,
                      verify_file)
 from .reuse import copy_verified
+from .native_versions import comparison_versions
 
 SCHEMA = "commons.native-study-delivery/v1"
 CONTEXT_SCHEMA = "commons.native-study-context/v1"
@@ -96,7 +97,7 @@ def retained_runtimes(run):
         stage = stages.get(model, {})
         if not isinstance(stage, dict):
             raise ValueError("Retain the original " + model.upper() + " stage")
-        original = stage.get("runtime")
+        original = stage.get("runtime") if stage.get("completed_at") else None
         if original is None:
             original = run.get("runtime")
         modules = original.get("modules") if isinstance(original, dict) else None
@@ -136,6 +137,7 @@ def retain(workspace, directory, state, selection, grid, profile, baseline, alte
     if isinstance(buffer, bool) or not math.isfinite(float(buffer)) or float(buffer) < 0:
         raise ValueError("Native study context buffer must be finite and nonnegative")
     runs = [baseline, *alternatives]
+    executed = comparison_versions(runs, ("ndr", "sdr"))
     runtimes = {run["id"]: retained_runtimes(run) for run in runs}
     for run in runs:
         for name, units in MASS_UNITS.items():
@@ -165,9 +167,11 @@ def retain(workspace, directory, state, selection, grid, profile, baseline, alte
         "expected_map_families": list(MAP_FAMILIES),
         "baseline_run_id": baseline["id"],
         "scenario_run_ids": [run["id"] for run in alternatives],
+        "execution": {name: executed[name] for name in ("policy", "models", "versions")},
         "runs": [{
             "id": run["id"], "selection": run["selection"], "runtime": run.get("runtime"),
             "stage_runtimes": runtimes[run["id"]],
+            "model_versions": executed["runs"][run["id"]],
             "artifacts": {name: run["artifacts"][name] for name in MASS_UNITS},
             "scenario": workspace._get("scenarios", run["selection"]["scenario_id"]),
         } for run in runs],
