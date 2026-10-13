@@ -267,8 +267,8 @@
           "kind": "links",
           "items": [
             {
-              "title": "Original NC 2022 assessment methodology",
-              "path": "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download"
+              "title": "Agency methodology citation and interpretation",
+              "path": "source/nc_designation_assessment/20261013/README.md"
             },
             {
               "title": "All 110 units with explicit source-review actions",
@@ -328,7 +328,6 @@
     "source/nc_designation_assessment/20261013/provenance.json",
     "source/nc_designation_assessment/20261013/README.md",
     "source/nc_designation_assessment/20261013/source-review-queue.csv",
-    "source/nc_designation_assessment/20261013/source-label-reconciliation.json",
-    "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download"
+    "source/nc_designation_assessment/20261013/source-label-reconciliation.json"
   ]
 }
