@@ -23,7 +23,7 @@ from . import parameter_support_reconciliation as reconciliation
 DIRECTORY = "parameter-report-sources"
 SCHEMA = "upstate.parameter-report-source/v1"
 SOURCE_ID = "saved-parameter-study"
-EDITION = 4
+EDITION = 5
 
 
 def _choices(value, available, label):
@@ -101,7 +101,14 @@ def preview(workspace, value):
         origin = validate_continuation(workspace, packet["selection"]["calibration_origin"],
                                        packet["selection"]["baseline_run_id"])
         calibration = continuation(workspace, origin["calibration_id"])
-    return {**({"calibration_origin": calibration["calibration_origin"],
+    working = None
+    if packet["selection"].get("working_origin"):
+        from .parameter_working import inspect as inspect_working
+        working = inspect_working(workspace, packet["selection"]["working_origin"]["revision_id"])
+    return {**({"working_origin": packet["selection"]["working_origin"],
+                "working_revision": {key: working["record"][key] for key in ("name", "author", "revision", "note")},
+                "working_history_count": len(working["history"])} if working else {}),
+            **({"calibration_origin": calibration["calibration_origin"],
                 "calibration_context": calibration["context"]} if calibration else {}),
             "selection": selection, "cases": [row for row in packet["cases"] if row["id"] in case_ids],
             "areas": [row for row in packet["areas"] if row["id"] in area_ids],
@@ -300,6 +307,14 @@ def _freeze(workspace, key, directory, selected, state):
                          for name, value in row.items()})
     atomic_bytes(directory / "selected-results.csv", buffer.getvalue().encode("utf-8"), immutable=True)
     records, bindings, profiles = [], {}, {}
+    if state["selection"].get("working_origin"):
+        from .parameter_working import export_package
+        package = export_package(workspace, state["selection"]["working_origin"]["revision_id"])
+        atomic_json(directory / "working-origin" / "complete-history.json", package, immutable=True)
+        for revision in package["records"]:
+            for source in revision["bindings"]["reporting_sources"]:
+                for entry in source["record"]["entries"]:
+                    _retain_source(workspace, directory, source["id"], entry["id"], records, bindings)
     for profile_id in dict.fromkeys([state["baseline_selection"]["profile_id"],
                                     *(row["profile_id"] for row in selected["cases"])]):
         profile = workspace._get("profiles", identifier(profile_id))
@@ -316,12 +331,12 @@ def _freeze(workspace, key, directory, selected, state):
         from .parameter_calibration import validate_continuation
         origin = validate_continuation(workspace, selected["calibration_origin"],
                                        state["selection"]["baseline_run_id"])
-        for kind, key, name in (
+        for kind, record_key, name in (
             ("calibrations", origin["calibration_id"], "result.json"),
             ("calibration-plans", origin["plan_id"], "plan.json"),
             ("observations", origin["observation_id"], "observations.json"),
         ):
-            path = workspace.root / kind / (key + ".json")
+            path = workspace.root / kind / (record_key + ".json")
             shared._copy(workspace, describe_file(workspace.root, path),
                          directory / "calibration-origin" / name)
         observed = workspace._get("observations", origin["observation_id"])
@@ -342,13 +357,13 @@ def _freeze(workspace, key, directory, selected, state):
                 raise ValueError("The selected profile repeats a calibration history dependency")
             seen_history.add(earlier["id"])
             history_root = directory / "calibration-origin" / "history" / earlier["id"]
-            for kind, key, name in (
+            for kind, record_key, name in (
                 ("calibrations", earlier["id"], "result.json"),
                 ("calibration-plans", earlier_plan["id"], "plan.json"),
                 ("experiment-specs", earlier_spec["id"], "parameter-study.json"),
                 ("observations", earlier_plan["selection"]["observation_id"], "observations.json"),
             ):
-                path = workspace.root / kind / (key + ".json")
+                path = workspace.root / kind / (record_key + ".json")
                 shared._copy(workspace, describe_file(workspace.root, path),
                              history_root / name)
             original_observed = workspace._get("observations", earlier_plan["selection"]["observation_id"])
@@ -369,6 +384,8 @@ def _freeze(workspace, key, directory, selected, state):
                          directory / "geography" / shared._member(item["path"]))
     scope = _source_scope(workspace, directory, grid, profiles, selected["areas"],
                           state["baseline_selection"]["scenario_id"], records, bindings)
+    if key != state["id"]:
+        raise ValueError("The source capture changed the original Parameter experiment identity")
     atomic_json(directory / "original-source-editions.json", records, immutable=True)
     atomic_json(directory / "native-input-inventory.json", {
         "workspace_id": workspace.project["id"], "experiment_id": key,
@@ -552,6 +569,17 @@ def _sections(selected, rows, ranges):
             "No original range rows are included in this source selection. Selecting only some "
             "completed cases does not create a new range. The original selected pair rows remain "
             "available with their own geographic support.",
+        ]])
+    if selected.get("working_origin"):
+        revision = selected["working_revision"]
+        sections.append(["Original working design history", [
+            "This prepared study retains its original unfinished design history. Earlier incomplete values remain working material, not accepted scientific inputs.",
+            _table(["Working history", "Original value"], [
+                ["Name", revision["name"]], ["Author", revision["author"]],
+                ["Revision", revision["revision"]], ["Revision note", revision["note"]],
+                ["Original revision", selected["working_origin"]["revision_id"]],
+                ["Retained history revisions", selected["working_history_count"]],
+            ]),
         ]])
     if selected.get("calibration_origin"):
         origin, context = selected["calibration_origin"], selected["calibration_context"]

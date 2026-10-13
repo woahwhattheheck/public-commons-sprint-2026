@@ -158,7 +158,7 @@ def _selection(workspace, value):
     if not isinstance(value, dict):
         raise ValueError("Supply a parameter experiment selection object")
     allowed = {"schema", "title", "purpose", "baseline_run_id", "design",
-               "axes", "reporting_areas", "difference_maps", "calibration_origin"}
+               "axes", "reporting_areas", "difference_maps", "calibration_origin", "working_origin"}
     if set(value) - allowed:
         raise ValueError("Unknown experiment fields: " + ", ".join(sorted(set(value) - allowed)))
     if value.get("schema", SELECTION_SCHEMA) != SELECTION_SCHEMA:
@@ -247,6 +247,9 @@ def _selection(workspace, value):
         from .parameter_calibration import validate_continuation
         selection["calibration_origin"] = validate_continuation(
             workspace, value["calibration_origin"], run["id"])
+    if "working_origin" in value:
+        from .parameter_working import origin
+        selection["working_origin"] = origin(workspace, value["working_origin"], selection)
     return selection, run, profile
 
 

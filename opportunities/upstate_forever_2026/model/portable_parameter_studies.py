@@ -58,4 +58,12 @@ def verify_parameter_studies(workspace, verified_members):
                        "profile_id": row["profile_id"], "state": row["state"]}
                       for row in state["cases"]],
             "artifacts": artifacts, "state_file": state_file, "selection_file": selection_file})
-    return {"schema": FORMAT, "workspace_id": workspace.project["id"], "studies": summaries}
+    result = {"schema": FORMAT, "workspace_id": workspace.project["id"], "studies": summaries}
+    if workspace._list("parameter-working"):
+        from .parameter_working import verify_all
+        result["working_histories"] = verify_all(workspace)
+        result["working_records"] = [
+            member("parameter-working/" + record["id"] + ".json")
+            for record in sorted(workspace._list("parameter-working"), key=lambda row: row["id"])
+        ]
+    return result
