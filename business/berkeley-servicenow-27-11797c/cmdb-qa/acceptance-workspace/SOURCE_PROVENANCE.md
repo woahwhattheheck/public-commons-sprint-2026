@@ -25,3 +25,7 @@ That complete parent file is preserved unchanged. The original test is preserved
 The acceptance workspace, browser UI, HTML composer, operating guide, source builder and original worked case extend the original comparator. They retain full original input editions and implement explicit mapping, exception ownership, immutable comparison history, corrected-target lineage, named receiving decisions, complete export/reopen and a portable customer handover.
 
 The worked case is authored for the operating demonstration. It is not drawn from an Alcor or Berkeley instance.
+
+## Unfinished-work receiving
+
+The additive drafts.cjs module and application controls retain complete unsaved form groups with their original saved workspace packages. They use the existing workspace receive/pack/hash functions and maintained SHA helper. The original comparator, original adapter, workspace transitions, persistent store and headless CLI remain byte-identical to the prior complete edition.
