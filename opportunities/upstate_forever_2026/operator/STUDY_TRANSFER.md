@@ -226,3 +226,16 @@ behavior for unfinished cases.
 ## Editable Monitoring study transfer
 
 The original selected-study workflow also accepts saved Monitoring networks, designs, budget comparisons, campaigns and observational contexts. Monitoring’s **Transfer editable study** action opens this desk with the original workspace and saved roots. Full campaign parent history, native field events, replay operations and source companions remain editable after restore. See [Monitoring study transfer](../model/MONITORING_STUDY_TRANSFER.md) for exact dependency and continuation behavior.
+
+
+## Transfer one saved scientific report edition
+
+Open a completed edition in **Sources → Saved scientific reports** and choose **Transfer this report and its studies**. The original Study transfer desk selects that exact edition in its original Workspace. You can also choose **Saved scientific reports** in the study type filter, combine editions with other saved studies, preview the dependency list, and export through the normal queue.
+
+The archive retains the original `scientific-report-editions/<id>/edition.json`, render selection, completed operation, PDF, HTML, Markdown, structured data, figures and every declared output. A report ZIP already prepared for that edition is retained too. Source choices keep their original order. Shared full source collections and original CAS companions are included once.
+
+The source lineage is specific to the original producer. A same-project Diagnostic report brings its original saved analysis and native cohort, with the exact historical report capture. An original Monitoring report brings its producer record, selected design and complete editable campaign history. An original calibration review brings its plan, fitted result, selected native run, uncertainty/map/review records and completed report exports. Missing declared same-project records stop the preview; they are not silently replaced with a smaller history. A report imported from another project keeps its contained source files and original provenance without claiming that the donor's editable Workspace is present. The preview identifies the actual retained dependencies.
+
+After receiving through the original archive restore, open **Sources → Saved scientific reports**. The edition keeps the same full identity, original Workspace path inside its render identity, ordered sources and output checksums. It does not rerender or substitute the new receiver path. **Use these studies in another report** starts a separate edition with the original source choices. Existing Diagnostic, Monitoring and calibration views reopen their retained records. Full Workspace backup remains available when the entire project is required.
+
+The new typed root is `{"kind":"scientific-report-editions","id":"<full-original-edition-id>"}`. It uses the existing study selection, preview, export, receipt, download and receive contracts. Report-file ZIP downloads remain a convenient document handoff; editable Study transfer additionally carries the selected original scientific context.

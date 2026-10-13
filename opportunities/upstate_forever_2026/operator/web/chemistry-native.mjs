@@ -1,4 +1,4 @@
-/** Original reach chemistry, with one retained editor per native workspace. */
+/** Original Chemistry desk and saved-report controls in the maintained host. */
 import {attachChemistry} from './chemistry.mjs';
 
 const workspaceKey = value => value?.workspace_key ?? value?.workspace ?? value?.data?.workspace_key;
@@ -26,11 +26,10 @@ export function attachNativeChemistry(host) {
         if (workspaceKey(host.getState()) === key) return host.showTask(id);
       }
     });
-    panel.addEventListener('click', async event => {
-      const button = event.target.closest('[data-action^="chemistry-"]');
-      if (!button || !panel.contains(button)) return;
-      event.preventDefault();
-      event.stopPropagation();
+    async function dispatchButton(button) {
+      await ready;
+      if (workspaceKey(host.getState()) !== key) throw Error('Reopen the original workspace for this Chemistry action.');
+      if (button.dataset.workspace && button.dataset.workspace !== key) throw Error('This Chemistry action belongs to another workspace.');
       if (busy) return;
       busy = true;
       const controls = [...panel.querySelectorAll('button,input,select,textarea')].map(node => [node,node.disabled]);
@@ -40,8 +39,16 @@ export function attachNativeChemistry(host) {
         for (const [node, disabled] of controls) node.disabled = disabled;
         busy = false;
       }
+    }
+    panel.addEventListener('click', async event => {
+      const button = event.target.closest('[data-action^="chemistry-"]');
+      if (!button || !panel.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      try { await dispatchButton(button); }
+      catch (error) { host.toast(error.message || String(error)); }
     });
-    const entry = {panel, controller,
+    const entry = {panel, controller, dispatch:dispatchButton, ready:()=>ready,
       async update() {
         await ready;
         if (busy || updating || !panel.isConnected) return;
@@ -75,5 +82,23 @@ export function attachNativeChemistry(host) {
     active?.panel.remove();
     active = null;
   }
-  return {mount,update,detach};
+  function taskActions(task) {
+    const key = currentKey();
+    if (task.workspace && task.workspace !== key) return '';
+    return desk(key).controller.taskActions(task);
+  }
+  async function dispatch(button) {
+    const key = currentKey();
+    if (button.dataset.workspace && button.dataset.workspace !== key) {
+      throw Error('This Chemistry result belongs to another workspace.');
+    }
+    const entry = desk(key);
+    await host.navigate('chemistry');
+    await entry.ready();
+    if (currentKey() !== key || active !== entry || !entry.panel.isConnected) {
+      throw Error('Reopen Chemistry in the selected workspace before opening this result.');
+    }
+    return entry.dispatch(button);
+  }
+  return {mount,update,detach,dispatch,taskActions};
 }

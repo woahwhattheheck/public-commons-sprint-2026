@@ -421,7 +421,7 @@ travel in the complete calibration component.
 
 ## Include a native calibration dossier in the client delivery
 
-Open a saved complete review and choose **Prepare report source**. This queued operation registers its exact ranking, original reference and validation metrics, optional source-error analysis, equal-axis figures, map atlas and complete original dossier as an ordinary `upstate.observed-report/v1` source. The review lists each completed source and opens the existing complete-delivery form with its original native baseline and source selection. Other observed studies remain in the same ordered source picker.
+Open a saved complete review and choose **Prepare report source**. This queued operation registers its exact ranking, original reference and validation metrics, optional source-error analysis, equal-axis figures, map atlas and complete original dossier as an ordinary `upstate.observed-report/v1` source. The review lists each completed source. **Open scientific report** enters the existing Sources composer with that original source, including for nutrient-only or sediment-only calibration. **Open mapped report form** retains the complete native-baseline delivery. Other observed studies remain in the same ordered source picker.
 
 The complete scientific report receives its readable tables and vector PDF figures. Every original dossier file, full ZIP, map, source CSV and figure specification travels as a verified companion; original relative links survive export and reopening. The calibration provider verifies this saved source again during ordinary Workspace restore. See [the complete source workflow](../model/CALIBRATION_REPORT_SOURCE.md) for native APIs, partial-model behavior, source identities and maintained receiving.
 
@@ -436,3 +436,41 @@ Open **Native execution** in a completed calibration to inspect run, pollutant, 
 Completed historic calibrations and report-source editions keep their original identities. New preparation uses the current execution fingerprint, review presentation edition and typed source producer edition. A stale unfinished plan is resolved through its original native runs by the calibration model; the operator never substitutes the version of a currently installed executable.
 
 Complete receiving includes `model/calibration_execution.py` beside the calibration model. It uses the maintained `native_versions`, `model_selection`, `observations`, `observation_support`, `observation_diagnostics` and `common` source from the receiving application. The original extension installer and cumulative assembly require these dependencies and retain their identities; no second observation reducer is installed.
+
+## Saved scientific reports from individual native model families
+
+A saved complete review can become a scientific report without preparing the
+full map delivery. Choose **Prepare report source** in the review. When its
+original task completes, choose **Open scientific report** in that task or the
+review's registered-source row. The existing Sources composer appends the exact
+original source after your current selections, deduplicates it by collection and
+source ID, and preserves a title or contact already entered. Inspect its current
+preview, then use the maintained saved-report queue to build the HTML, PDF,
+Markdown and complete source edition. Reopen that saved edition in Sources.
+
+The source keeps the actual selected model families and pollutants. NDR-only
+reviews retain their supported nutrient quantities; SDR-only reviews retain
+sediment. Tables, equal-axis figures, physical units, selected-only held-out
+results, original dossier ZIP and every retained source/map companion follow the
+same producer used by the existing complete delivery. **Open mapped report form**
+remains available for a baseline that satisfies that delivery's native model
+requirements.
+
+The provider's original `report-source` read now returns
+`scientific_report_selection: {workspace_key, sources, title}` alongside the
+unchanged `source_selection`, `delivery_selection` and `delivery_issue`.
+The calibration controller verifies the source record, Workspace and both source
+IDs before calling the maintained
+`host.openScientificReport({workspace_key, sources, title})` capability.
+The descriptor declares that capability. It never treats a source ID as a report
+entry key. A newer source request, another review or a changed Workspace discards
+an older response before navigation.
+
+Receive the maintained SourceReports saved-edition family with its
+`openScientificReport` application host and `openForSources` composer.
+The calibration installer records the original renderer, provider, controller
+and descriptor as shared dependencies; it preserves their current bodies.
+Install that complete publisher before this calibration successor and run the
+same existing calibration installer or cumulative assembly. The existing
+source archive, original report queue and independent reopening remain owned by
+SourceReports.

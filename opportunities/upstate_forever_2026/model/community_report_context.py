@@ -15,7 +15,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
 from .communities import REPORT_KIND
 
 SCHEMA = "upstate.community-report-context/v1"
-VERSION = "2"
+VERSION = "3"
 RECIPE = "community-scientific-report.json"
 MANIFEST = "sources.json"
 
@@ -197,6 +197,8 @@ def _revision_blocks(revision):
              selection.get("after", {}).get("watershed_ids")],
             ["Whole block groups", before_summary.get("geoid_count"), after_summary.get("geoid_count")],
             ["Selected GEOIDs", before_summary.get("geoids"), after_summary.get("geoids")],
+            ["Added selected GEOIDs", "Not applicable", selection.get("added_geoids")],
+            ["Removed selected GEOIDs", selection.get("removed_geoids"), "Not applicable"],
             ["Complete population total", before_summary.get("population_total"),
              after_summary.get("population_total")],
             ["Groups with population", _coverage(before_summary.get("population_total_known_groups"),
@@ -228,6 +230,7 @@ def _revision_blocks(revision):
                              [[row.get("field"), row.get("before"), row.get("after")] for row in changes]))
     blocks.append(_table(["Revision source lineage", "Previous edition", "Current edition"], [
         ["Scientific snapshot SHA256", context.get("before_snapshot_sha256"), context.get("after_snapshot_sha256")],
+        ["Scientific snapshot changed", "Not applicable", context.get("snapshot_changed")],
         ["Received intervention CSV SHA256", csv.get("before_sha256"), csv.get("after_sha256")],
         ["Received CSV parent plan", csv.get("before_import_plan_id"), csv.get("after_import_plan_id")],
     ]))
@@ -323,7 +326,7 @@ def _sections(payload, report_id, report_sha256):
     ]
     revision = payload.get("plan_revision")
     if revision:
-        sections.insert(1, ["Saved Community plan revision", _revision_blocks(revision)])
+        sections.insert(1, ["Changes from previous saved Community plan", _revision_blocks(revision)])
     regional = payload.get("regional_watershed_context")
     if regional:
         hucs = regional.get("hucs", [])
@@ -434,6 +437,22 @@ def prepare(workspace, report_id, *, report_sha256, delivery_id=None, import_sou
             raise ValueError("The original Community report index differs: " + name)
     if payload["plan"].get("context", {}).get("snapshot_sha256") != report.get("context_snapshot_sha256"):
         raise ValueError("The original Community report scientific context differs")
+    revision = payload.get("plan_revision")
+    if report.get("plan_revision") != revision:
+        raise ValueError("The original Community revision register differs from its saved report")
+    if revision:
+        if (revision.get("schema") != "upstate.community-plan-revision/v1"
+                or revision.get("plan_id") != report.get("plan_id")
+                or revision.get("previous_plan_id") != payload["plan"].get("previous_plan_id")
+                or revision.get("table_id") != report.get("table_id")):
+            raise ValueError("The original Community revision register differs from its saved plan")
+        if not {"plan-revision-summary.json", "plan-revision-changes.csv", "previous-plan.json"} <= paths.keys():
+            raise ValueError("The original Community revision register is missing its retained companions")
+        if read_json(paths["plan-revision-summary.json"]) != revision:
+            raise ValueError("The original Community revision summary differs from its report")
+        previous = read_json(paths["previous-plan.json"])
+        if previous.get("id") != revision["previous_plan_id"]:
+            raise ValueError("The original Community revision register names a different previous plan")
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "report_id": report_id, "report_sha256": report_sha256,
                 "original_files": {name: {"bytes": item["bytes"], "sha256": item["sha256"]}
