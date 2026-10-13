@@ -4,34 +4,42 @@
   "inputs": [
     {
       "key": "result_csv",
-      "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/results-with-provenance.csv",
       "bytes": 368696,
-      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8",
+      "original_path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "original_ref": "817335bc6d2a9130e203a48e63ecab91e0094003"
     },
     {
       "key": "station_csv",
-      "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/station-membership.csv",
       "bytes": 6909,
-      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92",
+      "original_path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "original_ref": "817335bc6d2a9130e203a48e63ecab91e0094003"
     },
     {
       "key": "flow_json",
-      "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-usgs/usgs_02177000_2022_2023.json",
       "bytes": 55405,
-      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec",
+      "original_path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "original_ref": "904ac1340507365a897ca846e7cfab3577898507"
     },
     {
       "key": "analysis_module",
-      "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+      "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-analysis/analysis.mjs",
       "bytes": 20084,
-      "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+      "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b",
+      "original_path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+      "original_ref": "16b0e52c3f54764dc61deac423358d775eefe90c"
     }
   ],
   "outputs": [
     {
       "path": "monitoring-context.json",
-      "bytes": 1719021,
-      "sha256": "def4f656870c352fb5bbacb2af8f318e10785276e83bdf0b1bda2a5935a14e14"
+      "bytes": 1747524,
+      "sha256": "f1be7772c3a256ab47575cdd265ada9ef0d1b3877fb4f9e038dc2631ceae39c2"
     },
     {
       "path": "monitoring-activities.csv",

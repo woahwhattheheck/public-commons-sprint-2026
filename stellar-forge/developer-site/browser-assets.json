@@ -694,6 +694,76 @@
         "grant-product-sources-core.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/grant-issuer-core.mjs",
+      [
+        "grant-issuer-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-issuer-source.mjs",
+      [
+        "grant-issuer-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-issuer-workspace.mjs",
+      [
+        "grant-issuer-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-operating-plan-core.mjs",
+      [
+        "grant-operating-plan-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-operating-plan-workspace.mjs",
+      [
+        "grant-operating-plan-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs",
+      [
+        "../../../stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs",
+      [
+        "../../../stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs",
+      [
+        "../../../stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-document-tables.mjs",
+      [
+        "source-document-tables.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-table-intake.mjs",
+      [
+        "source-table-intake.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

@@ -43,6 +43,12 @@
           "bytes": 37497,
           "sha256": "51100d4d343e651eaa32a6a8b6674b3aa935a1080c244be4ebca2f466685d611",
           "git_blob": "0a98c0b89e2071b305accb6340f6fcb931794918"
+        },
+        {
+          "commit": "2bb65304417732a9d910301790cc59ac4beb2de7",
+          "bytes": 45222,
+          "sha256": "942afd8de94ac374b0c3a0e600f4f71c17bfdf1ed069b966c40c92cdf53b76f8",
+          "git_blob": "e0a7225cb39a36dccf6482a0d34d713ae136f761"
         }
       ]
     },
@@ -109,6 +115,12 @@
           "bytes": 34194,
           "sha256": "4e23542b1f074df4213f2effb0a09290d58bf46df8f8b2f94208eefa95aeaa2e",
           "git_blob": "651f13ce26c9efe26c9a13bd8d51afacab653d8f"
+        },
+        {
+          "commit": "2bb65304417732a9d910301790cc59ac4beb2de7",
+          "bytes": 35072,
+          "sha256": "1beefb952bd68c9e9044ad31bb7130170dcf8cefdf8b148ae86c3070c9875804",
+          "git_blob": "6c015f000386b776ca2680369598f834e59d632c"
         }
       ]
     },
@@ -255,6 +267,22 @@
           "bytes": 3966,
           "sha256": "415b9b985a939233bfc750d4c0ab205b446d8c1959399f7b0c6f404e4037bac5",
           "git_blob": "14862983a72d58e7967a82632323ef2428cfa984"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-corrections",
+      "label": "Selected customer document corrections and unchanged repeat production",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/corrections.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "2bb65304417732a9d910301790cc59ac4beb2de7",
+          "bytes": 7529,
+          "sha256": "ffa9f796afd69637d38710200455a77e8f06f3e2858178e541a4754451303238",
+          "git_blob": "a26ba1cb1a2a357ca26c1f648b0133811c2cc074"
         }
       ]
     }

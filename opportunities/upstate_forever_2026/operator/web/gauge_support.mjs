@@ -91,7 +91,7 @@ export function attachGaugeSupport(host) {
     root.querySelector('[data-gs-tasks]').innerHTML=tasks.length?'<h2>Saved operations</h2><div class="gs-actions">'+tasks.slice(0,8).map(task=>
       button('task',(task.id===currentTask?'Current · ':'')+task.state+' · '+(task.action==='gauge.support.report'?(task.payload?.render===false?'Scientific report source':'Scientific report'):task.payload?.selection?.title||'Gauge support'),'data-id="'+esc(task.id)+'"')+
       (task.state==='complete'&&task.result?.id?button('open','Open result','data-id="'+esc(task.result.id)+'"'):'')+
-      (task.state==='complete'&&task.action==='gauge.support.report'&&task.result?.source?button('report-task','Open report form','data-id="'+esc(task.id)+'"'):'')).join('')+'</div>':'';
+      (task.state==='complete'&&task.action==='gauge.support.report'&&task.result?.source?button('report-task','Compose scientific report','data-id="'+esc(task.id)+'"')+button('report-task-mapped','Open mapped delivery','data-id="'+esc(task.id)+'"'):'')).join('')+'</div>':'';
   }
   function renderResult(){
     if(!root)return;const result=edition?.result,container=root.querySelector('[data-gs-result]');
@@ -111,13 +111,14 @@ export function attachGaugeSupport(host) {
       '<p class="gs-muted">Saved regional report '+esc(result.regional.report_id)+' · original station geography '+esc(result.station_edition_id)+
       ' · source edition '+esc(edition.id)+'</p><div class="gs-actions">'+button('station-edition','Open source station geography')+
       button('reuse','Use this selection')+button('verify','Verify and reopen linked source')+'</div><div>'+important.map(fileLink).join('')+'</div>'+
-      '<div class="gs-row"><label>Scientific report selection<select data-gs-report-delivery>'+options(list(state?.data?.deliveries),reportDelivery,row=>row.id,row=>row.title||row.id,'New report selection')+'</select></label>'+
+      '<div class="gs-row"><label>Include sources from saved mapped delivery (optional)<select data-gs-report-delivery>'+options(list(state?.data?.deliveries),reportDelivery,row=>row.id,row=>row.title||row.id,'Gauge source only')+'</select></label>'+
       button('report-render','Download scientific report',reportBusy?'disabled':'')+
       button('report','Use in scientific report',reportBusy?'disabled':'')+
-      (scientific?.source?button('report-open','Open prepared report form'):'')+'</div>'+
+      button('report-mapped','Use in mapped delivery',reportBusy?'disabled':'')+
+      (scientific?.source?button('report-open','Open scientific report composer')+button('report-open-mapped','Open prepared mapped delivery'):'')+'</div>'+
       (reportDownloads.length?'<div class="gs-actions">'+reportDownloads.filter(file=>/report\.(pdf|html|md)$|report-data\.json$|gauge-scientific-report\.zip$/.test(file.filename||file.label||'')).map(fileLink).join('')+'</div>':'')+
       (scientific?.error?'<p class="gs-note">Report rendering needs attention: '+esc(scientific.error.message)+'. Retained source and any completed formats remain available.</p>':'')+
-      '<p class="gs-muted">Download a scientific PDF, HTML, Markdown, data and full source ZIP from this saved edition. Use in scientific report adds the same source to a new or saved delivery, preserving its native runs, overlays and selected studies.</p>'+
+      '<p class="gs-muted">Download a scientific PDF, HTML, Markdown, data and full source ZIP from this saved edition. Use in scientific report opens the existing ordered source composer and preserves its current title, contact and draft sources. Use in mapped delivery retains the selected delivery’s native runs, overlays and studies.</p>'+
       '<details><summary>All source-preserving downloads</summary>'+files.map(fileLink).join('')+'</details></section>'+
       '<section class="gs-card"><h2>Gauges and original flow coverage</h2><label>Find gauge<input type="search" data-gs-search value="'+esc(search)+'" placeholder="Station, name or HUC12"></label>'+
       '<div class="gs-table"><table><thead><tr><th>Gauge</th><th>Point membership</th><th>Selected catchment km²</th><th>Within region</th><th>Numeric days</th><th>Original series</th></tr></thead><tbody>'+
@@ -173,19 +174,32 @@ export function attachGaugeSupport(host) {
     }catch(problem){if(root&&key===workspace&&version===generation)fail(problem);}
     finally{if(root&&key===workspace&&version===generation){busy=false;renderForm();note();}}
   }
-  async function openReport(value){
+  async function openReport(value,mapped=false){
     if(!value?.source||!value?.delivery_selection)throw Error('Complete the original gauge report source operation first.');
     const key=workspace,version=generation;
+    const sourceKey=row=>JSON.stringify([row?.source_collection_id,row?.source_id]);
+    const selection=value.scientific_report_selection||{
+      workspace_key:key,
+      sources:list(value.delivery_selection.observed_context_sources).length
+        ?clone(value.delivery_selection.observed_context_sources):[clone(value.source)],
+      title:value.report?.title||'Gauge support scientific report'
+    };
+    if(selection.workspace_key!==key||!Array.isArray(selection.sources)||
+       !selection.sources.some(row=>sourceKey(row)===sourceKey(value.source)))
+      throw Error('Open the Gauge report source in its original Workspace and selection.');
+    if(!mapped&&typeof host.openScientificReport!=='function')
+      throw Error('This application needs its maintained Scientific reports composer. Direct downloads and mapped delivery remain available.');
     await host.refresh({force:true});
-    if(!root||key!==workspace||version!==generation)return;
+    if(!root||key!==workspace||version!==generation||host.getWorkspace()!==key)return;
     state=host.getState();
-    await host.openDelivery(clone(value.delivery_selection));
+    if(mapped)await host.openDelivery(clone(value.delivery_selection));
+    else await host.openScientificReport(clone(selection));
   }
   function acceptReport(task){
     if(!task||task.action!=='gauge.support.report')return;
     if(task.state==='complete'&&task.result?.source){
       reportReady={...task.result,_downloads:task._downloads||[]};reportBusy=false;reportRequest=null;
-      if(reportHandled!==task.id){reportHandled=task.id;message=task.payload?.render===false?'Gauge source and map package retained. Open the prepared report form to review delivery settings.':'Scientific report and full source package ready for download.';save();renderResult();note();}
+      if(reportHandled!==task.id){reportHandled=task.id;message=task.payload?.render===false?'Gauge source and map package retained. Open the scientific report composer or the prepared mapped delivery.':'Scientific report and full source package ready for download.';save();renderResult();note();}
     }else if(['failed','cancelled','canceled','paused','interrupted'].includes(task.state)){
       reportBusy=false;reportRequest=null;
       if(reportHandled!==task.id){reportHandled=task.id;message='Scientific report operation '+task.state+'. Open its saved operation for the retained outputs or original error.';save();renderResult();note();
@@ -198,21 +212,27 @@ export function attachGaugeSupport(host) {
     if(!root||key!==workspace||version!==generation||edition?.id!==id)return;
     if(value){reportReady=value;edition.scientific_report=value;save();renderResult();}
   }
-  async function prepareReport(render=true){
+  async function prepareReport(render=true,mapped=false){
     if(reportBusy||!edition)return;
     const payload={edition_id:edition.id,render,...(reportDelivery?{delivery_id:reportDelivery}:{})};
     const key=workspace,version=generation,signature=canonical(payload);
+    let accepted=null;
     if(!reportRequest||reportRequest.signature!==signature)reportRequest={signature,id:'gauge-report-'+crypto.randomUUID()};
     reportBusy=true;error='';message=render?'Rendering the saved Gauge scientific report and complete source archive…':'Retaining the saved Gauge edition, maps and original source companions…';save();renderResult();note();
     try{
       const task=await host.api('/api/actions',{method:'POST',body:{workspace:key,action:'gauge.support.report',payload,operation_id:reportRequest.id}});
-      if(!root||key!==workspace||version!==generation)return;
+      accepted=task;
+      if(!root||key!==workspace||version!==generation||host.getWorkspace()!==key)return;
       reportTask=task.id;save();acceptReport(task);
       await host.refresh({force:true});
       if(!root||key!==workspace||version!==generation)return;
       state=host.getState();renderTasks();acceptReport(list(state?.tasks).find(row=>row.id===reportTask));
-      if(task.state==='complete'&&task.result?.source){if(render)await refreshReport(payload.edition_id);else await openReport(task.result);}
-    }catch(problem){if(root&&key===workspace&&version===generation){reportBusy=false;fail(problem);renderResult();}}
+      if(task.state==='complete'&&task.result?.source){if(render)await refreshReport(payload.edition_id);else await openReport(task.result,mapped);}
+    }catch(problem){if(root&&key===workspace&&version===generation&&host.getWorkspace()===key){
+      reportBusy=!!accepted&&!['complete','failed','cancelled','canceled','paused','interrupted'].includes(accepted.state);
+      if(accepted){reportTask=accepted.id;save();error=problem?.message||String(problem);message='Saved operation '+accepted.id+' remains in Tasks. Reopen its prepared source or completed downloads from that operation.';note();}
+      else fail(problem);
+      renderTasks();renderResult();}}
   }
   function change(event){
     const target=event.target,field=target.dataset.gsField;
@@ -242,9 +262,10 @@ export function attachGaugeSupport(host) {
     try{
       if(action==='refresh')await refresh();
       else if(action==='report')await prepareReport(false);
+      else if(action==='report-mapped')await prepareReport(false,true);
       else if(action==='report-render')await prepareReport(true);
-      else if(action==='report-open')await openReport(reportReady?.gauge_support_id===edition?.id?reportReady:edition?.scientific_report);
-      else if(action==='report-task'){const task=list(state?.tasks).find(row=>row.id===target.dataset.id);if(task?.result?.source)await openReport(task.result);}
+      else if(action==='report-open'||action==='report-open-mapped')await openReport(reportReady?.gauge_support_id===edition?.id?reportReady:edition?.scientific_report,action==='report-open-mapped');
+      else if(action==='report-task'||action==='report-task-mapped'){const task=list(state?.tasks).find(row=>row.id===target.dataset.id);if(task?.workspace===workspace&&task?.result?.source)await openReport(task.result,action==='report-task-mapped');}
       else if(action==='all-hucs'||action==='priority-hucs'){draft.reporting_huc12s=list(report()?.hucs).filter(row=>action==='all-hucs'||row.priority).map(row=>row.huc12);save();renderForm();}
       else if(action==='open')await open(target.dataset.id);
       else if(action==='task')host.showTask(target.dataset.id);
@@ -276,5 +297,17 @@ export function attachGaugeSupport(host) {
   }
   function detach(){generation++;catalogRequest++;detailRequest++;pendingEditionId=null;controller?.abort();controller=null;root=null;catalog=null;edition=null;busy=false;}
   async function prepare(selection){draft={...draft,...clone(selection||{})};save();if(root){await refresh();renderForm();}}
-  return {mount,update,detach,refresh,open,prepare};
+  async function scientificReport(value={}){
+    const key=host.getWorkspace(),version=generation;
+    if(!root||workspace!==key||(value.workspace_key&&value.workspace_key!==key))
+      throw Error('Open the saved Gauge edition in its original Workspace.');
+    const id=value.edition_id||value.id;
+    if(!id)throw Error('Choose a saved Gauge support edition.');
+    await open(id);
+    if(!root||key!==workspace||version!==generation||host.getWorkspace()!==key||edition?.id!==id)return;
+    const prepared=reportReady?.gauge_support_id===id?reportReady:edition.scientific_report;
+    if(prepared?.source)return openReport(prepared);
+    return prepareReport(false);
+  }
+  return {mount,update,detach,refresh,open,prepare,scientificReport};
 }

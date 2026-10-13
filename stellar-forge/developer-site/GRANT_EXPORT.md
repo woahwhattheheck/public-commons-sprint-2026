@@ -109,3 +109,19 @@ Keep generated drafts and prepared files in the original internal application wo
 
 See [the submission guide](GRANT_SUBMISSION.md) for editing and form mapping, and [review rounds](GRANT_REVIEW_ROUNDS.md) for the existing named review and author handover.
 
+
+## Carry issuer context and operating work through the same application
+
+In **Prepare submission → Submission handover → Issuer programme and selected native plan**, open the complete issuer-case ZIP from the original Grant Operations workspace. Review its original case, selected terms and retained native plan before receiving it into the current draft. The receiving profile explicitly chooses whether to select that native plan. Save or export the same editable application to retain the issuer source with its answers, field wording, prepared editions and history.
+
+The installed exporter exposes the same receiving path:
+
+```sh
+starforge grant-export --draft saved-submission.json --receive-issuer-case complete-issuer-case.zip --issuer-profile issuer-profile.json --out /absolute/customer/issuer-export
+```
+
+The complete profile and source rules are in [GRANT_ISSUER_CONTEXT.md](./GRANT_ISSUER_CONTEXT.md). The issuer edition travels in the complete draft and the export includes the original issuer case, selected native planning ZIP and readable issuer context.
+
+Under **Native delivery plan → Customer operating procedure**, select the original native revision and work packages, enter the customer and receiving details, and create a procedure. Open **Command finder → Operating plans** to receive that complete JSON, edit the ordered work, save revisions, retain actual output files and export the whole procedure. Use **Returned procedures** to review independent changes against their complete original history; receive the resulting complete plan or completed review back into the same application's planning review. [GRANT_OPERATING_PLANS.md](./GRANT_OPERATING_PLANS.md) documents the complete browser and `starforge grant-operating-plan` flow.
+
+The existing **Issuer form fields** view records the selected answer text at each wording review. When an answer changes, compare the previous and current text, choose the current wording or retain the edited field, and save that decision with the same draft. A source refresh keeps an already open draft selected while its complete comparison becomes available.

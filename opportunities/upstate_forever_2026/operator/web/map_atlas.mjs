@@ -671,7 +671,7 @@ export function attachMapAtlas(host) {
    observedReports=mountObservedReports(observedRoot,data().sources||[],draft);
    observedRoot.addEventListener('click',event=>{
     const control=event.target.closest('[data-observed-action]');if(!control||control.disabled)return;
-    try{draftEdits++;collect();persist();renderProblems();}catch(error){showError(error);}
+    try{draftEdits++;operationId=null;collect();persist();renderProblems();}catch(error){showError(error);}
    });
   }
   renderProblems();

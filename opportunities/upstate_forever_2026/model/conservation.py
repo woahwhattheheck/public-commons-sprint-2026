@@ -1484,7 +1484,9 @@ def save_plan(workspace, value):
                     "cost_total": total_cost if missing_costs == 0 else None,
                     "known_cost_subtotal": total_cost, "units_without_cost": missing_costs,
                     "currency": state["summary"]["currency"], "pollutants": pollutants,
-                    "quantitative_scope": "Selected-footprint contributions within each complete modeled case",
+                    "quantitative_scope": ("Selected geographic footprint and retained source-context intersections"
+                                           if state["mode"] == "source_context" else
+                                           "Selected-footprint contributions within each complete modeled case"),
                     **_context_metrics(reporting_union, contexts),
                 },
             )

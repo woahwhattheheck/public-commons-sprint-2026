@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "ensembles",
   "title": "Scenario sensitivity",
-  "version": "4.4",
+  "version": "4.5",
   "order": 50,
   "assets": [
     "ensembles.mjs"
@@ -165,7 +165,8 @@
       "toast",
       "openItem",
       "refresh",
-      "openDelivery"
+      "openDelivery",
+      "openScientificReport"
     ],
     "view": {
       "id": "ensembles",

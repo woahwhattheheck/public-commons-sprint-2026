@@ -19,20 +19,29 @@ export function orderedReportSources(catalog, selected) {
 
 export function attachScientificReportEditions(host) {
   let panel=null,workspace=null,generation=0,revision=0,detailGeneration=0,active=false;
-  let sources=[],editions=[],selected=[],title='',contact={name:'Upper Savannah project team',organization:'Internal scientific review',email:''};
-  let preview=null,opened=null,busy=false,error='',pending=null;
+  let sources=[],editions=[],selected=[],title='',contact={name:'',organization:'',email:''};
+  let preview=null,opened=null,busy=false,error='',pending=null,storageIssue='';
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   const request=(path,values={})=>host.api(host.endpoint(path,values));
   const payload=()=>({sources:selected.map(choice),...(title.trim()?{title:title.trim()}:{}),contact:{...contact}});
-  function changed(){revision++;preview=null;pending=null;saveDraft();}
+  function changed(){revision++;preview=null;saveDraft();}
   function saveDraft(){
-    try{sessionStorage.setItem('scientific-report-draft:'+workspace,JSON.stringify({selected,title,contact}));}catch{}
+    try{sessionStorage.setItem('scientific-report-draft:'+workspace,JSON.stringify({selected,title,contact,pending}));storageIssue='';}
+    catch{storageIssue='Browser storage is unavailable. Keep this report desk open until its original request is recovered.';}
   }
   function restoreDraft(){
     try{
       const saved=JSON.parse(sessionStorage.getItem('scientific-report-draft:'+workspace)||'null');
       if(saved&&Array.isArray(saved.selected)){selected=saved.selected.map(choice);title=typeof saved.title==='string'?saved.title:'';
-        contact={name:String(saved.contact?.name??''),organization:String(saved.contact?.organization??''),email:String(saved.contact?.email??'')};}
+        contact={name:String(saved.contact?.name??''),organization:String(saved.contact?.organization??''),email:String(saved.contact?.email??'')};
+        const retained=saved.pending;
+        if(retained&&typeof retained.id==='string'&&retained.id&&
+            ['source-reports.render','source-reports.export'].includes(retained.action)&&
+            retained.body&&typeof retained.body==='object'&&!Array.isArray(retained.body)&&
+            retained.key===JSON.stringify([workspace,retained.action,retained.body])){
+          pending=retained;
+        }
+      }
     }catch{}
   }
   function ensure(container){
@@ -49,6 +58,7 @@ export function attachScientificReportEditions(host) {
       panel.addEventListener('input',event=>{
         const field=event.target.dataset.scientificReportField;
         if(!field)return;
+        if(busy||pending){error='Recover the original report request before editing its selection.';render();return;}
         if(field==='title')title=event.target.value;
         else contact[field]=event.target.value;
         changed();
@@ -63,27 +73,28 @@ export function attachScientificReportEditions(host) {
     if(!panel)return;
     let chosen=[],selectionIssue='';
     try{chosen=orderedReportSources(sources,selected);}catch(reason){selectionIssue=reason.message;}
-    const selectedKeys=new Set(selected.map(key)),remaining=sources.filter(row=>!selectedKeys.has(key(row)));
+    const selectedKeys=new Set(selected.map(key)),remaining=sources.filter(row=>!selectedKeys.has(key(row))),locked=busy||!!pending;
     panel.innerHTML='<div class="source-reports-heading"><div><h3>Prepare a scientific report</h3>'+
       '<p>Select saved scientific studies in reading order. The report retains their methods, periods, figures and source data.</p></div>'+
       '<button type="button" data-scientific-report-action="refresh">Refresh saved reports</button></div>'+
-      '<p data-scientific-report-status role="status">'+esc(error||selectionIssue||(busy?'Working through the original task queue…':''))+'</p>'+
-      '<div class="scientific-report-fields"><label>Report title <span class="note">(optional)</span><input data-scientific-report-field="title" value="'+esc(title)+'"></label>'+
+      '<p data-scientific-report-status role="status">'+esc(error||storageIssue||selectionIssue||(busy?'Working through the original task queue…':''))+'</p>'+
+      (pending?'<section class="scientific-report-preview"><p>Original report request '+esc(pending.id)+(pending.task_id?' · task '+esc(pending.task_id):' · response awaiting recovery')+'</p><button type="button" data-scientific-report-action="recover"'+(busy?' disabled':'')+'>'+(pending.task_id?'Open retained report task':'Recover original report request')+'</button></section>':'')+
+      '<div class="scientific-report-fields"><label>Report title <span class="note">(optional)</span><input data-scientific-report-field="title" value="'+esc(title)+'"'+(locked?' disabled':'')+'></label>'+
       ['name','organization','email'].map(field=>'<label>'+esc({name:'Prepared by',organization:'Organization',email:'Contact email'}[field])+
-        '<input data-scientific-report-field="'+field+'" value="'+esc(contact[field])+'"></label>').join('')+'</div>'+
+        '<input data-scientific-report-field="'+field+'" value="'+esc(contact[field])+'"'+(locked?' disabled':'')+'></label>').join('')+'</div>'+
       '<label class="source-reports-document">Add a saved scientific study<select data-scientific-report-source>'+
         '<option value="">Choose an original report source</option>'+remaining.map(row=>'<option value="'+esc(key(row))+'">'+esc(row.title)+' · '+esc(row.vintage)+'</option>').join('')+
-        '</select></label><button type="button" data-scientific-report-action="add"'+(!remaining.length||busy?' disabled':'')+'>Add study</button>'+
+        '</select></label><button type="button" data-scientific-report-action="add"'+(!remaining.length||locked?' disabled':'')+'>Add study</button>'+
       (selected.length?'<ol class="scientific-report-order">'+selected.map((row,index)=>{
         const original=sources.find(item=>key(item)===key(row));
         return '<li><div><strong>'+esc(original?.title||row.source_id)+'</strong><small>'+esc(original?.vintage||'Retained selection')+
           ' · '+esc(row.source_id)+'</small></div><div class="inline-actions">'+
-          '<button type="button" data-scientific-report-action="up" data-index="'+index+'"'+(!index||busy?' disabled':'')+' aria-label="Move study '+(index+1)+' earlier">Earlier</button>'+
-          '<button type="button" data-scientific-report-action="down" data-index="'+index+'"'+(index===selected.length-1||busy?' disabled':'')+' aria-label="Move study '+(index+1)+' later">Later</button>'+
-          '<button type="button" data-scientific-report-action="remove" data-index="'+index+'"'+(busy?' disabled':'')+'>Remove</button></div></li>';
+          '<button type="button" data-scientific-report-action="up" data-index="'+index+'"'+(!index||locked?' disabled':'')+' aria-label="Move study '+(index+1)+' earlier">Earlier</button>'+
+          '<button type="button" data-scientific-report-action="down" data-index="'+index+'"'+(index===selected.length-1||locked?' disabled':'')+' aria-label="Move study '+(index+1)+' later">Later</button>'+
+          '<button type="button" data-scientific-report-action="remove" data-index="'+index+'"'+(locked?' disabled':'')+'>Remove</button></div></li>';
       }).join('')+'</ol>':'<p class="note">Saved calibration reviews, Scientific interpretation, native process studies and observed-water reports appear here after their report source is prepared.</p>')+
-      '<div class="inline-actions"><button type="button" data-scientific-report-action="preview"'+(!chosen.length||selectionIssue||busy?' disabled':'')+'>Preview selected sources</button>'+
-      '<button type="button" data-scientific-report-action="render"'+(!preview||busy?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare PDF, HTML and data')+'</button></div>'+
+      '<div class="inline-actions"><button type="button" data-scientific-report-action="preview"'+(!chosen.length||selectionIssue||locked?' disabled':'')+'>Preview selected sources</button>'+
+      '<button type="button" data-scientific-report-action="render"'+(!preview||locked?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare PDF, HTML and data')+'</button></div>'+
       '<div data-scientific-report-preview>'+previewHTML()+'</div>'+
       '<h3>Saved scientific reports</h3>'+
       (editions.length?'<div class="table-scroll"><table><thead><tr><th>Report</th><th>Contents</th><th></th></tr></thead><tbody>'+
@@ -130,8 +141,8 @@ export function attachScientificReportEditions(host) {
     target.innerHTML='<div class="source-reports-heading"><div><h3>'+esc(row.title)+'</h3><p>'+
       row.source_count+' studies · '+row.section_count+' sections · '+row.figure_count+' figures</p></div>'+
       '<button type="button" data-scientific-report-action="close">Close report</button></div>'+
-      '<div class="inline-actions"><button type="button" data-scientific-report-action="revise">Use these studies in another report</button>'+
-      '<button type="button" data-scientific-report-action="export"'+(busy?' disabled':'')+'>Prepare complete report ZIP</button>'+
+      '<div class="inline-actions"><button type="button" data-scientific-report-action="revise"'+(busy||pending?' disabled':'')+'>Use these studies in another report</button>'+
+      '<button type="button" data-scientific-report-action="export"'+(busy||pending?' disabled':'')+'>Prepare complete report ZIP</button>'+
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. The Workspace backup also keeps the original editable studies and source editions.</p>'+
@@ -141,25 +152,45 @@ export function attachScientificReportEditions(host) {
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
   }
+  async function showRetainedTask(){
+    const original=pending,ws=workspace,turn=generation;
+    if(!original?.task_id)throw Error('The original report task has not returned its ID yet.');
+    await host.refresh({force:true});
+    if(!valid(ws,turn)||pending!==original)return;
+    await host.showTask(original.task_id);
+    if(!valid(ws,turn)||pending!==original)return;
+    pending=null;saveDraft();await refresh();
+  }
   async function submit(action,body){
     if(busy)return;
     const ws=workspace,turn=generation;
     const requestKey=JSON.stringify([ws,action,body]);
-    if(!pending||pending.key!==requestKey)pending={key:requestKey,id:crypto.randomUUID()};
-    const requestBody={workspace:ws,action,payload:body,operation_id:pending.id};
-    busy=true;error='';render();
+    if(pending&&pending.key!==requestKey)
+      throw Error('Recover the original report request before starting another.');
+    if(!pending)pending={key:requestKey,id:crypto.randomUUID(),action,body:JSON.parse(JSON.stringify(body))};
+    const original=pending;
+    saveDraft();busy=true;error='';render();
     try{
-      const result=await host.api('/api/actions',{method:'POST',body:requestBody});
-      if(!valid(ws,turn))return;
-      if(result.workspace&&result.workspace!==ws)throw Error('The retained report task belongs to another Workspace.');
-      pending=null;await host.refresh({force:true});
-      if(!valid(ws,turn))return;
-      await host.showTask(result.id);
-      await refresh();
-    }finally{if(valid(ws,turn)){busy=false;render();}}
+      if(original.task_id){await showRetainedTask();return;}
+      const requestBody={workspace:ws,action:original.action,payload:original.body,operation_id:original.id};
+      const response=await host.api('/api/actions',{method:'POST',body:requestBody});
+      if(!valid(ws,turn)||pending!==original)return;
+      const task=response.task||response;
+      if((task.workspace&&task.workspace!==ws)||(response.workspace&&response.workspace!==ws))throw Error('The retained report task belongs to another Workspace.');
+      if(typeof task.id!=='string'||!task.id)throw Error('The original request is retained. Recover its native task response.');
+      original.task_id=task.id;saveDraft();
+      await showRetainedTask();
+    }finally{if(valid(ws,turn)){busy=false;saveDraft();render();}}
+  }
+  async function recover(){
+    if(busy||!pending)return;
+    return submit(pending.action,pending.body);
   }
   async function dispatch(button){
     const action=button.dataset.scientificReportAction;
+    if(action==='recover')return recover();
+    if(['add','up','down','remove','preview','render','revise','export'].includes(action)&&(busy||pending))
+      throw Error('Recover the original report request before changing its selection or starting another.');
     if(action==='refresh'){await refresh();if(opened)await open(opened.edition.id);return;}
     if(action==='add'){
       const value=panel.querySelector('[data-scientific-report-source]').value;
@@ -201,9 +232,11 @@ export function attachScientificReportEditions(host) {
       throw Error('Open the prepared report sources in their original Workspace.');
     if(!Array.isArray(value.sources)||!value.sources.length)
       throw Error('Choose one or more original prepared report sources.');
+    if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
     const ws=workspace,turn=generation;
     await refresh();
     if(!valid(ws,turn))throw Error('The Workspace changed before its report sources opened.');
+    if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
     const incoming=orderedReportSources(sources,value.sources).map(choice);
     const seen=new Set(selected.map(key));
     for(const row of incoming){if(!seen.has(key(row))){selected.push(row);seen.add(key(row));}}
@@ -217,8 +250,8 @@ export function attachScientificReportEditions(host) {
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
-    contact={name:'Upper Savannah project team',organization:'Internal scientific review',email:''};
-    preview=null;opened=null;busy=false;pending=null;error='';active=false;
+    contact={name:'',organization:'',email:''};
+    preview=null;opened=null;busy=false;pending=null;error='';storageIssue='';active=false;
   }
   return {mount,detach,reset,refresh,openForSources};
 }

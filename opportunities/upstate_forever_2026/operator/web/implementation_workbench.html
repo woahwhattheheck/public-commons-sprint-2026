@@ -1853,6 +1853,15 @@ class ImplementationWorkbench {
     this.cache();
     await this.host.openDelivery(clone(selection));
   }
+  async publishFieldObservationReport(){
+    const receipt=(this.observationReceipts||[]).at(-1),source=receipt?.report_source;
+    if(!receipt||receipt.workspace_key!==this.workspace||receipt.plan_id!==this.plan?.id||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the registered field edition in its original workspace and plan.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening the report publisher.');
+    const turn=this.generation,planId=this.plan.id;
+    const module=await import('./implementation_source_reports.mjs');
+    if(this.gone||turn!==this.generation||this.plan?.id!==planId||this.host.getState?.()?.workspace_key!==this.workspace)return;
+    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision});
+  }
   fieldObservationPanel(){
     if(!this.native)return '';
     const flow=this.observationFlow,receipt=(this.observationReceipts||[]).at(-1);
@@ -1860,7 +1869,7 @@ class ImplementationWorkbench {
     const counts=summary?'<dl>'+[['Original records',summary.row_count],['Numeric',summary.numeric_count],['Censored',summary.censored_count],['Text',summary.text_count],['Missing',summary.missing_count],['Sites',summary.site_count],['Activities',summary.activity_count],['Records without collection time',summary.collection_time_missing_count],['Sites without coordinates',summary.coordinate_missing_site_count]].map(([label,value])=>'<dt>'+esc(label)+'</dt><dd>'+esc(value??'')+'</dd>').join('')+'</dl>':'';
     const review=flow?.stage==='review'?'<p>Saved revision '+esc(flow.preview.revision)+'. Review the original records and their coverage before registering this edition.</p>'+counts+
       '<div class="iw-actions">'+button('observations-import','Register saved field observations','',this.observationBindingCurrent(flow)&&summary?.row_count>0?'iw-primary':'iw-disabled')+button('observations-dismiss','Dismiss preview')+'</div>':'';
-    const ready=receipt?'<section><h4>Registered field revision '+esc(receipt.revision)+'</h4><p>'+esc(receipt.summary?.row_count??'')+' original records. This edition remains tied to its saved plan revision even after later field edits.</p><div class="iw-actions">'+receipt.observation_ids.map((id,index)=>button('observations-open','Open observed data'+(receipt.observation_ids.length>1?' '+(index+1):''),'data-index="'+index+'"')).join('')+button('observations-source','Open retained source and report')+(receipt.report_source?.delivery_selection&&typeof this.host.openDelivery==='function'?button('observations-report','Prepare client report'):'')+button('observations-details','Inspect observation edition')+'</div></section>':'';
+    const ready=receipt?'<section><h4>Registered field revision '+esc(receipt.revision)+'</h4><p>'+esc(receipt.summary?.row_count??'')+' original records. This edition remains tied to its saved plan revision even after later field edits.</p><div class="iw-actions">'+receipt.observation_ids.map((id,index)=>button('observations-open','Open observed data'+(receipt.observation_ids.length>1?' '+(index+1):''),'data-index="'+index+'"')).join('')+button('observations-source','Open retained source and report')+(receipt.report_source?.delivery_selection&&typeof this.host.openDelivery==='function'?button('observations-report','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof this.host.openScientificReport==='function'?button('observations-publish','Prepare standalone scientific report'):'')+button('observations-details','Inspect observation edition')+'</div></section>':'';
     return '<section class="iw-notice" aria-label="Field observations in the scientific workspace"><h3>Use saved field records in Observed water quality</h3><p>Register the actual observations with their sites, collection times, sample relationships, methods and original qualifiers. Censored, text and missing results retain their original meaning. The same saved revision also supplies its field-observation report source.</p>'+
       (working?'<p>'+esc(flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
       '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+review+ready+'</section>';
@@ -2078,6 +2087,7 @@ class ImplementationWorkbench {
     if(action==='observations-dismiss'){if(this.pending)throw Error('Finish the retained operation before dismissing its preview.');this.observationFlow=null;this.cache();this.render();return;}
     if(action==='observations-open'){await this.openFieldObservation(Number(b.dataset.index));return;}
     if(action==='observations-report'){await this.prepareFieldObservationReport();return;}
+    if(action==='observations-publish'){await this.publishFieldObservationReport();return;}
     if(action==='observations-source'){await this.openFieldObservation(0,true);return;}
     if(action==='observations-details'){this.dialog('<h3>Retained observation edition</h3><pre class="iw-json">'+esc(JSON.stringify((this.observationReceipts||[]).at(-1),null,2))+'</pre>'+button('close-dialog','Close'));return;}
     if(action==='economic-dismiss'){if(this.economicHandoff&&['saving','importing'].includes(this.economicHandoff.stage))throw Error('Finish the retained source operation before dismissing its selection.');this.economicHandoff=null;this.cacheEconomic();this.render();return;}

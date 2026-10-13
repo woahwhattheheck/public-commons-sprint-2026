@@ -94,9 +94,52 @@ export function documentCompositionTemplate(provider='mintpdf'){
     maxGeneratedBytes:16*MiB
   };
 }
+function correctionLineage(value,templates,id){
+  strictObject(value,['schema','mode','reason','parent','documents'],'DOCUMENT_CORRECTION_LINEAGE_INVALID');
+  requireValue(value.schema==='stellar-forge.document-correction.v1'&&
+    ['correction','repeat'].includes(value.mode),'DOCUMENT_CORRECTION_LINEAGE_INVALID');
+  strictObject(value.parent,['id','sourceSha256'],'DOCUMENT_CORRECTION_PARENT_REQUIRED');
+  requireValue(ID.test(value.parent.id??'')&&value.parent.id!==id&&HASH.test(value.parent.sourceSha256??''),
+    'DOCUMENT_CORRECTION_PARENT_REQUIRED');
+  requireValue(Array.isArray(value.documents)&&value.documents.length>0&&value.documents.length<=2000,
+    'DOCUMENT_CORRECTION_SELECTION_REQUIRED');
+  const pairs=new Set(),ids=new Set(),templateIds=new Set(templates.map(item=>item.id));
+  const documents=value.documents.map(item=>{
+    strictObject(item,['id','recordKey','templateId','taskReference','sourceSha256'],'DOCUMENT_CORRECTION_SELECTION_INVALID');
+    const key=usableKey(item.recordKey),pair=canonical([key,item.templateId]);
+    requireValue(typeof item.recordKey==='string'&&ID.test(item.id??'')&&!ids.has(item.id)&&
+      templateIds.has(item.templateId)&&!pairs.has(pair)&&HASH.test(item.sourceSha256??''),
+      'DOCUMENT_CORRECTION_SELECTION_INVALID');
+    ids.add(item.id);pairs.add(pair);
+    return {id:item.id,recordKey:key,templateId:item.templateId,
+      taskReference:boundedText(item.taskReference,800,'DOCUMENT_CORRECTION_TASK_REQUIRED'),
+      sourceSha256:item.sourceSha256};
+  });
+  return {schema:value.schema,mode:value.mode,
+    reason:boundedText(value.reason,2000,'DOCUMENT_CORRECTION_REASON_REQUIRED'),
+    parent:{id:value.parent.id,sourceSha256:value.parent.sourceSha256},documents};
+}
+function assertCorrectionDocuments(config,documents){
+  if(!config.correction)return;
+  const selectedTemplates=new Set(config.correction.documents.map(item=>item.templateId));
+  requireValue(config.templates.every(item=>selectedTemplates.has(item.id)),
+    'DOCUMENT_CORRECTION_TEMPLATE_SELECTION_CHANGED');
+  const expected=new Map(config.correction.documents.map(item=>[canonical([item.recordKey,item.templateId]),item]));
+  requireValue(documents.length===expected.size,'DOCUMENT_CORRECTION_SELECTION_CHANGED',
+    'Every selected original document must produce exactly one replacement. Check its record and template condition.');
+  const seen=new Set();
+  for(const item of documents){
+    const key=canonical([item.recordKey,item.templateId]),original=expected.get(key);
+    requireValue(original&&!seen.has(key)&&item.taskReference===original.taskReference,
+      'DOCUMENT_CORRECTION_TASK_CHANGED','Keep each selected record key and original business task reference.');
+    if(config.correction.mode==='repeat')requireValue(item.sha256===original.sourceSha256,
+      'DOCUMENT_CORRECTION_REPEAT_SOURCE_CHANGED','An unchanged repeat must retain the original document source. Select correction to edit it.');
+    seen.add(key);
+  }
+}
 export function normalizeDocumentComposition(value){
   strictObject(value,['schema','id','name','provider','merchantOrigin','dataset','recordKey',
-    'taskReference','bindings','templates','maxGeneratedBytes'],'DOCUMENT_COMPOSITION_REQUIRED');
+    'taskReference','bindings','templates','maxGeneratedBytes','correction'],'DOCUMENT_COMPOSITION_REQUIRED');
   requireValue(value.schema===DOCUMENT_COMPOSITION_SCHEMA&&ID.test(value.id??''),
     'DOCUMENT_COMPOSITION_ID_REQUIRED');
   const service=documentProvider(value.provider);
@@ -162,7 +205,8 @@ export function normalizeDocumentComposition(value){
     name:boundedText(value.name,200,'DOCUMENT_COMPOSITION_NAME_REQUIRED'),
     provider:service.id,merchantOrigin:origin.origin,dataset,recordKey:value.recordKey,
     taskReference:boundedText(value.taskReference,2000,'DOCUMENT_COMPOSITION_TASK_REQUIRED'),
-    bindings:copied(bindings),templates,maxGeneratedBytes};
+    bindings:copied(bindings),templates,maxGeneratedBytes,
+    ...(Object.hasOwn(value,'correction')?{correction:correctionLineage(value.correction,templates,value.id)}:{})};
 }
 
 /** Read complete delimited records, including quoted separators, quotes and line breaks. */
@@ -385,6 +429,7 @@ export function composeDocumentSources({request,dataset,templates}={}){
   const prepared=config.templates.map(item=>({...item,body:compileDocumentTemplate(templates[item.id]),
     titleAst:compileDocumentTemplate(item.title),labelAst:compileDocumentTemplate(item.label)}));
   const taskAst=compileDocumentTemplate(config.taskReference),keys=new Set(),documents=[],files=[];
+  const selectedPairs=config.correction?new Set(config.correction.documents.map(item=>canonical([item.recordKey,item.templateId]))):null;
   let generatedBytes=0,selectedRecords=0;
   files.push(descriptor('inputs/dataset.'+config.dataset.format,dataset,
     config.dataset.format==='csv'?'text/csv':'application/json','dataset'));
@@ -395,7 +440,7 @@ export function composeDocumentSources({request,dataset,templates}={}){
     const record=records[index],key=usableKey(pointer(record,config.recordKey));
     requireValue(!keys.has(key),'DOCUMENT_COMPOSITION_DUPLICATE_RECORD_KEY','Record key '+key+' appears more than once.');
     keys.add(key);
-    const context=selectedContext(record,config.bindings),selected=prepared.filter(item=>included(record,item.when));
+    const context=selectedContext(record,config.bindings),selected=prepared.filter(item=>included(record,item.when)&&(!selectedPairs||selectedPairs.has(canonical([key,item.id]))));
     if(selected.length===0)continue;
     selectedRecords++;
     const taskReference=renderDocumentTemplate(taskAst,context,{format:'text',maxBytes:800});
@@ -415,6 +460,7 @@ export function composeDocumentSources({request,dataset,templates}={}){
     }
   }
   requireValue(documents.length>0,'DOCUMENT_COMPOSITION_NO_DOCUMENTS_SELECTED');
+  assertCorrectionDocuments(config,documents);
   const batchInput={schema:DOCUMENT_BATCH_SCHEMA,id:config.id,name:config.name,
     provider:config.provider,merchantOrigin:config.merchantOrigin,documents:documents.map(item=>({
       id:item.id,label:item.label,source:item.source,format:item.format,
@@ -469,6 +515,7 @@ function validatePlan(value){
     value.counts.generatedBytes===value.documents.reduce((sum,item)=>sum+item.bytes,0)&&
     value.counts.parentTasks===new Set(value.documents.map(item=>item.taskReference)).size,
     'DOCUMENT_COMPOSITION_COUNTS_CHANGED');
+  assertCorrectionDocuments(value.request,value.documents);
   return value;
 }
 async function readSource(path,maxBytes,signal){

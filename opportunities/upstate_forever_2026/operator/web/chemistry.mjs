@@ -31,7 +31,7 @@ export function csvObservations(text, reference){
 }
 export function attachChemistry(host){
  const {getState,api,endpoint,submitAction,showTask,toast,fileList}=host;
- let root=null,generation=0,editorGeneration=0,runGeneration=0,selectedCase='',editorCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
+ let root=null,generation=0,editorGeneration=0,runGeneration=0,reportGeneration=0,selectedCase='',editorCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
  const workspace=()=>{const s=getState();return s.workspace_key??s.workspace??s.workspaceKey??s.data?.workspace_key;};
  const read=(kind,payload={})=>api(endpoint(`/api/chemistry/${kind}`,payload));
  async function perform(action,payload){
@@ -47,6 +47,7 @@ export function attachChemistry(host){
  };
  function report(error){if(root){let n=root.querySelector('[data-chemistry-status]');if(!n){n=document.createElement('p');n.dataset.chemistryStatus='';root.append(n);const retry=document.createElement('button');retry.type='button';retry.dataset.action='chemistry-refresh';retry.textContent='Retry opening chemistry';root.append(retry)}n.textContent=error.message||String(error);n.setAttribute('role','alert')}else toast(error.message||String(error));}
  async function reload(){
+  reportGeneration++;runGeneration++;editorGeneration++;
   const current=++generation;const result=await read('catalog');if(current!==generation||!root)return;
   catalog=result;if(selectedCase&&!catalog.cases.some(c=>c.id===selectedCase))selectedCase='';
   render();
@@ -61,10 +62,30 @@ export function attachChemistry(host){
    <div class="chemistry-actions">${button('from-source','Import chemical project')}${button('receive','Receive editable ZIP')}</div>
    <p class="chemistry-muted">Use the original Sources intake for project JSON, observation files and editable ZIPs. Original file identities remain attached to the scenario.</p></section>
    <section><h2>Retained analyses</h2><div data-chemistry-runs>${catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>'}</div></section></div>
+   <section><h2>Saved scientific reports</h2><div data-chemistry-reports>${reportList()}</div></section>
    <section data-chemistry-editor hidden></section><section data-chemistry-result hidden></section></section>`;
   root.querySelector('[data-case]').addEventListener('change',e=>{selectedCase=e.target.value});
  }
+ function reportList(){
+  return (catalog.reports||[]).map(r=>`<div class="chemistry-run">${button('report-open',r.summary?.mode+' · '+r.id.slice(0,10),r.id)}<span>${esc(r.title)} · ${esc(r.edition)}</span></div>`).join('')||'<p>No scientific report saved yet. Open a completed analysis to prepare one.</p>';
+ }
+ async function openReport(id){
+  const current=++reportGeneration,selectedWorkspace=workspace();runGeneration++;
+  const value=await read('report',{report_id:id});
+  if(!root||current!==reportGeneration||workspace()!==selectedWorkspace)return;
+  if(value.workspace_key!==selectedWorkspace||value.id!==id)throw Error('The saved report response belongs to another workspace or report.');
+  const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
+  const s=value.summary||{};
+  target.innerHTML=`<h2>Saved Chemistry scientific report</h2><p>${esc(value.title)}</p><p class="chemistry-mono">${esc(value.id)} · ${esc(value.edition)}</p>
+   ${table([{mode:s.mode,source_kind:s.project_provenance?.kind,source:s.project_provenance?.reference,fit_records:s.fit_records,held_out_records:s.held_out_records,converged:s.converged,termination:s.termination,parameter_draws:s.draw_count,seed:s.seed}],['mode','source_kind','source','fit_records','held_out_records','converged','termination','parameter_draws','seed'])}
+   <p>The report uses the selected completed run and its original inputs. Download the complete scientific-report ZIP to open all relative links offline; the editable project ZIP reopens through the original Chemistry intake.</p>
+   <div class="chemistry-actions">${button('run-open','Open original analysis',value.run_id)}</div>
+   ${fileList(value._downloads||[])}
+   <iframe data-chemistry-report-frame title="Retained Chemistry scientific report" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" style="width:100%;height:78vh;border:1px solid #aaa;background:white"></iframe>`;
+  target.querySelector('[data-chemistry-report-frame]').srcdoc=value.preview_html;
+ }
  async function editor(project=null,caseId=null){
+  reportGeneration++;runGeneration++;
   const current=++editorGeneration;
   let original=null;if(!caseId)selectedCase='';if(caseId){original=await read('case',{case_id:caseId});if(current!==editorGeneration||!root)return;project=original.project;selectedCase=caseId;}
   if(!root||current!==editorGeneration)return;editorCase=caseId||'';const area=root.querySelector('[data-chemistry-editor]');area.hidden=false;
@@ -97,10 +118,11 @@ export function attachChemistry(host){
   area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');q.observations=csvObservations(await f.text(),area.querySelector('[data-observation-reference]').value);area.querySelector('[data-request]').value=pretty(q);}catch(e){report(e)}});
  }
  async function openRun(id,field='final',offset=0){
+  reportGeneration++;
   const current=++runGeneration;
   selectedRun=id;page=offset;const run=await read('run',{run_id:id});if(!root||current!==runGeneration)return;
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
-  target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}</div>${fileList(run._downloads||[])}
+  target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}${run.state==='complete'?button('report-prepare','Prepare scientific report',id):''}</div>${fileList(run._downloads||[])}
   <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
   target.querySelector('[data-result-field]').addEventListener('change',e=>openRun(id,e.target.value,0).catch(report));
   if(run.state==='complete'){
@@ -118,6 +140,8 @@ export function attachChemistry(host){
    if(action==='new')return await editor();
    if(action==='open'||action==='case-open'){const key=id||root.querySelector('[data-case]').value;if(!key)throw new Error('Choose a saved scenario.');return await editor(null,key);}
    if(action==='run-open')return await openRun(id);
+   if(action==='report-open')return await openReport(id);
+   if(action==='report-prepare')return await perform('report.prepare',{run_id:id});
    if(action==='from-source'||action==='receive'){const v=root.querySelector('[data-source]').value;if(!v)throw new Error('Choose an original retained source.');return await perform(action==='from-source'?'case.from-source':'receive',JSON.parse(v));}
    if(action==='save'){
     const area=root.querySelector('[data-chemistry-editor]');const project=parse(area.querySelector('[data-project]'),'Chemical project');
@@ -147,9 +171,15 @@ export function attachChemistry(host){
    sources.innerHTML='<option value="">Choose an original retained source</option>'+(catalog.sources||[]).flatMap(c=>(c.entries||[]).map(e=>`<option value="${esc(JSON.stringify({source_collection_id:c.id,source_id:e.id}))}">${esc(c.title)} / ${esc(e.title||e.id)}</option>`)).join('');
    if([...sources.options].some(option=>option.value===chosen))sources.value=chosen;
   }
+  const reports=root.querySelector('[data-chemistry-reports]');
+  if(reports)reports.innerHTML=reportList();
   const runs=root.querySelector('[data-chemistry-runs]');
   if(runs)runs.innerHTML=catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>';
  }
- return {update,mount(element){if(root===element)return;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){generation++;editorGeneration++;runGeneration++;root=null},dispatch,
- taskActions(task){const r=task.result||{};if(task.state!=='complete'||!task.action?.startsWith('chemistry.'))return '';return r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):''}};
+ return {update,mount(element){if(root===element)return;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){generation++;editorGeneration++;runGeneration++;reportGeneration++;root=null},dispatch,
+ taskActions(task){
+  const r=task.result||{},key=workspace();if(task.state!=='complete'||!task.action?.startsWith('chemistry.')||(task.workspace&&task.workspace!==key))return '';
+  const control=r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):r.schema==='upstate.chemistry-scientific-report/v1'?button('report-open','Open scientific report',r.id):'';
+  return control.replace('data-id=',`data-workspace="${esc(key)}" data-id=`);
+ }};
 }

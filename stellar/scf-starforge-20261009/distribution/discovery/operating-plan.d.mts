@@ -11,10 +11,20 @@ export interface OperatingRegistration {
   sources: CommandCatalog['sources'];
   runtimeGroups: CatalogItem[];
 }
+export const OPERATING_FILE_MAX_BYTES: number;
+export interface OperatingFile {
+  id: string; name: string; mediaType: string; bytes: number; encoding: 'base64'; content: string; note: string;
+}
+export type OperatingFileSummary = Omit<OperatingFile, 'content'>;
+export interface OperatingFileComparison {
+  orderChanged: boolean; previous: OperatingFileSummary[]; returned: OperatingFileSummary[];
+  added: OperatingFileSummary[]; removed: OperatingFileSummary[];
+  changed: Array<{ id: string; previous: OperatingFileSummary; returned: OperatingFileSummary; contentChanged: boolean }>;
+}
 export interface OperatingStep {
   id: string; title: string; instruction: string; inputs: string; expectedResult: string;
   owner: string; due: string; status: OperatingStepState; recordedResult: string;
-  argv: string[]; selection: OperatingRegistration | null;
+  argv: string[]; selection: OperatingRegistration | null; files?: OperatingFile[];
 }
 export interface OperatingPlanContent {
   title: string; customer: string; purpose: string; period: string; owner: string;
@@ -74,3 +84,12 @@ export function shellArgument(value: string): string;
 export function operatingStepCommand(step: OperatingStep): string;
 export function renderOperatingPlanMarkdown(plan: OperatingPlan, options?: { revision?: number }): string;
 export function renderOperatingPlanHTML(plan: OperatingPlan, options?: { revision?: number }): string;
+
+/** Retains complete original binary contents in the saved step; older steps remain unchanged. */
+export function inspectOperatingFile(value: unknown): OperatingFile;
+export function createOperatingFile(options: { id: string; name: string; bytes: Uint8Array; mediaType?: string; note?: string }): OperatingFile;
+export function operatingFileBytes(file: OperatingFile): Uint8Array;
+export function operatingFileSummary(file: OperatingFile): OperatingFileSummary;
+export function addOperatingFile(draft: OperatingPlanDraft, stepId: string, file: OperatingFile): OperatingPlanDraft;
+export function removeOperatingFile(draft: OperatingPlanDraft, stepId: string, fileId: string): OperatingPlanDraft;
+export function compareOperatingFiles(previous?: OperatingFile[], returned?: OperatingFile[]): OperatingFileComparison;
