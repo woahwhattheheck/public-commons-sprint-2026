@@ -643,7 +643,10 @@ class Workspace:
         for sha, data in objects.items():
             self._object(db, data)
 
-        preserved = {"original", "receivedFrom", "receivedHistory", "derivedHistory", "receivedValidation", "nativeIdentity"}
+        # Analytical selections identify immutable original input, including frozen editions.
+        # Remap their enclosing operating records while keeping the selected input digest intact.
+        preserved = {"original", "receivedFrom", "receivedHistory", "derivedHistory", "receivedValidation", "nativeIdentity",
+                     "selection", "selectionSummary"}
         def remap(value, field=None):
             if field in preserved:
                 return copy.deepcopy(value)
