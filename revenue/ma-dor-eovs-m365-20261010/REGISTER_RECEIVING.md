@@ -4,7 +4,7 @@
 
 Use the complete maintained Migration Workbench. The register interface is mounted in its ordinary navigation. The CLI, SQLite store, original source objects, operation history, readable reports and portable ZIP all use the same original workspace.
 
-The current application profile is commons.migration-workbench-application/v4. Its complete 48-file roster includes the original file migration, case, grant, financial reporting and property applications, plus the register domain, mounted operator interface, guides, receiver and authored operating example. The portable module declares the exact list. It still accepts complete earlier 16-, 21-, 24-, 31- and 39-file editions under their original profiles. An already captured delivery retains its original roster.
+The current application profile is commons.migration-workbench-application/v5. Its complete 56-file roster includes the original file migration, case, grant, financial reporting and property applications, the register domain, mounted operator interface, guides, receiver and authored operating example, plus CRF reporting and its complete receiving programme. The portable module declares the exact list. It still accepts complete earlier 16-, 21-, 24-, 31-, 39- and 48-file editions under their original profiles. An already captured delivery retains its original roster; the original 48-file register course stays bound to its exact v4 source.
 
 A delivery includes its complete SQLite snapshot, every retained source object, original completed historical delivery archives, every selected application file, and the complete readable and machine-readable reports. It does not depend on another checkout or an external service to restore the local working copy.
 
@@ -147,3 +147,8 @@ This is an authored software commissioning course. Actual customer exports, iden
 The first completion and every completed adoption use the same complete validation: exact original ten-phase input/source/phase receipts; six ordered browser phases and all six exact operation bodies/results; complete report and artifact hashes; original project history; complete native delivery and independently received return receipt. A cleanup error takes the same terminal failure path on both first run and adoption. Server stop, descendant drain, workspace closure and log synchronization are independently attempted; the inherited lease remains owned until the actual descendant drain reaches ECHILD.
 
 Each screenshot and download is fully hashed from its original regular-file descriptor, fsynced with its parent directory, and rechecked against its unchanged descriptor and path identity before its receipt is published. Complete CSV and NDJSON exports are compared to the selected descriptor and every ordered original finding. Accepted operations whose response did not reach the page are reconciled through the mounted original pending-request control before another mutation.
+
+
+## Outgoing product inspection
+
+The complete owner-directed rendered-product instruction is retained in [OPERATING_WORKBENCH.md](OPERATING_WORKBENCH.md#standing-lab-rule-inspect-the-rendered-product-before-presenting-it). Read and apply it before presenting the exact outgoing application or its attachments; open the actual product, operate its controls, view its rendered results and reopen its downloads. Include the instruction in delegated operating assignments.
