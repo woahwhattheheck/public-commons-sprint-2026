@@ -159,7 +159,6 @@ def execute_run(workspace, key):
                         registry = module.execute(args)
                         if not isinstance(registry, dict):
                             raise ValueError("Native engine did not return its original output registry")
-                        execution.phase("retain_stage", model=name)
                         files, outputs, additional_files = registry_snapshot(directory, name, registry)
                         stage = {"started_at": started, "completed_at": now(),
                                  "arguments": describe_file(directory, args_path),
@@ -169,7 +168,7 @@ def execute_run(workspace, key):
                                  "companions": native_companions(directory, files),
                                  "input_signature": selected, "runtime": runtime_source}
                         state["stages"][name] = stage
-                        execution.save()
+                        execution.phase("retain_stage", model=name)
                         register(workspace, key, name, stage)
                 output_selection = {"nitrogen_export": ("ndr", "n_total_export"),
                                     "phosphorus_export": ("ndr", "p_surface_export"),
