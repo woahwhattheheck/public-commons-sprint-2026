@@ -1,3 +1,4 @@
+import {mountEcoHandovers} from './eco_handovers.mjs';
 import {mountNativeObservations} from './measured_native_observations.mjs';
 import {mountReturnedReviews} from './measured_returned_reviews.mjs';
 import {mountMeasuredChemistry} from './measured_chemistry.mjs';
@@ -6,20 +7,20 @@ import {mountCollectionPanel} from './measured_collections.mjs';
 import {mountMeasurements} from './measured_observations.mjs';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),collectionMemory=new Map(),sedimentMemory=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map(),chiquesMemory=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),collectionMemory=new Map(),sedimentMemory=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map(),chiquesMemory=new Map(),ecoHandoverMemory=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
-  let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,nativeObservations=null,root=null,key=null,generation=0;
+  let instance=null,collections=null,largeFiles=null,ecoHandovers=null,chemistry=null,returnedReviews=null,nativeObservations=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
   const benchmarkKey=(workspace,owner)=>JSON.stringify([workspace,owner]);
   const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;for(const [identity,state] of sedimentMemory)if(identity!==current&&(state?.dirty||state?.pending||state?.auxPending))return true;for(const [identity,state] of chiquesMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;return !!instance?.hasUnsavedBenchmarks?.()||!!instance?.hasUnsavedSediment?.()||!!instance?.hasUnsavedChiques?.();};
   const unsavedObservationEditions=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of observationEditionMemory)if(identity!==current&&(state?.dirty||state?.pending_save||state?.retained_saves?.length))return true;return !!instance?.hasUnsavedObservationEditions?.();};
   const unsavedCollections=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,session] of collectionMemory)if(identity!==current&&(session.dirty||session.storageBlocked||session.state.pending))return true;return !!collections?.hasUnsaved?.();};
-  const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()||unsavedCollections()){event.preventDefault();event.returnValue='';}};
+  const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()||unsavedCollections()||ecoHandovers?.hasUnsaved?.()){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',beforeUnload);
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
   const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/large/collections/preview','/chiques/preview','/provider-query','/handbacks/preview'].includes(path);
-  function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();handbackMemory.clear();observationEditionMemory.clear();return true;}
+  function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();handbackMemory.clear();observationEditionMemory.clear();ecoHandoverMemory.clear();return true;}
   function remember(workspace,owner,path,method,response,error){
     syncPerson();if(owner!==person)return;
     const identities={};let native=response;
@@ -80,6 +81,9 @@ export function createMeasuredObservations(capabilities){
     outer.append(binding);
     const largeHost=document.createElement('section');outer.append(largeHost);
     largeFiles=mountLargeFilePanel(largeHost,{workspaceKey:boundWorkspace,request,refresh});
+    const handoverHost=document.createElement('section');outer.append(handoverHost);
+    const handoverScope=benchmarkKey(boundWorkspace,boundPerson);
+    ecoHandovers=mountEcoHandovers(handoverHost,{request,scope:handoverScope,initialState:ecoHandoverMemory.get(handoverScope)||null,onState:value=>{if(personIdentity()===boundPerson)ecoHandoverMemory.set(handoverScope,JSON.parse(JSON.stringify(value)));}});
     const chemistryHost=document.createElement('section');outer.append(chemistryHost);
     chemistry=mountMeasuredChemistry(chemistryHost,capabilities,{memory:chemistryMemory});
     const nativeHost=document.createElement('section');outer.append(nativeHost);
@@ -109,7 +113,7 @@ export function createMeasuredObservations(capabilities){
     // editor locally; never send an old-identity write through the new selection.
     if(instance&&displayedPerson!==null){const observation=personIdentity()===displayedPerson?instance.snapshotObservationEditions?.():null;if(observation)observationEditionMemory.set(benchmarkKey(key,displayedPerson),JSON.parse(JSON.stringify(observation)));const nutrient=instance.snapshotChiques?.();if(nutrient)chiquesMemory.set(benchmarkKey(key,displayedPerson),nutrient);const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);const sediment=instance.snapshotSediment?.();if(sediment)sedimentMemory.set(benchmarkKey(key,displayedPerson),sediment);}
     generation++;paintCurrentNotice=()=>{};displayedPerson=null;
-    nativeObservations?.destroy();nativeObservations=null;returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true,retainedSedimentState:true});instance=null;root=null;key=null;
+    nativeObservations?.destroy();nativeObservations=null;returnedReviews?.destroy();returnedReviews=null;ecoHandovers?.destroy();ecoHandovers=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true,retainedSedimentState:true});instance=null;root=null;key=null;
   }
   return {mount,async prepareLeave(){if(instance)await instance.prepareLeave?.();},cancelLeave(){instance?.cancelLeave?.();},destroy(){suspend();window.removeEventListener('beforeunload',beforeUnload);},update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
 }

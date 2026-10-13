@@ -30,7 +30,8 @@
     "sediment_comparisons.mjs",
     "chiques_nutrients.mjs",
     "collection_working.mjs",
-    "collection_transfer.mjs"
+    "collection_transfer.mjs",
+    "eco_handovers.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
