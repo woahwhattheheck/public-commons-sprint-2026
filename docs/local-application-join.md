@@ -78,7 +78,9 @@ node host/local_application_join.mjs \
 
 If there is exactly one current package on this lead edition that overlaps these file IDs, the helper can select it without `--supersedes`; it still requires `--reason`. If several current packages overlap, select the intended predecessor explicitly. A predecessor that already has a successor is rejected. Core also validates the original customer and lead-edition ancestry.
 
-Only changed or new files are submitted. Current byte-identical files keep their revision. The new package uses the **actual native file revision seals returned in the saved working-record export**, not a seal reconstructed from a filename or content hash. Original packages remain immutable and usable with their original file versions. Files omitted from the new directory remain in customer history but are not selected into this new package.
+Only changed or new files are submitted. Current byte-identical files keep their revision. The new package uses the **actual native file revision seals returned in the saved working-record export**, not a seal reconstructed from a filename or content hash. Original packages remain immutable and usable with their original file versions. Every member of the previous package outside the selected application files is inherited into the successor at its exact saved revision. This preserves customer briefs, lead CSVs, earlier companion files and any previously selected application members omitted from the new directory. Later current revisions of unrelated files do not silently replace those frozen references. The completion summary reports the inherited-member count.
+
+To intentionally remove a previous package member, use the maintained CLI's explicit reviewed package selection instead of this additive helper. Review that selection with the original owner. An application-directory update alone is not an instruction to remove other parts of the customer package.
 
 ## Interruption and concurrent work
 
@@ -96,7 +98,7 @@ To resume, run **the same command with the same paths, bytes and stable operatio
 
 Before preparing each new batch, the helper reads the current workspace seal and checks the exact preceding file IDs, revisions and seals. It checks that the newly prepared request uses that reviewed root seal. Core guards apply with that same root seal. If the source changed during preparation, the helper saves `Concurrent_Change.json` and does not apply that request or automatically rebase it on a later state. Reconcile the current source with its owner before preparing a new operation. Preserve the rejected request and its original inputs.
 
-Completed output is never silently overwritten. The helper verifies the final record retains every original non-file field, all earlier packages and complete earlier file versions. Reopening the completed helper run checks its saved output bytes. Native filesystem/database receiving remains the installed CLI's responsibility.
+Completed output is never silently overwritten. The helper verifies the final record retains every original non-file field, all earlier packages and complete earlier file versions. Reopening the completed helper run checks both its saved working-record and customer-archive bytes. Native filesystem/database receiving remains the installed CLI's responsibility.
 
 ## Complete outputs
 
@@ -104,7 +106,7 @@ On success, standard output gives actual paths, counts and SHA-256 values for:
 
 1. The complete original customer working record with its new application file/package revisions.
 2. `Complete_Customer_Package.zip` inside the checkpoint directory.
-3. The immutable package's native seal and the changed/unchanged file counts.
+3. The immutable package's native seal and the changed, unchanged and inherited file counts.
 4. The retained native request directory for continuing the same operation.
 
 A raw file's content SHA-256 and its native revision seal are different identities. The former identifies bytes; the latter seals the full saved file document, including its metadata. Both are preserved.
