@@ -1,0 +1,29 @@
+{
+  "name": "ecosystem-workbench-relay",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true,
+  "vars": {
+    "ECO_PUBLIC_ORIGIN": "https://ecosystem-workbench-relay.tjlabs-publisher.workers.dev",
+    "ECO_OPERATOR_ID": "ecosystem-native-operator-v1"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ECO_RELAY",
+        "class_name": "EcoRelay"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "eco-relay-v1",
+      "new_sqlite_classes": [
+        "EcoRelay"
+      ]
+    }
+  ],
+  "observability": {
+    "enabled": false
+  }
+}
