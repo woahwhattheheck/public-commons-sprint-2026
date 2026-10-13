@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "simulated-qc-comparison",
+  "extend_components": {
+    "implementation": {
+      "paths": [
+        "model/simulated_qc_comparison.py",
+        "docs/SIMULATED_QC_COMPARISON.md",
+        "source_tools/simulated_qc_comparison_browser.mjs",
+        "docs/SIMULATED_QC_COMPARISON_BROWSER.md",
+        "integration/component_fragments/simulated-qc-comparison.json"
+      ]
+    }
+  },
+  "required_components": [
+    "implementation"
+  ],
+  "source_reference": "Complete original simulated field QC comparison, scientific delivery, recorded browser and whole-Workspace receiving."
+}
