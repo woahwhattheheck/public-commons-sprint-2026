@@ -1,23 +1,37 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "migration-acceptance",
-  "description": "Complete native Migration Acceptance Workbench, original dlt/DuckDB source, managed Applications, Merchant agent tools, Installation and independent customer receiving",
+  "description": "Complete native Migration Acceptance Workbench, original dlt/DuckDB source, managed Applications, Merchant agent tools, Installation and independent customer receiving; complete Airtable/NetSuite provider review, preparation and independent receiving",
   "commands": {
     "migration-acceptance": "products/migration-acceptance/cli.mjs",
     "migration-acceptance-managed": "products/migration-acceptance/managed.mjs",
-    "migration-acceptance-receive": "products/migration-acceptance/receive.mjs"
+    "migration-acceptance-receive": "products/migration-acceptance/receive.mjs",
+    "migration-provider-capture": "products/migration-acceptance/adaptations/airtable-netsuite/capture-providers.mjs",
+    "migration-provider-prepare": "products/migration-acceptance/adaptations/airtable-netsuite/prepare-provider.mjs",
+    "migration-provider-review": "products/migration-acceptance/adaptations/airtable-netsuite/build-review.mjs",
+    "migration-provider-receive": "products/migration-acceptance/adaptations/airtable-netsuite/receive.mjs"
   },
   "commandDescriptions": {
     "migration-acceptance": "Operate the complete original migration, native parity, business acceptance and customer handoff workspace",
     "migration-acceptance-managed": "Run the original private customer application under Applications ownership",
-    "migration-acceptance-receive": "Continue the full original Fruitshop and Chinook source/native/browser/customer receiving programme"
+    "migration-acceptance-receive": "Continue the full original Fruitshop and Chinook source/native/browser/customer receiving programme",
+    "migration-provider-capture": "Retain complete read-only Airtable and independent SuiteQL source pages",
+    "migration-provider-prepare": "Prepare exact mapped sources, populations and independent expected records",
+    "migration-provider-review": "Build the complete original provider review as a portable ordinary HTML file",
+    "migration-provider-receive": "Operate original provider intake, native comparison and complete independent receiving"
   },
   "exports": {
     "./migration-acceptance/connection": "./source/products/migration-acceptance/connection.mjs",
     "./migration-acceptance/managed": "./source/products/migration-acceptance/managed.mjs",
     "./migration-acceptance/mcp": "./source/products/migration-acceptance/mcp.mjs",
     "./migration-acceptance/setup": "./source/products/migration-acceptance/setup.mjs",
-    "./migration-acceptance/acceptance": "./source/products/migration-acceptance/workbench/acceptance/index.mjs"
+    "./migration-acceptance/acceptance": "./source/products/migration-acceptance/workbench/acceptance/index.mjs",
+    "./migration-acceptance/provider-input": "./source/products/migration-acceptance/adaptations/airtable-netsuite/provider-input.mjs",
+    "./migration-acceptance/provider-project": "./source/products/migration-acceptance/adaptations/airtable-netsuite/project.mjs",
+    "./migration-acceptance/provider-intake": "./source/products/migration-acceptance/adaptations/airtable-netsuite/native-intake.mjs",
+    "./migration-acceptance/provider-receiving": "./source/products/migration-acceptance/adaptations/airtable-netsuite/receive.mjs",
+    "./migration-acceptance/provider-browser-receiving": "./source/products/migration-acceptance/adaptations/airtable-netsuite/browser-receive.mjs",
+    "./migration-acceptance/provider-offline-review": "./source/products/migration-acceptance/adaptations/airtable-netsuite/build-review.mjs"
   },
   "applicationProviders": {
     "migration-acceptance": "products/migration-acceptance/application-provider.mjs"
@@ -255,6 +269,47 @@
     "stellar-forge/developer-site/GRANT_MIGRATION_ACCEPTANCE.md",
     "stellar-forge/developer-site/grant-products/migration-acceptance.json",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/migration-acceptance.json",
-    "products/migration-acceptance/PUBLIC_SOURCE.md"
+    "products/migration-acceptance/PUBLIC_SOURCE.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/provider-input.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/sha256.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/capture-providers.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/prepare-provider.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/capture.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/mapping.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/configuration.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/inputs/customers.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/expected/customers.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/inputs/orders.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/expected/orders.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/inputs/order_customers.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/expected/order_customers.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/capture.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/mapping.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/projection.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/prepared/PREPARED.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/pipeline-input.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/source-ids.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/README.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/MAPPING.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/SOURCE-CONTRACT.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/configuration.template.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/mapping.template.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/OPERATED.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/DEPENDENCIES.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/project.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/acceptance.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/native-intake.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/receive.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/index.html",
+    "products/migration-acceptance/adaptations/airtable-netsuite/style.css",
+    "products/migration-acceptance/adaptations/airtable-netsuite/app.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/OPERATING.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/browser-receive.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/reviewed-project.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/examples/CORE-OPERATION.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/SOURCE_MANIFEST.json",
+    "products/migration-acceptance/adaptations/airtable-netsuite/build-review.mjs",
+    "products/migration-acceptance/adaptations/airtable-netsuite/INSTALLED.md",
+    "products/migration-acceptance/adaptations/airtable-netsuite/PUBLIC_ADOPTION.json"
   ]
 }

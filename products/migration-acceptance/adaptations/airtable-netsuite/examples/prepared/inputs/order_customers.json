@@ -1,0 +1,17 @@
+[
+  {
+    "order_id": "1001",
+    "customer_id": "9007199254740993",
+    "ordinal": "0"
+  },
+  {
+    "order_id": "1001",
+    "customer_id": "9007199254740994",
+    "ordinal": "1"
+  },
+  {
+    "order_id": "1002",
+    "customer_id": "9007199254740995",
+    "ordinal": "0"
+  }
+]
