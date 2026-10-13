@@ -4,6 +4,7 @@ import {attachConservationOptimization} from './conservation_optimization.mjs';
 
 export function attachConservationWithOptimization(host) {
   const original = attachConservation(host);
+  if (original.integratedOptimization) return original;
   const decision = attachConservationOptimization(host, {view:'conservation'});
   let target = null;
   function ensureStyle() {

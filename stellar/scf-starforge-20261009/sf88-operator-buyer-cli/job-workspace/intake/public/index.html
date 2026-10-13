@@ -31,6 +31,7 @@
             <aside class="terms">
               <h3>Configured job</h3>
               <dl><dt>Price in atomic units</dt><dd id="amount" class="mono"></dd><dt>Network</dt><dd id="network" class="mono"></dd><dt>Asset</dt><dd id="asset" class="mono break"></dd><dt>Recipient</dt><dd id="payTo" class="mono break"></dd><dt>Output</dt><dd id="output"></dd><dt>Execution limit</dt><dd id="timeout"></dd></dl>
+              <section id="declaredOutputs" hidden aria-labelledby="declaredOutputsHeading"><h3 id="declaredOutputsHeading">Included output files</h3><ul id="declaredOutputFiles"></ul><p class="hint">Retrieve the whole result once in Jobs. Each saved file can be previewed, downloaded and added to a collection.</p></section>
               <label>Request label <span class="optional">(optional)</span><input id="label" maxlength="300" placeholder="October account report"></label>
               <label>Reference <span class="optional">(generated if empty)</span><input id="reference" maxlength="80" spellcheck="false"></label>
               <label id="accessField" hidden>Merchant intake access token<input id="accessToken" type="password" autocomplete="off" spellcheck="false" maxlength="1024"></label>

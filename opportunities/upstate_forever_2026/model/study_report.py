@@ -462,7 +462,9 @@ def _retained_profiles(workspace, scope, experiment_id):
     """Recover the original report context from this received experiment."""
     from model.common import digest, read_json, verify_file
     context = scope / "study-report-context.json"
-    if context.is_file():
+    if context.exists() or context.is_symlink():
+        if context.is_symlink() or not context.is_file():
+            raise ValueError("The retained study report context must be an original file.")
         value = read_json(context)
         payload = {name: item for name, item in value.items() if name != "id"}
         if (value.get("schema") != "upstate.study-report-context/v1"
@@ -473,8 +475,10 @@ def _retained_profiles(workspace, scope, experiment_id):
             raise ValueError("The retained study report context differs from this experiment.")
         return value["source_profiles"]
     marker_path = scope / "study-report.json"
-    if not marker_path.is_file():
+    if not marker_path.exists() and not marker_path.is_symlink():
         return None
+    if marker_path.is_symlink() or not marker_path.is_file():
+        raise ValueError("The retained study report marker must be an original file.")
     marker = read_json(marker_path)
     if (marker.get("schema") != "upstate.study-report-downloads/v1"
             or marker.get("experiment_id") != experiment_id
@@ -501,10 +505,16 @@ def refresh_existing(workspace, experiment_id):
     from model.common import identifier
     experiment_id = identifier(experiment_id)
     scope = workspace.root / "experiments" / experiment_id
-    if not any((scope / name).is_file() for name in
+    if not any((scope / name).exists() or (scope / name).is_symlink() for name in
                ("study-report-context.json", "study-report.json")):
         return None
-    return build(workspace, experiment_id)
+    try:
+        return build(workspace, experiment_id)
+    except Exception as error:
+        raise RuntimeError(
+            "The saved experiment summary and native run artifacts remain retained. "
+            "Refreshing the complete study report failed: " + str(error)
+        ) from error
 
 
 def build(workspace, experiment_id, *, profiles=None):

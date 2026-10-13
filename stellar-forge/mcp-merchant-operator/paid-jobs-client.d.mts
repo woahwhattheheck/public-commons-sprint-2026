@@ -1,3 +1,4 @@
+import type { JobPackageDescription, JobOutputReceiving } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/outputs/index.mjs';
 // MIT. Complete paid-job receiving over the original merchant MCP transport.
 export declare const PAID_JOB_RECEIVING_SCHEMA: 'stellar-forge.paid-job-agent-receiving.v1';
 
@@ -120,6 +121,8 @@ export interface PaidJobReceivingResult {
   files: number;
   bytes: number;
   documentsVerified: true;
+  /** The exact original result's member manifest, or its explicitly received files. */
+  outputs: JobPackageDescription | JobOutputReceiving | null;
   artifacts: Array<PaidJobExportFile & { path: string }>;
 }
 export interface PaidJobDownloadResult extends PaidJobReceivingResult {
@@ -153,3 +156,12 @@ export declare function downloadPaidJobExport(options: DownloadPaidJobExportOpti
 export declare function reopenPaidJobExport(options: ReopenPaidJobExportOptions): Promise<PaidJobReopenResult>;
 /** Reads bounded original documents and returns the raw original resolution export. */
 export declare function readPaidJobCaseSource(options: ReadPaidJobCaseSourceOptions): Promise<PaidJobCaseSource>;
+
+export interface ReceivePaidJobOutputsOptions extends ReopenPaidJobExportOptions {
+  /** A new or matching private directory outside the retained export directory. */
+  outputDirectory: string;
+}
+/** Verify the full original export and resume its named output-file receiving offline. */
+export declare function receivePaidJobOutputs(options: ReceivePaidJobOutputsOptions): Promise<PaidJobReceivingResult & {
+  outputs: JobOutputReceiving;
+}>;

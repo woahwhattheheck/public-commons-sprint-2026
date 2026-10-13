@@ -255,6 +255,22 @@ def boundaries(output, *, catalog=DEFAULT_CATALOG, retry_failed=False, archive=N
     with held(root/"capture.lock", blocking=False):
         atomic_json(root/"provider-catalog.json", value, immutable=True)
         _receive_original_reporting(root)
+        retained_index = root/"county-boundaries.json"
+        if retained_index.exists():
+            retained = read_json(retained_index)
+            if (retained.get("schema") != SCHEMA or retained.get("kind") != "county-boundary-capture"
+                    or retained.get("catalog_sha256") != digest(value)
+                    or retained.get("source", {}).get("uri") != value["county_boundary"]["url"]):
+                raise ValueError("The retained county capture belongs to another source selection")
+            captured = retained["source"]
+            _verify_capture(root/"layers", captured)
+            _validate_counties(_body(root/"layers"/captured["path"]), value["county_boundary"])
+            print(json.dumps({"stage": "county-boundaries", "count": 46,
+                              "path": str(root/"layers"/captured["path"]),
+                              "sha256": captured["sha256"], "reused": True}), flush=True)
+            if archive:
+                return bundle(root, archive)
+            return retained
         spec = {**value["county_boundary"], "role": "COUNTY_CONTEXT",
                 "scope": "state", "page_size": 10,
                 "coverage": "All 46 original South Carolina county polygons"}

@@ -77,7 +77,7 @@ def panel_target(workspace, reviewer, delivery_id, map_key, panel_index):
         raise ValueError("Choose a retained atlas panel number")
     directory = workspace.root / "deliveries" / delivery_id
     state = read_json(directory / "delivery-state.json")
-    if state.get("id") != delivery_id or state.get("state") != "complete":
+    if state.get("id") != delivery_id or state.get("state") not in {"complete", "received_snapshot"}:
         raise ValueError("Finish the complete atlas delivery before opening its native spatial layers")
     descriptor = state.get("files", {}).get("map_atlas_index")
     if not descriptor:

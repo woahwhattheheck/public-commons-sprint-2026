@@ -600,7 +600,10 @@ def run_protection_study(workspace, receiving, kind, spec):
         "stability": True,
     }
     preview = receiving.run(kind + ".optimization_preview", lambda: optimization.preview(workspace, request))
-    saved = receiving.run(kind + ".optimization_save", lambda: optimization.save(workspace, request))
+    saved = receiving.run(
+        kind + ".optimization_save",
+        lambda: optimization.save(workspace, preview["request"], retained_analysis=preview),
+    )
     plan = saved["plan"]
     selected = [str(value) for value in saved["selected_ids"]]
     if not selected or len(set(selected)) != len(selected):
@@ -950,6 +953,8 @@ def arguments(argv=None):
     if (args.experiment_title or args.experiment_profile_id or args.experiment_axes
             or args.experiment_design != "one_at_a_time") and not (args.prepare_experiment or args.execute_experiment):
         parser.error("Choose --prepare-experiment or --execute-experiment with experiment settings")
+    if args.models and len(args.models) != len(set(args.models)):
+        parser.error("Select each native model once")
     return args
 
 
@@ -1072,7 +1077,7 @@ def main(argv=None):
             }
             if args.grid_id:
                 request["prepare_run"] = {"grid_id": args.grid_id, "profile_id": args.profile_id}
-                if args.models:
+                if args.models and set(args.models) != {"ndr", "sdr"}:
                     request["prepare_run"]["models"] = args.models
             if args.prepare_experiment or args.execute_experiment:
                 request["prepare_experiment"] = {

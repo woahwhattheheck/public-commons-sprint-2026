@@ -1,5 +1,6 @@
 // MIT. Durable application jobs compile into the original SF30 seller and SF89 admission.
 import { createHash } from 'node:crypto';
+import { normalizePackageOutput } from './outputs/contract.mjs';
 import { normalizeFilePolicy, augmentFileInput, inputManifest, storageLimits } from './inputs/protocol.mjs';
 import { compileJobIntake } from './intake/config.mjs';
 import { readFile, lstat, realpath } from 'node:fs/promises';
@@ -90,13 +91,14 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
     if (Buffer.byteLength(canonical(schema)) > 24000) fail('JOB_INPUT_SCHEMA_TOO_LARGE');
     const example = augmented.example;
     const output = raw.output ?? { format: 'json' };
-    if (!plain(output) || !['json', 'bytes'].includes(output.format)) fail('JOB_OUTPUT_FORMAT_INVALID');
-    const contentType = output.contentType ?? (output.format === 'json' ? 'application/json; charset=utf-8' : 'application/octet-stream');
+    if (!plain(output) || !['json', 'bytes', 'package'].includes(output.format)) fail('JOB_OUTPUT_FORMAT_INVALID');
+    const contentType = output.contentType ?? (output.format === 'json' ? 'application/json; charset=utf-8' :
+      output.format === 'package' ? 'application/vnd.stellar-forge.job-result+zip' : 'application/octet-stream');
     if (typeof contentType !== 'string' || contentType.length > 160 ||
         !/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:;[\x20-\x7e]+)?$/.test(contentType) ||
         output.format === 'json' && !/^application\/(?:[A-Za-z0-9!#$&^_.+-]+\+)?json(?:;|$)/.test(contentType))
       fail('JOB_OUTPUT_CONTENT_TYPE_INVALID');
-    const filename = output.filename ?? (output.format === 'json' ? 'result.json' : 'result.bin');
+    const filename = output.filename ?? (output.format === 'json' ? 'result.json' : output.format === 'package' ? 'result.zip' : 'result.bin');
     if (typeof filename !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(filename)) fail('JOB_OUTPUT_FILENAME_INVALID');
     // One complete selected payment option per function keeps each prepared job's
     // identity unambiguous before the native verifier receives a purchase.
@@ -121,7 +123,9 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
       timeoutMs: integer(raw.timeoutMs, 300000, 100, 3600000, 'TIMEOUT'),
       maxInputBytes: integer(raw.maxInputBytes, 262144, 1, 1048576, 'INPUT_LIMIT'),
       maxOutputBytes: integer(raw.maxOutputBytes, 8388608, 1, 67108864, 'OUTPUT_LIMIT'),
-      output: { format: output.format, contentType, filename } };
+      output: output.format === 'package' ? normalizePackageOutput(output,
+        integer(raw.maxOutputBytes, 8388608, 1, 67108864, 'OUTPUT_LIMIT')) :
+        { format: output.format, contentType, filename } };
     routes.push({ id, path: raw.path, offer, handler: id + 'Submit', admit: id + 'Admission', validateInput: true });
   }
   compileSellerRoutes(routes.map(route => ({ id: route.id, offer: route.offer, handler: () => {} })));

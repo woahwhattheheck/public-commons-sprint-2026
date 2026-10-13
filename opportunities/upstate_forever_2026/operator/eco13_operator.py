@@ -232,6 +232,52 @@ def _summary(record):
     return {name: copy.deepcopy(record.get(name)) for name in fields}
 
 
+def _transfer_identities(task, action, payload):
+    """Bind each retained transfer origin to this exact original request."""
+    origin = task.get("transfer_origin")
+    if origin is None:
+        return []
+    operation_id = task.get("operation_id")
+    if not isinstance(operation_id, str) or not operation_id:
+        raise ValueError("The received task has no original operation identity.")
+    current = {"workspace": task["workspace"], "action": action, "payload": payload}
+    if (task.get("request_sha256") != digest(current)
+            or task.get("id") != digest({"workspace": task["workspace"],
+                                        "operation_id": operation_id})):
+        raise ValueError("The received task differs from its retained request.")
+    identities = []
+    while origin is not None:
+        if not isinstance(origin, dict):
+            raise ValueError("The received task has an invalid transfer history.")
+        _id(origin.get("transfer_id"), "transfer")
+        workspace_key = _id(origin.get("workspace_key"), "original workspace")
+        task_id = _id(origin.get("task_id"), "original task")
+        original_sha = digest({"workspace": workspace_key,
+                               "action": action, "payload": payload})
+        if (origin.get("request_sha256") != original_sha
+                or task_id != digest({"workspace": workspace_key,
+                                      "operation_id": operation_id})):
+            raise ValueError("The received task differs from its original transferred selection.")
+        identities.append({"id": task_id, "request_sha256": original_sha,
+                           "action": action, "workspace": workspace_key})
+        origin = origin.get("previous")
+    return identities
+
+
+def _missing_transferred_export(task, descriptor, identities):
+    """Recognize only the sender-local archive of an exact transferred task."""
+    if task.get("action") != "eco13.comparison.export" or not identities:
+        return False
+    expected = {"outputs/eco13-" + identity["id"] + ".zip" for identity in identities}
+    if descriptor.get("path") not in expected:
+        return False
+    if (type(descriptor.get("bytes")) is not int or descriptor["bytes"] < 0
+            or not isinstance(descriptor.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", descriptor["sha256"])):
+        raise ValueError("The original exported archive has an invalid retained identity.")
+    return True
+
+
 def _settings(root, plan, payload=None):
     payload = payload or {}
     for flag in ("clear_budget", "reset_report_options"):
@@ -693,9 +739,15 @@ class Eco13Operator:
                 if action == "eco13.comparison.export":
                     return self._export(ws, task["workspace"], task, identity, payload)
                 completed = self._completed(ws, identity)
+                if completed is None:
+                    for original in _transfer_identities(task, action, payload):
+                        completed = self._completed(ws, original)
+                        if completed is not None:
+                            break
                 if completed is not None:
                     return {"record_id": completed["id"], "report_status": completed["status"],
-                            "summary": _summary(completed), "reused_completed_output": True}
+                            "summary": _summary(completed), "reused_completed_output": True,
+                            "retained_task_id": completed["operation"]["id"]}
                 stage = self._staging(ws, identity)
                 # After a crash between writing the immutable record and moving
                 # its directory, promote that same complete edition directly.
@@ -788,9 +840,21 @@ class Eco13Operator:
             task["_downloads"] = self._downloads(task["workspace"], scope, record)
             if result.get("archive"):
                 original = result["archive"]
-                path = _verified(self.app.root, original)
-                task["_downloads"].append(
-                    self.app._ticket(task["workspace"], path, original, original.get("label")))
+                try:
+                    path = _verified(self.app.root, original)
+                except FileNotFoundError:
+                    action, payload, _ = self._task_input(task)
+                    identities = _transfer_identities(task, action, payload)
+                    if not _missing_transferred_export(task, original, identities):
+                        raise
+                    task["_eco13"]["archive_status"] = "export_from_saved_record"
+                    task["_eco13"]["archive_message"] = (
+                        "This received project retains the complete comparison. "
+                        "Open comparison and choose Export editable comparison "
+                        "to create its archive on this computer.")
+                else:
+                    task["_downloads"].append(
+                        self.app._ticket(task["workspace"], path, original, original.get("label")))
         return task
 
     def verify_workspace(self, workspace):

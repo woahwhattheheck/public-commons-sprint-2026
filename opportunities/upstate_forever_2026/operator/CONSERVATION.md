@@ -2,11 +2,11 @@
 
 Operation: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-E7A1.
 
-This addition carries retained planning-unit geometry through a complete candidate inventory, explicit land selection, saved portfolios, editable GIS/tabular exports and original land-cover scenarios. It uses the existing authenticated operator, task queue, Workspace and scientific engine. Code is covered by the repository MIT license. 
+This addition carries retained planning-unit geometry through a complete candidate inventory, explicit land selection, saved portfolios, editable GIS/tabular exports and original land-cover scenarios. It uses the existing authenticated operator, task queue, Workspace and scientific engine. Code is covered by the repository MIT license. Scientific interpretation: **Needs expert review**.
 
 ## Install into the current application
 
-Use the complete additive source directory beside this guide. The application argument points to the current cumulative Upper Savannah application containing model/workspace.py and operator/server.py.
+The cumulative application opens Conservation through its maintained extension registry. Follow [CONSERVATION_HOST.md](CONSERVATION_HOST.md) for the current registered host and task controls. When composing the complete additive source into an existing application, its application argument points to the cumulative Upper Savannah directory containing model/workspace.py and operator/server.py.
 
     python -B /absolute/addon/operator/install_conservation.py --application /absolute/current/upstate_forever_2026
 
@@ -78,7 +78,7 @@ The scientific CLI supports overview, prepare, build, inspect, selection, plan-s
     python -B -m model.conservation_cli --workspace /absolute/current-workspace plan-save portfolio.json
     python -B -m model.conservation_cli --workspace /absolute/current-workspace export STUDY_ID --plan-id PLAN_ID
 
-The existing task queue accepts conservation.prepare, conservation.build, conservation.plan.save, conservation.export, conservation.scenario.create, conservation.criteria.prepare and conservation.experiment.prepare. Authenticated reads are /api/conservation/overview, /api/conservation/study?study_id=ID and /api/conservation/plan?plan_id=ID, with the usual workspace query. The browser uses the same queue and retained read methods.
+The existing task queue accepts conservation.prepare, conservation.build, conservation.plan.save, conservation.export, conservation.scenario.create, conservation.criteria.prepare, conservation.experiment.prepare and conservation.sources.capture. Authenticated reads are /api/conservation/overview, /api/conservation/study?study_id=ID, /api/conservation/plan?plan_id=ID and /api/conservation/source-capture?operation_id=ID, with the usual workspace query. The browser uses the same queue and retained read methods.
 
 Source-context and native-model states, exact source selections, coverage and practical run timings should accompany a walkthrough recording. Use the receiving result's actual stage timings when narrating a prepared result and a fresh operation.
 
@@ -98,7 +98,7 @@ Choose Published practice points in the scoring controls. The operator reads the
 
 Build criteria from imported layers queues the actual parcel derivation. The builder resolves retained original overlays, intersects them with the selected parcels, and imports a criterion table with its source editions and coverage. Native-context derivation uses the retained grid's original land-cover source. Its JSON table binds the exact parcel geometry selection, reporting geometry and source bodies. Use prepared parcel criteria reopens that original study before selecting the generated table; the same geometry binding is checked when the points are calculated.
 
-Land-protection acreage uses the complete original parcel geometry. Reporting-area intersections and native output coverage have separate fields. Choose the first-order Appendix D variant only when the retained stream-order column is available; the system derives the criterion from those orders. The Table 31 variant uses first- and second-order streams. The method guide documents the published difference.
+Choose **Source criterion geometry** when preparing the table. **Full original parcel** is the default for source-derived spatial criteria, including hydric soil and sensitive riparian acreage. **Reporting-boundary intersection** retains an explicit alternative basis. Full parcel size, protected-land interpretation, land-cover/development choices and native output support remain separately recorded. Reopening a prepared table restores its original geometry context. Choose the first-order Appendix D variant only when the retained stream-order column is available; the system derives the criterion from those orders. The Table 31 variant uses first- and second-order streams. The method guide documents the published difference.
 
 The original export-priority categories can come from the retained criterion table. When a completed baseline contains both NDR and SDR, Current-study native export classes derives three classes from actual parcel-mean nitrogen, phosphorus and sediment outputs. The retained interpretation identifies that current-study adaptation and records its cutoffs. NDR-only and SDR-only inventories keep their actual output availability.
 
@@ -160,3 +160,58 @@ The runner uses the actual eligible original HUC IDs with positive published pro
 ## Published-practice optimization
 
 The queued conservation-optimization catalog exposes published_axes alongside context_axes and physical_axes. The published-method objective uses the selected original practice's complete point score and prerequisite; its category, retained criterion sources, original priority definition and native support remain visible. Physical pollutant quantities and geographic context keep their own units. The original optimizer writes the selected plan through Conservation, so its study and plan controls reopen the same saved selection. See operator/CONSERVATION_OPTIMIZATION.md and model/CONSERVATION_OPTIMIZATION.md for the full native request and export shape.
+
+## Original soils and floodplains to a saved point study
+
+Open the original parcel study and choose **Acquire soils and floodplains**. Select soils, one-percent floodplain geography or both, and record the hydric interpretation. The acquisition domain includes the reporting geometry and every selected full-parcel extension. Reuse an existing compatible original source or the original soil capture directory when available. The source pipeline requests the uncovered part of that same domain and retains original responses and native identities.
+
+The operation records family progress, retained original/criterion source editions, source coverage and prepared builder bindings. Reopen it from the Conservation acquisition list or its retained task. Resume uses that same operation ID and preserved source requests. A completed family supplies usable criteria while an unfinished family continues independently.
+
+Choose **Prepare parcel criteria** from the actual saved acquisition, selecting the intended **Source criterion geometry**. The existing `conservation.criteria.prepare` action consumes `source_operation_id` and the returned original `parcel_criteria_selection`; an optional `settings.spatial_criteria_basis` chooses `whole_original_parcel` or `reporting_parcel`. The queued builder imports the resulting JSON/CSV/GIS table. **Use prepared parcel criteria** reopens the originating study geometry and selects that actual table in the point-study form.
+
+Build the published-practice inventory. Candidate details show each metric's exact value or closed acreage interval, geometry basis and original source, followed by each published criterion's points or contribution range and the practice prerequisite. Exact points can be resolved by a bounded acreage when its entire interval falls in the same published step. The exact acreage remains bounded until source coverage determines it.
+
+Save the chosen land through the ordinary manual, ranked or optimized portfolio workflow. The plan retains the same selected IDs and its actual full/reporting union geometry. The soil and floodplain source guide, parcel geometry guide and interval guide provide the complete callable and source contracts: [SOIL_FLOODPLAIN_SOURCES.md](../source_tools/SOIL_FLOODPLAIN_SOURCES.md), [PARCEL_CRITERIA_GEOMETRY.md](../source_tools/PARCEL_CRITERIA_GEOMETRY.md), and [PARCEL_CRITERIA_INTERVALS.md](../source_tools/PARCEL_CRITERIA_INTERVALS.md).
+
+## Review and preserve an optimizer decision
+
+The completed-study optimizer offers geographic context, available native quantities and complete applicable published-practice points. Review its actual candidate inventory, explicit weights, source/native coverage, resource limits, cost availability, solver status, original selected IDs and named preference results. Physical comparisons retain their selected original alternative and common support. Published-point density, when chosen, divides parcel priority points by actual reporting hectares and keeps that denominator visible.
+
+Saving an already reviewed preview submits only its original completed `preview_task_id`. The provider reads that task in the same workspace, and the model checks the complete recorded analysis, source study, original candidate/geometry files and selected IDs. It saves that exact decision and original normalized request. A new-spec optimization request remains a separate explicit calculation through the same maintained save action. The ordinary plan service computes the selected geometry union and physical summary.
+
+The saved decision reopens through the original optimized-plan/analysis routes. Its export includes the complete candidate inventory and original decision analysis. The saved portfolio continues to **Create land-cover scenario** and the matching native experiment workflow described above. [Optimization guide](CONSERVATION_OPTIMIZATION.md).
+
+## Read and reopen the full criterion report
+
+Export the candidate inventory or saved portfolio through its existing control. The report separates full original parcel acreage, reporting acreage and the geometry used by each criterion. It displays prerequisite status, exact points or possible point range, and the original criterion contributions without converting those points into pollutant mass. Acreage endpoints retain their exact closed-bound meaning.
+
+The ZIP includes the normal editable GIS and candidate tables, `criterion-contributions.csv`, `criterion-values.csv`, `criterion-scores.json`, source-register JSON/CSV, the retained original criterion table and `presentation.json`. Original source URLs, editions, selected fields and file hashes accompany the result. Larger reports retain the complete machine-readable inventory alongside the clearly identified preview in HTML.
+
+A current presentation is created from the same verified saved measurements and selected plan IDs. Earlier study/plan artifact hashes remain intact. Reopen the same saved study or portfolio after restarting the operator; use the ordinary Workspace backup/restore workflow to carry the sources, queued operation records, criteria and decisions to another receiving copy. [Report and export contract](../model/CONSERVATION_REPORTS.md).
+
+### Reading literal source classes in an exported decision
+
+Open the saved study or portfolio report. The published-points table now shows
+**Attainable totals** and **Possible priorities**, alongside the exact total and
+lower/upper limits. Read the listed alternatives as the saved possibilities;
+the limits alone do not imply every intervening integer can occur.
+
+Expand a parcel to read each criterion's attainable contributions and the
+**Literal published class interpretation** table. **Ambiguous** means the original
+printed bins overlap at that value. **Unclassified** means the value lies in a
+printed gap or outside those bins. **Missing** means the observation is absent.
+A bounded acreage can encounter several of those states. The report retains its
+closed limits, geometry basis, source references and exact-versus-range points.
+
+For a native export criterion, the **Current native export classification** table
+shows the original input and unit, actual current cell area, classification method
+and any explicit transfer of the printed bins. An unresolved published source cell
+area remains visible. This lets a reviewer distinguish current-study tertiles from
+an explicitly recorded source-profile transfer while reading annual parcel mass
+in the separate pollutant fields.
+
+Download the criterion CSVs for complete alternatives and field bindings, or
+`criterion-scores.json` for their original typed records. The ordinary parcel
+CSV and GeoPackage also carry the option arrays, class states and profile identity.
+These exports retain the saved parcel decision and its original full/reporting
+geometry.

@@ -6,6 +6,9 @@ and source inspection continue in their original maintained modules.
 from __future__ import annotations
 
 from collections import OrderedDict
+import base64
+from html import escape as html_escape
+from html.parser import HTMLParser
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -56,6 +59,88 @@ LINK_BRIDGE = r"""
 })();
 </script>
 """
+
+LINK_BRIDGE_SCRIPT = LINK_BRIDGE.split("<script>", 1)[1].rsplit("</script>", 1)[0]
+
+
+def _bridge_policy(policy):
+    """Admit only this preview bridge under an existing document policy."""
+    parts = [part.strip().split() for part in policy.split(";") if part.strip()]
+    effective = None
+    for name in ("script-src-elem", "script-src", "default-src"):
+        effective = next((part for part in parts if part[0].lower() == name), None)
+        if effective is not None:
+            break
+    if effective is None:
+        return policy
+    sources = effective[1:]
+    # Adding a hash to an otherwise unrestricted inline policy would disable
+    # its existing inline scripts. Such a policy already admits this bridge.
+    has_signature = any(value.startswith(("'nonce-", "'sha256-", "'sha384-", "'sha512-"))
+                        for value in sources)
+    if "'unsafe-inline'" in sources and not has_signature:
+        return policy
+    digest = base64.b64encode(hashlib.sha256(LINK_BRIDGE_SCRIPT.encode("utf-8")).digest()).decode("ascii")
+    bridge = "'sha256-" + digest + "'"
+    if bridge in sources:
+        return policy
+    amended = [value for value in sources if value != "'none'"] + [bridge]
+    if effective[0].lower() == "default-src":
+        # Leave the original fallback for every non-script resource intact.
+        parts.append(["script-src", *amended])
+    else:
+        effective[:] = [effective[0], *amended]
+    return "; ".join(" ".join(part) for part in parts)
+
+
+class _PreviewPolicies(HTMLParser):
+    """Locate actual policy elements, without rewriting report/script bodies."""
+
+    def __init__(self, source):
+        super().__init__(convert_charrefs=False)
+        self.edits = []
+        self.offsets = [0]
+        for line in source.split("\n"):
+            self.offsets.append(self.offsets[-1] + len(line) + 1)
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "meta":
+            return
+        first = {}
+        for key, value in attrs:
+            first.setdefault(key.lower(), value)
+        if str(first.get("http-equiv") or "").lower() != "content-security-policy":
+            return
+        policy = first.get("content")
+        if policy is None:
+            return
+        replacement = _bridge_policy(policy)
+        if replacement == policy:
+            return
+        amended = []
+        replaced = False
+        for key, value in attrs:
+            if key.lower() == "content" and not replaced:
+                value = replacement
+                replaced = True
+            amended.append(" " + key if value is None else
+                           " " + key + '="' + html_escape(value, quote=True) + '"')
+        raw = self.get_starttag_text()
+        line, column = self.getpos()
+        start = self.offsets[line - 1] + column
+        self.edits.append((start, start + len(raw), "<meta" + "".join(amended) + ">"))
+
+    handle_startendtag = handle_starttag
+
+
+def _preview_html(source):
+    parser = _PreviewPolicies(source)
+    parser.feed(source)
+    parser.close()
+    for start, end, replacement in reversed(parser.edits):
+        source = source[:start] + replacement + source[end:]
+    marker = source.lower().rfind("</body>")
+    return source[:marker] + LINK_BRIDGE + source[marker:] if marker >= 0 else source + LINK_BRIDGE
 
 def _member(value):
     if (not isinstance(value, str) or not value or value.startswith("/")
@@ -232,8 +317,7 @@ def linked_preview(operator, workspace_key, delivery_id, member_path):
         source = stream.read().decode("utf-8-sig")
     finally:
         stream.close()
-    marker = source.lower().rfind("</body>")
-    rendered = source[:marker] + LINK_BRIDGE + source[marker:] if marker >= 0 else source + LINK_BRIDGE
+    rendered = _preview_html(source)
     body = rendered.encode("utf-8")
     sha = hashlib.sha256(body).hexdigest()
     directory = Path(operator.root) / "previews" / "delivery-html"

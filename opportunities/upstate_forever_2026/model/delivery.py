@@ -22,7 +22,7 @@ SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
 DELIVERY_EDITION = "2026-10-13-integrated-report-2"
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-7"
+DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-8"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -579,10 +579,14 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             else:
                 summary = read_json(verify_file(directory, state["files"]["scenario_summary_json"]))
-            original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
-            grid_path = directory / "grid" / "grid.json"
-            _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
-            state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+            if "native_grid_record" not in state["files"]:
+                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+                grid_path = directory / "grid" / "grid.json"
+                _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+                state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_grid_record"])
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
