@@ -13,7 +13,7 @@ import math
 from pathlib import Path
 from urllib.parse import urlencode
 
-from model.common import atomic_json, canonical, digest, file_digest, held, identifier, read_json
+from model.common import atomic_bytes, atomic_json, canonical, digest, file_digest, held, identifier, read_json
 from model.chemistry import Chemistry
 from model.reach_chemistry.model import Project, ModelError
 from model.reach_chemistry.inference import observation_components, observation_rows
@@ -389,6 +389,86 @@ def _review(case, snap, selection):
                 "observations": len(observations), "derived_component_records": len(component_ids)}}
 
 
+
+def _referenced_collections(service, snap):
+    """Resolve selected original import IDs to their existing complete source sets."""
+    imports = {source["id"] for record in snap["records"] for source in record.get("sources", [])}
+    root = (Path(service.directory).resolve() / "collections").resolve()
+    chosen = []
+    for item in service.json("GET", "collections")["collections"]:
+        collection_id = identifier(item["id"])
+        directory = (root / collection_id).resolve(strict=True)
+        manifest_path = (directory / "collection.json").resolve(strict=True)
+        if not directory.is_relative_to(root) or not manifest_path.is_relative_to(directory) or not manifest_path.is_file():
+            raise ValueError("Original measurement collection is outside its retained source directory")
+        document = read_json(manifest_path)
+        if document.get("format") != "upper-savannah-measurement-collection/v1":
+            raise ValueError("Original measurement collection format differs")
+        if not any(file.get("importId") in imports for file in document["files"]):
+            continue
+        if not item["complete"]:
+            raise ValueError("Complete the referenced original measurement collection before binding its records")
+        chosen.append({"id": collection_id, "document": document})
+    return sorted(chosen, key=lambda value: value["id"])
+
+
+def _same_portable(left, right):
+    # The original engine's creation clock describes serialization, not source identity.
+    stable = lambda document: {key: value for key, value in document.items() if key != "createdAt"}
+    return stable(left) == stable(right)
+
+
+def _retain_collection_editions(service, snap, collections, directory):
+    """Use original immutable collection editions, including every binary companion."""
+    from base64 import b64decode
+    from hashlib import sha256
+    from io import BytesIO
+    from zipfile import ZipFile
+    result = []
+    for selected in collections:
+        collection_id = selected["id"]
+        edition = service.json("POST", "collections/" + collection_id + "/publish")
+        edition_id = identifier(edition["id"])
+        if edition["collectionId"] != collection_id or edition["workspaceRevision"] != snap["revision"]:
+            raise ValueError("Measurements changed while publishing the original source collection; inspect again")
+        prefix = "collections/" + collection_id + "/editions/" + edition_id
+        portable = service.json("GET", prefix + "/project.json")
+        original = service.json("GET", prefix + "/collection.json")
+        if not _same_portable(portable, snap["portable"]):
+            raise ValueError("The original collection edition differs from the reviewed atomic source snapshot")
+        if original != selected["document"]:
+            raise ValueError("The selected original collection manifest changed while its edition was published")
+        bundle = service.json("GET", prefix + "/bundle")
+        body = b64decode(bundle["base64"], validate=True)
+        checksum = sha256(body).hexdigest()
+        if checksum != bundle["sha256"] or len(body) != bundle["bytes"]:
+            raise ValueError("The original collection ZIP differs from its native byte identity")
+        # Read the exported source objects as their receiver will; retain the ZIP unchanged.
+        with ZipFile(BytesIO(body)) as archive:
+            names = archive.namelist()
+            declared = [file["path"] for file in edition["files"]] + ["edition.json"]
+            if len(names) != len(set(names)) or set(names) != set(declared):
+                raise ValueError("The original collection ZIP differs from its complete edition inventory")
+            if json.loads(archive.read("edition.json")) != edition:
+                raise ValueError("The original collection ZIP edition identity differs")
+            if json.loads(archive.read("collection.json")) != original:
+                raise ValueError("The original collection ZIP source manifest differs")
+            if json.loads(archive.read("native-reaches.json")) != snap["summary"]["reaches"]:
+                raise ValueError("The original collection ZIP carries a different measured native source domain")
+            if not _same_portable(json.loads(archive.read("project.json")), snap["portable"]):
+                raise ValueError("The original collection ZIP carries a different measured source revision")
+            for member in edition["files"]:
+                if archive.getinfo(member["path"]).file_size != member["bytes"]:
+                    raise ValueError("The original collection ZIP member length differs")
+        relative = "collections/" + collection_id + "/" + edition_id + ".zip"
+        atomic_bytes(directory / relative, body, immutable=True)
+        result.append({"collection_id": collection_id, "edition_id": edition_id,
+                       "workspace_revision": edition["workspaceRevision"],
+                       "path": relative, "sha256": checksum, "bytes": len(body),
+                       "title": original["title"], "original_files": original["files"]})
+    return result
+
+
 def prepare(workspace, service, selection):
     """Retain one reviewed source edition and a child of the actual native case."""
     if not isinstance(selection, dict):
@@ -398,13 +478,16 @@ def prepare(workspace, service, selection):
     original = chemistry.get_case(selection["case_id"])
     snap = _snapshot(service, selection.get("filters", {}), selection.get("expected_revision"))
     review = _review(original, snap, selection)
+    collections = _referenced_collections(service, snap)
     from model.reach_chemistry import inference as native_inference
     original_reader = Path(__file__).resolve().parents[1] / "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py"
     producer = {"format": "measured-chemistry-producer/v1", "adapter_sha256": file_digest(Path(__file__)),
                 "native_inference_sha256": file_digest(Path(native_inference.__file__)),
                 "original_interval_reader_sha256": file_digest(original_reader) if original_reader.is_file() else None}
     identity = digest({"selection": selection, "case_sha256": original["project_sha256"],
-                       "revision": snap["revision"], "records": snap["records"], "producer": producer})
+                       "revision": snap["revision"], "records": snap["records"], "producer": producer,
+                       "collections": [item["id"] for item in collections],
+                       "native_measurement_domain": snap["summary"]["reaches"]})
     directory = workspace.root / "measurement-chemistry" / identity
     directory.mkdir(parents=True, exist_ok=True)
     with held(directory / ".prepare.lock"):
@@ -421,9 +504,12 @@ def prepare(workspace, service, selection):
                 raise ValueError("Interrupted binding source snapshot differs from the original measured revision")
         else:
             atomic_json(portable_path, portable, immutable=True)
+        source_collections = _retain_collection_editions(service, snap, collections, directory)
         document = {"format": FORMAT, "title": selection["title"], "selection": selection,
                     "original_case_id": original["id"], "project_sha256": original["project_sha256"],
-                    "source_revision": snap["revision"], "original_records": snap["records"], "producer": producer, **review}
+                    "source_revision": snap["revision"], "original_records": snap["records"], "producer": producer,
+                    "source_collections": source_collections,
+                    "native_measurement_domain": snap["summary"]["reaches"], **review}
         atomic_json(directory / "binding-source.json", document, immutable=True)
         source_id = "measured-chemistry-" + identity
         manifest = {"schema": "upstate.sources/v1", "title": selection["title"],
@@ -431,7 +517,8 @@ def prepare(workspace, service, selection):
                         "uri": "urn:original-measurements:" + identity,
                         "vintage": "Measurements source revision " + str(snap["revision"]),
                         "path": "binding-source.json", "sha256": file_digest(directory / "binding-source.json"),
-                        "companions": [{"path": "measurements.json", "sha256": file_digest(directory / "measurements.json")}]}]}
+                        "companions": [{"path": "measurements.json", "sha256": file_digest(directory / "measurements.json")},
+                                       *[{k: value[k] for k in ("path", "sha256", "bytes")} for value in source_collections]]}]}
         atomic_json(directory / "sources.json", manifest, immutable=True)
         collection = workspace.import_sources(directory / "sources.json")
         source = {"source_collection_id": collection["id"], "source_id": source_id}
@@ -442,7 +529,8 @@ def prepare(workspace, service, selection):
             "case_id": case["id"], "original_case_id": original["id"],
             "project_sha256": original["project_sha256"], "source_revision": snap["revision"],
             "selection": selection, "source": source, "source_sha256": manifest["entries"][0]["sha256"],
-            "producer": producer,
+            "producer": producer, "source_collections": source_collections,
+            "native_measurement_domain": snap["summary"]["reaches"],
             "directory": str(directory.relative_to(workspace.root)), **review})
         atomic_json(receipt, {"binding_id": binding["id"]}, immutable=True)
         return get(workspace, binding["id"])
@@ -511,7 +599,8 @@ def adopt_source(workspace, payload):
     binding = workspace._save(FAMILY, {"format": FORMAT, "title": document["title"],
         "case_id": case["id"], "original_case_id": case["id"], "project_sha256": case["project_sha256"],
         "source_revision": document["source_revision"], "selection": selection,
-        "producer": document["producer"],
+        "producer": document["producer"], "source_collections": document.get("source_collections", []),
+        "native_measurement_domain": document.get("native_measurement_domain", []),
         "source": choice, "source_sha256": file_digest(source_path),
         "received_from": {"case_id": document["original_case_id"], "selection": document["selection"]},
         **{key: document[key] for key in ("accepted", "excluded", "derived", "derived_excluded", "counts", "request")}})
