@@ -360,6 +360,110 @@ def received_delivery(manifest, destination, record=None):
     return {"delivery": result}
 
 
+def _review_delivery_inputs(workspace, selected_delivery, stack, staging):
+    """Retain original delivery layers needed by saved reviews without ZIP recursion."""
+    needs = {}
+    for review in workspace._list("spatial-reviews"):
+        if review.get("project_id") != workspace.project["id"]:
+            raise ValueError("Saved review belongs to another Workspace")
+        for binding in review.get("bindings", []):
+            if binding.get("group") != "delivery":
+                continue
+            key = identifier(binding["owner_id"])
+            wanted = needs.setdefault(key, {"roles": {}, "atlas": set()})
+            role = binding["role"]
+            identity = {name: binding[name] for name in ("bytes", "sha256")}
+            if role in wanted["roles"] and wanted["roles"][role] != identity:
+                raise ValueError("Saved reviews select different bytes for one original delivery role")
+            wanted["roles"][role] = identity
+        origin = review.get("atlas_review", {}).get("origin")
+        if origin is not None:
+            if (origin.get("schema") != "upstate.atlas-review-origin/v1"
+                    or origin.get("project_id") != workspace.project["id"]):
+                raise ValueError("Saved atlas review has another original project binding")
+            key = identifier(origin["delivery_id"])
+            wanted = needs.setdefault(key, {"roles": {}, "atlas": set()})
+            wanted["atlas"].add(identifier(origin["atlas_index_sha256"]))
+    inputs, expected, retained = [], {}, []
+    for key, wanted in sorted(needs.items()):
+        selected = selected_delivery is not None and selected_delivery["id"] == key
+        if selected:
+            state = selected_delivery.get("record")
+            if not isinstance(state, dict):
+                raise ValueError("The selected delivery needs its original review registration")
+            files = state["files"]
+        else:
+            directory = workspace.root / "deliveries" / key
+            state_path = directory / "delivery-state.json"
+            if not state_path.is_file():
+                raise ValueError("Saved review lacks its original delivery: " + key)
+            stack.enter_context(held(directory / ".delivery.lock", blocking=False))
+            state = read_json(state_path)
+            if (state.get("schema") != "upstate.delivery/v1" or state.get("id") != key
+                    or state.get("state") not in {"complete", "received_snapshot"}
+                    or not isinstance(state.get("selection"), dict)):
+                raise ValueError("Saved review needs its completed original delivery selection")
+            # Keep atlas index, map/source-context companions and native layers.
+            # Nested working/GIS/export archives are separate deliverables.
+            excluded_suffixes = {".zip", ".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z"}
+            files = {role: item for role, item in state.get("files", {}).items()
+                     if Path(item["path"]).suffix.lower() not in excluded_suffixes}
+        for role, identity in wanted["roles"].items():
+            item = files.get(role)
+            if item is None or any(item.get(name) != value for name, value in identity.items()):
+                raise ValueError("Saved review changed its original delivery artifact: " + key + "/" + role)
+        if wanted["atlas"]:
+            index = files.get("map_atlas_index")
+            if index is None or wanted["atlas"] != {index["sha256"]}:
+                raise ValueError("Saved atlas reviews select another original delivery index")
+            if "map_atlas_sources" not in files:
+                raise ValueError("Saved atlas review needs its original source-context companion")
+        if selected:
+            continue
+        captured, identities, snapshot = _delivery_inputs(directory, files, state)
+        prefix = "workspace/deliveries/" + key + "/"
+        for name, path, identity in captured:
+            relative = name[len("delivery/"):]
+            member = prefix + relative
+            inputs.append((member, path, identity))
+            expected[member] = identities[name]
+        record_path = Path(staging) / (key + ".json")
+        atomic_json(record_path, snapshot["record"])
+        member = prefix + "delivery-state.json"
+        inputs.append((member, record_path, _identity(record_path)))
+        expected[member] = {"bytes": record_path.stat().st_size, "sha256": file_digest(record_path)}
+        retained.append(key)
+    return inputs, expected, retained
+
+
+def _received_member_aliases(manifest, destination):
+    """Expose already verified selected-delivery links under their Workspace names."""
+    members = dict(manifest["members"])
+    delivery = manifest.get("delivery") or {}
+    record = delivery.get("record")
+    if record is None:
+        return members
+    key = identifier(delivery["id"])
+    directory = Path(destination) / "workspace" / "deliveries" / key
+    for item in record["files"].values():
+        relative = member_name(item["path"]).as_posix()
+        original = "delivery/" + relative
+        declared = members.get(original)
+        wanted = {"bytes": item["bytes"], "sha256": item["sha256"]}
+        if declared is None or any(declared.get(name) != value for name, value in wanted.items()):
+            raise ValueError("Received delivery alias differs from its archived source: " + relative)
+        linked = relative_file(directory, relative)
+        source = relative_file(Path(destination) / "delivery", relative)
+        if (linked.stat().st_size != wanted["bytes"]
+                or (not os.path.samefile(linked, source) and file_digest(linked) != wanted["sha256"])):
+            raise ValueError("Received delivery alias differs from its registered source: " + relative)
+        alias = "workspace/deliveries/" + key + "/" + relative
+        if alias in members and members[alias] != wanted:
+            raise ValueError("Received delivery alias conflicts with a retained Workspace member")
+        members[alias] = wanted
+    return members
+
+
 def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True,
            delivery_root=None, delivery_files=None, delivery_state=None,
            frozen_databases=None):
@@ -395,6 +499,15 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):
                 stack.enter_context(held(path, blocking=False))
+            if not include_deliveries:
+                staging = stack.enter_context(tempfile.TemporaryDirectory(
+                    prefix=".archive-review-deliveries-", dir=destination.parent))
+                review_inputs, review_expected, review_deliveries = _review_delivery_inputs(
+                    workspace, delivery, stack, staging)
+                extra_inputs.extend(review_inputs)
+                expected_delivery.update(review_expected)
+                if review_deliveries:
+                    selection["review_delivery_ids"] = review_deliveries
             initial = _inventory(root, excluded=excluded, **inventory_selection)
             application = {p.relative_to(source_root).as_posix(): _identity(p)
                            for p in _application(source_root)}
@@ -606,6 +719,10 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                 os.fsync(output.fileno())
             if h.hexdigest() != expected["sha256"] or target.stat().st_size != expected["bytes"]:
                 raise ValueError("Receiving file differs: " + name)
+        # Restore the selected delivery's verified layer bindings before any
+        # saved review reconstructs the scientific Workspace catalogue.
+        _register_received_delivery(manifest, pending)
+        verified_members = _received_member_aliases(manifest, pending)
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
@@ -631,7 +748,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
             from .spatial import SpatialReview
             reviewer = SpatialReview(restored)
             for review in reviews:
-                reviewer.validate_saved(review, verified_members=manifest["members"])
+                reviewer.validate_saved(review, verified_members=verified_members)
         if restored._list("spatial-regions"):
             from .spatial_regions import SpatialRegions
             SpatialRegions(restored).verify()
@@ -643,7 +760,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
             from .spatial_exports import SpatialExports
             exporter = SpatialExports(restored)
             for value in spatial_exports:
-                exporter.inspect(value["id"], verified_members=manifest["members"])
+                exporter.inspect(value["id"], verified_members=verified_members)
         if restored._list("reviews"):
             from .reviews import validate_workspace
             # Extraction already checked every retained member against its SHA-256.
