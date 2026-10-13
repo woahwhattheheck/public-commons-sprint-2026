@@ -1,0 +1,59 @@
+{
+  "schema": "commons.metadata-case-event-profile.v1",
+  "namespace": "reference-metadata-review",
+  "source": "urn:tjlabs:metadata-reference",
+  "types": [
+    "org.tokenjunkielabs.metadata.changed.v1"
+  ],
+  "dataschema": "urn:tjlabs:schema:metadata-change:1",
+  "mapping": {
+    "schema": "commons.process-interface-mapping.v1",
+    "id": "metadataChangeV1",
+    "sourceSystem": "authored-metadata-reference",
+    "sourceVersion": "1",
+    "fields": [
+      {
+        "external": "assetId",
+        "native": "assetId",
+        "type": "string",
+        "meaning": "Selected asset identifier",
+        "required": true
+      },
+      {
+        "external": "sourceRevision",
+        "native": "sourceRevision",
+        "type": "long",
+        "meaning": "Original signed-64 source edition counter, supplied as decimal text",
+        "required": true
+      },
+      {
+        "external": "changeType",
+        "native": "changeType",
+        "type": "string",
+        "meaning": "Producer's change category",
+        "required": true
+      },
+      {
+        "external": "classification",
+        "native": "classification",
+        "type": "string",
+        "meaning": "Reported source classification, retained without policy inference",
+        "required": true
+      },
+      {
+        "external": "exceptionRequired",
+        "native": "exceptionRequired",
+        "type": "boolean",
+        "meaning": "Explicit commissioning scenario / customer-reviewed routing decision",
+        "required": true
+      },
+      {
+        "external": "sourceUri",
+        "native": "sourceUri",
+        "type": "string",
+        "meaning": "Original evidence locator; not automatically fetched",
+        "required": true
+      }
+    ]
+  }
+}
