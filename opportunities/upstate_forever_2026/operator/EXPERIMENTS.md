@@ -1,6 +1,6 @@
 # Scenario experiments
 
-Use Scenario experiments to compare retained land-cover alternatives and parameter choices with the original InVEST NDR and SDR models. Every land-cover effect is paired with the unchanged baseline under that same parameter profile. The selected source data, complete 30 m grid and actual biophysical table remain part of the saved design.
+Use Scenario experiments to compare retained land-cover alternatives and parameter choices with the original InVEST NDR and SDR models. Every land-cover effect is paired with the unchanged baseline under that same parameter profile. The selected source data, complete retained analysis grid and actual biophysical table remain part of the saved design.
 
 This guide accompanies the Upper Savannah operator and InVEST 3.20.0. It describes the controls in this delivery and the meaning of the native results. The regional reference preset is [experiment-methods-20261012.json](../source/experiment-methods-20261012.json).
 
@@ -63,7 +63,7 @@ The preset is a reproducible comparison with published reference settings. Value
 
 Preview selected cases before saving. Read the planned profiles, scenarios and native cases, and resolve any invalid selection shown by the preview. Confirm that every land-cover case has a baseline under its own profile and that the geographic grid is the intended one.
 
-Count work in native cases: a case is one profile and one scenario, and it uses both NDR and SDR. With two alternatives and two distinct profiles, the plan contains six native cases: two baselines plus four alternatives. A regional reference combination equal to the original profile does not add a duplicate profile. Completed cases are reused when the design is executed.
+Count work in native cases: a case is one profile and one scenario, using the baseline's selected NDR, SDR, or combined model scope. With two alternatives and two distinct profiles, the plan contains six native cases: two baselines plus four alternatives. A regional reference combination equal to the original profile does not add a duplicate profile. Completed cases are reused when the design is executed.
 
 The preview explains the work selection; actual elapsed time is recorded by execution on the host.
 
@@ -118,7 +118,7 @@ The paired result fields mean:
 | Change % | 100 times signed change divided by paired baseline; undefined when the baseline is zero. |
 | Paired support | The common valid cells and area used for the comparison. |
 
-Nitrogen and phosphorus are reported separately in kg/year. Sediment is reported in metric tonnes/year. The delivered cell-mass rasters already include the cell-area conversion from native per-hectare rates. On the fixed 30 m grid, one cell covers 0.09 ha [3,4].
+Nitrogen and phosphorus are reported separately in kg/year. Sediment is reported in metric tonnes/year. The delivered cell-mass rasters already include the cell-area conversion from native per-hectare rates. Cell area follows the actual retained metric affine transform: a full 30 m square cell covers 0.09 ha, while a full 300 m square cell covers 9 ha [3,4]. Read the selected grid's resolution and reporting mask with its quantities.
 
 Use Open run to inspect the model selection and original artifacts. Use Map to open the case's native outputs in Spatial review. Choose the relevant baseline and alternative, check the layer's quantity and units, then inspect linked views, swipe or a difference. A difference is alternative minus baseline. Click a location for the original pixel value and mask, and use the appropriate reporting or utility overlays. Save a useful spatial review with a title and notes so the receiving operator can reopen the same selections.
 
@@ -146,11 +146,31 @@ The original server's operation journal belongs to that server's operator-state 
 
 > For Tim: You receive the working study itself, so you can reopen the evidence and continue using it.
 
+## Adopt completed original runs and read their report sources
+
+Use **Adopt completed original runs** when an already completed retained run supplies one of the selected profile/scenario combinations. The selected baseline is considered automatically. The original engine checks the retained grid, parameter profile, scenario, selected models and producing versions. A compatible completed run may keep a historical requested-version declaration; its original run ID, complete selection and output descriptors remain intact. An unfinished selection continues through the current-version native execution path.
+
+Save and preview the same design after choosing its original runs. **Adopted original runs** in the saved design opens the actual original run records. The native case table identifies an adopted original result and an adopted original paired baseline separately. Each land-cover comparison continues to use its baseline under the same parameter profile.
+
+The selection field `source_run_ids` identifies explicitly selected originals. The engine freezes noncanonical source mappings in the original experiment's `plan.source_runs`. Each applicable case retains `native_source` and/or `native_baseline_source`; these contain the original selection, producing-model versions and exact selected output descriptors. Ordinary canonical selections keep their existing identity. The older partial-model recovery fields `source_run_id`, `source_baseline_run_id` and `source_selection` describe their existing recovery mechanism and remain separate.
+
+### The original-source register in report.html
+
+Use the existing **Refresh report** or **Build report from available cases** action. The same HTML report now includes **Original native sources and execution** when the retained summary contains adopted source bindings or per-model version records.
+
+The original output register shows each saved source run, its requested version, selected producing versions, and original output units, byte sizes, SHA-256 digests and run-relative paths. **Original selection and source binding** exposes the complete immutable binding; **Cases using these outputs** lists every case and whether that source supplies the result or paired baseline. A current selection address is the corresponding run digest under the current requested version. The original run ID remains the identity of the outputs actually used.
+
+The producing-model register preserves NDR and SDR separately. It displays the version used by the paired comparison, recorded basis, requested version, observed run version and stage completion. **Execution source and reuse** exposes the complete retained model record, including an independently adopted stage's original reuse source. Identical repeated records are grouped with all case uses retained; different records remain separate.
+
+A completed stage's recorded version takes precedence over the latest run runtime. If a completed-stage version is absent, the shared resolver uses the observed run runtime, then an explicitly labelled requested-only legacy record. The report reads this metadata from the saved experiment cases. It leaves the paired mass values, support, case IDs and original run records unchanged. Older summaries without these additive records remain readable, with their existing scientific tables.
+
+Keep `summary.json` with the report: it retains all original source bindings and the paired comparison's full `native_versions` cohort. Reopening and refreshing a complete experiment preserves its existing scientific case rows while refreshing the report files. An interrupted export or summary action can continue through the original operator queue and the maintained receiving command.
+
 ## Inputs and outputs
 
 | Input | Scientific meaning |
 | --- | --- |
-| Complete grid | The aligned terrain, land cover, precipitation, erosivity, erodibility, reporting geometry and upstream model domain used by the native models. |
+| Complete grid | The aligned inputs required by the selected native models, actual grid transform, reporting geometry and upstream model domain. |
 | Baseline native run | The unchanged scenario, reference profile and grid that anchor the experiment. |
 | Alternative scenario | A retained geographic land-cover transformation with original classes, replacement class and purpose. |
 | Retained profile | An immutable source table, parameter selection and supporting references. |
@@ -159,7 +179,7 @@ The original server's operation journal belongs to that server's operator-state 
 
 | Output | Use |
 | --- | --- |
-| Native case run | The original NDR and SDR execution, logs and files for one profile/scenario pair. |
+| Native case run | The selected original NDR, SDR, or combined execution, logs and files for one profile/scenario pair. |
 | Paired result | A same-support annual-mass comparison with its exact baseline and alternative identifiers. |
 | Parameter response | The effect of a profile change on the unchanged landscape. |
 | Land-cover response | The effect of a landscape change under one specified profile. |
@@ -207,7 +227,7 @@ Keep N, P and sediment components separate in physical units. If a planning scor
 
 NDR divides its runoff proxy by a supplied or calculated mean. Uniform precipitation scaling cancels when that mean is independently recalculated; fixing a baseline denominator preserves an intended absolute runoff-proxy change [2,3]. SDR uses rainfall erosivity R, which has its own physical units and source [4,5].
 
-The 30 m grid is the analysis grid. Preserve the original spatial resolution and period of precipitation, soils and other inputs in interpretation. Use identical paired grid support; inspect coverage when comparing scenarios.
+Use the actual retained analysis grid and its resolution. The regional 30 m default and other explicitly prepared resolutions keep their own original affine transform and cell area. Preserve the original spatial resolution and period of precipitation, soils and other inputs in interpretation. Use identical paired grid support; inspect coverage when comparing scenarios.
 
 ### What the regional preset establishes
 
@@ -234,7 +254,7 @@ python -B -m model.experiment_cli --workspace /absolute/scientific-workspace run
 python -B -m model.experiment_cli --workspace /absolute/scientific-workspace summary EXPERIMENT_ID
 ```
 
-An experiment selection uses schema upstate.experiment-selection/v1 and fields title, reason, baseline_run_id, scenario_ids, profile_ids, design and axes. Designs are one_at_a_time or factorial; each axis contains path, values and a nonempty reference. The methods document uses schema upstate.experiment-methods/v1 and a methods list. The form copies the selected method's axes and design into the actual study selection and retains its citation in the purpose/reference context.
+An experiment selection uses schema upstate.experiment-selection/v1 and fields title, reason, baseline_run_id, scenario_ids, profile_ids, design and axes, with optional source_run_ids for completed original-run adoption. Designs are one_at_a_time or factorial; each axis contains path, values and a nonempty reference. The methods document uses schema upstate.experiment-methods/v1 and a methods list. The form copies the selected method's axes and design into the actual study selection and retains its citation in the purpose/reference context.
 
 execute and run continue unfinished cases and preserve available summaries if a case fails. The command exits unsuccessfully while unresolved cases remain. Completed native work is reused. summary writes fresh results.csv and summary.json under experiments/<experiment_id>/; the operator builds the companion HTML report.
 
