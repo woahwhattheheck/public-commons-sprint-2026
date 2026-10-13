@@ -204,6 +204,8 @@ function renderOpenings() {
  table('opening-operations',['Opening','State','Channel','Initial deposit · base units','Transaction','Actions'],
   [...(state.openings||[])].reverse().map(row=>{
    const items=[['Inspect',()=>ownRecord(row)]],tx=row.transactions||{};
+   if(complete.includes(row.phase)&&!row.finalizedAt)items.push(['Finish saved operation',
+    ()=>action('opening-resume',{openingId:row.id})]);
    if(!complete.includes(row.phase))items.push([row.phase==='DRAFT'?'Authorize opening':'Resume',
     ()=>action(row.phase==='DRAFT'?'opening-execute':'opening-resume',{openingId:row.id})]);
    if(row.activeStage&&tx[row.activeStage]?.transaction)items.push(['Reconcile',
