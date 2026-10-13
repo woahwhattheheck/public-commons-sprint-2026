@@ -170,6 +170,7 @@
     "parameter-studies": {
       "paths": [
         "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
+        "docs/ENSEMBLE_PARAMETER_REPORT_RECEIVING.md",
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
@@ -177,25 +178,37 @@
         "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md",
         "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
         "install_native_supervision.py",
+        "integration/component_fragments/parameter-archive-source.json",
         "integration/ensemble-parameter-core-joins.json",
+        "integration/parameter-receiving-joins.json",
+        "model/PARAMETER_ARCHIVE_SOURCE.md",
+        "model/PARAMETER_STUDY_RECEIVING.md",
         "model/delivery_catalogue.py",
         "model/ensemble_parameter_studies.py",
         "model/ensemble_study_scope.py",
+        "model/parameter_archive_source.py",
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
         "model/parameter_scientific_figures.py",
+        "model/parameter_study_receiving.py",
+        "model/parameter_study_transfer.py",
         "model/parameter_views.py",
         "model/record_catalog.py",
         "operator/NATIVE_JOBS.md",
+        "operator/parameter_receiving.py",
         "operator/parameter_study_jobs.py",
         "operator/web/parameter_case_console.mjs",
+        "operator/web/parameter_received_studies.mjs",
+        "receiving/gura-original-four-case-results.json",
+        "source_tools/receive_ensemble_parameter_reports.py",
         "source_tools/receive_parameter_studies.py"
       ],
       "requires": [
         "project-transfer",
         "ensembles",
-        "scientific-report-editions"
+        "scientific-report-editions",
+        "study-transfer"
       ]
     },
     "project-transfer": {
@@ -261,6 +274,7 @@
     "study-transfer": {
       "paths": [
         "docs/IMPLEMENTATION_REPORT_STUDY_TRANSFER.md",
+        "model/PARAMETER_STUDY_RECEIVING.md",
         "model/field_deployment.py",
         "model/implementation.py",
         "model/implementation_observation_quality.py",
@@ -271,7 +285,11 @@
         "model/implementation_schema.py",
         "model/monitoring_common.py",
         "model/monitoring_packet.py",
-        "model/portable_implementation.py"
+        "model/parameter_study_receiving.py",
+        "model/parameter_study_transfer.py",
+        "model/portable_implementation.py",
+        "operator/parameter_receiving.py",
+        "operator/web/parameter_received_studies.mjs"
       ]
     },
     "programme-activity": {
@@ -290,6 +308,7 @@
     "retained-application-source": {
       "paths": [
         "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
+        "docs/ENSEMBLE_PARAMETER_REPORT_RECEIVING.md",
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
@@ -299,16 +318,26 @@
         "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/WATERSHED_SOURCE_REVIEW.md",
         "install_native_supervision.py",
+        "integration/component_fragments/parameter-archive-source.json",
         "integration/ensemble-parameter-core-joins.json",
+        "integration/parameter-receiving-joins.json",
+        "model/ENSEMBLE_SCENARIO_CONTRASTS.md",
         "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
+        "model/PARAMETER_ARCHIVE_SOURCE.md",
+        "model/PARAMETER_STUDY_RECEIVING.md",
         "model/delivery_catalogue.py",
+        "model/ensemble_coefficient_evidence.py",
         "model/ensemble_parameter_studies.py",
+        "model/ensemble_scenario_contrasts.py",
         "model/ensemble_study_scope.py",
         "model/ensemble_study_source.py",
+        "model/parameter_archive_source.py",
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
         "model/parameter_scientific_figures.py",
+        "model/parameter_study_receiving.py",
+        "model/parameter_study_transfer.py",
         "model/parameter_views.py",
         "model/programme_case_status.py",
         "model/programme_views.py",
@@ -316,8 +345,12 @@
         "model/utility_monitoring_comparison.py",
         "model/watershed_source_review.py",
         "operator/NATIVE_JOBS.md",
+        "operator/parameter_receiving.py",
         "operator/web/parameter_case_console.mjs",
+        "operator/web/parameter_received_studies.mjs",
+        "receiving/gura-original-four-case-results.json",
         "source/utility-source-context/20261013/source-explorer.html",
+        "source_tools/receive_ensemble_parameter_reports.py",
         "source_tools/watershed_source_review.mjs"
       ]
     },
@@ -343,8 +376,11 @@
       "paths": [
         "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
         "integration/ensemble-parameter-core-joins.json",
+        "model/ENSEMBLE_SCENARIO_CONTRASTS.md",
         "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
+        "model/ensemble_coefficient_evidence.py",
         "model/ensemble_parameter_studies.py",
+        "model/ensemble_scenario_contrasts.py",
         "model/ensemble_study_scope.py",
         "model/ensemble_study_source.py"
       ]
@@ -395,6 +431,9 @@
       "original_source_sha256": "ca15acb3f68dc0a202c8a158fa6a97c721d6ea53f91e8403cfdf930443da00fc",
       "native_archive_sha256": "b998556537f3eec273175fb7f046467d7b1f6259ddde185a45f46e7c7978834e",
       "source_collection_id": "3066545cc6da2cd39b368017c912c83e60be3491e2d9872175c2cbb3afc6a5a5"
-    }
+    },
+    "parameter_report_receiving": "17f18a6a0efb6e021bab58e13eeb06cfbc1805af",
+    "parameter_receiving_joins": "25174400da230a4b4820248182924217c49fe2f2",
+    "ensemble_scenario_contrasts": "7366c6e7781bb21be2e04004b5a1a7985c2a8cc8"
   }
 }
