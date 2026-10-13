@@ -1,8 +1,9 @@
 import {attachMonitoringFieldReturn} from './monitoring_field_return.mjs';
 import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 import {attachMonitoringReport} from './monitoring-report.mjs';
+import {attachMonitoringStudyTransfer} from './monitoring-study-transfer.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
-const READS = new Set(['context.catalog','context.list','context.get','context.preview','campaign.fieldwork.preview-return','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
+const READS = new Set(['campaign.fieldwork.preview-return','context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
 function component() {
   // The component is derived from the same shipped legacy entry, with external
@@ -105,11 +106,14 @@ export function attachMonitoring(host) {
     if(ticket!==generation || workspace()!==key)return;
     node.monitoringReport ||= attachMonitoringReport(node,host,key);
     node.monitoringReport.update();
+    node.monitoringStudyTransfer ||= attachMonitoringStudyTransfer(node,host,key);
+    node.monitoringStudyTransfer.update();
     await fieldwork.mount(root,key);
     if(ticket===generation && workspace()===key)await fieldReturn.mount(root,key);
   }
   async function update() {
     active?.monitoringReport?.update();
+    active?.monitoringStudyTransfer?.update();
     if (!active?.isConnected || active.busy || updating) return;
     const node = active, key = workspace(), version = generation;
     const current = () => active === node && generation === version &&
@@ -129,6 +133,6 @@ export function attachMonitoring(host) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }

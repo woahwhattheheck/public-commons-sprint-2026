@@ -74,6 +74,46 @@ cd "$UPSTATE_APPLICATION"
 
 The first command uses ordinary Python 3.10 or later and retained original source bytes to produce the real regional and utility packets. The second imports the actual original Greenwood plan, retains original source attachments and its native report, captures the existing Workspace and application through Project transfer, restores them to a fresh location, and reopens the exact saved plan revision. Each command returns its own actual `receiving.json` and output paths.
 
+## Continue a saved campaign or reviewed client follow-up
+
+A saved Monitoring campaign uses its actual retained sender revision. After the existing scientific operation releases its Workspace locks, run:
+
+```sh
+"$UPSTATE_PYTHON" -B source_tools/receive_monitoring_fieldwork.py \
+  --workspace /absolute/actual/existing/workspace \
+  --operation "$UPSTATE_OPERATION/monitoring-fieldwork" \
+  --campaign-id ACTUAL_CAMPAIGN_ID \
+  --revision-id ACTUAL_CAMPAIGN_REVISION_ID
+```
+
+This same course verifies the original campaign package, updates its editable Implementation plan, retains the native report, captures the whole Workspace and application, restores the captured edition and reopens the exact saved plan and attached originals. The source ZIP streams from retained files so a complete historical network package need not fit in memory. See [the full native fieldwork guide](IMPLEMENTATION_NATIVE_RECEIVING.md).
+
+For an existing original Monitoring receiving receipt, `campaign_id` and `campaign_revision_id` describe the sender Workspace. An independently received campaign pairs `received.workspace` with `independent_revision`; keep those selected Workspace/revision pairs together.
+
+A client-report follow-up starts with the exact saved report and its exported Meeting notes JSON. In **Implementation & fieldwork → Source selections → Receive briefing follow-up**, select those originals, preview the actual recorded entries, choose the work and receive the reviewed follow-up. [The briefing guide](BRIEFING_FOLLOWUP.md) documents the complete source-bound preview and native CLI. Then the existing generic fieldwork course receives its saved plan:
+
+```sh
+"$UPSTATE_PYTHON" -B source_tools/receive_implementation.py \
+  --workspace /absolute/actual/existing/workspace \
+  --operation "$UPSTATE_OPERATION/briefing-fieldwork" \
+  --plan-id ACTUAL_SAVED_PLAN_ID --revision ACTUAL_SAVED_REVISION
+```
+
+The saved report, briefing index and notes remain original attachments. Recorded deadlines stay deadlines; real duration, staffing and cost are editable planning inputs.
+
+## Reopen original scientific parameter results
+
+After the current scientific operation has retained its output, use the saved study IDs:
+
+```sh
+"$UPSTATE_PYTHON" -B source_tools/receive_parameter_studies.py \
+  --workspace /absolute/actual/scientific/workspace \
+  --operation "$UPSTATE_OPERATION/parameter-receiving" \
+  --study-id ACTUAL_SAVED_STUDY_ID
+```
+
+Repeat `--study-id` for several studies. Omitting it freezes the currently saved study list on first invocation. The original full Workspace is captured and restored; each selected study reopens through its existing native API. Receiving JSON lists original specification/case/run identities, current completion state and exact retained GeoTIFF/report/archive locations. A prepared or partial study keeps that state. Later work in the receiving Workspace remains intact. See [Parameter study native receiving](PARAMETER_STUDY_NATIVE_RECEIVING.md).
+
 In the received operator, open Project transfer and the completed receiving operation. Open its retained Implementation row to select the restored Workspace and exact saved revision. The Handover view supplies the retained report and attachment downloads. In Monitoring, select an actual saved campaign revision and use Campaign fieldwork to continue through the same Implementation store and report path. Original source questions remain tasks until the operator records real work.
 
 For native Parameter studies, use the already prepared study and its actual scientific interpreter. Its existing run/resume path retains paired-result progress, difference GeoTIFFs and report artifacts; the current Gura suite produces verified per-study exports and the final aggregate ZIP. The source installer does not create a replacement scientific study or receiving operation.

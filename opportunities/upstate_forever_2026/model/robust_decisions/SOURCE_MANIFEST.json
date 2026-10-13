@@ -102,8 +102,9 @@
     },
     {
       "path": "eco_robust/diagnostics.py",
-      "bytes": 25208,
-      "sha256": "bc4648249def873487c0130c35b1d9ee27ffd21c4e673d22e5396b589ec90409"
+      "bytes": 26561,
+      "sha256": "60fd99a366dc8882a341e98c2b1536025b9e2473205b53771bef7f93e340a0d1",
+      "previous_sha256": "bc4648249def873487c0130c35b1d9ee27ffd21c4e673d22e5396b589ec90409"
     },
     {
       "path": "eco_robust/decision_delivery.py",
@@ -111,7 +112,7 @@
       "sha256": "63893015deb509859fb363ae0772d07d6b5ba9fa332014873b4f7053d03e0475"
     }
   ],
-  "revision_operation_id": "ES26-NATIVE-DECISION-DELIVERY-20261013",
+  "revision_operation_id": "ES26-STAGE-AWARE-SCIENTIFIC-INTERPRETATION-20261013",
   "original_manifest_sha256": "a7f277a80ced3047f4c94ca609e4fd1212c9e03cb31d015e257b6585761f6cdc",
-  "previous_manifest_sha256": "3161e7128bf1fabbeed957dabc90945556790a4c7498ad9bc782457f1c68aee0"
+  "previous_manifest_sha256": "f2267a0f2999b811b9a9aa8bb54aa46d0eedbf82d0e81ba9aa971d95add46624"
 }

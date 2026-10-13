@@ -1,0 +1,38 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-report-editions",
+  "components": {
+    "scientific-report-editions": {
+      "title": "Saved standalone scientific reports through the original Sources desk",
+      "paths": [
+        "model/observed_report_render.py",
+        "operator/SCIENTIFIC_REPORT_EDITIONS.md",
+        "operator/extensions/source-reports.json",
+        "operator/source_report_editions.py",
+        "operator/source_reports.py",
+        "operator/web/app.mjs",
+        "operator/web/source_report_editions.mjs",
+        "operator/web/source_reports.css",
+        "operator/web/source_reports.mjs",
+        "source/observed-report-20261013/README.md",
+        "source/observed-report-20261013/install.py",
+        "source/observed-report-20261013/render.py"
+      ],
+      "requires": [
+        "core",
+        "observed-context"
+      ]
+    }
+  },
+  "extend_components": {
+    "observed-context": {
+      "paths": [
+        "model/observed_report_render.py"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ],
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/55cbd08e73a0648d00d5af464d6640665e4893cc/opportunities/upstate_forever_2026"
+}

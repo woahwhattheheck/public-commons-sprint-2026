@@ -1,3 +1,4 @@
+import {attachScientificReportEditions} from './source_report_editions.mjs';
 /** Reports stay in their original source edition and existing Sources screen. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const encoded = value => encodeURIComponent(String(value));
@@ -44,6 +45,7 @@ function download(url,label){
 }
 
 export function attachSourceReports(host) {
+  const scientific=attachScientificReportEditions(host);
   let panel=null,currentWorkspace=null,currentCatalogKey=null,reports=[],editions=[],discoveryIssues=[],selected=null,selectedMember=null;
   let generation=0,detailGeneration=0,active=false,loading=null,query='',catalogError=null;
   const request = (path,values={}) => host.api(host.endpoint(path,values));
@@ -65,7 +67,7 @@ export function attachSourceReports(host) {
         '<p class="source-reports-regional" hidden></p>'+
         '<label class="source-reports-search">Find a source edition or report<input type="search" data-source-report-search placeholder="Title, source ID, edition or report type"></label>'+
         '<div data-source-report-status role="status"></div><div data-source-report-editions></div><div data-source-report-catalog></div>'+
-        '<section data-source-report-detail hidden aria-label="Selected retained report"></section>';
+        '<section data-source-report-detail hidden aria-label="Selected retained report"></section><div data-scientific-reports></div>';
       panel.addEventListener('click',event=>{
         const button=event.target.closest('[data-source-report-action]');
         if(!button||!panel.contains(button))return;
@@ -191,10 +193,11 @@ export function attachSourceReports(host) {
       '<p class="note">This view uses the retained report bytes. Saved review files and selected CSV / JSON downloads remain available in its original controls.</p>'+
       '<p data-source-report-archive-status role="status"></p>'+
       ((selected.scientific_reports||[]).length?'<section class="source-report-editions"><h3>Include this interpretation in the client report</h3>'+
-        '<p>The existing ordered scientific-report picker can include these retained source documents with the selected model delivery.</p><ul>'+
+        '<p>Prepare these original studies as a saved scientific report, or include them in the selected model delivery.</p><ul>'+
         selected.scientific_reports.map(row=>'<li><strong>'+esc(row.title)+'</strong> · '+esc(row.vintage)+
           '<small>'+esc(row.source_id)+'</small></li>').join('')+'</ul>'+
-        '<button type="button" data-source-report-action="deliveries">Open Maps and delivery</button></section>':'')+
+        '<div class="inline-actions"><button type="button" data-source-report-action="scientific">Prepare scientific report</button>'+
+        '<button type="button" data-source-report-action="deliveries">Open Maps and delivery</button></div></section>':'')+
       '<details><summary>Source identity and related entries</summary><dl><dt>Source ID</dt><dd>'+esc(selected.source_id)+
       '</dd><dt>Source body SHA256</dt><dd class="mono">'+esc(selected.body_sha256)+'</dd>'+
       '<dt>Retained edition</dt><dd class="mono">'+esc(selected.collection_id)+'</dd></dl>'+
@@ -267,6 +270,7 @@ export function attachSourceReports(host) {
     if(action==='regional')return host.navigate('watershed-context');
     if(action==='stations')return host.navigate('station-geography');
     if(action==='deliveries')return host.navigate('deliveries');
+    if(action==='scientific'&&selected)return scientific.openForSources({workspace_key:currentWorkspace,sources:selected.scientific_reports,title:selected.title});
     if(action==='open')return open(button.dataset.reportKey);
     if(action==='close'){detailGeneration++;clearSelection();renderCatalog();return;}
     if(action==='edition'&&selected)return host.openItem('sources',selected.collection_id);
@@ -275,13 +279,21 @@ export function attachSourceReports(host) {
   async function mount(content){
     const workspace=host.getWorkspace();
     if(currentWorkspace!==workspace){reset();currentWorkspace=workspace;}
-    active=true;ensurePanel(content);renderRegional();await catalog();
+    active=true;ensurePanel(content);renderRegional();
+    await Promise.all([catalog(),scientific.mount(panel.querySelector('[data-scientific-reports]'))]);
   }
-  function detach(){active=false;if(panel)panel.hidden=true;}
+  function detach(){active=false;scientific.detach();if(panel)panel.hidden=true;}
   function reset(){
+    scientific.reset();
     generation++;detailGeneration++;loading=null;currentCatalogKey=null;reports=[];editions=[];discoveryIssues=[];selected=null;selectedMember=null;query='';catalogError=null;
     if(panel){panel.remove();panel=null;}currentWorkspace=null;active=false;
   }
   function focus(){if(panel&&active){panel.scrollIntoView({block:'start'});panel.querySelector('[data-source-report-search]').focus();}}
-  return {mount,detach,reset,focus};
+  async function openForSources(value,content){
+    if(value?.workspace_key!==host.getWorkspace())
+      throw Error('Choose prepared sources from the current Workspace.');
+    if(!active||!panel||currentWorkspace!==host.getWorkspace())await mount(content);
+    return scientific.openForSources(value);
+  }
+  return {mount,detach,reset,focus,openForSources};
 }

@@ -662,7 +662,9 @@ def native_reference(receiving, original, module, metadata, progress, checkpoint
     atomic(root / "received-original-arguments.json", {
         "release": RELEASE, "embedded_input_version": original["embedded_version"],
         "original": original["original_arguments"], "executed": args})
-    emit("native-original-start", model=model, workspace=str(root))
+    from model.native_execution import resource_status
+    emit("native-original-start", model=model, workspace=str(root),
+         resources=resource_status())
     registry = module.execute(args)
     if not isinstance(registry, dict):
         raise ValueError("Native execution did not return its original output registry")

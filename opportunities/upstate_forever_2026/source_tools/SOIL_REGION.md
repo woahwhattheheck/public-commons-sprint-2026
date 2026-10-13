@@ -126,9 +126,47 @@ and use the unchanged grid/K/coverage methods. Place the existing capture on
 the accepting host's owned persistent storage, preserving its original source
 directory and lock when continuing the current operation.
 
+## Source polygon correction
+
+Some native USDA AOI-clipped rings contain self-intersections. The geographic
+index now derives valid polygonal geometry from the original linework with
+GEOS MakeValid. Valid original geometries pass through unchanged. The complete
+original response, including the original WKB, remains in `original/`.
+
+Each corrected row records its original validity reason, source and indexed WKB
+SHA-256, source and resulting geometry types, actual Shapely/GEOS versions, and
+diagnostic planar square-degree areas in `properties.geometry_correction`.
+These degree areas describe the correction; they do not replace the native
+acreage or the projected raster-cell areas. The corrected indexed WKB and its
+spatial bounds are committed in the same existing tile transaction. Vector
+export carries the same correction properties and `coverage.json` reports the
+number of corrected fragments. Geometry without valid polygonal support still
+raises the concrete source error.
+
+The actual source polygon 65688604 exposed this path during regional capture:
+its original ring self-intersection was repaired from 936 to 938 coordinates,
+producing a valid Polygon. The diagnostic degree area changed only at floating
+point precision. This observation belongs to that polygon; it is not a blanket
+area-preservation guarantee for every invalid input. The implementation uses
+Shapely's default linework method, retaining compatibility with the existing
+Shapely 2.x runtime. See the [Shapely MakeValid reference](https://shapely.readthedocs.io/en/stable/reference/shapely.make_valid.html).
+
+Continue an interrupted original capture with the same `capture --resume`
+arguments and output directory. Its already completed tile/index and retained
+USDA responses remain reusable; the correction does not select a new domain,
+request another source edition, or change native rating values.
+
 ## Prepare K on the actual NLCD grid
 
-After the existing national NLCD owner returns the completed numeric regional raster, select that exact reference:
+The corrected native Annual NLCD 2025 region is available in the application's
+`source/annual-nlcd-native-20261013/source/` directory. Select its
+`land-cover.tif` and retain the adjacent `source-manifest.json` and companions.
+The corrected source ID is
+`usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`; its 9,443,751-byte TIFF has
+SHA-256 `3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`.
+This full 217-HUC-plus-buffer edition has 6,443 × 6,319 categorical cells. It
+supersedes the earlier `a9f6bfed…` raster, whose empty cached tile was corrected
+from the retained original PNG by PR #3387. Select the corrected reference:
 
 ~~~sh
 python3 -B -m source_tools.soil_region prepare \
@@ -139,6 +177,70 @@ python3 -B -m source_tools.soil_region prepare \
 ~~~
 
 Preparation additionally uses the existing NumPy/Rasterio stack. The original `rasters.grid_definition` creates the exact 30 m grid at the retained reference's native upper-left anchor, and the source remains categorical during nearest-neighbor alignment.
+
+### Original 2025 NLCD reference and native receiving
+
+The corrected original Annual NLCD 2025 regional TIFF is retained in
+[merged PR 3387](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3387),
+commit `f7e5e885b200cc5d552dc887daa3ff071a472a96`.
+Its complete body is **9,443,751 bytes**, SHA-256
+`3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`,
+with source ID
+`usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`.
+The selected original region contains 217 HUC12s plus the same 1,000 m buffer:
+6,443 by 6,319 cells in EPSG:5070, assembled from 49 original publisher PNGs.
+The completed source correction verifies all 40,713,317 pixels against those
+originals, with zero mismatches, class-0 cells or NoData.
+
+The complete numeric raster is a normal retained application file:
+`source/annual-nlcd-native-20261013/source/land-cover.tif`.
+Its adjacent `source-manifest.json` identifies the corrected edition and
+original companions. Reuse these already-published bytes in the current
+application or the existing project source directory. Bind the actual path:
+
+~~~sh
+UPSTATE_NLCD="$APPLICATION/source/annual-nlcd-native-20261013/source/land-cover.tif"
+~~~
+
+Retain the adjacent manifest and verify the full byte count and SHA-256 above
+before the existing `soil_region prepare --reference "$UPSTATE_NLCD"` step.
+The maintained receiver can retain this original source in the existing project:
+
+~~~sh
+"$UPSTATE_PYTHON" -B "$APPLICATION/source/annual-nlcd-native-20261013/receive.py" \
+  --raster "$UPSTATE_NLCD" \
+  --output "$CURRENT_PROJECT/sources/nlcd-2025-native"
+~~~
+
+It verifies the complete TIFF, compressed and inflated strip hashes, class
+counts and native georeference, and returns absolute `raster` and `manifest`
+paths. Bind the returned `raster` path for soil preparation. The corrected
+receiver uses `--raster`; the older `--parts` interface is superseded.
+
+The [original source Page](https://chatgpt.com/space/page_4d1a1acaf17c8191934049834ea8a222)
+preserves its source history, including tile 24's original PNG of 279,736 bytes,
+SHA-256 `aada47d6e45c6bc57c692cd638690a991e1cd02393356e1904c1cbb80aa55eec`.
+The earlier 9,237,060-byte TIFF with SHA-256
+`a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157`
+had an empty decoded tile entry and is retained as the preceding edition.
+The current preparation reference is the complete corrected 3fa517b4 TIFF.
+
+The TIFF's exact original affine is
+`[29.999999995403137, 0, 1114859.9994590343, 0, -30.000000026127967, 1428209.9983569037]`.
+Each axis independently satisfies the maintained nominal-30-metre tolerance
+(`rel_tol=1e-9, abs_tol=1e-12`). Recognize this existing nominal-30 case
+before applying the separate square-axis rule used for other native grids.
+Opposite source rounding makes the axis difference approximately
+`3.072483067967369e-8` metres, just above that generic square threshold.
+
+The existing normalization still anchors exact 30 m cells at the original
+upper-left coordinate and retains the complete source affine and dimensions
+in `grid.reference_normalization`. For the original full 6,443 by 6,319
+reference window, the maximum corner shift from nominal normalization is
+approximately **0.000167738125 metres**. The actual model window's measured
+shift is recorded by the grid builder. The original TIFF is unchanged.
+Explicit requested-resolution assertions and all other native-grid tolerances
+retain their existing behavior.
 
 The whole-soil interpretation remains `chorizon.kwfact`, **Dominant Condition / Surface Layer**. Native Choice strings are bound to their original legend. Missing choices stay missing. The preparer converts customary K once by **0.1317**, retaining the existing SDR units `t*ha*h/(ha*MJ*mm)`. This is the same source interpretation and conversion used by the maintained soil pipeline; the [official SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html) supplies the model's K input context.
 

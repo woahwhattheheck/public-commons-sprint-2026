@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "experiment-diagnostics",
   "title": "Scientific interpretation",
-  "version": "2",
+  "version": "3",
   "order": 55,
   "assets": [
     "retained_desks.mjs",
@@ -99,7 +99,8 @@
       "refreshState",
       "navigate",
       "closeDetail",
-      "openDelivery"
+      "openDelivery",
+      "openScientificReport"
     ],
     "lifecycle": {
       "mount": "mount",

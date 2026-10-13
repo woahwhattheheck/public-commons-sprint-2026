@@ -1,0 +1,242 @@
+"""Saved standalone scientific editions on the original operator queue and file transport."""
+from __future__ import annotations
+
+import hashlib
+import os
+from pathlib import Path, PurePosixPath
+import tempfile
+from urllib.parse import quote
+import zipfile
+
+from model.common import (atomic_json, describe_file, digest, held, identifier,
+                          read_json, relative_file, verify_file)
+from model import observed_context
+from model import observed_report_render as renderer
+
+KIND = "scientific-report-editions"
+SCHEMA = "upstate.scientific-report-edition/v1"
+ACTIONS = frozenset({"source-reports.render", "source-reports.export"})
+
+
+class ScientificReportEditions:
+    def __init__(self, operator, fault):
+        self.operator, self.Fault = operator, fault
+
+    def _directory(self, workspace, key):
+        key = identifier(key)
+        root = workspace.root.resolve()
+        directory = root / KIND / key
+        if directory.resolve().is_relative_to(root) is False:
+            raise ValueError("Keep the saved report inside its original Workspace")
+        return directory
+
+    def _record(self, workspace, key):
+        directory = self._directory(workspace, key)
+        record = read_json(directory / "edition.json")
+        if (record.get("schema") != SCHEMA or record.get("id") != key
+                or record.get("project_id") != workspace.project["id"]
+                or digest(record.get("render_identity")) != key):
+            raise ValueError("The saved report edition identity changed")
+        return record, directory
+
+    def _inspect(self, workspace, key):
+        record, directory = self._record(workspace, key)
+        result = read_json(directory / "operation.json")
+        identity = record["render_identity"]
+        if (result.get("state") != "complete"
+                or result.get("operation_id") != "observed-report-" + key[:20]
+                or any(result.get(name) != value for name, value in identity.items())
+                or result.get("files") != record.get("files")
+                or read_json(directory / "selection.json") != identity):
+            raise ValueError("The completed report differs from its saved selection")
+        if observed_context.bind(workspace, identity["selection"]) != identity["binding"]:
+            raise ValueError("The saved report's original scientific source edition changed")
+        for item in result["files"].values():
+            verify_file(directory, item)
+        return record, directory, result
+
+    @staticmethod
+    def _summary(record):
+        return {name: record[name] for name in (
+            "id", "title", "state", "operation_id", "source_count", "section_count",
+            "figure_count", "sources")}
+
+    def saved(self, workspace):
+        folder = self.operator.ws(workspace).root / KIND
+        rows = []
+        for path in sorted(folder.glob("*/edition.json")):
+            record, _ = self._record(self.operator.ws(workspace), path.parent.name)
+            rows.append(self._summary(record))
+        return rows
+
+    def catalog(self, workspace):
+        rows = []
+        for collection in self.operator.ws(workspace).sources():
+            for entry in collection.get("entries", []):
+                metadata = entry.get("metadata") or {}
+                if (entry.get("kind") == "document"
+                        and metadata.get("report_schema") == observed_context.SCHEMA):
+                    rows.append({"source_collection_id": collection["id"], "source_id": entry["id"],
+                                 "title": entry["title"], "vintage": entry["vintage"],
+                                 "uri": entry["uri"], "body_sha256": entry["body"]["sha256"],
+                                 "body_bytes": entry["body"]["bytes"],
+                                 "collection_title": collection.get("title", collection["id"])})
+        return {"workspace_key": workspace, "sources": rows, "editions": self.saved(workspace)}
+
+    def preview(self, workspace, payload):
+        ws = self.operator.ws(workspace)
+        result = renderer.prepare(ws, payload.get("sources"), title=payload.get("title"),
+                                  contact=payload.get("contact"))
+        key = digest(result["render_identity"])
+        record_path = self._directory(ws, key) / "edition.json"
+        return {"workspace_key": workspace, **result, "id": key,
+                "existing": record_path.is_file()}
+
+    def render(self, workspace, payload):
+        ws = self.operator.ws(workspace)
+        preview = self.preview(workspace, payload)
+        if payload.get("preview_id") != preview["id"]:
+            raise self.Fault("SCIENTIFIC_REPORT_PREVIEW",
+                             "Preview this exact ordered study selection before preparing its report.", 409)
+        key = preview["id"]
+        directory = self._directory(ws, key)
+        # This lock also participates in the original complete Workspace backup.
+        with held(ws.root / ".workspace.lock"):
+            result = renderer.render(ws, preview, directory)
+            record = {"schema": SCHEMA, "id": key, "project_id": ws.project["id"],
+                      "title": preview["title"], "render_identity": preview["render_identity"],
+                      **{name: result[name] for name in (
+                          "state", "operation_id", "source_count", "section_count",
+                          "figure_count", "sources", "files")}}
+            atomic_json(directory / "edition.json", record, immutable=True)
+        self._inspect(ws, key)
+        return {"scientific_report_edition_id": key, "title": record["title"],
+                "state": "complete", "source_count": record["source_count"],
+                "operation_id": record["operation_id"]}
+
+    def _files(self, record, directory):
+        files = dict(record["files"])
+        for role, name in (("operation", "operation.json"), ("edition", "edition.json")):
+            if role in files:
+                raise ValueError("Original report output uses a reserved saved-edition role")
+            files[role] = describe_file(directory, directory / name)
+        return files
+
+    def _url(self, workspace, key, name):
+        return "/api/file/scientific-reports/" + "/".join(
+            quote(str(part), safe="") for part in (workspace, key)) + "/" + quote(name, safe="/")
+
+    def detail(self, workspace, key):
+        ws = self.operator.ws(workspace)
+        record, directory, result = self._inspect(ws, identifier(key))
+        members = [{"role": role, **item,
+                    "url": self._url(workspace, key, item["path"])}
+                   for role, item in self._files(record, directory).items()]
+        archive = None
+        receipt = directory / "report-files.json"
+        if receipt.is_file():
+            item = read_json(receipt)["file"]
+            verify_file(directory, item)
+            archive = self.operator._ticket(workspace, directory / item["path"], item, "Complete report ZIP")
+        return {"workspace_key": workspace, "edition": record, "files": members, "archive": archive,
+                "viewer_url": next((row["url"] for row in members
+                                    if row["role"] == "report_html"), None),
+                "_downloads": [self.operator._ticket(workspace, relative_file(directory, row["path"]),
+                                                       row, row["role"]) for row in members]}
+
+    def member(self, workspace, key, name):
+        ws = self.operator.ws(workspace)
+        record, directory, _ = self._inspect(ws, identifier(key))
+        allowed = {row["path"]: row for row in self._files(record, directory).values()}
+        if name not in allowed:
+            raise self.Fault("SCIENTIFIC_REPORT_MEMBER", "Choose a file in this saved report.", 404)
+        item = allowed[name]
+        path = relative_file(directory, name)
+        return self.operator._ticket(workspace, path, item, name), path
+
+    def export(self, workspace, key):
+        ws = self.operator.ws(workspace)
+        record, directory, _ = self._inspect(ws, identifier(key))
+        destination = directory / "report-files.zip"
+        receipt = directory / "report-files.json"
+        files = self._files(record, directory)
+        members = {item["path"]: item for item in files.values()}
+        identity = {name: {field: item[field] for field in ("bytes", "sha256")}
+                    for name, item in sorted(members.items())}
+        with held(ws.root / ".workspace.lock"), held(directory / ".export.lock"):
+            if receipt.exists():
+                prior = read_json(receipt)
+                if prior.get("members") != identity:
+                    raise ValueError("The saved report archive belongs to another edition")
+                verify_file(directory, prior["file"])
+            else:
+                fd, temporary_name = tempfile.mkstemp(prefix=".report-files-", suffix=".zip", dir=directory)
+                os.close(fd)
+                temporary = Path(temporary_name)
+                try:
+                    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED,
+                                         allowZip64=True) as archive:
+                        for name, item in sorted(members.items()):
+                            path = relative_file(directory, name)
+                            info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+                            info.compress_type = zipfile.ZIP_DEFLATED
+                            info.external_attr = 0o100600 << 16
+                            info.file_size = item["bytes"]
+                            count, checksum = 0, hashlib.sha256()
+                            with path.open("rb") as source, archive.open(
+                                    info, "w", force_zip64=item["bytes"] >= zipfile.ZIP64_LIMIT) as target:
+                                while chunk := source.read(1024 * 1024):
+                                    count += len(chunk)
+                                    checksum.update(chunk)
+                                    target.write(chunk)
+                            if count != item["bytes"] or checksum.hexdigest() != item["sha256"]:
+                                raise ValueError("A saved scientific report file changed: " + name)
+                    os.replace(temporary, destination)
+                    atomic_json(receipt, {"members": identity,
+                                         "file": describe_file(directory, destination)}, immutable=True)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            item = read_json(receipt)["file"]
+        return {"scientific_report_edition_id": key, "state": "complete",
+                "download": self.operator._ticket(workspace, destination, item,
+                                                  record["title"] + " — complete report files")}
+
+    def read(self, workspace, operation, payload):
+        if operation == "scientific-catalog":
+            return self.catalog(workspace)
+        if operation == "scientific-preview":
+            return self.preview(workspace, payload)
+        if operation == "scientific-edition":
+            return self.detail(workspace, payload.get("id"))
+        raise self.Fault("SCIENTIFIC_REPORT_READ", "Choose a saved scientific report operation.", 404)
+
+    def invoke(self, task):
+        if task["action"] == "source-reports.render":
+            return self.render(task["workspace"], task["payload"])
+        if task["action"] == "source-reports.export":
+            return self.export(task["workspace"], task["payload"].get("id"))
+        raise self.Fault("SCIENTIFIC_REPORT_ACTION", "Choose a scientific report task.")
+
+    def state(self, workspace):
+        return {"scientific_report_editions": self.saved(workspace)}
+
+    def verify_workspace(self, workspace):
+        rows = []
+        for path in sorted((workspace.root / KIND).glob("*/edition.json")):
+            record, _, _ = self._inspect(workspace, path.parent.name)
+            rows.append({"id": record["id"], "source_count": record["source_count"]})
+        return {"scientific_report_editions": rows, "verified_count": len(rows)}
+
+    def decorate_task(self, task):
+        if task["state"] != "complete" or task["action"] not in ACTIONS:
+            return task
+        result = task.get("result") or {}
+        key = result.get("scientific_report_edition_id")
+        if not key:
+            return task
+        if task["action"] == "source-reports.export":
+            completed = self.detail(task["workspace"], key)
+            downloads = [completed["archive"]] if completed["archive"] else []
+        else:
+            downloads = self.detail(task["workspace"], key)["_downloads"]
+        return {**task, "_downloads": downloads}

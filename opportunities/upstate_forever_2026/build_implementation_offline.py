@@ -12,6 +12,8 @@ from pathlib import Path
 PARTS = {
     "core": "operator/web/implementation_core.mjs",
     "forms": "operator/web/implementation_forms.mjs",
+    "evidence": "operator/web/implementation_evidence.mjs",
+    "evidence_ui": "operator/web/implementation_evidence_ui.mjs",
     "results": "operator/web/implementation_results.mjs",
     "briefing": "operator/web/implementation_briefing.mjs",
     "ui": "operator/web/implementation.mjs",
@@ -48,11 +50,17 @@ def build(application: Path, output: Path | None = None) -> dict:
     script += _module(sources["forms"], "IMPLEMENTATION_FORMS", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
     script += _module(sources["results"], "IMPLEMENTATION_RESULTS", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
     script += _module(sources["briefing"], "IMPLEMENTATION_BRIEFING", {"./implementation_core.mjs": "IMPLEMENTATION_CORE"})
+    script += _module(sources["evidence"], "IMPLEMENTATION_EVIDENCE", {})
+    script += _module(sources["evidence_ui"], "IMPLEMENTATION_EVIDENCE_UI", {
+        "./implementation_core.mjs": "IMPLEMENTATION_CORE",
+        "./implementation_evidence.mjs": "IMPLEMENTATION_EVIDENCE",
+    })
     script += _module(sources["ui"], "IMPLEMENTATION_UI", {
         "./implementation_core.mjs": "IMPLEMENTATION_CORE",
         "./implementation_forms.mjs": "IMPLEMENTATION_FORMS",
         "./implementation_results.mjs": "IMPLEMENTATION_RESULTS",
         "./implementation_briefing.mjs": "IMPLEMENTATION_BRIEFING",
+        "./implementation_evidence_ui.mjs": "IMPLEMENTATION_EVIDENCE_UI",
     })
     script += "\nconst catalog = " + json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c") + ";\n"
     script += "window.implementationWorkbench = IMPLEMENTATION_UI.mountPortableImplementation(document.getElementById('implementation-root'), catalog);\n"
