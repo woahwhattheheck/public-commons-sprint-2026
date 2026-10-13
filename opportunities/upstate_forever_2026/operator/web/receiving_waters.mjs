@@ -445,20 +445,59 @@ export function attachReceivingWaters(context){
     const item=task._receiving_water;
     return item?'<div class="water-actions">'+control('water-task-result','Open '+item.kind,'data-kind="'+esc(item.kind)+'" data-id="'+esc(item.id)+'"')+'</div>':'';
   }
+  async function inspectDeliveryPlan(id){
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose the original prepared receiving-water plan.');
+    const workspace=currentWorkspace(),draft=formRoot();
+    const row=await api(endpoint('/api/receiving-waters/plan',{plan_id:id}));
+    if(workspace!==currentWorkspace()||draft!==formRoot())throw Error('Return to the original delivery draft before inspecting its prepared plan.');
+    if(row.id!==id||row.state!=='complete')throw Error('Open the completed original source plan.');
+    const body='<p>Your current delivery draft remains open. These are the original prepared source geometries and relationships; native model quantities are calculated by the selected analysis.</p>'+
+      '<p>Original plan: <code>'+esc(row.id)+'</code></p>'+
+      table(['Receiving water','Family','Original relationship','Prepared contribution area (ha)','Original source'],
+        (row.receptors||[]).map(r=>'<tr><td>'+esc(r.title||r.id)+'<small>'+esc(r.id)+'</small></td>'+
+          '<td>'+esc(families[r.family]||human(r.family))+'</td><td>'+esc(r.relationship_precision||human(r.relation?.method))+'</td>'+
+          '<td>'+fmt(r.contribution_area_ha)+'</td><td>'+esc(sourceTitle(r.source))+'</td></tr>'))+
+      '<details><summary>Original source choices</summary><pre class="json-view">'+esc(pretty(row.identity?.selection||row.selection))+'</pre></details>'+
+      '<details><summary>Original plan and geometry files</summary>'+fileList(row._downloads||[])+'</details>';
+    return detail(row.title||'Original prepared receiving-water plan',body,{kind:'receiving-water-plan',id});
+  }
   function deliveryFields(selection={}){
     const rows=analyses().filter(x=>x.state==='complete').map(x=>[x.id,x.title+' / '+runTitle(x.baseline_run_id)]);
-    return '<fieldset class="full"><legend>Receiving-water contribution maps</legend>'+
-      field('Completed water analysis',select('receiving_water_analysis',rows,selection.receiving_waters?.analysis_id||'','','Choose a completed analysis'),'The analysis must use this delivery baseline and the same alternatives. Its two family maps, per-water quantities, and source boundaries enter the delivery.',true)+'</fieldset>';
+    const original=selection.receiving_waters||{},planId=original.plan_id;
+    const prepared=planId?plans().find(row=>row.id===planId):null;
+    const retainedPlan=planId?
+      '<div class="full">'+
+      field('Retained prepared plan','<input type="checkbox" name="receiving_water_keep_plan" value="1" checked> Keep '+esc(prepared?.title||planId),
+        'A selected completed analysis replaces this plan. Leave the completed-analysis choice empty to keep the plan, or clear this checkbox to detach it.',true)+
+      input('receiving_water_seed_workspace',currentWorkspace()||'','type="hidden"')+
+      '<p>Original plan ID: <code>'+esc(planId)+'</code>. Scope: '+esc(original.quantity_scope||'reporting')+
+      '. The original receiving-water engine calculates this plan on the chosen native cohort during delivery. Overlapping land is counted once in each native family union.</p>'+
+      control('water-open-prepared-plan','Inspect original prepared plan','data-id="'+esc(planId)+'"')+
+      '<details class="technical"><summary>Original prepared-plan settings</summary><pre class="json-view">'+esc(pretty(original))+'</pre></details></div>':'';
+    return '<fieldset class="full"><legend>Receiving-water contribution maps</legend>'+retainedPlan+
+      field('Completed water analysis',select('receiving_water_analysis',rows,original.analysis_id||'','','Choose a completed analysis'),
+        'The analysis must use this delivery baseline and the same alternatives. Its two family maps, per-water quantities, and source boundaries enter the delivery.'+(planId?' Choosing an analysis supersedes the retained prepared plan.':''),true)+'</fieldset>';
   }
-  function deliverySelection(selection){
-    const id=value('receiving_water_analysis');if(!id)return {};
-    const row=analyses().find(x=>x.id===id),alternatives=selection.scenario_run_ids||[];
-    if(!row||row.state!=='complete'||row.baseline_run_id!==selection.baseline_run_id||[...(row.alternative_run_ids||[])].sort().join(',')!==[...alternatives].sort().join(','))throw Error('Choose a receiving-water analysis with the same completed baseline and alternatives as this delivery.');
-    return {receiving_waters:{analysis_id:id}};
+  function deliverySelection(selection,initialSelection={}){
+    const id=value('receiving_water_analysis');
+    if(id){
+      const row=analyses().find(x=>x.id===id),alternatives=selection.scenario_run_ids||[];
+      if(!row||row.state!=='complete'||row.baseline_run_id!==selection.baseline_run_id||[...(row.alternative_run_ids||[])].sort().join(',')!==[...alternatives].sort().join(','))throw Error('Choose a receiving-water analysis with the same completed baseline and alternatives as this delivery.');
+      return {receiving_waters:{analysis_id:id}};
+    }
+    const original=initialSelection.receiving_waters,keep=formRoot()?.querySelector('[name="receiving_water_keep_plan"]')?.checked;
+    if(!keep)return {};
+    if(value('receiving_water_seed_workspace')!==(currentWorkspace()||''))throw Error('Open the retained prepared-plan selection in its original workspace before delivery.');
+    if(!original||!/^[0-9a-f]{64}$/.test(original.plan_id||''))throw Error('Keep the original prepared receiving-water plan ID with this delivery.');
+    if(original.quantity_scope!==undefined&&!['reporting','model_domain'].includes(original.quantity_scope))throw Error('Keep the original reporting or model-domain quantity scope.');
+    const selected=JSON.parse(JSON.stringify(original));
+    if(['analysis_id','plan','receptor_spec'].some(name=>selected[name]!==undefined))throw Error('Choose one original prepared plan or one completed receiving-water analysis.');
+    return {receiving_waters:selected};
   }
   async function dispatch(button){
     const action=button.dataset.action,id=button.dataset.id;
     if(action==='water-open')return openSelection(button.dataset.kind,id);
+    if(action==='water-open-prepared-plan')return inspectDeliveryPlan(id);
     if(action==='water-task-result'){selected={kind:button.dataset.kind,id};remember();document.querySelector('#detail-dialog')?.close();if(location.hash==='#receiving-waters')return loadSelection();location.hash='receiving-waters';return;}
     if(action==='water-task')return showTask(id);
     if(action==='water-subject')return subjectDetails(id,button.dataset.subjectKind);
