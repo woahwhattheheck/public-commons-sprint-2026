@@ -143,9 +143,10 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="close">Close report</button></div>'+
       '<div class="inline-actions"><button type="button" data-scientific-report-action="revise"'+(busy||pending?' disabled':'')+'>Use these studies in another report</button>'+
       '<button type="button" data-scientific-report-action="export"'+(busy||pending?' disabled':'')+'>Prepare complete report ZIP</button>'+
+      (typeof host.openStudy==='function'?'<button type="button" data-scientific-report-action="transfer"'+(busy?' disabled':'')+'>Transfer this report and its studies</button>':'')+
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
-      '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. The Workspace backup also keeps the original editable studies and source editions.</p>'+
+      '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
       (opened.viewer_url?'<div class="source-report-frame-shell"><iframe title="'+esc(row.title)+
         '" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'')+
       '<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
@@ -220,6 +221,16 @@ export function attachScientificReportEditions(host) {
       panel.scrollIntoView({block:'start'});return;
     }
     if(action==='export'&&opened)return submit('source-reports.export',{id:opened.edition.id});
+    if(action==='transfer'&&opened){
+      if(typeof host.openStudy!=='function')throw Error('Open Study transfer in this application to transfer the saved report.');
+      const ws=workspace,turn=generation,ticket=++detailGeneration,id=opened.edition.id;
+      const result=await request('/api/source-reports/scientific-edition',{id});
+      if(!active||!valid(ws,turn)||ticket!==detailGeneration||opened?.edition.id!==id)return;
+      if(result.workspace_key!==ws||result.edition?.id!==id||result.edition.state!=='complete')
+        throw Error('The completed report differs from the selected original edition.');
+      return host.openStudy({workspace_key:ws,roots:[{kind:'scientific-report-editions',id,
+        title:result.edition.title,state:'complete'}]});
+    }
     if(action==='backup')return host.openBackup();
   }
   async function mount(container){
@@ -246,7 +257,7 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
     return {workspace_key:ws,sources:selected.map(choice)};
   }
-  function detach(){active=false;if(panel)panel.hidden=true;}
+  function detach(){active=false;detailGeneration++;if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
