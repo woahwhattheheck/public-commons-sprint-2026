@@ -22,8 +22,8 @@
       "kind": "document",
       "role": "observed_water_quality_report",
       "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
-      "bytes": 76700,
-      "sha256": "38837f270848781b8225e1dd4b767905feb94db5cca6377d19fca9c47a4a13e2",
+      "bytes": 76705,
+      "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e",
       "uri": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
       "vintage": "2023 original observations; derived 2026-10-13",
       "metadata": {
@@ -78,8 +78,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/report.mjs",
-          "bytes": 21113,
-          "sha256": "0062b65ab06846410a2acdef0ec8c08261e42688d2643872eadd4424053f0ea4"
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
@@ -235,8 +235,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/report.mjs",
-          "bytes": 21113,
-          "sha256": "0062b65ab06846410a2acdef0ec8c08261e42688d2643872eadd4424053f0ea4"
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
@@ -325,8 +325,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
-          "bytes": 76700,
-          "sha256": "38837f270848781b8225e1dd4b767905feb94db5cca6377d19fca9c47a4a13e2"
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
         }
       ]
     },
@@ -392,8 +392,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/report.mjs",
-          "bytes": 21113,
-          "sha256": "0062b65ab06846410a2acdef0ec8c08261e42688d2643872eadd4424053f0ea4"
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
@@ -482,8 +482,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
-          "bytes": 76700,
-          "sha256": "38837f270848781b8225e1dd4b767905feb94db5cca6377d19fca9c47a4a13e2"
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
         }
       ]
     },
@@ -549,8 +549,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/report.mjs",
-          "bytes": 21113,
-          "sha256": "0062b65ab06846410a2acdef0ec8c08261e42688d2643872eadd4424053f0ea4"
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
@@ -639,8 +639,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
-          "bytes": 76700,
-          "sha256": "38837f270848781b8225e1dd4b767905feb94db5cca6377d19fca9c47a4a13e2"
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
         }
       ]
     },
@@ -706,8 +706,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/report.mjs",
-          "bytes": 21113,
-          "sha256": "0062b65ab06846410a2acdef0ec8c08261e42688d2643872eadd4424053f0ea4"
+          "bytes": 21118,
+          "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/csv.mjs",
@@ -796,8 +796,8 @@
         },
         {
           "path": "observations/eighteenmile_2023/physical_context/physical-water-quality-study.html",
-          "bytes": 76700,
-          "sha256": "38837f270848781b8225e1dd4b767905feb94db5cca6377d19fca9c47a4a13e2"
+          "bytes": 76705,
+          "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
         }
       ]
     }
