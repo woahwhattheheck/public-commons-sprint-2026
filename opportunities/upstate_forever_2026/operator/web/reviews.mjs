@@ -64,11 +64,12 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       release(){
         if(released)return;released=true;
         for(const [node,event,callback]of listeners)node.removeEventListener(event,callback);
-        dialog?.removeEventListener('close',session.release);
+        dialog?.removeEventListener('close',onClose);
         if(activeReviewForm===session)activeReviewForm=null;
       }
     };
-    dialog?.addEventListener('close',session.release);
+    const onClose=()=>{if(dialog?.open===false)session.release();};
+    dialog?.addEventListener('close',onClose);
     activeReviewForm=session;
     return session;
   }
