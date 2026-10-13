@@ -3,3 +3,12 @@
 .definition-review{border-top:1px solid #d2d2d1;border-bottom:1px solid #d2d2d1;padding:20px 0;margin:20px 0}.review-groups{display:flex;gap:8px 20px;flex-wrap:wrap;font-size:12px;color:#55585b}.review-originals{margin:10px 0}.definition-changes{min-width:900px;table-layout:fixed}.definition-changes th:nth-child(1){width:14%}.definition-changes th:nth-child(2){width:18%}.definition-changes th:nth-child(3),.definition-changes th:nth-child(4){width:10%}.definition-changes th:nth-child(5),.definition-changes th:nth-child(6){width:24%}.definition-changes td{overflow-wrap:anywhere}.definition-changes pre{margin:0;max-height:240px;padding:8px}.definition-changes td code{font-size:11px}.definition-review .pager{margin-bottom:0}
 
 #commissioning-current section{margin-top:24px}#commissioning-current form>label{margin:14px 0}#commissioning-step-table td{min-width:110px}#commissioning-checks table{min-width:740px}#commissioning-checks td:nth-child(3){min-width:140px}#commissioning-checks td:nth-child(4){min-width:280px}#commissioning-current code{overflow-wrap:anywhere;word-break:break-all}#commissioning-current .actions{margin:8px 0}#commissioning-current form>button{margin-top:14px}
+
+/* Complete Gateway commissioning uses the same restrained workspace hierarchy. */
+#gateway-course-current fieldset { border:1px solid var(--line,#b8b8b8); margin:1rem 0; padding:1rem; min-width:0; }
+#gateway-course-current legend { font-weight:600; padding:0 .4rem; }
+#gateway-course-current code,#gateway-course-source .detail-row span { overflow-wrap:anywhere; word-break:break-word; }
+#gateway-course-current td textarea { min-width:14rem; }
+#gateway-course-current .actions { flex-wrap:wrap; }
+#gateway-draft-status { overflow-wrap:anywhere; }
+@media(max-width:700px){ #gateway-course-current td textarea { min-width:11rem; } #gateway-course-source textarea { min-height:15rem; } }

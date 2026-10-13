@@ -9,7 +9,7 @@
 <div class="shell">
 <aside><nav aria-label="Workspace sections">
 <button data-tab="targets" aria-current="page">Targets</button><button data-tab="portfolio">Portfolio</button>
-<button data-tab="cohorts">Cohorts</button><button data-tab="commissioning">Commissioning</button><button data-tab="rollouts">Rollouts</button><button data-tab="handover">Handover</button>
+<button data-tab="cohorts">Cohorts</button><button data-tab="commissioning">Commissioning</button><button data-tab="gateway-commissioning">Gateway commissioning</button><button data-tab="rollouts">Rollouts</button><button data-tab="handover">Handover</button>
 </nav><dl id="workspace-identity"></dl></aside>
 <main>
 <div id="notice" role="status" aria-live="polite"></div>
@@ -52,6 +52,42 @@ Response and error handling</textarea></label>
 <button type="submit">Save complete commissioning</button></form>
 <div id="commissioning-list" class="table-wrap"></div><div id="commissioning-pages" class="pager"></div>
 <div id="commissioning-current" class="panel" hidden></div><div id="commissioning-source" class="panel" hidden></div>
+</section>
+<section id="gateway-commissioning" class="section" hidden>
+<div class="section-heading"><div><h2>Gateway commissioning</h2><p>Review complete API sources on staging, then use the accepted native definitions on a separate production Gateway.</p></div></div>
+<div class="panel"><h3>Complete source intake</h3><p id="gateway-draft-status" role="status"></p>
+<div class="row"><button id="gateway-save-draft">Save local intake</button><button id="gateway-reopen-draft">Reopen saved intake</button><button id="gateway-download-draft">Download working intake</button>
+<label>Load complete intake draft<input id="gateway-intake-file" type="file" accept=".json,application/json"></label></div>
+<p id="gateway-target-help">Save two distinct Gateway targets in Targets before freezing this course.</p>
+<form id="gateway-course-form"><div class="fields">
+<label>Staging Gateway<select name="stagingConnectionId" required></select></label>
+<label>Production Gateway<select name="productionConnectionId" required></select></label>
+<label>Course label<input name="label" value="Gateway API cohort" maxlength="300" required></label>
+<label>Customer<input name="customer" maxlength="300"></label><label>Operating owner<input name="operator" maxlength="300"></label>
+<label>Reload scope<select name="scope"><option value="node">Selected Gateway node</option><option value="group">Gateway group</option></select></label></div>
+<label class="checkbox"><input name="block" type="checkbox" checked>Wait for node reload</label>
+<label>Operational checks, one per line<textarea name="checkNames" rows="4" required>Routing and upstream
+Authentication and access
+Response and error handling</textarea></label>
+<label>Complete workshare source (optional)<input name="workshare" type="file"></label><div id="gateway-workshare"></div>
+<p class="hint">Save each full source entry below, then freeze this intake. Up to 200 APIs and 16 MiB of complete definition source. Target credentials remain environment references.</p>
+<p id="gateway-source-count"></p><button type="submit">Save complete Gateway commissioning</button></form>
+</div>
+<form id="gateway-entry-form" class="panel"><h3 id="gateway-entry-title">Add complete API source</h3><div class="fields">
+<label>Stable source key<input name="key" required maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}"></label>
+<label>API label<input name="label" maxlength="300"></label>
+<label>Staging operation<select name="operation"><option value="create">Create native definition</option><option value="import">Import plain OpenAPI</option><option value="update">Update existing API</option></select></label>
+<label>Production operation<select name="productionOperation"><option value="create">Create exact staged ID</option><option value="update">Update same existing ID</option></select></label>
+<label>Native format<select name="kind"><option value="classic">Classic</option><option value="oas">Tyk OAS / OpenAPI</option></select></label>
+<label>Native API ID<input name="apiId" maxlength="1000" placeholder="Required for update; original source ID for create"></label></div>
+<label>Complete native JSON<textarea name="definitionText" rows="16" spellcheck="false" required></textarea></label>
+<label>Load original definition file<input id="gateway-definition-file" type="file" accept=".json,application/json"></label>
+<label>Original native query options<textarea name="query" rows="3" spellcheck="false" placeholder='{"listenPath":"/selected/","upstreamURL":"https://original.example/"}'></textarea></label>
+<p class="hint">Plain OpenAPI imports retain the actual provider-assigned ID. Review both complete submitted and active documents before accepting native transformation. Production always uses the accepted complete active definition.</p>
+<div class="row"><button type="submit">Save complete source entry</button><button type="button" id="gateway-new-entry">New source entry</button></div></form>
+<div id="gateway-entry-list" class="table-wrap"></div>
+<h3>Saved Gateway courses</h3><div id="gatewayCommissioning-list" class="table-wrap"></div><div id="gatewayCommissioning-pages" class="pager"></div>
+<div id="gateway-course-current" class="panel" hidden></div><div id="gateway-course-source" class="panel" hidden></div>
 </section>
 <section id="rollouts" class="section" hidden><div class="section-heading"><div><h2>Rollouts</h2><p>Prepare a native request, review it, then execute that saved request.</p></div></div>
 <form id="rollout-form" class="panel"><h3>Prepare a request</h3><div class="fields">
