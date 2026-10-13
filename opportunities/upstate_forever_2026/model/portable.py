@@ -528,6 +528,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
+            stack.enter_context(held(root / ".utility-monitoring.lock", blocking=False))
             for pattern in ("compute-programmes/*/.programme.lock",
                             "interactions/*/.interaction.lock",
                             "interaction-results/*/.analysis.lock"):

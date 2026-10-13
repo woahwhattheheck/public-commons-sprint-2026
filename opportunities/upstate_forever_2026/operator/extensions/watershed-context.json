@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "watershed-context",
   "title": "Regional watershed context",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "order": 55,
   "assets": [
     "watershed_context.mjs",
@@ -21,7 +21,8 @@
     "actions": [
       "watershed.context.analyze",
       "watershed.context.export",
-      "watershed.context.receive"
+      "watershed.context.receive",
+      "watershed.context.monitoring"
     ],
     "invoke": {
       "handler": "invoke",
@@ -85,6 +86,20 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/monitoring",
+        "operation": "monitoring",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -125,7 +140,8 @@
       "navigate",
       "showTask",
       "fileList",
-      "uploadFile"
+      "uploadFile",
+      "openDesk"
     ],
     "styles": [
       "/web/watershed_context.css"
