@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v20-readable-source-captions"
+REPORT_VERSION = "upstate.scientific-report/v21-readable-table-regions"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -1350,7 +1350,13 @@ def _html_block(block, *, figure_images=None):
     head = "".join("<th scope=\"col\">" + cell(value) + "</th>" for value in block["columns"])
     rows = "".join("<tr>" + "".join("<td>" + cell(value) + "</td>" for value in row)
                    + "</tr>" for row in block["rows"])
-    return "<div class=\"table-wrap\"><table>" + caption + "<thead><tr>" + head + "</tr></thead><tbody>" + rows + "</tbody></table></div>"
+    label = str(block.get("caption") or ("Data table: " + ", ".join(str(value) for value in block["columns"])))
+    hint = ('<p class="table-scroll-hint">Scroll horizontally to read every column. '
+            'Keyboard users can focus the table region and use the arrow keys.</p>'
+            if len(block["columns"]) > 3 else "")
+    return (hint + '<div class="table-wrap" tabindex="0" role="region" aria-label="' +
+            html_escape(label, quote=True) + '"><table>' + caption +
+            "<thead><tr>" + head + "</tr></thead><tbody>" + rows + "</tbody></table></div>")
 
 
 def _markdown_cell(value):
@@ -1424,19 +1430,20 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         "<title>" + html_escape(str(title)) + "</title><style>"
         "*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717;font:15px/1.5 Arial,sans-serif}"
-        "main{max-width:1120px;margin:auto;padding:32px}h1{font-size:30px;line-height:1.2}"
+        "main{max-width:1120px;margin:auto;padding:32px;background:#fff;color:#171717}h1{font-size:30px;line-height:1.2}"
         "h2{font-size:21px;border-bottom:1px solid #777;padding-bottom:8px;margin-top:32px}"
         "a{color:inherit;text-decoration:underline;overflow-wrap:anywhere}li{overflow-wrap:anywhere}nav{border:1px solid #aaa;padding:12px 20px}"
         "nav ol{columns:2;margin:8px 0;padding-left:20px}section{scroll-margin-top:20px}"
         "p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;max-width:100%;margin:16px 0;overscroll-behavior-x:contain}"
+        ".table-wrap:focus-visible{outline:2px solid #333;outline-offset:3px}.table-scroll-hint{display:none}"
         "table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;"
-        "padding:8px;border-bottom:1px solid #ccc;overflow-wrap:normal;word-break:normal}.scientific-number{white-space:nowrap;font-variant-numeric:tabular-nums}th{background:#eee;border-bottom:1px solid #444}"
+        "padding:8px;min-width:8rem;background:#fff;color:#171717;border-bottom:1px solid #ccc;overflow-wrap:normal;word-break:normal}.scientific-number{white-space:nowrap;font-variant-numeric:tabular-nums}th{background:#eee;color:#171717;border-bottom:1px solid #444}"
         "caption{text-align:left;margin-bottom:8px}.scientific-figure{margin:20px 0}"
         ".scientific-figure img{display:block;max-width:100%;height:auto}"
         ".scientific-figure figcaption{margin-top:8px;font-size:13px;max-width:95ch}"
         "footer{border-top:1px solid #777;margin-top:32px;padding-top:16px}"
-        "@media(max-width:620px){main{padding:16px}nav ol{columns:1}h1{font-size:25px}}"
-        "@media print{main{max-width:none;padding:0}nav{display:none}.table-wrap{overflow:visible}"
+        "@media(max-width:620px){main{padding:16px}nav ol{columns:1}h1{font-size:25px}.table-scroll-hint{display:block;font-size:13px}}"
+        "@media print{main{max-width:none;padding:0}nav,.table-scroll-hint{display:none}.table-wrap{overflow:visible}th,td{min-width:0}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}body{font-size:10pt}"
         "table{font-size:8pt}a{text-decoration:none}@page{margin:16mm}}"
         "</style></head><body><main><h1>" + html_escape(str(title))
