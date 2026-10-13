@@ -16,7 +16,9 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
            "model/parameter_case_status.py", "model/parameter_result_query.py",
            "model/parameter_views.py", "model/parameter_report_source.py",
-           "model/parameter_scientific_figures.py",
+           "model/parameter_scientific_figures.py", "model/ensemble_parameter_studies.py",
+           "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
+           "integration/ensemble-parameter-core-joins.json",
            "model/record_catalog.py", "model/delivery_catalogue.py",
            "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
            "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
@@ -133,6 +135,12 @@ PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("885d966bae05c7e5528ff
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
+
+# Exact maintained source before original Ensemble continuation (PR4085).
+PREVIOUS.setdefault("install_native_supervision.py", []).append("cafba0143ee9ea9cce9e44592a310f1c4d6ce9d48e0ee2b77f0bbad6bbc7eabb")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("c84ee4a4d82299a4313333115d0855f2392cd2b7bfa8af668321d35a4e351306")
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("cbe458d5a2c855ae5cb5ed6065722644f3314f9a96f91be2518422ed31e3c468")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("f28995782aef9c6143ec0bad1135844791d22162130c92d01304bd4977982b04")
 
 
 def sha(data):
@@ -384,6 +392,15 @@ def portable_patch(text):
             raise ValueError("The original portable inventory has no source segment")
         replacement = repr(tuple(updated) if isinstance(names, tuple) else updated)
         text = replace_one(text, segment, replacement, "portable application closure")
+    bridge = "            # Bridge directories are published under the Workspace lock before\n            # their first operation record, so lock even a prepared directory.\n            for directory in sorted((root / \"ensemble-parameter-studies\").glob(\"*\")):\n                if directory.is_dir():\n                    identifier(directory.name)\n                    stack.enter_context(held(directory / \".bridge.lock\", blocking=False))\n"
+    experiments = "            for path in sorted((root / \"experiments\").glob(\"*/.experiment.lock\")):\n"
+    if bridge not in text:
+        if '"ensemble-parameter-studies"' in text or '".bridge.lock"' in text:
+            raise ValueError("Compose the original Ensemble continuation lock ordering.")
+        text = replace_one(text, experiments, bridge + experiments,
+                           "Ensemble continuation before experiment backup locks")
+    elif text.index(bridge) > text.index(experiments):
+        raise ValueError("The Ensemble continuation lock must precede experiment locks.")
     ast.parse(text)
     return text
 
@@ -468,7 +485,7 @@ def parameter_report_server_patch(source):
         '        if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):\n'
         '            task["_item"] = {"kind": "parameter-studies", "id": result["id"]}\n'
         '            task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]\n')
-    joined = (
+    report_only = (
         '        if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):\n'
         '            if task["action"] == "parameter-study.source.prepare":\n'
         '                task["_item"] = {"kind": "parameter-studies", "id": result["experiment_id"]}\n'
@@ -479,8 +496,10 @@ def parameter_report_server_patch(source):
         '            else:\n'
         '                task["_item"] = {"kind": "parameter-studies", "id": result["id"]}\n'
         '                task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]\n')
+    joined = "        if task[\"action\"] in PARAMETER_STUDY_ACTIONS and task[\"state\"] == \"complete\" and result.get(\"id\"):\n            if task[\"action\"] == \"parameter-study.ensemble.continue\":\n                prepared = self.parameter_studies.ensemble_studies(task[\"workspace\"], result[\"id\"])\n                task[\"result\"] = {**result, **prepared}\n                task[\"_downloads\"] = [item for row in prepared[\"studies\"]\n                                      for item in (row.get(\"source\") or {}).get(\"downloads\", [])]\n            elif task[\"action\"] == \"parameter-study.source.prepare\":\n                task[\"_item\"] = {\"kind\": \"parameter-studies\", \"id\": result[\"experiment_id\"]}\n                prepared = self.parameter_studies.read(task[\"workspace\"], \"scientific-source\",\n                    {\"source_id\": result[\"id\"]})\n                task[\"result\"] = {**result, **prepared}\n                task[\"_downloads\"] = prepared.get(\"downloads\", [])\n            else:\n                task[\"_item\"] = {\"kind\": \"parameter-studies\", \"id\": result[\"id\"]}\n                task[\"_downloads\"] = self.item(task[\"workspace\"], \"parameter-studies\", result[\"id\"])[\"_downloads\"]\n"
     if joined not in source:
-        source = replace_one(source, original, joined, "Parameter saved scientific-source task")
+        before = report_only if report_only in source else original
+        source = replace_one(source, before, joined, "Parameter retained ensemble/source task")
     ast.parse(source, filename="operator/server.py")
     return source
 
@@ -498,15 +517,83 @@ def parameter_report_browser_patch(source):
     if not re.search(r"\bopenScientificReport\b", body):
         replacement = body.rstrip().rstrip(",") + ",openScientificReport"
         source = source[:match.start(1)] + replacement + source[match.end(1):]
-    action = "parameter-study.source.prepare"
-    if not re.search(r"['\"]" + re.escape(action) + r"['\"]\s*:", source):
-        labels = list(re.finditer(r"^const actionLabels\s*=\s*\{[^\n]*\};", source, re.M))
-        if len(labels) != 1:
-            raise ValueError("Parameter report action needs the original action-label registry.")
-        end = labels[0].end()
-        source = (source[:end] + '\nObject.assign(actionLabels,{"parameter-study.source.prepare":'
-                  '"Prepare Parameter scientific source"});' + source[end:])
+    for action, title in (
+            ("parameter-study.source.prepare", "Prepare Parameter scientific source"),
+            ("parameter-study.ensemble.continue", "Prepare scenario parameter studies")):
+        if not re.search(r"['\"]" + re.escape(action) + r"['\"]\s*:", source):
+            labels = list(re.finditer(r"^const actionLabels\s*=\s*\{[^\n]*\};", source, re.M))
+            if len(labels) != 1:
+                raise ValueError("Parameter action needs the original action-label registry.")
+            end = labels[0].end()
+            source = (source[:end] + "\nObject.assign(actionLabels," +
+                      json.dumps({action: title}) + ");" + source[end:])
     return source
+
+
+ENSEMBLE_PARAMETER_FORM = "  async function parameterStudies(id) {\n    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;\n    const response=await api(endpoint('/api/parameter-studies/ensemble-studies',{id}));\n    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;\n    const preview=response.preview;\n    if(response.workspace_key!==workspace || preview?.ensemble_id!==id)\n      throw Error('Reopen the original ensemble in its saved Workspace.');\n    const studyLinks=(response.latest?.studies||[]).map(row=>{\n      const attrs=' data-id=\"'+escapeHTML(row.experiment_id)+'\" data-workspace=\"'+escapeHTML(workspace)+'\"';\n      return '<li><strong>'+escapeHTML(row.title)+'</strong> · '+escapeHTML(label(row.state))+\n        '<div class=\"page-actions\"><button type=\"button\" data-action=\"parameter-study-open\"'+attrs+\n        '>Open scenario parameter study</button>'+\n        (row.source?.source?'<button type=\"button\" data-action=\"parameter-study-source-open\"'+attrs+\n          ' data-source-id=\"'+escapeHTML(row.source.id)+'\">Compose scientific report</button>':'')+\n        '</div></li>';\n    }).join('');\n    const rows=preview.studies.map(row=>'<tr>'+cell(row.scenario_title)+cell(row.title)+\n      cell(numeric(row.cases))+cell(short(row.base_profile_id))+'</tr>');\n    const content='<p>'+escapeHTML(preview.method)+'</p>'+\n      '<p><strong>'+numeric(preview.counts.complete_native_runs)+' / '+numeric(preview.counts.native_runs)+\n      ' original native runs complete</strong> · '+numeric(preview.counts.study_count)+' parameter studies.</p>'+\n      table(['Original scenario','Retained parameter study','Cases','Reference profile'],rows)+\n      '<p class=\"note\">Each study uses its original scenario, grid, coefficient source, run IDs and model arguments. '+\n      'The output includes annual quantities, signed parameter changes and pair-specific valid coverage. '+\n      'Its saved source retains the original ensemble plan and complete member mapping.</p>'+\n      (studyLinks?'<h3>Saved continuation</h3><ul>'+studyLinks+'</ul>':'')+\n      (!preview.ready?'<div class=\"notice\">Continue the original ensemble first. '+\n        escapeHTML(preview.counts.pending.length)+' original runs remain unfinished.</div>':'')+\n      '<label class=\"check-row\"><input type=\"checkbox\" name=\"ensemble_parameter_reports\" checked>'+\n      '<span>Prepare scientific sources, figures and reports for every scenario</span></label>'+\n      '<label class=\"check-row\"><input type=\"checkbox\" name=\"ensemble_parameter_maps\">'+\n      '<span>Retain original pairwise difference rasters in each Parameter export</span></label>';\n    openForm('Parameter results by scenario','Continue completed original native runs into scenario-specific studies.',\n      content,'Prepare scenario parameter studies',async()=>{\n        if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)\n          throw Error('Reopen this original ensemble before preparing its parameter studies.');\n        if(!preview.ready)throw Error('Complete the named original ensemble runs first.');\n        const selected=form();\n        const result=await submitAction('parameter-study.ensemble.continue',{\n          ensemble_id:id,\n          render_reports:!!selected?.elements.namedItem('ensemble_parameter_reports')?.checked,\n          difference_maps:!!selected?.elements.namedItem('ensemble_parameter_maps')?.checked});\n        toast('Original-run aggregation and reports are queued. Open each saved scenario study from the completed task.');\n        return result;\n      });\n  }\n\n"
+
+
+def ensemble_parameter_browser_patch(source):
+    """Join the existing Ensemble desk without replacing peer source producers."""
+    prepared = ENSEMBLE_PARAMETER_FORM
+    if prepared not in source:
+        if "async function parameterStudies(" in source:
+            raise ValueError("Compose the current Ensemble parameter form before installation.")
+        source = replace_one(source, "  async function inspect(id) {\n",
+                             prepared + "  async function inspect(id) {\n",
+                             "Ensemble scenario parameter form")
+    before = "      button('study-source','Prepare scientific study report',id)+\n"
+    after = before + "      button('parameter-studies','Parameter results by scenario',id)+\n"
+    if after not in source:
+        source = replace_one(source, before, after, "Ensemble parameter results button")
+    before = "    if(action==='inspect')return inspect(id);\n"
+    after = before + "    if(action==='parameter-studies')return parameterStudies(id);\n"
+    if after not in source:
+        source = replace_one(source, before, after, "Ensemble parameter results dispatch")
+    return source
+
+
+
+def ensemble_parameter_core_patch(body, ledger_body):
+    """Compose only the published additive continuation into retained science."""
+    ledger = json.loads(ledger_body.decode("utf-8"))
+    if (ledger.get("schema") != "upstate.ensemble-parameter-core-joins/v1" or
+            ledger.get("path") != "model/parameter_studies.py"):
+        raise ValueError("Receive the exact original Ensemble continuation source-join ledger.")
+    joins = ledger.get("replacements")
+    if (not isinstance(joins, list) or len(joins) != 4 or
+            any(not isinstance(item, dict) or
+                not isinstance(item.get("before"), str) or not item["before"] or
+                not isinstance(item.get("after"), str) or not item["after"]
+                for item in joins)):
+        raise ValueError("The original Ensemble continuation needs its four exact source joins.")
+    text = body.decode("utf-8")
+    ast.parse(text, filename="model/parameter_studies.py")
+    if ("def prepare_retained(" in text and joins[0]["after"] not in text):
+        raise ValueError("Compose the existing retained-case implementation before receiving its continuation.")
+    applied = []
+    for index, item in enumerate(joins):
+        before, after = item["before"], item["after"]
+        count = text.count(after)
+        if count == 1:
+            applied.append({"join": index + 1, "state": "already_composed"})
+            continue
+        if count:
+            raise ValueError("Ambiguous original Ensemble continuation postimage: " + str(index + 1))
+        text = replace_one(text, before, after,
+                           "retained scientific continuation join " + str(index + 1))
+        applied.append({"join": index + 1, "state": "composed"})
+    ast.parse(text, filename="model/parameter_studies.py")
+    result = text.encode("utf-8")
+    if sha(body) == ledger.get("base_sha256"):
+        if len(body) != ledger.get("base_bytes"):
+            raise ValueError("The original scientific source size differs from its ledger.")
+        if sha(result) != ledger.get("sha256") or len(result) != ledger.get("bytes"):
+            raise ValueError("The composed scientific source differs from its exact published postimage.")
+    return result, {"ledger_sha256": sha(ledger_body), "before_sha256": sha(body),
+                    "after_sha256": sha(result), "joins": applied,
+                    "policy": "exact additive joins; every other scientific source byte retained"}
+
 
 
 def parameter_study_dependency(body):
@@ -530,8 +617,16 @@ def parameter_study_dependency(body):
         if (names[:len(arguments)] != arguments or required > len(arguments)
                 or any(value is None for value in args.kw_defaults)):
             raise ValueError("Compose the current saved-study adapter with its scientific API: " + name)
+    retained = declarations.get("prepare_retained")
+    if (retained is None or
+            tuple(item.arg for item in [*retained.args.posonlyargs, *retained.args.args]) !=
+            ("workspace", "selection", "case_runs") or
+            tuple(item.arg for item in retained.args.kwonlyargs) != ("provenance",) or
+            retained.args.kw_defaults != [None]):
+        raise ValueError("Compose the current original-run continuation into "
+                         "model/parameter_studies.py: prepare_retained(..., *, provenance)")
     return {"bytes": len(body), "sha256": sha(body),
-            "functions": ["native_case_context", "record_interruption", "_read", "_bind_state",
+            "functions": ["prepare_retained", "native_case_context", "record_interruption", "_read", "_bind_state",
                           "_baseline_versions"],
             "policy": "retain installed scientific source unchanged"}
 
@@ -541,7 +636,8 @@ def retained_reader_dependencies(application):
     """Validate and retain scientific/context modules used by the incoming readers."""
     required = {
         "model/common.py": ("canonical", "digest", "held", "identifier", "relative_file",
-                            "read_json", "file_digest"),
+                            "read_json", "file_digest", "atomic_json", "describe_file",
+                            "now", "verify_file"),
         "model/model_selection.py": ("selected", "run_models", "validate_completed_run"),
         "model/native_versions.py": ("model_versions", "version_label"),
         "model/parameter_calibration.py": ("candidates",),
@@ -600,16 +696,26 @@ def install(application, increment, *, retention=False):
                  for name in ("operator/server.py", "operator/web/app.mjs", "model/portable.py")}
     dependency = "model/parameter_studies.py"
     originals[dependency] = (application / dependency).read_bytes()
-    retained_dependencies = {dependency: parameter_study_dependency(originals[dependency])}
+    core_ledger = (increment / "integration/ensemble-parameter-core-joins.json").read_bytes()
+    composed_core, core_composition = ensemble_parameter_core_patch(originals[dependency], core_ledger)
+    retained_dependencies = {dependency: parameter_study_dependency(composed_core)}
+    retained_dependencies[dependency].update(
+        policy="retain native science with exact additive original-case/source joins",
+        source_composition=core_composition)
     reader_bodies, reader_records = retained_reader_dependencies(application)
     originals.update(reader_bodies)
     retained_dependencies.update(reader_records)
     changed = {
+        dependency: composed_core,
         "operator/server.py": parameter_report_server_patch(parameter_result_server_patch(server_patch(
             originals["operator/server.py"].decode("utf-8"), retention=retention))).encode("utf-8"),
         "operator/web/app.mjs": parameter_report_browser_patch(browser_patch(
             originals["operator/web/app.mjs"].decode("utf-8"))).encode("utf-8"),
         "model/portable.py": portable_patch(originals["model/portable.py"].decode("utf-8")).encode("utf-8")}
+    ensemble_path = "operator/web/ensembles.mjs"
+    originals[ensemble_path] = (application / ensemble_path).read_bytes()
+    changed[ensemble_path] = ensemble_parameter_browser_patch(
+        originals[ensemble_path].decode("utf-8")).encode("utf-8")
     programme_path = application / "operator/programmes.py"
     if programme_path.exists():
         originals["operator/programmes.py"] = programme_path.read_bytes()
@@ -617,6 +723,8 @@ def install(application, increment, *, retention=False):
             originals["operator/programmes.py"].decode("utf-8")).encode("utf-8")
     for name in MEMBERS:
         body = (increment / name).read_bytes()
+        if name == "integration/ensemble-parameter-core-joins.json" and body != core_ledger:
+            raise ValueError("The Ensemble continuation ledger changed during installation preflight.")
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"))
         destination = application / name
@@ -637,7 +745,8 @@ def install(application, increment, *, retention=False):
         if (application / name).read_bytes() != body:
             raise ValueError("Concurrent source changed before native supervision installation: " + name)
     # Install additive modules first, then the narrow current-source registration.
-    ordered = [*MEMBERS, "operator/server.py", "operator/web/app.mjs", "model/portable.py"]
+    ordered = [dependency, *MEMBERS, "operator/web/ensembles.mjs", "operator/server.py",
+               "operator/web/app.mjs", "model/portable.py"]
     if "operator/programmes.py" in changed:
         ordered.append("operator/programmes.py")
     for name in ordered:
@@ -651,7 +760,7 @@ def install(application, increment, *, retention=False):
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
     for dependency in retained_dependencies:
-        if (application / dependency).read_bytes() != originals[dependency]:
+        if (application / dependency).read_bytes() != changed.get(dependency, originals[dependency]):
             raise ValueError("The retained scientific/context source changed during native supervision installation: " + dependency)
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
