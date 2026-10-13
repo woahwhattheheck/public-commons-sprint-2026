@@ -65,6 +65,41 @@ class ScientificSourceReader:
                 "Complete original source manifest"),
         }
 
+
+    def preview(self, workspace, payload):
+        """Read one document through its exact original OBSERVED_CONTEXT source."""
+        from published_report_preview import prepare_inventory
+        source = self._source(workspace, payload)
+        members = source["members"]
+        binding = source["binding"]
+        member = payload.get("path")
+        inventory = {
+            name: {"path": name, "bytes": row["bytes"], "sha256": row["sha256"]}
+            for name, row in members.items()
+        }
+
+        def source_path(name):
+            if name not in members:
+                raise ValueError("Choose a member of this exact original source")
+            return members[name]["path"]
+
+        result = prepare_inventory(
+            self.operator, workspace, self.operator.ws(workspace),
+            {"source_collection_id": binding["source_collection_id"],
+             "source_id": binding["source_id"], "body_sha256": binding["body_sha256"],
+             "source_binding": binding},
+            member, inventory, source_path)
+        result["schema"] = "upstate.scientific-source-preview/v1"
+        result["preview"]["url"] = (
+            "/api/file/scientific-source-preview/" + quote(workspace, safe="")
+            + "/" + result["preview"]["id"])
+        return result
+
+    def preview_file(self, workspace, ticket_id):
+        from published_report_preview import file_reply
+        from source_reports import document_policy
+        return file_reply(self.operator, workspace, ticket_id, policy_for=document_policy)
+
     def member(self, workspace, collection_id, source_key, name):
         identifier(collection_id)
         identifier(source_key)
