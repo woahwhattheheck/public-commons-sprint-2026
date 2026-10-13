@@ -1,6 +1,6 @@
 {
   "schema": "upstate.programme-native-reuse-patch/v1",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "shared": {
     "model/compute_programme.py": [
       {
@@ -75,7 +75,10 @@
       {
         "id": "native-reuse-preview-details",
         "before": "  return '<details><summary>Source and dependency details</summary>' + dependencies + sources + '</details>';",
-        "after": "  const candidates = rows(row.reuse_candidates).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');\n  const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    esc(item.reason) + '</small>').join('');\n  const reuse = candidates ? '<p><strong>Original stage candidates</strong><br>' + candidates +\n    'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';\n  const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';\n  return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';"
+        "after": "  const candidates = rows(row.reuse_candidates).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');\n  const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    esc(item.reason) + '</small>').join('');\n  const reuse = candidates ? '<p><strong>Original stage candidates</strong><br>' + candidates +\n    'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';\n  const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';\n  return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';",
+        "previous_after": [
+          "  const candidates = rows(row.reuse_candidates).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');\n  const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +\n    esc(item.reason) + '</small>').join('');\n  const reuse = candidates ? '<p><strong>Original completed candidates</strong><br>' + candidates +\n    'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';\n  const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';\n  return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';"
+        ]
       }
     ],
     "source_tools/install_cumulative_application.py": [
@@ -111,16 +114,22 @@
   "known_additions": {
     "model/PROGRAMME_NATIVE_REUSE.md": [
       "bffb20211f4ccee53db3d1d3d2cb6e91519198c8b688a7336bd9d4134f3302e3",
-      "55b8bdcd10146fffb063a69f18931a826a89496564d41c143746ec94fca708aa"
+      "55b8bdcd10146fffb063a69f18931a826a89496564d41c143746ec94fca708aa",
+      "c4171d565525960687791b0a1e395b191e02177f5bc7dd90fd1766ce4678d76b",
+      "8727ae51afbec63d517f1ada913324fef200f3969909d72aa1582534738031fa"
     ],
     "operator/programme_native_reuse_patch.json": [
-      "eb9b62dd1be0beb00c61f6adbe50567794991d2c4f0ce64c4d3e793460cc8f64"
+      "eb9b62dd1be0beb00c61f6adbe50567794991d2c4f0ce64c4d3e793460cc8f64",
+      "20e3e0185f72ba9e3b1a6ba5fbc6291c74636b6ea1c4fdfaaaae5fd1615c61b0",
+      "ff0123b220b2971467e362797685df0dcc30c3d55ea8d3160d70285c3ce2f0ce"
     ],
     "operator/install_programme_reuse.py": [
-      "a565a35bf72dbb508e58f5b58f63cd9784667ca47e053ec240578ed1469cbcf3"
+      "a565a35bf72dbb508e58f5b58f63cd9784667ca47e053ec240578ed1469cbcf3",
+      "05590c3ca80ce56fa4fd0de7e4fc8b3444be975e3c263a340a1d04342e77988c"
     ],
     "integration/component_fragments/programme-native-reuse.json": [
-      "a5ac1093936e72a481ba697988a487ca8a1d503545679fe8f85683daa6cb5efb"
+      "a5ac1093936e72a481ba697988a487ca8a1d503545679fe8f85683daa6cb5efb",
+      "aa36153f00e106559504210592bbc187d4096c6d068b545446207fc476a591da"
     ]
   }
 }

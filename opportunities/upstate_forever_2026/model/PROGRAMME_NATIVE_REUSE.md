@@ -105,4 +105,4 @@ Run from the received application directory with its verified GIS/InVEST interpr
 
 The creation command also accepts `--run` to continue its successor through the original Programme resume path. The result includes both the original Programme status/report and the source-update adoption record. An incomplete native continuation returns status 2; a raised continuation error reports the successor Programme ID for resumption. Separate preview and creation let the operator inspect the exact candidates and source changes before dispatch.
 
-The installer composes these four CLI seams after the source-successor backend. It retains the prior installed source hashes so existing 1.0.0 receivers can upgrade and repeat the installation safely. The same saved successor and original native candidate IDs are used by both browser and CLI.
+The installer composes these four CLI seams after the source-successor backend. It retains the prior installed source hashes so existing 1.0.0 and 1.0.1 receivers can upgrade and repeat the installation safely. The same saved successor and original native candidate IDs are used by both browser and CLI.
