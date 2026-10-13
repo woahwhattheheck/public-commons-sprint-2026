@@ -92,6 +92,20 @@
         "AUDIT_RECIPIENT_QUEUE.md",
         "text/plain; charset=utf-8"
       ]
+    ],
+    [
+      "/revision-review.js",
+      [
+        "public/revision-review.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/AUDIT_REVISION_REVIEW.md",
+      [
+        "AUDIT_REVISION_REVIEW.md",
+        "text/plain; charset=utf-8"
+      ]
     ]
   ]
 }

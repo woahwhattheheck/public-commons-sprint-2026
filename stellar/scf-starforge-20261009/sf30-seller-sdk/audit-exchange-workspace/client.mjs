@@ -19,7 +19,7 @@
  * @typedef {AuditEditionSummary & {reviews:AuditReview[],links:AuditLink[],analysisRuns:AuditAnalysis[]}} AuditEdition
  * @typedef {{id:string,sourceId:string,revisionId:string,entityKey?:string,status:'open'|'investigating'|'resolved'|'accepted',title:string,note:string,assignee:string,dueDate:string,evidence:{label:string,url:string}[],actor:string,createdAt?:string}} AuditReview
  * @typedef {{id:string,sourceId:string,revisionId:string,entityKey:string,targetKind:'haystack'|'lda'|'turnover',targetWorkspaceId:string,targetRecordId:string,note:string,actor:string}} AuditLink
- * @typedef {{id:string,kind:'xml'|'review'|'workspace'|'application'|'turnover-projection'|'analysis-output'|'colleague-return'|'recipient-editor'|'recipient-return'|'recipient-custody'|'recipient-queue'|'recipient-queue-package',name:string,bytes:number,sha256:string,downloadUrl:string,createdAt:string,mime?:string,sourceId?:string,revisionId?:string}} AuditExport
+ * @typedef {{id:string,kind:'xml'|'review'|'workspace'|'application'|'turnover-projection'|'analysis-output'|'colleague-return'|'recipient-editor'|'recipient-return'|'recipient-custody'|'recipient-queue'|'recipient-queue-package'|'review-transition',name:string,bytes:number,sha256:string,downloadUrl:string,createdAt:string,mime?:string,sourceId?:string,revisionId?:string}} AuditExport
  * @typedef {{name:string,downloadUrl:string,bytes?:number,sha256?:string}} AuditOutput
  * @typedef {'Mean'|'SLR'|'3PC'|'3PH'|'4P'|'5P'|'HDD'|'CDD'|'HDD-CDD'|'TOW'|'TOWT'} AuditNativeModel
  * @typedef {{models?:AuditNativeModel[],sourceTimezone?:string,weatherTimezone?:string,weatherColumns?:{time:string,temp:string,end?:string,station?:string},weatherUnits?:'F'|'C'|'degF'|'degC'|'°F'|'°C',weatherInterval?:'15-min'|'Hourly'|'Daily',endPolicy?:'required'|'next-reading'|'frequency',lastEnd?:string,interval?:'15-min'|'Hourly'|'Daily'|'Monthly',baseline?:{start:string,end:string},reporting?:{start:string,end:string},normalization?:{start:string,end:string},modelArguments?:Record<string,unknown>,balancePoint?:number,confidenceLevel?:number,allowNegativePredictions?:boolean,seed?:number,timeoutSeconds?:number,weatherMissingValues?:string[]}} AuditModelOptions
@@ -111,11 +111,11 @@
 
 export const AUDIT_MUTATIONS = new Set([
   "source.import","source.replace","source.patch","source.validate","edition.save",
-  "review.save","link.save","projection.save","analysis.run","analysis.resume","export.create","workspace.receive","return.apply","recipient.prepare","recipient.stage","recipient.apply","recipient.queue.save","recipient.queue.export"
+  "review.save","link.save","projection.save","analysis.run","analysis.resume","export.create","workspace.receive","return.apply","recipient.prepare","recipient.stage","recipient.apply","recipient.queue.save","recipient.queue.export","review.transition.apply"
 ]);
 export const AUDIT_READS = new Set([
   "workspace.get","source.get","source.page","source.bytes","edition.get","source.compare","export.get","export.read","operation.get",
-  "analysis.preview","projection.preview","return.preview","return.plan","recipient.preview","recipient.queue.get","recipient.queue.inspect"
+  "analysis.preview","projection.preview","return.preview","return.plan","recipient.preview","recipient.queue.get","recipient.queue.inspect","review.transition.preview","review.transition.history"
 ]);
 
 export class AuditExchangeError extends Error {
