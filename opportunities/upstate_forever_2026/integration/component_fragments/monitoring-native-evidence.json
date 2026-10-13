@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-native-evidence",
+  "extend_components": {
+    "monitoring-recommendations": {
+      "paths": [
+        "model/monitoring_native_evidence.py",
+        "model/monitoring_evidence_report.py",
+        "source/SAMPLING_NATIVE_EVIDENCE.md",
+        "integration/component_fragments/monitoring-native-evidence.json"
+      ],
+      "requires": [
+        "multivariate-control-outcomes",
+        "terrain-conditioning-report-source"
+      ],
+      "retained_only": []
+    }
+  }
+}

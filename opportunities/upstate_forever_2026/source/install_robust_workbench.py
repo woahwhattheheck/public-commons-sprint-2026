@@ -21,6 +21,22 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/monitoring_native_evidence.py",
+    "model/monitoring_evidence_report.py",
+    "model/monitoring_recommendations.py",
+    "model/monitoring_common.py",
+    "model/monitoring_observed_context.py",
+    "model/monitoring_packet.py",
+    "model/MONITORING_RECOMMENDATIONS.md",
+    "source/SAMPLING_NATIVE_EVIDENCE.md",
+    "operator/monitoring_recommendations.py",
+    "operator/extensions/monitoring-recommendations.json",
+    "operator/web/monitoring_recommendations.mjs",
+    "operator/web/monitoring_recommendations.css",
+    "operator/SAMPLING_PRIORITIES.md",
+    "source_tools/receive_sampling_recommendations.py",
+    "integration/component_fragments/monitoring-recommendations.json",
+    "integration/component_fragments/monitoring-native-evidence.json",
     "model/common.py",
     "model/workspace.py",
     "source/observed-report-20261013/RECEIVING.md",
@@ -442,6 +458,22 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/monitoring_native_evidence.py",
+    "model/monitoring_evidence_report.py",
+    "model/monitoring_recommendations.py",
+    "model/monitoring_common.py",
+    "model/monitoring_observed_context.py",
+    "model/monitoring_packet.py",
+    "model/MONITORING_RECOMMENDATIONS.md",
+    "source/SAMPLING_NATIVE_EVIDENCE.md",
+    "operator/monitoring_recommendations.py",
+    "operator/extensions/monitoring-recommendations.json",
+    "operator/web/monitoring_recommendations.mjs",
+    "operator/web/monitoring_recommendations.css",
+    "operator/SAMPLING_PRIORITIES.md",
+    "source_tools/receive_sampling_recommendations.py",
+    "integration/component_fragments/monitoring-recommendations.json",
+    "integration/component_fragments/monitoring-native-evidence.json",
     "model/common.py",
     "model/workspace.py",
     "source/observed-report-20261013/RECEIVING.md",
@@ -1835,7 +1867,58 @@ def verify_terrain_receiving_dependencies(application, pending):
     ))
 
 
+def verify_sampling_native_evidence_dependencies(application, pending):
+    def source(name):
+        return pending.get(name) if name in pending else read_existing(application, name)
+    def require(names):
+        for name in names:
+            assembled_data(application, pending, name)
+    recommendations = source("model/monitoring_recommendations.py")
+    evidence = source("model/monitoring_native_evidence.py")
+    receiving = source("source_tools/receive_sampling_recommendations.py")
+    if (evidence is not None
+            or (recommendations is not None and b"monitoring_native_evidence" in recommendations)
+            or (receiving is not None and b"verify-evidence-received" in receiving)):
+        require((
+            "model/monitoring_native_evidence.py",
+            "model/monitoring_evidence_report.py",
+            "model/monitoring_recommendations.py",
+            "model/monitoring_study_transfer.py",
+            "model/monitoring_common.py",
+            "model/monitoring_observed_context.py",
+            "model/monitoring_packet.py",
+            "model/MONITORING_RECOMMENDATIONS.md",
+            "source/SAMPLING_NATIVE_EVIDENCE.md",
+            "operator/monitoring_recommendations.py",
+            "operator/extensions/monitoring-recommendations.json",
+            "operator/web/monitoring_recommendations.mjs",
+            "operator/web/monitoring_recommendations.css",
+            "operator/SAMPLING_PRIORITIES.md",
+            "source_tools/receive_sampling_recommendations.py",
+            "integration/component_fragments/monitoring-recommendations.json",
+            "integration/component_fragments/monitoring-native-evidence.json",
+            "model/common.py", "model/workspace.py", "model/study_transfer.py",
+            "model/portable.py", "model/scientific_report.py", "model/scientific_figures.py",
+            "model/multivariate_control_outcomes.py", "model/multivariate_control_outcome_analysis.py",
+            "model/multivariate_control_outcome_report.py", "model/multivariate_control_outcome_transfer.py",
+            "model/multivariate_control_study_transfer.py",
+            "model/terrain_conditioning_report_source.py", "model/terrain_conditioning_scientific_report.py",
+            "model/terrain_conditioning_study_transfer.py", "CURRENT_OWNER_DIRECTION.md",
+        ))
+        descriptor = json.loads(assembled_data(application, pending, "operator/extensions/monitoring-recommendations.json"))
+        if (descriptor.get("id") != "monitoring-recommendations"
+                or not {"monitoring.recommendations.prepare", "monitoring.recommendations.design",
+                        "monitoring.recommendations.export"}.issubset(
+                            descriptor.get("backend", {}).get("actions", []))
+                or not any(route.get("path") == "/api/monitoring-recommendations"
+                           for route in descriptor.get("backend", {}).get("routes", []))):
+            raise ValueError("Install the complete original Sampling priorities registration")
+        for asset in descriptor.get("assets", []):
+            assembled_data(application, pending, "operator/web/" + asset)
+
+
 def verify_composition(application, pending):
+    verify_sampling_native_evidence_dependencies(application, pending)
     verify_terrain_receiving_dependencies(application, pending)
     verify_multivariate_control_dependencies(application, pending)
     verify_geographic_browser_dependencies(application, pending)

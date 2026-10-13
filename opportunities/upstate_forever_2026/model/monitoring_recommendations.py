@@ -17,6 +17,7 @@ from pathlib import Path
 
 from .monitoring_common import ContractError, canonical_bytes, digest, held, atomic_json, load_json
 from . import monitoring_observed_context as observed_context
+from . import monitoring_native_evidence as native_evidence
 
 COLLECTION = "monitoring_recommendations"
 DESIGNS = "monitoring_recommendation_designs"
@@ -29,7 +30,7 @@ COHORT_FIELDS = ("characteristic", "method", "unit", "fraction", "result_value_t
 TARGET_KEYS = {"id", "station_id", "cohort_id", "months", "minimum_dates_per_month",
                "proposed_visits", "reporting_limit", "reporting_limit_basis", "flow_goal",
                "reason", "priority", "included", "setup_cost", "per_visit_cost",
-               "cost_basis", "sensitivity_basis"}
+               "cost_basis", "sensitivity_basis", "model_evidence"}
 SELECTION_KEYS = {"context_id", "title", "operator", "recorded_at", "evidence_start",
                   "evidence_end", "notes", "planning_basis", "targets"}
 
@@ -143,6 +144,7 @@ def list_saved(workspace):
 def catalog(workspace):
     return {"contexts": observed_context.list_saved(workspace)["records"],
             "recommendations": list_saved(workspace)["records"], "currency": "USD",
+            "model_evidence": native_evidence.catalog(workspace),
             "semantics": "Historical evidence and proposed future sampling remain separate."}
 
 
@@ -196,6 +198,8 @@ def _selection(record, selection):
             row[key] = _text(row.get(key, ""), key, empty=True)
         for key in ("setup_cost", "per_visit_cost"):
             row[key] = _decimal(row.get(key), key, money=True)
+        if "model_evidence" in row:
+            row["model_evidence"] = native_evidence.normalize(row["model_evidence"])
         row["reporting_limit"] = _decimal(row.get("reporting_limit"), "reporting_limit")
         if row["reporting_limit"] is not None and not row["reporting_limit_basis"].strip():
             raise ContractError("A proposed reporting limit needs its explicit scientific/operator rationale")
@@ -214,9 +218,13 @@ def _as_decimal(value):
         return None
 
 
-def compile_recommendations(record, selection):
+def compile_recommendations(record, selection, *, model_evidence=None):
     """Pure calculation over an already inspected retained context."""
     selection = _selection(record, selection)
+    model_evidence = {} if model_evidence is None else model_evidence
+    expected = {r["id"] for r in selection["targets"] if "model_evidence" in r}
+    if not isinstance(model_evidence, dict) or set(model_evidence) != expected:
+        raise ContractError("Resolve each explicitly selected native evidence source before compiling")
     view = _context_view(record)
     stations = {r["source_station_id"]: r for r in view["stations"]}
     cohorts = {r["id"]: r for r in view["cohorts"]}
@@ -328,6 +336,12 @@ def compile_recommendations(record, selection):
                               "per_visit_cents": visit, "proposed_visits": target["proposed_visits"],
                               "total_cents": total, "basis": target["cost_basis"]},
                      "warnings": warnings})
+        if target["id"] in model_evidence:
+            resolved = model_evidence[target["id"]]
+            if resolved.get("selection") != target["model_evidence"]:
+                raise ContractError("The resolved native evidence differs from the target choice")
+            rows[-1]["model_evidence"] = copy.deepcopy(resolved)
+            warnings.append("Native evidence supports authored sampling rationale; station-catchment and quantitative constituent equivalence are not established.")
     conflicts = [{"catchment_id": k, "station_ids": sorted(v)} for k, v in sorted(bindings.items()) if len(v) > 1]
     return {"schema": SCHEMA, "title": selection["title"], "selection": selection,
             "context_id": record["id"], "context_digest": digest(record),
@@ -359,7 +373,9 @@ def compile_recommendations(record, selection):
 
 def preview(workspace, *, selection):
     record = observed_context.inspect(workspace, selection.get("context_id") if isinstance(selection, dict) else None)
-    return compile_recommendations(record, selection)
+    selected = _selection(record, selection)
+    return compile_recommendations(record, selected,
+        model_evidence=native_evidence.resolve(workspace, record, selected))
 
 
 def _operation(workspace, operation_id, request, perform):
@@ -439,7 +455,8 @@ def inspect(workspace, recommendation_id):
                 or current["revision"] != parent.get("revision", 0) + 1):
             raise ContractError("Proposal ancestry differs in source context or revision sequence")
         current = parent
-    recomputed = compile_recommendations(context_value, value["selection"])
+    recomputed = compile_recommendations(context_value, value["selection"],
+        model_evidence=native_evidence.resolve(workspace, context_value, value["selection"]))
     for key in recomputed:
         if key != "schema" and value.get(key) != recomputed[key]:
             raise ContractError("The saved recommendation no longer matches its exact calculation: " + key)
@@ -603,6 +620,9 @@ def report_html(record, native_designs=None):
         details += "<section><h2>" + esc(target["id"]) + ": " + esc(row["cohort"]["label"]) + "</h2>"
         details += "<p>Reporting-limit target: " + esc(target["reporting_limit"] if target["reporting_limit"] is not None else "Not entered") + ". " + esc(target["reporting_limit_basis"]) + "</p>"
         details += "<p>Cost basis: " + esc(target["cost_basis"] or "Not entered") + ". Sensitivity context: " + esc(target["sensitivity_basis"] or "No model-sensitivity basis selected") + ".</p>"
+        if "model_evidence" in row:
+            from .monitoring_evidence_report import render
+            details += render(row["model_evidence"])
         details += "<p>Flow goal: " + esc(target["flow_goal"]) + "; matching historical episodes: " + str(len(row["evidence"]["high_flow_episodes"])) + ". Original station flow applicability: " + str(row["evidence"]["flow_scope_eligible"]) + ".</p>"
         details += "<ul>" + "".join("<li>" + esc(x) + "</li>" for x in row["warnings"]) + "</ul>"
         details += "<details><summary>Exact supporting observation and activity identifiers</summary><pre>" + esc(json.dumps({"observations": row["evidence"]["observation_ids"], "activities": row["evidence"]["activity_ids"], "cohort": row["cohort"]["fields"]}, ensure_ascii=False, indent=2)) + "</pre></details></section>"
@@ -613,7 +633,7 @@ def report_html(record, native_designs=None):
             (r["target_id"], r["proposed_visits"], r["calendar_visits_in_selected_months"], r["calendar_count_meets_request"]) for r in item["target_calendar"]])
     total = money(record["budget"]["known_total_cents"])
     return ("<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-        "<title>" + esc(record["title"]) + "</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#202020;font:15px/1.5 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:28px;background:white}h1{font-size:28px}h2{font-size:20px;margin-top:30px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #bbb;padding:8px;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:avoid}details{margin:12px 0}@media(max-width:500px){main{padding:14px}}@media print{body,main{background:white}main{padding:0;max-width:none}thead{display:table-header-group}.table{overflow:visible}details{display:block}details>*{display:block}table{font-size:10px}}</style></head><body><main>"
+        "<title>" + esc(record["title"]) + "</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#202020;font:15px/1.5 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:28px;background:white}h1{font-size:28px}h2{font-size:20px;margin-top:30px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #bbb;padding:8px;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:auto}h2,h3,h4,caption{break-after:avoid}tr{break-inside:avoid}caption{text-align:left;font-weight:600;padding:8px 0}details{margin:12px 0}@media(max-width:500px){main{padding:14px}}@media print{body,main{background:white}main{padding:0;max-width:none}thead{display:table-header-group}.table{overflow:visible}details{display:block}details>*{display:block}table{font-size:10px}.sampling-native-evidence details{display:none}}</style></head><body><main>"
         "<h1>" + esc(record["title"]) + "</h1><p>Proposed monitoring programme · recorded by " + esc(record["operator"]) + " at " + esc(record["recorded_at"]) + "</p>"
         "<p>Historical evidence: " + esc(record["selection"]["evidence_start"]) + " to " + esc(record["selection"]["evidence_end"]) + ". Known included planning cost: " + total + ("; complete." if record["budget"]["complete"] else "; additional selected costs remain unknown.") + "</p>"
         "<p>" + esc(record["selection"]["planning_basis"]) + "</p>" + targets + details + native +
@@ -633,7 +653,16 @@ def export_members(workspace, recommendation_id):
         add_member(files, name, bytes_member(body))
     add("recommendation.json", canonical_bytes(record))
     add("selection.json", canonical_bytes(record["selection"]))
-    add("proposal-history.json", canonical_bytes(history(workspace, recommendation_id)))
+    proposal_history = history(workspace, recommendation_id)
+    add("proposal-history.json", canonical_bytes(proposal_history))
+    evidence_rows = [{"recommendation_id": proposal["id"], "target_id": row["target_id"],
+                      "evidence": row["model_evidence"]}
+                     for proposal in proposal_history for row in proposal["targets"]
+                     if "model_evidence" in row]
+    if evidence_rows:
+        add("native-evidence.json", canonical_bytes(evidence_rows))
+        for name, member in native_evidence.export_members(workspace, proposal_history):
+            add_member(files, name, member)
     add("native-designs.json", canonical_bytes(native))
     add("sampling-review.html", report_html(record, native).encode("utf-8"))
     fields = ["target_id", "station_id", "cohort_id", "month", "observed_dates", "minimum_dates", "date_gap", "dates", "observation_ids", "activity_ids"]
@@ -643,7 +672,8 @@ def export_members(workspace, recommendation_id):
     add("proposed-targets.csv", csv_text(target_rows, ["id", "station_id", "cohort_id", "included",
         "months", "minimum_dates_per_month", "proposed_visits", "reporting_limit", "reporting_limit_basis",
         "flow_goal", "priority", "reason", "setup_cost", "per_visit_cost", "total_cost_cents",
-        "cost_basis", "sensitivity_basis", "cohort_fields", "warnings"]).encode("utf-8"))
+        "cost_basis", "sensitivity_basis", "cohort_fields", "warnings",
+        *(["model_evidence"] if evidence_rows else [])]).encode("utf-8"))
     for name, member in observed_context.export_members(workspace, record["context_id"]):
         add_member(files, name, member)
     service = MonitoringWorkspace(workspace)

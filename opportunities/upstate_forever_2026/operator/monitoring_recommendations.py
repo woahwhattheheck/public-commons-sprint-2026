@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from model import monitoring_recommendations as recommendations
-from model.common import identifier
+from model.common import identifier, verify_file
 from model.monitoring_common import atomic_json, digest, file_sha256, held, load_json
 
 PREFIX = "monitoring.recommendations."
@@ -97,6 +97,31 @@ def _export_path(operator, task_id, result):
     return target
 
 
+
+def _evidence_downloads(operator, workspace_key, result):
+    """Use original file tickets; never save local URLs in scientific identity."""
+    public, cache = deepcopy(result), {}
+    workspace = operator.ws(workspace_key)
+    for row in public.get("targets", []):
+        evidence = row.get("model_evidence")
+        if evidence is None:
+            continue
+        source = evidence["source"]
+        key = source["collection_id"], source["source_id"]
+        if key not in cache:
+            links = []
+            for item in [source["body"], *source["members"]]:
+                name = item.get("view_path", item["filename"])
+                target = verify_file(workspace.root, {**item, "path": item["object"]})
+                ticket = operator._ticket(workspace_key, target, item,
+                                          "Native sampling evidence: " + name)
+                links.append({"path": name, "bytes": item["bytes"], "sha256": item["sha256"],
+                              "download_url": "/api/file/" + ticket["id"] + "?download=1"})
+            cache[key] = links
+        evidence["downloads"] = deepcopy(cache[key])
+    return public
+
+
 def read(operator, workspace_key, payload):
     """Read registry query values through the existing authenticated route."""
     payload = _object(payload, "Sampling query")
@@ -119,7 +144,8 @@ def read(operator, workspace_key, payload):
         if set(values) != {"selection"}:
             raise ValueError("Sampling preview needs its complete selection")
         return {"workspace_key": workspace_key,
-                **recommendations.preview(workspace, selection=values["selection"])}
+                **_evidence_downloads(operator, workspace_key,
+                    recommendations.preview(workspace, selection=values["selection"]))}
     if action == "context":
         if set(values) != {"context_id"}:
             raise ValueError("Choose one complete saved observational context")
@@ -129,7 +155,8 @@ def read(operator, workspace_key, payload):
         if set(values) != {"recommendation_id"}:
             raise ValueError("Choose one complete saved sampling edition")
         return {"workspace_key": workspace_key,
-                **recommendations.inspect(workspace, identifier(values["recommendation_id"])),
+                **_evidence_downloads(operator, workspace_key,
+                    recommendations.inspect(workspace, identifier(values["recommendation_id"]))),
                 "saved_designs": recommendations.designs(workspace, identifier(values["recommendation_id"]))}
     raise ValueError("Choose catalog, context, list, preview or get for sampling priorities")
 
