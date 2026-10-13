@@ -2,6 +2,10 @@
 
 These commands prepare the original public inputs for the same `model.workspace.Workspace` used by the operator. Run them from the product root with the equipped GIS interpreter. They retain original response bytes, request URLs, response metadata and SHA256s; completed exact responses are reused after interruption.
 
+## Recover complete source archives
+
+Use [Source archive recovery](SOURCE_BANK_RECOVERY.md) to inspect and extract original ZIPs, gzip source banks and exported Slack source documents. The pure JavaScript decoder works without a native executor. Its Node command verifies the complete archive before recovering files into a new directory and retains the original carrier and full member inventory. The guide includes commands for the actual completed 217-HUC run and the 19-file water-source bank.
+
 ## Streamed downloads and original-object reuse
 
 Use [Streamed original-source capacity](STORAGE_RESOURCES.md) when continuing a large retained source on a shared Linux worker. The receiver distinguishes disk-backed streams from memory-backed appends, accounts for the effective cgroup memory limit and clean reclaimable file cache, and records the next range's actual storage and buffer requirements.
