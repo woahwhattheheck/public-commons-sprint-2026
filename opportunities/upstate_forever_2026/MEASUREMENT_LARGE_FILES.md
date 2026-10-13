@@ -1,6 +1,6 @@
 # Large files and complete measurement handovers
 
-Version 1.2.0 · ECO-CLOUD-3F90 · 13 October 2026
+Version 1.2.3 · ECO-CLOUD-3F90 / CEDAR-10212-SCOUT · 13 October 2026
 
 ## The complete operating course
 
@@ -150,6 +150,47 @@ The command's --workspace is the **measurement directory**. In the original oper
 this is OUTER_WORKSPACE/measurement-observations. It is not the outer model Workspace.
 Use MEASUREMENTS_PYTHON to select the Python executable for ZIP64 packing in a direct
 Node invocation. The managed native Python bridge passes its own interpreter.
+
+## Local original-file continuation
+
+For a local CSV, select a stable 64-character lowercase hexadecimal intake identifier
+before starting the copy. Keep the same identifier and original definition when
+continuing that receive. The optional source hash pins the complete selected bytes:
+
+```sh
+node measurement_workspace/engine/cli.mjs large-prepare \
+  --workspace /absolute/measured-workspace \
+  --file /absolute/original-water-quality.csv \
+  --kind wqp --id "$INTAKE_ID" --source-sha256 "$ORIGINAL_SHA256"
+```
+
+The installed command stages the complete file under the same intake lease used by
+browser chunk uploads. It checks its length, complete SHA-256 and every acknowledged
+prefix byte before publishing it as the retained original. A failed read, changed
+source, wrong hash or different repeated selection preserves the existing original,
+prepared review and committed import. A completed intake accepts an exact replay;
+a different complete source belongs to a new intake identifier. Column choices and
+labels can still be revised through the original reconfiguration operation before
+commit, without changing the original file.
+
+The complete staged copy and original receiving state are saved together before
+publication. If the process stops during publication, the next preparation resumes
+that same retained operation, even when the selected external file is no longer
+available:
+
+```sh
+node measurement_workspace/engine/cli.mjs large-prepare \
+  --workspace /absolute/measured-workspace --intake "$INTAKE_ID"
+```
+
+Use the returned preview and the existing large-commit command to commit its native
+records. Reopening the saved intake in the original browser also continues its
+receiving operation. These commands keep the original normalizer and native SQLite
+transaction. The local continuation stages one complete additional source file on
+disk while copying; it streams through bounded buffers rather than loading that
+file into memory. After successful publication the temporary copy and receiving
+intent are removed. Preserve the intake directory if an interrupted operation
+reports that its retained files differ.
 
 ## Native interface and implementation
 
