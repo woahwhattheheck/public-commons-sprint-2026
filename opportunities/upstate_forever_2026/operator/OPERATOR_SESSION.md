@@ -9,8 +9,8 @@ d669a1850c7bdfa1e1cfda350ba4b8a21028af7f018bd2e8c132a4f62647dca8.
 
 The existing header has **Save view and notes**. It saves the selected analysis
 and operating notes into the actual workspace's operator-session.json. The
-native service checks the original project identity and each selected grid,
-profile, scenario, model run, baseline, comparison, map review, map pack and
+native service checks the original project identity and each selected source
+collection, grid, profile, scenario, model run, baseline, comparison, map review, map pack and
 delivery relationship. Saves use the current revision; conflicting browser
 edits remain separate until the operator refreshes. Distinct earlier notes
 remain in the saved history.
@@ -70,9 +70,39 @@ workspace lock contracts.
 
 ## Source checks
 
-The nine guards match the retained core methods, current ECSA route form,
+The original nine guards and the final source-selection join match the retained
+core methods, current ECSA route form,
 current native application with the complete guided joins, original header,
 and current extension installer. Every resulting source composition repeats
 identically. The complete current browser parses after composition. The
 receiving cumulative build supplies the actual native import/startup and
 save → backup → receive → reopen operation on its existing Workspace.
+
+## Start from an original source collection
+
+The guided journey can save `selection.source_collection_id` before a grid,
+profile, scenario or run exists. The native service resolves this optional ID
+through the original workspace's retained `sources` collection. An unknown,
+non-text or malformed ID is rejected by the existing saved-selection validator;
+older saved views with no source selection continue to open and save.
+
+The collection is an operator selection for the next original preparation. It
+does not assert that a grid, parameter profile and land-cover scenario all use
+the same collection. Their existing independent source and run relationships
+remain authoritative. No scientific input, unit, period or native model is
+chosen by saving the view.
+
+**Save view and notes**, ordinary workspace backup and Project continuity carry
+the complete selected source ID and notes through the existing session record.
+Both ordinary archive capture and incremental capture call the same native
+saved-view method. Reopen the independently received workspace to continue
+from its retained collection under the receiving workspace key. This read and
+selection do not start a native run or resume unfinished tasks.
+
+The original session source declaration now includes the final
+`native-saved-first-source-selection` join. Its accepted complete method bodies
+preserve the current community-view validation as well as the original
+calibration-review variants. Reapplying the declaration retains those bodies
+and the source selection. The guided extension advertises `source.import` and
+its existing-host `openJourneySource` capability; it still uses the original
+request queue and source importer.

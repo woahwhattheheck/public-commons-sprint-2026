@@ -154,9 +154,20 @@ def _selection(value):
     if not isinstance(value, dict):
         raise LedgerError('Land-cover selection must be a JSON object')
     mode = value.get('input_mode', 'runs')
-    if mode not in ('runs', 'sources'):
-        raise LedgerError('Choose retained runs or retained raster sources')
-    if mode == 'sources':
+    if mode not in ('runs', 'sources', 'timeline'):
+        raise LedgerError('Choose retained runs, raster sources or an observed timeline')
+    if mode == 'timeline':
+        from .landcover_temporal import years
+        annual = value.get('annual_sources')
+        if not isinstance(annual, list) or any(not isinstance(item, dict) for item in annual):
+            raise LedgerError('Choose ordered annual source bands and their observation years')
+        selected_years = years([item.get('year') for item in annual])
+        references = [landcover_source_inputs.source_selection({k: v for k, v in item.items() if k != 'year'}) for item in annual]
+        if len({json.dumps(item, sort_keys=True) for item in references}) != len(references):
+            raise LedgerError('A retained source band can appear only once in a timeline')
+        inputs = {'input_mode': 'timeline', 'annual_sources': [
+            {'year': year, **reference} for year, reference in zip(selected_years, references)]}
+    elif mode == 'sources':
         baseline = landcover_source_inputs.source_selection(value.get('baseline_source'))
         alternatives = value.get('alternative_sources')
         if not isinstance(alternatives, list) or not alternatives:
@@ -184,6 +195,10 @@ def _selection(value):
     options = value.get('options', {})
     if not isinstance(options, dict) or set(options) - allowed:
         raise LedgerError('Choose the supported window, common-support, unknown-class and overlap options')
+    if mode == 'timeline':
+        if options.get('support_scope', 'all') != 'all':
+            raise LedgerError('An observed timeline requires common support across every selected year')
+        options = {**options, 'support_scope': 'all'}
     if 'allow_projected_area' in options and not isinstance(options['allow_projected_area'], bool):
         raise LedgerError('Projected planar area permission must be a boolean')
     # The legacy run selection keeps its exact pre-existing shape and identity.
@@ -192,13 +207,17 @@ def _selection(value):
 
 
 def _inputs(workspace, selection):
-    if selection.get('input_mode') == 'sources':
-        operands, keys = landcover_source_inputs.prepare(workspace, selection)
+    if selection.get('input_mode') in ('sources', 'timeline'):
+        source_selection = selection
+        if selection.get('input_mode') == 'timeline':
+            references = [{k: v for k, v in item.items() if k != 'year'} for item in selection['annual_sources']]
+            source_selection = {**selection, 'baseline_source': references[0], 'alternative_sources': references[1:]}
+        operands, keys = landcover_source_inputs.prepare(workspace, source_selection)
         return {'rasters': [item[0] for item in operands],
                 'operands': [item[2] for item in operands], 'keys': keys,
                 'schema': landcover_source_inputs.SCHEMA, 'grid_id': None,
                 'grid_definition': operands[0][2]['header']['grid'],
-                'grid_spec': {'input_mode': 'sources', 'resampling': 'none'}}
+                'grid_spec': {'input_mode': selection['input_mode'], 'resampling': 'none'}}
     operands = [_operand(workspace, rid) for rid in
                 [selection['baseline_run_id'], *selection['alternative_run_ids']]]
     grid = operands[0][1]
@@ -226,9 +245,16 @@ def preview_inputs(workspace, value):
               'checked': ['original source bytes and companions', 'integer bands and common native lattice; NLCD class values checked during build',
                           'original reporting source and selected identifiers'],
               'remaining': 'Build computes polygon intersections, valid-data coverage and class transitions.'}
-    if selection.get('input_mode') == 'sources':
+    if selection.get('input_mode') in ('sources', 'timeline'):
         result['source_editions'] = landcover_source_inputs.presentation(inputs['operands'], inputs['keys'])
         result['headers'] = [item['header'] for item in inputs['operands']]
+    if selection.get('input_mode') == 'timeline':
+        from .landcover_temporal import SCHEMA as TIMELINE_SCHEMA
+        selected_years = [item['year'] for item in selection['annual_sources']]
+        result['timeline'] = {'schema': TIMELINE_SCHEMA, 'years': selected_years,
+                              'intervals': [{'from_year': a, 'to_year': b, 'gap_years': b-a}
+                                            for a, b in zip(selected_years, selected_years[1:])]}
+        result['remaining'] = 'Build computes the original polygon fractions, all-year common support, annual class paths and observed returns.'
     return result
 
 
@@ -243,8 +269,10 @@ def build(workspace, value, *, progress=None):
                'operands': inputs['operands'], 'zones': zone_binding,
                'reducer_sha256': sha256_file(Path(__file__).with_name('landcover_ledger.py')),
                'adapter_sha256': sha256_file(__file__)}
-    if selection.get('input_mode') == 'sources':
+    if selection.get('input_mode') in ('sources', 'timeline'):
         binding['source_adapter_sha256'] = sha256_file(landcover_source_inputs.__file__)
+    if selection.get('input_mode') == 'timeline':
+        binding['temporal_reducer_sha256'] = sha256_file(Path(__file__).with_name('landcover_temporal.py'))
     key = digest(binding)
     parent = workspace.root / KIND
     parent.mkdir(exist_ok=True)
@@ -272,8 +300,10 @@ def build(workspace, value, *, progress=None):
                             dict(zip(inputs['keys'], inputs['rasters'][1:])),
                             zone_path, output, options=options,
                             id_field='_landcover_zone_id', name_field='_landcover_zone_name',
-                            context_files=[pending_binding], progress=progress)
-        if selection.get('input_mode') == 'sources':
+                            context_files=[pending_binding], progress=progress,
+                            temporal_years=([item['year'] for item in selection['annual_sources']]
+                                            if selection.get('input_mode') == 'timeline' else None))
+        if selection.get('input_mode') in ('sources', 'timeline'):
             report['source_editions'] = landcover_source_inputs.presentation(inputs['operands'], inputs['keys'])
             atomic_json(output / 'input-editions.json', binding)
             atomic_json(output / 'ledger.json', report)
@@ -309,7 +339,7 @@ def inspect(workspace, key):
         raise LedgerError('Land-cover edition selection differs from its retained binding')
     source_mode = binding.get('schema') == landcover_source_inputs.SCHEMA
     if source_mode:
-        if binding['selection'].get('input_mode') != 'sources':
+        if binding['selection'].get('input_mode') not in ('sources', 'timeline'):
             raise LedgerError('Source binding mode differs from its retained selection')
         current = _inputs(workspace, binding['selection'])
         if (not landcover_source_inputs.same_records(binding['operands'], current['operands'])
@@ -343,6 +373,13 @@ def inspect(workspace, key):
             raise LedgerError('Portable source binding differs from the original edition')
         if report.get('source_editions') != landcover_source_inputs.presentation(binding['operands'], current['keys']):
             raise LedgerError('Source chronology differs from the original edition')
+    if binding['selection'].get('input_mode') == 'timeline':
+        from .landcover_temporal import SCHEMA as TIMELINE_SCHEMA
+        selected_years = [item['year'] for item in binding['selection']['annual_sources']]
+        if (report.get('timeline', {}).get('schema') != TIMELINE_SCHEMA
+                or report['timeline'].get('years') != selected_years
+                or report['options']['support_scope'] != 'all'):
+            raise LedgerError('Observed chronology differs from the retained annual selection')
     return {'edition': edition, 'binding': binding, 'report': report}
 
 

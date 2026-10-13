@@ -1,0 +1,158 @@
+{
+  "schema": "stellar-forge.document-comparison-selection.v1",
+  "key": "authored-migration-acceptance",
+  "label": "Selected document migration acceptance — authored reference",
+  "scopeNote": "Six explicitly authored source/target pairs illustrate complete-byte matches, metadata differences, a missing target capture and exact numeric comparison. These are editable examples, not observed customer migrations or a repository-wide audit.",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Title",
+      "source": "/version/properties/legacy:title",
+      "target": "/version/properties/app:title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "key": "approved",
+      "label": "Approved metadata",
+      "source": "/version/properties/legacy:approved",
+      "target": "/version/properties/app:approved",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "key": "tags",
+      "label": "Unordered unique tags",
+      "source": "/version/properties/legacy:tags",
+      "target": "/version/properties/app:tags",
+      "type": "string-set",
+      "required": true
+    },
+    {
+      "key": "quantity",
+      "label": "Exact numeric quantity",
+      "source": "/version/properties/legacy:quantity",
+      "target": "/version/properties/app:quantity",
+      "type": "number",
+      "required": true
+    },
+    {
+      "key": "mime",
+      "label": "Content media type",
+      "source": "/content/mimeType",
+      "target": "/content/mimeType",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "pairs": [
+    {
+      "key": "pair-1",
+      "label": "Exact bytes and explicitly mapped fields",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-1",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-1",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-1-source.json",
+      "targetMember": "pair-1-target.json"
+    },
+    {
+      "key": "pair-2",
+      "label": "Changed target content",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-2",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-2",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-2-source.json",
+      "targetMember": "pair-2-target.json"
+    },
+    {
+      "key": "pair-3",
+      "label": "Changed mapped title",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-3",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-3",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-3-source.json",
+      "targetMember": "pair-3-target.json"
+    },
+    {
+      "key": "pair-4",
+      "label": "Target not captured",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-4",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-4",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-4-source.json",
+      "targetMember": null
+    },
+    {
+      "key": "pair-5",
+      "label": "Long integer precision difference",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-5",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-5",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-5-source.json",
+      "targetMember": "pair-5-target.json"
+    },
+    {
+      "key": "pair-6",
+      "label": "Target metadata type mismatch",
+      "source": {
+        "repositoryId": "authored-source",
+        "repositoryBaseUrl": "https://source.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "source-6",
+        "versionId": "1.0"
+      },
+      "target": {
+        "repositoryId": "authored-target",
+        "repositoryBaseUrl": "https://target.example.invalid/alfresco/api/-default-/public/alfresco/versions/1",
+        "nodeId": "target-6",
+        "versionId": "2.0"
+      },
+      "sourceMember": "pair-6-source.json",
+      "targetMember": "pair-6-target.json"
+    }
+  ]
+}

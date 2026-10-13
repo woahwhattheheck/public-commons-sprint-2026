@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {parseCSV,day} from '../measurement_workspace/engine/parse.mjs';
 import {parseSource,WQP_DETECTION_EDITION} from '../measurement_workspace/engine/normalise.mjs';
+import {WQP_CHARACTERISTIC_EDITION} from '../measurement_workspace/engine/characteristics.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const need=(value,message)=>{if(!value)throw Error(message);};
@@ -43,7 +44,8 @@ function unique(rows,field,label){
   for(const row of rows){const id=field(row);need(id&&!values.has(id),'Original '+label+' identities are missing or repeated');values.set(id,row);}
   return values;
 }
-export function prepareWqpCollection({capture,captureBytes,queryBytes,files}) {
+export function prepareWqpCollection({capture,captureBytes,queryBytes,files,characteristics=''}) {
+  need(characteristics===''||characteristics===WQP_CHARACTERISTIC_EDITION,'Choose the explicit supported characteristic interpretation');
   need(capture?.schema==='upstate.wqp-source-capture/v1'&&capture.state==='complete','Select a complete original WQP capture');
   const query=capture.query,from=day(query.from),to=day(query.to);
   need(from<=to&&typeof query.station_id==='string'&&query.station_id,'Retain the captured station and original dates');
@@ -105,6 +107,7 @@ export function prepareWqpCollection({capture,captureBytes,queryBytes,files}) {
   });
   for(const k of limits.keys())need(resultKeys.has(k),'A complete limit profile row has no original result in this capture');
   const mapping={_wqp_detection:WQP_DETECTION_EDITION,station:'WQPMonitoringLocationIdentifier',date:'WQPActivityStartDate',time:'WQPActivityStartTime',zone:'WQPActivityStartTimeZone',medium:'WQPActivityMediaName',activityType:'WQPActivityTypeCode'};
+  if(characteristics)mapping._wqp_characteristics=characteristics;
   const derived=csv([...tables.Result.headers,...joinedColumns],enriched);
   const parsed=parseSource({kind:'wqp',text:decode(derived),mapping});
   need(parsed.rows.length===enriched.length&&!parsed.rejected.length,'The current native normalizer cannot retain every source row; inspect its explicit rejections before receiving');
@@ -117,6 +120,7 @@ export function prepareWqpCollection({capture,captureBytes,queryBytes,files}) {
     station_rows:tables.Station.rows.length,activity_rows:tables.Activity.rows.length,
     full_limit_profile_rows:tables.ResultDetectionQuantitationLimit.rows.length,
     result_rows_by_joined_limit_count:joinedCounts,normalisation:WQP_DETECTION_EDITION,
+    ...(characteristics?{characteristic_interpretation:characteristics}:{}),
     parameters,detection_conditions:conditions,issues,
     transformation:'All original result cells are unchanged. Added explicitly mapped columns retain the original activity site/date/clock/timezone/media/type by organization/activity identity; one JSON column carries every matching original limit-profile row by organization/result identity. No missing source clock or timezone is invented.',
     scientific_scope:'Published observations for the exact source dates. No annual load, native modeled export, catchment assignment, sampling clock, replicate average or point value for a censored result is inferred.',
@@ -135,6 +139,7 @@ export function prepareWqpCollection({capture,captureBytes,queryBytes,files}) {
   member('original/query.json',queryBytes,'companion','Exact original source query');
   member('results-with-original-limits.csv',derived,'wqp','WQP results with complete original limit rows',{
     type:'derived-from-original-wqp',normalisation:WQP_DETECTION_EDITION,
+    ...(characteristics?{characteristic_interpretation:characteristics}:{}),
     originalResult:descriptors.Result,originalLimits:descriptors.ResultDetectionQuantitationLimit,
     originalActivities:descriptors.Activity,
     join:'exact OrganizationIdentifier + ActivityIdentifier / ResultIdentifier',
@@ -154,16 +159,16 @@ function write(root,name,bytes){
   }finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);syncDirectory(directory);}
 }
 function main(args){
-  const options={};for(let i=0;i<args.length;i+=2){const k=args[i],v=args[i+1];need(['--source','--output'].includes(k)&&v&&!options[k],'Use --source CAPTURE_DIRECTORY --output PREPARED_DIRECTORY');options[k]=v;}
+  const options={};for(let i=0;i<args.length;i+=2){const k=args[i],v=args[i+1];need(['--source','--output','--characteristics'].includes(k)&&v&&!options[k],'Use --source CAPTURE_DIRECTORY --output PREPARED_DIRECTORY [--characteristics wqp-characteristics/v1]');options[k]=v;}
   need(options['--source']&&options['--output'],'Choose complete source and prepared directories');
   const source=fs.realpathSync(options['--source']),output=path.resolve(options['--output']);
   const inside=(a,b)=>{const r=path.relative(a,b);return r===''||(!path.isAbsolute(r)&&r!=='..'&&!r.startsWith('..'+path.sep));};
   need(!inside(source,output)&&!inside(output,source),'Keep originals and prepared edition in separate directories');
   const captureBytes=read(source,'capture.json'),queryBytes=read(source,'query.json'),capture=JSON.parse(decode(captureBytes)),files={};
   for(const role of roles){const d=capture.files?.find(x=>x.kind===role);need(d,'Missing original '+role+' profile');files[role]=read(source,d.path,d);}
-  const prepared=prepareWqpCollection({capture,captureBytes,queryBytes,files});
+  const prepared=prepareWqpCollection({capture,captureBytes,queryBytes,files,characteristics:options['--characteristics']||''});
   fs.mkdirSync(output,{recursive:true,mode:0o700});need(fs.realpathSync(output)===output,'Use an ordinary prepared directory');
-  const binding=json({schema:'upstate.wqp-prepared-binding/v1',capture:{bytes:captureBytes.length,sha256:sha(captureBytes)},normalisation:WQP_DETECTION_EDITION});
+  const binding=json({schema:'upstate.wqp-prepared-binding/v1',capture:{bytes:captureBytes.length,sha256:sha(captureBytes)},normalisation:WQP_DETECTION_EDITION,...(options['--characteristics']?{characteristic_interpretation:options['--characteristics']}:{})});
   need(!fs.readdirSync(output).length||fs.existsSync(path.join(output,'.source-binding.json')),'Refuse a nonempty unbound output directory');
   write(output,'.source-binding.json',binding);
   for(const[name,bytes]of Object.entries(prepared.bodies))write(output,name,bytes);

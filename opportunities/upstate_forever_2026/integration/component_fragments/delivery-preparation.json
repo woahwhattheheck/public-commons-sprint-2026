@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "delivery-preparation",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791909434246029",
+  "components": {
+    "delivery-preparation": {
+      "title": "Saved seven-map delivery preparation and native receiving",
+      "paths": [
+        "model/delivery_preparation.py",
+        "model/delivery.py",
+        "model/workspace.py",
+        "model/portable.py",
+        "model/cli.py",
+        "operator/delivery_preparation.py",
+        "operator/extensions/delivery-preparation.json",
+        "operator/web/delivery_preparation.mjs",
+        "operator/web/delivery_preparation_storage.mjs",
+        "operator/web/delivery_preparation.css",
+        "model/DELIVERY_PREPARATION.md",
+        "operator/delivery_preparation_receiving.mjs",
+        "operator/delivery_preparation_receiving.py",
+        "source_tools/receive_geographic_handover_browser.mjs"
+      ],
+      "requires": [
+        "core",
+        "delivery-datasets",
+        "project-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "delivery-preparation"
+  ]
+}

@@ -330,6 +330,34 @@ def _freeze(workspace, key, directory, selected, state):
         catchments = plan["selection"]["catchments"]
         _retain_source(workspace, directory, catchments["source_collection_id"],
                        catchments["source_id"], records, bindings)
+        # Retain every earlier evaluation behind this selected-profile result.
+        # These are original source members, so report-only transfers can reopen
+        # the same ancestry without the producer's complete Workspace.
+        from .calibration_followup import resolve as resolve_followup
+        prior = plan["selection"].get("prior_evaluation")
+        seen_history = set()
+        while prior is not None:
+            earlier, earlier_plan, earlier_spec = resolve_followup(workspace, prior)
+            if earlier["id"] in seen_history:
+                raise ValueError("The selected profile repeats a calibration history dependency")
+            seen_history.add(earlier["id"])
+            history_root = directory / "calibration-origin" / "history" / earlier["id"]
+            for kind, key, name in (
+                ("calibrations", earlier["id"], "result.json"),
+                ("calibration-plans", earlier_plan["id"], "plan.json"),
+                ("experiment-specs", earlier_spec["id"], "parameter-study.json"),
+                ("observations", earlier_plan["selection"]["observation_id"], "observations.json"),
+            ):
+                path = workspace.root / kind / (key + ".json")
+                shared._copy(workspace, describe_file(workspace.root, path),
+                             history_root / name)
+            original_observed = workspace._get("observations", earlier_plan["selection"]["observation_id"])
+            shared._copy(workspace, original_observed["original"],
+                         history_root / "observations-original.csv")
+            original_catchments = earlier_plan["selection"]["catchments"]
+            _retain_source(workspace, directory, original_catchments["source_collection_id"],
+                           original_catchments["source_id"], records, bindings)
+            prior = earlier_plan["selection"].get("prior_evaluation")
     grid = workspace.get_grid(state["baseline_selection"]["grid_id"])
     grid_root = workspace.root / "grids" / grid["id"]
     atomic_json(directory / "grid.json", grid, immutable=True)

@@ -1,3 +1,4 @@
+import {initialiseIntake,exportIntakes,validateIntakes,receiveIntakes} from './intake.mjs';
 import {installLargeFileReads} from './large_intake.mjs';
 import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
@@ -27,6 +28,7 @@ export class MeasurementWorkspace {
       CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,created_at TEXT NOT NULL,kind TEXT NOT NULL,entity TEXT NOT NULL,data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS exports(id TEXT PRIMARY KEY,created_at TEXT NOT NULL,revision INTEGER NOT NULL,kind TEXT NOT NULL,content TEXT NOT NULL);
     `);
+    initialiseIntake(this);
   }
   readConsistent(operation){
     this.db.exec('BEGIN');try{const value=operation();this.db.exec('COMMIT');return value;}catch(e){this.db.exec('ROLLBACK');throw e;}
@@ -219,6 +221,7 @@ export class MeasurementWorkspace {
     // Caller owns the original consistent read transaction.
     const value={format:'upper-savannah-measurements',version:1,createdAt:new Date().toISOString(),revision:this.revision(),tables:{}};
     for(const name of ['imports','records','import_records','stations','mappings','reviews','selected_versions','events','exports'])value.tables[name]=this.db.prepare(`SELECT * FROM ${name}`).all();
+    value.intake=exportIntakes(this);
     return value;
   }
   portable(){return this.readConsistent(()=>this.portableDocument());}
@@ -230,6 +233,7 @@ export class MeasurementWorkspace {
       if(!Array.isArray(tables?.[name]))throw new InputError('Portable workspace missing '+name);
       for(const row of tables[name])if(columns.some(c=>!Object.hasOwn(row,c)))throw new InputError('Portable row missing required field in '+name);
     }
+    if(packageValue.intake)validateIntakes(packageValue.intake,tables.imports);
     // Canonical values are rebuilt from complete originals, not trusted from the package.
     const expectedRecords=new Map(),expectedLinks=new Set();
     for(const source of tables.imports){
@@ -256,11 +260,12 @@ export class MeasurementWorkspace {
     for(const row of tables.mappings){const data=JSON.parse(row.data);if(data.stationId!==row.station_id||data.reachId!==row.reach_id||!tables.stations.some(x=>x.id===row.station_id))throw new InputError('Invalid station mapping');}
     if(!Number.isSafeInteger(packageValue.revision)||packageValue.revision<0)throw new InputError('Invalid portable revision');
     this.atomic(()=>{
-      if(this.db.prepare('SELECT COUNT(*) n FROM imports').get().n||this.db.prepare('SELECT COUNT(*) n FROM records').get().n)throw new InputError('Receive into an empty workspace; existing work is never overwritten',409);
+      if(this.db.prepare('SELECT COUNT(*) n FROM intake_editions').get().n||this.db.prepare('SELECT COUNT(*) n FROM imports').get().n||this.db.prepare('SELECT COUNT(*) n FROM records').get().n)throw new InputError('Receive into an empty workspace; existing work is never overwritten',409);
       for(const [name,columns]of Object.entries(keys)){
         const insert=this.db.prepare(`INSERT INTO ${name}(${columns.join(',')}) VALUES(${columns.map(()=>'?').join(',')})`);
         for(const row of tables[name])insert.run(...columns.map(c=>row[c]));
       }
+      if(packageValue.intake)receiveIntakes(this,packageValue.intake);
       this.db.prepare("UPDATE meta SET value=? WHERE key='revision'").run(packageValue.revision);
       this.event('receive','workspace',{sourceCreatedAt:packageValue.createdAt,sourceRevision:packageValue.revision});
     });

@@ -1,3 +1,4 @@
+import {openSoilReport} from './soil_component_report.mjs';
 /**
  * Source preparation desk for the original Upper Savannah operator.
  * TokenJunkieLabs. Uses the existing native helpers and retained task queue.
@@ -45,6 +46,7 @@ export function createSourceWorkbench(host, configuration = {}) {
   const uploadsInFlight = new Map();
   let operationView = {query:'', status:'all', offset:0}, operationCache = null;
   let resultTask = null, resultDocument = null, resultBusy = false, resultGeneration = 0;
+  let soilReport = null;
   const local = () => settings.storageKey + ':' + workspace;
   const storageRead = () => {
     try {
@@ -525,6 +527,12 @@ export function createSourceWorkbench(host, configuration = {}) {
         (typeof host.openFilePreview === 'function' ? textButton('preview-result-file','Preview','data-sp-file="'+index+'"') : '') +
         (url.startsWith('/api/file/') ? '<a href="'+escapeHTML(download)+'" download>Download</a>' : '') + '</div></div>';
     }).join('');
+    const soilReports = list(result.soil_reports).map((report,index) =>
+      textButton('open-soil-report','Open soil evidence report','data-sp-report="'+index+'"','primary')).join('');
+    const soilReview = soilReports ? '<section><h3>Review the selected soil interpretation</h3>'+
+      '<p>Read the original mapunits, component weights, horizon depths, missing values and native-baseline comparison. '+
+      'The scientific interpretation remains your decision; complete original rows and preparation choices travel with this edition.</p>'+
+      '<div class="sp-actions">'+soilReports+'</div></section>' : '';
     const stages = list(document.stages);
     const summary = result.summary && typeof result.summary === 'object' ? result.summary : {};
     const summaryRows = list(summary.rows).filter(row => Array.isArray(row) && row.length === 2);
@@ -537,7 +545,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       (task?.restored ? 'Saved source preparation in this study' : 'Original source operation') +
       '</p></div>'+textButton('result-close','Close')+'</header>' +
       (resultBusy ? '<p role="status">Reading the saved source result and original files…</p>' : '') +
-      (document.error ? '<p class="sp-inline-error" role="alert">'+escapeHTML(document.error)+'</p>' : '') + details + sourceSummary +
+      (document.error ? '<p class="sp-inline-error" role="alert">'+escapeHTML(document.error)+'</p>' : '') + details + sourceSummary + soilReview +
       (observed.error ? '<p class="sp-inline-error">'+escapeHTML(observed.error.message || observed.error)+'</p>' : '') +
       '<div class="sp-actions">'+textButton('result-refresh','Refresh result',resultBusy ? 'disabled' : '')+
       (collectionId ? textButton('open-source','Open imported edition','data-sp-id="'+escapeHTML(collectionId)+'"') : '')+
@@ -701,6 +709,13 @@ export function createSourceWorkbench(host, configuration = {}) {
       if (chosen !== '' && chosen != null) options[field.name] = chosen;
       else if (field.required) throw new Error('Enter ' + (field.label || field.name) + '.');
     }
+    if (selectedMethod === 'soil-component-scenario') {
+      if (options.horizon_method === 'depth' &&
+          !(Number(options.depth_top_cm) >= 0 && Number(options.depth_bottom_cm) > Number(options.depth_top_cm)))
+        throw new Error('Choose a depth bottom greater than its nonnegative top.');
+      if (options.output_mode === 'raster' && options.model_use === 'model' && !String(options.analyst_note || '').trim())
+        throw new Error('Record the scientific interpretation note before selecting this scenario as model K.');
+    }
     return {method:selectedMethod, inputs, options, ...(value.title.trim() ? {title:value.title.trim()} : {}), import_sources:value.import_sources !== false};
   }
   async function openBrowser(field) {
@@ -830,6 +845,9 @@ export function createSourceWorkbench(host, configuration = {}) {
     if(node.matches('[data-sp-operation-search]')){operationView.query=node.value;operationView.offset=0;save();renderTasks();}
     else if(node.matches('[data-sp-title]')){draft().title=node.value;save();}
     else if(node.matches('[data-sp-compose-title]')){mergeDraft.title=node.value;save();}
+    else if(node.matches('textarea[data-sp-option],input[type="text"][data-sp-option]')){
+      editRevision++;draft().options[node.dataset.spOption]=node.value;save();
+    }
   }
   async function click(event) {
     const button=event.target.closest('[data-sp-action]');
@@ -873,6 +891,15 @@ export function createSourceWorkbench(host, configuration = {}) {
       if(action==='result-close')return closeResult();
       if(action==='result-refresh' && resultTask)return await openResult(resultTask,false);
       if(action==='select-prepared')return selectPreparedOperation(id);
+      if(action==='open-soil-report'){
+        const document=resultDocument;
+        const report=list(document?.result?.soil_reports)[Number(button.dataset.spReport)];
+        if(!report)throw new Error('Reopen the complete saved soil operation.');
+        soilReport?.dispose();
+        soilReport=openSoilReport({container,report,documents:document.result.soil_documents,
+          files:document._downloads,onError:setError});
+        return;
+      }
       if(action==='preview-result-file'){
         const file=list(resultDocument?._downloads)[Number(button.dataset.spFile)];
         if(file && typeof host.openFilePreview==='function'){closeResult();return host.openFilePreview(file);}
@@ -968,6 +995,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     if(currentTask)fetchProgress();
   }
   function suspend() {
+    soilReport?.dispose();soilReport=null;
     closeResult();
     controls?.abort();controls=null;
     container?.querySelector('[data-sp-browser]')?.close();

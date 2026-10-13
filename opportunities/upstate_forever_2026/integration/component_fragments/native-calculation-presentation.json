@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-calculation-presentation",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791911955480939",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "operator/web/native_presentation.mjs",
+        "operator/NATIVE_CALCULATION_OPERATOR.md"
+      ]
+    }
+  },
+  "required_components": []
+}

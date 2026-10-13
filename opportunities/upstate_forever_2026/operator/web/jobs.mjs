@@ -1,3 +1,4 @@
+import {nativePresentation,selectionMarkup,outputsMarkup,issueMarkup} from './native_presentation.mjs';
 /** Native calculation console inside the original operator. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const short = value => value ? String(value).slice(0,12) : '—';
@@ -57,14 +58,16 @@ function resourceMarkup(native){
     (errors.length?'<details><summary>Unavailable observations ('+errors.length+')</summary><ul>'+errors.map(row=>'<li>'+esc(row.source||'Resource')+': '+esc(row.type||'Read error')+'</li>').join('')+'</ul></details>':'');
 }
 
-function reuseMarkup(native){
+function reuseMarkup(native,state){
   const row=native.native_execution?.stage_reuse;
   if(!row)return '';
   const labels={searching:'Finding a retained stage',checking:'Checking original stage identity',
     comparing_original_inputs:'Comparing original scientific inputs',transferring:'Retaining verified outputs',
     complete:'Original stage retained',no_matching_stage:'Native calculation required'};
-  const source=row.source_run_id?'<p>Original run <code>'+esc(row.source_run_id)+'</code></p>':'';
-  const file=row.current_file?'<p>Current original file <code>'+esc(row.current_file)+'</code></p>':'';
+  const original=(state?.data?.runs||[]).find(value=>value.id===row.source_run_id);
+  const scenario=(state?.data?.scenarios||[]).find(value=>value.id===original?.selection?.scenario_id);
+  const source=row.source_run_id?'<p>Original saved case: '+esc(scenario?.title||'Retained scientific run')+'</p><details><summary>Original source run identity</summary><code>'+esc(row.source_run_id)+'</code></details>':'';
+  const file=row.current_file?'<p>Current file: '+esc(String(row.current_file).split(/[\\/]/).pop())+'</p>':'';
   const scope=row.candidate_kind==='exact_index'?'Exact content-signature index':
     row.candidate_kind==='explicit_source'?'Explicit original source comparison':'Exact index, then selected original sources';
   const count=value=>Number.isInteger(value)?value.toLocaleString():'—';
@@ -84,6 +87,19 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   let selected=null,workspace=null,timer=null,controller=null,offset=0,stream='native',snapshot=null,busy=false,generation=0;
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./jobs.css',import.meta.url);document.head.append(style);
   const root=()=>document.querySelector('[data-native-console]');
+  const renderedMarkup=new WeakMap();
+  function markup(node,body){
+    if(renderedMarkup.get(node)===body)return;
+    const disclosures=Array.from(node.querySelectorAll('details')).map(item=>({label:item.querySelector('summary')?.textContent,open:item.open,focused:item.querySelector('summary')===document.activeElement}));
+    const focused=document.activeElement;
+    const buttonFocus=focused&&node.contains(focused)&&focused.matches('button[data-action]')?{action:focused.dataset.action,id:focused.dataset.id,kind:focused.dataset.kind}:null;
+    node.innerHTML=body;renderedMarkup.set(node,body);
+    for(const item of node.querySelectorAll('details')){
+      const previous=disclosures.find(row=>row.label===item.querySelector('summary')?.textContent);
+      if(previous){item.open=previous.open;if(previous.focused)item.querySelector('summary')?.focus({preventScroll:true});}
+    }
+    if(buttonFocus){const next=Array.from(node.querySelectorAll('button[data-action]')).find(button=>button.dataset.action===buttonFocus.action&&button.dataset.id===buttonFocus.id&&button.dataset.kind===buttonFocus.kind);if(next&&!next.disabled)next.focus({preventScroll:true});}
+  }
   function current(){return selected&&getWorkspace()===workspace&&getDetailContext()?.kind==='native-job'&&getDetailContext()?.id===selected&&root();}
   function detach(){generation++;clearTimeout(timer);timer=null;controller?.abort();controller=null;selected=null;snapshot=null;busy=false;}
   function controls(task,native){
@@ -91,25 +107,8 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     if(task.state==='queued')html+=button('stop','Cancel queued run',id);
     else if(native.alive)html+=button('stop',native.stop_requested?'Stop requested':native.programme_context?'Stop calculation and pause programme':'Stop calculation',id,native.stop_requested);
     if(['failed','interrupted','cancelled'].includes(task.state))html+=button('resume',native.alive?'Reconnect to calculation':'Resume retained run',id);
-    html+=button('result','Inspect native result',id)+button('snapshot','Download operation record',id);
+    html+=button('result','Open saved maps and results',id)+button('snapshot','Download operation record',id);
     return html;
-  }
-  function phase(native){
-    if(native.stop_requested&&native.alive)return 'Stopping the selected calculation';
-    if(native.run_state==='complete')return 'Calculation complete';
-    if(native.alive){
-      const execution=native.native_execution;
-      if(execution?.phase==='stage_reuse')return 'Reusing original '+(execution.model||'native').toUpperCase()+' stage';
-      if(execution?.phase==='waiting_stage')return 'Waiting for the matching original stage';
-      if(execution?.phase==='native')return 'Calculating original '+(execution.model||'native').toUpperCase()+' model';
-      if(execution?.phase==='export')return 'Retaining physical export rasters';
-      return native.study_context?'Parameter-study native case running':native.programme_context?'Programme native calculation running':'Native model calculation running';
-    }
-    if(native.task_state==='queued')return 'Waiting in the operator queue';
-    if(native.task_state==='interrupted')return 'Operator reopened — retained work available';
-    if(native.task_state==='cancelled')return 'Calculation stopped — retained work available';
-    if(native.task_state==='failed'||native.run_state==='failed')return 'Calculation needs continuation';
-    return 'Prepared native calculation';
   }
   function stageRows(native){
     const stages=native.stages||{},artifacts=native.artifacts||{};
@@ -124,8 +123,13 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   }
   function paint(value){
     const node=current();if(!node)return;
+    node.querySelector('[data-native-connection]').hidden=true;
     snapshot=value;const task=value.task,native=value.native_job;
-    node.querySelector('[data-native-phase]').textContent=phase(native);
+    const view=nativePresentation(value,getState());
+    node.querySelector('[data-native-phase]').textContent=view.heading;
+    node.querySelector('[data-native-guidance]').textContent=view.message;
+    markup(node.querySelector('[data-native-case]'),selectionMarkup(view));
+    markup(node.querySelector('[data-native-outputs]'),outputsMarkup(view));
     node.querySelector('[data-native-elapsed]').textContent=duration(native.elapsed_seconds);
     const retainedMemory=native.resource_observation?.values?.process?.VmRSS_bytes;
     const liveMemory=Number.isFinite(native.resources?.resident_bytes);
@@ -142,25 +146,21 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     });
     node.querySelector('[data-native-storage]').textContent=bytes(native.storage_free_bytes);
     node.querySelector('[data-native-heartbeat]').textContent=when(native.heartbeat_at);
-    node.querySelector('[data-native-controls]').innerHTML=controls(task,native);
+    markup(node.querySelector('[data-native-controls]'),controls(task,native));
     node.querySelector('[data-native-stages]').innerHTML=stageRows(native);
     node.querySelector('[data-native-selection]').textContent=pretty({
       selection:native.selection,native_run_id:native.run_id,execution_id:native.execution_id,
       programme:native.programme_context,parameter_study:native.study_context});
     const reuse=node.querySelector('[data-native-reuse]');
-    reuse.innerHTML=reuseMarkup(native);reuse.hidden=!reuse.innerHTML;
-    const issue=native.run_error?.message||(task.error?.code==='NATIVE_DETACHED'?null:task.error?.message)||native.failure?.message;
-    const error=node.querySelector('[data-native-error]');error.hidden=!issue;error.textContent=issue||'';
+    markup(reuse,reuseMarkup(native,getState()));reuse.hidden=!reuse.innerHTML;
+    const error=node.querySelector('[data-native-error]');
+    const issueDetailsOpen=Boolean(error.querySelector('details')?.open);
+    const issueSummaryFocused=error.querySelector('summary')===document.activeElement;
+    error.hidden=!view.problem;error.innerHTML=issueMarkup(view);
+    const issueDetails=error.querySelector('details');
+    if(issueDetails){issueDetails.open=issueDetailsOpen;if(issueSummaryFocused)issueDetails.querySelector('summary').focus({preventScroll:true});}
     const carry=node.querySelector('[data-native-continuation]');
-    carry.textContent=native.run_error?.kind==='storage_exhausted'&&!native.alive
-      ?native.run_error.recovery||'Make space on the recorded Workspace filesystem, then resume this same retained run.'
-      :native.alive&&task.state==='interrupted'
-      ?'The original calculation is still running. Reconnect to follow the same worker.'
-      :native.stop_requested&&native.alive
-      ?'Stop requested for this calculation. Completed native stages remain saved while the worker closes.'
-      :native.run_state==='complete'
-      ?'Open the native result to inspect the selected model outputs.'
-      :'Completed native stages are retained in the selected run and reused by its next continuation.';
+    carry.textContent=view.retainedText;
     if(value.log){
       const output=node.querySelector('[data-native-log]'),follow=node.querySelector('[data-native-follow]').checked;
       if(value.log.reset)output.textContent='';
@@ -184,7 +184,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       paint(value);
     }catch(error){
       if(epoch===generation&&error.name!=='AbortError'&&current()){
-        const node=root().querySelector('[data-native-error]');node.hidden=false;node.textContent=error.message;
+        const node=root().querySelector('[data-native-connection]');node.hidden=false;node.textContent='The current calculation state could not be refreshed. Your saved operation remains selected. '+error.message;
       }
     }finally{
       if(epoch===generation){busy=false;controller=null;
@@ -194,24 +194,27 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   function resetLog(nextStream=stream){generation++;clearTimeout(timer);controller?.abort();controller=null;busy=false;stream=nextStream;offset=0;root().querySelector('[data-native-log]').textContent='';return update();}
   async function open(id){
     detach();selected=id;workspace=getWorkspace();offset=0;stream='native';
-    detail('Native calculation console',
+    detail('Scientific calculation',
       '<section class="native-console" data-native-console>'+
       '<h2 data-native-phase aria-live="polite">Opening retained calculation…</h2>'+
+      '<p class="note" data-native-guidance></p><section data-native-case></section>'+ 
       '<p class="note" data-native-continuation></p>'+
       '<div class="native-metrics"><dl><dt>Elapsed</dt><dd data-native-elapsed>—</dd></dl>'+
       '<dl><dt data-native-memory-label>Worker memory</dt><dd data-native-memory>—</dd></dl>'+
       '<dl><dt>Workspace disk available</dt><dd data-native-storage>—</dd></dl>'+
       '<dl><dt>Last worker update</dt><dd data-native-heartbeat>—</dd></dl></div>'+
       '<div class="page-actions" data-native-controls></div>'+
-      '<div class="notice error" data-native-error hidden></div>'+
+      '<p class="notice error" data-native-connection hidden role="status"></p><section data-native-error hidden></section>'+
       '<section data-native-reuse aria-live="polite" hidden></section>'+
       '<section data-native-resources hidden></section>'+
       '<div class="table-scroll"><table><thead><tr><th>Native stage</th><th>Status</th><th>Saved at</th><th>Retained files</th></tr></thead><tbody data-native-stages></tbody></table></div>'+
+      '<section data-native-outputs></section>'+ 
+      '<details data-native-technical><summary>Original worker log and support observations</summary>'+ 
       '<h3>Original worker output</h3><div class="native-log-controls">'+
       '<label>Log stream<select data-native-stream><option value="native">Native model log</option><option value="process">Worker process output</option></select></label>'+
       '<label class="check"><input type="checkbox" data-native-follow checked> Follow new output</label>'+
       '<span data-native-log-position></span>'+button('rewind','Read from start',id)+'</div>'+
-      '<pre class="native-log" data-native-log tabindex="0" aria-label="Original model log"></pre>'+
+      '<pre class="native-log" data-native-log tabindex="0" aria-label="Original model log"></pre></details>'+
       '<details><summary>Selected input identities</summary><pre data-native-selection></pre></details>'+
       '<details><summary>Retained task and process record</summary><pre data-native-record></pre></details>'+
       '</section>',{kind:'native-job',id});
@@ -232,6 +235,14 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   async function dispatch(target){
     const action=target.dataset.action?.replace('native-job-',''),id=target.dataset.id;
     if(action==='open')return open(id);
+    if(!current())return;
+    if(action==='input'){
+      const kind=target.dataset.kind;
+      if(!['profiles','scenarios','grids'].includes(kind))return;
+      const wanted=snapshot?.native_job?.selection?.[kind==='profiles'?'profile_id':kind==='scenarios'?'scenario_id':'grid_id'];
+      if(id!==wanted)return;
+      detach();return openItem(kind,id);
+    }
     if(action==='refresh')return update();
     if(action==='rewind')return resetLog();
     if(action==='stop'||action==='resume'){

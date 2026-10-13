@@ -1077,6 +1077,12 @@ def _verify_restored_workspace(manifest, destination):
     if any((restored.root / "point-source-bindings").glob("*.json")):
         from source.retained_point_sources import verify_workspace as verify_point_source_bindings
         details["point_source_context"] = verify_point_source_bindings(restored)
+    # Named preparation requests and revisions travel in the original workspace.
+    # A captured running build can legitimately point at its received snapshot.
+    if ((restored.root / "delivery-preparations").exists()
+            or (restored.root / "delivery-preparation-operations").exists()):
+        from .delivery_preparation import verify_all as verify_delivery_preparations
+        details["delivery_preparations"] = verify_delivery_preparations(restored)
     return details
 
 

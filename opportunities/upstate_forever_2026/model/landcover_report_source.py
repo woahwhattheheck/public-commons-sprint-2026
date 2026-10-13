@@ -70,7 +70,7 @@ def _links(items):
 
 def _original_sources(workspace, binding):
     references = [binding["zones"]["selection"]]
-    if binding["selection"].get("input_mode") == "sources":
+    if binding["selection"].get("input_mode") in ("sources", "timeline"):
         references.extend(item["source_selection"] for item in binding["operands"])
     originals = {}
     for choice in references:
@@ -84,7 +84,7 @@ def _original_sources(workspace, binding):
 
 def _run_members(workspace, binding, report):
     """Retain native run raster members using their current original Workspace paths."""
-    if binding["selection"].get("input_mode") == "sources":
+    if binding["selection"].get("input_mode") in ("sources", "timeline"):
         return []
     import rasterio
     accepted = {(item["bytes"], item["sha256"]) for item in report["inputs"]
@@ -248,6 +248,41 @@ def _sections(edition, binding, report, originals):
                  rows[(zone["id"], key)]["support"]["excluded_by_other_scenarios_ha"]] for zone in zones]),
             "These tables include every original reporting polygon. Complete class-to-class "
             "transitions and group areas for each polygon remain in the attached CSV and JSON files.",
+        ]])
+    if report.get("timeline") is not None:
+        timeline = report["timeline"]
+        selected_years = timeline["years"]
+        editions = [baseline, *[alternatives[key] for key in report["scenarios"]]]
+        summary_keys = ("stable_ha", "changed_ha", "returned_to_initial_ha",
+                        "persistent_final_ha", "unconfirmed_final_ha",
+                        "forest_internal_only_ha", "forest_exit_ha", "forest_entry_ha")
+        sections.append(["Observed annual trajectory", [
+            _table(["Selected observation year", "Original edition", "Source vintage", "Source ID", "Band"],
+                   [[year, item["label"], item["source_time"], item["source_id"], item["band"]]
+                    for year, item in zip(selected_years, editions)]),
+            *timeline["interpretation"],
+            _table(["Original polygon ID", "Name", "All-year common support (ha)",
+                    "Stable class (ha)", "Any observed change (ha)", "Returned to initial (ha)",
+                    "Final class observed at least twice (ha)", "Final class observed once (ha)",
+                    "Forest-internal class change (ha)", "Any forest exit (ha)", "Any forest entry (ha)"],
+                   [[row["zone_id"], row["zone_name"], row["analysis_ha"],
+                     *[row["summary"][name] for name in summary_keys]] for row in timeline["rows"]]),
+            _links([
+                ("Complete observed trajectories for every reporting area", "ledger/results/timeline-trajectories.csv"),
+                ("Every annual class area", "ledger/results/timeline-annual-classes.csv"),
+                ("Every adjacent-observation transition", "ledger/results/timeline-adjacent-transitions.csv"),
+                ("Every observed group crossing", "ledger/results/timeline-groups.csv"),
+                ("Selected years with exact source identities", "ledger/results/timeline-source-years.csv"),
+                ("Interactive original timeline and source maps", "ledger/results/report.html"),
+            ]),
+        ]])
+        domain_timeline = next(row for row in timeline["rows"] if row["zone_id"] == "__domain__")
+        sections.append(["Unique study-area annual class areas", [
+            _table(["Observation year", "Class code", "Class", "Area (ha)"],
+                   [[annual["year"], item["code"], report["classes"][str(item["code"])], item["ha"]]
+                    for annual in domain_timeline["annual"] for item in annual["classes"]]),
+            "The annual tables use identical all-observation common support. The complete trajectory "
+            "raster has one band per selected observation; no source raster is resampled.",
         ]])
     sections.append(["Original data and complete editable outputs", [
         _table(["Original source", "Edition", "URI", "Body SHA-256"],

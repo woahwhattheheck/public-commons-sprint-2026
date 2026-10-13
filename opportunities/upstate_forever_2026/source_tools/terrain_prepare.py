@@ -41,18 +41,37 @@ def validate_grid(value: dict[str, Any]) -> dict[str, Any]:
         raise TerrainError("The model terrain grid must use unrotated, square, exact 30 m cells")
     from rasterio.transform import array_bounds
     transform = Affine(30, 0, c, 0, -30, f)
-    return {"crs": crs.to_wkt(), "crs_name": crs.to_string(),
+    checked = {"crs": crs.to_wkt(), "crs_name": crs.to_string(),
             "transform": list(transform)[:6], "width": int(width), "height": int(height),
             "resolution_m": 30.0, "pixel_area_ha": 0.09,
             "bounds": list(array_bounds(int(height), int(width), transform))}
+    # Retain the original grid writer's explicit publisher-rounding provenance.
+    from copy import deepcopy
+    for key in ("reference_alignment", "reference_normalization"):
+        if key in value:
+            checked[key] = deepcopy(value[key])
+    return checked
 
 
 def reference_grid(path: Path | str) -> dict[str, Any]:
+    """Use the existing scientific grid writer for a complete reference raster.
+
+    Original Annual NLCD coefficients can differ from nominal 30 metres by a
+    few floating-point units. Use the SAME normalization/tolerance as native
+    Workspace.prepare_grid, retain its complete provenance and preserve the
+    reference's number of cells rather than expanding a rounding-only edge.
+    """
     import rasterio
+    from shapely.geometry import box
+    from model.rasters import grid_definition
     with rasterio.open(path) as source:
-        grid = {"crs": source.crs.to_wkt() if source.crs else None,
-                "transform": list(source.transform)[:6],
-                "width": source.width, "height": source.height}
+        width, height = source.width, source.height
+        transform = source.transform
+        domain = box(transform.c, transform.f-height*30.0,
+                     transform.c+width*30.0, transform.f)
+    grid = grid_definition(path, domain, resolution=30.0)
+    if grid["width"] != width or grid["height"] != height:
+        raise TerrainError("Original reference cell counts changed during nominal-grid receiving")
     return validate_grid(grid)
 
 

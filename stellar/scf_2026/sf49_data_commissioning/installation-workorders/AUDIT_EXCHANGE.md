@@ -242,7 +242,7 @@ Use the existing original receiving owner. The offline, installed, queue and rev
 
 Observe and use the exact installed author and independent receiver at desktop and relevant narrow width. Open every outgoing recipient/editor, native source, decision/custody/queue archive, XML, report, model output and application attachment in its normal viewer. Captured images still require the producing operator's direct viewing. Record useful actual acceptance outcomes in the same customer Installation. The complete owner instruction above applies to all these files.
 
-Bryce's local Codex in-app browser is reserved from 16:00 UTC on 13 October 2026 until explicit release. This original receiving uses only a separately authorized isolated cloud browser while that reservation applies.
+The October 13, 2026 local-browser reservation is historical: Bryce's meeting-over statement at 16:18:37 UTC satisfied its original end condition, and the canonical 16:29:39 UTC owner notice explicitly released the browser. Authorized local browser work may resume while preserving the current operator's private/demo tabs and saved state. Retain the existing receiving owner and all other standing controls; this release does not restart cancelled work.
 
 
 <!-- bryce-rendered-product-inspection:begin -->

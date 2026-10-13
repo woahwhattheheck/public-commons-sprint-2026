@@ -4,7 +4,7 @@ This continuation uses the existing Measurements source collection, SQLite impor
 
 ## Source and scientific meaning
 
-The intended new station is SCDES/WQP `21SC60WQ_WQX-RL-26024`, Lake Hartwell northeast of Broyles Recreation Area. The requested period is January 1–October 13, 2026. The official station page lists 2026 nutrient, microbiological and physical observations, but actual acquired CSV rows and native import counts must come from the completed capture; this source change alone is not evidence of those counts.
+The captured station is SCDES/WQP `21SC60WQ_WQX-RL-26024`, Lake Hartwell northeast of Broyles Recreation Area. The requested period is January 1–October 13, 2026. The four official CSVs were acquired and fully read back on October 13, 2026: one station, six activities, 132 distinct result IDs and 132 matching detection-limit rows. Actual sampling dates are January 21, February 12, March 11, April 14, June 1 and July 6. The requested end date does not imply observations after July 6. Native SQLite receiving and browser use remain a separate producing-host course.
 
 - Station: https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-26024/
 - WQP services: https://www.waterqualitydata.us/webservices_documentation/
@@ -17,6 +17,22 @@ The new mapping directive `_wqp_detection: wqp-detection-conditions/v2` is expli
 
 For the parent’s new USGS v1 intake, the separate explicit mapping `_usgs_daily: usgs-daily-source/v2` recognizes both published timeseries and approval field spellings. Conflicting simultaneously supplied aliases reject the source row. Unpinned historical USGS imports are unchanged.
 
+## Explicit characteristic edition
+
+Use both `_wqp_detection: wqp-detection-conditions/v2` and `_wqp_characteristics: wqp-characteristics/v1` for the separately prepared `characteristics-v1` collection. The additional directive pins a new mapping/import identity. Omitting it preserves the whole earlier detection-v2 preparation exactly, including all resolved mapping fields and original record objects.
+
+The new module recognizes the 26 actual source labels without broadening model calibration eligibility. TKN and nitrate plus nitrite remain separate from total nitrogen. Chemical basis comes from the explicit source speciation or as-X unit; conflicting bases remain unmapped. No molecular-weight conversion occurs. Total phosphorus requires unfiltered/total fraction and explicit P basis. Hardness with no source chemical basis remains unspecified. Unambiguous metal names retain their elemental basis. BOD5 uses the source's explicit five-day name or APHA 5210-B context, not an arbitrary biochemical oxygen demand label.
+
+MPN/100mL and CFU/100mL are distinct microbial quantities; NTU and FNU remain distinct turbidity scales. Micromhos/cm normalize one-to-one to microsiemens/cm without temperature correction. pH retains its own scale, and salinity in ppt is not treated as a mass concentration. Original method context/name, speciation, result/activity depth and reference, relative depth, time/temperature/weight bases are copied into the new canonical records, as well as the complete raw cells.
+
+All 34 actual censored results remain left-censored observations with no point value; their compatible original thresholds are upper bounds. Two hardness records retain `chemical-basis-unspecified`. Every original winter clock says EDT and two salinity records say 36.79 ppt. These are source review questions: no clock, value or unit was silently corrected. Repeated observations retain their distinct result IDs and are not averaged.
+
+Scientific source basis:
+
+- EPA nutrient field semantics and speciation: https://www.epa.gov/sites/default/files/2017-06/documents/wqx_nutrient_best_practices_guide.pdf
+- APHA 5210-B, five-day BOD: https://www.nemi.gov/methods/method_summary/5715/
+- Conductivity units: https://archive.epa.gov/water/archive/web/html/vms59.html
+
 ## Capture in the existing equipped operation
 
 Run from the maintained application root, using the already installed Python and Node >=22.16. Choose new explicit source/preparation/output directories; retain them on the actual host.
@@ -26,15 +42,25 @@ python -B -m source_tools.capture_wqp_edition --output /actual/course/hartwell20
 node source_tools/prepare_wqp_measurement_collection.mjs --source /actual/course/hartwell2026-original --output /actual/course/hartwell2026-prepared
 ```
 
+The completed original capture is retained under `observations/hartwell_2026/wqp_20261013/capture`; reuse those exact bodies for this edition. The following capture command is for a deliberately new dated source edition, not a request to refetch the completed one.
+
 The capture requests Station, Activity (`activityAll`), Result (`resultPhysChem`) and the complete ResultDetectionQuantitationLimit profile. Explicit result metadata is required because the older default physical/chemical CSV can omit ResultIdentifier. Successful original bytes and HTTP metadata are immutable; endpoint errors are recorded and never become a completed capture. Same-query restart reuses verified retained responses. A changed query requires another directory.
 
 Preparation validates all source hashes, station/activity/date joins and organization/result limit joins. It keeps the four original CSVs and capture/query metadata unchanged. A derived result CSV adds one JSON column containing all matching original limit-profile rows and explicitly mapped columns from the exact original activity for site/date/clock/timezone/media/type. These source joins accommodate narrow result profiles while preserving every original result cell; absent original clocks or zones remain absent. It never aligns limits by row position, station proximity or analyte name. Missing result identifiers, mismatched collection clocks or unjoinable limit rows stop preparation. Counts/conditions/issues are written in SOURCE_COVERAGE.json.
 
+To prepare the explicit characteristic edition from those same originals:
+
+```sh
+node source_tools/prepare_wqp_measurement_collection.mjs --source observations/hartwell_2026/wqp_20261013/capture --output /actual/course/hartwell2026-characteristics-v1 --characteristics wqp-characteristics/v1
+```
+
+The already prepared source tree includes both editions. Use `characteristics-v1/collection.json` for the new native course and preserve `detection-v2/` as original history. If both are imported into one workspace, their shared original result identities are explicit source variants; use the maintained version-selection workflow instead of counting both as separate measurements.
+
 ## Original native preview, receive, publish and reopen
 
 ```sh
-node measurement_workspace/engine/cli.mjs collection-preview --workspace /actual/measurements --manifest /actual/course/hartwell2026-prepared/collection.json --source-root /actual/course/hartwell2026-prepared --output /actual/course/hartwell2026-preview.json
-node measurement_workspace/engine/cli.mjs collection-receive --workspace /actual/measurements --manifest /actual/course/hartwell2026-prepared/collection.json --source-root /actual/course/hartwell2026-prepared --output /actual/course/hartwell2026-received.json
+node measurement_workspace/engine/cli.mjs collection-preview --workspace /actual/measurements --manifest /actual/course/hartwell2026-characteristics-v1/collection.json --source-root /actual/course/hartwell2026-characteristics-v1 --output /actual/course/hartwell2026-preview.json
+node measurement_workspace/engine/cli.mjs collection-receive --workspace /actual/measurements --manifest /actual/course/hartwell2026-characteristics-v1/collection.json --source-root /actual/course/hartwell2026-characteristics-v1 --output /actual/course/hartwell2026-received.json
 node measurement_workspace/engine/cli.mjs collection-publish --workspace /actual/measurements --id ACTUAL_RETURNED_COLLECTION_SHA --output /actual/course/hartwell2026-published.json
 ```
 
@@ -42,7 +68,7 @@ Use the actual returned collection ID and edition directory. The published editi
 
 ## Source-level validation already exercised
 
-The complete original 88-row 2023 CSV was parsed by old and new unpinned source and returned identical complete records/mapping/rejection output. Focused scientific cases cover lower reporting limits with estimated numbers, upper quantitation limits, contradictory directions, incompatible limit types/units, plain numeric values, explicit comparators, and full multi-limit joins. These checks do not claim that the new 2026 capture, SQLite import or browser course has run.
+The complete original 88-row 2023 CSV was parsed by old and new unpinned source and returned identical complete records/mapping/rejection output. Focused scientific cases cover lower reporting limits with estimated numbers, upper quantitation limits, contradictory directions, incompatible limit types/units, plain numeric values, explicit comparators, and full multi-limit joins. The actual 132-row characteristic preparation also completed in the maintained pure source, with zero rejected/unmapped rows; whole old detection-v2 preparation and the 88-row unpinned parsing remain exactly equal. Focused basis-conflict, absent-basis, MPN/CFU and NTU/FNU checks preserve distinctions. The source capture and pure preparation ran; these checks do not claim SQLite import or browser execution.
 
 ## Required recipient use
 

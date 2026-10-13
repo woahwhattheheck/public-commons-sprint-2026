@@ -12,6 +12,7 @@ import re
 import shutil
 import stat
 import tempfile
+from .verified_files import source_identity, verified_operation
 
 SCHEMA = "upstate.scientific-workbench/v1"
 INVEST_VERSION = "3.20.0"
@@ -198,16 +199,15 @@ def _retained_object_matches(path, checksum, size, *, verified_state=None):
         if not stat.S_ISREG(opened.st_mode):
             raise ValueError("Retained original object is not a regular file")
         state = _file_state(opened)
-        if verified_state is not None and state == verified_state and size == opened.st_size:
-            # The caller just hashed this exact inode and bound it to checksum.
-            actual, count = checksum, size
-        else:
-            try:
-                actual, count, state = _stream_identity(stream, "Retained original object")
-            except ValueError:
-                # A concurrent completed publication or view hard link can
-                # change ctime. Recheck under the digest lock before any copy.
-                return False
+        try:
+            # Reuse only an identity recorded by this operation, never a bare
+            # caller-provided stat tuple. Keep verified_state for API continuity.
+            actual, count, state = source_identity(
+                stream, path, "Retained original object")
+        except (ValueError, FileNotFoundError):
+            # A concurrent completed publication or view hard link can change
+            # ctime. Recheck under the digest lock before any copy or repair.
+            return False
         try:
             current = path.lstat()
         except FileNotFoundError:
@@ -220,6 +220,7 @@ def _retained_object_matches(path, checksum, size, *, verified_state=None):
         os.fsync(stream.fileno())
         return True
 
+@verified_operation
 def retain_file(project, source, expected_sha256=None):
     """Retain one independent input copy, reusing banked bytes and interrupted intake."""
     source = Path(source).resolve(strict=True)
@@ -231,7 +232,7 @@ def retain_file(project, source, expected_sha256=None):
     pending = None
     with source.open("rb") as src:
         if expected is None:
-            checksum, size, source_state = _stream_identity(src, "Original input")
+            checksum, size, source_state = source_identity(src, source, "Original input")
             source_verified = True
         else:
             opened = os.fstat(src.fileno())
@@ -250,8 +251,8 @@ def retain_file(project, source, expected_sha256=None):
             nonlocal source_verified
             if not source_verified:
                 src.seek(0)
-                actual, count, _ = _stream_identity(
-                    src, "Original input", expected_state=source_state)
+                actual, count, _ = source_identity(
+                    src, source, "Original input", expected_state=source_state)
                 if actual != checksum or count != size:
                     raise ValueError("Original source hash differs: " + source.name)
                 source_verified = True
@@ -284,8 +285,8 @@ def retain_file(project, source, expected_sha256=None):
                                      os.O_EXCL | os.O_NOFOLLOW, 0o600)
                 pending = candidate
                 with os.fdopen(descriptor, "wb") as out:
-                    copied, copied_size, _ = _stream_identity(
-                        src, "Original input", expected_state=source_state, output=out)
+                    copied, copied_size, _ = source_identity(
+                        src, source, "Original input", expected_state=source_state, output=out)
                     if copied != checksum or copied_size != size:
                         raise ValueError("Original source hash differs: " + source.name)
                     out.flush()

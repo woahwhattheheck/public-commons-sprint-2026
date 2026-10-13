@@ -32,6 +32,10 @@ def drain(process,root,reason):
         if group_alive(process.pid):
             with contextlib.suppress(ProcessLookupError): os.killpg(process.pid,signal.SIGKILL)
     with contextlib.suppress(subprocess.TimeoutExpired): process.wait(timeout=15)
+    deadline=time.monotonic()+15
+    while group_alive(process.pid) and time.monotonic()<deadline:
+        process.poll();time.sleep(.2)
+    if group_alive(process.pid):raise RuntimeError("The original child group has not fully drained; retain this operation before preservation.")
     event(root,"child-drained",pid=process.pid,reason=reason,returncode=process.returncode)
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--case",type=pathlib.Path,required=True)
@@ -77,7 +81,7 @@ def main():
                 if group_alive(process.pid): drain(process,root,"close original descendant group after completed native course")
         result=verify_stages(root)
         source_copy=root/"complete-application-source";source_copy.mkdir(exist_ok=True)
-        source_names=["hcps-core.cjs","hcps-app.js","hcps.css","index.template.html","production-seed.json","BUILD.cjs","VERIFY.cjs","ASSEMBLE.py","RECEIVING.cjs","RECEIVING.py","OPERATING.md"]
+        source_names=["hcps-core.cjs","hcps-return.cjs","hcps-app.js","hcps-return-ui.js","hcps.css","index.template.html","production-seed.json","BUILD.cjs","VERIFY.cjs","ASSEMBLE.py","RECEIVING.cjs","RECEIVING.py","OPERATING.md"]
         for name in source_names: retain(source_copy/name,(source/name).read_bytes())
         # Render every complete assembled page and every page of the retained readable derivative.
         import shutil

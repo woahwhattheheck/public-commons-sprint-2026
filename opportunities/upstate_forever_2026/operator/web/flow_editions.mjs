@@ -1,6 +1,7 @@
 /** Daily discharge studies in the existing Measurements workspace.
  * Uses the original API and immutable studies; no independent data store.
  */
+import {mountFlowLoads} from './flow_loads_ui.mjs';
 const INPUT='upstate.daily-flow-study-input/v1';
 const STUDY='upstate.daily-flow-study/v1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,6 +17,13 @@ function saveFile(name,value,type='application/json'){
  const url=URL.createObjectURL(new Blob([text],{type})),link=document.createElement('a');
  link.href=url;link.download=name;document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+async function saveBundle(value){
+ if(!value||typeof value.base64!=='string'||!Number.isSafeInteger(value.bytes)||value.bytes<0||!/^[a-f0-9]{64}$/.test(value.sha256))throw Error('The retained bundle descriptor is incomplete.');
+ const binary=atob(value.base64),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+ if(bytes.length!==value.bytes)throw Error('The retained bundle size differs from its descriptor.');
+ if(globalThis.crypto?.subtle){const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');if(digest!==value.sha256)throw Error('The retained bundle checksum differs from its descriptor.');}
+ const url=URL.createObjectURL(new Blob([bytes],{type:value.type||'application/zip'})),a=document.createElement('a');a.href=url;a.download=value.name||'flow-bundle.zip';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 function table(headers,rows,label){
  return '<div class="mf-scroll" tabindex="0" role="region" aria-label="'+esc(label)+'"><table><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
@@ -35,12 +43,14 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./flow_editions.css',import.meta.url).href;document.head.append(style);
  let dead=false,busy=false,catalogue={imports:[],studies:[]},draft=fresh(),inspection=null,study=null,comparison=null,
      saved=false,previewCurrent=false,view='summary',page=0,filter='',rowsPerPage=50,comparisonOnly=true;
+ let loadsDesk=null,loadsSnapshot=initialState?.loadsSnapshot??null;
  if(initialState){({draft,inspection,study,comparison,saved,previewCurrent,view,page,filter,comparisonOnly}=copy(initialState));}
+ function stopLoads(){if(loadsDesk){loadsSnapshot=loadsDesk.snapshot();loadsDesk.destroy();loadsDesk=null;}}
  host.classList.add('mf');
  host.innerHTML='<section class="mf-heading"><div><h2>Daily flow studies</h2><p>Inspect original gauge responses, choose a reporting window, and retain a complete reproducible study.</p></div><button type="button" data-act="new">New study</button></section><p class="mf-status" role="status" aria-live="polite">Opening flow catalogue…</p><div class="mf-body"></div>';
  const body=host.querySelector('.mf-body'),status=host.querySelector('.mf-status');
  function message(text,error=false){if(dead)return;status.textContent=text;status.dataset.error=String(error);}
- function controlState(){host.setAttribute('aria-busy',String(busy));for(const el of host.querySelectorAll('button,input,select,textarea'))el.disabled=busy||el.dataset.unavailable==='true';}
+ function controlState(){host.setAttribute('aria-busy',String(busy));for(const el of host.querySelectorAll('button,input,select,textarea')){if(el.closest('.mf-loads'))continue;el.disabled=busy||el.dataset.unavailable==='true';}}
  async function task(fn){if(dead||busy)return;busy=true;controlState();try{await fn();}catch(error){if(!dead&&error.name!=='AbortError')message(error.message,true);}finally{busy=false;if(!dead)controlState();}}
  const find=name=>host.querySelector('[name="'+name+'"]');
  function dirty(){previewCurrent=false;const save=host.querySelector('[data-act="save"]');if(save){save.dataset.unavailable='true';save.disabled=true;}message('Draft changed. Preview it before saving a new immutable study.');}
@@ -90,8 +100,10 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
   return '<section class="mf-card"><h3>Compare original editions</h3><p>Select the earlier and later source editions explicitly. Differences never replace either saved study.</p><form data-form="compare"><div class="mf-grid"><label>Earlier edition<select name="before" required>'+choices(comparison?.before_id||'')+'</select></label><label>Later edition<select name="after" required>'+choices(comparison?.after_id||'')+'</select></label></div><button type="submit">Compare studies</button></form><div class="mf-comparison-result"></div></section>';
  }
  function render(){
-  if(dead)return;body.innerHTML=catalogueHTML()+builderHTML()+'<section class="mf-results"></section>'+comparisonHTML();
-  renderResults();renderComparison();controlState();
+  if(dead)return;stopLoads();body.innerHTML=catalogueHTML()+builderHTML()+'<section class="mf-results"></section><div class="mf-loads-host"></div>'+comparisonHTML();
+  renderResults();renderComparison();
+  loadsDesk=mountFlowLoads(host.querySelector('.mf-loads-host'),{api,request,studies:catalogue.studies,selectedStudy:saved?study?.id:null,initialState:loadsSnapshot});
+  controlState();
  }
  function renderResults(){
   const target=host.querySelector('.mf-results');if(!study){target.innerHTML='';return;}
@@ -100,7 +112,7 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
    '<p class="mf-mono">Study '+esc(study.id)+'</p>'+facts([['Station-days',totals('expected_days')],['Quantified',totals('quantified_days')],['Approved',totals('approved_days')],['Provisional',totals('provisional_days')],['Qualified',totals('qualified_days')],['Signed negative',totals('signed_negative_days')]])+
    '<p class="mf-notice">Known volume uses only quantified daily mean discharge × 86,400 seconds. Missing or ambiguous days are not filled. Signed original discharge remains signed. A complete selected window is not necessarily a complete calendar period.</p>'+
    '<div class="mf-actions"><button type="button" data-act="save" data-unavailable="'+String(!previewCurrent||saved)+'">'+(saved?'Study saved':'Save this preview')+'</button><button type="button" data-act="download-study">Full study JSON</button><button type="button" data-act="edit-study">Use this original input</button><button type="button" data-act="download-result-input">Study input JSON</button></div>'+
-   '<div class="mf-actions">'+['daily','periods','samples'].map(kind=>'<button type="button" data-act="csv" data-kind="'+kind+'" data-unavailable="'+String(!saved)+'">'+esc(kind[0].toUpperCase()+kind.slice(1))+' CSV</button>').join('')+'</div>'+
+   '<div class="mf-actions"><button type="button" data-act="bundle" data-unavailable="'+String(!saved)+'">Complete original ZIP</button><button type="button" data-act="report" data-unavailable="'+String(!saved)+'">Readable report HTML</button>'+['daily','periods','samples'].map(kind=>'<button type="button" data-act="csv" data-kind="'+kind+'" data-unavailable="'+String(!saved)+'">'+esc(kind[0].toUpperCase()+kind.slice(1))+' CSV</button>').join('')+'</div>'+
    (!saved?'<p class="mf-muted">Save this exact preview to enable its server-generated CSV downloads.</p>':'')+
    '<nav class="mf-tabs" aria-label="Flow result views">'+[['summary','Coverage'],['daily','Daily discharge'],['periods','Calendar periods'],['samples','Sample-day context'],['sources','Original sources']].map(([id,title])=>'<button type="button" data-act="view" data-view="'+id+'" aria-current="'+String(view===id)+'">'+title+'</button>').join('')+'</nav><div class="mf-result-view"></div></section>';
   renderResultView();controlState();
@@ -156,8 +168,9 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
   if(!value.series_by_station||typeof value.series_by_station!=='object'||Array.isArray(value.series_by_station))throw Error('Retain the station-to-series selection object.');
   draft=copy(value);inspection=null;previewCurrent=false;await inspectDraft();if(!dead)render();
  }
- host.addEventListener('input',event=>{if(event.target.closest('.mf-body')&&!['input-json','result-station','changed-only','before','after'].includes(event.target.name)&&!event.target.closest('[data-form]'))dirty();},{signal});
+ host.addEventListener('input',event=>{if(event.target.closest('.mf-loads'))return;if(event.target.closest('.mf-body')&&!['input-json','result-station','changed-only','before','after'].includes(event.target.name)&&!event.target.closest('[data-form]'))dirty();},{signal});
  host.addEventListener('change',event=>{
+  if(event.target.closest('.mf-loads'))return;
   if(event.target.name==='result-station'){filter=event.target.value;page=0;renderResultView();}
   if(event.target.name==='changed-only'){comparisonOnly=event.target.checked;renderComparison();}
  },{signal});
@@ -204,13 +217,15 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
    }
    if(action==='open'){const value=await api('/flow/studies/'+encodeURIComponent(button.dataset.id));if(dead)return;await loadStudy(value,true);message('Opened original saved study. All source responses and inputs are available.');}
    if(action==='edit-study'){draft=copy(study.input);inspection=null;previewCurrent=false;await inspectDraft();if(dead)return;render();message('Original input loaded as a draft. Editing creates a new study; the saved edition remains unchanged.');}
-   if(action==='download-study')saveFile('daily-flow-study-'+study.id+'.json',study);
-   if(action==='download-result-input')saveFile('daily-flow-study-input-'+study.id+'.json',study.input);
+   if(action==='download-study')saveFile('flow-study.json',study);
+   if(action==='download-result-input')saveFile('flow-input.json',study.input);
    if(action==='download-comparison')saveFile('daily-flow-comparison.json',comparison);
+   if(action==='bundle'){if(!saved)throw Error('Save this preview before downloading the original bundle.');const value=await api('/flow/studies/'+encodeURIComponent(study.id)+'/bundle');if(dead)return;await saveBundle(value);}
+   if(action==='report'){if(!saved)throw Error('Save this preview before downloading its report.');const response=await request('/flow/studies/'+encodeURIComponent(study.id)+'/report.html','GET'),text=await response.text();if(!response.ok)throw Error(text);if(dead)return;saveFile('flow-report.html',text,'text/html;charset=utf-8');}
    if(action==='csv'){
     if(!saved)throw Error('Save this preview before downloading the server CSV.');
     const response=await request('/flow/studies/'+encodeURIComponent(study.id)+'/'+button.dataset.kind+'.csv','GET'),text=await response.text();
-    if(!response.ok)throw Error(text);if(dead)return;saveFile('flow-'+button.dataset.kind+'-'+study.id+'.csv',text,'text/csv;charset=utf-8');
+    if(!response.ok)throw Error(text);if(dead)return;saveFile(({daily:'daily-flow.csv',periods:'flow-periods.csv',samples:'sample-flow.csv'})[button.dataset.kind],text,'text/csv;charset=utf-8');
    }
    if(action==='view'){view=button.dataset.view;page=0;filter='';renderResults();}
    if(action==='page-back'){page=Math.max(0,page-1);renderResultView();}
@@ -219,5 +234,5 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
   });
  },{signal});
  task(async()=>{await reloadCatalogue();if(dead)return;render();message('Choose a saved study or prepare a new study from complete original discharge responses.');});
- return {snapshot(){capture();return copy({draft,inspection,study,comparison,saved,previewCurrent,view,page,filter,comparisonOnly});},refresh:()=>task(async()=>{capture();await reloadCatalogue();render();message('Flow catalogue refreshed; original draft retained.');}),destroy(){dead=true;controller.abort();style.remove();host.replaceChildren();host.classList.remove('mf');}};
+ return {snapshot(){capture();if(loadsDesk)loadsSnapshot=loadsDesk.snapshot();return copy({draft,inspection,study,comparison,saved,previewCurrent,view,page,filter,comparisonOnly,loadsSnapshot});},refresh:()=>task(async()=>{capture();await reloadCatalogue();render();message('Flow catalogue refreshed; original draft retained.');}),destroy(){dead=true;stopLoads();controller.abort();style.remove();host.replaceChildren();host.classList.remove('mf');}};
 }

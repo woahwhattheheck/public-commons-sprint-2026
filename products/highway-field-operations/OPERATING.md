@@ -256,7 +256,24 @@ Restore the paired package separately through the original native receiver when 
 
 The installed profile is **highway-field-operations**. The shared Installation profile loader discovers its complete JSON and uses it for the original Workshare/Installation preparation.
 
-The current public selection includes the complete profile, the maintained `profiles.mjs` loader and `prepare-core.mjs` preparation API under `stellar/scf_2026/sf49_data_commissioning/installation-workorders/`. Use the existing Installation desk and its actual retained case. The historical Merchant-only `grant-installation-workorder` command is not registered in this public selection. See `PACKAGE_README.md` for the complete selected build, install and opening route. Continue an existing operated Installation through its current native edition. Keep the original canonical plan, all phase/effort sources, customer choice and funded assignments.
+The current public selection includes the complete profile, the maintained `profiles.mjs` loader and `prepare-core.mjs` preparation API under `stellar/scf_2026/sf49_data_commissioning/installation-workorders/`. Its original `grant-workspace` contribution registers the complete workorder preparation command. Start from the actual retained `installation-workshare-seed` result; review the generated bindings with the existing customer and native operator before preparing the same Installation input:
+
+```sh
+npx --no-install starforge grant-installation-workorder template \
+  --profile highway-field-operations \
+  --seed /absolute/private/original-seed.json \
+  --out /absolute/private/highway-bindings
+
+npx --no-install starforge grant-installation-workorder prepare \
+  --profile highway-field-operations \
+  --seed /absolute/private/original-seed.json \
+  --bindings /absolute/private/highway-bindings/bindings.json \
+  --out /absolute/private/highway-installation
+```
+
+These commands prepare complete local files. Preview and save the returned input in the existing Installation desk and actual retained case; they do not themselves issue an agreement, purchase, funding assignment or customer acceptance. Continue an existing operated Installation through its current native edition. Preserve the original canonical plan, phase/effort sources, customer choice and funded assignments. See `PACKAGE_README.md` for the complete selected build and opening route and the [workorder guide](../../stellar/scf_2026/sf49_data_commissioning/installation-workorders/README.md) for original request recovery.
+
+The same selected source includes customer adoption planning, issuer source/award terms, saved operating procedures and original period-report capture. Open the [complete Grant Operations guide](../grant-operations/OPERATING.md) using the same existing case and source history. Full case/Application handoff retains original requests and returned files; a report does not replace the complete case. `GRANT_CLOSURE.json` pins the adopted public closure, while `PUBLIC_ADOPTION.json` preserves the earlier adoption decision.
 
 The complete course covers source selection, deployment, capture, forms, inspection and supervisor work, dispatch, later source/rebase, approved proposal, original paired comparison, independent staff/native receiving and ongoing support. Populate the actual customer fields from its original records and attach complete observations and outputs.
 

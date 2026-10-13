@@ -127,6 +127,13 @@
         "document-intake-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/document-comparison-browser.mjs",
+      [
+        "document-comparison-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

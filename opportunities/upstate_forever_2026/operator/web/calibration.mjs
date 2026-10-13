@@ -273,6 +273,55 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     }
     return result;
   }
+  function referencePartitionKey(selection){
+    const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?
+      Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
+    return JSON.stringify(stable({
+      observation_id:selection.observation_id,catchments:selection.catchments,
+      observation_record_ids:[...(selection.observation_record_ids??[])].sort(),
+      parameters:Object.entries(selection.objective??{}).filter(([,v])=>Number(v.weight??1)>0).map(([k])=>k).sort()
+    }));
+  }
+  function currentReferenceHistory(preview,selection){
+    const history=preview.reference_history;
+    if(!history)return null;
+    const source=preview.observations.original.sha256,oldTraining=new Set(),oldValidation=new Set();
+    for(const row of history.history??[]){
+      if(row.reference_csv_sha256!==source)continue;
+      for(const id of row.calibration_record_ids??[])oldTraining.add(id);
+      for(const id of row.validation_record_ids??[])oldValidation.add(id);
+    }
+    const training=new Set(),validation=new Set(),validationGroups=new Set(selection.validation_group_ids??[]);
+    for(const unit of preview.units??[]){
+      const group=selection.catchment_groups?.[unit.catchment_id]??unit.group_id;
+      const target=validationGroups.has(group)?validation:training;
+      for(const id of unit.observation_record_ids??[])target.add(id);
+    }
+    const reused=[...validation].filter(id=>oldValidation.has(id)).sort();
+    const oldFit=[...validation].filter(id=>oldTraining.has(id)).sort();
+    const promoted=[...training].filter(id=>oldValidation.has(id)).sort();
+    const unseen=[...validation].filter(id=>!oldTraining.has(id)&&!oldValidation.has(id)).sort();
+    let description='Current draft split: '+training.size+' training reference records and '+validation.size+' validation reference records. ';
+    if(reused.length)description+=reused.length+' validation records were already evaluated in earlier holdouts. ';
+    if(oldFit.length)description+=oldFit.length+' validation records were used for earlier parameter selection. ';
+    if(promoted.length)description+=promoted.length+' previously held-out records now enter training under this edited design. ';
+    if(!validation.size)description+='This selection has no validation partition. ';
+    else if(!reused.length&&!oldFit.length)description+='Current validation record IDs are absent from the linked earlier fits; review their spatial, period and source independence. ';
+    description+='Candidate ranking uses only the current declared calibration groups.';
+    return {...history,description,draft_projection:true,
+      validation_reuses_prior_validation_record_ids:reused,
+      validation_reuses_prior_training_record_ids:oldFit,
+      training_uses_prior_validation_record_ids:promoted,
+      validation_record_ids_absent_from_history:unseen};
+  }
+  function referenceHistoryHTML(history){
+    if(!history)return '';
+    return section('Follow-up reference evaluation',history.description,
+      '<div class="section-body">'+(history.history??[]).map(row=>'<p><strong>'+esc(row.title)+'</strong> · '+
+        number(row.calibration_record_ids?.length)+' earlier training records · '+
+        number(row.validation_record_ids?.length)+' earlier validation records '+
+        button('report','Open earlier evaluation',row.calibration_id)+'</p>').join('')+'</div>');
+  }
   function collectSelection({split=false}={}){
     const candidate_run_ids=chosen('calibration_candidates');
     const unavailable=$$('[name="calibration_candidates"]',form()).filter(node=>node.checked&&node.dataset.calibrationExecutionIssue);
@@ -332,6 +381,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       selection.validation_group_ids=[...partitions].filter(([,role])=>role==='validation').map(([id])=>id);
       if(!selection.calibration_group_ids.length)throw Error('Keep at least one catchment group for calibration.');
     }
+    const prior=activeDraft.selection;
+    if(prior?.prior_evaluation){
+      selection.prior_evaluation=JSON.parse(JSON.stringify(prior.prior_evaluation));
+      if(!split&&referencePartitionKey(selection)===referencePartitionKey(prior)){
+        for(const key of ['catchment_groups','calibration_group_ids','validation_group_ids'])
+          if(prior[key]!==undefined)selection[key]=JSON.parse(JSON.stringify(prior[key]));
+      }
+    }
     return selection;
   }
   function captureDraft(){
@@ -349,7 +406,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   function renderSourceDesign(){
     const target=$('#calibration-design-review');if(!target)return;
     if(!previewResult){target.replaceChildren();return;}
-    try{target.innerHTML=calibrationDesignHTML(analyzeCalibrationDesign(previewResult,collectSelection({split:true})));}
+    try{const selection=collectSelection({split:true});target.innerHTML=referenceHistoryHTML(currentReferenceHistory(previewResult,selection))+calibrationDesignHTML(analyzeCalibrationDesign(previewResult,selection));}
     catch(error){target.innerHTML='<p class="note">'+esc(error.message||String(error))+'</p>';}
   }
   function invalidatePreview(){
@@ -437,7 +494,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(planId){
       const packet=await openingRead(opening,()=>read('plan',{id:planId}));
       if(!opening.current())return;
-      draft={workspace,selection:packet.plan.selection};
+      draft={workspace,selection:packet.plan.selection,reference_history:packet.plan.reference_history};
+    }
+    if(candidateHandoff?.annual_reference){
+      const reference=candidateHandoff.annual_reference;
+      if(reference.prior_evaluation?.parameter_study_id!==candidateHandoff.study_id)
+        throw Error('The retained reference design belongs to another Parameter study.');
+      draft={workspace,selection:reference.selection,annual_reference:reference,
+        temporal_weighting_explicit:true};
     }
     const selection=JSON.parse(JSON.stringify(draft?.selection??{schema:'upstate.calibration-selection/v1',title:'',candidate_run_ids:[],
       observation_id:'',catchments:{},objective:Object.fromEntries(pollutants.map(name=>[name,{weight:1}])),notes:[]}));
@@ -518,6 +582,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     openForm(planId?'Revise calibration selection':'New calibration',
       'Choose completed baseline profiles, original annual loads and source catchments. Inspect their connected groups, then retain the selection and validation split.',
       '<div class="calibration-form">'+
+      (draft.annual_reference?'<div class="notice"><strong>Continue the original annual-reference design</strong><p>'+
+        esc(draft.annual_reference.description)+'</p><p>'+esc(draft.annual_reference.title)+'</p></div>':'')+
+      referenceHistoryHTML(draft.reference_history)+
       (draft.parameter_study?'<div class="notice"><strong>Started from a retained parameter study</strong><p>'+
         esc(draft.parameter_study.title)+' · '+number(draft.parameter_study.candidate_run_ids.length)+
         ' original completed runs. Observation, catchment and objective choices remain editable.</p><p class="mono">'+
@@ -794,6 +861,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const independent=(view.groups??[]).filter(group=>group.partition==='validation').length;
     return header(view.title||report.title,report.selected_run_id?'Original observations and completed native model runs. Lower calibration loss selects the retained parameter profile; validation describes that selected profile on the reserved catchment groups.':'The retained candidate outcomes identify the observations and native catchment support needed to complete parameter selection.',
       button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true)+(report.selected_run_id?button('continue-profile','Continue selected profile',report.id):''))+
+      referenceHistoryHTML(report.reference_history)+
       '<div class="cards">'+[
         ['Selected parameter profile',report.selected_run_id?(selected?.title||named('profiles',report.selected_profile_id)):'No eligible candidate',report.selected_run_id?candidateModels(selected||{selected_models:report.selected_models})+' · native run '+short(report.selected_run_id):'Inspect the retained candidate outcomes below.'],
         ['Candidate runs',number(view.candidate_count??report.candidate_count??view.ranking.length),number(view.distinct_profile_count??report.distinct_profile_count??new Set(view.ranking.map(row=>row.profile_id)).size)+' distinct parameter profiles with their original run identities.'],

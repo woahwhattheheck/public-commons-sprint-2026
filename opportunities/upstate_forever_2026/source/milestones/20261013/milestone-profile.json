@@ -1,0 +1,108 @@
+{
+  "schema": "upstate.milestone-handoff-profile/v1",
+  "id": "ec-sdc-proposed-workshare-20261013",
+  "title": "Upper Savannah — proposed milestone evidence",
+  "source": {
+    "title": "DD6B proposal and production start package",
+    "url": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QUTPQAF",
+    "section": "Deliverable acceptance and operator handover",
+    "observed_at": "2026-10-13",
+    "workshare": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/WORKSHARE.md"
+  },
+  "scope_note": "These criteria organize the existing proposed workshare. Saved evidence, engineering dispositions and reviewer readiness do not accept commercial terms, authorize an invoice or record payment. Tim / Ecosystem Sciences retains scientific direction; Bryce retains the relationship.",
+  "milestones": [
+    {
+      "id": "source-method",
+      "title": "Source and method setup",
+      "criteria": [
+        {
+          "id": "M1-01",
+          "title": "Original source inventory",
+          "detail": "Retain the selected original files, sidecars, publisher/source editions and actual acquisition state. Incomplete or failed acquisition stays visible."
+        },
+        {
+          "id": "M1-02",
+          "title": "Grid and alignment",
+          "detail": "Inspect the actual prepared 30 m grid: metric CRS, affine origin, dimensions, extent, NoData and coverage. Trace at least one transformation to its original source."
+        },
+        {
+          "id": "M1-03",
+          "title": "Geographic support",
+          "detail": "Keep upstream contributing model domain, South Carolina reporting mask, utility focus catchments and exterior buffer distinct, with their original selections."
+        },
+        {
+          "id": "M1-04",
+          "title": "Editable scientific profile",
+          "detail": "Retain the selected profile and table with coefficient lineage, algorithm settings, physical quantity meanings and missing-data assumptions for scientific review."
+        },
+        {
+          "id": "M1-05",
+          "title": "Two explicit alternatives",
+          "detail": "Retain the two proposed scenario definitions, geographic masks/class transitions and purpose for ES scientific selection. Commissioning examples are identified as such."
+        },
+        {
+          "id": "M1-06",
+          "title": "Recipient source operation",
+          "detail": "Open the actual retained setup project and its sources, inspect alignment/coverage and record the selected host/application/project identity. Record source/profile/scenario decisions and remaining exceptions."
+        }
+      ]
+    },
+    {
+      "id": "modeled-review",
+      "title": "Complete modeled review release",
+      "criteria": [
+        {
+          "id": "M2-01",
+          "title": "Baseline and selected alternatives",
+          "detail": "Retain the completed current-condition baseline and two reviewed alternatives with exact original run/profile/scenario selections. Partial runs remain identified."
+        },
+        {
+          "id": "M2-02",
+          "title": "Native model provenance",
+          "detail": "Retain original NDR/SDR arguments, logs, physical rasters and quantitative comparisons. Source assumptions and model interpretation remain inspectable."
+        },
+        {
+          "id": "M2-03",
+          "title": "Physical units and support",
+          "detail": "Inspect annual nitrogen/phosphorus kg/year and sediment delivered to streams tonnes/year on declared support. Keep erosion quantities and dimensionless priority indices distinct; check comparison signs."
+        },
+        {
+          "id": "M2-04",
+          "title": "Seven map families",
+          "detail": "Inspect the seven requested map families and nine principal PDFs under the proposed two-alternative scope, plus complete GIS, metadata and report draft."
+        },
+        {
+          "id": "M2-05",
+          "title": "Traceable editable release",
+          "detail": "Open saved scenarios/run outputs, trace selected findings to original maps/rasters/tables/sources and retain editable GIS/report source, operator and review material."
+        }
+      ]
+    },
+    {
+      "id": "correction-receiving",
+      "title": "Consolidated correction and receiving",
+      "criteria": [
+        {
+          "id": "M3-01",
+          "title": "Consolidated correction lineage",
+          "detail": "Retain original comments, decisions, engineering dispositions and earlier editions for the included consolidated correction. Source/profile revisions and any repeated baseline-plus-two-alternative cycle retain their actual identities."
+        },
+        {
+          "id": "M3-02",
+          "title": "Complete native project",
+          "detail": "Retain complete source/data/software/native Project archive, runtime instructions and editable GIS/report source, with exact member inventory."
+        },
+        {
+          "id": "M3-03",
+          "title": "Final human-facing outputs",
+          "detail": "Open and inspect the exact final maps, report, presentation and guide, preserving scientific units, support and source references."
+        },
+        {
+          "id": "M3-04",
+          "title": "Independent recipient operation",
+          "detail": "Open the delivered application against an independently received Project. Inspect originals/profile/scenarios/runs, repeat an agreed export or saved comparison, and retain the exact output inventory and returned findings."
+        }
+      ]
+    }
+  ]
+}
