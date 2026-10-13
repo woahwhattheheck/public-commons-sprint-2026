@@ -49,6 +49,7 @@ No new native model calculation is issued by this course. If a retained Paramete
 The operation directory contains:
 
 - **START_HERE.html** — the local entrypoint to the actual scientific HTML/PDF, original quantitative results and full editable Study.
+- **scientific-report.zip** — the shared native report export and original source companions, independently copied into this operation.
 - **parameter-scenario-study.zip** — the complete selected editable Workspace and original application.
 - **received/** — the independent restored application and Workspace.
 - **result.json** — exact original study IDs, report/source editions, archive identity, actual Python paths and measured report/transfer attempt durations.

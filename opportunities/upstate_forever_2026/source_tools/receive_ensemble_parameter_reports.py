@@ -33,6 +33,7 @@ from model import scientific_report_editions as reports
 from model import study_receiving, study_transfer
 from model.project_transfer_workspace import NativeProjectTransfer
 from model.workspace import Workspace
+from model.reuse import copy_verified
 
 SCHEMA = "upstate.ensemble-parameter-report-course/v1"
 LEAF = "source_tools/receive_ensemble_parameter_reports.py"
@@ -269,6 +270,7 @@ def _start_page(root, received_workspace, original, science, archive, result):
         if name not in record["files"]:
             raise ValueError("The completed scientific report is missing " + name)
         add(label, verify_file(directory, record["files"][name]))
+    add("Scientific report and original source companions (ZIP)", root / "scientific-report.zip")
     add("Complete editable Study and application", archive["path"])
     add("Original report/source selection", root / "receiving-selection.json")
     for row in original["studies"]:
@@ -398,6 +400,8 @@ def run(args):
             payload = {"title": original["title"],
                        "sources": [row["source"] for row in state["sources"]]}
             science, science_export = _report(workspace, root, state, checkpoint, payload)
+            delivery_archive = copy_verified(Path(science_export["directory"]), science_export["file"],
+                                             root, path="scientific-report.zip")
             selection = {"schema": "upstate.study-selection/v1", "title": original["title"],
                          "roots": [{"kind": "scientific-report-editions", "id": science["id"]}],
                          "include_related_results": True}
@@ -435,7 +439,8 @@ def run(args):
                 "operation": str(root), "original_workspace": str(workspace.root),
                 "ensemble_id": original["ensemble_id"], "bridge_id": original["bridge_id"],
                 "original_studies": original["studies"], "sources": state["sources"],
-                "scientific_report_edition_id": science["id"], "scientific_export": science_export,
+                "scientific_report_edition_id": science["id"],
+                "scientific_export": {**science_export, "delivery_file": delivery_archive},
                 "study_archive": {name: archive[name] for name in ("id", "path", "bytes", "sha256", "members")},
                 "receiving": received, "fresh_process": fresh,
                 "start_here": str(root / "START_HERE.html"),
