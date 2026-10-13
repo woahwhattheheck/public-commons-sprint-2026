@@ -75,10 +75,8 @@ export function buildFlowableProcessProgramme({catalogText,members,inputs,operat
   need(parsed.processDefinitionId==='__PROCESS_DEFINITION_ID__'&&parsed.businessKey==='__BUSINESS_KEY__',
    'The original typed request must select its definition and stable business key.');
   bodyText=bodyText.split('"__BUSINESS_KEY__"').join(JSON.stringify(operation+':'+family.key+':source1'));
-  if(tenantId!==undefined){
-   need(parsed.tenantId==='__TENANT_ID__'||parsed.tenantId===tenantId,'Retain the explicit selected native tenant in the original input.');
-   if(parsed.tenantId==='__TENANT_ID__')bodyText=bodyText.split('"__TENANT_ID__"').join(JSON.stringify(tenantId));
-  }else need(parsed.tenantId===undefined,'Select the tenant declared by the complete original input.');
+  need(parsed.tenantId===undefined,
+   'The exact-definition-ID start must omit tenantId; select the tenant on the original deployment.');
   const start=add(family.key+'-start',family.name+' · start selected source 1','process',{action:'start',bodyText},
    [token('__PROCESS_DEFINITION_ID__',definitions.get(family.key+':1'))]);
   processes.set(family.key,ref(start,'reconciliation','/evidence/processInstanceIds/0'));
