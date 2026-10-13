@@ -228,6 +228,15 @@ try{
  await page.goto(c.operator_url,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#workspace-select')?.options.length>0);
  assert.equal(new URL(page.url()).hash,'#overview');
+ if(c.scientific_synthesis_review){
+  const {receiveScientificSynthesisReview}=await import("./scientific_synthesis_review_receiving.mjs");
+  bindOriginal(await getState());
+  saved.scientific_synthesis_review=await receiveScientificSynthesisReview(page,{
+   control:c.scientific_synthesis_review,workspace,api,outputDirectory:output,freshContext:true,
+   ownerCheck:async()=>{const current=await getState();assert.equal(current.data.project.id,c.model.workspace_id);assert.equal(current.workspace_key??workspace,workspace);}
+  });
+  await checkpoint();
+ }else{
  await inspectViews();
  if(c.scientific_synthesis){
   const {receiveScientificSynthesis}=await import('./scientific_synthesis_receiving.mjs');
@@ -269,6 +278,7 @@ try{
   saved.received=restore.result;await showTask(restore.task_id);
   await page.locator('#detail-dialog [data-action="workspace-select"]').click();
   workspace=restore.result.workspace_key;bindOriginal(await getState());await navigate('overview');await screenshot('restored-workspace');
+ }
  }
  assert.deepEqual(modelRunActions,[]);assert.deepEqual(attempt.page_errors,[]);assert.deepEqual(attempt.http_errors,[]);
  attempt.complete=true;attempt.completed_at=new Date().toISOString();
