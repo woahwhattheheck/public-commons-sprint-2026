@@ -342,7 +342,8 @@ def main(argv=None):
                                        queue_directory=args.queue_directory)
         from native_result_view import select
         print(json.dumps(select(report, args.report_format)))
-        if args.action in ("resume-memory", "resume-capacity") and report["state"] in native.TERMINAL:
+        if (args.action in ("resume-memory", "resume-capacity") and
+                (report["state"] in native.TERMINAL or report["state"] == "finalization_pending")):
             return native.exit_status(report)
         return 0
     except (OSError, ValueError, KeyError, ImportError) as exc:
