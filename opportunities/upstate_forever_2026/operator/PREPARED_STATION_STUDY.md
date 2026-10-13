@@ -1,6 +1,22 @@
-# Prepare and operate the 87-station Upper Savannah study
+# Prepare and operate Upper Savannah assessment studies
 
-The prepared study joins the retained 705-station SCDES catalogue, eight original WQP station records, the extracted 101-row assessment inventory and the complete upstream HUC12 domain. Each input is selected by its retained byte identity. The domain's HUC12 field is discovered from its native schema.
+The original 87-station study joins the retained 705-station SCDES catalogue, eight original WQP station records, the extracted 101-row assessment inventory and the complete upstream HUC12 domain. Each input is selected by its retained byte identity. The domain's HUC12 field is discovered from its native schema.
+
+## Choose the retained assessment coverage
+
+| Prepared study | Original assessment records | Exact station IDs | Original inventories |
+| --- | ---: | ---: | --- |
+| Upper Savannah assessment — 87 monitoring stations | 101 | 87 | Retained 2026 draft extract |
+| Upper Savannah published assessments — 159 monitoring stations | 192 | 159 | Published 2024 listing and July 28, 2026 TMDL status |
+| Upper Savannah assessment editions — 164 monitoring stations | 293 | 164 | All three retained inventories |
+
+Choose the all-editions study to inspect the complete retained assessment coverage.
+The original 87- and 159-station selections remain available for their own source
+scope. The all-editions selection has 82 stations shared between those selections
+and five draft-only sites: RL-24073, RS-24163, SV-236, SV-344 and SV-376.
+Their original locations are already in the retained monitoring and WQP sources.
+Every cause/use record remains attached to its original edition, source row and
+publisher watershed assignment.
 
 ## Import retained source packages
 
@@ -182,3 +198,58 @@ bytes with SHA256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09
 This fallback manifest can be imported directly when the original statewide
 JSON banks have not yet been received. Both paths preserve the original 192
 edition-specific records and use the same three native station sources.
+
+## Operate all three retained editions together
+
+The complete preset adds the unchanged 101-row draft inventory to the published
+192-row selection. It retains 293 distinct edition records at 164 station IDs,
+using the same monitoring, WQP8, WQP2 and original 217-polygon domain sources.
+The complete selection has 154 exact monitoring-layer locations, all eight WQP8
+locations and the two additional WQP2 locations, with one original point per site.
+Its source summary includes the three edition counts, the shared station count,
+the five draft-only stations and 77 distinct publisher HUC12 labels. The mapped
+watershed memberships still come from the actual point/polygon operation.
+
+Run from the current application directory, selecting actual source directories:
+
+    python -m model.station_study \
+      --workspace ALL_EDITIONS_WORKSPACE --create-workspace --build \
+      --study-id upper-savannah-assessments-all-editions-164 \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP8/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --source-manifest ES9960_COMPLETE_ORIGINALS/sources.json \
+      --source-manifest WQP_ADDITIONAL_TWO/sources.json \
+      --assessment-csv WQP8/assessment_listed_causes_2026_draft_original.csv \
+      --receive-workspace ALL_EDITIONS_RECEIVING --create-receiving-workspace
+
+The accepted original published CSV manifest can replace the complete normalized
+JSON-bank manifest when that is the available retained inventory. The additional
+draft input remains the exact 14,033-byte CSV described above. Existing original
+source imports are reused. Select distinct study and receiving directories; the
+same native build, full source archive, reopen comparison and editable operator
+selection serve all three presets.
+
+### Read cause and use support together
+
+The retained published 2024 selection has 108 cause records at 94 stations.
+The July 2026 selection has 84 E. coli/recreation records at 84 stations.
+Those published cohorts share 19 stations; their original cause/use records
+remain distinct. The draft extract has a different retained geographic scope,
+so differences between these inventories are not a concentration trend.
+
+In the July 2026 rows, five stations have the original recreation/E. coli
+support value Fully Supported: SV-206, SV-015, SV-139, SV-073 and SV-352.
+SV-206 also retains a BIO/AL listing in both the 2024 and draft inventories;
+SV-139 retains DO/AL. Read the support field together with its original cause,
+designated use and edition rather than assigning one station-wide status.
+
+For the Lower Eighteenmile publisher watershed 030601010602, the original
+listing records include SV-268 with TN, TP and TURB, and SV-233 with TURB.
+The separate July 2026 ECOLI/REC rows at SV-135, SV-233 and SV-268 have support
+value Not Supported. These records provide source-specific context for the
+existing nutrient, turbidity and microbial observations and model studies.
+Select the original edition and cause in the maintained station panel; the full
+293-record export preserves their exact source representations.
+
+Original public documents: [2024 303(d) listing](https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf), [July 28, 2026 TMDL attainment status](https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf), and [2026 draft Integrated Report](https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/PDF/302110). The unchanged retained source bodies and source-specific geographic selections are identified above.
