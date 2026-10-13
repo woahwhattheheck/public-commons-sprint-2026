@@ -295,6 +295,20 @@ export function createClientSourceIntake(host){
     return '<p data-ci-mapping-status role="status" aria-live="polite">'+esc(mappingStatus(choice))+'</p>'+fields(primary)+
       (additional.length?'<details><summary data-ci-additional-summary>Additional native columns · '+additional.filter(name=>choice.mapping[name]).length+' selected</summary><p>These optional selections remain saved and included in the projected table. They are not required by the chosen model.</p>'+fields(additional)+'</details>':'');
   }
+  function rasterPreparation(choice,index){
+    const clear=choice.conversion?actionButton('remove-conversion','Remove incompatible conversion',
+      'data-ci-index="'+index+'" data-ci-mutating'):'';
+    if(choice.role==='CONTEXT')return '<p>Context retains the original raster for reference. Grid preparation and physical unit conversion are not applied to this role.</p>'+clear;
+    const categorical=choice.role==='NLCD';
+    const methods=categorical?[['nearest','Nearest'],['mode','Mode']]:
+      [['nearest','Nearest'],['bilinear','Bilinear'],['average','Average'],['mode','Mode']];
+    return '<fieldset><legend>Native grid preparation</legend><p>Pixels are retained unchanged. Reviewed preparation is applied later by the existing grid engine.</p><div class="ci-fields">'+
+      selectField('Resampling on the chosen model grid','resampling',methods,choice.resampling)+
+      (categorical?'<p>Land-cover classes keep their original codes. Choose nearest or mode resampling; physical unit conversion does not apply.</p>'+clear:
+        inputField('Conversion factor (blank means none)','conversion.factor',choice.conversion?.factor??'','number','step="any" min="0"')+
+        inputField('Converted target units','conversion.target_units',choice.conversion?.target_units??'')+
+        inputField('Conversion source / reference','conversion.reference',choice.conversion?.reference??''))+'</div></fieldset>';
+  }
   function interpretation(choice,index){
     const file=inspection.files[choice.file_index],part=file.inspection.parts[choice.part_index];
     const fieldValues=[['','Not selected'],...arr(part.fields).map(x=>[x.id,x.display||x.label])];
@@ -307,11 +321,7 @@ export function createClientSourceIntake(host){
       selectField('Original label column','label_field',fieldValues,choice.label_field)+
       inputField('Methods / unit interpretation reference','reference',choice.reference)+
       '<label class="ci-wide"><span>Interpretation and limitations</span><textarea data-ci-field="notes" data-ci-mutating>'+esc(choice.notes)+'</textarea></label></div>'+
-      (part.kind==='raster'?'<fieldset><legend>Native grid preparation</legend><p>Pixels are retained unchanged. An explicit scale is applied later by the existing grid engine, once.</p><div class="ci-fields">'+
-        selectField('Resampling on the chosen model grid','resampling',[['nearest','Nearest'],['bilinear','Bilinear'],['average','Average'],['mode','Mode']],choice.resampling)+
-        inputField('Conversion factor (blank means none)','conversion.factor',choice.conversion?.factor??'','number','step="any" min="0"')+
-        inputField('Converted target units','conversion.target_units',choice.conversion?.target_units??'')+
-        inputField('Conversion source / reference','conversion.reference',choice.conversion?.reference??'')+'</div></fieldset>':'')+
+      (part.kind==='raster'?rasterPreparation(choice,index):'')+
       (part.kind==='table'&&choice.role==='BIOPHYSICAL'?'<fieldset><legend>Map original columns to native parameters</legend><p>Only reviewed column selections produce the native CSV. The complete original workbook, all sheets, formulas and extra columns remain retained. Values are validated by the existing NDR/SDR table reader.</p>'+
         selectField('Native model validation','models',[['ndr,sdr','NDR and SDR'],['ndr','NDR'],['sdr','SDR']],choice.models.join(','))+
         mappingControls(choice,fieldValues)+'</fieldset>':'')+
@@ -490,6 +500,7 @@ export function createClientSourceIntake(host){
           else item[field]=value;
           if(field!=='confirmed')item.confirmed=false;
           if(field==='role'&&value==='NLCD')item.resampling='nearest';
+          if(field==='role'&&['CONTEXT','NLCD'].includes(value))delete item.conversion;
           if(field==='role'&&value!=='BIOPHYSICAL')item.mapping={};
           if(field==='role'&&value==='BIOPHYSICAL'&&!Object.keys(item.mapping).length){
             const part=inspection.files[item.file_index].inspection.parts[item.part_index];
@@ -545,11 +556,19 @@ export function createClientSourceIntake(host){
         })});return;
       }
       // Synchronous edits are performed outside the operation's busy guard.
-      if(action==='add-choice'||action==='remove-choice'||action==='remove-upload'||action==='recover-upload'){
+      if(action==='add-choice'||action==='remove-choice'||action==='remove-upload'||action==='recover-upload'||action==='remove-conversion'){
         busy=false;
         if(action==='recover-upload'){
           const receipt=availableUploads().find(row=>row.id===button.dataset.ciId);need(receipt,'The original upload receipt is no longer selected.');
           saveChange(value=>value.uploads.push(clone(receipt)));renderFiles();
+        }else if(action==='remove-conversion'){
+          saveChange(value=>{
+            const choice=value.selections[Number(button.dataset.ciIndex)];
+            need(choice&&['CONTEXT','NLCD'].includes(choice.role),'Select a context or land-cover interpretation.');
+            delete choice.conversion;choice.confirmed=false;
+          });
+          notice='Incompatible conversion removed. Review and confirm this source interpretation before saving.';
+          renderChoices();messages();
         }else if(action==='add-choice')addChoice(Number(button.dataset.ciFile),Number(button.dataset.ciPart));
         else if(action==='remove-choice'){saveChange(v=>{v.selections.splice(Number(button.dataset.ciIndex),1);});renderChoices();}
         else{saveChange(v=>{v.uploads.splice(Number(button.dataset.ciIndex),1);});renderFiles();}
