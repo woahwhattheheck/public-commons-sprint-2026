@@ -38,7 +38,7 @@ export function communityRevisionSummary(value){
   '<details><summary>Original source and metadata changes</summary>'+table(['Field','Earlier value','Later value'],fieldRows(value.source_changes))+'</details>';
 }
 
-export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan}){
+export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan,studyTransferButton}){
   let generation=0;
   const workspace=()=>getState()?.workspace_key||'';
   const data=()=>getState()?.data||{};
@@ -68,6 +68,7 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
       '</span> · retained in this project as a complete received comparison. The original ZIP and every archived source member are available below.</p>':'';
     detail(result.title,origin+'<div class="community-detail-actions">'+
       originalPlanButton(comparison.before_plan,'Open earlier plan')+originalPlanButton(comparison.after_plan,'Open later plan')+
+      (!received&&typeof studyTransferButton==='function'?studyTransferButton('community-plan-comparisons',id):'')+
       '</div>'+communityRevisionSummary(comparison)+fileList(list(result._downloads))+
       '<details class="technical"><summary>Complete retained comparison</summary><pre class="json-view">'+
       esc(JSON.stringify(comparison,null,2))+'</pre></details>',
@@ -96,9 +97,11 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
       }
       return rows;
     };
-    let currentForm=null,preview=null,previewSequence=0;
-    const valid=()=>workspace()===w&&generation===g&&currentForm&&
-      document.getElementById('operation-form')===currentForm&&currentForm.querySelector('[name="revision_after"]');
+    let currentForm=null,currentDialog=null,currentAfter=null,preview=null,previewSequence=0;
+    const valid=()=>workspace()===w&&generation===g&&currentForm&&currentDialog?.open&&
+      document.getElementById('form-dialog')===currentDialog&&
+      document.getElementById('operation-form')===currentForm&&
+      currentForm.querySelector('[name="revision_after"]')===currentAfter;
     const read=()=>{
       if(!valid())throw Error('Reopen the comparison form in its original workspace.');
       const before=currentForm.elements.namedItem('revision_before').value;
@@ -161,7 +164,9 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
         return submitAction('community.plan.compare',clone(selected));
       },()=>{
         currentForm=document.getElementById('operation-form');
-        if(workspace()!==w||generation!==g)return;
+        currentDialog=document.getElementById('form-dialog');
+        currentAfter=currentForm?.querySelector('[name="revision_after"]');
+        if(!currentAfter||!valid())return;
         refreshReports();
         currentForm.elements.namedItem('revision_after').addEventListener('change',()=>{
           const after=currentForm.elements.namedItem('revision_after').value;
@@ -176,9 +181,11 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
   async function receive(){
     const w=workspace(),g=++generation;
     if(!w)throw Error('Select the project that will retain this Community handover.');
-    let currentForm=null,reviewed=null,sequence=0;
-    const valid=()=>workspace()===w&&generation===g&&currentForm&&
-      document.getElementById('operation-form')===currentForm&&currentForm.querySelector('[name="revision_archive"]');
+    let currentForm=null,currentDialog=null,currentArchive=null,reviewed=null,sequence=0;
+    const valid=()=>workspace()===w&&generation===g&&currentForm&&currentDialog?.open&&
+      document.getElementById('form-dialog')===currentDialog&&
+      document.getElementById('operation-form')===currentForm&&
+      currentForm.querySelector('[name="revision_archive"]')===currentArchive;
     const selectedFile=()=>{
       if(!valid())throw Error('Reopen the receiving form in its selected project.');
       const file=currentForm.elements.namedItem('revision_archive').files?.[0];
@@ -227,7 +234,9 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
           upload_id:reviewed.upload_id,archive_sha256:reviewed.archive_sha256});
       },()=>{
         currentForm=document.getElementById('operation-form');
-        if(workspace()!==w||generation!==g)return;
+        currentDialog=document.getElementById('form-dialog');
+        currentArchive=currentForm?.querySelector('[name="revision_archive"]');
+        if(!currentArchive||!valid())return;
         currentForm.elements.namedItem('revision_archive').addEventListener('change',()=>{
           reviewed=null;++sequence;
           currentForm.querySelector('[data-revision-receive-preview]').textContent='Review this original handover before receiving.';
