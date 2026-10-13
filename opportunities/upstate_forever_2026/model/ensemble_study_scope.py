@@ -173,7 +173,8 @@ def sections(scope):
         "This saved design retains the original source classifications, geographic choices and "
         "assumption documents below. These declarations belong to the selected source editions.",
         _table(["Native grid property", "Original value"], [
-            ["Title", scope["grid_title"]], ["Coordinate reference system", native.get("crs")],
+            ["Title", scope["grid_title"]],
+            ["Coordinate reference system", native.get("crs_name") or native.get("crs")],
             ["Columns × rows", _plain(native.get("width")) + " × " + _plain(native.get("height"))],
             ["Native cell size (m)", native.get("resolution_m")],
             ["Native cell area (ha)", native.get("pixel_area_ha")],
