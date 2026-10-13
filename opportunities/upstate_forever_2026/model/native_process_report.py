@@ -134,7 +134,8 @@ def catalog(ws):
         item = read_json(path)
         reports.append({k: item.get(k) for k in
                         ("id", "state", "title", "selection", "source_choice", "updated_at", "error")})
-    return {"native_runs": rows, "reports": reports}
+    # Describe the supported selection API without importing optional renderers.
+    return {"include_figures_available": True, "native_runs": rows, "reports": reports}
 
 
 def _crs(value):
