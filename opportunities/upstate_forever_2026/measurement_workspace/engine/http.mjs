@@ -1,3 +1,5 @@
+import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
+import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
 import {intakeOperation} from './intake.mjs';
 import {flowOperation,readFlowStudy,flowCSV} from './flow_workspace.mjs';
 import {largeOperation} from './large_http.mjs';
@@ -38,6 +40,15 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
       if(parts[0]==='intake'){send(response,200,intakeOperation(s,method,parts.slice(1),['POST','PUT'].includes(method)?await readBody(request):{}));return;}
+      if(parts[0]==='reconciliation'){
+        if(method==='GET'&&parts[1]==='reports'&&parts.length===4&&parts[3]==='report.csv'){
+          send(response,200,reconciliationCSV(reconciliationReport(s,parts[2])),'text/csv; charset=utf-8','source-reconciliation.csv');return;
+        }
+        if(method==='GET'&&parts[1]==='reports'&&parts.length===4&&parts[3]==='report.html'){
+          send(response,200,sourceReviewHTML(reconciliationReport(s,parts[2])),'text/html; charset=utf-8','source-reconciliation.html');return;
+        }
+        send(response,200,reconciliationOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
       if(parts[0]==='flow'){
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['daily.csv','periods.csv','samples.csv'].includes(parts[3])){send(response,200,flowCSV(readFlowStudy(s,parts[2]),parts[3].split('.')[0]),'text/csv; charset=utf-8',parts[3]);return;}
         send(response,200,await flowOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
