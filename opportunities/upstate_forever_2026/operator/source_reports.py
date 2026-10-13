@@ -93,6 +93,7 @@ BUNDLED_REPORT_MANIFESTS = (
     "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json",
     "source/water_context/sources-20261013.json",
+    "source/rl18151-lake-phosphorus-20261013/sources.json",
     "point_source_history.sources.json",
     "point_source_load_volume.sources.json",
     "point_source_scientific.sources.json",
