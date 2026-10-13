@@ -199,6 +199,74 @@ apply and the ordinary customer delivery. The producer opens those exact
 normal/narrow rendered views and every downloaded attachment, uses the important
 controls, and inspects the returned screenshots before presenting the result.
 
+## Review changed event meaning before the same native continuation
+
+Open the accepted programme and its already acquired following NDJSON/manifest
+pair. Compare the complete preceding and current mappings in the original
+Event browser or source CLI. Inspect cumulative coverage and newly added events
+separately: an old field can remain present in earlier events while disappearing
+from every new event. Review missing/null values, changed JSON kinds and each
+added, removed or redirected output mapping.
+
+Keep the original comparison, reviewer, decision note and every affected output
+field's reason together. Save the complete unfinished mapping review before a
+handoff and reopen it against the same programme, baseline operation, revision,
+source pair and mapping. Programme switches preserve their separate drafts.
+The native coordinator recomputes the complete comparison before its original
+review and carries the exact attributed selection into the existing apply.
+
+The installed typed agent and source CLI receive the same full comparison and
+review record. Continue any changed workbook source through the customer
+worksheet course below, then receive the original full report, workbook and
+Analysis archive through the same Installation operation. The complete course
+is in [Event programmes](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_PROGRAMMES.md).
+
+## Continue the customer's saved worksheet after a later source changes
+
+A selected later window can leave one of the customer's existing worksheet
+columns without a matching source. Open the original saved Event action and
+its complete `WORKBOOK_COLUMN_CHOICES_REQUIRED` proposal in the same browser.
+Use [the complete worksheet course](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md)
+to retain the original operation, accepted review and customer's decision note.
+
+The operator works from each unresolved sheet's full preceding columns and
+actual new source. Review source selection, heading, conversion, null label and
+precision; add, remove, reorder or restore rows deliberately. Report columns
+retain their zero-based source positions and query-export columns retain their
+unique source names. All editable rows remain in the saved handover while the
+browser displays twenty at a time. Additional already-resolved sheet arrays
+remain with the complete native apply selection.
+
+Download the full working JSON before handing the task to another engineer.
+It retains the original workspace, programme, operation, review and entire
+proposal with every unfinished choice. Reopen against that same source, review
+the complete readable HTML, and continue the original explicit native apply.
+A changed source or proposal calls for its own original review. An in-flight
+file read cannot replace newly edited choices or another active native action.
+
+The existing distribution exposes `starforge event-workbook-columns` and
+`./buyer/event-workbook-columns`. The complete CLI supports template creation,
+inspection, native column-array output and readable HTML, using the same
+source binding as the browser. It retains a different existing destination
+rather than replacing that file. The installation includes the full source
+and operating guide so independent file receiving works with the selected
+product edition.
+
+Local checks match the workbook's UTF-8 heading/null-label allowances and
+permitted XML characters. Native Unicode case folding, complete source-row
+conversion and the current workbook definition are checked by the original
+workbook writer when the operator explicitly continues. Current-customer
+review remains the route for deliberately changed definitions.
+
+The producing operator opens the exact outgoing browser and every downloaded
+JSON/HTML result, operates source selection, paged and reordered columns,
+save/reopen, conflicting source selection and explicit continuation, and
+inspects the actual normal and narrow rendered views. The receiving engineer
+reopens the whole original customer workspace and carries a later source
+through the same programme, workbook and complete delivery. These operations
+join the existing native receiving record and its actual screenshots and
+outputs.
+
 ## Receive the Analysis result into its original Customer Installation
 
 Use the complete [Event customer Installation course](../../stellar/scf_2026/sf49_data_commissioning/installation-workorders/WEBHOOK_EVENT_ANALYSIS.md)
@@ -262,7 +330,6 @@ screenshots and control/download/reopen outcomes to the producing maintainer
 in the original receiving operation. The producer opens those images and
 resolves concrete defects there. Continue the same implementation and native
 operation; keep the existing focused-validation policy and owner schedule.
-The current fleet cutoff is October 13, 2026 at 14:00 UTC.
 
 ## Financial units and recurring service
 
@@ -324,10 +391,13 @@ the installed commands used by that receiving engineer.
 The complete public product is selected at commit 131fce461f90a29bf3fd1bd430aa89efc0bef164 in
 woahwhattheheck/public-commons-sprint-2026. The independent registration at
 stellar-forge/developer-site/grant-products/webhook-customer-analysis.json keeps
-all thirty existing source IDs and every preceding measured edition. Each
+all thirty preceding source IDs and every preceding measured edition, plus the
+three complete worksheet-continuation source entries. Each
 historical edition names its original repository explicitly; the current edition
-names the public repository, exact commit, full Git blob, UTF-8 byte count and
-SHA-256. Historical source identities remain distinct from the current public
+names its actual public repository, exact commit, full Git blob, UTF-8 byte
+count and SHA-256. The mapping and worksheet continuation selects all thirty-three complete
+source bodies at one current public product commit, including its browser,
+native coordinator, typed agent, installed commands and operating guides. Historical source identities remain distinct from the current public
 source selection.
 
 The same public edition includes the complete commercial Workshare intake into
