@@ -730,7 +730,8 @@ async function makeContext(options) {
     endLedger:options.endLedger===undefined?null:String(options.endLedger)};
   const originalIdentities=originalSourceIdentities(options);
   if(originalIdentities.length)selection.originalLedgerSources=originalIdentities;
-  const source=options.checkpoint?copy(options.checkpoint):{
+  need(options.checkpointMode===undefined||['copy','borrowed'].includes(options.checkpointMode),'CHECKPOINT_MODE','Choose detached copy or awaited native borrowed checkpoint delivery.');
+  const source=options.checkpoint?(options.checkpointMode==='borrowed'?options.checkpoint:copy(options.checkpoint)):{
     schema:'stellar-forge.givecredit-source.v1',kind:'ledger',
     metadata:{origin:'cfce-stellar-ledger',network,networkPassphrase:passphrase,selection,
       startedAt:now(),updatedAt:now(),status:'capturing',coverage:{},issues:[],progress:{},assetMetadata:[],
@@ -790,7 +791,7 @@ async function makeContext(options) {
     request:{jsonrpc:'2.0',id:'capture-'+String(source.responses.length+1),method,params},provider:archive?'archive':'rpc'});
   ctx.progress=async(phase,details={})=>{
     source.metadata.updatedAt=now();source.metadata.assetMetadata=[...ctx.assets.values()].map(copy);
-    if(options.onProgress)await options.onProgress({phase,...details,checkpoint:copy(source)});
+    if(options.onProgress)await options.onProgress({phase,...details,checkpoint:options.checkpointMode==='borrowed'?source:copy(source)});
   };
   return ctx;
 }
@@ -1197,7 +1198,7 @@ function interrupted(ctx,error) {
   ctx.source.metadata.status='interrupted';ctx.source.metadata.updatedAt=now();
   ctx.source.metadata.interruption={code:error.code||'CAPTURE_INTERRUPTED',message:error.message,retryAfter:error.retryAfter||null};
   ctx.source.metadata.assetMetadata=[...ctx.assets.values()].map(copy);
-  error.checkpoint=copy(ctx.source);
+  error.checkpoint=ctx.options.checkpointMode==='borrowed'?ctx.source:copy(ctx.source);
   throw error;
 }
 
@@ -1211,7 +1212,10 @@ function interrupted(ctx,error) {
  * transactionHashes, registrySource/registrySources, originalLedgerSources,
  * from/before or fromDate/beforeDate,
  * startLedger/endLedger (exclusive), assets (original token metadata),
- * fetchImpl, sdk, signal, timeoutMs, checkpoint, onProgress.
+ * fetchImpl, sdk, signal, timeoutMs, checkpoint, onProgress, checkpointMode.
+ * checkpointMode:'borrowed' is for an awaited native persistence callback: it
+ * receives the live source only until that callback resolves. The caller owns
+ * its supplied resume checkpoint. Default 'copy' retains detached snapshots.
  *
  * originalLedgerSources accepts complete retained provider responses:
  * {format:'stellar-expert-ledger-json',sourceUrl,ledger,content,retrievedAt:null|string,
