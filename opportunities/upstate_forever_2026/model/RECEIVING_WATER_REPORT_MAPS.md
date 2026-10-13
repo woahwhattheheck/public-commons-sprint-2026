@@ -188,3 +188,12 @@ preparation itself, five report figures for four waters, original plan/source
 hashes, visible multipart rings/holes, readable water labels, and reopened original
 report source and mapped figures. Existing scientific/native run IDs remain the
 ones selected in the original study.
+
+### Shared consumer capability
+
+`model.scientific_map_figures.ROLE_LABELS_VERSION` is `1` for the maintained
+optional `panel.role_labels` contract described above. Producers may check this
+version before preparing a capture that supplies authoritative area/source
+labels. The constant declares that installed rendering capability; the complete
+renderer body hash remains part of every retained map capture and report
+rendering identity.
