@@ -56,34 +56,19 @@ https://chatgpt.com/space/page_acc65615f4f08191a72c7656c43af4eb
 Operator source:
 https://chatgpt.com/space/page_5edbd4eace908191ad8b8168344f8268
 
-## Render and operate the outgoing product
+<!-- TJLABS_RENDERED_PRODUCT_INSPECTION:2026-10-13.1 -->
+## Owner-directed rendered-product inspection
 
-Before describing a client- or prospect-facing app, website, dashboard, demo,
-report, presentation or export as ready, the producing agent must open, run or
-render the exact outgoing version, look at the rendered screen or its actual
-screenshots, and operate the important user controls. Capturing screenshots
-without viewing them does not complete this work.
+Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
+Scope: owner-controlled work across providers, local and cloud runtimes, and current and future workers. Existing owner controls remain in force.
 
-Inspect the actual presentation width and a narrow or mobile width when
-relevant. Exercise the important populated, empty, loading and error states;
-open the generated downloads or exports and reopen the saved result. Keep the
-selected source, data, application version and output together throughout this
-course. Code review, DOM counts, HTTP success, unit checks and another agent's
-approval do not replace seeing and using the actual product.
+Before calling a client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing worker must open/run/render the exact outgoing version, LOOK at the rendered screen or its real screenshots, and operate the important user controls. Check the actual screenshare width and narrow/mobile width where relevant, populated/empty/loading/error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Code review, DOM counts, HTTP200, unit checks or another worker's approval do not replace seeing the actual product.
 
-Repair broken, unstyled, cramped, clipped, overflowing or unreadable output
-within the authorized work before presenting it. Use plain industrial design:
-readable tables, clear hierarchy, consistent typography and spacing, restrained
-controls, useful labels and responsive layouts. Preserve the actual scientific
-workflows, source data and computation.
+The Ecosystem product requires plain industrial design: readable tables, clear hierarchy, consistent typography/spacing, restrained controls, useful labels and responsive layouts. Keep the real workflows/data/computation. Reviews must lead directly to repairs and must not replace implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a verification product.
 
-This is part of implementing and delivering the product. Review should lead to
-concrete repairs and completion. Use focused checks for the affected workflow;
-do not substitute broad test suites, repeated inspection or a separate
-verification product for the requested engineering work.
+Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
 
-Include this instruction in delegated assignments. Keep it in active
-owner-controlled provider/project instructions and current build/receiving
-guides when moving the work to another environment. Preserve other owner
-instructions, third-party files and historical evidence. Do not force restarts,
-create watchers or revive work the owner stopped as part of this propagation.
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. This instruction does not extend or restart the Ecosystem sprint: the existing cutoff is October 13, 2026 at 10:00 a.m. America/Kentucky/Louisville, 14:00 UTC.
+
+Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
+<!-- /TJLABS_RENDERED_PRODUCT_INSPECTION -->

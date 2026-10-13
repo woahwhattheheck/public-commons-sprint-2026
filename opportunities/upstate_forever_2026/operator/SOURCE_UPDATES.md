@@ -135,8 +135,18 @@ With `--transfer`, it downloads the ordinary complete archive, verifies its
 native ticket, restores that exact ZIP through the original form, and opens the
 same immutable update and progress in the independent receiving workspace.
 
-Screenshots, optional browser video, original downloads and the completed step
-journal are saved in the selected output directory. The private operator URL
+The maintained driver opens and refreshes the populated plan at desktop and
+390-pixel phone widths, then downloads its HTML/CSV report and original plan
+through the narrow view. With `--run-models`, it checks actual completed native
+stage/output receipts, repeats preparation on the same plan, and confirms those
+receipts remain identical. Add `--expect-reuse` only for a deliberately selected
+lineage-only edition of completed original runs; every model must then retain
+its actual reused source-run identity. Fresh-browser and archive receiving
+views are captured at both widths. Complete archive SHA256 is streamed from
+disk without retaining the ZIP in JavaScript memory.
+
+Screenshots, actual control geometry, optional browser video, original downloads
+and the completed step journal are saved in the selected output directory. The private operator URL
 and capability are redacted. A native failure leaves its actual task identity
 and exception in that same journal and the original operator queue, so
 continuation uses the saved operation.
@@ -147,6 +157,6 @@ The original root-selective `/source-refresh` page remains available. Its catalo
 
 ### Inspect the installed populated view
 
-Use the exact receiving application and actual retained study for the browser journey above. Open the populated **Source updates** desk at desktop and narrow phone widths; inspect source selectors, dependency rows, run provenance, comparison availability and task/error controls for clipped text, overlapping controls and unreadable tables. Operate the real sequence: compare editions, save the plan, prepare replacements, choose **Complete refreshed runs and comparisons**, open the completed comparison, download the original reports and complete archive, then reopen that archive in an independent workspace. Inspect the completed state again at both widths. Correct an observed product defect in its maintained source and repeat the affected interaction.
+Use the exact receiving application and actual retained study for the browser journey above. Open the populated **Source updates** desk at desktop and narrow phone widths; inspect source selectors, dependency rows, run provenance, comparison availability and task/error controls for clipped text, overlapping controls and unreadable tables. Operate the real sequence: compare editions, save the plan, prepare replacements, choose **Complete refreshed runs and comparisons**, open the completed comparison, download the original reports and complete archive, then reopen that archive in an independent workspace. Inspect the completed state again at both widths. The producing peer must open and visually inspect the saved desktop and phone PNGs as well as operating the controls; captured geometry alone does not finish that review. Correct an observed product defect in its maintained source and repeat the affected interaction.
 
 For a source edition that changes only lineage metadata, confirm the successor run is actually complete and its per-model rows identify the verified reused original stages and retained outputs. Continue that same plan once with preparation only and confirm those completion and provenance rows remain. For changed scientific inputs, use the deliberately selected replacement edition and inspect the native stages and output differences produced by the original engine. Retain the actual application/source pin, commands, workspace/plan/run IDs, result journal and screenshots with the existing receiving operation; publication and source checks precede this operated product review.
