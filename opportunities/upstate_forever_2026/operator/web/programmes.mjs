@@ -1,4 +1,5 @@
 import {attachNativeCaseConsole} from './parameter_case_console.mjs';
+import {attachProgrammeSourceUpdates} from './programme_source_updates.mjs';
 /* Retained native execution control, shared by programme and experiment callers. */
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const short = value => value ? String(value).slice(0, 12) : '—';
@@ -14,6 +15,7 @@ const methodLink = '<a href="https://storage.googleapis.com/releases.naturalcapi
 export function attachProgrammes(context) {
   const {api, endpoint, getState, openForm, submitAction, detail, fileList, showTask, toast, openItem} = context;
   const caseConsole = attachNativeCaseConsole({...context, executeAction: sendAction}, 'programme');
+  const sourceUpdates = attachProgrammeSourceUpdates({...context, openProgramme: open, beginFormOpening});
   let host = null, controller = null, selected = null, currentWorkspace = null;
   let catalogue = null, record = null, loading = false, generation = 0;
   let subset = new Set(), latestError = '', activeRequest = false;
@@ -419,6 +421,7 @@ export function attachProgrammes(context) {
       actionButton('report', 'Build result catalogue', record.id, nativeActive ? 'disabled' : '') +
       actionButton('study-export', 'Export native study', record.id, nativeActive ? 'disabled' : '') +
       actionButton('selection', 'Download selections', record.id) + actionButton('clone', 'Copy selections', record.id) +
+      actionButton('source-update', 'Update sources', record.id) +
       (task ? actionButton('task', 'Inspect active operation', task.id) : '') + '</div>' +
       '<p class="note">Resume reuses the original run identities and completed native stages. Selecting cases limits this request; the saved programme retains every case.</p>' +
       pageControls() + table(['Select', 'Case', 'Profile / land cover', 'Native state', 'Target run', ''], runRows) +
@@ -507,6 +510,7 @@ export function attachProgrammes(context) {
     refreshRecord();
   }
   function detach() {
+    sourceUpdates.detach();
     generation++;
     controller?.abort(); controller = null;
     pageRequest?.abort(); pageRequest = null;
@@ -1204,6 +1208,7 @@ export function attachProgrammes(context) {
       if (opening.pending()) return createForm({...original, selection}, opening);
       return;
     }
+    if (action === 'source-update') return sourceUpdates.open(record);
     if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
     if (action === 'pair-completion') return preparePairCompletion(value);
@@ -1265,7 +1270,7 @@ export function attachProgrammes(context) {
     if (button.dataset.action === 'programme-interaction') return fromInteraction(button.dataset.id);
   }
   function taskActions(task) {
-    const row = task.programme || (['compute.programme.save', 'compute.programme.experiment', 'compute.programme.interaction'].includes(task.action) ? task.result : null);
+    const row = task.programme || (['compute.programme.save', 'compute.programme.experiment', 'compute.programme.interaction', 'compute.programme.source-update'].includes(task.action) ? task.result : null);
     const id = row?.id || task.payload?.programme_id;
     if (!task.action?.startsWith('compute.programme.') || !id) return '';
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
@@ -1279,6 +1284,7 @@ export function attachProgrammes(context) {
         escapeHTML(task.programme_report_error||task.experiment.report_error)+'</p>':'')+'</div>';
   }
   function completionMessage(task) {
+    if (task.action === 'compute.programme.source-update') return 'Source successor saved. Open its Programme to continue the selected native cases and export the new study.';
     if (task.action === 'compute.programme.delivery' && task.result?.delivery_id) return 'Maps, scientific report and original study source package are ready.';
     if (task.action !== 'compute.programme.run' && task.action !== 'compute.programme.pair-completion') return '';
     if (task.action === 'compute.programme.pair-completion' && !task.payload?.run) return 'Matching calculation programme saved.';
