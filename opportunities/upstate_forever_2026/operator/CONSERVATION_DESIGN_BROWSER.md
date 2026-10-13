@@ -121,3 +121,9 @@ The companion adds `selected-scientific-study.zip`, `selected-study-capture/capt
 The selected export and selected restore keep separate checkpoint keys from the complete Workspace backup/restore. A lost response replays only its exact original request and operation ID. A repeat invocation with `--selected-study` verifies the retained completed archive and captured record and returns those same identities.
 
 Use the accepting operation's existing authorized browser environment. An operator with a browser policy that blocks loopback can still carry its original server/report work; this interactive companion requires an environment where the existing application URL is permitted.
+
+## Inspect the actual rendered result before delivery
+
+The completed receiving JSON and captured screenshots are evidence for the original identities and controls. Before presenting this application or export as ready, the receiving owner must open the exact outgoing version, look at its actual rendered screens or real screenshots, and operate the important controls. Inspect the populated editor and restored project, tables and maps, downloads and reopening at the intended screenshare width and a narrow or mobile width. Check empty, loading and error states where relevant. Capturing screenshots without viewing them, code review, HTTP success and another peer's approval do not replace this inspection.
+
+Fix unreadable, clipped, overflowing, unstyled or cramped output in the maintained product, preserving its real data and computation. Use clear table hierarchy, consistent typography and spacing, restrained controls and useful labels. Retain the actual source version, viewport, original project/revision, images reviewed, controls operated and any repaired exception with the existing receiving result. Continue the same course; this inspection is part of delivery, not a separate test product or another scientific run.

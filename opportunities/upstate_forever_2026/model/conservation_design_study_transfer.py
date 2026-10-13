@@ -175,7 +175,7 @@ def _retained_editor_files(workspace, staged, records):
     source_root, target_root = Path(workspace.root), Path(staged.root)
     retained = {}
     by_id = {row["id"]: row for row in records}
-    engine = _modules()[0]
+    engine, design, unused = _modules()
 
     def retain(path, descriptor=None):
         path = Path(path)
@@ -207,6 +207,43 @@ def _retained_editor_files(workspace, staged, records):
         verify_file(target_root, item)
         retained[relative] = {**item, "mutable": False}
 
+    def retain_preparation(reference, row):
+        # The original editor's open endpoint begins with get_preparation().
+        # Keep that immutable parent even when related-result discovery is off.
+        key = identifier(reference["preparation_id"])
+        directory = source_root / "conservation-design" / "preparations" / key
+        path = directory / "preparation.json"
+        value = read_json(path)
+        if (value.get("schema") != "upstate.conservation-design/v1"
+                or value.get("kind") != "preparation" or value.get("state") != "complete"
+                or value.get("id") != key or digest(value.get("selection")) != key
+                or value.get("workspace_id") != workspace.project["id"]
+                or value.get("project_id") != row["id"]
+                or value.get("plan_id") != row["source_reference"]["plan_id"]
+                or value.get("study_id") != row["source_reference"]["study_id"]
+                or value.get("binding_id") != row["binding_id"]
+                or value.get("geometry_role") != row["geometry_role"]
+                or value["selection"].get("source_reference") != row["source_reference"]):
+            raise ValueError("The original editor preparation lost its selected project binding")
+        files = value.get("files") or {}
+        if not {"binding", "project", "editable_project"}.issubset(files):
+            raise ValueError("Retain the complete original editable preparation packet")
+        prepared = read_json(verify_file(source_root, files["project"]))
+        engine.validate_project(prepared)
+        binding = design.binding_for(prepared)
+        if (prepared["id"] != row["id"]
+                or digest(prepared["baseline"]) != row["baseline_sha256"]
+                or binding is None or binding["id"] != row["binding_id"]
+                or binding["source_reference"] != row["source_reference"]
+                or read_json(verify_file(source_root, files["binding"])) != binding):
+            raise ValueError("The prepared original project differs from its captured editor baseline")
+        retain(path)
+        for descriptor in files.values():
+            original = verify_file(source_root, descriptor)
+            if not original.resolve().is_relative_to(directory.resolve()):
+                raise ValueError("An editor preparation names a file outside its original packet")
+            retain(original, descriptor)
+
     for path in sorted((source_root / EDITOR / "preparations").glob("*.json")):
         value = read_json(path)
         project_id = value.get("project_id")
@@ -221,6 +258,7 @@ def _retained_editor_files(workspace, staged, records):
                 or value.get("binding_id") != row["binding_id"]):
             raise ValueError("The original editor preparation reference differs from its captured project")
         identifier(path.stem)
+        retain_preparation(value, row)
         retain(path)
     for path in sorted((source_root / EDITOR / "operations").glob("*/operation.json")):
         value = read_json(path)

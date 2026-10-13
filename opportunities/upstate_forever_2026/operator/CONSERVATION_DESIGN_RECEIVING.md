@@ -88,6 +88,8 @@ A useful completed receiving record includes the original plan, preparation and 
 
 The existing Study desk can also transfer only the original selected Conservation portfolio and its related saved editor work. Select its original plan, retain related results, and use the ordinary Study export and Workspace restore controls. The maintained transfer freezes the original editor Store before discovering that selection, then copies the matching original projects into a private database. It retains their UUIDs, exact current bodies, alternatives, every captured revision and timestamp, and original plan bindings.
 
+Captured editor projects retain their original native preparation records and verified binding, project and editable ZIP files even when **Include related results** is off. These are required to reopen the captured project; the option controls discovery of other saved scenarios and results. The browser continuation below leaves related results on to exercise the complete saved-design course.
+
 The selected archive identifies this capture in `identity.conservation_design_history`. The original archive checks verify its exact frozen database bytes before receiving. Later valid saves may extend the restored revision history; all captured revision bodies must still match. Original uncommitted browser drafts remain in their browser recovery keys.
 
 Append `--selected-study` to the same browser receiving command below to exercise this continuation after its existing whole-Workspace archive/reopen course. Use the same output directory to preserve both sets of accepted task identities. The complete [selected-study guide](../model/CONSERVATION_DESIGN_STUDY_TRANSFER.md) describes the original Store and receipt contract.
@@ -130,3 +132,9 @@ The existing native model owner continues scientific execution for any prepared 
 The installer composes the original provider's Workspace verification method and descriptor registration in memory. Existing editor transport, file policy, binary upload, native queue and draft handling stay in their current source bodies. An already registered verifier remains with its owner.
 
 The complete source family, database inventory addition and receiving instructions travel in the maintained public application. Shared host, scientific engine, cumulative source collection and native run ownership remain with their respective current implementations.
+
+## Inspect the actual rendered result before delivery
+
+The completed receiving JSON and captured screenshots are evidence for the original identities and controls. Before presenting this application or export as ready, the receiving owner must open the exact outgoing version, look at its actual rendered screens or real screenshots, and operate the important controls. Inspect the populated editor and restored project, tables and maps, downloads and reopening at the intended screenshare width and a narrow or mobile width. Check empty, loading and error states where relevant. Capturing screenshots without viewing them, code review, HTTP success and another peer's approval do not replace this inspection.
+
+Fix unreadable, clipped, overflowing, unstyled or cramped output in the maintained product, preserving its real data and computation. Use clear table hierarchy, consistent typography and spacing, restrained controls and useful labels. Retain the actual source version, viewport, original project/revision, images reviewed, controls operated and any repaired exception with the existing receiving result. Continue the same course; this inspection is part of delivery, not a separate test product or another scientific run.
