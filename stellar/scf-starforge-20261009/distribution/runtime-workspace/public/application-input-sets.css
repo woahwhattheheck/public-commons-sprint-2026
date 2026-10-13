@@ -5,3 +5,10 @@
 #application-input-sets input[type=file]{display:block;max-width:100%;margin-top:5px}
 #application-input-sets button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 #application-input-sets .actions{flex-wrap:wrap}
+
+#application-input-sets .application-input-set-editions{min-width:0;max-width:100%;margin-top:20px}
+#application-input-sets .application-input-set-editions table{width:100%;table-layout:fixed;border-collapse:collapse}
+#application-input-sets .application-input-set-editions th,#application-input-sets .application-input-set-editions td{overflow-wrap:anywhere;vertical-align:top;text-align:left;padding:6px;border-bottom:1px solid #d8d8d8}
+#application-input-sets .application-input-set-editions input:not([type=checkbox]){max-width:100%;box-sizing:border-box}
+#application-input-sets .application-input-set-editions label{display:block;margin:8px 0}
+@media(max-width:480px){#application-input-sets .application-input-set-editions th,#application-input-sets .application-input-set-editions td{font-size:12px;padding:4px}}
