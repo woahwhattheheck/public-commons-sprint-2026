@@ -46,7 +46,7 @@ The command performs the full maintained operation:
 3. Reopen the original completed operation and saved report edition.
 4. Download PDF, HTML, Markdown and structured report data through their original file tickets.
 5. Prepare and download the complete report ZIP, then read all original members.
-6. Queue the complete Workspace backup, upload that archive through the original receiving interface, restore it independently and reopen the same report in Sources.
+6. Queue the complete Workspace backup, reuse its exact verified retained upload or stream the archive through the original receiving interface, restore it independently and reopen the same report in Sources.
 7. With **--selected-study**, preview and export that saved report through Study transfer, receive its original selected archive, and reopen the same edition with its retained editable dependencies.
 
 The selected-study option uses the current scientific-report Study transfer family. The complete Workspace operation remains available independently. The existing producer resolvers determine the original editable history carried with each selected report source.
@@ -60,6 +60,14 @@ The original preview is saved before its render request is submitted. On resume,
 If execution stopped after the original renderer published its complete operation but before the edition or queue completion was saved, the same render action verifies those original output files and publishes the missing edition record. A later formatter version does not rerender that completed output. An operation that has not yet completed rendering still uses the original installed-source check; changing its renderer does not silently replace its selected edition.
 
 The selected-study export likewise reuses its saved preview token and original request. Complete downloads use streaming byte and checksum verification. The original report identity retains its authoring Workspace path after receiving. Subsequent report editions use their own newly reviewed preview and retain this completed edition.
+
+### Reuse the original verified archive upload
+
+Before either the complete Workspace or selected-study restore, the receiver hashes the exact retained archive and derives the original upload ID from its SHA-256, filename and ZIP media type. If that upload's metadata exists in this operation's operator state, the existing authenticated upload lookup reopens it and checks the retained object's length and complete hash. The returned ID, filename, media type, byte length and SHA-256 must also match the downloaded archive. This avoids writing another temporary archive copy when resuming a completed upload.
+
+A new streamed upload occurs only when that exact metadata file is absent. An inaccessible metadata record, missing or changed retained object, malformed record or different returned identity stops the same operation with its actual error. It does not trigger a replacement upload. The existing restore request and original task ID remain unchanged.
+
+Both `receiving-progress.json` and the completed `scientific-report-receiving.json` expose `uploads.workspace` and, when selected, `uploads.selected_study`. Each records `mode` (`retained` or `streamed`), the original upload ID, filename, MIME type, byte count and SHA-256. The progress phases `workspace_upload` and `selected_study_upload` identify the actual archive check or transfer. Continue with the original command and `--resume`; keep its output and operator-state directory together.
 
 **--timeout** sets the allowance for each original queued operation and receiving phase, default 1,800 seconds. The same command runs each report in one owned native process. Its supervisor follows that process's original progress record and gives startup, each queue operation, shutdown and the optional browser course their own deadline. An expired native thread cannot keep the course waiting indefinitely inside executor shutdown.
 

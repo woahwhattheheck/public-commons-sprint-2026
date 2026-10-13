@@ -40,6 +40,32 @@ def identity(path):
     return {"bytes": size, "sha256": checksum.hexdigest()}
 
 
+def archive_upload(operator, archive):
+    """Reopen an exact retained upload through the original checked lookup."""
+    archive = Path(archive)
+    expected = {"filename": archive.name, "mime_type": "application/zip", **identity(archive)}
+    upload_id = digest({"sha256": expected["sha256"], "filename": expected["filename"],
+                        "media_type": expected["mime_type"]})
+    metadata = operator.root / "uploads" / (upload_id + ".json")
+    # Only absence of the metadata itself permits another streamed upload.
+    # lstat sees a dangling metadata link as present; lookup/access/identity
+    # failures must propagate instead of creating a replacement object.
+    try:
+        metadata.lstat()
+    except FileNotFoundError:
+        with archive.open("rb") as stream:
+            record = operator.receive_upload(stream, expected["bytes"],
+                                             expected["filename"], expected["mime_type"])
+        mode = "streamed"
+    else:
+        record = operator.upload(upload_id)
+        mode = "retained"
+    require(isinstance(record, dict) and record.get("id") == upload_id
+            and all(record.get(field) == value for field, value in expected.items()),
+            "The original archive upload returned a different identity: " + archive.name)
+    return record, {"mode": mode, "id": upload_id, **expected}
+
+
 def load_operator():
     spec = importlib.util.spec_from_file_location(
         "upstate_scientific_report_operator", APP / "operator/server.py")
@@ -296,6 +322,14 @@ def operate(args, workspace, out):
     key = operator.primary
     tasks = {}
 
+    def receive_archive(phase, archive):
+        checkpoint(phase + "_upload", archive=str(archive), upload_state="checking")
+        record, receipt = archive_upload(operator, archive)
+        progress.setdefault("uploads", {})[phase] = receipt
+        checkpoint(phase + "_upload", archive=str(archive),
+                   upload_state="verified", uploads=progress["uploads"])
+        return record
+
     def read(method, path, payload=None, owner=None):
         return operator.extensions.read(method, path, owner or key, payload or {})
 
@@ -430,9 +464,7 @@ def operate(args, workspace, out):
         tickets = backup.get("_downloads") or []
         require(len(tickets) == 1, "The original Workspace backup must expose its complete archive.")
         archive_path = download(tickets[0], "scientific-report-workspace.zip")
-        with archive_path.open("rb") as stream:
-            upload = operator.receive_upload(stream, archive_path.stat().st_size,
-                                             archive_path.name, "application/zip")
+        upload = receive_archive("workspace", archive_path)
         restored_task = action("restore", "workspace.restore", {"upload_id": upload["id"]})
         restored_key = restored_task["result"]["workspace_key"]
         restored = operator.ws(restored_key)
@@ -476,9 +508,7 @@ def operate(args, workspace, out):
             selected_tickets = exported.get("_downloads") or []
             require(len(selected_tickets) == 1, "The selected study needs its original complete archive.")
             selected_archive = download(selected_tickets[0], "selected-scientific-report-study.zip")
-            with selected_archive.open("rb") as stream:
-                selected_upload = operator.receive_upload(stream, selected_archive.stat().st_size,
-                                                          selected_archive.name, "application/zip")
+            selected_upload = receive_archive("selected_study", selected_archive)
             selected_task = action("selected_restore", "workspace.restore", {"upload_id": selected_upload["id"]})
             selected_key = selected_task["result"]["workspace_key"]
             selected_workspace = operator.ws(selected_key)
@@ -506,6 +536,7 @@ def operate(args, workspace, out):
             "selected_study_receiving": selected_receiving,
             "report_files": copied, "report_archive": {"path": str(report_archive), **identity(report_archive)},
             "workspace_archive": {"path": str(archive_path), **identity(archive_path)},
+            "uploads": progress.get("uploads", {}),
             "tasks": {phase: {"id": task["id"], "action": task["action"], "state": task["state"]}
                       for phase, task in tasks.items()},
             "browser_handoff": {"view": "sources", "workspace_key": restored_key,
