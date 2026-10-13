@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v21-readable-table-regions"
+REPORT_VERSION = "upstate.scientific-report/v22-source-origin"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -848,7 +848,7 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
         rows = [[_label(key), _quantity(value), _mass_units(key, value),
                  _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
                 for key, value in physical.items()]
-        return _table(["Pollutant", "Annual export", "Unit", "Valid cells", "Coverage"],
+        return _table(["Pollutant", "Annual source export", "Unit", "Valid cells", "Coverage"],
                       rows, widths=[1.0, 1.0, 1.4, .9, .9], caption=caption)
 
     blocks = [physical_table(
@@ -905,14 +905,16 @@ def receiving_sections(product):
         return []
     inventory = product["inventory"]
     measurement = inventory.get("measurement", {})
-    blocks = ["Receiving-water quantity scope: " + inventory["quantity_scope"].replace("_", " ") + ".",
-              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship")
+    from .client_receiving_waters import quantity_interpretation, quantity_paragraphs
+    meaning = quantity_interpretation(inventory["quantity_scope"])
+    blocks = [meaning["scope_label"] + ".", *quantity_paragraphs(inventory["quantity_scope"]),
+              *[str(measurement[key]) for key in ("coverage", "scenario_delta", "overlap", "relationship")
                 if measurement.get(key)]]
     identity = inventory.get("identity", {})
     selection_rows = [
         ["Receiving-water analysis", _plain(identity.get("analysis_id"))],
         ["Original source plan", _plain(identity.get("plan_id"))],
-        ["Quantity scope", _plain(inventory.get("quantity_scope"))],
+        ["Quantity scope", meaning["scope_label"] + " (" + _plain(inventory.get("quantity_scope")) + ")"],
         ["Baseline run", _plain(inventory.get("baseline_run_id"))],
     ]
     selection_rows.extend(["Alternative run", _plain(run_id)]

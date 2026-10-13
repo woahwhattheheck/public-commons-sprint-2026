@@ -73,6 +73,22 @@ function reference(value){
     accounting_implementation_sha256:value.identity.accounting_implementation_sha256||null,
     selection:copy(value.identity.selection),measurement:copy(value.measurement),quantity_sources:copy(value.quantity_sources)};
 }
+
+export function sourceOriginDescription(scope){
+  const support={
+    reporting:'Counts source pixels in the selected receiving-area mask intersected with the original reporting support.',
+    model_domain:'Counts source pixels in the selected receiving-area mask intersected with the original modeled domain and valid native outputs.'
+  }[scope];
+  if(!support)throw Error('Choose an original reporting or model-domain quantity scope.');
+  return [
+    'Annual modeled source export reaching streams: quantities are assigned to the land-source pixels in this support. They are not loads crossing its boundary or arriving at an intake.',
+    support,
+    'A downstream land-cover change can alter NDR delivery from upstream source pixels outside the reporting mask. The separate model-domain view retains that wider source support.',
+    'Scenario placement identifies where land cover may change; the reporting mask selects contributions to summarize. Upstream association and published protection polygons keep their distinct meanings.',
+    'Nitrogen and phosphorus are kg/year; sediment is metric tonnes/year from its own eroding source pixels. Stream/reservoir transport, intake concentration and treatment removal are not modeled here.'
+  ];
+}
+
 export function compareQuantityScopes(first,second){
   first=analysis(first);second=analysis(second);
   if(first.quantity_scope===second.quantity_scope)throw Error('Choose one reporting-area analysis and one full-model-domain analysis.');
@@ -110,7 +126,9 @@ export function compareQuantityScopes(first,second){
     baseline_run_id:reporting.baseline_run_id,alternative_run_ids:[...reporting.alternative_run_ids],
     quantities:keys,reporting:reference(reporting),model_domain:reference(domain),method_differences:methodDifferences,
     interpretation:{
-      physical:'Annual land export reaching streams within each original selected quantity support.',
+      physical:'Modeled export originating at selected land-source pixels and reaching streams; not boundary-crossing or intake load.',
+      source_origin:sourceOriginDescription('reporting'),
+      model_domain_support:sourceOriginDescription('model_domain')[1],
       scenario_change:'Original alternative minus baseline on common valid cells within that scope.',
       across_scopes:'Each scope retains its own original support. No subtraction between scopes is made.',
       precision:'Reporting uses retained Float32 mass-per-pixel outputs; model domain reads original native rates with the original pixel area. Small rounding differences can occur.',
@@ -124,7 +142,8 @@ export function scopeComparisonCSV(value){
     'subject_kind','subject_id','title','family','accounting_group_id','accounting_role','relationship',
     'baseline_run_id','run_id','quantity','sum_units','area_in_quantity_scope_ha','selected_pixel_area_ha','selected_cells',
     'physical_sum','physical_valid_cells','physical_coverage_fraction','paired_baseline_sum','paired_alternative_sum',
-    'signed_change','increased_export','avoided_export','paired_valid_cells','paired_coverage_fraction','status'];
+    'signed_change','increased_export','avoided_export','paired_valid_cells','paired_coverage_fraction','status',
+    'quantity_basis','source_support_meaning','boundary_meaning'];
   const cell=value=>{
     if(value===undefined||value===null)return '';
     let text=String(value);if(typeof value!=='number'&&/^[\s]*[=+\-@]/.test(text))text="'"+text;
@@ -138,7 +157,9 @@ export function scopeComparisonCSV(value){
       subject_kind:row.kind,subject_id:row.id,title:row.title,family:row.family,accounting_group_id:row.accounting_group_id,
       accounting_role:row.accounting_role,relationship:row.relationship_precision,baseline_run_id:value.baseline_run_id,
       quantity:q,sum_units:quantities[q].units,area_in_quantity_scope_ha:item?.area_in_quantity_scope_ha,
-      selected_pixel_area_ha:item?.selected_pixel_area_ha,selected_cells:item?.selected_cells};
+      selected_pixel_area_ha:item?.selected_pixel_area_ha,selected_cells:item?.selected_cells,
+      quantity_basis:'modeled_source_pixel_export_to_streams',source_support_meaning:sourceOriginDescription(scope)[1],
+      boundary_meaning:sourceOriginDescription(scope)[0]};
     for(const run of [value.baseline_run_id,...value.alternative_run_ids]){
       const physical=run===value.baseline_run_id?item?.baseline[q]:item?.alternatives[run]?.physical[q];
       const change=run===value.baseline_run_id?null:item?.alternatives[run]?.changes[q];
@@ -187,7 +208,9 @@ export function renderScopeComparison(value,{analyses=[],runTitle=id=>id.slice(0
   }).join('');
   return '<section data-water-scope-comparison data-reporting="'+esc(value.reporting.id)+'" data-domain="'+esc(value.model_domain.id)+'" data-page="'+page+'">'+
     '<header class="water-section-heading"><div><p class="eyebrow">SAME MODEL COHORT · TWO QUANTITY SUPPORTS</p><h2>Compare reporting and model-domain exports</h2><p>'+esc(value.reporting.title)+'</p></div></header>'+
-    '<p>Annual land export reaching streams within each selected receiving area. Both analyses use the same original source plan, grid and saved model artifacts.</p>'+
+    '<p>Compare annual source export reaching streams. Both analyses use the same original source plan, grid and saved model artifacts.</p>'+
+    '<p class="water-note">'+esc(sourceOriginDescription('reporting')[0])+'</p>'+
+    '<details><summary>Source origin, upstream effects and scenario placement</summary>'+sourceOriginDescription('reporting').slice(1).concat(sourceOriginDescription('model_domain')[1]).map(text=>'<p>'+esc(text)+'</p>').join('')+'</details>'+
     (value.method_differences.length?'<p class="water-error" role="status">The saved analysis methods differ ('+esc(value.method_differences.join(', '))+'). These are two retained results; differences cannot be attributed to quantity support alone.</p>':'')+
     '<div class="water-scope-pair">'+picker('reporting','Reporting-area analysis')+picker('model_domain','Full-model-domain analysis')+button('water-scope-apply','Apply analysis pair')+'</div>'+
     '<p class="water-note" data-water-scope-pending hidden>Apply the changed analysis pair to compare or download it.</p>'+
