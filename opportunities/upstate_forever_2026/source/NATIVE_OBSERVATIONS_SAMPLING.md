@@ -90,6 +90,14 @@ Use the same original **source_tools/receive_sampling_recommendations.py**, orig
 --native-observation-course source_tools/selections/sampling_sv833_20261013.json
 ~~~
 
+The original 45-input packet already contains its preparation script. When that preparation has completed, reuse its retained **selection.json**, **successor-selection.json**, **native-configuration.json** and **native-command.json**. If the original input preparation is still outstanding, use that packet's existing script against the same application and Workspace:
+
+~~~text
+prepare_river13_sampling.py --application "$APP" --workspace "$WS" --output "$INPUT_PREP" --prepare-only
+~~~
+
+That original preparation records the receiver command and its output **$INPUT_PREP/native-course**. Continue the command in **native-command.json** with the additional **--native-observation-course "$APP/source_tools/selections/sampling_sv833_20261013.json"** argument. This retains the issued operation and original output directory and uses the actual prepared observational context identifiers.
+
 The current course remains **ECO-SAMPLING-RIVER13-15227-20261013** on **/mnt/data/eco-trends/application** and **/mnt/data/eco-trends/workspace**. The new nutrient phase runs inside that course and retains its own exact authored inputs and actual returned object identities. The original four-target proposal and its history/report/Study remain available.
 
 The receiver verifies the actual original data and network-source bytes, builds the retained native network, prepares the concentration context, resolves exact original-row Sampling cohorts, saves the full proposal, invokes the existing native design/calendar, exports the complete reports and selected editable Study, and reopens the proposal and scientific files in the Study's contained application. Replaying the same authored course uses its stable identities and original saved output.
