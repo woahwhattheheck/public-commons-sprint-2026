@@ -186,6 +186,117 @@ def _native_provenance_report(summary):
     return "".join(pieces)
 
 
+def _per_area_report(summary):
+    """Use retained accounting; never infer treatment area from reporting coverage."""
+    pieces = [
+        '<h2>Per-hectare response and actual input changes</h2>',
+        '<p>Reporting density divides the paired annual mass by the area where both runs have valid '
+        'reported outputs. Whole-reporting response per changed hectare divides the total paired '
+        'reporting response by the actual changed-input area in the model domain. Export density '
+        'on changed cells uses only those changed cells with valid outputs in both runs. These are '
+        'different numerators and denominators; downstream response can extend beyond the changed cells.</p>',
+        '<p>Areas use the retained projected grid and pixel-centre domain boundary. The changed-input '
+        'area is the union of actual land-cover changes and pollutant-relevant coefficient changes '
+        'at unchanged classes. It is not a nominal treatment polygon, an observed intervention area, '
+        'or proof that a management practice has been implemented. Overlapping changes count once. '
+        'Positive reduction means less annual export. A dash is unavailable, not zero.</p>',
+        '<h3>Reporting densities and response per changed hectare</h3>'
+        '<div class="scroll"><table><thead><tr><th>Scenario / profile</th><th>Export / units</th>'
+        '<th>Paired reporting area (ha)</th><th>Baseline density</th><th>Alternative density</th>'
+        '<th>Reporting reduction density</th><th>Whole-reporting reduction per changed ha</th>'
+        '<th>Reduction density on changed cells</th></tr></thead><tbody>',
+    ]
+    available = []
+    for row in summary.get("rows", []):
+        for pollutant, label in POLLUTANTS:
+            metric = row.get("metrics", {}).get(pollutant)
+            if not isinstance(metric, dict):
+                continue
+            area = metric.get("per_area")
+            if not isinstance(area, dict):
+                continue
+            available.append((row, label, metric, area))
+            paired = area.get("paired_reporting", {})
+            response = area.get("whole_reporting_response_per_changed_ha", {})
+            density = area.get("changed_cell_density", {})
+            pieces.append(
+                '<tr><td>' + _text(row.get("scenario_title") or row.get("scenario_id")) +
+                '<br><span class="muted">' + _text(row.get("profile_title") or row.get("profile_id")) +
+                '</span></td><td>' + label + '<br>' + _text(area.get("units")) + '</td>' +
+                ''.join('<td class="num">' + _number(value) + '</td>' for value in (
+                    paired.get("area_ha"), paired.get("baseline_total"), paired.get("alternative_total"),
+                    paired.get("reduction"), response.get("reduction"), density.get("reduction"))) +
+                '</tr>')
+    if not available:
+        pieces.append('<tr><td colspan="8">Build an updated summary from the retained completed cases '
+                      'to add per-area accounting. This does not rerun the native models.</td></tr>')
+    pieces.append('</tbody></table></div><h3>Changed-input area and output coverage</h3>'
+                  '<div class="scroll"><table><thead><tr><th>Scenario / profile</th><th>Export</th>'
+                  '<th>Changed in model domain (ha)</th><th>Changed in reporting area (ha)</th>'
+                  '<th>Changed with paired outputs (ha)</th><th>Paired coverage of reporting changes</th>'
+                  '<th>Interpretation / unavailable response</th></tr></thead><tbody>')
+    for row, label, metric, area in available:
+        footprint = area.get("input_footprint", {})
+        response = area.get("whole_reporting_response_per_changed_ha", {})
+        coverage = footprint.get("paired_fraction_of_reporting_changed")
+        coverage_text = _number(100 * coverage) + "%" if isinstance(coverage, (int, float)) else "—"
+        explanation = (response.get("reason") or area.get("reason") or
+                       "Spatial input-change response; assess this modelled association with its original assumptions.")
+        pieces.append(
+            '<tr><td>' + _text(row.get("scenario_title") or row.get("scenario_id")) +
+            '<br><span class="muted">' + _text(row.get("profile_title") or row.get("profile_id")) +
+            '</span></td><td>' + label + '</td>' +
+            ''.join('<td class="num">' + _number(footprint.get(name)) + '</td>'
+                    for name in ("area_ha", "reporting_area_ha", "paired_area_ha")) +
+            '<td class="num">' + coverage_text + '</td><td>' + _text(explanation) + '</td></tr>')
+    if not available:
+        pieces.append('<tr><td colspan="7">No per-area input context is retained in this summary yet.</td></tr>')
+    pieces.append('</tbody></table></div><p>Global model-parameter changes and changing land-cover '
+                  'validity prevent attribution of the whole response to the local changed-input area. '
+                  'The original totals and reporting densities remain visible. Missing native land-cover '
+                  'descriptors leave changed-input area unavailable; they are never replaced by an '
+                  'estimated polygon area. Source and support differences remain part of interpretation.</p>')
+    for row, label, metric, area in available:
+        footprint = area.get("input_footprint")
+        if not isinstance(footprint, dict):
+            continue
+        pieces.append('<details><summary>' + _text(row.get("scenario_title") or row.get("scenario_id")) +
+                      ' / ' + _text(row.get("profile_title") or row.get("profile_id")) +
+                      ' · ' + label + ' — original input changes and area sources</summary>')
+        pieces.append('<p>Land-cover changes: ' + _number(footprint.get("landcover_changed_cells")) +
+                      ' cells. Coefficient changes on otherwise unchanged classes: ' +
+                      _number(footprint.get("coefficient_changed_cells")) +
+                      ' cells. Land-cover valid-support differences: ' +
+                      _number(footprint.get("landcover_support_changed_cells")) +
+                      ' cells. Area-mask identity <code>' + _text(footprint.get("sha256")) + '</code>.</p>')
+        for role in ("baseline", "alternative"):
+            source = footprint.get("sources", {}).get(role, {})
+            table = source.get("table", {})
+            pieces.append('<p><strong>' + role.capitalize() + ' coefficient source:</strong> ' +
+                          _text(table.get("title") or table.get("source_id")) +
+                          ' · ' + _text(table.get("vintage")) + '<br><code>' + _text(table.get("uri")) +
+                          '</code><br>Original SHA-256 <code>' + _text(table.get("body", {}).get("sha256")) +
+                          '</code>; land-cover SHA-256 <code>' +
+                          _text((source.get("landcover") or {}).get("sha256")) + '</code>.</p>')
+        changes = footprint.get("coefficient_changes", [])
+        if changes:
+            pieces.append('<div class="scroll"><table><thead><tr><th>Land-cover code</th>'
+                          '<th>Native coefficient</th><th>Baseline</th><th>Alternative</th></tr></thead><tbody>')
+            for change in changes:
+                pieces.append('<tr><td class="num">' + _number(change.get("lucode")) + '</td><td>' +
+                              _text(change.get("field")) + '</td><td>' +
+                              _text(change.get("before_original_text")) + '</td><td>' +
+                              _text(change.get("after_original_text")) + '</td></tr>')
+            pieces.append('</tbody></table></div><p>Listed table changes include retained classes that may '
+                          'have no cells on this model domain. Area is counted from the original rasters.</p>')
+        if footprint.get("global_parameter_changes"):
+            pieces.append('<ul>' + ''.join('<li>' + _text(change.get("path")) + ': ' +
+                          _text(change.get("before")) + ' → ' + _text(change.get("after")) + '</li>'
+                          for change in footprint["global_parameter_changes"]) + '</ul>')
+        pieces.append('</details>')
+    return "".join(pieces)
+
+
 def render_report(summary):
     """Readable offline report; figures use the same retained paired-mass rows."""
     rows = summary.get("rows", [])
@@ -249,6 +360,7 @@ def render_report(summary):
     if not rendered:
         pieces.append('<tr><td colspan="10">Completed paired results will appear after the selected native runs finish.</td></tr>')
     pieces.append('</tbody></table></div>')
+    pieces.append(_per_area_report(summary))
     pieces.append('<h2>Case register</h2><div class="scroll"><table><thead><tr>'
                   '<th>Scenario</th><th>Profile</th><th>State</th><th>Changes</th>'
                   '<th>Native run / paired baseline</th><th>Recovery detail</th></tr></thead><tbody>')

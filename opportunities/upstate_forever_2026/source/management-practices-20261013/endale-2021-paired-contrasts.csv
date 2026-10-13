@@ -1,0 +1,4 @@
+endophyte,baseline_key,alternative_key,nitrogen_change_alternative_minus_baseline,phosphorus_change_alternative_minus_baseline,units,meaning
+novel,endale2021-novel-bl,endale2021-novel-if,0.05,-0.92,kg/ha/year,Arithmetic difference of published annual means; not a modeled stream-export difference or significance test
+wild,endale2021-wild-bl,endale2021-wild-if,1.67,-0.46,kg/ha/year,Arithmetic difference of published annual means; not a modeled stream-export difference or significance test
+free,endale2021-free-bl,endale2021-free-if,1.74,-0.14,kg/ha/year,Arithmetic difference of published annual means; not a modeled stream-export difference or significance test

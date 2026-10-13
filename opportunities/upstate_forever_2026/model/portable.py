@@ -971,6 +971,10 @@ def _verify_restored_workspace(manifest, destination):
                                             "biophysical-authoring-registrations")):
         from .biophysical_evidence_authoring import verify_all as verify_biophysical_authoring
         verify_biophysical_authoring(restored)
+    if restored._list("management-cases"):
+        from .management_cases import inspect as inspect_management_case
+        for management_case in restored._list("management-cases"):
+            inspect_management_case(restored, management_case["id"])
     if restored._list("planning-inventories"):
         from .planning_inventory import inspect as inspect_planning_inventory
         for inventory in restored._list("planning-inventories"):
