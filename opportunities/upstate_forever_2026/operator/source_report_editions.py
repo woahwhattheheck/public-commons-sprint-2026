@@ -10,10 +10,11 @@ from model import scientific_briefing
 from model import observed_context
 from model import scientific_report_editions as retained_editions
 from model import scientific_report_review
+from model import scientific_report_capture
 
 KIND = "scientific-report-editions"
 SCHEMA = "upstate.scientific-report-edition/v1"
-ACTIONS = frozenset({"source-reports.render", "source-reports.export", "source-reports.briefing", "source-reports.review"})
+ACTIONS = frozenset({"source-reports.render", "source-reports.export", "source-reports.briefing", "source-reports.review", "source-reports.adopt"})
 
 
 class ScientificReportEditions:
@@ -56,7 +57,20 @@ class ScientificReportEditions:
                                  "uri": entry["uri"], "body_sha256": entry["body"]["sha256"],
                                  "body_bytes": entry["body"]["bytes"],
                                  "collection_title": collection.get("title", collection["id"])})
-        return {"workspace_key": workspace, "sources": rows, "editions": self.saved(workspace)}
+        captures = scientific_report_capture.catalog(self.operator.ws(workspace))
+        return {"workspace_key": workspace, "sources": rows, "editions": self.saved(workspace),
+                "captured_reports": captures["reports"], "capture_issues": captures["issues"]}
+
+    def capture_preview(self, workspace, payload):
+        result = scientific_report_capture.preview(
+            self.operator.ws(workspace), identifier(payload.get("capture_id")))
+        return {"workspace_key": workspace, **result}
+
+    def adopt(self, workspace, payload):
+        return scientific_report_capture.adopt(
+            self.operator.ws(workspace), identifier(payload.get("capture_id")),
+            expected_capture_sha256=identifier(payload.get("capture_sha256")),
+            expected_edition_id=identifier(payload.get("edition_id")))
 
     def preview(self, workspace, payload):
         result = retained_editions.preview(self.operator.ws(workspace), payload)
@@ -184,6 +198,8 @@ class ScientificReportEditions:
             created_at=task["created_at"])
 
     def read(self, workspace, operation, payload):
+        if operation == "scientific-capture":
+            return self.capture_preview(workspace, payload)
         if operation == "scientific-review-preview":
             return self.review_preview(workspace, payload)
         if operation == "scientific-briefing-preview":
@@ -199,6 +215,8 @@ class ScientificReportEditions:
         raise self.Fault("SCIENTIFIC_REPORT_READ", "Choose a saved scientific report operation.", 404)
 
     def invoke(self, task):
+        if task["action"] == "source-reports.adopt":
+            return self.adopt(task["workspace"], task["payload"])
         if task["action"] == "source-reports.review":
             return self.review(task)
         if task["action"] == "source-reports.briefing":
