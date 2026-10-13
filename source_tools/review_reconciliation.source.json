@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.review-reconciliation-source/v1",
+  "source_carrier": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C88TDJ8H5",
+  "files": [
+    {
+      "path": "model/review_reconciliation.py",
+      "bytes": 30193,
+      "sha256": "a23ece98705be91e0d5ee5a0520901e97976df45361da03d0f5eb3e274e6e55e"
+    },
+    {
+      "path": "operator/review_reconciliation.py",
+      "bytes": 9150,
+      "sha256": "53e2781f605fcbf1fc5ba5b00bccdec9bf53892247cfe69cfdfe16834d4e6787"
+    },
+    {
+      "path": "operator/web/review_reconciliation.mjs",
+      "bytes": 35300,
+      "sha256": "cac107f2b8409af34f03d46eeb5d0f464d6a7f5a2db7e7f81431aca152e2ec14"
+    },
+    {
+      "path": "operator/extensions/review-reconciliation.json",
+      "bytes": 2614,
+      "sha256": "6bacf9914a7e1bdce036637799bdee67e4116ea21c9475b1a7ecd0c4890d5530"
+    },
+    {
+      "path": "operator/REVIEW_RECONCILIATION.md",
+      "bytes": 5772,
+      "sha256": "6bee4ed74bb4584e280d3e4f20840754ae5ee1f8f2ecc6304e1b4bc58e536535"
+    }
+  ]
+}

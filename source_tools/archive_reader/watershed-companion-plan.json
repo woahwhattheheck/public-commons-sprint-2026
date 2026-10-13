@@ -1,0 +1,240 @@
+{
+  "schema": "upstate.source-companion-reconciliation/v1",
+  "operation_id": "ECO-WATERSHED13-20261013",
+  "title": "Preserve the completed original 217-HUC context through native import and reopen",
+  "original_manifest": {
+    "carrier_file_id": "F0C8RTULRB3",
+    "path": "source/water_context/20261013/original-sources.json",
+    "bytes": 2782,
+    "sha256": "3923e7bf5577982712141d5664b07c044b94dbc962efb63d308aac1e5538bee3",
+    "original_path": "source/water_context/20261013/sources.json"
+  },
+  "edition_directory": "source/water_context/20261013",
+  "context_entry_id": "upper-savannah-water-context-domain217-20261013",
+  "priority_entry_id": "nrcs-fy26-upper-savannah-domain217-20261013",
+  "context_primary": {
+    "path": "full-domain-water-context.json",
+    "bytes": 152659,
+    "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566"
+  },
+  "original_context_companions": [
+    {
+      "path": "source-context-run.json",
+      "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388"
+    },
+    {
+      "path": "classified-full-domain-query.json"
+    },
+    {
+      "path": "README.md"
+    }
+  ],
+  "preserved_priority_entry": {
+    "path": "nrcs-domain-fy26.csv",
+    "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+    "units": {
+      "st_ac": "acres of the state portion",
+      "huc12_ac": "acres of the whole HUC"
+    },
+    "companions": [
+      {
+        "path": "domain-huc12s.json",
+        "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+      },
+      {
+        "path": "source-context-run.json",
+        "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388"
+      }
+    ]
+  },
+  "verified_additional_context_companions": [
+    {
+      "path": "scdes-domain217-source-coverage.json",
+      "bytes": 7043,
+      "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb",
+      "role": "classification_coverage",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/source/water_context/20261013/scdes-domain217-source-coverage.json",
+      "original_upstream_carrier": "F0C8HSCBK35"
+    },
+    {
+      "path": "received/watershed-context-20261013/watershed-context.json",
+      "bytes": 470519,
+      "sha256": "54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34",
+      "role": "original_context_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/watershed-context.json"
+    },
+    {
+      "path": "received/watershed-context-20261013/watershed-hucs.csv",
+      "bytes": 83474,
+      "sha256": "7f63e89b1c8c683b6fc03b4a5834a898f07e6840576f1290600c81943e9e9c81",
+      "role": "original_context_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/watershed-hucs.csv"
+    },
+    {
+      "path": "received/watershed-context-20261013/watershed-huc8s.csv",
+      "bytes": 1573,
+      "sha256": "9b8f27fa12c37e147f61315cc0bc528d53d05fc437c76a02543702123b5db989",
+      "role": "original_context_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/watershed-huc8s.csv"
+    },
+    {
+      "path": "received/watershed-context-20261013/watershed-states.csv",
+      "bytes": 611,
+      "sha256": "ba29c12cf299866e14ea085ed44fd8e91b7dbbb57b567d820e4862975a25357d",
+      "role": "original_context_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/watershed-states.csv"
+    },
+    {
+      "path": "received/watershed-context-20261013/watershed-report.md",
+      "bytes": 6583,
+      "sha256": "e60ede577fa26a85f29b1a26d7b123c9107f8b3c24038f81cfd8c504b05e6a25",
+      "role": "original_context_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/watershed-report.md"
+    },
+    {
+      "path": "received/watershed-context-20261013/selected-watersheds.json",
+      "bytes": 17316,
+      "sha256": "bb5c1000da55c71e6a25ce2711d2445592b3315484f1371cd0dac926ae7b3909",
+      "role": "original_selection_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/selected-watersheds.json"
+    },
+    {
+      "path": "received/watershed-context-20261013/selected-watersheds.csv",
+      "bytes": 1003,
+      "sha256": "9a35e4d9cdd68c1e230210b121cc622927a9920ef42d6fcc20f49a99506595cf",
+      "role": "original_selection_output",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/outputs/watershed-context-20261013/selected-watersheds.csv"
+    },
+    {
+      "path": "received/watershed-context-20261013/run-receipt.json",
+      "bytes": 4794,
+      "sha256": "ccbb064d6b4e390b880efec6898d03f049bf82f54c332063f07b250e5ea7f43f",
+      "role": "original_run_receipt",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "run-receipt.json"
+    },
+    {
+      "path": "received/watershed-context-20261013/original-source/model/WATERSHED_CONTEXT.md",
+      "bytes": 8182,
+      "sha256": "2e5be4ac1a9dac4ab2697894b38788cd34fc6ea3df5be4c9b586603330707fd4",
+      "role": "original_executed_source",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/model/WATERSHED_CONTEXT.md"
+    },
+    {
+      "path": "received/watershed-context-20261013/original-source/model/watershed_context.py",
+      "bytes": 43245,
+      "sha256": "3ef89ad3e237fb0f13b7ba410cbc347d9dcb38bf99209290c27067cbd89c5571",
+      "role": "original_executed_source",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/model/watershed_context.py"
+    },
+    {
+      "path": "received/watershed-context-20261013/original-source/model/watershed_context_cli.py",
+      "bytes": 394,
+      "sha256": "8390515a940f6d2cde24cc0705ad7f8688142eecfc2fa3d7bb0fc6e18e840de4",
+      "role": "original_executed_source",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "application/model/watershed_context_cli.py"
+    },
+    {
+      "path": "received/watershed-context-20261013/source-receipt.json",
+      "bytes": 1121,
+      "sha256": "a706be2e47ae2faa7f397009eae3198a78ddd3c768443ec6ec7cc33b064b7811",
+      "role": "original_execution_record",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "source-receipt.json"
+    },
+    {
+      "path": "received/watershed-context-20261013/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "original_execution_record",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "stderr.txt"
+    },
+    {
+      "path": "received/watershed-context-20261013/stdout.json",
+      "bytes": 2576,
+      "sha256": "803d3963e538907e5b9e4a72ecd05d6dd35284dfdd03f92299f06f47cfa234cb",
+      "role": "original_execution_record",
+      "source_carrier": "F0C9JNBA7EU",
+      "archive_path": "stdout.json"
+    },
+    {
+      "path": "received/watershed-context-20261013/eco-watershed13-received.zip",
+      "bytes": 121182,
+      "sha256": "716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5",
+      "role": "original_completed_archive",
+      "source_carrier": "F0C9JNBA7EU"
+    }
+  ],
+  "owner_generated_companions": [],
+  "native_binding": {
+    "source_lookup": "Workspace.source_file(collection_id, context_entry_id)",
+    "loader": "source_tools/prepare_watershed_context.py:load_source_edition(context_path.parent)",
+    "companion_reconstruction": "Workspace reconstructs primary and all declared companions using their retained view_path relative to their original common parent.",
+    "separate_entry_lookup": "Resolve priority_entry_id through Workspace.source_file if the loader consumes its CSV or domain list; a separate entry is not automatically a context companion.",
+    "ownership": "ECO13-47DB maintains source-edition preparation, loader, export history, and reopen continuation.",
+    "source_manifest": {
+      "path": "complete-sources.json",
+      "schema": "upstate.sources/v1",
+      "role": "Ordinary Workspace import manifest; not read by load_source_edition and not required as a context companion."
+    },
+    "source_files": "Only full-domain-water-context.json, scdes-domain217-source-coverage.json and optional native-network.json are model inputs; source_files names remain basenames.",
+    "supporting_files": "Publisher originals are retained separately from model source_files; completed reports remain in their received subdirectory.",
+    "complete_receiving_edition": {
+      "revision": "1.0.3",
+      "manifest": "complete-sources.json",
+      "context_companions": 22,
+      "execution_source_binding": "The run-receipt source_receipt reference resolves beside the run record; original executed model, CLI and documentation are retained under original-source/model.",
+      "original_zip": {
+        "path": "received/watershed-context-20261013/eco-watershed13-received.zip",
+        "bytes": 121182,
+        "sha256": "716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5"
+      },
+      "previous_edition_canvas_id": "F0C9K1394AU",
+      "repository_composition": "Current maintained README preserved and extended; historical source guide/manifest retained under original-source-README.md and original-sources.json."
+    }
+  },
+  "application_rules": [
+    "Preserve every original manifest entry, identifier, source URI, edition, unit, metadata field, and companion.",
+    "Copy the verified source coverage and outputs from their actual ZIP members to the portable paths in this map.",
+    "Keep all retained edition companions below the edition directory so the context primary's parent remains the loader's edition root after import and transfer.",
+    "Add verified additional_context_companions to the existing context entry's companions without altering the bytes of any original source or report.",
+    "Use complete-sources.json as the ordinary Workspace import manifest; the loader reads its two or three original input basenames directly.",
+    "Use the existing saved selection bound to result watershed-4592eb077b7164d59ba4 and context digest 7126b91bf0dbbf40c928953e216fb8d61c016131ed027d0cf34e10dfb256700f.",
+    "Treat the original manifest hash as the upstream identity; compute a new identity for the reconciled manifest."
+  ],
+  "source_trace": [
+    {
+      "file_id": "F0C8RTULRB3",
+      "purpose": "Original seven-file full-domain source edition"
+    },
+    {
+      "file_id": "F0C8JV7PJUV",
+      "purpose": "Original executable model, CLI, guide and exact two-source input bank"
+    },
+    {
+      "file_id": "F0C9JNBA7EU",
+      "purpose": "Completed native run archive, original input bytes and seven generated output bytes"
+    },
+    {
+      "file_id": "F0C8Q1PPN3C",
+      "purpose": "Existing watershed operator"
+    },
+    {
+      "file_id": "F0C8QA3KZ42",
+      "purpose": "Maintained original producer and loader; confirms ordinary manifest and direct two/three model-input reading."
+    }
+  ],
+  "revision": "1.0.3"
+}

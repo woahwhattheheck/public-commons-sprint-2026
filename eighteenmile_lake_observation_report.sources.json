@@ -1,0 +1,401 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile2023 original lake observations, full study cohort and sampling report",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "study_id": "scdes-eighteenmile-lake-2023",
+    "report_edition": "20261013-original-wqp-lake-report-2",
+    "original_lake_results": 88,
+    "reconciled_chlorophyll_cohort": 75,
+    "shared_chlorophyll_records": 45
+  },
+  "entries": [
+    {
+      "id": "eighteenmile-2023-original-wqp-lake-records",
+      "title": "Eighteenmile2023 original chlorophyll and microcystin observations",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-838%3B21SC60WQ_WQX-SV-839%3B21SC60WQ_WQX-SV-840&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv",
+      "vintage": "2023; retrieved2026-10-13",
+      "kind": "table",
+      "role": "observed_water_quality_context",
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+      "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61",
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174",
+          "bytes": 281844
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+          "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+          "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+          "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+          "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+          "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+          "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+          "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+          "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902",
+          "bytes": 7667
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a",
+          "bytes": 8424
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36",
+          "bytes": 644
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-chlorophyll-reconciled-75-2023",
+      "title": "Original75 measured chlorophyll records on fifteen study dates",
+      "kind": "table",
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+      "bytes": 43187,
+      "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023 observations; original source captured2026-10-13",
+      "source_format": "CSV",
+      "role": "LAKE_STUDY_CONCENTRATION_COHORT",
+      "rows": 75,
+      "source_edition": "Original WQP records selected by study dates and explicit routine-visit reconciliation",
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+          "bytes": 47412,
+          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "bytes": 7667,
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "bytes": 8424,
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-chlorophyll-reconciled-summary-2023",
+      "title": "Five-site measured chlorophyll summaries and original printed sample counts",
+      "kind": "table",
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+      "bytes": 644,
+      "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 study; cohort reconciliation2026-10-13",
+      "source_format": "CSV",
+      "role": "LAKE_COHORT_SUMMARY",
+      "rows": 5,
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+          "bytes": 47412,
+          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "bytes": 7667,
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "bytes": 8424,
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-sv268-original-routine-day-20230711",
+      "title": "Original SV-268 all-characteristic response for2023-07-11",
+      "kind": "table",
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+      "bytes": 7667,
+      "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=07-11-2023&startDateHi=07-11-2023&mimeType=csv",
+      "vintage": "2023 observation; captured2026-10-13",
+      "source_format": "CSV",
+      "role": "WQP_ORIGINAL_DAY_RESPONSE",
+      "rows": 14,
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-sv374-original-routine-day-20230808",
+      "title": "Original SV-374 all-characteristic response for2023-08-08",
+      "kind": "table",
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+      "bytes": 8424,
+      "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-374&startDateLo=08-08-2023&startDateHi=08-08-2023&mimeType=csv",
+      "vintage": "2023 observation; captured2026-10-13",
+      "source_format": "CSV",
+      "role": "WQP_ORIGINAL_DAY_RESPONSE",
+      "rows": 16,
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-2023-original-study-report",
+      "title": "Eighteenmile original observations and complete five-station study report",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+      "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174",
+      "bytes": 281844,
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 observations; report assembled2026-10-13",
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+          "bytes": 47412,
+          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+          "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+          "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+          "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+          "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+          "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+          "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+          "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+          "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902",
+          "bytes": 7667
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a",
+          "bytes": 8424
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36",
+          "bytes": 644
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Original lake concentration observations and the maintained reconciled75-record study retain separate identities and original activity fields.",
+    "Study selection at the two duplicate dates retains the source owner's explicit inference, routine-activity evidence and original EST/EDT labels.",
+    "All report, generator, original CSV, selection evidence and source-owner methods are retained as the original Workspace source collection.",
+    "The original lake table and report document each independently retain both complete source directory trees for Workspace.source_file materialization and reproduction."
+  ]
+}

@@ -1,0 +1,4 @@
+state,huc_count,state_row_count,state_portion_acres,state_portion_km2,rows_with_area_count,priority_huc_count,priority_state_portion_acres,cross_state_huc_count,priority_system_type_counts,status_counts
+GA,115,115,2435508.93266875,9856.154965983102,115,13,350585.6961667,18,"{""Both"": 3, ""Ground"": 5, ""Surface"": 5}","{""High Priority Area"": 13, ""Not Selected"": 102}"
+NC,9,9,109734.81595176,444.08104469526194,9,0,0.0,8,{},"{""Not Selected"": 9}"
+SC,116,116,2113830.3203338,8554.367807706687,116,5,116976.37638629999,19,"{""Both"": 2, ""Ground"": 3}","{""High Priority Area"": 5, ""Not Selected"": 111}"

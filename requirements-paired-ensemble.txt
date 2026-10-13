@@ -1,0 +1,4 @@
+# GIS result consumer; reuse the current application environment when present.
+numpy==2.3.5
+rasterio==1.5.0
+Pillow==12.3.0

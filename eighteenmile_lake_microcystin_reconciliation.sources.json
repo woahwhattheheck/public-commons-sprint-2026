@@ -1,0 +1,556 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile 2023 microcystin report reconciliation",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "original_micro_rows": 85,
+    "selected_rows": 73,
+    "excluded_rows": 12,
+    "calendar_dates": 15,
+    "station_counts": [
+      {
+        "station": "SV-268",
+        "n": 15
+      },
+      {
+        "station": "SV-838",
+        "n": 14
+      },
+      {
+        "station": "SV-839",
+        "n": 15
+      },
+      {
+        "station": "SV-374",
+        "n": 15
+      },
+      {
+        "station": "SV-840",
+        "n": 14
+      }
+    ],
+    "same_clock_different_date_matches": 4
+  },
+  "entries": [
+    {
+      "id": "eighteenmile-2023-microcystin-reconciliation-report",
+      "title": "Microcystin report summary reconciled to original observations",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+      "bytes": 8709,
+      "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; reconciliation 2026-10-13",
+      "metadata": {
+        "selection_status": "inferred candidate report cohort",
+        "source_report_table": "8",
+        "source_report_printed_page": 16,
+        "source_report_pdf_page": 23
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+          "bytes": 9324,
+          "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+          "bytes": 6766,
+          "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+          "bytes": 2232,
+          "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+          "bytes": 3280,
+          "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+          "bytes": 3679,
+          "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+          "bytes": 75481,
+          "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+          "bytes": 13984,
+          "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+          "bytes": 1985,
+          "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+          "bytes": 1556,
+          "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+          "bytes": 169,
+          "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+          "bytes": 289952,
+          "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-2023-microcystin-reconciliation-selected",
+      "title": "73 original microcystin records in inferred report cohort",
+      "kind": "table",
+      "role": "LAKE_MICROCYSTIN_REPORT_COHORT",
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+      "bytes": 75481,
+      "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; reconciliation 2026-10-13",
+      "metadata": {
+        "selection_status": "inferred candidate report cohort",
+        "source_report_table": "8",
+        "source_report_printed_page": 16,
+        "source_report_pdf_page": 23
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+          "bytes": 9324,
+          "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+          "bytes": 6766,
+          "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+          "bytes": 2232,
+          "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+          "bytes": 3280,
+          "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+          "bytes": 3679,
+          "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+          "bytes": 13984,
+          "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+          "bytes": 1985,
+          "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+          "bytes": 1556,
+          "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+          "bytes": 169,
+          "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+          "bytes": 289952,
+          "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+          "bytes": 8709,
+          "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-2023-microcystin-reconciliation-excluded",
+      "title": "12 campaign records outside inferred report cohort",
+      "kind": "table",
+      "role": "LAKE_MICROCYSTIN_REPORT_EXCLUSIONS",
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+      "bytes": 13984,
+      "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; reconciliation 2026-10-13",
+      "metadata": {
+        "selection_status": "inferred candidate report cohort",
+        "source_report_table": "8",
+        "source_report_printed_page": 16,
+        "source_report_pdf_page": 23
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+          "bytes": 9324,
+          "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+          "bytes": 6766,
+          "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+          "bytes": 2232,
+          "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+          "bytes": 3280,
+          "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+          "bytes": 3679,
+          "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+          "bytes": 75481,
+          "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+          "bytes": 1985,
+          "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+          "bytes": 1556,
+          "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+          "bytes": 169,
+          "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+          "bytes": 289952,
+          "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+          "bytes": 8709,
+          "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-2023-microcystin-reconciliation-comparison",
+      "title": "Published summary and original-source precision comparison",
+      "kind": "table",
+      "role": "LAKE_MICROCYSTIN_REPORT_COMPARISON",
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+      "bytes": 1985,
+      "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; reconciliation 2026-10-13",
+      "metadata": {
+        "selection_status": "inferred candidate report cohort",
+        "source_report_table": "8",
+        "source_report_printed_page": 16,
+        "source_report_pdf_page": 23
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+          "bytes": 9324,
+          "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+          "bytes": 6766,
+          "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+          "bytes": 2232,
+          "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+          "bytes": 3280,
+          "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+          "bytes": 3679,
+          "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+          "bytes": 75481,
+          "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+          "bytes": 13984,
+          "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+          "bytes": 1556,
+          "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+          "bytes": 169,
+          "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+          "bytes": 289952,
+          "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+          "bytes": 8709,
+          "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-2023-microcystin-reconciliation-date-clocks",
+      "title": "Four original differing-date clock comparisons",
+      "kind": "table",
+      "role": "LAKE_MICROCYSTIN_DATE_CLOCK_SUPPORT",
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+      "bytes": 1556,
+      "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; reconciliation 2026-10-13",
+      "metadata": {
+        "selection_status": "inferred candidate report cohort",
+        "source_report_table": "8",
+        "source_report_printed_page": 16,
+        "source_report_pdf_page": 23
+      },
+      "companions": [
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+          "bytes": 9324,
+          "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+          "bytes": 6766,
+          "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+          "bytes": 2232,
+          "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+          "bytes": 3280,
+          "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+          "bytes": 3679,
+          "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+          "bytes": 75481,
+          "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+          "bytes": 13984,
+          "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+          "bytes": 1985,
+          "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+          "bytes": 169,
+          "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+          "bytes": 289952,
+          "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+          "bytes": 8709,
+          "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    }
+  ]
+}
