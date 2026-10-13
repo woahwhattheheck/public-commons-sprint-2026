@@ -105,3 +105,9 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+## Complete included-project preview
+
+New delivery edition2 includes deliveryContext alongside the original row view. Before publication, the panel displays the counts for the entire included native project, explicitly including unselected imports/results, and every matching original companion collection/file with its bytes and SHA-256. Project and native-context identities remain available in details. The original request fingerprint formula is unchanged; previewSha256 binds this full delivery context. A changed matching companion inventory requires a new preview even when the scientific revision did not change.
+
+A retained edition's Source rows view displays the same frozen inventory. Earlier edition1 returns retain their original rendering and receiving semantics; they are labelled as original editions instead of displaying a newly invented file inventory. The current server validates collection files against their native imports and compares all payload identities when a return ID already exists.

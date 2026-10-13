@@ -97,7 +97,7 @@ function parse(argv){
 }
 class Course{
   constructor(options,prepared,donor,selection){this.o=options;this.prepared=prepared;this.donor=donor;this.selection=selection;this.root=options.directory;
-    this.path=join(this.root,'operation.json');this.bound=false;this.apps=null;this.manager=null;this.browserOwner=null;this.closing=null;this.tail=Promise.resolve();}
+    this.path=join(this.root,'operation.json');this.bound=false;this.apps=null;this.manager=null;this.browserOwner=null;this.closing=null;this.tail=Promise.resolve();this.selectedHere=new Set();}
   async open(){
     this.state=await exists(this.path)?await json(this.path):{schema:SCHEMA,id:randomUUID(),selection:this.selection,startedAt:now(),status:'prepared',phases:{},hosts:{},files:{},errors:[]};
     need(this.state.schema===SCHEMA&&same(this.state.selection,this.selection),'Resume the exact original installed receiving selection.');
@@ -215,8 +215,12 @@ class Course{
       need(i<600,'Original Applications connection remains pending; resume its saved selection.');await delay(1000);}
     let run=h.starts.find(x=>x.stage===stage&&!x.closed);
     if(!run){const a=await this.app(name);need(!a.current||a.current.active===false&&!['PENDING','QUEUED','INTERRUPTED','OBSERVATION_UNAVAILABLE'].includes(a.current.phase),'Reconcile the original managed owner first.');
-      const review=await this.apps.applicationsStartReview({applicationId:h.applicationId});run={stage,requestId:randomUUID(),reviewId:review.id,createdAt:now()};h.starts.push(run);await this.save();await this.record(name+'-'+run.requestId+'-review',review);}
+      const review=await this.apps.applicationsStartReview({applicationId:h.applicationId});run={stage,requestId:randomUUID(),reviewId:review.id,applicationId:h.applicationId,createdAt:now(),dispatch:'selected'};
+      h.starts.push(run);this.selectedHere.add(run.requestId);await this.save();await this.record(name+'-'+run.requestId+'-review',review);}
+    // Persist the exact original dispatch before entering the maintained Start.
+    run.dispatch='dispatching';await this.save();this.selectedHere.delete(run.requestId);
     await this.apps.applicationsStart({applicationId:h.applicationId,requestId:run.requestId,reviewId:run.reviewId});
+    run.dispatch='entered';await this.save();
     let recovered=false;
     for(let i=0;i<600;i++){
       const a=await this.app(name),actual=a?.runs.find(x=>x.id===run.requestId);
@@ -301,17 +305,50 @@ class Course{
     const host=this.state.hosts[name];if(!host?.applicationId)return;
     const cancelled=v=>v?.schema==='stellar-forge.application-run-cancellation.v1'&&v.applicationId===host.applicationId&&v.state==='CANCELLED'&&v.launched===false;
     const closed=v=>{const r=v?.commandResult;return v?.active===false&&v.phase==='SUCCEEDED'&&r?.operation==='original-command'&&typeof r.completedAt==='string'&&Number.isFinite(Date.parse(r.completedAt))&&
-      (r.state==='STOPPED'&&r.stopped===true&&r.launched===false||r.launched===true&&['STOPPED','COMPLETED','EXITED'].includes(r.state)&&(Number.isInteger(r.exitCode)||typeof r.signal==='string'&&r.signal.length>0));};
+      (r.state==='STOPPED'&&r.stopped===true&&r.launched===false||r.launched===true&&['STOPPED','COMPLETED','EXITED'].includes(r.state)&&(Number.isInteger(r.exitCode)||typeof r.signal==='string'&&r.signal.length>0)||
+        r.state==='LAUNCH_FAILED'&&r.exitCode===null&&r.signal===null&&r.error&&
+        r.closure?.schema==='stellar-forge.managed-command-closure.v1'&&
+        typeof r.closure.childCreated==='boolean'&&r.closure.childClosed===true&&
+        typeof r.closure.observerCreated==='boolean'&&r.closure.observerClosed===true);};
     for(const run of host.starts.filter(x=>!x.closed)){
+      // Reopen this exact proof before observations or another Stop can change.
       const proof=await this.intent(name+'-'+run.requestId+'-closed',async()=>{
+        let absent=false;
+        try{await this.apps.applicationsOutput({applicationId:host.applicationId,operationId:run.requestId});}
+        catch(error){if(error.code!=='ENOENT')throw error;absent=true;}
+        if(absent&&(run.dispatch==='selected'||this.selectedHere.has(run.requestId))){
+          return{applicationId:host.applicationId,operationId:run.requestId,cancellation:null,output:null,
+            unentered:{schema:'stellar-forge.receiving-unentered-launch.v1',state:'CANCELLED_BEFORE_DISPATCH',nativeRunObserved:false},closedAt:now()};
+        }
+        if(absent){
+          // A prior caller may have entered Start: reconcile only its saved ID.
+          await this.apps.applicationsStart({applicationId:host.applicationId,requestId:run.requestId,reviewId:run.reviewId});
+        }
         const cancellation=await this.apps.applicationsStop({applicationId:host.applicationId,operationId:run.requestId});
-        if(cancelled(cancellation)&&cancellation.operationId===run.requestId)return{applicationId:host.applicationId,operationId:run.requestId,cancellation,output:null,closedAt:now()};
-        for(;;){const output=await this.apps.applicationsOutput({applicationId:host.applicationId,operationId:run.requestId});if(output.operationId===run.requestId&&closed(output))return{applicationId:host.applicationId,operationId:run.requestId,cancellation:null,output,closedAt:now()};await delay(1000);}
+        if(cancelled(cancellation)&&cancellation.operationId===run.requestId)
+          return{applicationId:host.applicationId,operationId:run.requestId,cancellation,output:null,closedAt:now()};
+        for(;;){
+          const output=await this.apps.applicationsOutput({applicationId:host.applicationId,operationId:run.requestId});
+          if(output.operationId===run.requestId&&closed(output))
+            return{applicationId:host.applicationId,operationId:run.requestId,cancellation:null,output,closedAt:now()};
+          // Inactive pending/queued/interrupted/unknown observations retain ownership.
+          await delay(1000);
+        }
       });
+      const unentered=proof.unentered?.schema==='stellar-forge.receiving-unentered-launch.v1'&&
+        proof.unentered.state==='CANCELLED_BEFORE_DISPATCH'&&proof.unentered.nativeRunObserved===false;
       need(proof.applicationId===host.applicationId&&proof.operationId===run.requestId&&
-        (cancelled(proof.cancellation)&&proof.cancellation.operationId===run.requestId||proof.output?.operationId===run.requestId&&closed(proof.output)),'Retain the actual original command closure proof.');
-      if(this.manager){const status=await this.call('status',{workspace:name});if(status.state==='CONNECTED')await this.call('disconnect',{workspace:name,launchId:status.launchId});}
-      run.closed=true;run.closedAt=proof.closedAt;await this.save();
+        typeof proof.closedAt==='string'&&Number.isFinite(Date.parse(proof.closedAt))&&
+        (unentered||cancelled(proof.cancellation)&&proof.cancellation.operationId===run.requestId||
+          proof.output?.operationId===run.requestId&&closed(proof.output)),
+        'Retain the positive closure proof for this exact original application and operation.');
+      if(this.manager){
+        const all=await this.call('status',{}),status=all.workspaces.find(row=>row.workspace===name);
+        if(status?.state==='CONNECTED')await this.call('disconnect',{workspace:name,launchId:status.launchId});
+      }
+      run.closed=true;run.closedAt=proof.closedAt;
+      if(unentered)run.cancelledBeforeDispatch=true;
+      this.selectedHere.delete(run.requestId);await this.save();
     }
   }
   close(){

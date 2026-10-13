@@ -1,3 +1,4 @@
+import {mountNativeObservations} from './measured_native_observations.mjs';
 import {mountReturnedReviews} from './measured_returned_reviews.mjs';
 import {mountMeasuredChemistry} from './measured_chemistry.mjs';
 import {mountLargeFilePanel} from './measured_large_files.mjs';
@@ -8,7 +9,7 @@ export function createMeasuredObservations(capabilities){
   const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),benchmarkMemory=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
-  let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,root=null,key=null,generation=0;
+  let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,nativeObservations=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
   const benchmarkKey=(workspace,owner)=>JSON.stringify([workspace,owner]);
   const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;return !!instance?.hasUnsavedBenchmarks?.();};
@@ -79,6 +80,10 @@ export function createMeasuredObservations(capabilities){
     largeFiles=mountLargeFilePanel(largeHost,{workspaceKey:boundWorkspace,request,refresh});
     const chemistryHost=document.createElement('section');outer.append(chemistryHost);
     chemistry=mountMeasuredChemistry(chemistryHost,capabilities,{memory:chemistryMemory});
+    const nativeHost=document.createElement('section');outer.append(nativeHost);
+    nativeObservations=mountNativeObservations(nativeHost,{request:async(action,payload={})=>{
+      const {value,guard}=await send('/api/measurements/native-observations','/native-observations/'+action,action==='prepare'?'POST':'GET',{action,...payload});guard();return value;
+    }});
     const collectionHost=document.createElement('section');outer.append(collectionHost);
     collections=mountCollectionPanel(collectionHost,{request,refresh});
     const returnedHost=document.createElement('section');outer.append(returnedHost);
@@ -101,7 +106,7 @@ export function createMeasuredObservations(capabilities){
     // editor locally; never send an old-identity write through the new selection.
     if(instance&&displayedPerson!==null){const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);}
     generation++;paintCurrentNotice=()=>{};displayedPerson=null;
-    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true});instance=null;root=null;key=null;
+    nativeObservations?.destroy();nativeObservations=null;returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true});instance=null;root=null;key=null;
   }
   return {mount,async prepareLeave(){if(instance)await instance.prepareLeave?.();},cancelLeave(){instance?.cancelLeave?.();},destroy(){suspend();window.removeEventListener('beforeunload',beforeUnload);},update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
 }

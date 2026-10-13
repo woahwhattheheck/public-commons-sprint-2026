@@ -94,6 +94,9 @@ class MeasuredObservationExtension:
     def read(self, workspace, operation, payload):
         try:
             if operation == 'bind-domain': return self.bind_domain(workspace,payload)
+            if operation == 'native-observations':
+                from .native_observations import handle
+                return handle(workspace, self._service(workspace), payload)
             if operation == 'chemistry':
                 from .chemistry import handle
                 return handle(workspace, self._service(workspace), payload)

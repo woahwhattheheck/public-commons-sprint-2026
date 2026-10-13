@@ -16,6 +16,7 @@ import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
 import {admitMatchedControlChapter,admitMatchedControlReceiving,admitMatchedControlOutcomeChapter,operateMatchedControl,operateMatchedControlOutcomes} from './multivariate_control_browser.mjs';
 import {operateDeliveryPreparation} from '../operator/delivery_preparation_receiving.mjs';
+import {operateStructuralStudy,receiveStructuralProjectNative,uploadStructuralArchive} from '../operator/structural_study_receiving.mjs';
 
 // Current direction .4 renews the full delivery. A caller may request its own deadline.
 let CUTOFF=Infinity;
@@ -46,13 +47,14 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control','delivery_preparation','matched_control_receiving','multivariate_control_outcomes'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control','delivery_preparation','matched_control_receiving','multivariate_control_outcomes','structural_study'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
   const matchedControl=await admitMatchedControlChapter(settings.multivariate_control,{requireValue});
   let outcomeChapter=await admitMatchedControlOutcomeChapter(settings.multivariate_control_outcomes,{requireValue});
   if(outcomeChapter)requireValue(matchedControl,'Choose the retained original control chapter alongside its native outcome');
   if(settings.delivery_preparation!==undefined)requireValue(typeof settings.delivery_preparation==='boolean','Choose an explicit saved preparation continuation');
+  if(settings.structural_study!==undefined){const chosen=settings.structural_study;requireValue(chosen&&typeof chosen==='object'&&!Array.isArray(chosen)&&Object.keys(chosen).every(k=>['selection','python'].includes(k))&&chosen.selection?.reference_run_id&&Array.isArray(chosen.selection.cases)&&typeof chosen.python==='string'&&isAbsolute(chosen.python),'Supply the complete actual structural selection and installed Python for this original course');}
   if(settings.cutoff!==undefined){requireValue(typeof settings.cutoff==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(settings.cutoff)&&Number.isFinite(Date.parse(settings.cutoff)),'Use a complete caller-requested cutoff timestamp with timezone');CUTOFF=Date.parse(settings.cutoff);}
   check();
   const nativeStudy=settings.matched_control_receiving===undefined?null:
@@ -154,6 +156,7 @@ async function main(argv){
   const id=now().replace(/[^0-9]/g,'')+'-'+randomUUID().slice(0,8);
   attempt={id,started_at:now(),state:'running',actions:[],files:[],opened:[],errors:[]};
   if(settings.delivery_preparation===true)attempt.delivery_preparation_selected=true;
+  if(settings.structural_study)attempt.structural_study_selected=true;
   progress.attempts.push(attempt);
   const attemptRoot=join(output,'attempts',id);for(const part of ['media','downloads','records','private'])await fs.mkdir(join(attemptRoot,part),{recursive:true,mode:0o700});
   checkpoint=async()=>{progress.updated_at=now();await atomic(progressPath,progress);};await checkpoint();
@@ -165,8 +168,8 @@ async function main(argv){
   await fs.access(settings.executable,fsConstants.X_OK);
   const imported=await import(pathToFileURL(settings.playwright_module).href),chromium=imported.chromium||imported.default?.chromium;
   requireValue(chromium?.launchPersistentContext,'Use the installed Playwright Chromium module');
-  const browserProfile=settings.delivery_preparation===true?join(output,'private','delivery-preparation-profile'):join(attemptRoot,'private','profile');
-  if(settings.delivery_preparation===true)await fs.mkdir(join(output,'private'),{recursive:true,mode:0o700});
+  const browserProfile=(settings.delivery_preparation===true||settings.structural_study)?join(output,'private','delivery-preparation-profile'):join(attemptRoot,'private','profile');
+  if(settings.delivery_preparation===true||settings.structural_study)await fs.mkdir(join(output,'private'),{recursive:true,mode:0o700});
   context=await chromium.launchPersistentContext(browserProfile,{
    executablePath:settings.executable,headless:true,acceptDownloads:true,viewport:{width:1440,height:1000}});
   context.setDefaultTimeout(30000);context.setDefaultNavigationTimeout(60000);
@@ -507,23 +510,42 @@ async function main(argv){
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'same case after actual reload');
   await click('[data-geo-case="'+prepared.id+'"]');await screenshot(page,'geographic-reopened',1440);await screenshot(page,'geographic-reopened',390);
   }
-  if(settings.delivery_preparation===true){
-   async function preparationRequest({method,path,body,query}){
+   async function retainedCourseRequest({method,path,body,query}){
     check();const target=new URL(path,operatorURL);
     requireValue(target.origin===operatorURL.origin,'Use the original authenticated operator');
     if(query)target.search=new URLSearchParams(query).toString();
     const headers={Authorization:'Bearer '+token,'X-Workspace':connection.workspace_key,Origin:operatorURL.origin};
     const response=method==='GET'?await context.request.get(target.href,{headers}):await context.request.post(target.href,{headers,data:body});
     const value=await response.json();
-    requireValue(response.ok(),'The saved preparation operation failed: '+path+' HTTP '+response.status()+' '+(value.error?.message||''));
+    requireValue(response.ok(),'The original retained course operation failed: '+path+' HTTP '+response.status()+' '+(value.error?.message||''));
     return value;
    }
+  if(settings.delivery_preparation===true){
    const preparationResult=await operateDeliveryPreparation({
     page,workspaceKey:connection.workspace_key,projectId:project.id,deliveryId:record.delivery_id,
     operationId:settings.operation_id,directory:join(output,'delivery-preparation'),
-    request:preparationRequest,screenshot,download,waitFor,check});
+    request:retainedCourseRequest,screenshot,download,waitFor,check});
    await saveRecord('delivery-preparation-browser',preparationResult);
    action('delivery_preparation_complete',{preparation_id:preparationResult.preparation_id,revision:preparationResult.revision,delivery_id:preparationResult.delivery_id,original_build_operation_id:preparationResult.build_operation_id});
+  }
+  if(settings.structural_study){
+   const structuralResult=await operateStructuralStudy({
+    page,workspaceKey:connection.workspace_key,projectId:project.id,selection:settings.structural_study.selection,
+    operationId:settings.operation_id,directory:join(output,'structural-study'),
+    request:retainedCourseRequest,screenshot,download,waitFor,check,
+    receiveNative:({studyId,reportOperationId})=>receiveStructuralProjectNative({
+     python:settings.structural_study.python,application:join(restored,'application'),workspace,
+     studyId,reportOperationId,directory:join(output,'structural-study-native'),check}),
+    uploadArchive:({file,descriptor})=>uploadStructuralArchive({file,descriptor,origin:operatorURL.origin,token,workspaceKey:connection.workspace_key,check}),
+    inspectAttachment:async({file,descriptor,nativeReceiving})=>{
+     const observed=nativeReceiving.attachments.files[descriptor.role];
+     requireValue(observed&&observed.path===descriptor.path&&observed.sha256===descriptor.sha256&&observed.bytes===descriptor.bytes&&observed.opened,'The original native report member was not actually opened');
+     requireValue(equal(await fileHash(file),{bytes:descriptor.bytes,sha256:descriptor.sha256}),'The browser download differs from the original opened native member');
+     return {opened:true,scope:'original-report',observation:observed};
+    }});
+   await saveRecord('structural-study-browser',structuralResult);
+   action('structural_study_complete',{study_id:structuralResult.study_id,report_id:structuralResult.report_id,
+    archive_sha256:structuralResult.native_receiving.archive.sha256,browser_workspace:structuralResult.project_transfer.result.workspace_key});
   }
   await saveRecord('browser-errors',pageErrors);
   requireValue(!pageErrors.length,'An actual outgoing page raised a browser error; inspect retained diagnostics');

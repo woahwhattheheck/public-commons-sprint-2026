@@ -15,6 +15,7 @@ from .portable_databases import snapshot_databases, without_database_files, veri
 from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 from .portable_implementation import locked_implementation, verify_implementation
 from .portable_parameter_studies import verify_parameter_studies
+from . import joint_parameter_study_transfer as joint_transfer
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -546,6 +547,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 if directory.is_dir():
                     identifier(directory.name)
                     stack.enter_context(held(directory / ".bridge.lock", blocking=False))
+            for path in joint_transfer.workspace_lock_paths(root):
+                stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
@@ -617,6 +620,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     root, records, source_ids={row["id"] for row in workspace._list("sources")})
                 implementation = verify_implementation(root, records)
                 parameter_studies = verify_parameter_studies(workspace, records)
+                joint_parameter_studies = joint_transfer.verify_workspace(workspace, records)
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
                             "database_snapshots": databases,
@@ -624,7 +628,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             "source_views": "Recreated from the original content-addressed objects on demand",
                             "source_acquisitions": source_acquisitions,
                             "implementation": implementation,
-                            "parameter_studies": parameter_studies}
+                            "parameter_studies": parameter_studies,
+                            "joint_parameter_studies": joint_parameter_studies}
                 if delivery:
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
@@ -649,7 +654,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                       "selection": selection, "database_snapshots": databases,
                       "source_acquisitions": source_acquisitions,
                       "implementation": implementation,
-                      "parameter_studies": parameter_studies}
+                      "parameter_studies": parameter_studies,
+                      "joint_parameter_studies": joint_parameter_studies}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -1064,8 +1070,16 @@ def _verify_restored_workspace(manifest, destination):
     retained_studies = manifest.get("parameter_studies")
     if retained_studies is not None and retained_studies != parameter_studies:
         raise ValueError("Receiving changed the original parameter studies or exports")
+    joint_parameter_studies = joint_transfer.verify_workspace(restored, verified_members)
+    retained_joint = manifest.get("joint_parameter_studies")
+    if retained_joint is not None and retained_joint != joint_parameter_studies:
+        raise ValueError("Receiving changed the captured original joint studies")
     details = {"source_acquisitions": source_acquisitions,
-               "implementation": implementation, "parameter_studies": parameter_studies}
+               "implementation": implementation, "parameter_studies": parameter_studies,
+               "joint_parameter_studies": joint_parameter_studies}
+    if joint_parameter_studies:
+        from .study_transfer import verify_received_studies
+        details["selected_joint_studies"] = verify_received_studies(restored, joint_only=True)
     if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
         from .programme_interactions import validate_workspace as validate_programme_interactions
         validate_programme_interactions(restored, verified_members=manifest["members"])
@@ -1091,6 +1105,12 @@ def _verify_restored_workspace(manifest, destination):
             or (restored.root / "delivery-preparation-operations").exists()):
         from .delivery_preparation import verify_all as verify_delivery_preparations
         details["delivery_preparations"] = verify_delivery_preparations(restored)
+    # Structural studies retain their exact native cases, original operation
+    # identities and complete first receipts. Verification does not render or run.
+    if ((restored.root / "structural-studies").exists()
+            or (restored.root / "structural-study-operations").exists()):
+        from .structural_studies import verify_all as verify_structural_studies
+        details["structural_studies"] = verify_structural_studies(restored)
     return details
 
 

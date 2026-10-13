@@ -1,0 +1,47 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "structural-studies",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791911665785559",
+  "components": {
+    "structural-studies": {
+      "title": "Original-grid structural studies, native worker, human report and full editable receiving",
+      "paths": [
+        "integration/component_fragments/structural-studies.json",
+        "model/structural_overlap.py",
+        "model/structural_studies.py",
+        "model/structural_report.py",
+        "model/portable.py",
+        "model/cli.py",
+        "operator/native_jobs.py",
+        "model/native_worker.py",
+        "operator/structural_study_jobs.py",
+        "operator/structural_study.py",
+        "operator/extensions/structural-studies.json",
+        "operator/web/structural_studies.mjs",
+        "operator/web/structural_study_storage.mjs",
+        "operator/web/structural_studies.css",
+        "model/STRUCTURAL_STUDIES_OPERATOR.md",
+        "operator/structural_study_receiving.mjs",
+        "operator/structural_study_receiving.py",
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "model/verified_files.py",
+        "source_tools/resolve_structural_terrain_selection.py",
+        "source_tools/STRUCTURAL_TERRAIN_SELECTION.md"
+      ],
+      "requires": [
+        "core",
+        "parameter-studies",
+        "extension-startup",
+        "delivery-preparation",
+        "project-transfer",
+        "terrain-conditioning"
+      ],
+      "import_roots": [
+        "operator"
+      ]
+    }
+  },
+  "required_components": [
+    "structural-studies"
+  ]
+}

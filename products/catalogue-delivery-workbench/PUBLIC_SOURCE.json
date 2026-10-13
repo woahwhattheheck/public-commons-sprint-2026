@@ -181,6 +181,48 @@
         "sha256": "8e79e029155c6e72353b01567749f34c46f929a8b6472b50b223b0e2a7c7f138"
       },
       "reason": "Independently close owned child/log/file resources after failures."
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/receiving.mjs",
+      "before": {
+        "gitBlob": "9d29d1a7b6b2f72ce9409a1f587f72d4b4edba0b",
+        "bytes": 51004,
+        "sha256": "a07e05c341fab58842d46b97f3d29187ec6feeaf5fdbb8a06469bdb980812736"
+      },
+      "after": {
+        "gitBlob": "1af0c3e2331018552b40fec54cf0f6d8b47eb5d6",
+        "bytes": 53105,
+        "sha256": "e37791c2e326beaeb32c0495fa4efef8f2a51aa41b50055500a2d6cb597166d2"
+      },
+      "reason": "Retain exact positive child/observer closure, selected-before-dispatch cancellation and same-request recovery while preserving public readiness and independent cleanup."
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/mcp.mjs",
+      "before": {
+        "gitBlob": "f68a53e7aa5fa682ea4ccf668e5190ce9a6dfc2e",
+        "bytes": 25763,
+        "sha256": "073c61db5fed27b3cf031c4c1770c7f49248c791d7c8ea926218d60ec2957958"
+      },
+      "after": {
+        "gitBlob": "8acb26340b14e8f6cf310e642d00a363f4f44619",
+        "bytes": 26311,
+        "sha256": "f1b23dddb66ddac257a8bf5f64ead98046c7e738553b5cfd30651390dcc7cca9"
+      },
+      "reason": "Receive original source-owner PR1958 current authority pagination, safe failed-response replay and retained complete artifact errors."
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/requests.mjs",
+      "before": {
+        "gitBlob": "bef8291b0080bf158bbd87e463d774eb9d340b61",
+        "bytes": 6452,
+        "sha256": "ae4d0c6d0009e74f08337458168184aa5c4bd167ab42953629c70945a86efaae"
+      },
+      "after": {
+        "gitBlob": "14479ef2c6e2384ddc88c843acf9a1dd13a4bc11",
+        "bytes": 6978,
+        "sha256": "d9553657beda9e98ac0d39004882f4c895825afcc699bb95762852ffeebf08d9"
+      },
+      "reason": "Receive original source-owner PR1958 current authority pagination, safe failed-response replay and retained complete artifact errors."
     }
   ],
   "packaging": {
@@ -365,5 +407,43 @@
     "custody": "Preserve the original equipped provider owner and complete private source. Public installation consumes actual original donor outputs without redispatching native approval.",
     "installedContinuation": "Any existing installed receiving directory resumes its exact bound source manifest and helper/browser selection. Public adoption does not rewrite that predecessor.",
     "readiness": "Source publication is not native destination acceptance or producer visual inspection."
+  },
+  "receivingClosureSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "b08d3bb3f2a4fba3829968a2b5d2023df4271118",
+    "fullSourceBlob": "a577ec6b49ddd8f1727527a1cf9cf1417fbf7542",
+    "publicSharedFiles": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+        "gitBlob": "2d38b113cc68d4361454d71fd77c0384d253a9f0",
+        "bytes": 7664,
+        "sha256": "51cff7b0bce06156f6690b02e53f2da275478d7cff1ecdbe090ecb3a823bfba9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+        "gitBlob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d",
+        "bytes": 7522,
+        "sha256": "6de5e8de411425927aef22267504808841bc7d2c9dffa0e66c51f032eb440853"
+      }
+    ],
+    "preservation": "Existing selected native source, original application bodies, business records and completed receipts remain unchanged. Select this coherent public package through the existing receiving/source-adoption contract; do not rewrite an active installed selection."
+  },
+  "catalogueRequestSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "ca8fe195662f0e76041b19acd3ca9fe04d1d85b9",
+    "files": [
+      {
+        "path": "products/catalogue-delivery-workbench/mcp.mjs",
+        "gitBlob": "8acb26340b14e8f6cf310e642d00a363f4f44619",
+        "bytes": 26311,
+        "sha256": "f1b23dddb66ddac257a8bf5f64ead98046c7e738553b5cfd30651390dcc7cca9"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/requests.mjs",
+        "gitBlob": "14479ef2c6e2384ddc88c843acf9a1dd13a4bc11",
+        "bytes": 6978,
+        "sha256": "d9553657beda9e98ac0d39004882f4c895825afcc699bb95762852ffeebf08d9"
+      }
+    ]
   }
 }

@@ -103,6 +103,22 @@
     {
       "path": "products/staff-portal-workbench/source-manifest.schema.json",
       "blob": "011427b8e7edcd3d141a3e52e5c001060dc09539"
+    },
+    {
+      "path": "products/staff-portal-workbench/receiving.mjs",
+      "blob": "d76c5a785f8b340a7e7ff0c04bc8e0f6e2032951"
+    },
+    {
+      "path": "products/staff-portal-workbench/RECEIVING.md",
+      "blob": "d9dee7f5f8a9116aa773d0f2050d1af96c6fc308"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+      "blob": "2d38b113cc68d4361454d71fd77c0384d253a9f0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+      "blob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d"
     }
   ]
 }

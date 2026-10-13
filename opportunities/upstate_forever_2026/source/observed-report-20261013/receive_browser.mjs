@@ -219,6 +219,13 @@ async function main() {
     journal.selected_study = { study_id: selected.study_id, workspace_key: selected.workspace_key,
       retained_records: selected.original_nodes.length, edition_id: selected.edition_id };
   }
+  if (receipt.terrain) {
+    const { runTerrainReportReceivingChapter } = await import('../../source_tools/terrain_report_browser.mjs');
+    journal.terrain_chapter = await runTerrainReportReceivingChapter({
+      page, receipt, outputDirectory: output, sourcesDesk, previewSources: preview,
+      originalJSON, download, shot,
+    });
+  }
   journal.assessment_action_requests = actionRequests.slice(0, reportActionStart);
   journal.action_requests = actionRequests.slice(reportActionStart);
   requireValue(journal.action_requests.length === 0,

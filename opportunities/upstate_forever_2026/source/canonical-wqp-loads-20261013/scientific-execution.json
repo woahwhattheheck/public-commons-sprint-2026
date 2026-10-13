@@ -1,0 +1,166 @@
+{
+  "schema": "commons.scientific-execution-evidence/v1",
+  "operation": "ECO-WO13-CANONICAL-WQP-20261013",
+  "execution": "Maintained JavaScript scientific and parsing modules executed in V8 with original input bytes; no filesystem, SQLite or browser execution claimed.",
+  "source_files": [
+    {
+      "path": "measurement_workspace/engine/flow_wqp_loads.mjs",
+      "bytes": 5414,
+      "sha256": "520e9d4cd74b5a4e56e5f88755d0f68524f067b7c87802e9d690d82cc32127b8"
+    },
+    {
+      "path": "measurement_workspace/engine/flow_loads.mjs",
+      "bytes": 9331,
+      "sha256": "3571295aa55f6156e1d07fa1e87b0622d5130b677db742cf61d0ba51b0c8d7ce"
+    },
+    {
+      "path": "source_tools/observed_loads.cjs",
+      "bytes": 27712,
+      "sha256": "89bbd274d5efb333855a2e79ab254928818813c721d7fe4e7354af22ae8f65b7"
+    }
+  ],
+  "report_renderer_git_blob": "ce21e8d72bc30c7c772d16cc986045b44f6b75b6",
+  "study_id": "1a960683943c480aa1fdaec87500653e482004a1e8d2f98a980f403bc2b4e52c",
+  "result_id": "aa06f97c251a717d8b41c604f0c7ed46c62f9b86643b825fa17a18058e86e968",
+  "counts": {
+    "samples": 132,
+    "flows": 285,
+    "series": 26,
+    "context_only": 26,
+    "spatial_admitted": 0,
+    "quantified_mass_days": 0,
+    "annual_exports": 0,
+    "left_censored": 34,
+    "concentration_context": 66,
+    "other_context": 66
+  },
+  "checks": [
+    "Matched canonical as-P series retained",
+    "Known matched three-day mass",
+    "Identical-day weighted concentration",
+    "P and PO4 never mixed",
+    "Separate chemical-basis interpolation",
+    "Censor point stays null",
+    "Left-censor lower envelope",
+    "Right-censored source retained outside finite envelope",
+    "Existing review exclusion honored",
+    "Unresolved source version excluded",
+    "Mismatched retained characteristic metadata rejected",
+    "All actual canonical rows retained",
+    "Actual 26 distinct contexts retained",
+    "Lake source does not acquire catchment mass eligibility",
+    "All 34 original left-censored rows and limit bodies retained",
+    "Existing actual589/2477 integration byte-structure unchanged",
+    "Non-concentration context exports use other_context; mixed metadata source_context",
+    "Missing IDs with declared variant conflict remain excluded",
+    "Standalone canonical report retains original quantity kinds; legacy report markup remains unchanged"
+  ],
+  "output_carrier": {
+    "schema": "commons.ordered-gzip-base64-file/v1",
+    "filename": "canonical-wqp-complete-output.json",
+    "bytes": 28396936,
+    "sha256": "3e4ba3fe7b74cba07a49e47e2e870e40b84444f387a91f74e0e49eccb126963b",
+    "compressed_bytes": 1176178,
+    "compressed_sha256": "b1395ac7e143eb679e285cf7060a8a3bbff8d1c0e51c3831dff9b93556ee6dd6",
+    "study_id": "1a960683943c480aa1fdaec87500653e482004a1e8d2f98a980f403bc2b4e52c",
+    "result_id": "aa06f97c251a717d8b41c604f0c7ed46c62f9b86643b825fa17a18058e86e968",
+    "files": [
+      {
+        "path": "flow-study.json",
+        "bytes": 3619214,
+        "sha256": "2964d66a00f74fc27bfa26cc324acdea219971f527e4aac34d26d41e6c208eab"
+      },
+      {
+        "path": "flow-input.json",
+        "bytes": 1588725,
+        "sha256": "a03f749c76e4af17609faf05e90fe35e644eece2166c9075ee0c7ceeb1c7c0a0"
+      },
+      {
+        "path": "flow-loads.json",
+        "bytes": 10781349,
+        "sha256": "67aab7661924a4e1c4b62be9442d22b8ee23853c1e3fe79b75c48b2af4650f73"
+      },
+      {
+        "path": "observed-loads.json",
+        "bytes": 2987291,
+        "sha256": "90e50be9aa827446b4c769ff59a092695b7032810d07a77defae76bd193c83c7"
+      },
+      {
+        "path": "contract.json",
+        "bytes": 982,
+        "sha256": "4541edf2ff980873adb0a41167bd33cc8b0f1279761a582fac039f2be23a9237"
+      },
+      {
+        "path": "load-selection.json",
+        "bytes": 1154,
+        "sha256": "f6a1c74db05b80159fda149e93325fd2ca035b63aaa81f20ec85232ac75f8cb8"
+      },
+      {
+        "path": "report.html",
+        "bytes": 16464,
+        "sha256": "5602f88de6fef1e53fca93a59d0dcce9874382004fa1221f298274793864964b"
+      },
+      {
+        "path": "concentration-context.csv",
+        "bytes": 4772477,
+        "sha256": "5784304eaa819acc958cad61679763d0226da14c525e5acdde4dc549b27abd40"
+      },
+      {
+        "path": "annual-loads.csv",
+        "bytes": 284,
+        "sha256": "f1c4a2e6bd80887f89ee5cd74074cb368163d8a900fd6c656b0a9a26af9db5ac"
+      },
+      {
+        "path": "daily-loads.csv",
+        "bytes": 68,
+        "sha256": "d63e5659e142e9a4a099bec94427f06e546633f60d5d16d3b1aedf7ba74033f7"
+      },
+      {
+        "path": "period-loads.csv",
+        "bytes": 197,
+        "sha256": "f5c547c57f58030b1ea3349bea26e7cbbf328ecfc708f41b1b54bea9e308c5d1"
+      },
+      {
+        "path": "observation-export-metadata.json",
+        "bytes": 536,
+        "sha256": "e415fc1c98c22a363017e88fcf102713f1628f52b37e532235e3bb623168cd98"
+      },
+      {
+        "path": "README.txt",
+        "bytes": 1105,
+        "sha256": "11cfb110a0a85b453da3e423ce2d4b989b89fdaed3bba2f77ac855c1db958214"
+      }
+    ],
+    "parts": [
+      {
+        "path": "output-part-001.txt",
+        "bytes": 500000,
+        "sha256": "9696f6846d33ed73052dd6e6f6379d774539e2fb311426489857411cc9005475"
+      },
+      {
+        "path": "output-part-002.txt",
+        "bytes": 500000,
+        "sha256": "20a4cff85fc136ac3f7d322bc914fa0f8958cc3419371f7c3b803daac8bb4466"
+      },
+      {
+        "path": "output-part-003.txt",
+        "bytes": 500000,
+        "sha256": "1eea983c03c1187b6fc764b67316e73e7c46b31c3510211e82fb0a5b6b26b226"
+      },
+      {
+        "path": "output-part-004.txt",
+        "bytes": 68240,
+        "sha256": "22086984a57bd914c0ce8b3191e885ead98d936b2a372bdf3d6705d70574e45d"
+      }
+    ]
+  },
+  "readback": {
+    "parts": 4,
+    "files": 13,
+    "all_byte_and_sha256_matches": true
+  },
+  "standalone_report": {
+    "canonical_quantity_table": true,
+    "legacy_markup_exact": true
+  }
+}

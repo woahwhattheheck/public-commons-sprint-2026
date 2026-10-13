@@ -667,19 +667,20 @@ class Course{
   }
   close(){
     if(this.closing)return this.closing;
+    const report=value=>{try{process.stderr.write(JSON.stringify(value)+'\n');}catch{}};
     this.closing=(async()=>{
       if(!this.bound)return;
       if(!this.apps&&Object.values(this.state?.hosts??{}).some(host=>host.starts.some(run=>!run.closed))){
         for(;;){try{this.apps=await openRuntimeWorkspace({directory:this.options.merchant.workspace});break;}
-          catch(error){process.stderr.write(JSON.stringify({state:'APPLICATION_OBSERVER_CLOSE_PENDING',error:err(error)})+'\n');await delay(1000);}}
+          catch(error){report({state:'APPLICATION_OBSERVER_CLOSE_PENDING',error:err(error)});await delay(1000);}}
       }
       for(const name of Object.keys(this.state?.hosts??{})){
         while(this.state.hosts[name].starts.some(x=>!x.closed)){
-          try{await this.stop(name);}catch(error){this.state.errors.push({at:now(),name:'close-'+name,error:err(error)});try{await this.save();}catch{}process.stderr.write(JSON.stringify({operationId:this.state.id,error:err(error),state:'OWNER_CLOSE_PENDING'})+'\n');await delay(1000);}
+          try{await this.stop(name);}catch(error){this.state.errors.push({at:now(),name:'close-'+name,error:err(error)});try{await this.save();}catch{}report({operationId:this.state.id,error:err(error),state:'OWNER_CLOSE_PENDING'});await delay(1000);}
         }
       }
-      if(this.manager)for(;;){try{await this.manager.close();this.manager=null;break;}catch(error){process.stderr.write(JSON.stringify({error:err(error),state:'MCP_CLOSE_PENDING'})+'\n');await delay(1000);}}
-      await this.apps?.close();
+      if(this.manager)for(;;){try{await this.manager.close();this.manager=null;break;}catch(error){report({error:err(error),state:'MCP_CLOSE_PENDING'});await delay(1000);}}
+      if(this.apps)for(;;){try{await this.apps.close();this.apps=null;break;}catch(error){report({error:err(error),state:'APPLICATION_WORKSPACE_CLOSE_PENDING'});await delay(1000);}}
     })().finally(()=>{this.closing=null;});return this.closing;
   }
   async run(){

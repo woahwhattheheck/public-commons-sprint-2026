@@ -1,0 +1,85 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "terrain-report-receiving",
+  "source_reference": "ES26/original-terrain-scientific-receiving-20261013",
+  "extend_components": {
+    "terrain-conditioning-report-source": {
+      "paths": [
+        "source_tools/terrain_report_receiving.py",
+        "source_tools/terrain_report_browser.mjs",
+        "source_tools/TERRAIN_REPORT_RECEIVING.md",
+        "integration/component_fragments/terrain-report-receiving.json",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/assessment_browser.mjs",
+        "source/observed-report-20261013/receive_course.py",
+        "model/scientific_report_editions.py",
+        "model/scientific_report_study_transfer.py",
+        "model/study_transfer.py",
+        "model/portable.py",
+        "operator/server.py",
+        "operator/extension_registry.py",
+        "operator/source_reports.py",
+        "operator/web/source_reports.mjs",
+        "operator/extensions/source-reports.json",
+        "CURRENT_OWNER_DIRECTION.md",
+        "operator/source_report_editions.py",
+        "operator/source_archive_ingress.py",
+        "operator/scientific_synthesis.py",
+        "operator/scientific_source_reader.py",
+        "model/scientific_briefing.py",
+        "model/observed_context.py",
+        "model/scientific_report_review.py",
+        "model/scientific_report_capture.py",
+        "model/scientific_synthesis.py",
+        "model/scientific_synthesis_catalog.py"
+      ],
+      "requires": []
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_flood.cpp",
+        "source_tools/terrain_prepare.py",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "model/terrain_conditioning_report_cli.py",
+        "model/terrain_conditioning_study_transfer.py",
+        "operator/terrain_conditioning_native.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/web/terrain_conditioning.mjs",
+        "operator/web/terrain_conditioning.css",
+        "operator/TERRAIN_SCIENTIFIC_SOURCE.md",
+        "source/TERRAIN_STUDY_TRANSFER.md",
+        "integration/component_fragments/terrain-conditioning.json",
+        "integration/component_fragments/terrain-conditioning-report-source.json",
+        "integration/component_fragments/terrain-study-transfer.json",
+        "source_tools/terrain_report_receiving.py",
+        "source_tools/terrain_report_browser.mjs",
+        "source_tools/TERRAIN_REPORT_RECEIVING.md",
+        "integration/component_fragments/terrain-report-receiving.json",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/assessment_browser.mjs",
+        "source/observed-report-20261013/receive_course.py"
+      ],
+      "requires": []
+    },
+    "study-transfer": {
+      "paths": [
+        "model/terrain_conditioning_study_transfer.py",
+        "source/TERRAIN_STUDY_TRANSFER.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_flood.cpp",
+        "source_tools/terrain_prepare.py"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": []
+}
