@@ -116,3 +116,9 @@ Source checks, HTTP status, DOM counts, tests, captured-but-unviewed screenshots
 ## Validation of this edition
 
 The pure planner was executed on the three complete native, browser and documentation source families from an active internal application: 343 unique application files, 6,619,025 source bytes, selected host composition and retained existing dependencies. Reapplying all three banks to that completed source state produced no changes. Each saved source volume was independently read, decoded and checked against the complete bank/member identities. It was also executed on a complete existing two-file documentation bank, including its exact original predecessor. A second operation retained an unrelated concurrent source addition, and reopening that composed state produced no changes. The JavaScript receiving source was syntax parsed. Native filesystem staging remains part of the existing receiving worker's real application operation.
+
+## Resume the complete ordered family
+
+Pass the same full ordered list of source banks when resuming a prepared application. Every bank and its complete source members are validated before composition. If an installed file exactly matches the final explicitly selected edition for that path in a later bank, earlier selected layers retain that complete final body. The receipt records the later layer and its verified identity. Supporting dependencies do not authorize this behavior. An unknown installed body still follows the original guarded composition rules.
+
+This allows a whole source family to converge after a later bank refactors a module originally added by an earlier bank. The planner produces the same final source on a fresh receive and leaves that complete edition unchanged on replay.

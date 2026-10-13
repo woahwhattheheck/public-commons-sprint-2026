@@ -80,11 +80,23 @@ function createSourceBankComposer({identity}) {
     const local=p=>{path(p);if(prefix&&!p.startsWith(prefix))throw Error('Member is outside --source-prefix: '+p);return path(prefix?p.slice(prefix.length):p);};
     const complete=new Map(),initial=new Map(),steps=[];
     for(const [p,raw] of Object.entries(current)){path(p);const f=typeof raw==='string'?{content:raw}:object(raw,p);if(typeof f.content!=='string')throw Error(p+' current source must be UTF-8 text');complete.set(p,{content:f.content,mode:f.mode});initial.set(p,{content:f.content,mode:f.mode});}
-    for(let layer=0;layer<banks.length;layer++){
-      const checked=validateBank(banks[layer]);
+    // Validate every supplied bank before using any later declared identity.
+    // Only the last explicitly selected member can supersede an earlier layer;
+    // supporting dependencies never authorize an otherwise unknown replacement.
+    const layers=banks.map(validateBank),lastSelected=new Map();
+    for(let layer=0;layer<layers.length;layer++){
+      const checked=layers[layer];
+      for(const [p,f] of checked.members){const destination=local(p);if(checked.deltas.has(p))lastSelected.set(destination,{layer,member:f});}
+    }
+    for(let layer=0;layer<layers.length;layer++){
+      const checked=layers[layer];
       for(const [p,f] of checked.members){
         const destination=local(p),prior=complete.get(destination),selected=checked.deltas.has(p),patch=checked.patches.get(p);
         if(prior&&!selected){steps.push({layer,path:destination,action:'preserve-existing-dependency'});continue;}
+        const successor=lastSelected.get(destination);
+        if(prior&&selected&&successor.layer>layer&&prior.content===successor.member.content){
+          steps.push({layer,path:destination,action:'retain-later-selected-source',selected_layer:successor.layer,bytes:successor.member.bytes,sha256:successor.member.sha256});continue;
+        }
         if(prior&&prior.content===f.content){steps.push({layer,path:destination,action:'already-current'});continue;}
         let content=f.content,detail={};
         if(prior){
