@@ -20,11 +20,11 @@ import tempfile
 import zipfile
 
 OPERATION = "SCF-ANALYSIS-DATASET-PUBLICATION-B9D2-20261012"
-CARRIER = "a50bc2339f5736edd1a5becf7820713286963f6d"
+CARRIER = "7b3e80950f3256594ec22cf650828663fffbc875"
 PROJECT = "31a92f2bacd565eac461478519ec2ebc44df7af1fadeda2a9c82f62ab3c27355"
 BACKUP = "4daa8c2c28cfe14263a69c32cb0e3733e043d223a320fdf83cc7daef51f7d0e3"
 PYTHON = "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/"
-PRODUCT_TREE = "b5d3a26fbdc79d7cf7838f220051f762e2ee24dd"
+PRODUCT_TREE = "cdb7a537d13f664ff1c9ed604d25d16cab39040f"
 
 def require(value, message):
     if not value:

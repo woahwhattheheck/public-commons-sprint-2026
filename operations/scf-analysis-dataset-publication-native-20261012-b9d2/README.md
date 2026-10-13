@@ -19,9 +19,9 @@ receipt requires reading its saved operation and child state first.
 
 ## Exact selected source
 
-- Complete 379-file source carrier: Git blob `a50bc2339f5736edd1a5becf7820713286963f6d`, 5,840,762 UTF-8 bytes.
-- Product's 27-file tree: `b5d3a26fbdc79d7cf7838f220051f762e2ee24dd`.
-- Portable preparer: Git blob `032cffd2c76f24c3748241e41f3d19cd89b65eeb`.
+- Complete 379-file source carrier: Git blob `7b3e80950f3256594ec22cf650828663fffbc875`, 5,840,772 UTF-8 bytes.
+- Product's 27-file tree: `cdb7a537d13f664ff1c9ed604d25d16cab39040f`.
+- Portable preparer: Git blob `133b71445a6a70ff381ec411d0f82de5a3289f1f`.
 - Final native bridge: `3b7b4ba3ccaceae8b28ade45a37864021b04a192`.
 
 The carrier binds every full file body. Where an original per-file Git identity
