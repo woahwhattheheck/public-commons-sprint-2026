@@ -95,5 +95,9 @@ class ParameterStudyAPI:
             "range_basis": result["range_basis"],
             "aggregation": {name: value for name, value in result.get("aggregation", {}).items()
                             if name != "pairs"},
+            **{name: result[name] for name in (
+                "invest_version", "invest_version_basis", "baseline_selection",
+                "native_versions", "native_run_selections", "native_version_labels", "native_version_guides")
+               if name in result},
             "artifact_sha256": artifact["sha256"],
         }
