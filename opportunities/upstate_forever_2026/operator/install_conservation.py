@@ -62,8 +62,21 @@ OWNED = frozenset({
     "source/conservation-documentation-integration-20261013.json",
     "source/conservation-reporting-joins-20261013.json",
     "source/keowee-native-binding-20261013.json",
+    "source/keowee-native-receiving-20261013/capture.json",
+    "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+    "source/keowee-native-receiving-20261013/source-interval-journey.json",
+    "source/keowee-native-receiving-20261013/source-selection-journey.json",
+    "source/keowee-native-receiving-20261013/sources.json",
     "source/keowee-priority-integration-20261013.json",
     "source/keowee-priority-methods-20261013.json",
+    "source/keowee/20261013/KEOWEE-INTEGRATION.md",
+    "source/keowee/20261013/keowee-criteria.csv",
+    "source/keowee/20261013/keowee-evaluator.d.mts",
+    "source/keowee/20261013/keowee-evaluator.mjs",
+    "source/keowee/20261013/keowee-fields.csv",
+    "source/keowee/20261013/keowee-journey-check.json",
+    "source/keowee/20261013/keowee-source-catalog.json",
+    "source/keowee/20261013/keowee-sources-manifest.json",
     "source/keowee/20261013/lake-keowee-methodology.json",
     "source/parcel-criteria-geometry-integration-20261013.json",
     "source/parcel-criteria-integration-20261013.json",
@@ -75,6 +88,7 @@ OWNED = frozenset({
     "source_tools/PARCEL_CRITERIA_GEOMETRY.md",
     "source_tools/PARCEL_CRITERIA_INTERVALS.md",
     "source_tools/SOIL_FLOODPLAIN_SOURCES.md",
+    "source_tools/keowee_interval_receiving.mjs",
     "source_tools/parcel_criteria.py",
     "source_tools/soil_floodplain_sources.py",
 })
@@ -102,7 +116,8 @@ KNOWN_PRIOR = {
         "c46d49b9d9ec84e16be050679546a11edeea6f0f5862b21544e6313e4fca7930",
         "4d51f59276d6585e817d43f44dd80c6aaeed3e15cc6cf149e9cc2b3d0d90cd87",
         "586fdf871373935689f6876c753da09051774ae76ac08b0c0b71cfef83489e19",
-        "24244f46143402dfe22f432195c801e94b5a81e0b50c918f8ae1bac5fe70578e"
+        "24244f46143402dfe22f432195c801e94b5a81e0b50c918f8ae1bac5fe70578e",
+        "c26c81d7ec647be3d1fde1f1e57d1f36d8229a3ec1a416ad9059799d2d542af9"
     ],
     "operator/conservation.py": [
         "530d230e20704b058ffc50cebea6cab01b2af42f94d1a472de2482ce95ada0a4",
@@ -121,7 +136,8 @@ KNOWN_PRIOR = {
         "ee1ed5e75d34616416e342db99df34587cdc750d38c7f808a6d2ea58a6c2595b",
         "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710",
         "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e",
-        "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65"
+        "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65",
+        "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
@@ -137,7 +153,8 @@ KNOWN_PRIOR = {
         "9c94af3dac766ae3fd32a2e514d1efff911960db5d01b9b3d60c2919ae81aff9",
         "c109ce231393d18f149b5f2bfc5faaec56948d1efda26ddc1c5a3144c1b5b231",
         "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277",
-        "606ec48543d3967cd8bef4b86d320ab273ff8b0f60f890d2bd5b91f11467fbee"
+        "606ec48543d3967cd8bef4b86d320ab273ff8b0f60f890d2bd5b91f11467fbee",
+        "7478f563ff1ee1a2626b06df63e62a59c25277a91ad28d217fba7f4fe0ab7949"
     ],
     "operator/install_conservation.py": [
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
@@ -153,7 +170,8 @@ KNOWN_PRIOR = {
         "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1",
         "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb",
         "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
-        "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1"
+        "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
+        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -164,14 +182,16 @@ KNOWN_PRIOR = {
         "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c",
         "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352",
         "f02cbba6296578a498566f577edde0c7cf897e37a1916bdceb7fa3faea6ef3a2",
-        "91e45b0b566ffd433cae627f3167f42123abb3c2ccf8e53c388767e4618254b3"
+        "91e45b0b566ffd433cae627f3167f42123abb3c2ccf8e53c388767e4618254b3",
+        "0232570ab566d79d5d2a563928c51a470098df18f760ffe71a47cb6769897dcf"
     ],
     "model/keowee_priority.py": [
         "9686b4b9224f2d09f705e09a4300877f2bf5ce39a4405c81aa5fc84b2cd8949e",
         "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd",
         "3f8e48b83d74355b280baafefe0142cd5b23924813aeeba48170ec8815497043",
         "f83004ffaf97a2f5182fffb632d8ece6570d117983e210b084ccf41da1000d7f",
-        "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431"
+        "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431",
+        "52a9c817d4871e44f18e9f9a9b909376fa83efbf49816f6393b16ffdec5ca22e"
     ],
     "source/keowee-priority-methods-20261013.json": [
         "f6f0d496697b03cdd667407ff26f0377f1262df608b21f6a3ff059357c134ec5"
@@ -193,7 +213,8 @@ KNOWN_PRIOR = {
         "aabd1f2ca24827c783d47da103ae55e130a2d22ae77688748848762ff4cd49d0",
         "0a42f6685d086ec9bca55e6e63d891058de5be5547a5bc4d116a2d2626358123",
         "9bcc0a413f9d2e8feec08d2ff827c829e1a875d977519e3b61edb7f907f3b5e9",
-        "d8d014e9731170ee849af3d09100441ff0bb1b47c65e981fa5d431386a1fd65e"
+        "d8d014e9731170ee849af3d09100441ff0bb1b47c65e981fa5d431386a1fd65e",
+        "a8bbbc648cc4d675520f926c782c1ec6f7084fa4a3fe3784c632393ab36bc0f2"
     ],
     "model/CONSERVATION_EXPERIMENTS.md": [
         "b8859697162b7dd37e19c59fed4ab5abae8fc3e02e50a6e31e6faed9e28bd65d"
@@ -204,18 +225,21 @@ KNOWN_PRIOR = {
         "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41",
         "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9",
         "e8ad84d3f992cc1e2d40240abb84c33923d6f60de1dca5a3231cb9bd47f53e9c",
-        "1b27a5186fe99f255856e7515609c7a4ed88ff08ccad508479ade53b3955b7b4"
+        "1b27a5186fe99f255856e7515609c7a4ed88ff08ccad508479ade53b3955b7b4",
+        "d2f1bc510f2d64c9ed088936428f5eea28b3fa259982eb9ec1cefdba315fbe3e"
     ],
     "source/parcel-criteria-sources-20261013.json": [
         "4b2276fb7c976f08ac11d6d95a96af0ed806a914442deda5126c30916f3b57a0",
         "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a",
         "028c4cb379e39fdf9b6ca53c964862b9ed05a9582e63803784814cfb7468ae30",
-        "c7dfd207ec90a25851b02f6a271cf4aed561cf33e6cc61ee96b9404be1bb9858"
+        "c7dfd207ec90a25851b02f6a271cf4aed561cf33e6cc61ee96b9404be1bb9858",
+        "d64314e31a4e3121fc66f3c624033cb3ae176397e0830e17fade066ecb6a192b"
     ],
     "source_tools/PARCEL_CRITERIA.md": [
         "3c1b9b9c8df3452aa5d16969be10e0917978d80130d138d3df9220a073dc72c3",
         "87779cb93017eff68557d8e8d95fef3aeb5d6fccf1d1868a611d9f22b326c8a8",
-        "b870cf11dede90a07568d0be967339a75301dbb6891d5fc56015b97934a61fa8"
+        "b870cf11dede90a07568d0be967339a75301dbb6891d5fc56015b97934a61fa8",
+        "574d9ff53d930dee48d783c6cbad8771811fb5eae2257170571e8eddbec62df4"
     ],
     "source/parcel-criteria-integration-20261013.json": [
         "d11fc0238a4637af7432df34761d43bd3dd4f6abedcc72f81700dca6bf6b0da8"
@@ -281,11 +305,13 @@ KNOWN_PRIOR = {
     ],
     "model/conservation_reporting.py": [
         "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9",
-        "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f"
+        "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f",
+        "65a6bfd15909352a8b1bfd2767e4512554c7633a20e3234c5b5a6b230da3b9c0"
     ],
     "model/CONSERVATION_REPORTS.md": [
         "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6",
-        "254b52695f08b5ba43bcdba78965d55d51222d2ff2a0d9699c9c3de387a99218"
+        "254b52695f08b5ba43bcdba78965d55d51222d2ff2a0d9699c9c3de387a99218",
+        "13be9aadd97fdda29db103fbf20af7e1416ae7121d415e63ad495ccf757767ff"
     ],
     "source/conservation-reporting-joins-20261013.json": [
         "4a6a69aca0062ad71c1919d868dabca0511e7ce65277d67dcfd4de40b65499c2"
@@ -350,7 +376,8 @@ KNOWN_PRIOR = {
     "operator/web/retained_desks.mjs": [
         "3313f4fa86212b12627985d6332a796ebffa913889f452b136f28df4da121d96",
         "9e53dc3f51baae9dd3a1a26901a371d82bc68bd7bc940bbc6a050d6a516136de",
-        "f3641132250affeb3109f97dd0cd1f01414f7dcf009ae187154b5e27585768d9"
+        "f3641132250affeb3109f97dd0cd1f01414f7dcf009ae187154b5e27585768d9",
+        "bed9b53bb6ea1ce7b0111b2c46954cc582b876112c6f553be3408f8fe3db179c"
     ],
     "source_tools/PARCEL_CRITERIA_GEOMETRY.md": [
         "35db87a06a0e4036044cca57cf1a8478a33af7a04332e2abf43455abf09cccc4"
@@ -368,7 +395,8 @@ KNOWN_PRIOR = {
         "7d5078bc1d1626f218db5415d2e0e4a301aa0b94dc48fc6fd9c70b94b9ce402c"
     ],
     "model/keowee_profile_adapter.py": [
-        "e36148ceb0f042cc0fd86c1525034066e9376df0b12acf06e23e57e58186b971"
+        "e36148ceb0f042cc0fd86c1525034066e9376df0b12acf06e23e57e58186b971",
+        "4a4057834f3c5863620b0f324cb0acb898a3644e86c0d788c0d49251661a1183"
     ],
     "source/keowee-native-binding-20261013.json": [
         "b5e50ed043db62ad166a2f8754e502fed212225b0a54ab9ee498505ba567b465"
@@ -381,6 +409,21 @@ KNOWN_PRIOR = {
     ],
     "operator/KEOWEE_METHOD_VIEW.md": [
         "31f8446504c3027440bb5b8cca019c666058885ca1fd669e4c771a25e880d3a3"
+    ],
+    "source/keowee/20261013/keowee-evaluator.mjs": [
+        "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65"
+    ],
+    "source/keowee/20261013/keowee-evaluator.d.mts": [
+        "f721913b3290c67eab80c2c70c3ec0f881ad938a5563755bfca3e956c24db663"
+    ],
+    "source/keowee/20261013/KEOWEE-INTEGRATION.md": [
+        "6e463f137ecc9b177ebc21766121ca27b951c77800571495c1f1ae8ff9952070"
+    ],
+    "source/keowee/20261013/keowee-sources-manifest.json": [
+        "3f56af96c013ea1328c79d01b2601f86f51fa77dfbd9ec1b061cca8a4fb99849"
+    ],
+    "operator/web/keowee-method-view.mjs": [
+        "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698"
     ]
 }
 
@@ -849,8 +892,21 @@ def read_packet(path):
         "source/conservation-documentation-integration-20261013.json",
         "source/conservation-reporting-joins-20261013.json",
         "source/keowee-native-binding-20261013.json",
+        "source/keowee-native-receiving-20261013/capture.json",
+        "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+        "source/keowee-native-receiving-20261013/source-interval-journey.json",
+        "source/keowee-native-receiving-20261013/source-selection-journey.json",
+        "source/keowee-native-receiving-20261013/sources.json",
         "source/keowee-priority-integration-20261013.json",
         "source/keowee-priority-methods-20261013.json",
+        "source/keowee/20261013/KEOWEE-INTEGRATION.md",
+        "source/keowee/20261013/keowee-criteria.csv",
+        "source/keowee/20261013/keowee-evaluator.d.mts",
+        "source/keowee/20261013/keowee-evaluator.mjs",
+        "source/keowee/20261013/keowee-fields.csv",
+        "source/keowee/20261013/keowee-journey-check.json",
+        "source/keowee/20261013/keowee-source-catalog.json",
+        "source/keowee/20261013/keowee-sources-manifest.json",
         "source/keowee/20261013/lake-keowee-methodology.json",
         "source/parcel-criteria-geometry-integration-20261013.json",
         "source/parcel-criteria-integration-20261013.json",
@@ -858,6 +914,7 @@ def read_packet(path):
         "source/parcel-criteria-sources-20261013.json",
         "source/soil-floodplain-integration-20261013.json",
         "source/soil-floodplain-source-profile-20261013.json",
+        "source_tools/keowee_interval_receiving.mjs",
         "source_tools/parcel_criteria.py",
         "source_tools/soil_floodplain_sources.py",
     }
