@@ -13,6 +13,7 @@ from . import cartography, map_atlas, portable, rasters
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery
+from . import scenario_analysis_delivery as analysis_delivery
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
@@ -201,6 +202,9 @@ def build(workspace, selection):
     report_link = bind_report(workspace, selection)
     if report_link is not None:
         selection["source_report_sha256"] = report_link["report_sha256"]
+    analysis_link = analysis_delivery.bind_analysis(workspace, selection)
+    if analysis_link is not None:
+        selection["source_scenario_analysis_sha256"] = analysis_link["analysis_sha256"]
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -272,6 +276,9 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            analysis_product = analysis_delivery.retain_analysis(workspace, directory, state, analysis_link)
+            if analysis_product is not None:
+                atomic_json(state_path, state)
             if report_link is not None:
                 retain_report(workspace, directory, state, report_link)
                 atomic_json(state_path, state)
@@ -562,6 +569,7 @@ def build(workspace, selection):
                 ]
                 target = directory / "report.pdf"
                 sections.extend(receiving_water_delivery.report_section(water_product))
+                sections.extend(analysis_delivery.report_sections(analysis_product))
                 cartography.report_pdf(target, selection.get("title", workspace.project["title"]),
                                        sections, contact=contact, source_records=records)
                 state["files"]["report"] = describe_file(directory, target)
@@ -597,6 +605,7 @@ def build(workspace, selection):
                 manifest["source_report"] = report_link
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
+            analysis_delivery.extend_assets(manifest, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
