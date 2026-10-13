@@ -318,7 +318,7 @@ export function attachEnsembles(context) {
         'With no extra parameter axes, the design compares the selected original profiles.')+
       '<div class="full">'+field('Purpose and comparison question','<textarea name="ensemble_reason" required rows="3"></textarea>')+'</div>'+
       '<fieldset class="full"><legend>Land-cover alternatives (optional)</legend>'+
-        '<p class="note">Leave these unselected to compare at least two distinct parameter cases on the observed baseline.</p>'+
+        '<p class="note">Leave these unselected to compare at least two distinct parameter cases on the retained baseline.</p>'+
         choices('ensemble_alternative',alternatives,'Parameter-only designs can use the retained baseline.')+'</fieldset>'+
       '<fieldset class="full"><legend>Scientific parameter profiles</legend>'+choices('ensemble_profile',profiles,'Prepare a profile first.')+'</fieldset>'+
       '<section class="full"><h3>Optional sourced parameter exploration</h3><p class="note">Add the values you want to evaluate and their source. '+
@@ -834,7 +834,7 @@ export function attachEnsembles(context) {
         (error?.message||error?.error?.message||JSON.stringify(error)))+'</li>').join('')+
       '</ul><p>Completed stages stay available. Inspect the named run, correct its input or runtime problem and continue this same design.</p></div></section>';
     content+='<h3 class="subheading">Land-cover physical quantities</h3>'+pairTable(summary);
-    content+='<h3 class="subheading">Parameter sensitivity on the observed baseline</h3>'+pairTable(summary,'sensitivity');
+    content+='<h3 class="subheading">Parameter sensitivity on the retained baseline</h3>'+pairTable(summary,'sensitivity');
     content+='<h3 class="subheading">Report downloads</h3>';
     if(result.export_state==='stale')
       content+='<div class="notice">The downloadable report needs to be refreshed. '+
@@ -907,7 +907,7 @@ export function attachEnsembles(context) {
         escapeHTML(value)+'</strong></div>').join('')+'</div>'+
       '<p>'+escapeHTML(item.reason||'')+'</p>'+
       '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
-      'Each land-cover contrast uses matching parameter choices; parameter contrasts retain the observed baseline. '+
+      'Each land-cover contrast uses matching parameter choices; parameter contrasts hold the retained baseline fixed. '+
       'The original annual units, common-cell coverage and undefined values remain unchanged.</p>';
     if(!local)html+='<p>This scientific source originated in another project. Its captured choices and results are available here.</p>';
     const errors=[...(summary.run_errors||[]),...(summary.errors||[])];
