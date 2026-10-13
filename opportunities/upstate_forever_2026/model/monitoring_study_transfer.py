@@ -12,10 +12,12 @@ from .common import canonical, digest, identifier, read_json
 
 ROOT_KINDS = ("monitoring_networks", "monitoring_plans", "monitoring_frontiers",
               "monitoring_heads", "monitoring_observed_contexts",
-              "monitoring_frontier_comparisons")
+              "monitoring_frontier_comparisons", "monitoring_recommendations",
+              "monitoring_recommendation_designs")
 IMMUTABLE_KINDS = ("monitoring_networks", "monitoring_plans", "monitoring_frontiers",
                    "monitoring_revisions", "monitoring_events",
-                   "monitoring_observed_contexts", "monitoring_frontier_comparisons")
+                   "monitoring_observed_contexts", "monitoring_frontier_comparisons",
+                   "monitoring_recommendations", "monitoring_recommendation_designs")
 MUTABLE_KINDS = ("monitoring_heads", "monitoring_frontier_jobs")
 DOCUMENTS = {"monitoring-report-sources": "report.json"}
 LABELS = {
@@ -23,6 +25,8 @@ LABELS = {
     "monitoring_plans": "Monitoring designs",
     "monitoring_frontiers": "Monitoring budget frontiers",
     "monitoring_frontier_comparisons": "Saved Monitoring budget choices",
+    "monitoring_recommendations": "Sampling priorities and proposal history",
+    "monitoring_recommendation_designs": "Sampling priority native designs",
     "monitoring_heads": "Editable monitoring campaigns",
     "monitoring_revisions": "Monitoring campaign revisions",
     "monitoring_events": "Monitoring field events",
@@ -325,6 +329,50 @@ def _comparison(closure, key, value):
                      "Exact per-plan observed context of the saved budget comparison")
 
 
+def _recommendation(closure, kind, key, value):
+    """Carry original observations, ancestry and solver results in one study.
+
+    Operation indices are a local derived cache. Immutable request identities
+    travel with the selected records and rebuild that cache on an exact retry.
+    """
+    from . import monitoring_recommendations as recommendations
+
+    reason = "Original source-bound sampling priorities"
+    if kind == "monitoring_recommendations":
+        inspected = recommendations.inspect(closure.workspace, key)
+        if inspected != {**value, "id": key}:
+            raise ValueError("The sampling proposal changed while selected.")
+        closure.need("monitoring_observed_contexts", value["context_id"], reason)
+        closure.need("monitoring_networks", value["network_id"], reason)
+        closure.need("sources", value["source_binding"]["source_collection_id"], reason)
+        revision = value.get("revision")
+        if type(revision) is not int or revision < 1:
+            raise ValueError("The sampling proposal lost its original revision number.")
+        parent_id = value.get("parent_id")
+        if parent_id:
+            parent = _native(closure, kind, parent_id)
+            if (parent.get("context_id") != value["context_id"]
+                    or type(parent.get("revision")) is not int
+                    or parent["revision"] + 1 != revision):
+                raise ValueError("The sampling proposal changed its original ancestry.")
+            closure.need(kind, parent_id, "Complete selected sampling proposal history")
+        elif revision != 1:
+            raise ValueError("The sampling proposal lost its first edition.")
+        closure.nodes[(kind, key)].update(
+            state="saved", revision=revision, context_id=value["context_id"])
+    else:
+        inspected = recommendations.inspect_design(closure.workspace, key)
+        if inspected != {**value, "id": key}:
+            raise ValueError("The sampling design handoff changed while selected.")
+        closure.need("monitoring_recommendations", value["recommendation_id"], reason)
+        closure.need("monitoring_observed_contexts", value["context_id"], reason)
+        closure.need("monitoring_networks", value["network_id"], reason)
+        closure.need("monitoring_plans", value["plan_id"],
+                     "Original native design requested by the sampling proposal")
+        closure.nodes[(kind, key)].update(
+            state=value.get("status"), plan_id=value["plan_id"])
+
+
 def visit(closure, kind, key, value):
     if kind not in LABELS:
         return False
@@ -340,11 +388,19 @@ def visit(closure, kind, key, value):
     if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
         raise ValueError("The original Monitoring record changed: " + kind + "/" + key)
     reason = "Original " + LABELS[kind].lower()
-    if kind == "monitoring_frontier_comparisons":
+    if kind in {"monitoring_recommendations", "monitoring_recommendation_designs"}:
+        _recommendation(closure, kind, key, value)
+    elif kind == "monitoring_frontier_comparisons":
         _comparison(closure, key, value)
     elif kind == "monitoring_networks":
         _bindings(closure, value["source_bindings"], reason)
     elif kind == "monitoring_plans":
+        if value.get("recommendation_id"):
+            recommendation = _native(closure, "monitoring_recommendations", value["recommendation_id"])
+            if recommendation["network_id"] != value["network_id"]:
+                raise ValueError("The native sampling design names another original network.")
+            closure.need("monitoring_recommendations", recommendation["id"],
+                         "Source-bound sampling priorities behind the original native design")
         closure.need("monitoring_networks", value["network_id"], reason)
         _bindings(closure, value["source_bindings"], reason)
         job_id = value.get("frontier_job_id")
@@ -421,6 +477,8 @@ def related(closure):
     campaigns = {key for kind, key in closure.nodes if kind == "monitoring_heads"}
     frontiers = {key for kind, key in roots if kind == "monitoring_frontiers"}
     comparisons = {key for kind, key in roots if kind == "monitoring_frontier_comparisons"}
+    context_ids = {key for kind, key in roots if kind == "monitoring_observed_contexts"}
+    recommendations = {key for kind, key in roots if kind == "monitoring_recommendations"}
     contexts = [closure.read("monitoring_observed_contexts/" + key + ".json")
                 for kind, key in roots if kind == "monitoring_observed_contexts"]
     plans.update(row["plan_id"] for row in contexts if row.get("plan_id"))
@@ -462,6 +520,23 @@ def related(closure):
         if value is not None and (value.get("campaign_id") in campaigns
                 or value.get("plan_id") in plans or value.get("network_id") in networks):
             closure.need("monitoring_observed_contexts", path.stem, "Saved observational context for the selected Monitoring study")
+
+    # Discovery follows only explicit roots. Proposal ancestors retain their
+    # own inputs but do not pull unrelated descendants or later source work.
+    for path in sorted((closure.root / "monitoring_recommendations").glob("*.json")):
+        value = _related_row(closure, path)
+        if value is not None and (value.get("context_id") in context_ids
+                or value.get("network_id") in networks):
+            recommendations.add(path.stem)
+            closure.need("monitoring_recommendations", path.stem,
+                         "Saved sampling priorities for the explicitly selected source")
+    for path in sorted((closure.root / "monitoring_recommendation_designs").glob("*.json")):
+        value = _related_row(closure, path)
+        if value is not None and (value.get("recommendation_id") in recommendations
+                or value.get("plan_id") in plans):
+            closure.need("monitoring_recommendation_designs", path.stem,
+                         "Original native design handoff for the selected sampling study")
+
     for path in sorted((closure.root / "monitoring-report-sources").glob("*/report.json")):
         value = _related_row(closure, path)
         if value is None or value.get("state") != "complete":
@@ -550,7 +625,7 @@ def catalogue(workspace, kind):
                 title, state = record.get("title"), record.get("status") or "saved"
                 selection = {name: record[name] for name in
                              ("network_id", "plan_id", "campaign_id", "campaign_revision_id",
-                              "frontier_id", "baseline_plan_id") if record.get(name)}
+                              "frontier_id", "baseline_plan_id", "context_id", "recommendation_id") if record.get(name)}
             row = {"kind": kind, "id": key, "title": title or key[:12], "state": state,
                    "updated_at": record.get("created_at") or "", "selection": selection}
         except (ValueError, KeyError, OSError, TypeError) as error:

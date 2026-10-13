@@ -37,7 +37,9 @@ const ROOTS = [
   ['monitoring_frontiers', 'Monitoring budget frontiers'],
   ['monitoring_frontier_comparisons', 'Saved Monitoring budget choices'],
   ['monitoring_heads', 'Monitoring campaigns'],
-  ['monitoring_observed_contexts', 'Monitoring observational context']
+  ['monitoring_observed_contexts', 'Monitoring observational context'],
+  ['monitoring_recommendations', 'Sampling priorities'],
+  ['monitoring_recommendation_designs', 'Sampling priority native designs']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
 const sourceWaterKinds = Object.freeze({
@@ -46,6 +48,7 @@ const sourceWaterKinds = Object.freeze({
   'receptor-inventories':'inventory', 'receptor-report-sources':'report-source'
 });
 
+const samplingOpenKinds=new Set(['monitoring_recommendations','monitoring_recommendation_designs']);
 const monitoringOpenKinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
@@ -180,7 +183,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-sampling"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
   }
 
   function sourceWaterControl(row){
@@ -270,6 +273,8 @@ export function attachStudyTransfer(host) {
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
             (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
+            (row.state!=='unreadable'&&samplingOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
+              ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
@@ -542,6 +547,17 @@ export function attachStudyTransfer(host) {
           throw new Error('Choose an original saved paired raster analysis.');
         if(typeof host.openDesk!=='function')throw new Error('Open the maintained paired raster desk.');
         await host.openDesk('paired-ensemble','openForStudy',{workspace_key:workspace,id:row.id});
+      }
+      else if(action==='open-sampling'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||!samplingOpenKinds.has(row.kind))
+          throw new Error('Choose an available saved sampling proposal or design.');
+        const id=row.kind==='monitoring_recommendations'?row.id:row.selection?.recommendation_id;
+        if(!/^[a-f0-9]{64}$/.test(id||''))
+          throw new Error('Refresh this saved design to reopen its original sampling proposal.');
+        if(typeof host.openDesk!=='function')throw new Error('Open the current Sampling priorities desk.');
+        await host.openDesk('monitoring-recommendations','openSaved',
+          {workspace_key:workspace,recommendation_id:id});
       }
       else if(action==='open-monitoring'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
