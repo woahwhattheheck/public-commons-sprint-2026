@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { open, readFile } from 'node:fs/promises';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
+import {serveDocumentComparison} from './document-comparison-service.mjs';
 import {serveFlowableHistoryAnalysis} from './history-service.mjs';
 import {previewFlowableEventIntake,readFlowableEventExample,reviewFlowableEventIntake,describeFlowableEventPreparation} from './event-intake.mjs';
 import {previewFlowableDocumentIntake,describeFlowableDocumentPreparation,reviewFlowableDocumentIntake,readFlowableDocumentResult,readFlowableDocumentExample} from './document-intake.mjs';
@@ -64,7 +65,7 @@ export async function startFlowableWorkspaceServer({
   const declared=JSON.parse(await readFile(new URL('./browser-assets.json',import.meta.url),'utf8'));
   need(declared.schema==='stellar-forge.browser-assets.v1' && declared.root==='./' &&
     Array.isArray(declared.routes),'FLOWABLE_BROWSER_ASSETS_INVALID');
-  const allowed=new Map([["/","index.html"],["/browser.mjs","browser.mjs"],["/style.css","style.css"],["/actions.mjs","actions.mjs"],["/programme-browser.mjs","programme-browser.mjs"],["/programme-authoring.mjs","programme-authoring.mjs"],["/programme-authoring-store.mjs","programme-authoring-store.mjs"],["/programme-authoring-browser.mjs","programme-authoring-browser.mjs"],["/process-programme.mjs","process-programme.mjs"],["/case-programme.mjs","case-programme.mjs"],["/programme-core.mjs","programme-core.mjs"],["/programme-process.source-draft.json","examples/process.source-draft.json"],["/programme-case.source-draft.json","examples/case.source-draft.json"],["/decision-programme.mjs","decision-programme.mjs"],["/programme-decision.source-draft.json","examples/decision.source-draft.json"],["/document-intake-browser.mjs","document-intake-browser.mjs"],["/event-intake-browser.mjs","event-intake-browser.mjs"],["/history-browser.mjs","history-browser.mjs"]]);
+  const allowed=new Map([["/","index.html"],["/browser.mjs","browser.mjs"],["/style.css","style.css"],["/actions.mjs","actions.mjs"],["/programme-browser.mjs","programme-browser.mjs"],["/programme-authoring.mjs","programme-authoring.mjs"],["/programme-authoring-store.mjs","programme-authoring-store.mjs"],["/programme-authoring-browser.mjs","programme-authoring-browser.mjs"],["/process-programme.mjs","process-programme.mjs"],["/case-programme.mjs","case-programme.mjs"],["/programme-core.mjs","programme-core.mjs"],["/programme-process.source-draft.json","examples/process.source-draft.json"],["/programme-case.source-draft.json","examples/case.source-draft.json"],["/decision-programme.mjs","decision-programme.mjs"],["/programme-decision.source-draft.json","examples/decision.source-draft.json"],["/document-intake-browser.mjs","document-intake-browser.mjs"],["/document-comparison-browser.mjs","document-comparison-browser.mjs"],["/event-intake-browser.mjs","event-intake-browser.mjs"],["/history-browser.mjs","history-browser.mjs"]]);
   const assets=new Map();
   for(const [route,[filename,type]] of declared.routes) {
     need(allowed.get(route)===filename && !assets.has(route),'FLOWABLE_BROWSER_ASSETS_INVALID');
@@ -154,7 +155,8 @@ export async function startFlowableWorkspaceServer({
             result=await serveFlowableHistoryAnalysis({workspace:model,method:input.method,input:input.args});
           }else if(url.pathname==='/api/document'){
             const functions={preview:previewFlowableDocumentIntake,review:reviewFlowableDocumentIntake,preparation:describeFlowableDocumentPreparation,result:readFlowableDocumentResult};
-            if(input.method==='example')result=await readFlowableDocumentExample();
+            if(['comparison-example','comparison-preview','comparison-delivery','comparison-receive'].includes(input.method))result=await serveDocumentComparison({method:input.method.slice('comparison-'.length),input:input.args});
+            else if(input.method==='example')result=await readFlowableDocumentExample();
             else{need(Object.hasOwn(functions,input.method),'FLOWABLE_DOCUMENT_METHOD_REQUIRED');result=await functions[input.method]({workspace:model,input:input.args});}
           }else if(url.pathname==='/api/event'){
             const functions={preview:previewFlowableEventIntake,review:reviewFlowableEventIntake,preparation:describeFlowableEventPreparation};
