@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.measurement-workspace-source.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "sourceCommit": "7a2384e215c569e7bedbb6f510132eb5641445d4",
+  "sourceCommit": "0c21e53b59274cf8cf2100d52a5829dd3f5a036d",
   "description": "Exact original Node scientific service, complete browser source, native archive helpers, original observed-load kernel, public station receiving input and selected operating guides. No private customer workspace, credentials or commercial documents.",
   "files": [
     {
@@ -215,6 +215,12 @@
       "sha256": "c8d868a3cd62473465f73b79e0602678535ae3d22778a8bcfd52707530fc8c92"
     },
     {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/observation-edition-receiving.mjs",
+      "gitBlob": "255a620584d7d1fb284653144d0ebd0a84b0db0e",
+      "bytes": 32159,
+      "sha256": "36581f6442320c0f3628f6adc6fdb2bc839d1d84f31300285892cdbb00c3078a"
+    },
+    {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/offline_review_cli.mjs",
       "bytes": 1853,
       "sha256": "d25c84a1d3abe817976ff8fe15f234eb1e1aaecb7dbeb6a82c24549d7f009325",
@@ -246,9 +252,9 @@
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/reconciliation-receiving.mjs",
-      "bytes": 32377,
-      "sha256": "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1",
-      "gitBlob": "88bacaf506f3bc31ab3da69c08b411d1da0cd9af"
+      "gitBlob": "06106c103692fc19fffdd763b721a69b5cdfbef5",
+      "bytes": 32984,
+      "sha256": "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/result_handback.mjs",

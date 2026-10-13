@@ -292,7 +292,8 @@
     "opportunities/upstate_forever_2026/measurement_workspace/INTAKE_COMPARISON.md",
     "opportunities/upstate_forever_2026/measurement_workspace/web/intake_comparison.mjs",
     "opportunities/upstate_forever_2026/operator/web/intake_comparison.mjs",
-    "opportunities/upstate_forever_2026/operator/web/measured_intake.mjs"
+    "opportunities/upstate_forever_2026/operator/web/measured_intake.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/observation-edition-receiving.mjs"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
