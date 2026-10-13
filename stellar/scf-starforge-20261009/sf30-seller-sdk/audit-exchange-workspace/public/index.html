@@ -250,6 +250,38 @@
         <label>Export note<textarea id="export-note" data-draft rows="3"></textarea></label><button type="submit" data-mutation disabled>Prepare complete export</button>
       </form>
       <div id="exports-table"></div>
+      <article class="card" aria-labelledby="recipient-heading">
+        <p class="eyebrow">Original author and offline colleague</p><h3 id="recipient-heading">Recipient reviews</h3>
+        <p>Send a complete editable review package. The colleague can inspect the original XML and retained history, author reviews offline, and return the whole source and manuscript. Receive it here to preview and apply every review through this author's native journal.</p>
+        <p id="recipient-empty" class="empty">Prepare a complete workspace or application export above to begin.</p>
+        <form id="recipient-prepare-form">
+          <h4>1. Prepare the complete editor</h4>
+          <label>Original author export<select id="recipient-author-export" data-draft><option value="">Choose an original complete author export</option></select></label>
+          <label>Preparation note<textarea id="recipient-prepare-note" data-draft rows="2"></textarea></label>
+          <button id="recipient-prepare" type="submit" data-mutation disabled>Prepare and download complete editor</button>
+        </form>
+        <form id="recipient-stage-form">
+          <h4>2. Receive the colleague's return</h4>
+          <label>Complete returned ZIP<input id="recipient-return-file" type="file" accept=".zip,application/zip"></label>
+          <p id="recipient-file-status" role="status">Choose the complete returned ZIP; its original source remains inside.</p>
+          <label>Receiving note<textarea id="recipient-stage-note" data-draft rows="2"></textarea></label>
+          <button id="recipient-stage" type="submit" data-mutation disabled>Retain complete returned review</button>
+        </form>
+        <form id="recipient-apply-form">
+          <h4>3. Review and accept native changes</h4>
+          <label>Retained return<select id="recipient-return" data-draft><option value="">Choose a retained complete return</option></select></label>
+          <div class="actions"><button id="recipient-preview" type="button" disabled>Preview every authored review</button><button id="recipient-download-return" type="button" disabled>Download exact retained return</button></div>
+          <p id="recipient-preview-summary" role="status">Select a retained return and preview its complete authored reviews.</p>
+          <div id="recipient-review-table"></div>
+          <details id="recipient-preview-detail"><summary>Complete original request preview</summary><pre id="recipient-preview-json"></pre></details>
+          <button id="recipient-download-preview" type="button" disabled>Download complete preview</button>
+          <label>Acceptance note<textarea id="recipient-apply-note" data-draft rows="2"></textarea></label>
+          <p class="muted">Apply uses the exact saved preview. If its response is interrupted, recover the original retained request above. A definite later-version refusal can leave earlier reviews accepted; retain the refused request, close it with the existing control, refresh and preview again. Already accepted reviews keep their original identities.</p>
+          <button id="recipient-apply" type="submit" data-mutation disabled>Apply exact preview and download custody</button>
+        </form>
+        <p id="recipient-result" role="status"></p>
+        <p>All prepared editors, complete returns and acceptance custody remain available in the export table. The next complete workspace/application export includes their original bytes.</p>
+      </article>
       <form id="receive-form" class="card"><h3>Receive a complete exported case</h3><label>Workspace or application package<input id="receive-file" type="file" required></label><p id="receive-file-status"></p><label>Receiving note<textarea id="receive-note" data-draft rows="3"></textarea></label>
         <p class="muted">The original case is received with distinct local identities in one transaction, retaining its sources, revisions, editions, reviews, and related work.</p><button type="submit" data-mutation disabled>Receive complete case</button>
       </form><article id="receive-result" hidden><h3>Received case</h3><pre id="receive-result-json"></pre></article>
