@@ -450,5 +450,31 @@
   },
   "original-component-monitoring-observed-station-scope.json-93df7b6ee47e9f3a": {
     "src/opportunities/upstate_forever_2026/integration/component_fragments/monitoring-observed-station-scope.json": "93df7b6ee47e9f3ad1d5d83b629bff6c0a0fd2b9c464e474bdba3fcdd5f70a88"
+  },
+  "maintained-application-before-budget-navigator-a6af6c79628098b57050ba04959d62a4c79fb6db": {
+    "src/opportunities/upstate_forever_2026/model/monitoring_frontier_comparison.py": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+    "src/opportunities/upstate_forever_2026/model/MONITORING_BUDGET_COMPARISON.md": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+    "src/opportunities/upstate_forever_2026/operator/MONITORING_BUDGET_CHOICES.md": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+  },
+  "maintained-before-scoped-upgrade-46cd4258b23474932ea372107e16261195a36cbd": {
+    "src/opportunities/upstate_forever_2026/integration/monitoring_observed_sources.json": "71a6ba98f843f422731e5e420efdc9d5e70e2789d6931231c9fb4d7e69d9df9d",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_study_transfer_sources.json": "b6fd0c98109f4ea57ca09ca01fd05e04a74b6ab9149b5bdc387de1f97f5df259",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/PREDECESSORS.json": "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/current_application_files.json": "d1707e89ae587a5d2e4534f878ad197c059af9f8ee3a53775e0f3d5850130da6",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/source_adoption.json": "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
+    "src/opportunities/upstate_forever_2026/model/MONITORING_BUDGET_COMPARISON.md": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+    "src/opportunities/upstate_forever_2026/model/monitoring_frontier_comparison.py": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+    "src/opportunities/upstate_forever_2026/operator/MONITORING_BUDGET_CHOICES.md": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd"
+  },
+  "scoped-upgrade-cb57ed5815f880997c9868b0014c8470d0171401": {
+    "src/opportunities/upstate_forever_2026/integration/monitoring_observed_sources.json": "7be85064d27b77eac0ce982a32229ceeff646b3d07b0d0cf9368c797d40a7ffd",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_study_transfer_sources.json": "2d7d7c6819b6a45ccc773aab354b416ff817c04fce2ea7a740cd7490067e5fe1",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/PREDECESSORS.json": "e300cdba7e1b6be4f6898b0112d875c4ea553a4c4d2d40f6fe906f48e3f81ea5",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/current_application_files.json": "aac41776d89a852037320bcdbe33b830e0bd2351ec763009cb8c0813d4c53203",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/source_adoption.json": "8501d45a5f40bc7938d5e1975b0a584a4f4b839a8476fb4e94e1e16711cd20a5"
+  },
+  "original-receiving-waters-before-editable-revisions-1528b5f1": {
+    "src/opportunities/upstate_forever_2026/operator/install_receiving_waters.py": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
   }
 }

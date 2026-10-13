@@ -1,0 +1,84 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Georgia original designated uses and county trout clauses",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "designated_uses": "Complete Savannah River Basin table, 30 named reach entries, section (14).",
+    "trout_protection": "Complete statewide county trout designation section (15)(b), 256 clauses in 31 counties; 18 None declarations retained separately.",
+    "geographic_membership": "The original 217-HUC study membership is determined by an explicit native geometry crosswalk. A basin or county label alone is not a measured intersection."
+  },
+  "notes": [
+    "Each designated use and trout clause remains a distinct legal record; overlapping designations are not added as separate stream length.",
+    "Class labels and complete reach descriptions are original. Display labels derived from trout paragraphs have automatic name matching disabled.",
+    "The edition approval date is not a per-reach adoption date; effective_date is null unless the original record supplies one.",
+    "Default Fishing is retained as a general rule. Missing or unassociated geometry is not automatically labeled Fishing.",
+    "The DNR public fishing map is simplified NHD-derived angling geography, without statutory Primary/Secondary fields; it is not automatically assigned these legal clauses."
+  ],
+  "entries": [
+    {
+      "id": "ga-391-3-6-03-original-reach-registry-20220831",
+      "title": "Georgia Savannah designated uses and statewide trout clauses",
+      "kind": "table",
+      "role": "CURRENT_WATER_CLASSIFICATIONS",
+      "source_schema": "upstate.classified-water-registry/v2",
+      "jurisdiction": "GA",
+      "classification_system": "GA-391-3-6-.03",
+      "designation_status": "current",
+      "vintage": "State adoption 2022-01-28; EPA approval 2022-08-31",
+      "observed_at": "2026-10-13",
+      "uri": "https://epd.georgia.gov/document/document/georgia-water-quality-standardsaug-2022pdf/download",
+      "source_format": "JSON",
+      "representation": "Original legal text transcription with complete reproducible source selection",
+      "path": "source/high_quality_waters/georgia-20261013/ga.selected-reaches.json",
+      "bytes": 348663,
+      "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347",
+      "companions": [
+        {
+          "path": "source/high_quality_waters/georgia-20261013/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/build_registry.mjs",
+          "bytes": 5298,
+          "sha256": "5d9e078909af85f348af2a1668c3894d9b109a27809f207e08e60322d4cd594c"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/ga.selected-reaches.csv",
+          "bytes": 119369,
+          "sha256": "ecd6d32dc804e9b9d55e0c723db0881087ba069e1ee41b6e03d6049b809a2dc9"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/dnr-trout-map-item.original.json",
+          "bytes": 2726,
+          "sha256": "35d109fb9832121193a97af03269be68a09d11902181a320fb3835f15d151bbc"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/dnr-trout-service.original.json",
+          "bytes": 6078,
+          "sha256": "4a4e1a3be23b2fc2e3d5d04bca1ec89782b7fdeb99cbbbba8cd0555ea0f4c655"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/dnr-trout-layer.original.json",
+          "bytes": 11818,
+          "sha256": "2e3385d9e3ba6b2f73f0fc39fed9e4a27384c55bbad4036dc8670d5645dff292"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/README.md",
+          "bytes": 4702,
+          "sha256": "a3c35f506f6162311cca4e3c1279f62e1fef93c9ba7788754de0787f083e4ea1"
+        },
+        {
+          "path": "source/high_quality_waters/georgia-20261013/rebuild.mjs",
+          "bytes": 913,
+          "sha256": "96122d2c3f8b9c3a367ee6e90b4fb42f80d06a32ec02508c03be862f53d29d8f"
+        }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "schema": "upstate.source-files/v1",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "commit": "2637a88e05ed9433393e865f4cbe55f4d308f4e2",
+    "commit": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
     "operation_id": "ECO13-MONITORING-SCOPED-UPGRADE-DD6B-20261013"
   },
   "files": [

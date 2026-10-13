@@ -106,3 +106,98 @@ The source installer validates and copies every member declared by the current p
 For the scientific validator, both `native-network.json` and `native-network.json.gz` retain the original bytes. If both encodings exist, select one explicitly with `--native-network-name`. Native publisher metadata may be embedded, retained in `native-network-source.json`, or resolved from an exact matching source manifest through `--source-manifest`. Paths and hashes bind that metadata to the actual selected network and context.
 
 The whole-edition command uses the maintained completed-archive adapter, which enriches byte-matching existing reports before invoking the canonical receiver and attaches the original completed connectivity outputs. The current shared provider also retains whole imported source entries and immutable source-edition fingerprints. Those inventories and contributing-area CSVs remain available after Workspace backup and reopen.
+
+
+## Receive the selected observed-evidence edition
+
+The native report receiver above continues to preserve the original seven-output
+regional calculation. Observed land cover and dated station context are an
+optional addition to the current selection export; they do not replace that
+historical native result or its original report ID.
+
+Install the current Regional watersheds component together with the complete
+`landcover_observation_profiles.sources.json` source family. The installer
+retains the declared original tables and companions. The existing source
+manifest/import rules still apply to the original regional water context.
+
+To exercise the complete original operator/export/archive/reopen path with
+the observed-evidence selection, use the maintained driver with its optional flag:
+
+```sh
+python -B integration/run_watershed_context_operator.py \
+  --application /absolute/current/application \
+  --workspace /absolute/current/original-workspace \
+  --source-dir /absolute/current/application/source/water_context/20261013 \
+  --source-manifest /absolute/current/application/source/water_context/sources-20261013.json \
+  --include-observed-evidence \
+  --output /absolute/new/watershed-evidence-receiving
+```
+
+The driver reads the current original report's exact evidence-source choice,
+queues the ordinary `watershed.context.export` with that SHA-256 and the
+existing priority-HUC selection, and downloads the complete saved export.
+It preserves the native report and selected source membership. Its existing
+workspace archive/independent restore then reopens the same saved selection,
+compares the saved evidence context and every retained download byte, and
+records the actual source choice, files and receiving identity in
+`operator-journey.json`.
+
+Omitting `--include-observed-evidence` preserves the original receiving
+course. If the optional source is absent, the explicitly selected evidence
+course reports that actual missing input before its export; the original
+planning-only workflow remains available. Use a new owned output directory,
+as the maintained driver requires. With `--workspace`, the course opens that
+existing project using `create=False`, retains its original project identity,
+and places operator state, downloads, its backup and independent receiving copy
+under the separate new output directory. Output cannot be inside the existing
+Workspace or contain it. The original source analysis/export actions reuse their
+deterministic saved identities; the course does not replace the source Workspace.
+Omitting `--workspace` preserves the original new-Workspace receiving behavior.
+Run this course at the accepting owner's coordinated operation boundary; the
+browser export is also available through the existing production operator.
+
+### Saved selection and live source are independent
+
+The report response's `_evidence_profiles` describes the source available
+for a **new** export. The saved export's `landcover_observation_context`
+and original file inventory describe the already-retained result. Browser
+reopening, native receiving and workspace restoration use the latter. A later
+source edition can produce another export identity while the original remains
+readable.
+
+The saved summary separates selected HUC12s from the distinct contributing
+union. Source-selected land-cover hectares, original NRCS acres, local station
+membership and original upstream drainage support retain their own meanings.
+The eight group balances preserve gross crossing gains/losses beside net
+annual change. The original CSV/JSON/source files carry the complete numerical
+precision, original station identities, source dates and manifest hashes.
+
+## View and operate the exact received product
+
+The native HTTP driver establishes the saved source/export/archive behavior.
+Complete the same receiving course by opening and visually inspecting its exact
+outgoing application and files before calling the product ready. Bryce's
+[standing rendered-product instruction](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449)
+applies across providers and local/cloud seats and must travel in delegated work
+and owner-controlled receiving instructions.
+
+Use the original populated project at the intended screenshare width and a
+narrow/mobile width. View the source choice, table/detail, utility selection,
+actual task progress and saved observed evidence. Operate the include-evidence
+control, an existing selection/export control, the resulting downloads and saved
+selection reopening. View empty-source, loading and error displays when reached
+by that course. Inspect the actual screenshots or live rendered screens; merely
+saving screenshots, reading source or counting DOM elements is insufficient.
+
+Open the exported HTML brief and extracted packet briefing, and view any outgoing
+PDF at normal reading scale. Then open the independently restored project and the
+same saved selection/downloads. Selected HUCs, distinct contributing union,
+source years, assessment edition, hectares and all group balances must remain
+legible and clearly labeled. Correct visible overflow, clipping, missing styles,
+broken controls/links and unreadable tables in the existing source before handoff.
+
+Use the existing receiving notes to record the viewed version/project/export,
+actual widths, completed controls and any repaired defect. Preserve the plain
+industrial design and existing source/native operation. The complete procedure
+is in [the Regional watersheds operator guide](../operator/WATERSHED_CONTEXT.md#inspect-the-rendered-outgoing-watershed-product);
+no additional test suite or standalone review product is required.
