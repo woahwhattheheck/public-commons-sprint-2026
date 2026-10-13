@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.native-outcome-bindings/v1",
+  "packet": {
+    "bytes": 1066937,
+    "sha256": "75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572"
+  },
+  "paths": {
+    "report": "/source/files/0/content",
+    "plan": "/source/files/2/content",
+    "runs": "/source/files/4/content",
+    "receipt": "/source",
+    "preview": "/preview"
+  },
+  "links": [
+    {
+      "title": "Maintained native scientific interpretation",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/da831093fe8699afe515637fe0e4bb4736f8d134/opportunities/upstate_forever_2026/interpretation/retained-5156"
+    },
+    {
+      "title": "Original source and retained Study preview",
+      "url": "https://docs.google.com/document/d/18nFkmbRbLcyOq0X52jRIZhUnxManQKt6NOOvial1HM8/edit"
+    }
+  ]
+}
