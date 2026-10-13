@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": "3",
+  "version": "5",
   "order": 65,
   "assets": [
     "receptors.mjs",
@@ -14,7 +14,9 @@
       "receptor.network.build",
       "receptor.inventory.build",
       "receptor.experiment.build",
-      "receptor.package.export"
+      "receptor.package.export",
+      "receptor.source-areas.prepare",
+      "receptor.scenario.save"
     ],
     "invoke": {
       "handler": "invoke",
@@ -109,6 +111,20 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/receptors/source-areas",
+        "operation": "source-areas",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -137,6 +153,17 @@
       {
         "kind": "receptor-networks",
         "operation": "network",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "receptor-scenario-areas",
+        "operation": "source-areas",
         "handler": "read",
         "args": [
           "operator",
@@ -175,7 +202,14 @@
       "getState",
       "api",
       "endpoint",
-      "toast"
+      "toast",
+      "openExtension",
+      "openForm",
+      "submitAction",
+      "refreshState",
+      "openItem",
+      "navigate",
+      "closeDetail"
     ],
     "styles": [
       "/web/receptors.css"
@@ -189,6 +223,11 @@
       "mount": "mount",
       "update": "update",
       "detach": "detach"
-    }
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "receptor-result-"
+    ]
   }
 }

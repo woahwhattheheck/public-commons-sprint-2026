@@ -12,17 +12,74 @@ import zipfile
 from .common import SCHEMA, atomic_json, canonical, file_digest, held, now, read_json
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
-APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_delivery.py",
-                     "delivery_snapshot.py", "handoff_view.py", "focused_check.py",
-                     "install_extensions.py", "install_experiments.py", "install_terrain.py",
-                     "receive_application_source.py", "requirements-terrain.txt",
-                     "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md",
-                     "environment.yml", "PROGRAMMES.md", "PAIRED_ENSEMBLES.md",
-                     "install_programmes.py", "requirements-paired-ensemble.txt",
-                     "PUBLISHED_STUDIES.md", "install_published_studies.py",
-                     "receive_published_studies.py", "tools/attach_published_report.py")
-APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source", "source_data", "ecsa_runs",
-                           "measurement_workspace", "observations")
+APPLICATION_FILES = (
+    "README.md",
+    "audit.py",
+    "raster_checks.py",
+    "package_delivery.py",
+    "delivery_snapshot.py",
+    "handoff_view.py",
+    "focused_check.py",
+    "install_extensions.py",
+    "install_experiments.py",
+    "install_terrain.py",
+    "receive_application_source.py",
+    "requirements-terrain.txt",
+    "terrain-source-manifest.json",
+    "START_HERE.md",
+    "TERRAIN_STATIC.md",
+    "environment.yml",
+    "PROGRAMMES.md",
+    "PAIRED_ENSEMBLES.md",
+    "ENSEMBLES.md",
+    "requirements-ensemble.txt",
+    "install_programmes.py",
+    "requirements-paired-ensemble.txt",
+    "PUBLISHED_STUDIES.md",
+    "install_published_studies.py",
+    "receive_published_studies.py",
+    "tools/attach_published_report.py",
+    "CHEMISTRY.md",
+    "DECISION_CONTEXT.md",
+    "GIS_SOURCE.json",
+    "GURA_NATIVE_WORKFLOW.md",
+    "LANDCOVER_LEDGER.md",
+    "README_RECEIVING.md",
+    "RFP_RESPONSE_MAP.md",
+    "SOURCE_REFRESH.md",
+    "WORKSHARE.md",
+    "install_chemistry.py",
+    "install_economic_desk.py",
+    "install_gis_projects.py",
+    "install_landcover.py",
+    "install_source_refresh.py",
+    "native_recovery_check.py",
+    "receive_decision_source.py",
+    "receive_upstate_local.py",
+    "requirements-chemistry.txt",
+    "requirements-landcover.txt",
+    "water_context_cli.py",
+    "WATER_CONTEXT_OPERATOR.md",
+    "NATIVE_REUSE_MATCHING.md",
+)
+APPLICATION_DIRECTORIES = (
+    "model",
+    "operator",
+    "source_tools",
+    "source",
+    "source_data",
+    "ecsa_runs",
+    "measurement_workspace",
+    "observations",
+    "checks",
+    "docs",
+    "examples",
+    "integration",
+    "integrations",
+    "receiving",
+    "tests",
+    "tools",
+)
 MAX_MANIFEST = 64 * 1024 * 1024
 
 def member_name(value):
@@ -69,11 +126,29 @@ def _application(source_root):
         path = source_root / name
         if path.is_file():
             files.append(path)
+    # Preserve the complete maintained source families without walking installed
+    # environments or version-control caches that can live beside their source.
+    excluded_directories = {
+        "__pycache__", ".git", ".hg", ".svn", ".venv", "venv", "node_modules",
+    }
     for name in APPLICATION_DIRECTORIES:
         folder = source_root / name
-        if folder.exists():
-            files.extend(p for p in folder.rglob("*") if p.is_file() and not p.is_symlink()
-                         and "__pycache__" not in p.parts and p.suffix != ".pyc")
+        if not folder.is_dir() or folder.is_symlink():
+            continue
+        for directory, folders, names in os.walk(folder, followlinks=False):
+            directory = Path(directory)
+            folders[:] = sorted(
+                part for part in folders
+                if part not in excluded_directories
+                and not (directory / part).is_symlink()
+            )
+            for filename in sorted(names):
+                path = directory / filename
+                if (path.suffix in {".pyc", ".pyo"} or filename.endswith(".lock")
+                        or filename.startswith((".write-", ".intake-", ".archive-"))):
+                    continue
+                if path.is_file() and not path.is_symlink():
+                    files.append(path)
     return sorted(set(files))
 
 def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True):

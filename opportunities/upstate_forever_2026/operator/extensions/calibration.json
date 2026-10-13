@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "3",
+  "version": "5",
   "order": 65,
   "assets": [
     "calibration.mjs",
@@ -20,7 +20,9 @@
     "actions": [
       "calibration.prepare",
       "calibration.analyze",
-      "calibration.export"
+      "calibration.export",
+      "calibration.uncertainty",
+      "calibration.uncertainty.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -80,6 +82,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/uncertainty",
+        "operation": "uncertainty",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -109,12 +124,28 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "kind": "calibration-uncertainties",
+        "operation": "uncertainty",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
       "handler": "decorate_task",
       "args": [
         "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
       ]
     }
   },

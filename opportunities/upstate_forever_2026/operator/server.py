@@ -30,6 +30,8 @@ from model.common import atomic_json, canonical, digest, file_digest, held, now,
 from model.workspace import Workspace
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -49,6 +51,7 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "observation.compare", "delivery.build", "workspace.backup", "workspace.restore",
            "spatial.review.save", "spatial.review.export", "community.table.import", "community.plan.save",
            "community.report.build"}
+ACTIONS.update(CONSERVATION_ACTIONS)
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
@@ -115,6 +118,7 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
+        self.conservation = Conservation(self, Fault)
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -148,7 +152,7 @@ class Operator:
                                     "title": value.get("title", p.name), "entries": len(value.get("entries", []))}
         self.extensions = ExtensionRegistry(self, Fault,
             builtin_actions=ACTIONS, builtin_kinds=KINDS,
-            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
+            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
             source_roots=source_roots).load()
         for path in (self.root / "tasks").glob("*.json"):
             task = read_json(path)
@@ -195,6 +199,81 @@ class Operator:
         else:
             raise Fault("SPATIAL_OPERATION", "Choose a supported native spatial read.")
         return {"workspace_key": workspace, **result}
+
+    def operator_session(self, workspace):
+        ws = self.ws(workspace)
+        path = ws.root / "operator-session.json"
+        if not path.exists():
+            return None
+        value = read_json(path)
+        if not isinstance(value, dict) or value.get("schema") != "upstate.operator-session/v1" or value.get("project_id") != ws.project["id"]:
+            raise Fault("JOURNEY_PROJECT", "The saved operator view belongs to a different project.", 409)
+        return value
+
+    def _save_operator_session(self, workspace, value):
+        ws = self.ws(workspace)
+        journey = value.get("journey")
+        if not isinstance(journey, dict) or journey.get("schema") != "upstate.operating-journey/v1" or journey.get("project_id") != ws.project["id"]:
+            raise Fault("JOURNEY_PROJECT", "Save the selected journey in its original project.")
+        selection = journey.get("selection")
+        if not isinstance(selection, dict) or not isinstance(journey.get("notes", ""), str):
+            raise Fault("JOURNEY_SELECTION", "Save the selected scientific records and text notes.")
+        fields = {"baseline_run_id": "runs", "grid_id": "grids", "profile_id": "profiles",
+                  "scenario_id": "scenarios", "run_id": "runs", "comparison_id": "comparisons",
+                  "spatial_review_id": "spatial_reviews", "spatial_export_id": "spatial_exports",
+                  "delivery_id": "deliveries"}
+        overview = ws.overview()
+        chosen = {}
+        for key, collection in fields.items():
+            selected = selection.get(key, "")
+            if not isinstance(selected, str):
+                raise Fault("JOURNEY_SELECTION", "Choose a saved " + key.replace("_", " ") + ".")
+            chosen[key] = next((row for row in overview.get(collection, []) if row["id"] == selected), None)
+            if selected and chosen[key] is None:
+                raise Fault("JOURNEY_SELECTION", "This workspace does not contain the selected " + key.replace("_", " ") + ".")
+        run, baseline = chosen["run_id"], chosen["baseline_run_id"]
+        if run and any(run.get("selection", {}).get(key) != selection.get(key) for key in ("grid_id", "profile_id", "scenario_id")):
+            raise Fault("JOURNEY_SELECTION", "The selected run uses a different grid, profile or scenario.")
+        comparison = chosen["comparison_id"]
+        if comparison and (comparison.get("baseline_run_id") != (baseline or {}).get("id") or not any(row.get("run_id") == (run or {}).get("id") for row in comparison.get("alternatives", []))):
+            raise Fault("JOURNEY_SELECTION", "The selected comparison uses a different baseline or alternative.")
+        delivery = chosen["delivery_id"]
+        if delivery and (delivery.get("selection", {}).get("baseline_run_id") != (baseline or {}).get("id") or (run or {}).get("id") not in delivery.get("selection", {}).get("scenario_run_ids", [])):
+            raise Fault("JOURNEY_SELECTION", "The selected delivery uses a different baseline or alternative.")
+        pack = chosen["spatial_export_id"]
+        if pack and selection.get("spatial_review_id") and pack.get("review_id") != selection["spatial_review_id"]:
+            raise Fault("JOURNEY_SELECTION", "The map pack belongs to a different saved geographic view.")
+        request_sha256 = digest(journey)
+        current = self.operator_session(workspace)
+        if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):
+            return current
+        if value.get("expected_revision") != (current or {}).get("revision"):
+            raise Fault("JOURNEY_CHANGED", "Another browser saved this workspace view. Refresh to load its saved revision, then save your current view and notes.", 409)
+        journey = json.loads(canonical(journey))
+        versions = []
+        previous = (current or {}).get("journey", {})
+        candidates = [*previous.get("note_versions", []), *journey.get("note_versions", [])]
+        if previous.get("notes") and previous["notes"] != journey.get("notes"):
+            candidates.append({"text": previous["notes"], "recorded_at": current["saved_at"]})
+        for item in candidates:
+            if not isinstance(item, dict) or not isinstance(item.get("text"), str):
+                raise Fault("JOURNEY_NOTES", "Each retained notes version needs its original text.")
+            if not any(row["text"] == item["text"] for row in versions):
+                versions.append({"text": item["text"], "recorded_at": item.get("recorded_at")})
+        journey["note_versions"] = versions
+        saved = {"schema": "upstate.operator-session/v1", "project_id": ws.project["id"],
+                 "revision": digest(journey), "request_sha256": request_sha256,
+                 "saved_at": now(), "journey": journey}
+        atomic_json(ws.root / "operator-session.json", saved)
+        return saved
+
+    def save_operator_session(self, workspace, value):
+        ws = self.ws(workspace)
+        try:
+            with held(ws.root / ".operator-session.lock", blocking=False):
+                return self._save_operator_session(workspace, value)
+        except BlockingIOError as error:
+            raise Fault("JOURNEY_BUSY", "A workspace save is in progress. Save this view again when it finishes.", 409) from error
 
     def public_workspaces(self):
         return [{k: v for k, v in row.items() if k != "directory"} for row in self.registry.values()]
@@ -289,6 +368,8 @@ class Operator:
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
+        if action in CONSERVATION_ACTIONS:
+            return self.conservation.invoke(task)
         if action in REHEARSAL_ACTIONS:
             return self.rehearsals.invoke(task)
         if self.extensions.handles_action(action):
@@ -346,7 +427,10 @@ class Operator:
                         "bytes": destination.stat().st_size, "sha256": file_digest(destination),
                         "members": len(retained["members"]), "selection": retained["selection"],
                         "reused_completed_output": True}
-            return ws.backup(destination, include_intermediates=selection)
+            with held(ws.root / ".operator-session.lock", blocking=False):
+                if value.get("journey") is not None:
+                    self._save_operator_session(task["workspace"], {"journey": value["journey"], "expected_revision": value.get("journey_revision")})
+                return ws.backup(destination, include_intermediates=selection)
         if action == "workspace.restore":
             uploaded = self.upload(required(value, "upload_id"))
             destination = self.restore_root / task["id"]
@@ -667,6 +751,11 @@ class Operator:
     def state(self, workspace):
         ws = self.ws(workspace)
         state = ws.overview()
+        try:
+            state["operator_session"] = self.operator_session(workspace)
+        except (Fault, OSError, ValueError) as error:
+            state["operator_session"] = None
+            state["operator_session_error"] = str(error)
         state = self.extensions.extend_state(workspace, state)
         state["experiments"] = self.experiments.catalog(workspace)
         from programme_activity import ProgrammeActivity
@@ -699,7 +788,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
+        return self.conservation.decorate_task(self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task))))))
 
     def open_download(self, key):
         with self.lock:
@@ -826,6 +915,10 @@ class Handler(BaseHTTPRequestHandler):
             if url.path.startswith("/api/"):
                 self.authorized()
                 workspace = one("workspace", self.app.primary)
+                conservation_reads = {"/api/conservation/" + name: name for name in CONSERVATION_READS}
+                if url.path in conservation_reads:
+                    return self.send_json(200, self.app.conservation.read(workspace,
+                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))
                 rehearsal_reads = {"/api/rehearsals/" + name: name for name in REHEARSAL_READS}
                 if url.path in rehearsal_reads:
                     return self.send_json(200, self.app.rehearsals.read(workspace,
@@ -882,7 +975,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -924,6 +1017,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, self.app.programmes.pause(value.get("workspace", self.app.primary), value))
             if url.path == "/api/programmes/delivery-preview":
                 return self.send_json(200, self.app.programmes.delivery_preview(value.get("workspace", self.app.primary), value))
+            if url.path == "/api/operator-session":
+                return self.send_json(200, self.app.save_operator_session(value.get("workspace", self.app.primary), value))
             if url.path == "/api/session":
                 return self.send_json(200, {"connected": True}, cookie=True)
             if url.path == "/api/source-preview":
@@ -1043,10 +1138,6 @@ def main():
         server.server_close()
         server.operator.close()
 
-
-# ASTRA-ECO12-2651 namespaced original-operator integration
-import paired_ensemble as _paired_ensemble_extension
-_paired_ensemble_extension.install(sys.modules[__name__])
 
 if __name__ == "__main__":
     main()

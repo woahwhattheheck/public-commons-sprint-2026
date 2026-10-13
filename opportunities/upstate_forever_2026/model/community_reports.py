@@ -14,7 +14,7 @@ from .common import atomic_bytes, canonical, describe_file, digest, held, verify
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
                           get_plan, get_table, text, verify_plan_context)
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 
 def _cell(value):
@@ -209,6 +209,15 @@ def _contents(plan, table, title):
         ("Selected interventions", intervention_headings, intervention_display),
         ("Original scientific context", physical_headings, physical_display),
     ]
+    imported = plan.get("intervention_import")
+    if imported:
+        revision = imported["summary"]
+        sections.insert(3, (
+            "Received intervention programme",
+            ["Original edited CSV", "Rows", "Added", "Changed", "Removed"],
+            [[imported["source"]["filename"], revision["row_count"],
+              len(revision["added_ids"]), len(revision["changed_ids"]), len(revision["removed_ids"])]],
+        ))
     estimate = plan["cost_summary"]
     cost_statement = (
         str(estimate["known_estimate_count"]) + " of " + str(estimate["intervention_count"])
@@ -277,6 +286,12 @@ def _contents(plan, table, title):
         "scientific-context.csv": csv_text(physical_columns, physical),
         "plan.json": json.dumps(plan, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n",
     }
+    if imported:
+        outputs["received-interventions.csv"] = imported["source"]["text"]
+        import_record = {**imported, "source": {
+            key: value for key, value in imported["source"].items() if key != "text"}}
+        outputs["INTERVENTION_IMPORT.json"] = json.dumps(
+            import_record, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
     return outputs, payload
 
 

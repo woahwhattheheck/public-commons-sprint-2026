@@ -64,3 +64,17 @@ Files:
 - `source-acquisition.json`: original URLs, byte hashes, counts and derivation rules.
 - `report-reconciliation.json`: original observations and published-source differences.
 - `source-manifest.json`: existing native source-import entry point.
+
+## Original sampling report and offline explorer
+
+Open `lake-observations-report.html` in a browser. It contains all 88 original working records and the exact original three-lake WQP result CSV. Six station/parameter plots share the same vertical scale within each parameter. Filled circles show numeric source values; open downward triangles mark original censoring limits. Station, parameter, condition and text filters update the plotted emphasis and observation table. Selecting a point or station row opens the full original identity, date/time, unit, method, depth and detection fields.
+
+Download the selected original working records as CSV or the complete unchanged WQP result response. Blank censored result and unit fields remain blank in every download. Printing temporarily displays the entire original cohort and restores the current filter afterward. The summary table and static charts remain readable without scripts; preserve the complete source directory for links to all original and derived companions.
+
+Rebuild the report with Node.js using only its standard library:
+
+```sh
+node observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs
+```
+
+The generator accepts an optional source-directory argument and checks the 88 original result/activity joins, source values and units, six censored records and three fifteen-observation chlorophyll statistics before rendering. It keeps original timezone strings and uses dates only for horizontal plot placement. The output embeds its observations, styles and browser behavior, with no network dependency for inspection and CSV export.

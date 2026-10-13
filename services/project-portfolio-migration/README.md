@@ -360,6 +360,36 @@ native reopen of those bytes. Conversion changes stay visible when the
 captured project is reopened later. The original native account selection and
 target operation receipts belong to the operator's retained record.
 
+## Commission an already imported Planner project
+
+Use the commissioning workflow when a project already exists in the selected
+Planner or Project Operations environment. Select its actual project GUID and
+source edition, retain the original import documents and exception report, then
+review the returned task, resource, assignment and dependency identities in the
+same migration desk.
+
+The interface keeps explicit source-to-target mappings, original exception
+decisions and proposed field conversions together. Each proposal is tied to the
+selected inventory and deployment revision. The review distinguishes intended
+source values, observed target values and accepted changes, so a later correction
+can use the existing source edition while retaining its exact before-values.
+
+After a reviewed correction, continue the original scheduling request, capture
+the returned target and accept its reviewed comparison. The commissioning
+handover carries the identity review, correction history and original report
+downloads. Reopening the workspace retains its saved requests and report
+identities.
+
+The [commissioning desk guide](operator/COMMISSIONING_DESK.md) covers the complete
+browser workflow. The [client and CLI guide](operator/COMMISSIONING_CLIENT.md)
+provides the typed JavaScript client, all commissioning commands and recovery of
+interrupted uploads or saved requests. The
+[commissioning engine guide](operator/IMPORTED_PLAN_COMMISSIONING.md) documents
+the native mappings and retained action contract.
+
+Deliver the full application source alongside the exported workspace; both are
+needed to reopen the same software and saved business state.
+
 ## Target route distinctions
 
 Microsoft's MPP import creates a new project and documents a limit of ten
