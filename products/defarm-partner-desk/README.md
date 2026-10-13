@@ -21,7 +21,7 @@ Choose a UTF-8 JSON array of item objects or an ordinary CSV with unique headers
 
 Save a named batch. Source identity includes the original name/format/hash, explicit mapping, exact selected request bytes, gateway, network label and upstream SDK version/commit. Re-selecting the same identity reopens the existing case and its original operations. A changed source or mapping creates a separate saved edition.
 
-The Source & selected items view shows the first 250 rows for interactive reading. The original download, complete report, source-row CSV and case package retain every row. JSON-encoded source and selected-item columns distinguish exact strings, types, absent fields and embedded newlines.
+The Source & selected items view searches all retained rows and pages them in groups of25,50 or100. The reader preserves original row numbers and per-case query/page state. Download matching rows follows that exact search; the original download, complete report, full source-row CSV and case package retain every row. JSON-encoded source and selected-item columns distinguish exact strings, types, absent fields and embedded newlines.
 
 ## Preview and commit
 
@@ -72,6 +72,10 @@ Inspect every outgoing human-visible artifact rendered before delivery: open its
 
 ## Product limits that affect use
 
-Original input text is admitted up to 16 MiB; HTTP receiving accepts up to 80 MiB serialized JSON. Full case exports include response histories and may eventually exceed receiving admission, so select an appropriate local batch size and retain the whole original working directory for large histories. The 250-row interactive view is a display page, not a source cut.
+Original input text is admitted up to 16 MiB; HTTP receiving accepts up to 80 MiB serialized JSON. Full case exports include response histories and may eventually exceed receiving admission, so select an appropriate local batch size and retain the whole original working directory for large histories. The interactive table mounts at most100 rows per page and searches the full original source.
 
 This edition is a local single-operator application. Its HTTP listener binds 127.0.0.1, checks the expected host and same-origin mutation token, and keeps files private to the process user. Remote/team deployment is part of an explicit commissioning scope with authentication and a durable service owner.
+
+## Install-free original-case recipient
+
+Download offline recipient from the selected local case, or open recipient.html. The single HTML contains the exact exported original case and the complete reusable reader source. It works from file:// without npm, a server or network access. Original package, source, selected request, all rows and complete report are downloadable; separate recipient notes export alongside the unchanged original. The shared all-row search is used in both applications. See OFFLINE_RECIPIENT.md for full source/receiving commands and the existing actual browser course.
