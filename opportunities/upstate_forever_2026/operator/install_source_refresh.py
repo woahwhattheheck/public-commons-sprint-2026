@@ -108,6 +108,7 @@ KNOWN_RELEASES = {
         "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e"
     ],
     "operator/SOURCE_UPDATES.md": [
+        "aaf32d8b96304e644f787d18f386a0814875fb29730abd70da12ca864e72ef2d",
         "170a91e1a909d0304069dd9a719ef08c58f38f32ad93d60eb736367fbb42639b",
         "d5638a7ea89219c4465e19f18fdf54e393557ccaed96471720e62bca3d4c4d78",
         "3320a1abddc882ac10534c7139430f52e98e5cbab11132b3a82fa7d05af0e19e",
@@ -126,6 +127,7 @@ KNOWN_RELEASES = {
         "f7acd72e10b3986682c3dbb4617d629cb7586eaaacc159b6134ca4763f4ced1a"
     ],
     "operator/install_source_refresh.py": [
+        "5aad31dd33de34ff99157f0f484554005873dc23d07f41721050663aaf24dd13",
         "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
@@ -149,6 +151,7 @@ KNOWN_RELEASES = {
         "6cfded328d17b8684ea3c9bbb7bc6f40c014c36b08580d244f0b0506126c6c77"
     ],
     "install_source_refresh.py": [
+        "5aad31dd33de34ff99157f0f484554005873dc23d07f41721050663aaf24dd13",
         "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "689226ec18f615ee4ada207b59dd2b1c9f05975be6a2ca0286b213adfac9126c",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
@@ -190,6 +193,7 @@ KNOWN_RELEASES = {
         "4698277a21b8bf0044bc5335964d94e6d8847e6627f0133e5668012cfedaf705"
     ],
     "source/run_source_updates_browser.mjs": [
+        "6ffef03aa727a72914bf9675dc901c672c21c90e3ecf1250b3268dee27a27ea8",
         "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728"
     ],
     "model/source_refresh_receiving.py": [
