@@ -1,11 +1,11 @@
 # Primary sources and editorial mapping
 
-Retrieved13 October 2026. TJLabs authored the reporting convention, example wording, scenario designs and document templates in this kit.
+Retrieved 13 October 2026. TJLabs authored the reporting convention, example wording, scenario designs and document templates in this kit.
 
 | Source | Selected material | Use in the sample |
 | --- | --- | --- |
-| OpenTDF Architecture — https://opentdf.io/architecture | Four service descriptions; page displays25August2025 | Distinguishes policy administration, decision, entity resolution and key access. |
-| OpenTDF Authorization Service — https://opentdf.io/components/authorization | Current v2 section and separate v1 section; page displays20May2026 | Supports the version distinction and entity/action/resource decision dimensions. |
+| OpenTDF Architecture — https://opentdf.io/architecture | Four service descriptions; page displays 25August2025 | Distinguishes policy administration, decision, entity resolution and key access. |
+| OpenTDF Authorization Service — https://opentdf.io/components/authorization | Current v2 section and separate v1 section; page displays 20May2026 | Supports the version distinction and entity/action/resource decision dimensions. |
 | RFC 2119 — https://www.rfc-editor.org/rfc/rfc2119.html | Requirement vocabulary | Defines the adopted uppercase normative terms. |
 | RFC 8174 — https://www.rfc-editor.org/rfc/rfc8174.html | Uppercase requirement-keyword clarification | Limits the special keyword interpretation to uppercase usage. |
 | OpenTDF Specification — https://opentdf.io/spec | Specification navigation and versioning | Starting route for selecting an actual profile/schema/protocol edition in a real engagement. |
