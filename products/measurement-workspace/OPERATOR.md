@@ -145,6 +145,10 @@ After a managed restart, review the new connection receipt and create a successo
 
 A successful whole-workspace receive may replace the initially empty destination's native intake UUID. Retain its complete receiving response. The existing connection then reports an identity change; use the original Applications Stop, Review and Start workflow to obtain a new connection bound to the received project. This is the receiving continuation, not a reason to repeat the receive.
 
+## Complete large original files
+
+The configured client now retains and transfers full original source files and every member of a native edition through the existing chunked APIs. Use [LARGE_FILE_TRANSFERS.md](LARGE_FILE_TRANSFERS.md) for host-declared `files` aliases, bounded upload/download, exact-run recovery, reviewed native commit, complete `project.zip` receiving and explicit same-directory rebind after the managed instance changes. The original eight tools below remain available; the transfer guide documents eight additive tools. `FILES_COMPLETE` means complete transport, while scientific acceptance and actual recipient operation remain separate recorded outcomes.
+
 ## Merchant agent tools
 
 The configured Merchant operator exposes eight tools:
