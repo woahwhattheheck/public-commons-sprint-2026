@@ -1,0 +1,2795 @@
+{
+  "schema": "tjlabs.public-events-source/v1",
+  "source": {
+    "key": "america250wa-public-events",
+    "collection_url": "https://america250wa.org/events/",
+    "format": "indexed-html-metadata",
+    "retrieved_at": "2026-10-13T19:10:00Z",
+    "scope_id": "america250wa-public-upcoming-index-20261013",
+    "coverage": "partial",
+    "selection": "Exactly the 54 event-detail links displayed by the public Events index retrieved 13 October 2026. Detail pages were read individually; their retained cache-age labels vary. This is a public metadata demonstration, not an authenticated CMS export or a complete historical catalogue. Missing records carry no deletion authority.",
+    "agency_case_url": "https://digitalnativeconsultants.com/washington-state-historical-society/",
+    "retrieval_note": "Provider rendering results were obtained during the 19:06–19:10 UTC source operation. Cache-age labels are retained on individual records.",
+    "edition": 2,
+    "previous_source_sha256": "bb8433428ff46df27851b4246dbc5fa0eb944b276191e6d3bca6311be897196b",
+    "edition_note": "Clark County Genealogical Society organizer restored from the explicit unlinked Organizer bullet on the original detail page; all other original records are unchanged.",
+    "public_projection": {
+      "original_sha256": "bf21d8f1ebe86546833f90d334b337969470e22c5c77f0df4252676d563633a0",
+      "changes": [
+        "Removed internal routing and provider result identifiers; retained factual metadata, URLs, cache labels and date evidence."
+      ]
+    }
+  },
+  "records": [
+    {
+      "key": "https://america250wa.org/event/historical-society-of-federal-way-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/historical-society-of-federal-way-out-of-many-one-display/",
+      "values": {
+        "title": "Historical Society of Federal Way (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "John Barker Cabin",
+          "address": "411 S 348th St Federal Way, WA (Washington) 98003 United States"
+        },
+        "organizers": [
+          {
+            "name": "Historical Society of Federal Way"
+          }
+        ],
+        "event_url": "https://federalwayhistory.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Historical Society of Federal Way (Out of Many, One display)",
+        "index_listing": "Historical Society of Federal Way (Out of Many, One display)\n\nJanuary 1 - December 31\n\nJohn Barker Cabin 411 S 348th St, Federal Way",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/vashon-heritage-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/vashon-heritage-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Vashon Heritage Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Vashon Heritage Museum",
+          "address": "10105 SW Bank Rd Vashon, WA (Washington) 98070 United States"
+        },
+        "organizers": [
+          {
+            "name": "Vashon Heritage Museum"
+          }
+        ],
+        "event_url": "https://www.vashonheritagemuseum.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Vashon Heritage Museum (Out of Many, One display)",
+        "index_listing": "Vashon Heritage Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nVashon Heritage Museum 10105 SW Bank Rd, Vashon",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/moses-lake-museum-art-center-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/moses-lake-museum-art-center-out-of-many-one-display/",
+      "values": {
+        "title": "Moses Lake Museum & Art Center (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "City of Moses Lake Museum & Art Center",
+          "address": "401 South Balsam Street Moses Lake, WA (Washington) 98837 United States"
+        },
+        "organizers": [
+          {
+            "name": "City of Moses Lake Museum & Art Center"
+          }
+        ],
+        "event_url": "https://moseslakemuseum.com"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Moses Lake Museum & Art Center (Out of Many, One display)",
+        "index_listing": "Moses Lake Museum & Art Center (Out of Many, One display)\n\nJanuary 1 - December 31\n\nCity of Moses Lake Museum & Art Center 401 South Balsam Street, Moses Lake",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/dupont-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/dupont-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "DuPont Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "DuPont Historical Museum",
+          "address": "207 Barksdale Ave DuPont, WA (Washington) 98327 United States"
+        },
+        "organizers": [
+          {
+            "name": "DuPont Historical Society"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "DuPont Historical Society (Out of Many, One display)",
+        "index_listing": "DuPont Historical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nDuPont Historical Museum 207 Barksdale Ave, DuPont",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/northwest-carriage-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/northwest-carriage-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Northwest Carriage Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Northwest Carriage Museum",
+          "address": "314 Alder Street Raymond, WA (Washington) 98577 United States"
+        },
+        "organizers": [
+          {
+            "name": "Northwest Carriage Museum"
+          }
+        ],
+        "event_url": "https://www.nwcarriagemuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Northwest Carriage Museum (Out of Many, One display)",
+        "index_listing": "Northwest Carriage Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nNorthwest Carriage Museum 314 Alder Street, Raymond",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/wing-luke-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/wing-luke-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Wing Luke Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Wing Luke Museum of the Asian Pacific American Experience",
+          "address": "719 S King St Seattle, WA (Washington) 98104 United States"
+        },
+        "organizers": [
+          {
+            "name": "Wing Luke Museum of the Asian Pacific American Experience"
+          }
+        ],
+        "event_url": "https://www.wingluke.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Wing Luke Museum (Out of Many, One display)",
+        "index_listing": "Wing Luke Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nWing Luke Museum of the Asian Pacific American Experience 719 S King St, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/lake-stevens-historical-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/lake-stevens-historical-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Lake Stevens Historical Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "The Grimm House",
+          "address": "12402 Mill Spur Lake Stevens, WA (Washington) 98258 United States"
+        },
+        "organizers": [
+          {
+            "name": "Lake Stevens Historical Museum"
+          }
+        ],
+        "event_url": "https://Lakestevenshistoricalmuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Lake Stevens Historical Museum (Out of Many, One display)",
+        "index_listing": "Lake Stevens Historical Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nThe Grimm House 12402 Mill Spur, Lake Stevens",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/black-diamond-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/black-diamond-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Black Diamond Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Black Diamond Historical Museum",
+          "address": "32627 Railroad Ave Black Diamond, WA (Washington) 98010 United States"
+        },
+        "organizers": [
+          {
+            "name": "Black Diamond Historical Society"
+          }
+        ],
+        "event_url": "https://www.blackdiamondmuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Black Diamond Historical Society (Out of Many, One display)",
+        "index_listing": "Black Diamond Historical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nBlack Diamond Historical Museum 32627 Railroad Ave, Black Diamond",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/rainier-valley-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/rainier-valley-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Rainier Valley Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Hillman City Heritage Bell & Mural",
+          "address": "5520 Rainier Ave S Seattle, WA (Washington) 98118 United States"
+        },
+        "organizers": [
+          {
+            "name": "Rainier Valley Historical Society"
+          }
+        ],
+        "event_url": "https://www.rainiervalleyhistoricalsociety.org/hillman-city-heritage-bell"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Rainier Valley Historical Society (Out of Many, One display)",
+        "index_listing": "Rainier Valley Historical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nHillman City Heritage Bell & Mural 5520 Rainier Ave S, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/mccleary-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/mccleary-museum-out-of-many-one-display/",
+      "values": {
+        "title": "McCleary Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "McCleary Museum",
+          "address": "426 South 3rd Street McCleary, WA (Washington) 98557 United States"
+        },
+        "organizers": [
+          {
+            "name": "McCleary Museum and Event Center"
+          }
+        ],
+        "event_url": "https://mcclearymuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "McCleary Museum (Out of Many, One display)",
+        "index_listing": "McCleary Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nMcCleary Museum 426 South 3rd Street, McCleary",
+        "detail_status": "read",
+        "detail_cache_label": "2 months ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/pacific-bonsai-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/pacific-bonsai-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Pacific Bonsai Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Pacific Bonsai Museum",
+          "address": "2515 S. 336th St. Federal Way, WA (Washington) 98001 United States"
+        },
+        "organizers": [
+          {
+            "name": "Pacific Bonsai Museum"
+          }
+        ],
+        "event_url": "https://www.pacificbonsaimuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Pacific Bonsai Museum (Out of Many, One display)",
+        "index_listing": "Pacific Bonsai Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nPacific Bonsai Museum 2515 S. 336th St., Federal Way",
+        "detail_status": "read",
+        "detail_cache_label": "2 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/museum-of-pop-culture-mopop-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/museum-of-pop-culture-mopop-out-of-many-one-display/",
+      "values": {
+        "title": "Museum of Pop Culture “MOPOP” (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "MOPOP (Museum of Pop Culture)",
+          "address": "325 5th Ave N Seattle, WA (Washington) 98109 United States"
+        },
+        "organizers": [
+          {
+            "name": "MOPOP (Museum of Pop Culture)"
+          }
+        ],
+        "event_url": "https://www.mopop.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Museum of Pop Culture “MOPOP” (Out of Many, One display)",
+        "index_listing": "Museum of Pop Culture “MOPOP” (Out of Many, One display)\n\nJanuary 1 - December 31\n\nMOPOP (Museum of Pop Culture) 325 5th Ave N, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "3 days ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/des-moines-memorial-drive-preservation-association-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/des-moines-memorial-drive-preservation-association-out-of-many-one-display/",
+      "values": {
+        "title": "Des Moines Memorial Drive Preservation Association (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Des Moines Memorial",
+          "address": "15623 Des Moines Memorial Drive Burien, WA (Washington) 98148 United States"
+        },
+        "organizers": [
+          {
+            "name": "Des Moines Memorial Drive Preservation Association"
+          }
+        ],
+        "event_url": "https://livingroadofremembrance.com"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Des Moines Memorial Drive Preservation Association (Out of Many, One display)",
+        "index_listing": "Des Moines Memorial Drive Preservation Association (Out of Many, One display)\n\nJanuary 1 - December 31\n\nDes Moines Memorial 15623 Des Moines Memorial Drive, Burien",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/the-museum-of-flight-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/the-museum-of-flight-out-of-many-one-display/",
+      "values": {
+        "title": "The Museum of Flight (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Museum of Flight",
+          "address": "9404 East Marginal Way S Seattle, WA (Washington) 98108 United States"
+        },
+        "organizers": [
+          {
+            "name": "Museum of Flight"
+          }
+        ],
+        "event_url": "https://www.museumofflight.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "The Museum of Flight (Out of Many, One display)",
+        "index_listing": "The Museum of Flight (Out of Many, One display)\n\nJanuary 1 - December 31\n\nMuseum of Flight 9404 East Marginal Way S, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "3 days ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/fort-walla-walla-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/fort-walla-walla-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Fort Walla Walla Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Fort Walla Walla Museum",
+          "address": "755 NE Myra Road Walla Walla, WA (Washington) 99362 United States"
+        },
+        "organizers": [
+          {
+            "name": "Fort Walla Walla Museum"
+          }
+        ],
+        "event_url": "https://www.fwwm.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Fort Walla Walla Museum (Out of Many, One display)",
+        "index_listing": "Fort Walla Walla Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nFort Walla Walla Museum 755 NE Myra Road, Walla Walla",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/gorge-heritage-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/gorge-heritage-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Gorge Heritage Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Gorge Heritage Museum",
+          "address": "202 E Humboldt St. Bingen, WA (Washington) 98605 United States"
+        },
+        "organizers": [
+          {
+            "name": "West Klickitat County Historical Society"
+          }
+        ],
+        "event_url": "https://www.gorgegheritagemuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Gorge Heritage Museum (Out of Many, One display)",
+        "index_listing": "Gorge Heritage Museum (Out of Many, One display)\n\nJanuary 1 - December 31\n\nGorge Heritage Museum 202 E Humboldt St., Bingen",
+        "detail_status": "read",
+        "detail_cache_label": "2 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/shaw-island-library-and-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/shaw-island-library-and-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Shaw Island Library and Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Shaw Island Museum",
+          "address": "2346 Blind Bay Rd Shaw Island, WA (Washington) 98286 United States"
+        },
+        "organizers": [
+          {
+            "name": "Shaw Island Library and Historical Society"
+          }
+        ],
+        "event_url": "https://www.shawlibraryandmuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Shaw Island Library and Historical Society (Out of Many, One display)",
+        "index_listing": "Shaw Island Library and Historical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nShaw Island Museum 2346 Blind Bay Rd, Shaw Island",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/spanaway-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/spanaway-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Spanaway Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1",
+          "source_end_literal": "* End: December 31",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Prairie House Museum",
+          "address": "812 E 176th Ave Spanaway, WA 98387 United States"
+        },
+        "organizers": [
+          {
+            "name": "Spanaway Historical Society"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Spanaway Historical Society (Out of Many, One display)",
+        "index_listing": "Spanaway Historical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nPrairie House Museum 812 E 176th Ave, Spanaway",
+        "detail_status": "read",
+        "detail_cache_label": "3 months ago",
+        "date_evidence_lines": [
+          "  * Start: January 1",
+          "  * End: December 31",
+          "  *[ January 1 ]: 2026-01-01",
+          "  *[ December 31 ]: 2026-12-31"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/clark-county-genealogical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/clark-county-genealogical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Clark County Genealogical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-01-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 1 - December 31",
+          "source_start_literal": "* Start: January 1  (2026-01-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Clark County Genealogical Society",
+          "address": "3205 NE 52nd Street Vancouver, 98663 United States"
+        },
+        "event_url": "https://www.ccgs-wa.org",
+        "organizers": [
+          {
+            "name": "Clark County Genealogical Society"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Clark County Genealogical Society (Out of Many, One display)",
+        "index_listing": "Clark County Genealogical Society (Out of Many, One display)\n\nJanuary 1 - December 31\n\nClark County Genealogical Society 3205 NE 52nd Street, Vancouver",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: January 1  (2026-01-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "event_url",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/power-of-place-exhibit-at-governors-mansion/",
+      "url": "https://america250wa.org/event/power-of-place-exhibit-at-governors-mansion/",
+      "values": {
+        "title": "Power of Place Exhibit at Governor’s Mansion",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-01-28T08:00:00",
+          "end": "2026-12-31T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "January 28 @ 8:00 am - December 31 @ 5:00 pm",
+          "source_start_literal": "* Start: January 28 @ 8:00 am",
+          "source_end_literal": "* End: December 31 @ 5:00 pm",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art Exhibit"
+        ],
+        "venue": {
+          "name": "Governor’s Mansion",
+          "address": "504 15th Ave SE Olympia, WA 98501 United States"
+        },
+        "organizers": [
+          {
+            "name": "Governor’s Mansion Foundation"
+          }
+        ],
+        "event_url": "https://wagovmansion.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Power of Place Exhibit at Governor’s Mansion",
+        "index_listing": "Power of Place Exhibit at Governor’s Mansion\n\nJanuary 28 @ 8:00 am - December 31 @ 5:00 pm\n\nGovernor's Mansion 504 15th Ave SE, Olympia",
+        "detail_status": "read",
+        "detail_cache_label": "7 months ago",
+        "date_evidence_lines": [
+          "  * Start: January 28 @ 8:00 am",
+          "  * End: December 31 @ 5:00 pm",
+          "  *[ January 28 @ 8:00 am ]: 2026-01-28",
+          "  *[ December 31 @ 5:00 pm ]: 2026-12-31"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "January 28 @ 8:00 am - December 31 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/marysville-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/marysville-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Marysville Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-03-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "March 1 - December 31",
+          "source_start_literal": "* Start: March 1",
+          "source_end_literal": "* End: December 31",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Marysville Historical Society Museum",
+          "address": "6805 Armar Road Marysville, WA 98270 United States"
+        },
+        "organizers": [
+          {
+            "name": "Marysville Historical Society"
+          }
+        ],
+        "event_url": "https://MarysvilleHistory.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Marysville Historical Society (Out of Many, One display)",
+        "index_listing": "Marysville Historical Society (Out of Many, One display)\n\nMarch 1 - December 31\n\nMarysville Historical Society Museum 6805 Armar Road, Marysville",
+        "detail_status": "read",
+        "detail_cache_label": "3 months ago",
+        "date_evidence_lines": [
+          "  * Start: March 1",
+          "  * End: December 31",
+          "  *[ March 1 ]: 2026-03-01",
+          "  *[ December 31 ]: 2026-12-31"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "March 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/secretary-of-state-office-moments-that-made-us/",
+      "url": "https://america250wa.org/event/secretary-of-state-office-moments-that-made-us/",
+      "values": {
+        "title": "Secretary of State Office – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-03-02T08:00:00",
+          "end": "2026-12-31T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "March 2 @ 8:00 am - December 31 @ 4:00 pm",
+          "source_start_literal": "* Start: March 2 @ 8:00 am  (2026-03-02)",
+          "source_end_literal": "* End: December 31 @ 4:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Washington State Capitol Campus",
+          "address": "416 Sid Snyder Ave SW Olympia, WA (Washington) 98504 United States"
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Secretary of State Office – Moments that Made US",
+        "index_listing": "Secretary of State Office – Moments that Made US\n\nMarch 2 @ 8:00 am - December 31 @ 4:00 pm\n\nWashington State Capitol Campus 416 Sid Snyder Ave SW, Olympia",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: March 2 @ 8:00 am  (2026-03-02)",
+          "  * End: December 31 @ 4:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "March 2 @ 8:00 am - December 31 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/steilacoom-historical-museum-association-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/steilacoom-historical-museum-association-out-of-many-one-display/",
+      "values": {
+        "title": "Steilacoom Historical Museum Association (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-04-01",
+          "end": "2026-10-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "April 1 - October 31",
+          "source_start_literal": "* Start: April 1  (2026-04-01)",
+          "source_end_literal": "* End: October 31  (2026-10-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Steilacoom Historical Museum",
+          "address": "1801 Rainier Street Steilacoom, WA (Washington) 98388 United States"
+        },
+        "organizers": [
+          {
+            "name": "Steilacoom Historical Museum Association"
+          }
+        ],
+        "event_url": "https://steilacoomhistorical.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Steilacoom Historical Museum Association (Out of Many, One display)",
+        "index_listing": "Steilacoom Historical Museum Association (Out of Many, One display)\n\nApril 1 - October 31\n\nSteilacoom Historical Museum 1801 Rainier Street, Steilacoom",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: April 1  (2026-04-01)",
+          "  * End: October 31  (2026-10-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "April 1 - October 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/cowlitz-county-historical-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/cowlitz-county-historical-museum-moments-that-made-us/",
+      "values": {
+        "title": "Cowlitz County Historical Museum – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-04-01T10:00:00",
+          "end": "2027-01-20T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "April 1, 2026 @ 10:00 am - January 20, 2027 @ 4:00 pm",
+          "source_start_literal": "* Start: April 1 @ 10:00 am  (2026-04-01)",
+          "source_end_literal": "* End: January 20, 2027 @ 4:00 pm  (2027-01-20)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Cowlitz County Historical Museum",
+          "address": "405 Allen Street Kelso, WA (Washington) 98626 United States"
+        },
+        "event_url": "https://cowlitzcountyhistory.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Cowlitz County Historical Museum – Moments that Made US",
+        "index_listing": "Cowlitz County Historical Museum – Moments that Made US\n\nApril 1, 2026 @ 10:00 am - January 20, 2027 @ 4:00 pm\n\nCowlitz County Historical Museum 405 Allen Street, Kelso",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: April 1 @ 10:00 am  (2026-04-01)",
+          "  * End: January 20, 2027 @ 4:00 pm  (2027-01-20)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "April 1, 2026 @ 10:00 am - January 20, 2027 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/lewis-county-historical-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/lewis-county-historical-museum-moments-that-made-us/",
+      "values": {
+        "title": "Lewis County Historical Museum – Moments That Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-04-28T10:00:00",
+          "end": "2026-12-31T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "April 28 @ 10:00 am - December 31 @ 4:00 pm",
+          "source_start_literal": "* Start: April 28 @ 10:00 am  (2026-04-28)",
+          "source_end_literal": "* End: December 31 @ 4:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Lewis County Historical Museum",
+          "address": "599 NW Front Way Chehalis, WA (Washington) 98532 United States"
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Lewis County Historical Museum – Moments That Made US",
+        "index_listing": "Lewis County Historical Museum – Moments That Made US\n\nApril 28 @ 10:00 am - December 31 @ 4:00 pm\n\nLewis County Historical Museum 599 NW Front Way, Chehalis",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: April 28 @ 10:00 am  (2026-04-28)",
+          "  * End: December 31 @ 4:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "April 28 @ 10:00 am - December 31 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/the-seattle-griot-project-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/the-seattle-griot-project-out-of-many-one-display/",
+      "values": {
+        "title": "The Seattle Griot Project (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-05-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "May 1 - December 31",
+          "source_start_literal": "* Start: May 1  (2026-05-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Washington State Black Legacy Institute",
+          "address": "2656 42nd Ave Southwest Seattle, WA (Washington) 98116 United States"
+        },
+        "organizers": [
+          {
+            "name": "The Seattle Griot Project"
+          }
+        ],
+        "event_url": "https://www.theseattlegriotproject.com"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "The Seattle Griot Project (Out of Many, One display)",
+        "index_listing": "The Seattle Griot Project (Out of Many, One display)\n\nMay 1 - December 31\n\nWashington State Black Legacy Institute 2656 42nd Ave Southwest, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: May 1  (2026-05-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "May 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/quincy-valley-historical-society-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/quincy-valley-historical-society-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Quincy Valley Historical Society & Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-05-01",
+          "end": "2026-10-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "May 1 - October 31",
+          "source_start_literal": "* Start: May 1  (2026-05-01)",
+          "source_end_literal": "* End: October 31  (2026-10-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Quincy Valley Historical Society and Museum",
+          "address": "415 F St SW Quincy, WA (Washington) 98848 United States"
+        },
+        "organizers": [
+          {
+            "name": "Quincy Valley Historical Society and Museum"
+          }
+        ],
+        "event_url": "https://qvhsm.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Quincy Valley Historical Society & Museum (Out of Many, One display)",
+        "index_listing": "Quincy Valley Historical Society & Museum (Out of Many, One display)\n\nMay 1 - October 31\n\nQuincy Valley Historical Society and Museum 415 F St SW, Quincy",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: May 1  (2026-05-01)",
+          "  * End: October 31  (2026-10-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "May 1 - October 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/wenatchee-valley-museum-and-cultural-center-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/wenatchee-valley-museum-and-cultural-center-out-of-many-one-display/",
+      "values": {
+        "title": "Wenatchee Valley Museum and Cultural Center (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-05-01",
+          "end": "2026-11-01",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "May 1 - November 1",
+          "source_start_literal": "* Start: May 1  (2026-05-01)",
+          "source_end_literal": "* End: November 1  (2026-11-01)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "East Wenatchee City Hall",
+          "address": "271 9th St NE East Wenatchee, WA (Washington) 98802 United States"
+        },
+        "organizers": [
+          {
+            "name": "Wenatchee Valley Museum and Cultural Center"
+          }
+        ],
+        "event_url": "https://www.wenatcheevalleymuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Wenatchee Valley Museum and Cultural Center (Out of Many, One display)",
+        "index_listing": "Wenatchee Valley Museum and Cultural Center (Out of Many, One display)\n\nMay 1 - November 1\n\nEast Wenatchee City Hall 271 9th St NE, East Wenatchee",
+        "detail_status": "read",
+        "detail_cache_label": "last week",
+        "date_evidence_lines": [
+          "  * Start: May 1  (2026-05-01)",
+          "  * End: November 1  (2026-11-01)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "May 1 - November 1"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/american-hop-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/american-hop-museum-out-of-many-one-display/",
+      "values": {
+        "title": "American Hop Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-05-01",
+          "end": "2026-10-15",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "May 1 - October 15",
+          "source_start_literal": "* Start: May 1  (2026-05-01)",
+          "source_end_literal": "* End: October 15  (2026-10-15)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "American Hop Museum",
+          "address": "22 So. B Street Toppenish, WA (Washington) 98948 United States"
+        },
+        "organizers": [
+          {
+            "name": "American Hop Museum"
+          }
+        ],
+        "event_url": "https://www.americanhopmuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "American Hop Museum (Out of Many, One display)",
+        "index_listing": "American Hop Museum (Out of Many, One display)\n\nMay 1 - October 15\n\nAmerican Hop Museum 22 So. B Street, Toppenish",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: May 1  (2026-05-01)",
+          "  * End: October 15  (2026-10-15)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "May 1 - October 15"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/city-of-pacific-moments-that-made-us/",
+      "url": "https://america250wa.org/event/city-of-pacific-moments-that-made-us/",
+      "values": {
+        "title": "City of Pacific – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": null,
+          "end": null,
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "May 3 @ 8:00 am - November 1 @ 5:00 pm",
+          "source_start_literal": "",
+          "source_end_literal": "",
+          "source_time_literal": ""
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "City of Pacific – Moments that Made US",
+        "index_listing": "City of Pacific – Moments that Made US\n\nMay 3 @ 8:00 am - November 1 @ 5:00 pm\n\nCity of Pacific 100 Third Ave SE, Pacific",
+        "detail_status": "unavailable",
+        "detail_cache_label": null,
+        "date_evidence_lines": [],
+        "detail_error": "Failed to fetch https://america250wa.org/event/city-of-pacific-moments-that-made-us/: (400) Timeout fetching",
+        "index_schedule_literal": "May 3 @ 8:00 am - November 1 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/spokane-fire-station-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/spokane-fire-station-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Spokane Fire Station Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-06-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 1 - December 31",
+          "source_start_literal": "* Start: June 1  (2026-06-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Spokane City Fire Department Regional Training Center",
+          "address": "1608 N Rebecca St Spokane, WA (Washington) 99217 United States"
+        },
+        "organizers": [
+          {
+            "name": "Spokane Fire Station Museum"
+          }
+        ],
+        "event_url": "https://www.facebook.com/firedepartmentmuseum/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Spokane Fire Station Museum (Out of Many, One display)",
+        "index_listing": "Spokane Fire Station Museum (Out of Many, One display)\n\nJune 1 - December 31\n\nSpokane City Fire Department Regional Training Center 1608 N Rebecca St, Spokane",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: June 1  (2026-06-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/issaquah-history-museums-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/issaquah-history-museums-out-of-many-one-display/",
+      "values": {
+        "title": "Issaquah History Museums (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-06-01",
+          "end": "2026-11-01",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 1 - November 1",
+          "source_start_literal": "* Start: June 1  (2026-06-01)",
+          "source_end_literal": "* End: November 1  (2026-11-01)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Issaquah Historic Train Depot Museum",
+          "address": "78 1st Ave NE Issaquah, WA (Washington) 98027 United States"
+        },
+        "organizers": [
+          {
+            "name": "Issaquah History Museums"
+          }
+        ],
+        "event_url": "https://issaquahhistory.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Issaquah History Museums (Out of Many, One display)",
+        "index_listing": "Issaquah History Museums (Out of Many, One display)\n\nJune 1 - November 1\n\nIssaquah Historic Train Depot Museum 78 1st Ave NE, Issaquah",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: June 1  (2026-06-01)",
+          "  * End: November 1  (2026-11-01)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 1 - November 1"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/pioneer-association-of-the-state-of-washington-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/pioneer-association-of-the-state-of-washington-out-of-many-one-display/",
+      "values": {
+        "title": "Pioneer Association of the State of Washington (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-06-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 1 - December 31",
+          "source_start_literal": "* Start: June 1  (2026-06-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Pioneer Hall",
+          "address": "1642 43rd Ave. East Seattle, WA (Washington) 98112 United States"
+        },
+        "organizers": [
+          {
+            "name": "Pioneer Association of the State of Washington"
+          }
+        ],
+        "event_url": "https://www.wapioneers.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Pioneer Association of the State of Washington (Out of Many, One display)",
+        "index_listing": "Pioneer Association of the State of Washington (Out of Many, One display)\n\nJune 1 - December 31\n\nPioneer Hall 1642 43rd Ave. East, Seattle",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: June 1  (2026-06-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/kitsap-history-museum-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/kitsap-history-museum-out-of-many-one-display/",
+      "values": {
+        "title": "Kitsap History Museum (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-06-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 1 - December 31",
+          "source_start_literal": "* Start: June 1  (2026-06-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Kitsap History Museum",
+          "address": "280 4th St. Bremerton, WA (Washington) 98337 United States"
+        },
+        "organizers": [
+          {
+            "name": "Kitsap History Museum"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Kitsap History Museum (Out of Many, One display)",
+        "index_listing": "Kitsap History Museum (Out of Many, One display)\n\nJune 1 - December 31\n\nKitsap History Museum 280 4th St., Bremerton",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: June 1  (2026-06-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/kitsap-county-moments-that-made-us/",
+      "url": "https://america250wa.org/event/kitsap-county-moments-that-made-us/",
+      "values": {
+        "title": "Kitsap County – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-01T09:00:00",
+          "end": "2026-12-31T12:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 1 @ 9:00 am - December 31 @ 12:00 pm",
+          "source_start_literal": "* Start: June 1 @ 9:00 am  (2026-06-01)",
+          "source_end_literal": "* End: December 31 @ 12:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Kitsap County",
+          "address": "619 Division St Port Orchard, WA (Washington) 98366 United States"
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Kitsap County – Moments that Made US",
+        "index_listing": "Kitsap County – Moments that Made US\n\nJune 1 @ 9:00 am - December 31 @ 12:00 pm\n\nKitsap County 619 Division St, Port Orchard",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: June 1 @ 9:00 am  (2026-06-01)",
+          "  * End: December 31 @ 12:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 1 @ 9:00 am - December 31 @ 12:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/america-at-250-25-decades-of-collected-memories/",
+      "url": "https://america250wa.org/event/america-at-250-25-decades-of-collected-memories/",
+      "values": {
+        "title": "America at 250: 25 Decades of Collected Memories",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-09T08:30:00",
+          "end": "2027-02-14T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 9, 2026 @ 8:30 am - February 14, 2027 @ 5:00 pm",
+          "source_start_literal": "* Start: June 9 @ 8:30 am",
+          "source_end_literal": "* End: February 14, 2027 @ 5:00 pm",
+          "source_time_literal": ""
+        },
+        "venue": {
+          "name": "northwest museum of arts and culture",
+          "address": "2316 West 1st Avenue, Spokane, WA, USA"
+        },
+        "organizers": [
+          {
+            "name": "Northwest Museum of Arts and Culture"
+          }
+        ],
+        "event_url": "https://www.northwestmuseum.org/visit/plan-your-visit/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "America at 250: 25 Decades of Collected Memories",
+        "index_listing": "America at 250: 25 Decades of Collected Memories\n\nJune 9, 2026 @ 8:30 am - February 14, 2027 @ 5:00 pm\n\nNorthwest Museum of Arts and Culture 2316 West 1st Avenue, Spokane",
+        "detail_status": "read",
+        "detail_cache_label": "3 months ago",
+        "date_evidence_lines": [
+          "  * Start: June 9 @ 8:30 am",
+          "  * End: February 14, 2027 @ 5:00 pm",
+          "  *[ June 9 @ 8:30 am ]: 2026-06-09",
+          "  *[ February 14, 2027 @ 5:00 pm ]: 2027-02-14"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 9, 2026 @ 8:30 am - February 14, 2027 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/america250-exhibits-at-the-westport-aquarium/",
+      "url": "https://america250wa.org/event/america250-exhibits-at-the-westport-aquarium/",
+      "values": {
+        "title": "America250 Exhibits at the Westport Aquarium",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-23T08:00:00",
+          "end": "2026-12-21T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 23 @ 8:00 am - December 21 @ 5:00 pm",
+          "source_start_literal": "* Start: June 23 @ 8:00 am  (2026-06-23)",
+          "source_end_literal": "* End: December 21 @ 5:00 pm  (2026-12-21)",
+          "source_time_literal": ""
+        },
+        "venue": {
+          "name": "Westport Aquarium",
+          "address": "321 East Harbor Street Westport, WA (Washington) 98595 United States"
+        },
+        "organizers": [
+          {
+            "name": "Westport Aquarium"
+          }
+        ],
+        "event_url": "https://westportaquarium.weebly.com/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "America250 Exhibits at the Westport Aquarium",
+        "index_listing": "America250 Exhibits at the Westport Aquarium\n\nJune 23 @ 8:00 am - December 21 @ 5:00 pm\n\nWestport Aquarium 321 East Harbor Street, Westport",
+        "detail_status": "read",
+        "detail_cache_label": "2 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: June 23 @ 8:00 am  (2026-06-23)",
+          "  * End: December 21 @ 5:00 pm  (2026-12-21)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 23 @ 8:00 am - December 21 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/yakima-valley-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/yakima-valley-museum-moments-that-made-us/",
+      "values": {
+        "title": "Yakima Valley Museum – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-26T10:00:00",
+          "end": "2026-11-30T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "June 26 @ 10:00 am - November 30 @ 5:00 pm",
+          "source_start_literal": "* Start: June 26 @ 10:00 am  (2026-06-26)",
+          "source_end_literal": "* End: November 30 @ 5:00 pm  (2026-11-30)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Yakima Valley Museum",
+          "address": "2105 Tieton Drive Yakima, WA (Washington) 98902 United States"
+        },
+        "organizers": [
+          {
+            "name": "Yakima Valley Museum"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Yakima Valley Museum – Moments that Made US",
+        "index_listing": "Yakima Valley Museum – Moments that Made US\n\nJune 26 @ 10:00 am - November 30 @ 5:00 pm\n\nYakima Valley Museum 2105 Tieton Drive, Yakima",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: June 26 @ 10:00 am  (2026-06-26)",
+          "  * End: November 30 @ 5:00 pm  (2026-11-30)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "June 26 @ 10:00 am - November 30 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/upper-valley-historical-society-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/upper-valley-historical-society-out-of-many-one-display/",
+      "values": {
+        "title": "Upper Valley Historical Society (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-07-01",
+          "end": "2026-12-31",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "July 1 - December 31",
+          "source_start_literal": "* Start: July 1  (2026-07-01)",
+          "source_end_literal": "* End: December 31  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Upper Valley Historical Society",
+          "address": "735 Front Street Leavenworth, WA (Washington) 98826 United States"
+        },
+        "organizers": [
+          {
+            "name": "Upper Valley Historical Society"
+          }
+        ],
+        "event_url": "https://www.leavenworthmuseum.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Upper Valley Historical Society (Out of Many, One display)",
+        "index_listing": "Upper Valley Historical Society (Out of Many, One display)\n\nJuly 1 - December 31\n\nUpper Valley Historical Society 735 Front Street, Leavenworth",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: July 1  (2026-07-01)",
+          "  * End: December 31  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "July 1 - December 31"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/lacey-museum-and-cultural-center-out-of-many-one-display/",
+      "url": "https://america250wa.org/event/lacey-museum-and-cultural-center-out-of-many-one-display/",
+      "values": {
+        "title": "Lacey Museum and Cultural Center (Out of Many, One display)",
+        "schedule": {
+          "kind": "unresolved",
+          "start": "2026-07-01",
+          "end": "2026-12-30",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "July 1 - December 30",
+          "source_start_literal": "* Start: July 1  (2026-07-01)",
+          "source_end_literal": "* End: December 30  (2026-12-30)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Lacey City Hall",
+          "address": "420 College St. SE Lacey, WA (Washington) 98503 United States"
+        },
+        "organizers": [
+          {
+            "name": "Lacey Museum and Cultural Center"
+          }
+        ],
+        "event_url": "https://laceymuseum.org"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Lacey Museum and Cultural Center (Out of Many, One display)",
+        "index_listing": "Lacey Museum and Cultural Center (Out of Many, One display)\n\nJuly 1 - December 30\n\nLacey City Hall 420 College St. SE, Lacey",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: July 1  (2026-07-01)",
+          "  * End: December 30  (2026-12-30)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "July 1 - December 30"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/island-county-historical-society-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/island-county-historical-society-museum-moments-that-made-us/",
+      "values": {
+        "title": "Island County Historical Society Museum – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-07-01T10:00:00",
+          "end": "2026-11-20T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "July 1 @ 10:00 am - November 20 @ 4:00 pm",
+          "source_start_literal": "* Start: July 1 @ 10:00 am  (2026-07-01)",
+          "source_end_literal": "* End: November 20 @ 4:00 pm  (2026-11-20)",
+          "source_time_literal": ""
+        },
+        "venue": {
+          "name": "Island County Historical Society Museum",
+          "address": "908 NW Alexander St Coupeville, WA (Washington) 98239 United States"
+        },
+        "event_url": "https://www.islandhistory.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Island County Historical Society Museum – Moments that Made US",
+        "index_listing": "Island County Historical Society Museum – Moments that Made US\n\nJuly 1 @ 10:00 am - November 20 @ 4:00 pm\n\nIsland County Historical Society Museum 908 NW Alexander St, Coupeville",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: July 1 @ 10:00 am  (2026-07-01)",
+          "  * End: November 20 @ 4:00 pm  (2026-11-20)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "July 1 @ 10:00 am - November 20 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "venue",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/wenatchee-valley-museum-and-cultural-center-moments-that-made-us/",
+      "url": "https://america250wa.org/event/wenatchee-valley-museum-and-cultural-center-moments-that-made-us/",
+      "values": {
+        "title": "Wenatchee Valley Museum and Cultural Center – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-07-01T10:00:00",
+          "end": "2026-11-30T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "July 1 @ 10:00 am - November 30 @ 4:00 pm",
+          "source_start_literal": "* Start: July 1 @ 10:00 am  (2026-07-01)",
+          "source_end_literal": "* End: November 30 @ 4:00 pm  (2026-11-30)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Wenatchee Valley Museum and Cultural Center",
+          "address": "127 S Mission St Wenatchee, WA (Washington) 98801 United States"
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Wenatchee Valley Museum and Cultural Center – Moments that Made US",
+        "index_listing": "Wenatchee Valley Museum and Cultural Center – Moments that Made US\n\nJuly 1 @ 10:00 am - November 30 @ 4:00 pm\n\nWenatchee Valley Museum and Cultural Center 127 S Mission St, Wenatchee",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: July 1 @ 10:00 am  (2026-07-01)",
+          "  * End: November 30 @ 4:00 pm  (2026-11-30)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "July 1 @ 10:00 am - November 30 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/westport-aquarium-2/",
+      "url": "https://america250wa.org/event/westport-aquarium-2/",
+      "values": {
+        "title": "Westport Aquarium",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-07-04T11:30:00",
+          "end": "2026-12-31T16:30:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "July 4 @ 11:30 am - December 31 @ 4:30 pm",
+          "source_start_literal": "* Start: July 4 @ 11:30 am  (2026-07-04)",
+          "source_end_literal": "* End: December 31 @ 4:30 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Westport Aquarium",
+          "address": "321 East Harbor Street Westport, WA (Washington) 98595 United States"
+        }
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Westport Aquarium",
+        "index_listing": "Westport Aquarium\n\nJuly 4 @ 11:30 am - December 31 @ 4:30 pm\n\nWestport Aquarium 321 East Harbor Street, Westport",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: July 4 @ 11:30 am  (2026-07-04)",
+          "  * End: December 31 @ 4:30 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "July 4 @ 11:30 am - December 31 @ 4:30 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/spokane-valley-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/spokane-valley-museum-moments-that-made-us/",
+      "values": {
+        "title": "Spokane Valley Museum – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-08-01T11:00:00",
+          "end": "2026-10-31T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "August 1 @ 11:00 am - October 31 @ 4:00 pm",
+          "source_start_literal": "* Start: August 1 @ 11:00 am  (2026-08-01)",
+          "source_end_literal": "* End: October 31 @ 4:00 pm  (2026-10-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Spokane Valley Museum",
+          "address": "E 12114 Sprague Ave Spokane Valley, WA (Washington) 99206 United States"
+        },
+        "organizers": [
+          {
+            "name": "Spokane Valley Museum"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Spokane Valley Museum – Moments that Made US",
+        "index_listing": "Spokane Valley Museum – Moments that Made US\n\nAugust 1 @ 11:00 am - October 31 @ 4:00 pm\n\nSpokane Valley Museum E 12114 Sprague Ave, Spokane Valley",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: August 1 @ 11:00 am  (2026-08-01)",
+          "  * End: October 31 @ 4:00 pm  (2026-10-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "August 1 @ 11:00 am - October 31 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/clark-county-historical-museum-moments-that-made-us/",
+      "url": "https://america250wa.org/event/clark-county-historical-museum-moments-that-made-us/",
+      "values": {
+        "title": "Clark County Historical Museum – Moments that Made US",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-08-08T11:00:00",
+          "end": "2026-12-31T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "August 8 @ 11:00 am - December 31 @ 4:00 pm",
+          "source_start_literal": "* Start: August 8 @ 11:00 am  (2026-08-08)",
+          "source_end_literal": "* End: December 31 @ 4:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Clark County Historical Museum",
+          "address": "1511 Main Street Vancouver, 98660 United States"
+        },
+        "event_url": "https://cchmuseum.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Clark County Historical Museum – Moments that Made US",
+        "index_listing": "Clark County Historical Museum – Moments that Made US\n\nAugust 8 @ 11:00 am - December 31 @ 4:00 pm\n\nClark County Historical Museum 1511 Main Street, Vancouver",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: August 8 @ 11:00 am  (2026-08-08)",
+          "  * End: December 31 @ 4:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "August 8 @ 11:00 am - December 31 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/mccleary-museum-and-event-center/",
+      "url": "https://america250wa.org/event/mccleary-museum-and-event-center/",
+      "values": {
+        "title": "McCleary Museum and Event Center",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-08-08T12:00:00",
+          "end": "2026-11-25T16:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "August 8 @ 12:00 pm - November 25 @ 4:00 pm",
+          "source_start_literal": "* Start: August 8 @ 12:00 pm  (2026-08-08)",
+          "source_end_literal": "* End: November 25 @ 4:00 pm  (2026-11-25)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Community Gathering"
+        ],
+        "venue": {
+          "name": "McCleary Museum and Event Center",
+          "address": "426 S 3rd St. McCleary, WA (Washington) 98557 United States"
+        },
+        "organizers": [
+          {
+            "name": "McCleary Museum and Event Center"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "McCleary Museum and Event Center",
+        "index_listing": "McCleary Museum and Event Center\n\nAugust 8 @ 12:00 pm - November 25 @ 4:00 pm\n\nMcCleary Museum and Event Center 426 S 3rd St., McCleary",
+        "detail_status": "read",
+        "detail_cache_label": "2 weeks ago",
+        "date_evidence_lines": [
+          "  * Start: August 8 @ 12:00 pm  (2026-08-08)",
+          "  * End: November 25 @ 4:00 pm  (2026-11-25)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "August 8 @ 12:00 pm - November 25 @ 4:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/washington-state-americas-250th-local-history-writing-contest/",
+      "url": "https://america250wa.org/event/washington-state-americas-250th-local-history-writing-contest/",
+      "values": {
+        "title": "Washington State America’s 250th Local History Writing Contest",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-08-20T08:00:00",
+          "end": "2026-10-31T23:59:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "August 20 @ 8:00 am - October 31 @ 11:59 pm",
+          "source_start_literal": "* Start: August 20 @ 8:00 am  (2026-08-20)",
+          "source_end_literal": "* End: October 31 @ 11:59 pm  (2026-10-31)",
+          "source_time_literal": ""
+        },
+        "venue": {
+          "name": "Youth for History",
+          "address": "online"
+        },
+        "organizers": [
+          {
+            "name": "Youth for History"
+          }
+        ],
+        "event_url": "https://youthforhistory.org/america250competition/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Washington State America’s 250th Local History Writing Contest",
+        "index_listing": "Washington State America’s 250th Local History Writing Contest\n\nAugust 20 @ 8:00 am - October 31 @ 11:59 pm\n\nYouth for History online",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: August 20 @ 8:00 am  (2026-08-20)",
+          "  * End: October 31 @ 11:59 pm  (2026-10-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "August 20 @ 8:00 am - October 31 @ 11:59 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/america-250-traveling-exhibition/",
+      "url": "https://america250wa.org/event/america-250-traveling-exhibition/",
+      "values": {
+        "title": "America 250 Traveling Exhibition",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-09-01T08:00:00",
+          "end": "2026-12-31T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "September 1 @ 8:00 am - December 31 @ 5:00 pm",
+          "source_start_literal": "* Start: September 1 @ 8:00 am  (2026-09-01)",
+          "source_end_literal": "* End: December 31 @ 5:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "venue": {
+          "name": "Youth for History",
+          "address": "online"
+        },
+        "organizers": [
+          {
+            "name": "Youth for History"
+          }
+        ],
+        "event_url": "https://youthforhistory.org/traveling-america-250-exhibition-fall-2026/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "America 250 Traveling Exhibition",
+        "index_listing": "America 250 Traveling Exhibition\n\nSeptember 1 @ 8:00 am - December 31 @ 5:00 pm\n\nYouth for History online",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Start: September 1 @ 8:00 am  (2026-09-01)",
+          "  * End: December 31 @ 5:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "September 1 @ 8:00 am - December 31 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/the-american-experience-stories-of-freedom-equality-and-identity/2026-09-09/",
+      "url": "https://america250wa.org/event/the-american-experience-stories-of-freedom-equality-and-identity/2026-09-09/",
+      "values": {
+        "title": "The American Experience: Stories of Freedom, Equality and Identity",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-09-09T12:00:00",
+          "end": "2026-12-31T17:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "September 9 @ 12:00 pm - December 31 @ 5:00 pm",
+          "source_start_literal": "* Start: September 9 @ 12:00 pm  (2026-09-09)",
+          "source_end_literal": "* End: December 31 @ 5:00 pm  (2026-12-31)",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit"
+        ],
+        "venue": {
+          "name": "Karshner Museum & Center for Culture & Arts",
+          "address": "309 4th St NE Puyallup, WA (Washington) 98372 United States"
+        },
+        "organizers": [
+          {
+            "name": "Karshner Museum & Center for Culture & Arts"
+          }
+        ],
+        "event_url": "https://karctr.puyallupsd.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "The American Experience: Stories of Freedom, Equality and Identity",
+        "index_listing": "The American Experience: Stories of Freedom, Equality and Identity\n\nSeptember 9 @ 12:00 pm - December 31 @ 5:00 pm\n\nKarshner Museum & Center for Culture & Arts 309 4th St NE, Puyallup",
+        "detail_status": "read",
+        "detail_cache_label": "last month",
+        "date_evidence_lines": [
+          "  * Start: September 9 @ 12:00 pm  (2026-09-09)",
+          "  * End: December 31 @ 5:00 pm  (2026-12-31)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "September 9 @ 12:00 pm - December 31 @ 5:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/beyond-treaties-native-stories-of-survival-and-strength/",
+      "url": "https://america250wa.org/event/beyond-treaties-native-stories-of-survival-and-strength/",
+      "values": {
+        "title": "Beyond Treaties: Native Stories of Survival and Strength",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-10-14T13:00:00",
+          "end": "2026-10-14T14:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "October 14 @ 1:00 pm - 2:00 pm",
+          "source_start_literal": "* Date: October 14  (2026-10-14)",
+          "source_end_literal": "",
+          "source_time_literal": "1:00 pm - 2:00 pm"
+        },
+        "categories": [
+          "Educational Program",
+          "Historical Program",
+          "Lecture or Talk",
+          "Performance or Concert"
+        ],
+        "venue": {
+          "name": "Highline Heritage Museum",
+          "address": "819 SW 152nd St. Burien, WA 98166 Burien, WA (Washington) 98166 United States"
+        },
+        "organizers": [
+          {
+            "name": "Highline Heritage Museum"
+          }
+        ],
+        "event_url": "https://highlinemuseum.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Beyond Treaties: Native Stories of Survival and Strength",
+        "index_listing": "Beyond Treaties: Native Stories of Survival and Strength\n\n1:00 pm - 2:00 pm\n\nHighline Heritage Museum 819 SW 152nd St. Burien, WA 98166, Burien",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Date: October 14  (2026-10-14)",
+          "  * Time:"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "1:00 pm - 2:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/green-expectations-a-poetry-workshop/",
+      "url": "https://america250wa.org/event/green-expectations-a-poetry-workshop/",
+      "values": {
+        "title": "Green Expectations, A Poetry Workshop",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-10-24T13:00:00",
+          "end": "2026-10-24T14:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "October 24 @ 1:00 pm - 2:00 pm",
+          "source_start_literal": "* Date: October 24  (2026-10-24)",
+          "source_end_literal": "",
+          "source_time_literal": "1:00 pm - 2:00 pm"
+        },
+        "categories": [
+          "Educational Program",
+          "Lecture or Talk",
+          "Workshop"
+        ],
+        "venue": {
+          "name": "Highline Heritage Museum",
+          "address": "819 SW 152nd St. Burien, WA 98166 Burien, WA (Washington) 98166 United States"
+        },
+        "organizers": [
+          {
+            "name": "Highline Heritage Museum"
+          }
+        ],
+        "event_url": "https://highlinemuseum.org/"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Green Expectations, A Poetry Workshop",
+        "index_listing": "Green Expectations, A Poetry Workshop\n\n1:00 pm - 2:00 pm\n\nHighline Heritage Museum 819 SW 152nd St. Burien, WA 98166, Burien",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Date: October 24  (2026-10-24)",
+          "  * Time:"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "1:00 pm - 2:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/forged-in-fire-lecture-and-demonstration-studio-glass-movement/",
+      "url": "https://america250wa.org/event/forged-in-fire-lecture-and-demonstration-studio-glass-movement/",
+      "values": {
+        "title": "Forged in Fire Lecture and Demonstration: Studio Glass Movement",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-10-31T13:00:00",
+          "end": "2026-10-31T15:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "October 31 @ 1:00 pm - 3:00 pm",
+          "source_start_literal": "* Date: October 31  (2026-10-31)",
+          "source_end_literal": "",
+          "source_time_literal": "1:00 pm - 3:00 pm"
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit",
+          "Cultural Celebration",
+          "Educational Program",
+          "Lecture or Talk"
+        ],
+        "venue": {
+          "name": "Museum of Glass",
+          "address": "1801 Dock Street, Tacoma, WA 98408 Tacoma, WA (Washington) 98408 United States"
+        },
+        "organizers": [
+          {
+            "name": "Museum of Glass"
+          }
+        ],
+        "event_url": "https://www.museumofglass.org/forgedinfire"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Forged in Fire Lecture and Demonstration: Studio Glass Movement",
+        "index_listing": "Forged in Fire Lecture and Demonstration: Studio Glass Movement\n\n1:00 pm - 3:00 pm\n\nMuseum of Glass 1801 Dock Street, Tacoma, WA 98408, Tacoma",
+        "detail_status": "read",
+        "detail_cache_label": "2 weeks ago",
+        "date_evidence_lines": [
+          "  * Date: October 31  (2026-10-31)",
+          "  * Time:"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "1:00 pm - 3:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/city-of-toledo-time-capsule-burial-ceremony/",
+      "url": "https://america250wa.org/event/city-of-toledo-time-capsule-burial-ceremony/",
+      "values": {
+        "title": "City of Toledo Time Capsule Burial Ceremony",
+        "schedule": {
+          "kind": "all-day",
+          "start": "2026-11-11",
+          "end": "2026-11-11",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "November 11",
+          "source_start_literal": "* Date: November 11  (2026-11-11)",
+          "source_end_literal": "",
+          "source_time_literal": ""
+        },
+        "categories": [
+          "Community Gathering",
+          "Parade",
+          "Veteran or Military Tribute"
+        ],
+        "venue": {
+          "name": "City of Toledo",
+          "address": "130 North 2nd Street, Toledo, WA, USA"
+        },
+        "organizers": [
+          {
+            "name": "City of Toledo"
+          }
+        ]
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "City of Toledo Time Capsule Burial Ceremony",
+        "index_listing": "City of Toledo Time Capsule Burial Ceremony\n\nAll Day\n\nCity of Toledo 130 North 2nd Street, Toledo, WA, USA",
+        "detail_status": "read",
+        "detail_cache_label": "today",
+        "date_evidence_lines": [
+          "  * Date: November 11  (2026-11-11)"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "All Day"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers"
+      ]
+    },
+    {
+      "key": "https://america250wa.org/event/forged-in-fire-lecture-and-demonstration-dale-chihuly/",
+      "url": "https://america250wa.org/event/forged-in-fire-lecture-and-demonstration-dale-chihuly/",
+      "values": {
+        "title": "Forged in Fire Lecture and Demonstration: Dale Chihuly",
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-11-21T13:00:00",
+          "end": "2026-11-21T15:00:00",
+          "timezone": null,
+          "end_inclusive": null,
+          "recurrence": null,
+          "literal": "November 21 @ 1:00 pm - 3:00 pm",
+          "source_start_literal": "* Date: November 21  (2026-11-21)",
+          "source_end_literal": "",
+          "source_time_literal": "1:00 pm - 3:00 pm"
+        },
+        "categories": [
+          "Art, History, or Cultural Exhibit",
+          "Cultural Celebration",
+          "Educational Program",
+          "Lecture or Talk"
+        ],
+        "venue": {
+          "name": "Museum of Glass",
+          "address": "1801 Dock Street, Tacoma, WA 98408 Tacoma, WA (Washington) 98408 United States"
+        },
+        "organizers": [
+          {
+            "name": "Museum of Glass"
+          }
+        ],
+        "event_url": "https://www.museumofglass.org/forgedinfire"
+      },
+      "original": {
+        "representation": "public-index-and-individual-rendered-metadata",
+        "index_title": "Forged in Fire Lecture and Demonstration: Dale Chihuly",
+        "index_listing": "Forged in Fire Lecture and Demonstration: Dale Chihuly\n\n1:00 pm - 3:00 pm\n\nMuseum of Glass 1801 Dock Street, Tacoma, WA 98408, Tacoma",
+        "detail_status": "read",
+        "detail_cache_label": "3 weeks ago",
+        "date_evidence_lines": [
+          "  * Date: November 21  (2026-11-21)",
+          "  * Time:"
+        ],
+        "detail_error": null,
+        "index_schedule_literal": "1:00 pm - 3:00 pm"
+      },
+      "observed_fields": [
+        "title",
+        "schedule",
+        "categories",
+        "venue",
+        "organizers",
+        "event_url"
+      ]
+    }
+  ]
+}
