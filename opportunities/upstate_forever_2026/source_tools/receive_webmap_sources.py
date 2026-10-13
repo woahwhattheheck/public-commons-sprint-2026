@@ -13,7 +13,8 @@ import time
 
 
 def receive(application, workspace, state_directory, timeout=240, *,
-            collection_receiver=None, collection_state_directory=None):
+            collection_receiver=None, collection_state_directory=None,
+            gis_state_directory=None):
     application, workspace = Path(application).resolve(), Path(workspace).resolve()
     state_directory = Path(state_directory).resolve()
     state_directory.mkdir(parents=True, exist_ok=True)
@@ -201,6 +202,18 @@ def receive(application, workspace, state_directory, timeout=240, *,
             timeout=timeout, require_declared_companions=True)
         proof["scope"] = "native_webmap_admission_and_selected_original_collection"
         target.write_text(json.dumps(proof, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if gis_state_directory is not None:
+        gis_state = Path(gis_state_directory).resolve()
+        collection_state = Path(collection_state_directory).resolve() if collection_state_directory else (
+            state_directory / "selected-collection-receiving")
+        if gis_state in (state_directory, collection_state):
+            raise ValueError("Use a separate state directory for native GIS receiving.")
+        sys.path.insert(0, str(application / "source_tools"))
+        from receive_webmap_gis import receive as receive_gis
+        proof["gis_receiving"] = receive_gis(
+            application, workspace, proof["source_collection_id"], gis_state, timeout)
+        proof["scope"] += "_and_native_gis_handover"
+        target.write_text(json.dumps(proof, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return proof
 
 
@@ -212,8 +225,10 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", type=float, default=240)
     parser.add_argument("--collection-receiver", type=Path)
     parser.add_argument("--collection-state-directory", type=Path)
+    parser.add_argument("--gis-state-directory", type=Path)
     args = parser.parse_args()
     print(json.dumps(receive(args.application, args.workspace, args.state_directory, args.timeout,
                              collection_receiver=args.collection_receiver,
-                             collection_state_directory=args.collection_state_directory),
+                             collection_state_directory=args.collection_state_directory,
+                             gis_state_directory=args.gis_state_directory),
                      ensure_ascii=False, indent=2))

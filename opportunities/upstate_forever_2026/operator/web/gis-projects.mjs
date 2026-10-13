@@ -1,7 +1,7 @@
 /** Complete GIS export/receiving panel using the original Operator API and task queue. */
 export function attachGISProjects({getState, api, refreshState, showTask, toast}) {
   let root=null, catalogue=null, controller=null, signature='', activeWorkspace=null;
-  let pending=null, lastSelection=null;
+  let pending=null, lastSelection=null, intakeVersion=0, intakeLoading=false;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const pretty=n=>Number(n||0).toLocaleString();
   const options=(rows,label)=>'<option value="">None selected</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(label(x))+'</option>').join('');
@@ -87,7 +87,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       try{const state=await api('/api/state?'+new URLSearchParams({workspace}));task=state.tasks.find(x=>x.operation_id===op.operation_id);}catch{}
       if(!task)throw original;
     }
-    if(activeWorkspace!==workspace)return;
+    if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
     toast('GIS operation queued in the original task list.');await showTask(task.id);await refreshState({force:true});
   }
   async function submitExport(event){
@@ -99,7 +99,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     const workspace=activeWorkspace;
     try{const file=root.querySelector('[name="archive"]').files[0];if(!file)throw new Error('Select a complete GIS ZIP archive.');
       const uploaded=await api('/api/upload',{method:'POST',raw:file,filename:file.name});
-      if(activeWorkspace!==workspace)return;
+      if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
       await submit('gis.project.receive',{upload_id:uploaded.id});
     }catch(e){error(e.message);}finally{button.disabled=false;}
   }
@@ -113,8 +113,48 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       await submit('gis.project.adopt-sources',payload);
     }catch(e){error(e.message);}finally{button.disabled=false;}
   }
+  async function createForSources(request){
+    const frozen=JSON.parse(JSON.stringify(request||{}));
+    const workspace=getState()?.workspace_key,selection=frozen.selection;
+    if(!root||!workspace||frozen.workspace_key!==workspace)
+      throw new Error('Open the selected original workspace before preparing its GIS handover.');
+    if(!selection||typeof selection!=='object'||!Array.isArray(selection.sources)||!selection.sources.length)
+      throw new Error('Choose registered original sources for this GIS handover.');
+    const collection=selection.source_collection_id;
+    if(typeof collection!=='string'||!collection||selection.sources.some(row=>
+       !row||row.source_collection_id!==collection||typeof row.source_id!=='string'||!row.source_id))
+      throw new Error('Choose source members from one retained original collection.');
+    const ids=selection.sources.map(row=>row.source_id);
+    if(new Set(ids).size!==ids.length)throw new Error('Choose each original source once.');
+    const title=selection.title,projectCRS=selection.project_crs;
+    if(typeof title!=='string'||!title.trim()||title.length>240||typeof projectCRS!=='string'||!projectCRS.trim())
+      throw new Error('Name the GIS handover and its display coordinate system.');
+    const notes=selection.notes||[];
+    if(!Array.isArray(notes)||notes.some(value=>typeof value!=='string'))
+      throw new Error('Keep GIS handover notes as text.');
+    const token=++intakeVersion,element=root;
+    controller?.abort();const own=new AbortController();controller=own;intakeLoading=true;
+    try{
+      const data=await api('/api/gis/projects?'+new URLSearchParams({workspace}),{signal:own.signal});
+      if(token!==intakeVersion||own.signal.aborted||root!==element||getState()?.workspace_key!==workspace)
+        throw new Error('The workspace or source selection changed while opening the GIS handover.');
+      if(data.workspace_key!==workspace)throw new Error('GIS response belongs to a different workspace.');
+      const original=data.sources?.find(row=>row.id===collection);
+      if(!original||ids.some(id=>!original.entries.some(row=>row.id===id)))
+        throw new Error('Refresh the admitted source collection before preparing its GIS handover.');
+      if(!original.entries.some(row=>ids.includes(row.id)&&['vector','raster'].includes(row.kind)))
+        throw new Error('Include at least one original vector or raster layer in the GIS handover.');
+      activeWorkspace=workspace;catalogue=data;signature=stateSignature(getState());
+      const value={title:title.trim(),project_crs:projectCRS.trim(),source_collection_id:collection,
+        sources:selection.sources.map(row=>({source_collection_id:collection,source_id:row.source_id})),
+        scenario_run_ids:[],comparison_ids:[],include_grid:true,notes:[...notes]};
+      saveSelection(value);render();
+      root.querySelector('[data-gis-export]')?.scrollIntoView({block:'start'});
+      return JSON.parse(JSON.stringify(value));
+    }finally{if(token===intakeVersion)intakeLoading=false;}
+  }
   async function load(force=false){
-    if(!root)return;const state=getState();const key=state?.workspace_key;if(!key)return;
+    if(!root||intakeLoading)return;const state=getState();const key=state?.workspace_key;if(!key)return;
     const next=stateSignature(state);if(!force&&signature===next)return;
     if(activeWorkspace!==key){activeWorkspace=key;lastSelection=null;pending=null;catalogue=null;}
     if(catalogue&&root.querySelector('[data-gis-export]')){try{lastSelection=formSelection();}catch{}}
@@ -130,6 +170,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       if(!catalogue||activeWorkspace!==state.workspace_key)root.innerHTML='<section class="gis-workspace"><h1>Editable GIS projects</h1><p>Opening the retained study selections…</p><p data-gis-error role="alert" hidden></p></section>';
       else render();void load(true);},
     update(state){if(root&&getState()?.workspace_key===state?.workspace_key)void load();},
-    detach(){controller?.abort();controller=null;root=null;}
+    detach(){intakeVersion++;intakeLoading=false;controller?.abort();controller=null;root=null;},
+    createForSources
   };
 }

@@ -204,7 +204,7 @@ export async function main(args=process.argv.slice(2)){
       }else print({id:source.id,label:source.label,kind:source.kind,metadata:source.metadata,files:Object.keys(source.files),
         tables:Object.fromEntries(Object.entries(source.kind==='carbon'?source.carbon.tables:source.tables).map(([name,rows])=>[name,rows.length]))});
     }else if(command==='source-export')print({file:await writeNew(options.out,editionFor(workspace.state,options.edition))});
-    else if(command==='handover')print({file:await writeNew(options.out,await workspace.handover()),workspaceId:workspace.state.workspaceId});
+    else if(command==='handover')print({file:await writeNew(options.out,await workspace.readonlyHandover()),workspaceId:workspace.state.workspaceId});
     else throw Object.assign(new Error('Choose a command from --help.'),{code:'UNKNOWN_COMMAND'});
   }finally{await workspace.close();}
 }

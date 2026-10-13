@@ -417,3 +417,62 @@ PDF, HTML, Markdown and `report-data.json` use the same ordered typed blocks. Th
 The existing portable Workspace backup recursively includes the original source objects, `ensemble-scientific-sources`, annual-reference operations, flow support and saved calibration records. Restore with the maintained Workspace receiver, reopen the same saved consumer and choose its existing source/report. Every retained file descriptor is relative to the receiving Workspace; no old container path is needed to open the source. A newly selected uncertainty result produces its own source identity while the earlier exported edition remains available.
 
 This section describes the source-exact integration. The original equipped receiving operation7208/4610 runs the actual Python/report journey against its retained Workspace and reports the first native exception for repair.
+
+
+## Saved calibration figures and exact numeric source
+
+The same **Prepare scientific report** action and `scientific-source` command now
+write native vector figures from the original retained calibration. No new model,
+observation estimator or candidate selection is run. The source is a new version 2
+scientific-source edition; its calibration, observation, flow and uncertainty IDs
+remain the originals. Previously registered version 1 reports retain their source
+collections and archived bytes.
+
+The complete figures include:
+
+| Figure | Original quantities and interpretation |
+|---|---|
+| Selected candidate against references | Observed versus predicted annual mass, one retained catchment/constituent calibration unit per point. Constituents and physical units have separate panels. Original calibration and validation partitions remain distinct. The diagonal is the mathematical 1:1 reference. |
+| Selected physical residuals | The original predicted-minus-observed residual, plotted against the original observed annual mass. Zero is an explicit reference. |
+| Original objective ranking | Every eligible native run keeps its saved rank and dimensionless objective score. Repeated executions of one parameter profile retain their actual run identities. |
+| Exact flow-period coverage | Original numeric days and days outside the captured period, each divided by the record's full requested [start,end) day count. Missing or unresolved counts remain absent. |
+| Original flow qualifiers | Approved, estimated and provisional day counts shown separately against the same original reference-period denominator. Categories can overlap. |
+| Original source-error gaps | Saved minimum, maximum and nominal objective gaps for each challenger. Original gap direction, standard-error multiplier, missing records and coverage remain attached. These are the original sensitivity bounds. |
+
+The selected fit and residual figures use the original calibration unit's temporal
+aggregation, including all original record IDs, periods and weights. They keep the
+native annual mass, any originally declared delivered external load, predicted
+annual mass, spatial group, actual support and partition together. Every prediction
+excluded by the original producer stays excluded from the plot and remains in the
+figure specification and complete original result.
+
+The source package includes `calibration-figure-spec.json`,
+`calibration-figure-coordinates.csv` and a complete monochrome SVG per figure.
+Every data coordinate names its exact original packaged JSON and JSON Pointer.
+The specification retains source identities, original units, station/series names,
+reference records, exclusive period ends and source qualifier semantics.
+Mathematical reference marks carry their own role and have no invented data
+provenance. Presentation-only axes and ordinal row positions do not change the
+original quantities. Row-indexed plots split into sixteen-row panels; the
+coordinate CSV and source tables identify every row without truncating the cohort.
+
+Only the explicit percentage display transforms source counts:
+`100 * original_day_count / expected_days`.
+The original count and denominator are retained beside each point. Covered-days
+volume and complete-period volume remain in their original tables and source
+records; incomplete periods are not extrapolated by the plotting code.
+
+The standard-library SVG writer runs during `--source-only` preparation. The
+existing `observed_context` collector binds each exact figure specification/SVG
+and appends its typed scientific figure blocks. Existing ReportLab rendering
+produces PDF vectors from the same specification; the maintained HTML renderer
+embeds the same retained SVGs. Markdown, structured data, complete sourceZIP and
+original Workspace backup/restore preserve all original coordinates and source
+companions.
+
+Source installation requires `model/ensemble_scientific_figures.py` together with
+the version 2 `model/ensemble_scientific_source.py`; the existing service, command,
+descriptor and browser remain compatible. Reopen the saved calibration and use
+**Refresh scientific report** to create its version 2 source, then **Include in
+delivery** to append that actual source to the existing ordered scientific source
+selection. Earlier selected report editions remain available independently.

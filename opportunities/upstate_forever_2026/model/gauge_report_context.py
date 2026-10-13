@@ -10,6 +10,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
+import zipfile
 
 from . import gauge_support, observed_context
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
@@ -332,18 +333,156 @@ def delivery_selection(workspace, source, delivery_id=None):
     return selection
 
 
-def prepare(workspace, edition_id, *, import_source=True, delivery_id=None):
-    """Prepare actual saved results, register the complete source and offer delivery."""
+
+def _directory(workspace, edition, members):
+    identity = {"version": VERSION, "report_loader_edition": observed_context.EDITION,
+        "workspace_id": workspace.project["id"], "gauge_support_id": edition["id"],
+        "build_id": edition["build_id"],
+        "members": [item for unused, item in sorted(members.values(), key=lambda pair: pair[1]["path"])]}
+    operation_id = digest(identity)
+    return operation_id, workspace.root / "gauge-support" / edition["build_id"] / "report-context" / operation_id
+
+
+def _report_records(workspace, edition, source):
+    unused, entry = workspace.source_file(source["source_collection_id"], source["source_id"])
+    records = [{"id": observed_context.ROLE, **source, "title": entry["title"],
+                "vintage": entry["vintage"], "uri": entry["uri"], "sha256": entry["body"]["sha256"]}]
+    for index, item in enumerate(edition["result"]["sources"]):
+        records.append({"id": "gauge-original-%03d" % index, "source_id": item["source_id"],
+            "source_collection_id": item["collection_id"], "title": item.get("title") or item["source_id"],
+            "vintage": item.get("vintage") or "Original retained gauge source",
+            "uri": item.get("uri") or "", "sha256": item["source_sha256"]})
+    return records
+
+
+def _render(workspace, directory, edition, prepared):
+    """Render the registered Gauge source through the maintained scientific formatter."""
+    from . import scientific_report
+    selection = delivery_selection(workspace, prepared["source"])
+    selection["observed_context_binding"] = observed_context.bind(workspace, selection)
+    signature = {"schema": "upstate.gauge-scientific-render/v1",
+        "source_binding": selection["observed_context_binding"],
+        "formatter_sha256": file_digest(Path(scientific_report.__file__)),
+        "collector_sha256": file_digest(Path(observed_context.__file__)),
+        "figure_renderer_sha256": file_digest(Path(scientific_report.__file__).with_name("scientific_figures.py")),
+        "producer_sha256": file_digest(Path(__file__))}
+    output = directory / "reports" / digest(signature)
+    output.mkdir(parents=True, exist_ok=True)
+    receipt = output / "release.json"
+    checkpoint = directory / "standalone.json"
+    value = {**prepared, "state": "rendering", "report_signature": signature}
+    if receipt.exists():
+        release = read_json(receipt)
+        if release.get("signature") != signature or release.get("state") != "complete":
+            raise ValueError("Saved Gauge report release differs from its source or formatter")
+        for item in release["members"]:
+            verify_file(workspace.root, item)
+        for item in release["files"].values():
+            verify_file(workspace.root, item)
+        value.update(state="complete", report=release,
+                     files=[*prepared["files"], *release["files"].values()])
+        atomic_json(checkpoint, value)
+        return value
+    atomic_json(checkpoint, value)
+    members, downloads = {}, {}
+    try:
+        product = observed_context.collect(workspace, selection, output, {})
+        if product is None or product["binding"] != selection["observed_context_binding"]:
+            raise ValueError("Rendered Gauge source differs from its original selection")
+        for item in product["files"].values():
+            path = verify_file(output, item)
+            members[item["path"]] = describe_file(workspace.root, path)
+        recipe = [item for item in product["files"].values()
+                  if Path(item["path"]).name == RECIPE and item["sha256"] == prepared["recipe"]["sha256"]]
+        if len(recipe) != 1:
+            raise ValueError("The rendered Gauge recipe must retain one original source root")
+        # Retain the importable original manifest beside its exact recipe and companions.
+        target = output / Path(recipe[0]["path"]).parent / MANIFEST
+        original = verify_file(workspace.root, prepared["manifest"])
+        _copy(original, target, prepared["manifest"])
+        members[target.relative_to(output).as_posix()] = describe_file(workspace.root, target)
+        atomic_json(output / "selection.json", selection, immutable=True)
+        members["selection.json"] = describe_file(workspace.root, output / "selection.json")
+        title = edition["title"] + " — gauge and catchment support"
+        records = _report_records(workspace, edition, prepared["source"])
+        companions = scientific_report.write_companions(output, title, product["sections"],
+            contact={}, source_records=records, binding={"gauge_support_id": edition["id"],
+                "regional": edition["regional"], "observed_context": product["binding"],
+                "workspace_id": workspace.project["id"], "selection": selection})
+        for name, item in companions.items():
+            descriptor = describe_file(workspace.root, verify_file(output, item))
+            members[item["path"]] = descriptor
+            downloads[name] = descriptor
+        value.update(files=[*prepared["files"], *downloads.values()])
+        atomic_json(checkpoint, value)
+        scientific_report.report_pdf(output / "report.pdf", title, product["sections"],
+                                     contact={}, source_records=records)
+        downloads["report_pdf"] = describe_file(workspace.root, output / "report.pdf")
+        members["report.pdf"] = downloads["report_pdf"]
+        archive = output / "gauge-scientific-report.zip"
+        pending = output / ".gauge-scientific-report.pending"
+        try:
+            with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as writer:
+                for name, item in sorted(members.items()):
+                    writer.write(verify_file(workspace.root, item), name)
+            pending.replace(archive)
+        finally:
+            pending.unlink(missing_ok=True)
+        downloads["report_archive"] = describe_file(workspace.root, archive)
+        downloads["report_selection"] = members["selection.json"]
+        release = {"schema": "upstate.gauge-scientific-release/v1", "state": "complete",
+            "title": title, "signature": signature, "source": prepared["source"],
+            "gauge_support_id": edition["id"], "regional_report_id": edition["regional"]["report_id"],
+            "section_count": len(product["sections"]), "source_member_count": len(product["files"]),
+            "files": downloads, "members": [members[name] for name in sorted(members)]}
+        atomic_json(receipt, release, immutable=True)
+        value.update(state="complete", report=release,
+                     files=[*prepared["files"], *downloads.values()])
+        atomic_json(checkpoint, value)
+        return value
+    except BaseException as error:
+        value.update(state="source_ready", files=[*prepared["files"], *downloads.values()],
+            error={"type": type(error).__name__, "message": str(error)})
+        atomic_json(checkpoint, value)
+        raise
+
+
+def latest(workspace, edition_id):
+    """Reopen the last prepared standalone report in the same restored Workspace."""
+    edition = gauge_support.inspect(workspace, identifier(edition_id), verify=True, include_result=True)
+    members = _saved_members(workspace, edition)
+    operation_id, directory = _directory(workspace, edition, members)
+    checkpoint = directory / "standalone.json"
+    if not checkpoint.exists():
+        return None
+    value = read_json(checkpoint)
+    if (value.get("operation_id") != operation_id or value.get("gauge_support_id") != edition["id"]
+            or value.get("workspace_id") != workspace.project["id"]):
+        raise ValueError("Saved scientific report belongs to another Gauge edition")
+    for item in value.get("files", []):
+        verify_file(workspace.root, item)
+    for item in value.get("report", {}).get("members", []):
+        verify_file(workspace.root, item)
+    if value.get("source"):
+        selection = delivery_selection(workspace, value["source"])
+        if observed_context.bind(workspace, selection) != value["observed_context_binding"]:
+            raise ValueError("Saved Gauge report source binding changed")
+    return value
+
+
+def prepare(workspace, edition_id, *, import_source=True, delivery_id=None, render=True):
+    """Prepare actual saved results, register their source and render a standalone report."""
+    if not isinstance(render, bool) or not isinstance(import_source, bool):
+        raise ValueError("Render and source import must be true or false")
+    if render and not import_source:
+        raise ValueError("Standalone rendering requires the original native source import")
     edition = gauge_support.inspect(workspace, identifier(edition_id), verify=True, include_result=True)
     if edition["result"].get("project_id") != workspace.project["id"]:
         raise ValueError("Choose a Gauge support edition from this original Workspace")
     if edition["result"].get("schema") != gauge_support.SCHEMA:
         raise ValueError("Saved Gauge support result uses another schema")
     members = _saved_members(workspace, edition)
-    identity = {"version": VERSION, "report_loader_edition": observed_context.EDITION, "workspace_id": workspace.project["id"], "gauge_support_id": edition["id"],
-        "build_id": edition["build_id"], "members": [item for unused, item in sorted(members.values(), key=lambda pair: pair[1]["path"])]}
-    operation_id = digest(identity)
-    directory = workspace.root / "gauge-support" / edition["build_id"] / "report-context" / operation_id
+    operation_id, directory = _directory(workspace, edition, members)
     with held(workspace.root / "locks" / ("gauge-report-" + operation_id + ".lock")):
         directory.mkdir(parents=True, exist_ok=True)
         for name, (path, item) in sorted(members.items()):
@@ -405,6 +544,9 @@ def prepare(workspace, edition_id, *, import_source=True, delivery_id=None):
             atomic_json(directory / "registered-context.json", result, immutable=True)
             result["delivery_selection"] = delivery_selection(workspace, source, delivery_id)
             result["selected_delivery_id"] = delivery_id
+            result["state"] = "source_ready"
+            if render:
+                return _render(workspace, directory, edition, result)
         return result
 
 
@@ -413,13 +555,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--edition-id", required=True)
-    parser.add_argument("--prepare-only", action="store_true")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--prepare-only", action="store_true", help="Write source files without import or rendering")
+    modes.add_argument("--source-only", action="store_true", help="Import the complete source without rendering")
+    modes.add_argument("--inspect", action="store_true", help="Reopen the retained standalone report and verified files")
     parser.add_argument("--delivery-id")
     args = parser.parse_args(argv)
-    if args.prepare_only and args.delivery_id:
-        parser.error("--delivery-id requires native source import")
-    value = prepare(Workspace(args.workspace), args.edition_id,
-                    import_source=not args.prepare_only, delivery_id=args.delivery_id)
+    if (args.prepare_only or args.inspect) and args.delivery_id:
+        parser.error("--delivery-id requires source preparation and native import")
+    workspace = Workspace(args.workspace)
+    value = latest(workspace, args.edition_id) if args.inspect else prepare(
+        workspace, args.edition_id, import_source=not args.prepare_only,
+        delivery_id=args.delivery_id, render=not (args.prepare_only or args.source_only))
     print(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False))
 
 

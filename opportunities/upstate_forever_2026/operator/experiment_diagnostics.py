@@ -6,10 +6,10 @@ selection and authenticated downloads with model.experiment_diagnostics.
 from __future__ import annotations
 import json
 import importlib
-from model.common import identifier, relative_file
+from model.common import identifier, relative_file, verify_file
 from model import experiment_diagnostics as diagnostics
 
-ACTIONS = frozenset({"diagnostics.analyze"})
+ACTIONS = frozenset({"diagnostics.analyze", "diagnostics.report.prepare"})
 READS = frozenset({"catalog", "item", "experiment"})
 
 
@@ -169,6 +169,8 @@ class ExperimentDiagnostics:
         return {
             "workspace_key": workspace, "project": ws.project,
             "diagnostics": diagnostics.listing(ws),
+            "deliveries": [{"id": row["id"], "title": row.get("title") or row.get("selection", {}).get("title") or row["id"],
+                            "state": row.get("state")} for row in overview.get("deliveries", [])],
             "experiment_programmes": programmes,
             "experiment_programme_error": programme_error,
             "grids": [
@@ -198,12 +200,30 @@ class ExperimentDiagnostics:
     def invoke(self, task):
         if task["action"] not in ACTIONS:
             raise self.Fault("DIAGNOSTIC_ACTION", "Select the scientific analysis action.", 404)
+        if task["action"] == "diagnostics.report.prepare":
+            from model import diagnostic_report_context
+            value = task.get("payload") or {}
+            return diagnostic_report_context.prepare(
+                self.operator.ws(task["workspace"]), self._id(value),
+                report_sha256=identifier(value.get("report_sha256")),
+                delivery_id=value.get("delivery_id") or None)
         return diagnostics.analyze(self.operator.ws(task["workspace"]), task["payload"])
 
     def decorate_task(self, task):
         if task.get("action") not in ACTIONS:
             return task
         result = task.get("result", {})
+        if task["action"] == "diagnostics.report.prepare":
+            if task.get("state") == "complete" and result.get("source"):
+                ws = self.operator.ws(task["workspace"])
+                task["_diagnostic_report"] = {
+                    "diagnostic_id": result["diagnostic_id"], "report_sha256": result["report_sha256"],
+                    "title": result["title"], "source": result["source"]}
+                task["_downloads"] = [
+                    self.operator._ticket(task["workspace"], verify_file(ws.root, item),
+                                          item, item["path"].rsplit("/", 1)[-1])
+                    for item in result.get("files", [])]
+            return task
         if result.get("id"):
             task["_diagnostic"] = {"id": result["id"], "title": result.get("title") or
                                    result.get("selection", {}).get("title", "Scientific analysis")}

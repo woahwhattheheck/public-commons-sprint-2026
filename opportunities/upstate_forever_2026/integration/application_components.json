@@ -273,22 +273,26 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_discharge_sources",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_catchments",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_reference_flow_support",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_split_capture",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -700,6 +704,7 @@
         "model/ensemble_operations.py",
         "model/ensemble_references.py",
         "model/ensemble_report.py",
+        "model/ensemble_scientific_figures.py",
         "model/ensemble_scientific_source.py",
         "model/ensembles.py",
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
@@ -717,17 +722,20 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_parameter_studies",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_study_consumers",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "complete_operating_guide",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -869,7 +877,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "paired_raster_studies",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -905,7 +914,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "source_profile_intake",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -914,11 +924,142 @@
       "paths": [
         "operator/extensions/programme-activity.json",
         "operator/programme_activity.py",
-        "model/compute_programme.py"
+        "model/compute_programme.py",
+        "model/programme_interactions.py",
+        "docs/programme-interactions.md",
+        "model/compute_programme_cli.py",
+        "model/portable.py",
+        "operator/programmes.py",
+        "operator/web/programmes.mjs",
+        "install_programmes.py",
+        "operator/web/native-interactions.mjs",
+        "PROGRAMME_INTERACTIONS.md",
+        "install_programme_interactions.py"
       ],
       "requires": [
-        "core"
-      ]
+        "core",
+        "native-interactions"
+      ],
+      "source_reference": {
+        "programme_interactions": {
+          "version": "1.0.1",
+          "original_version": "1.0.0",
+          "credit": "TokenJunkieLabs / ECO-6334 original Programme conservation integration",
+          "source_base": {
+            "repository": "woahwhattheheck/public-commons-sprint-2026",
+            "ref": "b39554bf4ead42d1fb42af7c21a9e241f384fd41",
+            "prefix": "opportunities/upstate_forever_2026/"
+          },
+          "original_payload": {
+            "bytes": 374795,
+            "sha256": "d24d65ea7beeefae398aa00d3e11f6b3440a14a57f05bbff0f2886572bef3103"
+          },
+          "native_run_adoption_source": "cd8c4d9dd37c877bf62ef49036ef4c4c9ffc3bd3",
+          "original_member_inventory": {
+            "model/programme_interactions.py": {
+              "bytes": 30808,
+              "sha256": "8acaff9a620242ae17cc4d06756efa14256198aa28cb7470911e10fc92063a3a"
+            },
+            "docs/programme-interactions.md": {
+              "bytes": 7065,
+              "sha256": "41fb0118f7817ba5d5606a13fbf9a1eddff85b51abcb4b65a304f8158de34783"
+            },
+            "model/compute_programme.py": {
+              "bytes": 92636,
+              "sha256": "7bfaac9fd416a503441038a4716db4b75d2cf8c71db88c4417055c2c686ae4a1"
+            },
+            "model/compute_programme_cli.py": {
+              "bytes": 8954,
+              "sha256": "8e35bffa0669f80a24aeafeb34a166c0d53e436b0a49efa2196345e489932730"
+            },
+            "model/portable.py": {
+              "bytes": 48553,
+              "sha256": "27cd6f5c16d9c8b81b3d5ead461ea9f6ed5f11e2ec22a81222deed4a248b2ea5"
+            },
+            "operator/programmes.py": {
+              "bytes": 13262,
+              "sha256": "e203c6fd581f2bd0c26fdbee47c951f6e270911ee1890e8bebd6748639755993"
+            },
+            "operator/web/programmes.mjs": {
+              "bytes": 78664,
+              "sha256": "b4166ab4d763dc0df5dde77f3164f369b80779104cd260752388cfa8c148bd32"
+            },
+            "install_programmes.py": {
+              "bytes": 22312,
+              "sha256": "3c23eb8407888398fbb95370a2671d924817b7ed54223565c107244698a28b3e"
+            },
+            "operator/web/native-interactions.mjs": {
+              "bytes": 39769,
+              "sha256": "15a086bfc42ed700ea986878d416bde923a015e52447b4c3168945d18520275b"
+            },
+            "PROGRAMME_INTERACTIONS.md": {
+              "bytes": 3826,
+              "sha256": "da317b0e2fc761d78ab7fe4d0a96371de93612f5ed041da9d054c6d20aa709d4"
+            },
+            "install_programme_interactions.py": {
+              "bytes": 10038,
+              "sha256": "602273f37fd706653026bb50f0184cb7b1b36000f3bfa43e1b8906d24a303322"
+            }
+          },
+          "maintained_member_inventory": {
+            "model/programme_interactions.py": {
+              "bytes": 32029,
+              "sha256": "c5ee1b1e185bdff4ae8daeb095a677ede163050b6195b02e0a54be3f7516fe1d",
+              "mode": "100644"
+            },
+            "docs/programme-interactions.md": {
+              "bytes": 9238,
+              "sha256": "49eec1695330380f6f8da551b3d41f225142a6ebb704bde9863d4be9ce1d4950",
+              "mode": "100644"
+            },
+            "model/compute_programme.py": {
+              "bytes": 95604,
+              "sha256": "dc102a0ff059c2e004d33cb5a45ff358d2e91bc3a55a7db33ac99afd2c012b13",
+              "mode": "100644"
+            },
+            "model/compute_programme_cli.py": {
+              "bytes": 8954,
+              "sha256": "8e35bffa0669f80a24aeafeb34a166c0d53e436b0a49efa2196345e489932730",
+              "mode": "100644"
+            },
+            "model/portable.py": {
+              "bytes": 49628,
+              "sha256": "2e46470a7f0096446a396c96f3ae1e6b26b57228c71da94b9fc6c3cffd3fbb3f",
+              "mode": "100644"
+            },
+            "operator/programmes.py": {
+              "bytes": 13262,
+              "sha256": "e203c6fd581f2bd0c26fdbee47c951f6e270911ee1890e8bebd6748639755993",
+              "mode": "100644"
+            },
+            "operator/web/programmes.mjs": {
+              "bytes": 78664,
+              "sha256": "b4166ab4d763dc0df5dde77f3164f369b80779104cd260752388cfa8c148bd32",
+              "mode": "100644"
+            },
+            "install_programmes.py": {
+              "bytes": 23802,
+              "sha256": "b6e086094c3246dc0d88bd8fac2ba643b92e64213e252c6d1ce14c0cbd47d99d",
+              "mode": "100644"
+            },
+            "operator/web/native-interactions.mjs": {
+              "bytes": 39769,
+              "sha256": "15a086bfc42ed700ea986878d416bde923a015e52447b4c3168945d18520275b",
+              "mode": "100644"
+            },
+            "PROGRAMME_INTERACTIONS.md": {
+              "bytes": 5896,
+              "sha256": "839b42c94778e88a8f1d7124ce73a4b98f1a0d6a3810e81a33b2c4b76d17f736",
+              "mode": "100644"
+            },
+            "install_programme_interactions.py": {
+              "bytes": 11024,
+              "sha256": "00ced6bf8c45a354d85a586a29e8475003764d62600baaf86d99295b13abac20",
+              "mode": "100644"
+            }
+          }
+        }
+      }
     },
     "project-continuity": {
       "title": "Complete project continuity",
@@ -1188,7 +1329,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_soil_preparation",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -1453,7 +1595,9 @@
         "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
         "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
         "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
         "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/receptor-topology/20261013/utility-topology-results.json",
         "source/utility-observed-context/20261013/README.md",
         "source/utility-observed-context/20261013/inputs.json",
         "source/utility-observed-context/20261013/regional-nutrient-series.csv",
@@ -1464,6 +1608,7 @@
         "source/utility-observed-context/20261013/utility-station-coverage.csv",
         "source/utility-observed-context/20261013/utility-station-year-method.csv",
         "source/utility-observed-context/20261013/utility-year-coverage.csv",
+        "source/utility-source-context/20261013/inputs.json",
         "source/utility-source-context/20261013/utility-source-context.json",
         "source/water_context/20261013/classified-full-domain-query.json",
         "source/water_context/20261013/classified-reaches.csv",
@@ -1500,7 +1645,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "watershed_source_reporting",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ],
       "source_manifests": [
@@ -1709,7 +1855,11 @@
         "operator/install_native_interactions.py",
         "operator/native_interactions.py",
         "operator/web/native-interactions.css",
-        "operator/web/native-interactions.mjs"
+        "operator/web/native-interactions.mjs",
+        "model/programme_interactions.py",
+        "docs/programme-interactions.md",
+        "PROGRAMME_INTERACTIONS.md",
+        "install_programme_interactions.py"
       ],
       "requires": [
         "core"
@@ -1786,10 +1936,36 @@
             "mode": "100644"
           },
           "operator/web/native-interactions.mjs": {
-            "bytes": 39576,
-            "sha256": "9cb6c436ed7e0cf6cb39887f894374beab65bc387e0960ec45c1a6f05c427825",
+            "bytes": 39769,
+            "sha256": "15a086bfc42ed700ea986878d416bde923a015e52447b4c3168945d18520275b",
+            "mode": "100644"
+          },
+          "model/programme_interactions.py": {
+            "bytes": 32029,
+            "sha256": "c5ee1b1e185bdff4ae8daeb095a677ede163050b6195b02e0a54be3f7516fe1d",
+            "mode": "100644"
+          },
+          "docs/programme-interactions.md": {
+            "bytes": 9238,
+            "sha256": "49eec1695330380f6f8da551b3d41f225142a6ebb704bde9863d4be9ce1d4950",
+            "mode": "100644"
+          },
+          "PROGRAMME_INTERACTIONS.md": {
+            "bytes": 5896,
+            "sha256": "839b42c94778e88a8f1d7124ce73a4b98f1a0d6a3810e81a33b2c4b76d17f736",
+            "mode": "100644"
+          },
+          "install_programme_interactions.py": {
+            "bytes": 11024,
+            "sha256": "00ced6bf8c45a354d85a586a29e8475003764d62600baaf86d99295b13abac20",
             "mode": "100644"
           }
+        },
+        "programme_integration": {
+          "version": "1.0.1",
+          "component": "programme-activity",
+          "native_run_adoption_source": "cd8c4d9dd37c877bf62ef49036ef4c4c9ffc3bd3",
+          "policy": "Adopt exact retained native selections; original engine validates actual executed cohort before attribution."
         }
       }
     },
@@ -2068,7 +2244,12 @@
         "source/implementation/20261013/greenwood-review-plan.json",
         "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
         "source/keowee-native-receiving-20261013/source-interval-journey.json",
-        "source_tools/receive_implementation.py"
+        "source_tools/receive_implementation.py",
+        "model/implementation_outcomes.py",
+        "operator/implementation_outcomes.py",
+        "operator/extensions/implementation-outcomes.json",
+        "operator/web/implementation_outcomes.mjs",
+        "model/IMPLEMENTATION_OUTCOMES_METHOD.md"
       ],
       "requires": [
         "core"
@@ -2986,7 +3167,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_gauge_support",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -3021,8 +3203,11 @@
         "eighteenmile_lake_paired_analysis.sources.json",
         "eighteenmile_routine_nutrient_flow.sources.json",
         "eighteenmile_scientific_figures.sources.json",
+        "model/NATIVE_PROCESS_QUANTITIES.md",
+        "model/native_process_report.py",
         "model/observations.py",
         "model/observed_context.py",
+        "model/process_quantities.py",
         "model/scientific_figures.py",
         "model/scientific_report.py",
         "observations/calibration_context_20261013/README.md",

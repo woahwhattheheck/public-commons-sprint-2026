@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "gauge-support",
   "title": "Gauge support",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 45,
   "assets": [
     "gauge_support.mjs",
@@ -63,6 +63,20 @@
         ],
         "path": "/api/gauge-support/verify",
         "operation": "verify",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/gauge-support/report",
+        "operation": "report",
         "handler": "read",
         "args": [
           "workspace_key",

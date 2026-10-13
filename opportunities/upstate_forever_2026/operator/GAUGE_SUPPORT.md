@@ -159,6 +159,18 @@ Outputs include analysis.json; gauges, HUC intersections, annual coverage, utili
 The shared extension registers a Workspace verification callback. It checks saved outputs, every original source, the linked original station edition and the exact saved regional report. The component uses existing original-data readers, source retention, task queue, verified download tickets, extension host and portable engine.
 
 
+## Download a scientific report from a saved Gauge edition
+
+Open a saved Gauge support edition and choose **Download scientific report**. The same operator queue registers its original report source and renders the saved scientific tables through the maintained formatter. The completed view provides **report.pdf**, **report.html**, **report.md**, **report-data.json** and **gauge-scientific-report.zip**. The ZIP retains the original source recipe and importable manifest, every original companion, maps, source packages, full report formats and the exact source selection. Extract the ZIP before following its relative source and map links.
+
+This action uses the saved Gauge analysis directly. The ordinary scientific/client report form remains available through **Use in scientific report** and **Open prepared report form** for a delivery that includes model runs and other studies. Choosing an existing delivery only changes the offered combined delivery selection; the directly downloaded Gauge report remains bound to this one saved edition.
+
+Standalone report outputs are retained in the original Workspace below the source operation's `reports/RENDER_ID/` directory. The render identity binds the exact source selection and the collector, formatter, scientific figure renderer and Gauge producer file hashes. Repeating an unchanged complete render verifies and reuses all retained members. A changed formatter produces a separate release. The browser reopens completed downloads from the saved edition using fresh verified file tickets.
+
+HTML, Markdown and report data are retained before the PDF step. If PDF rendering or archive completion fails, the saved operation records its actual error and the same edition exposes any completed formats alongside the original source package. Retry **Download scientific report** after correcting that error; the existing source preparation is reused.
+
+PDF rendering requires the existing ReportLab dependency used by the shared scientific formatter. The source import and saved support report retain the application’s current dependencies. This report action neither runs a watershed model nor changes a source quantity.
+
 ## Use a saved edition in the scientific or client report
 
 Open a saved Gauge support edition and choose **Use in scientific report**. The existing operator queue prepares a report source from that exact saved edition, imports it into the same Workspace and offers **Open prepared report form**. The current scientific/client delivery form then uses the registered source. A completed source action remains available under Saved operations after reconnect.
@@ -181,7 +193,9 @@ From the current complete application:
   --edition-id "$GAUGE_EDITION_ID"
 ~~~
 
-The last command verifies the selected saved result and its original package, writes the complete report source and imports it through `Workspace.import_sources`. Its JSON returns the exact `source`, `observed_context_binding`, `delivery_selection`, original edition/report IDs and verified files.
+The last command verifies the selected saved result and its original package, writes and imports the complete report source through `Workspace.import_sources`, then renders PDF, HTML, Markdown, structured data and the complete ZIP. Its JSON returns the exact `source`, `observed_context_binding`, `delivery_selection`, original edition/report IDs, `report` release and verified files. Every returned file path is relative to the same Workspace root.
+
+Append `--source-only` to import the full source and prepare a combined delivery selection without rendering. Append `--inspect` to reopen the last standalone operation, its actual error if present and all retained verified output descriptors without recomputing the report.
 
 Append `--delivery-id "$SAVED_DELIVERY_ID"` to start from a specific retained delivery selection. The returned `delivery_selection` preserves the complete existing selection and appends the newly registered source. It removes the previous observed-source binding so the normal delivery builder binds the current ordered sources.
 
@@ -191,7 +205,7 @@ Use `--prepare-only` when preparing files without source import. The returned `m
 "$PYTHON" -B -m model.cli --workspace "$WORKSPACE" source-import "$WORKSPACE/$MANIFEST_PATH"
 ~~~
 
-The module also exposes `prepare(workspace, edition_id, import_source=True, delivery_id=None)`. The shared operator action is `gauge.support.report` with payload `{edition_id, delivery_id?}`. It runs on the existing task queue and verified download transport.
+The module also exposes `prepare(workspace, edition_id, import_source=True, delivery_id=None, render=True)` and `latest(workspace, edition_id)`. Use `render=False` when preparing source files only; `import_source=False` additionally skips native source registration. The shared operator action is `gauge.support.report` with payload `{edition_id, delivery_id?, render?}`. Rendering defaults to true; the existing **Use in scientific report** button sends `render:false`. The `/api/gauge-support/report` read reopens the retained report for `edition_id`. Both modes run on the existing task queue and verified download transport.
 
 ### Retention and reopen
 
@@ -201,7 +215,7 @@ The native manifest is `gauge-report.sources.json`. Its single document source i
 
 The existing full Workspace backup retains the saved gauge edition, linked regional and station editions, registered source objects, queued operation, prepared report package and completed deliveries. Restore that same Workspace and reopen the source/delivery IDs returned by the original operation. The original Gauge support ZIP remains the report/source package for recipients who need the original analysis and all its inputs.
 
-Receiving continuation remains the original regional operation 1791859874 and source handoff 1791866330. After the original gauge build completes, run this report source action in that same Workspace, open the existing scientific/client report form, generate the normal report/data/archive, then restore the completed Workspace and reopen those same IDs. Return the actual source collection/document identity and resulting report/archive paths to the original operation.
+Receiving continuation remains the original regional operation 1791859874 and source handoff 1791866330. After the original gauge build completes, run this report action in that same Workspace and retain its direct PDF/HTML/Markdown/data/ZIP outputs. Restore the completed Workspace and reopen the same Gauge edition and report downloads. When an actual model delivery is selected, use the existing scientific/client report form to compose this retained source with its original runs and other studies. Return the actual source collection/document identity and resulting report/archive paths to the original operation.
 
 ## Component files
 

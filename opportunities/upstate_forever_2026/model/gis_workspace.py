@@ -1,6 +1,7 @@
 """Original Workspace -> explicit editable GIS request; no replacement scientific engine."""
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from . import gis_project as gis
 
@@ -58,6 +59,12 @@ def source_layer(workspace, selection: dict) -> dict:
                       "units": entry.get("units"), "conversion": entry.get("conversion"),
                       "received_gis":entry.get("received_gis")},
            "visible": selection.get("visible", False)}
+    # Keep explicit scientific metadata with the portable originals and working layer.
+    # These are the retained source's own values, not inferred units or geography.
+    for key in ("provenance", "webmap_source", "scientific_metadata", "geography_basis",
+                "original_fields", "field_vintages"):
+        if key in entry:
+            row["source"][key] = deepcopy(entry[key])
     for key in ("layer", "where", "band", "metric", "direction"):
         if key in selection:
             row[key] = selection[key]
