@@ -579,3 +579,14 @@ Queue responses return the actual job ID. Read that job through
 `/api/state` and its saved original destination through
 `/api/migration` to continue after a disconnected browser. Reopening
 the same workspace resumes from retained local state.
+
+
+## Collections: original institutional files
+
+**Collections** uses the same local Workbench, queue, saved jobs, Delivery downloads and complete workspace export. It retains a frozen original directory with exact paths/lengths/hashes and empty directories, a complete accession reference and immutable review history. A collection-only workspace is supported; the existing research source directory can remain absent.
+
+The [complete collection guide](COLLECTION_ACCESSION.md) covers original inspection, exact retention, metadata and rights decisions, per-file reasons, complete JSON draft import and explicit difference choices, verified BagIt, full source/workspace receiving and cold reopen. Original research-provider destinations keep their existing source profile. Generic original-file collection bags require the selected target’s own reviewed import contract.
+
+The source closure additionally includes `research/preservation/collection_accession.py`, `collection_accession.js` `COLLECTION_ACCESSION.md`, and both complete `receiving/collection_accession_receive.py` / `receiving/collection_accession_browser.mjs` manual programmes. Native source binding and complete archive receiving verify that whole group. Interrupted private accession staging data remains in complete backups; it is not shown as a completed accession.
+
+Collection API routes are `GET /api/accessions`, `GET /api/accession?id=ID`, and POST `/api/accession-inspect`, `/api/accession-init`, `/api/accession-review`, `/api/accession-build`. All use the existing Host/Origin and workspace token checks. Review save checks the original expected revision; queued actions use the original operation record and shared server lifecycle.
