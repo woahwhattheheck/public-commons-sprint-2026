@@ -340,3 +340,69 @@ If producing video, record the actual working application and use available natu
 Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+
+
+## Original geographic assumptions in saved study reports
+
+The geographic preparation and the completed square example retain separate
+source editions. A geographic profile declares `geographic-edition:<id>` and
+its original source collection. Scope helper version 2 follows that exact
+reference only within the same retained collection. It admits document URIs
+with the exact `upstate.geographic-headwaters:<id>/<member>` identity; it does
+not select unrelated documents by filename, title, geographic proximity, or
+the active Workspace's latest preparation.
+
+The saved source now carries the admitted geographic assumptions, original
+topology, geographic selection and binding, complete producer and matching
+source, and every original companion attached to those entries. The
+geographic selection's companions include the original matching summary,
+complete matching-pair CSV, implementation/source receipts and retained
+original inputs. Original bytes, source entry metadata, collection records,
+companion paths and SHA-256 identities are preserved by the existing native
+source retention. The source package and editable Study transfer use this
+same captured lineage.
+
+The report displays the actual source declarations: simulated physical fields
+and terrain, the meaning of the `measured-runoff` coefficient enum, declared
+model parameters, the computational domain and reporting intersection, and
+the original utility/intake relationships. Vector-union hectares, prepared
+pixel-centre cells/hectares, and completed native finite-output support are
+separate quantities. The source's matching method, whole-input precipitation
+normalization, class counts and recorded rainfall residuals are copied as
+issued. An exact or greedy method is never inferred from a case title.
+
+The original per-HUC preparation table shows restoration cells and original
+81/82 classes only. It does not establish a same-area control in each HUC.
+Matching across the full reporting union can allocate control to different
+HUCs or utility footprints. The maintained separate spatial-allocation
+product supplies those local comparisons. Nested protection footprints may
+overlap; only an explicit union is an unduplicated total. Native benefit
+comparisons still require the applicable common finite output support, and
+annual stream export remains distinct from an intake-delivery or
+concentration calculation.
+
+This is a source and presentation continuation. It changes neither a saved
+profile nor grid, scenario, native run, matching selection or physical
+quantity. The existing producer includes the scope helper's exact source
+hash in its operation identity and currentness check. Explicitly preparing
+the same saved ensemble therefore creates a new immutable scientific source
+and report presentation; earlier reports and their original transfer receipts
+remain retained. The native scientific-source version stays 2.
+
+At the existing report boundary, use the current complete application:
+
+```python
+from model.ensemble_study_source import prepare
+result = prepare(workspace, actual_ensemble_id, render=True)
+```
+
+Continue through the original ordered Scientific Reports and selected Study
+workflow. Open the exact generated HTML, PDF, source links, original matching
+CSV and complete archive; inspect the source classification, geographic and
+matching tables at desktop and narrow widths, then reopen the exported
+editable Study with its own archived application. Report the actual outputs
+or concrete exception in the same accepted native operation. Do not restart
+a model merely to refresh this presentation. The current owner direction
+`CURRENT_OWNER_DIRECTION.md` version `2026-10-13.3`, original native writer,
+14:00 UTC cutoff and actual outgoing-attachment viewing requirement remain
+in effect.
