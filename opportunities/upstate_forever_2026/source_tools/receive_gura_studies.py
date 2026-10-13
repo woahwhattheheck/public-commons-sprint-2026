@@ -215,17 +215,17 @@ def main(argv=None):
     application = args.application.resolve(strict=True)
     sys.path.insert(0, str(application))
     sys.path.insert(0, str(application / "source_tools"))
-    import receive_gura_reference as receiver
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_NUM_THREADS", "1")
+    os.environ.setdefault("GDAL_CACHEMAX", "64")
+    import receive_gura_native as receiver
     from receive_gura_planning import original_baseline
     from model import parameter_studies
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
 
-    os.environ.setdefault("OMP_NUM_THREADS", "1")
-    os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-    os.environ.setdefault("MKL_NUM_THREADS", "1")
-    os.environ.setdefault("GDAL_CACHEMAX", "64")
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
     receiving.mkdir(parents=True, exist_ok=True)
