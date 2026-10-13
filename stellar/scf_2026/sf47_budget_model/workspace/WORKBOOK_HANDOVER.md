@@ -147,12 +147,6 @@ This reopens the original final-workbook-handover/planning.zip in a private rece
 - [SpreadsheetML formulas and stored results](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-formulas)
 - [Microsoft's explanation of Excel numeric precision](https://learn.microsoft.com/en-us/troubleshoot/microsoft-365-apps/excel/floating-point-arithmetic-inaccurate-result)
 
-## Public distribution
+## Workbook receiving through Merchant MCP
 
-The public distribution registers `starforge grant-source-tables` alongside the existing `starforge grant-workspace` command. Open **Source tables** in that original native planning application, or use the CLI sequence above against the same saved workspace. Its complete source-table document stays inside each native planning revision and the original full planning ZIP.
-
-The original application reader accepts that full ZIP in **Planning edition**. Review its complete source and changes there, select the intended work packages in **Operating plans**, and retain the received plan in the complete application handover.
-
-An explicitly selected earlier revision exports its complete consecutive history through that revision. Later revisions remain in the source workspace. An interrupted workbook handover or save resumes with its original plan, revision and request identity.
-
-The maintained workbook receiving programme in `examples/source-tables/receive-current-budget-workbook-handover.mjs` exercises the complete original workflow, including saved-workspace receiving, workbook return, native preview/save, browser use and independent reopen.
+The existing Grant agent can inspect original sheets, retain complete projections and return profiles, review all four collections, save the exact native preview and deliver an exact saved-plan workbook revision. The full archive and four original member files remain available through existing snapshot/chunk downloads, including completed handover recovery after Merchant restart. Continue the same original workbook case with receive-current-budget-workbook-mcp.mjs. See [SOURCE_TABLES_AGENT.md](SOURCE_TABLES_AGENT.md) for the complete operating sequence and original-case command.

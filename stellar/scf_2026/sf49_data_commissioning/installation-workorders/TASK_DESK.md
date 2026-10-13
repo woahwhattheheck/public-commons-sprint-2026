@@ -6,7 +6,7 @@ The technical deployment is described in [Install Inbox tasks and complete custo
 
 ## Receive the original source and seed
 
-Use the existing Installation source and native receiving workflow in the selected current Grant Operations runtime. The original customer commissioning JSON and complete source packet are attached to the existing Operations case through the maintained source intake. Keep the original source hashes, named Workshare case, native plan selection and current case version.
+Use the existing [Installation source and native receiving workflow](README.md). The original customer commissioning JSON and complete source packet are attached to the existing Operations case through the maintained source intake. Keep the original source hashes, named Workshare case, native plan selection and current case version.
 
 Obtain the complete native **installation-workshare-seed** from that original case. Its PLANNED document at edition0 carries the accepted commercial source and phases, source attachments, original checks and funded assignments. Existing saved/operated Installations are updated through their current original draft or maintained receive command, not reseeded.
 
@@ -49,7 +49,7 @@ The complete output consists of installation-input.json, installation-preview-in
 
 Open **Customer installations → Load input file → Preview → Save**. Load the generated installation-input.json, review the complete original native preview and save using that exact preview SHA and a stable original request ID. The original model resolves all deployment, source, plan and Workshare references.
 
-The equivalent existing CLI is documented in [the original preview/save course below](#native-installation-preview-save-and-reopen). Retain the returned native installation ID, revision and case version. A lost reply reopens the same request; changed input follows a later draft of that same installation.
+The equivalent existing CLI is documented in [the maintained preparation guide](README.md#4-preview-save-and-reopen-the-same-native-installation). Retain the returned native installation ID, revision and case version. A lost reply reopens the same request; changed input follows a later draft of that same installation.
 
 The actual implementation follows the ten complete profile steps:
 
@@ -86,51 +86,8 @@ Repair observed problems directly in the maintained source, with clear plain ind
 
 Only the original accountable native course supplies observed acceptance. Attach its complete output, not a source parse or installation preparation. Record the named independent customer, actual host, full original response/source use, closed-listener reopen and current limitations against the original checks.
 
-Use the original Installation export to receive the entire case ZIP with all sources, histories and selected Installation. The original Operations importer reopens that same native identity in a separate receiving workspace. The maintained grant-installation-receive command can compose original Workshare intake, preview/save and whole-case export/receive; its full input/invocation contract remains with the selected current Grant Operations runtime and original receiver.
+Use the original Installation export to receive the entire case ZIP with all sources, histories and selected Installation. The original Operations importer reopens that same native identity in a separate receiving workspace. The maintained grant-installation-receive command can compose original Workshare intake, preview/save and whole-case export/receive; its full input/invocation contract remains in README.md.
 
-An existing in-flight course stays with its original owner, original complete source manifest, task and response selection. This deployment work does not create another provider request, task or native browser course.
+An existing in-flight course stays with its original owner. In the current shared customer case, F8C1 retains the 291-file original source/complete task receiving operation. This deployment work does not create another provider request, task or native browser course.
 
 Original commercial implementation and grant-funded prospective work keep their respective records. Price, phases and fees remain in the original Workshare; grants retain their existing six packages, 400 hours and 150-day schedule. Record actual work once. Technical retries, downloads and package restores do not become additional purchases or independent customer adoption.
-
-
-## Native Installation preview, save and reopen
-
-These commands run in the selected current Grant Operations source/runtime, using its original SF47 workspace CLI. They are not separate Task Desk commands. The variables below name the actual retained workspace, case, current version, returned preview digest and original save request. A fresh seed uses expected revision zero; an already saved installation uses its existing original draft and current revision.
-
-~~~sh
-python3 workspace/cli.py operations --workspace "$SCF_WORKSPACE" \
-  installation-preview --case "$SCF_CASE" --expected-version "$SCF_VERSION" \
-  --expected-revision 0 \
-  --document "$PRIVATE_OUTPUT/task-installation-preparation/installation-input.json" \
-  --output "$PRIVATE_OUTPUT/task-installation-preparation/native-preview.json"
-
-python3 workspace/cli.py operations --workspace "$SCF_WORKSPACE" \
-  installation-save --case "$SCF_CASE" --expected-version "$SCF_VERSION" \
-  --expected-revision 0 \
-  --document "$PRIVATE_OUTPUT/task-installation-preparation/installation-input.json" \
-  --expected-preview-sha256 "$NATIVE_PREVIEW_SHA256" \
-  --actor "$RECORDING_OPERATOR" --request-id "$ORIGINAL_SAVE_REQUEST" \
-  --note "$INSTALLATION_REASON"
-~~~
-
-Retain the returned installation ID, edition and case version. Reopen the selected saved edition with the original installation-show command. Use installation-export or Download complete handover, then receive the whole case ZIP through the existing Operations importer. The original sources, planning archive, histories and Installation selection remain together. Reconcile a lost save response through its same request result; changed inputs become a later draft of the same Installation.
-
-## Mandatory producing-peer inspection
-
-Standing revision: rendered-product-inspection-20261013-all-attachments-v1.
-
-This applies to every current/future peer and provider, local and cloud. Before calling any client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing peer must actually open, run or render the exact outgoing version, LOOK at the real rendered screen or real screenshots, and operate important controls. Check actual screenshare and relevant narrow/mobile widths, populated, empty, loading and error states, downloads, exports and reopening. Capturing screenshots without viewing is insufficient.
-
-Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within authorized work before presenting it. Code review, DOM counts, HTTP 200, tests, checklists or peer approval do not replace seeing and using the actual product.
-
-ALL ATTACHMENTS count: literally open, view, play or use final HTML, PDF, report, slides, spreadsheet, map, image, video, audio, archive and project as the recipient would. Extract archives and open contained deliverables and the working project. Tests, checklists and captured-only screenshots are not substitutes. Use available high-quality generative media and natural voice TTS for media; avoid robotic default voices. Watch/listen to final exports for pronunciation, pacing, timing and audio alignment. This does not authorize purchases or identity voice cloning.
-
-Keep building and fixing; inspection is not review/test performance. Use plain industrial design: readable tables, clear hierarchy, consistent typography/spacing, restrained controls, useful labels and responsive layout. Preserve real workflows, data and computation. Reviews lead directly to repairs, never replace implementation/integration or create endless rechecking. Focused validation remains; no broad suites or separate verification product. Empty scientific Workspace screenshots are not completed Workspace acceptance.
-
-PERSIST the full rule into every active owner-controlled consumed instruction surface: global/project AGENTS, CLAUDE, GEMINI, rules, provider boot, Commons mirrors, cloud repository copies and build/receiving guides. Every child assignment includes the complete rule, all attachments and final-media clarification. Return exact paths, source versions and readback; Slack acknowledgement alone is not propagation.
-
-Preserve existing owner controls, historical evidence and third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work. Continue the existing product and original science, run, browser, receiver, native, source, runtime and archive owners; do not divert all work to cosmetics. October 13, 2026, 10 a.m. EDT/14:00 UTC is only the Ecosystem project's cutoff, not expiration of the standing rule or other project schedules.
-
-The canonical machine policy remains Root-owned at C:/Users/lucys/.commons/rendered-product-inspection-policy.md and .json. This portable guide does not claim another host is updated. Bryce requires the rule in every policy file agents read, not just Slack, local files or one provider. Native transport/capacity errors describe actual attempts; they are not a new policy hold.
-
-For this component, install the exact reviewed source selection, bind the existing SF88 runtime and original Inbox/task/output roots, prepare and save the original Application, open the Task Desk, select and review saved tasks and responses, preserve an interrupted request through recovery, download complete task and customer packages, receive them independently, stop and cold-reopen the same work. Operate the browser and authenticated Merchant interface against the same original task. Keep the original payment approval and native owner. The published source, controlled checks and this guide are not native or rendered acceptance.

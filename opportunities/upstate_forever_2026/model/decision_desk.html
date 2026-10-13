@@ -47,11 +47,13 @@
 <button id="tab-overview" role="tab" aria-controls="panel-overview" aria-selected="true" data-tab="overview">Alternatives</button>
 <button id="tab-detail" role="tab" aria-controls="panel-detail" aria-selected="false" tabindex="-1" data-tab="detail">Selected case</button>
 <button id="tab-sensitivity" role="tab" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1" data-tab="sensitivity">Sensitivity</button>
+<button id="tab-lifecycle" role="tab" aria-controls="panel-lifecycle" aria-selected="false" tabindex="-1" data-tab="lifecycle" hidden>Lifecycle</button>
 <button id="tab-methods" role="tab" aria-controls="panel-methods" aria-selected="false" tabindex="-1" data-tab="methods">Methods &amp; sources</button>
 </div>
 <section id="panel-overview" class="panel" role="tabpanel" aria-labelledby="tab-overview"></section>
 <section id="panel-detail" class="panel" role="tabpanel" aria-labelledby="tab-detail" hidden></section>
 <section id="panel-sensitivity" class="panel" role="tabpanel" aria-labelledby="tab-sensitivity" hidden></section>
+<section id="panel-lifecycle" class="panel" role="tabpanel" aria-labelledby="tab-lifecycle" hidden></section>
 <section id="panel-methods" class="panel" role="tabpanel" aria-labelledby="tab-methods" hidden></section>
 </div>
 </div>
@@ -82,6 +84,7 @@ let report=null, state={filters:defaultFilters(),selected:null,tab:"overview",me
 function checkReport(value){
  if(!value||typeof value!=="object"||Array.isArray(value)||value.schema!==SCHEMA)throw Error("Choose a report with schema "+SCHEMA+".");
  if(!value.scope||!value.baseline||!Array.isArray(value.alternatives))throw Error("The report needs scope, baseline and alternatives records.");
+ checkLifecycleReport(value);
  const ids=new Set();
  for(const item of value.alternatives){
   if(!item||typeof item.id!=="string"||!item.id||ids.has(item.id))throw Error("Every alternative needs a unique non-empty id.");
@@ -150,7 +153,7 @@ function loadReport(value,view){
  if(view&&typeof view==="object"){
   if(view.filters)next.filters=cleanFilters(view.filters);
   if(typeof view.selected==="string")next.selected=view.selected;
-  if(["overview","detail","sensitivity","methods"].includes(view.tab))next.tab=view.tab;
+  if(["overview","detail","sensitivity","methods","lifecycle"].includes(view.tab)&& (view.tab!=="lifecycle"||checked.lifecycle))next.tab=view.tab;
   if(METRICS.some(m=>m.key===view.metric))next.metric=view.metric;
   if(["label","cost",...METRICS.map(m=>m.key)].includes(view.sort))next.sort=view.sort;
   next.descending=view.descending===true;if(typeof view.notes==="string")next.notes=view.notes;next.retain_unmodeled_targets=view.retain_unmodeled_targets!==false;
@@ -168,6 +171,7 @@ function render(){
  byId("study-info").innerHTML+=fact("Modeled quantities",METRICS.map(m=>m.name).join(", "),false);
  byId("footer-state").textContent="Report "+report.id+" · "+report.schema;
  const rows=visible();byId("filter-summary").textContent=rows.length+" of "+report.alternatives.length+" alternatives match this view. Modeled quantities: "+METRICS.map(m=>m.name).join(", ")+".";
+ byId("tab-lifecycle").hidden=!report.lifecycle;byId("panel-lifecycle").innerHTML=lifecycleReportMarkup(report);if(state.tab==='lifecycle'&&!report.lifecycle)state.tab='overview';
  renderOverview(rows);renderDetail();renderSensitivity();renderMethods();setTab(state.tab,false);
 }
 function tableHead(key,label,num){const arrow=state.sort===key?(state.descending?" ↓":" ↑"):"";return '<th'+(num?' class="num"':"")+' scope="col"><button class="sort-button" data-sort="'+key+'">'+escapeHtml(label+arrow)+"</button></th>";}
@@ -214,6 +218,67 @@ function supportTable(item){
  if(native.length){html+='<h4 style="margin-top:18px">Native reporting coverage</h4><div class="table-wrap"><table><thead><tr><th>Pollutant</th><th class="num">Common valid / selected cells</th><th class="num">Structural stream cells</th><th class="num">Cells needing source review</th><th class="num">Outside native extent · ha</th></tr></thead><tbody>';for(const m of native){const c=item.outputs[m.key].support.native_coverage;html+="<tr><td>"+m.name+'</td><td class="num">'+(finite(c.common_valid_fraction)?fmt(c.common_valid_fraction*100)+"%":"—")+'</td><td class="num">'+fmt(c.common_structural_stream_cells,0)+'</td><td class="num">'+fmt(c.unresolved_common_cells,0)+'</td><td class="num">'+fmt(c.outside_native_extent_ha)+"</td></tr>";}html+="</tbody></table></div><p class='small muted' style='margin-top:10px'>Coverage uses the original reporting polygon and its selected pixel centres. Structural stream cells follow the native model’s stream mask. The paired mass comparison uses the common valid cells shown above.</p>";}
  return html;
 }
+function checkLifecycleReport(report){
+  const l=report?.lifecycle;if(l===undefined||l===null)return;
+  const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+  if(!object(l)||l.schema!=='upstate.lifecycle-report/v1'||!object(l.settings)||!Array.isArray(l.scenarios)||!Array.isArray(l.methodology))throw Error('The retained lifecycle report is incomplete or has an unsupported schema.');
+  const known=new Set((report.alternatives||[]).map(r=>r.run_id)),seen=new Set();
+  for(const s of l.scenarios){
+    if(!object(s)||!known.has(s.run_id)||seen.has(s.run_id)||!Array.isArray(s.cashflows)||!Array.isArray(s.benefit_years)||!Array.isArray(s.cases))throw Error('Retain complete distinct lifecycle scenarios from this original report.');
+    seen.add(s.run_id);
+    if(s.cashflows.some(r=>!object(r)||!object(r.source))||s.benefit_years.some(r=>!object(r)||!object(r.outputs))||s.cases.some(r=>!object(r)||!object(r.metrics)))throw Error('Retain complete cash-flow, annual benefit and sensitivity rows.');
+  }
+}
+
+
+/** Pure presentation of the retained Python result; safe to inline in the standalone desk. */
+function lifecycleReportMarkup(report,selectedRunId=null){
+  const lifecycle=report?.lifecycle;if(!lifecycle)return '';checkLifecycleReport(report);
+  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const number=value=>typeof value==='number'&&Number.isFinite(value)?new Intl.NumberFormat(undefined,{maximumSignificantDigits:12}).format(value):'Unavailable';
+  const labels={nitrogen_export:'Nitrogen',phosphorus_export:'Phosphorus',sediment_export:'Sediment'};
+  const kindNames={establishment:'Establishment',maintenance:'Maintenance',replacement:'Replacement',other:'Other gross cost',assistance:'Assistance received',salvage:'Salvage received'};
+  const link=value=>{
+    if(!value)return 'Reference not retained';
+    let href='';try{const parsed=new URL(value.uri||'');if(['http:','https:'].includes(parsed.protocol))href=parsed.href;}catch{}
+    return (href?'<a target="_blank" rel="noopener noreferrer" href="'+escape(href)+'">'+escape(value.title||value.uri)+'</a>':escape(value.title||value.uri))+
+      (value.uri?'<div class="elr-ref">'+escape(value.uri)+'</div>':'')+(value.as_of?' · as of '+escape(value.as_of):'');
+  };
+  const cell=value=>'<td>'+escape(value)+'</td>';
+  const table=(head,rows,caption)=>'<div class="elr-table"><table><caption>'+escape(caption)+'</caption><thead><tr>'+head.map(x=>'<th scope="col">'+escape(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+  const settings=lifecycle.settings||{},currency=settings.currency||'',basis=settings.price_basis==='constant'?'Constant prices; real discount rate':settings.price_basis==='nominal'?'Nominal dated amounts; nominal discount rate':settings.price_basis||'Unspecified price basis';
+  const style='<style>.economic-lifecycle-report{margin-top:22px;border-top:1px solid #bfc4c7;padding-top:18px;color:#25292c;font:14px/1.5 Arial,Helvetica,sans-serif}.economic-lifecycle-report *{box-sizing:border-box}.economic-lifecycle-report h3{font-size:18px;margin:0 0 10px}.economic-lifecycle-report h4{font-size:15px;margin:20px 0 8px}.economic-lifecycle-report p{margin:8px 0}.economic-lifecycle-report details{border:1px solid #c9cdd0;padding:12px;margin:14px 0;background:#fff}.economic-lifecycle-report summary{font-weight:650;cursor:pointer;overflow-wrap:anywhere}.economic-lifecycle-report .elr-note{color:#50575b;font-size:13px}.economic-lifecycle-report .elr-ref{font:11px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}.economic-lifecycle-report .elr-table{overflow-x:auto;margin:12px 0}.economic-lifecycle-report table{width:100%;border-collapse:collapse;font-size:12px}.economic-lifecycle-report caption{text-align:left;padding:6px 0;font-weight:600;color:#3f464b}.economic-lifecycle-report th,.economic-lifecycle-report td{padding:8px;border-bottom:1px solid #d3d7da;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.economic-lifecycle-report thead{background:#f0f2f3}.economic-lifecycle-report .elr-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:10px;margin:12px 0}.economic-lifecycle-report .elr-fact{padding:10px;border:1px solid #cbd0d3;background:#f5f6f7;overflow-wrap:anywhere}.economic-lifecycle-report .elr-fact span{display:block;font-size:12px;color:#53595e}.economic-lifecycle-report .elr-fact strong{display:block;font-size:15px;margin-top:3px}.economic-lifecycle-report .elr-warning{border:1px solid #7b8288;padding:10px}.economic-lifecycle-report a{color:#253038;text-underline-offset:2px}.economic-lifecycle-report pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f5f6;padding:10px;font-size:12px}@media print{.economic-lifecycle-report{font-size:10pt}.economic-lifecycle-report .elr-table{overflow:visible}.economic-lifecycle-report details{break-inside:auto}.economic-lifecycle-report th,.economic-lifecycle-report td{padding:4px;font-size:9pt}.economic-lifecycle-report thead{display:table-header-group}}@media(max-width:600px){.economic-lifecycle-report details{padding:8px}.economic-lifecycle-report th,.economic-lifecycle-report td{padding:6px}}</style>';
+  let html=style+'<section class="economic-lifecycle-report" aria-label="Dated lifecycle results"><h3>Dated lifecycle results</h3><p>'+escape(basis)+' · '+escape(currency)+'. Price reference '+escape(settings.price_date)+'; start '+escape(settings.start_date)+'; horizon '+escape(settings.horizon_years)+' years. Discount rate '+number(settings.discount_rate)+' (decimal).</p>'+
+    '<p class="elr-note">These calculations use the separately authored schedule. The original upfront-plus-annual budget and Pareto decisions remain unchanged. Each pollutant keeps its own mass unit. Discounted mass is a time-weighted decision quantity, not an additional physical model output or measured benefit.</p>'+
+    (settings.note?'<p>'+escape(settings.note)+'</p>':'');
+  const scenarios=(lifecycle.scenarios||[]).filter(row=>selectedRunId===null||row.run_id===selectedRunId);
+  if(!scenarios.length)return html+'<p class="elr-note">This original scenario has no authored lifecycle schedule in the retained edition.</p></section>';
+  for(const s of scenarios){
+    const original=(report.selection?.lifecycle?.scenarios||[]).find(row=>row.run_id===s.run_id)||{},base=(s.cases||[]).find(row=>row.id==='base');
+    html+='<details open><summary>'+escape(s.label||s.run_id)+'</summary><p class="elr-ref">Original native run '+escape(s.run_id)+'</p>'+
+      (s.note?'<p>'+escape(s.note)+'</p>':'')+'<p class="elr-note">Trajectory source: '+link(s.trajectory_source||original.trajectory_source)+'</p>';
+    if(!s.support_ready)html+='<p class="elr-warning">The complete scenario lacks the required shared physical support. Dated cost calculations remain visible; lifecycle load totals and unit-value ratios are unavailable.</p>';
+    if(base)html+='<div class="elr-facts">'+[
+      ['Gross present cost',base.gross_present_value],['Assistance present value',base.assistance_present_value],['Salvage present value',base.salvage_present_value],['Net present cost',base.net_present_value],['Gross annual equivalent',base.gross_annual_equivalent],['Net annual equivalent',base.net_annual_equivalent]
+    ].map(([label,value])=>'<div class="elr-fact"><span>'+label+'</span><strong>'+number(value)+' '+escape(currency)+(label.includes('annual')?'/year':'')+'</strong></div>').join('')+'</div>';
+    html+='<h4>Authored and sensitivity cases</h4>'+table(['Case','Discount rate','Gross-cost factor','Benefit factor','Gross present cost','Assistance PV','Salvage PV','Net present cost','Gross annual equivalent','Net annual equivalent'],(s.cases||[]).map(row=>'<tr>'+
+      [row.label||row.id,number(row.discount_rate),number(row.cost_multiplier),number(row.benefit_multiplier),number(row.gross_present_value),number(row.assistance_present_value),number(row.salvage_present_value),number(row.net_present_value),number(row.gross_annual_equivalent),number(row.net_annual_equivalent)].map(cell).join('')+'</tr>'),'All amounts in '+currency+'; annual equivalents in '+currency+'/year')+
+      '<p class="elr-note">Cost multipliers affect gross cost kinds only; assistance and salvage remain fixed. A negative net cost is shown explicitly. No assistance eligibility, escalation, tree growth or monetary environmental value is inferred.</p>';
+    const metricRows=[];for(const row of s.cases||[])for(const[metric,m]of Object.entries(row.metrics||{}))metricRows.push('<tr>'+
+      [row.label||row.id,labels[metric]||metric,number(m.annual_native_reduction)+' '+(m.units||'')+'/year',number(m.total_avoided_load)+' '+(m.units||''),number(m.discounted_avoided_load)+' '+(m.units||''),number(m.gross_cost_per_total_unit),number(m.net_cost_per_total_unit),number(m.gross_break_even_unit_value),number(m.net_break_even_unit_value),m.unit_value_units||''].map(cell).join('')+'</tr>');
+    html+='<h4>Separate pollutant totals and threshold values</h4>'+table(['Case','Pollutant','Native annual reduction','Undiscounted avoided mass','Discounted avoided mass','Gross cost / undiscounted mass','Net cost / undiscounted mass','Gross break-even unit value','Net break-even unit value','Unit-value units'],metricRows,'Retained modeled support and explicit annual trajectory')+
+      '<p class="elr-note">Break-even unit value divides present cost by discounted avoided mass. It is a threshold to compare with a separately justified valuation, not a claim that benefits have been monetized. Ratios require positive mass and complete shared support. Signed zero or adverse load changes remain visible in the underlying rows.</p>';
+    html+='<h4>Dated cash flows</h4>'+table(['Date','Label / type','Amount','Elapsed years','Discount factor','Present value','Source and notes'],(s.cashflows||[]).map(row=>'<tr>'+cell(row.date)+cell((row.label||row.id)+' · '+(kindNames[row.kind]||row.kind))+cell(number(row.amount)+' '+currency)+cell(number(row.time_years))+cell(number(row.discount_factor))+cell(number(row.present_value)+' '+currency)+'<td>'+link(row.source)+(row.note?'<p>'+escape(row.note)+'</p>':'')+'</td></tr>'),'Original authored amounts and base-case discounting');
+    if(!(s.cashflows||[]).length)html+='<p class="elr-note">No cash flows were entered for this scenario.</p>';
+    const years=[];for(const row of s.benefit_years||[])for(const[metric,value]of Object.entries(row.outputs||{}))years.push('<tr>'+
+      [row.year,row.date,number(row.factor),labels[metric]||metric,number(value.annual_native_reduction)+' '+(value.units||'')+'/year',number(value.avoided_load)+' '+(value.units||''),number(row.discount_factor),number(value.present_value_load)+' '+(value.units||''),row.note||''].map(cell).join('')+'</tr>');
+    html+='<h4>Every authored benefit year</h4>'+table(['Year','Anniversary','Trajectory factor','Pollutant','Native annual reduction','Avoided mass','Discount factor','Discounted mass','Reason'],years,'Base-case annual assumed trajectory; no biological growth simulation')+
+      '<details><summary>Exact lifecycle scenario input</summary><pre>'+escape(JSON.stringify(original,null,2))+'</pre></details></details>';
+  }
+  if((lifecycle.methodology||[]).length)html+='<h4>Calculation method</h4><ol>'+lifecycle.methodology.map(row=>'<li>'+escape(row)+'</li>').join('')+'</ol>';
+  return html+'</section>';
+}
+
 function renderDetail(){
  const item=selected();if(!item){byId("panel-detail").innerHTML='<h2>Selected case</h2><div class="empty-inline">Open a report with alternatives to inspect a complete case.</div>';return;}
  let html='<div class="scenario-heading"><div><h2>'+escapeHtml(item.label||item.id)+'</h2><p class="mono">'+escapeHtml(item.run_id)+"</p>"+tags(item)+'</div><button class="noprint" data-action="show-overview">Back to alternatives</button></div>';
@@ -326,7 +391,7 @@ document.addEventListener("click",event=>{
 });
 document.addEventListener("keydown",event=>{
  const element=event.target.closest("[data-select]");if(element&&(event.key==="Enter"||event.key===" ")&&element.tagName.toLowerCase()==="circle"){event.preventDefault();element.dispatchEvent(new MouseEvent("click",{bubbles:true}));}
- if(event.target.matches("[data-tab]")&&["ArrowLeft","ArrowRight","Home","End"].includes(event.key)){event.preventDefault();const tabs=[...document.querySelectorAll("[data-tab]")];const index=tabs.indexOf(event.target);const next=event.key==="Home"?0:event.key==="End"?tabs.length-1:(index+(event.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length;setTab(tabs[next].dataset.tab,true);}
+ if(event.target.matches("[data-tab]")&&["ArrowLeft","ArrowRight","Home","End"].includes(event.key)){event.preventDefault();const tabs=[...document.querySelectorAll("[data-tab]")].filter(tab=>!tab.hidden);const index=tabs.indexOf(event.target);const next=event.key==="Home"?0:event.key==="End"?tabs.length-1:(index+(event.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length;setTab(tabs[next].dataset.tab,true);}
 });
 document.addEventListener("change",event=>{if(event.target.id==="chart-metric"){state.metric=event.target.value;renderOverview(visible());}});
 for(const id of ["status-filter","currency-filter","capital-filter","annual-filter","nitrogen-filter","phosphorus-filter","sediment-filter"])byId(id).addEventListener("change",onFilter);

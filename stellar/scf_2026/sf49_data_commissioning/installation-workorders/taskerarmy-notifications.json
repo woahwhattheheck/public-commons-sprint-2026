@@ -1,0 +1,89 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "taskerarmy-notifications",
+  "title": "Tasker: complete tenant-routed notifications, operator recovery and independent receiving",
+  "task": {
+    "name": "Deliver and operate the complete original notification installation",
+    "purpose": "Give the selected operations team actionable source-job notifications, an editable tenant/route operator, complete job and delivery history, and a portable application and database that another operator can independently receive.",
+    "request": "Continue the original Workshare and Installation. Select the actual source event publisher and map its job identity, store, version, state, timestamp, review URL and summary to the maintained Tasker contract. Configure the approved tenants and review origins, actual Slack workspace/channel routing and credential references. Prepare the complete native source and database, operate the original authenticated event receiver, browser operator and delivery worker, exercise actual event progression and operator recovery, and independently receive and reopen the whole delivered installation.",
+    "completeOutput": "The complete selected native application and source manifest; editable tenant/route configuration with private environment references; working original operator, event receiver and worker; complete saved event/version and delivery history; exact named mutation results; operator decisions for uncertain deliveries; complete TAR.GZ archive with SQLite backup, source, configuration and lineage; independent receiving and onward-export result; and usable publisher, operator and maintenance handover.",
+    "repeatTrigger": "A later real source-job event follows the original publisher identity/version contract and existing route selection. A new tenant, channel, source mapping or application edition is an explicit change to that installation. Repeating an event ID, recovering an interrupted named request, reopening the operator or downloading the same complete archive continues its original operation.",
+    "pricedUnit": "Retain the actual original Workshare scope, implementation and operating milestones. Any selected Stellar source/resource acquisition retains its original complete useful result, atomic price, authorised budget and payer. Source event counts, HTTP retries and archive chunks remain parts of their original useful operation unless the actual source contract prices them separately."
+  },
+  "source": {
+    "reference": "The maintained products/taskerarmy complete source, native/API.md and SCF.md; the original customer's approved source-event publisher, actual tenant/review-origin inventory, configured Slack destinations and the complete selected installation/configuration.",
+    "mode": "MIXED",
+    "population": "Every selected original source event and retained job version, including actionable, quiet, duplicate and stale outcomes; every selected tenant and route generation; the complete original delivery collection, route circuits, resolutions, named operations and native source files.",
+    "meaning": "Preserve event_id, tenant, job_id, store_id, exact positive version, source state and timestamp. Keep the approved HTTPS review origin and customer-safe title/reason. Retain actual team/channel identity, route generation, enabled state, expiry/retry timing, message hash, dispatch outcome and operator resolution. Delivery IDs and version cursors remain exact decimal strings across JavaScript and MCP.",
+    "changePolicy": "The original publisher controls event identity and monotonic source version. Save a complete route configuration at its actual current revision and apply the original generation rules when destination identity changes. Adopt a complete source edition through the original installation operation; preserve previous source, state, request history and receiving lineage."
+  },
+  "receiving": {
+    "application": "The original Tasker Python outbox, operator, loopback ingress and worker; products/taskerarmy/cli.mjs and typed client; source-owned merchant_tasker MCP tools; and the existing Applications entries for Tasker operator, event receiver and delivery worker.",
+    "acceptanceRule": "Prepare the selected complete source/configuration and inspect its actual installation identity. Receive real publisher-contract events, inspect complete queue and job history, render the original message and operate the original configured delivery path. Review and resolve an actual uncertain outcome when present. Save and reopen the selected configuration, restart the same original managed services, export the complete application and SQLite state, independently receive it at the selected separate location, reopen its actual operator/history and export it onward.",
+    "changeAndWithdraw": "The source owner controls publisher mapping and data rights; the operations owner selects tenants, authorised review origins and actual Slack destinations; the receiving operator owns the native installation and service environment. An unavailable or withdrawn source, disabled route or changed channel receives its original recorded operational decision while retained history remains attributable to its actual source and configuration.",
+    "recovery": "Retain the complete original request, selected installation/source identity and request ID. Read the named result in the original SQLite database after an interrupted response. Recover a snapshot or receiving operation through its existing native archive request. A received installation gets a new identity and retains originating requests under their original installation namespace. Review actual current delivery state and external outcome before choosing sent, retry or cancelled.",
+    "maintenance": "Name the publisher owner, Slack/configuration owner, native runtime operator, receiving operator and commercial owner. Retain Python/source versions, managed service entries, private environment-reference assignments, complete archives and original destination/route generation rules. Use the same Applications lifecycle for restart and the original operator for configuration and delivery recovery."
+  },
+  "steps": [
+    {
+      "title": "Bind the original notification work and real source publisher",
+      "result": "Select the existing Workshare/Installation, actual event producer, useful notification requirement, source and operations owners, receiving operator and complete delivery scope. Map the publisher's real event fields, identities, versions, states and review navigation into the native contract."
+    },
+    {
+      "title": "Prepare the complete native installation",
+      "result": "Receive the full selected Tasker source and manifest, actual Python interpreter and private configuration. Prepare a separate original installation containing original/editable sources, database and native operation records; inspect its complete source and installation identity."
+    },
+    {
+      "title": "Configure original tenants, destinations and credential references",
+      "result": "Save the complete approved tenant/review-origin and route inventory through the original revision-bound operator. Select the actual team/channel destinations, store/state filters, route generation and enabled state; provide credential references through the existing private environment surface."
+    },
+    {
+      "title": "Operate the original three services",
+      "result": "Review, save and start the original operator, loopback event receiver and delivery worker through the existing managed Applications owner. Open the original private operator and retain its actual process/source identity; use the correct fixed ingress port and selected worker interval."
+    },
+    {
+      "title": "Deliver complete event and queue operation",
+      "result": "Run the real publisher mapping through the original validation and event ingress. Inspect exact job-version and fully paginated delivery history, actual message rendering, queue outcomes, retry timing and route circuits. Retain named request outcomes with the same original SQLite business changes."
+    },
+    {
+      "title": "Complete operator recovery and source maintenance",
+      "result": "Use original current configuration revisions and route-generation rules for approved changes. Read uncertain request results before replay and actual delivery/external outcomes before resolution. Adopt a selected complete source edition through its retained original operation and restart the same managed service entries."
+    },
+    {
+      "title": "Independently receive and reopen the complete handover",
+      "result": "Export the full native TAR.GZ archive with application, source manifests, SQLite backup, configuration and lineage. Receive it at the independent private destination, inspect the originating journal through its original installation namespace, reopen actual queue/history/operator operation and export the received installation onward."
+    },
+    {
+      "title": "Deliver the usable publisher and operating handover",
+      "result": "Provide the complete original application, editable configuration, actual publisher mapping, CLI/MCP operation guide, managed service selections, full archives and receiving result. Retain named runtime, source, route, credential-reference and maintenance ownership with the original customer case."
+    }
+  ],
+  "inputs": [
+    "Original Workshare/Installation seed, actual scope, useful result, owners, receiving selection and commercial milestones",
+    "Complete maintained Tasker source, native source manifest and actual Python3.11-or-later executable",
+    "Actual publisher event mapping with tenant/job/store identities, precise versions, source states/timestamps, approved review origins and complete safe message content",
+    "Complete tenant and route configuration, actual Slack team/channel selections, store/state filters, enabled state and route generations",
+    "Existing private credential references, original native installation directory, environment JSON and per-installation fixed ingress port",
+    "Complete original queue/job histories, configuration revisions, named request identifiers and actual uncertain-delivery decisions",
+    "Whole native TAR.GZ archive, byte count, SHA256, source/database manifests, originating installation identity and independent receiving destination",
+    "Actual selected merchant/resource acquisition and payer/budget details if the work uses a paid Stellar source or service"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/taskerarmy/SCF.md",
+      "blob": "0022f34a8e5df181d7a8acd59771cc00e5400b9d"
+    },
+    {
+      "path": "products/taskerarmy/client.mjs",
+      "blob": "46f59860d017c43d63d101216f155ba10c1b9a81"
+    },
+    {
+      "path": "products/taskerarmy/native/API.md",
+      "blob": "193de5cf300b297ef36a15ac8ea1da12c34742f1"
+    },
+    {
+      "path": "products/taskerarmy/native/manage.py",
+      "blob": "1364c0d0ed4591d8d7b85aed8eff9f01cb4956b0"
+    }
+  ]
+}

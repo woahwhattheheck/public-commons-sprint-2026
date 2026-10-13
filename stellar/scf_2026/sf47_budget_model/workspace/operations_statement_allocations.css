@@ -1,0 +1,9 @@
+.statement-allocation-panel h5{font-size:1rem;margin:1.2rem 0 .6rem}
+.statement-allocation-panel .statement-actions{flex-wrap:wrap}
+.statement-allocation-item{display:grid;grid-template-columns:minmax(12rem,1.3fr) minmax(10rem,1fr) minmax(16rem,1.7fr);gap:.75rem;align-items:end;border-bottom:1px solid #d8d8d8;padding:.85rem 0}
+.statement-allocation-item strong{overflow-wrap:anywhere}
+.statement-allocation-panel textarea{width:100%;box-sizing:border-box}
+.statement-allocation-invoice,.statement-allocation-proposal{border:1px solid #bdbdbd;padding:1rem;margin-top:1rem;background:#fafafa}
+.statement-allocation-proposal li{margin:.35rem 0}
+.statement-allocation-panel pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:720px){.statement-allocation-item{grid-template-columns:1fr}.statement-allocation-panel .statement-summary{grid-template-columns:1fr}.statement-allocation-panel .statement-actions button{flex:1 1 12rem}}

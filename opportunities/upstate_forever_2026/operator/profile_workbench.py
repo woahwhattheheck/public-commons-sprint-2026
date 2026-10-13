@@ -6,6 +6,7 @@ import json
 from model import profile_editions as model
 from model import profile_customer_review as customer_review
 from model import biophysical_evidence as evidence
+from model import biophysical_evidence_authoring as authoring
 from model.common import describe_file, verify_file
 
 CUSTOMER_ACTIONS = frozenset({"profile.customer_review.create", "profile.customer_review.apply"})
@@ -13,11 +14,13 @@ BIOPHYSICAL_ACTIONS = frozenset({
     "profile.biophysical.evidence.save", "profile.biophysical.ranges.prepare",
     "profile.biophysical.experiment.prepare", "profile.biophysical.evidence.populate",
 })
-ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS
+AUTHORING_ACTIONS = frozenset({"profile.biophysical.authoring.save", "profile.biophysical.authoring.register"})
+ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS | AUTHORING_ACTIONS
 READS = frozenset({"catalog", "inspect", "table", "preview", "compare", "methods",
                    "customer-review-catalog", "customer-review-inspect", "customer-review-preview",
                    "biophysical-catalog", "biophysical-template", "biophysical-evidence-preview",
-                   "biophysical-evidence-inspect", "biophysical-ranges-preview", "biophysical-ranges-inspect"})
+                   "biophysical-evidence-inspect", "biophysical-ranges-preview", "biophysical-ranges-inspect",
+                   "biophysical-authoring-list", "biophysical-authoring-inspect", "biophysical-authoring-export"})
 
 
 class ProfileWorkbench:
@@ -79,6 +82,11 @@ class ProfileWorkbench:
                          "Original coefficient evidence CSV"))
         return downloads
 
+    def _authoring_downloads(self, workspace_key, files):
+        ws = self.operator.ws(workspace_key)
+        return [self.operator._ticket(workspace_key, verify_file(ws.root, record), record, label)
+                for label, record in files.items()]
+
     def read(self, workspace_key, operation, payload=None):
         ws = self.operator.ws(workspace_key)
         value = payload or {}
@@ -86,7 +94,19 @@ class ProfileWorkbench:
             raise self.Fault("PROFILE_REQUEST", "Use a profile selection object.")
         if operation.startswith(("customer-review-", "biophysical-")):
             value = {key: item for key, item in value.items() if key != "workspace"}
-        if operation == "biophysical-catalog":
+        if operation == "biophysical-authoring-list":
+            if set(value) != {"profile_id"}:
+                raise self.Fault("PROFILE_REQUEST", "Select the original profile for named working revisions.")
+            result = authoring.list_series(ws, value["profile_id"])
+        elif operation in {"biophysical-authoring-inspect", "biophysical-authoring-export"}:
+            if set(value) != {"revision_id"}:
+                raise self.Fault("PROFILE_REQUEST", "Select one exact saved working revision.")
+            if operation == "biophysical-authoring-inspect":
+                result = authoring.inspect(ws, value["revision_id"])
+            else:
+                result = authoring.export_files(ws, value["revision_id"])
+                result["_downloads"] = self._authoring_downloads(workspace_key, result["files"])
+        elif operation == "biophysical-catalog":
             result = evidence.catalog(ws, value.get("profile_id"))
         elif operation == "biophysical-template":
             result = evidence.template(ws, value.get("profile_id"))
@@ -138,6 +158,10 @@ class ProfileWorkbench:
     def invoke(self, task):
         ws = self.operator.ws(task["workspace"])
         action = task["action"]
+        if action == "profile.biophysical.authoring.save":
+            return authoring.save(ws, task["payload"], created_at=task.get("created_at"))
+        if action == "profile.biophysical.authoring.register":
+            return authoring.register(ws, task["payload"], created_at=task.get("created_at"))
         if action == "profile.biophysical.evidence.populate":
             from source_tools.receive_biophysical_evidence import populate
             value = task["payload"]
@@ -178,6 +202,15 @@ class ProfileWorkbench:
         value = deepcopy(task)
         result = value["result"]
         ws = self.operator.ws(value["workspace"])
+        if task["action"] in AUTHORING_ACTIONS:
+            if task["action"] == "profile.biophysical.authoring.save":
+                detail = authoring.export_files(ws, result["record"]["id"])
+                value["_downloads"] = self._authoring_downloads(value["workspace"], detail["files"])
+            else:
+                detail = authoring.inspect_registration(ws, result["registration"]["id"])
+                value["_downloads"] = self._authoring_downloads(value["workspace"], detail["files"])
+                value["_downloads"].extend(self._evidence_downloads(value["workspace"], detail["evidence"], evidence.EVIDENCE_KIND))
+            return value
         if task["action"] in BIOPHYSICAL_ACTIONS:
             if task["action"] in {"profile.biophysical.evidence.save", "profile.biophysical.evidence.populate"}:
                 detail = evidence.inspect_evidence(ws, result["id"])
@@ -211,4 +244,5 @@ class ProfileWorkbench:
     def verify_all(self, workspace):
         return {**model.verify_all(workspace),
                 "customer_reviews": customer_review.verify_all(workspace),
-                "biophysical_evidence": evidence.verify_all(workspace)}
+                "biophysical_evidence": evidence.verify_all(workspace),
+                "biophysical_authoring": authoring.verify_all(workspace)}

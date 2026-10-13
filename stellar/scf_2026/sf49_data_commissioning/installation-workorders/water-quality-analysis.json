@@ -1,0 +1,84 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "source": {
+    "mode": "SNAPSHOT",
+    "reference": "The complete approved study source and baseline/corrected editions, original WQX or supported Open Waters graph, all saved review/concentration choices and the complete paired scientific bundle.",
+    "population": "Every selected original measurement/result and every independently reported detection/quantitation/reporting limit. Preserve all physical source rows and complete source bundles, including records with absent measured values and records whose units cannot be converted into the chosen scientific dimension.",
+    "meaning": "Retain exact lexical quantity, original units, analyte/characteristic, station, sample/activity identity, timestamp/date, fraction, method, qualifier and censoring context. Convert only supported dimensionally compatible values/limits through the original converter. A limit-only record retains its separate limits without inventing a measured value. Optical units and other unsupported dimensions keep an explicit review/Keep disposition.",
+    "changePolicy": "Create named saved study editions and retain prior original and standardized analyses. Review source/group/unit/period changes explicitly. Keep unmatched or ambiguous records and all original limits visible; record the exact comparison selection and reason for every scientific exclusion or Keep decision."
+  },
+  "receiving": {
+    "application": "The maintained WQX water-quality application, complete standardized-analysis workflow, original CLI/browser/API/MCP operator and waterQualityReview paid scientific mode. Select the actual current full source/installed release and original workspace.",
+    "acceptanceRule": "Import the full original graph; save all explicit unit and review choices; run complete native analysis and selected paired/period comparison; verify every original quantity/limit and complete export set; receive into an independent empty project and cold reopen it; repeat the selected report/analysis through the original application; where paid execution is selected, receive and verify its actual complete saved-review-bound result and original input.",
+    "changeAndWithdraw": "The study owner supplies source rights and scientific/grouping requirements; the scientific reviewer owns explicit conversion, comparison and exclusion choices. The installation/merchant owner runs the selected workflow; the receiving analyst makes its independent use decision. Source withdrawal retains historical provenance and produces an explicit operating restriction.",
+    "recovery": "Keep the original project, source graph, saved review, decision chain, original job and complete output digests. Resume the same sealed upload, review or job after reading its original state. Stop/drain through the original worker owner; receive full downloads with exact byte/hash checks and reopen the same saved editions without recomputing them as a new purchase.",
+    "maintenance": "Name the study lead, scientific reviewer, source provider, merchant/runtime owner and independent analyst. Retain method/unit/grouping assumptions, source window, included correction, original study/family limits, output custody and the actual maintenance/change policy."
+  },
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/model.mjs",
+      "blob": "c20ca65b9459345a636e19b03cb7dceaa5e77f04"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/workflow.mjs",
+      "blob": "1b9ca9518ffbcec9ce7c612664566a53d4e17990"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/concentration-units.mjs",
+      "blob": "dcd870a0e2a7a3528c69e6519fdea47f7c1cdbf1"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/scientific.mjs",
+      "blob": "9d44c133cc2abe7dcdf056d016291b61f0f98d30"
+    }
+  ],
+  "id": "water-quality-analysis",
+  "title": "Water-quality study: original observations, explicit standardization and paired scientific receiving",
+  "task": {
+    "name": "Deliver a complete reviewed water-quality study and its paired scientific edition",
+    "purpose": "Give the study owner and an independent analyst an editable, traceable scientific delivery that preserves all original measurements, qualifiers and limits while making compatible quantities and selected editions comparable.",
+    "request": "Continue the original study Workshare and Installation. Select the agreed study/window and complete field/laboratory export families. Retain the original source/capture/review/plan graph. Save explicit station/parameter/time and concentration-unit decisions; keep incompatible optical or other non-mass quantities separate. Run the maintained scientific workflow over the full selected cohort and its chosen original-unit/baseline edition. Retain every result and independently reported limit, complete groups, comparisons and report, then receive and reopen the full portable delivery through the original operator and paid function when selected.",
+    "completeOutput": "Complete original source bundles, source/capture/review/plan identities, all original fields/results/limits, saved conversion/Keep choices and native review documents, original-unit and standardized scientific analyses, complete period/edition comparison, operator report, all selected native scientific exports and full portable bundle, independent receiving/reopen and an editable analyst handover.",
+    "repeatTrigger": "A new agreed study window, source edition or independently useful scientific comparison can be a later task. Reopening a saved study, repeating a preview or receiving the same archive continues the existing task. Additional source families, studies or broad scientific/regulatory certification follow the original scope change.",
+    "pricedUnit": "Keep original implementation milestones and the selected complete waterQualityReview task separately. Approve the useful study/window/edition result and its original source input, atomic price and task budget. Do not count charts, exported files or repeated reads as separate customer purchases."
+  },
+  "steps": [
+    {
+      "title": "Bind the original study and all source editions",
+      "result": "Receive the original commercial plan and exact phase effort, agreed study/window and up to the selected two field/lab source families. Retain every original source bundle and its review/plan identity."
+    },
+    {
+      "title": "Inspect complete scientific meaning",
+      "result": "Review all original measurements and independent limits with their units, method/fraction/qualifier/censoring context, station/activity and time. Keep missing measured values, duplicate/ambiguous rows and incompatible dimensions explicit."
+    },
+    {
+      "title": "Save explicit unit and review decisions",
+      "result": "Use the maintained concentration converter and source-bound review chain. Convert compatible measurement/limit quantities and preserve explicit Keep/review decisions for non-convertible records. Export and reimport the full decision table."
+    },
+    {
+      "title": "Run the complete paired scientific workflow",
+      "result": "Analyze the full selected cohort and original-unit/baseline edition, retain complete compatible groups, selected period comparisons and all underlying rows. Save the complete scientific review and comparison rather than a chart-only projection."
+    },
+    {
+      "title": "Receive the original useful job when selected",
+      "result": "Use the existing waterQualityReview scientific mode with its whole sealed source and saved choices. Preserve original checkout/approval/task budget, job reference and full verified output. No separate payment or scientific engine is introduced."
+    },
+    {
+      "title": "Export and independently reopen the whole study",
+      "result": "Download every selected native scientific export and the complete portable bundle. Receive it into the independent original project, cold reopen, and compare full source/review/report/analysis identities and every retained result/limit."
+    },
+    {
+      "title": "Complete the analyst handover",
+      "result": "Repeat the study/report workflow with the named analyst, resolve the included correction and retain source, group, unit, time, comparison and maintenance decisions. Proposed installation state remains distinct from actual scientific or customer acceptance."
+    }
+  ],
+  "inputs": [
+    "Original Workshare packet with complete commercial phases and exact original effort sources",
+    "Agreed study/window, complete approved field/laboratory source families and source-use authority",
+    "Full source/capture/review/plan graph, original-unit and selected baseline/corrected bundles",
+    "Complete concentration choices and explicit incompatible-dimension/optical Keep reasons",
+    "Selected station/parameter/time/method/fraction/grouping and scientific comparison requirements",
+    "Actual installed WQX product, original project, runtime/merchant/buyer selections and approved useful-task budget",
+    "Full native analysis/report/exports/portable bundle and independent analyst receiving identity"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "geoapify-customer",
+  "title": "Geoapify: recurring address review, complete datasets and customer receiving",
+  "task": {
+    "name": "Commission a recurring address dataset and its customer application",
+    "purpose": "Receive the customer's original address records, review complete provider matches and coordinate choices, deliver a selected dataset edition, and continue useful later source editions with a named customer and receiving engineer.",
+    "request": "Select the complete original commercial Workshare and an actual customer population. Retain the original CSV or JSON, field mapping, business identifiers, provenance and coordinate meaning. Prepare approved Geoapify requests, continue the original asynchronous jobs, retain whole responses and review the candidates. Record deliberate address and coordinate decisions, then build a frozen SF30 dataset edition. Receive its complete CSV, configuration, GeoJSON, review and report with the entire workspace package. For a later useful source edition, stage and compare it against a chosen frozen baseline, review unpaired and changed records and explicitly choose eligible unchanged-query decisions to reuse. Build the next edition while keeping earlier sources, pending jobs and unfinished forms. Prepare the existing Customer Installation from the selected frozen edition and exact full archive, preview/save through the original native case and transfer the complete customer operation.",
+    "completeOutput": "The entire original Geoapify workspace package, including every retained original source and normalized intake, request, provider response, review decision, source comparison, source-specific working form and frozen edition; every selected frozen dataset CSV, configuration, GeoJSON, basis, review and report; applicable original source-comparison files; the original Workshare/Installation seed, explicit operator bindings and technical profile; all selected additional working files; complete source selection and file inventory; native Installation input/preview and full workorder. The selected frozen edition and active workspace source remain separately identified. Complete issued customer projects and original HTML, returned working choices/forms/history, exact adoption requests/previews/results and their original native decisions accompany the whole workspace.",
+    "repeatTrigger": "A real later customer source edition, corrected original record, changed source schema or newly needed geographic dataset triggers the next task. Stage the whole new source and compare it with the actual selected frozen baseline. Keep missing/duplicate business identifiers unpaired, retain previous editions, and reuse prior query decisions only through explicit review. A source that is unchanged, empty, unqueried or awaiting a provider result retains that actual state.",
+    "pricedUnit": "Use the original merchant's authorized resource/query/page terms and the buyer's aggregate spending approval. Geoapify credits, provider input rows, dataset rows and exported files have their own meanings. The implementation fee and support terms remain in the original Workshare; Stellar unit price, network, asset, recipient, useful task count and budget come from the selected existing deployment."
+  },
+  "source": {
+    "mode": "SNAPSHOT",
+    "population": "The whole customer-selected CSV or JSON and every retained source edition in the original Geoapify workspace. Preserve raw bytes, mapping, business identity, original row ordinal and the exact normalized-intake SHA. Keep the frozen selected edition's intake distinct from the currently active intake and unfinished editor.",
+    "meaning": "An address-query identity can be shared by multiple original business records. Source comparisons pair a business identity only when it is nonempty and unique on each side. Preserve original and proposed coordinates separately, including their order, nulls and ranges. Provider confidence and match type describe the provider result; approval and coordinate selection come from the retained named reviewer. Duplicate records, unmatched source identities, no result and pending/uncertain jobs remain visible.",
+    "changePolicy": "A new original source is staged without changing the active intake or published edition. The operator reviews the exact comparison and explicitly selects decision reuse at first activation. Historical jobs continue against their own original intake; later source switching restores that source's unfinished forms. Review, payment, publication and source-use rights remain with their original owners. Retain preceding acquired material under its actual licence and attribution."
+  },
+  "receiving": {
+    "application": "The maintained Geoapify application, original CLI, Applications entry and merchant tools; its complete workspace restore and frozen SF30 dataset receiver. The original SF47 Customer installations desk receives the complete prepared Installation input.",
+    "acceptanceRule": "Open the complete selected source and review all candidate/coordinate choices; receive every selected dataset file and original report. Stage and review a useful subsequent source, explicitly choose eligible reuse, preserve an unfinished source-specific form and continue the original jobs. Restore the full package in a distinct private workspace and reopen both selected and prior editions. Independently reopen the complete Installation preparation, load it into the same native case, preview the actual source/roles/terms and record observed results through its original acceptance checks. The producing operator looks at and uses the actual desktop/narrow application, attachments and reopened results. Issue an exact frozen review, open/save/reopen the complete offline customer files, receive the original returned choices, inspect issued/current/customer differences and adopt deliberate resolutions. Reopen that entire history from the received complete workspace.",
+    "changeAndWithdraw": "The source owner authorizes the original population and downstream use. The merchant controls the offered dataset and terms; the independent buyer controls its signing and whole-task spending. A reviewer selects addresses and coordinate policy. Installation preparation preserves the original source and commercial selections while the original case records deployment, acceptance and later change or withdrawal.",
+    "recovery": "Preserve workspace UUID/revision, complete archive SHA, selected frozen edition and intake identities, native job IDs, whole provider responses and source-specific forms. Resume an interrupted preparation in its original private directory from the retained request and exact inputs; independently reopen from received files without the producer's paths. Restore through the original Geoapify package receiver into an empty workspace. Continue pending jobs and reconcile an uncertain original POST before another submission. Changed source or bindings become a separate preparation edition.",
+    "maintenance": "Name the source owner, address/coordinate reviewer, merchant, independent buyer, customer application owner and receiving engineer. Retain actual source and provider plan rights, attribution, deployment/source version, configuration references, review cadence, approved budget, job-result retention, backup procedure and support responsibility. Keep original commercial phases, effort, fees and funding assignments in their existing Workshare and Installation."
+  },
+  "steps": [
+    {
+      "title": "Select the original customer task and commercial Workshare",
+      "result": "Receive the complete retained workshare, actual useful population, customer application and responsibilities. Preserve its source, phase IDs, implementation effort, fees, payment milestones and original acceptance checks."
+    },
+    {
+      "title": "Receive original address sources and exact meaning",
+      "result": "Retain the whole original CSV/JSON, complete field mapping, business IDs and original coordinates. Record actual source provenance, downstream rights and attribution; preserve null, duplicate and malformed rows for review."
+    },
+    {
+      "title": "Operate complete provider jobs and deliberate review",
+      "result": "Prepare the approved query selection, retain the original request and continue asynchronous results with the maintained poll timing. Review whole responses and record named address/coordinate decisions. Preserve unknown and interrupted outcomes under their original operation."
+    },
+    {
+      "title": "Freeze and receive the selected useful dataset",
+      "result": "Build the native SF30 edition and export the complete workspace. Select its exact retained edition, original intake and complete CSV/configuration/GeoJSON/basis/review/report. Keep current editor source and selected frozen source distinct."
+    },
+    {
+      "title": "Continue recurring source editions",
+      "result": "Stage a real later complete source, compare against the chosen frozen baseline, inspect unpaired/changed records and deliberately select eligible decision reuse. Preserve earlier sources and restore their unfinished forms; continue their original jobs and retain both dataset editions."
+    },
+    {
+      "title": "Prepare the complete original Installation",
+      "result": "Select the exact source archive and frozen edition with the fresh native Workshare seed. Fill real source, existing merchant/buyer/payment and receiving bindings. Carry full selected additional working files into the same preparation and preserve the original prospective checks."
+    },
+    {
+      "title": "Independently receive and save the original case",
+      "result": "Reopen the whole preparation from received bytes, restore the original Geoapify workspace and operate its selected edition. Load the prepared input in Customer installations, preview and save through the original version/request-aware writer. Preserve actual native outcomes and export/reopen the same case."
+    },
+    {
+      "title": "Deliver and maintain the full customer operation",
+      "result": "Open and use the exact outgoing application at desktop/narrow widths, every report/data/archive/working attachment and independent reopen. View captured frames and repair real defects. Transfer whole source and agreed operating responsibilities to the named engineer and customer."
+    }
+  ],
+  "inputs": [
+    "Complete original customer Workshare, commissioning source and receiving packet, existing case/pinned plan, original phases/effort/fees/checks.",
+    "Whole original starforge-geoapify.json.gz workspace package with exact byte count/SHA-256 and the selected native frozen edition ID.",
+    "Complete original source/mapping and source-use authority, retained provider requests/responses, named address/coordinate decisions and selected dataset files.",
+    "Historical source editions/comparisons, every original pending job and source-specific unfinished editor; complete additional working files explicitly selected for this customer.",
+    "Fresh original installation-workshare-seed and actual existing merchant/buyer/payment/source/receiving bindings, including named host/operator.",
+    "Exact maintained software source, actual independent receiving directory, whole native restore/Installation reopen and observed customer application/attachment outcomes.",
+    "Complete issued customer review files, actual returned choices and unfinished history, and original source-bound adoption requests/previews/results when this customer used offline review."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/geoapify/source-history.mjs",
+      "blob": "f80a7d8460c38dc90d4acd346290db7ea783a433"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+      "blob": "e23a23ad1a68fc826ca6282a8582434b0ce3ec92"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/geoapify/package.mjs",
+      "blob": "6372c03cb2fd680d98a4f79007e435981926a27e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/geoapify/workspace.mjs",
+      "blob": "0e764b7fa76db44f60523910857903ec79541eb8"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/geoapify-installation-source.mjs",
+      "blob": "79e6dbad39977bdfd6b15bec5b70e074c4ba8935"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/geoapify/customer-review-core.mjs",
+      "blob": "97b84f8984a076adbdfa7580046d758a5da76214"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/geoapify/customer-review-store.mjs",
+      "blob": "b083ca3c8c1424e9ed8baafdd536e44b4ffb74f2"
+    }
+  ]
+}

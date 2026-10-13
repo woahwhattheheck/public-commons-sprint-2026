@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catalogue installation</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body><header><div><p class="eyebrow">Customer installations</p><h1>Catalogue commissioning</h1><p>Prepare selected catalogue work for its existing operating case.</p></div><button id="refresh">Refresh retained work</button></header>
+<main>
+<p id="status" role="status" aria-live="polite">Opening the retained preparation desk…</p>
+<section id="authentication" hidden><h2>Open the private desk</h2><p>Use the complete link returned by this listener, or paste its credential here for this browser session.</p><label>Desk credential<input id="credential" type="password" autocomplete="off"></label><button id="authenticate">Open</button></section>
+<div id="controls">
+<section><h2>1. Retain complete inputs</h2><p>Receive the whole stopped catalogue archive and the current case and original Installation seed. Keep the original files together.</p>
+<div class="form-grid"><label>Input kind<select id="input-kind"><option value="archive">Complete catalogue archive (.ckanw)</option><option value="case">Current operating case (JSON)</option><option value="seed">Original Installation seed (JSON)</option><option value="selection">Selected commissioning scope (JSON)</option><option value="bindings">Installation bindings (JSON)</option></select></label><label>Complete original file<input id="input-file" type="file"></label></div>
+<button id="import">Retain this file</button><div id="inputs"></div>
+<div class="actions"><button id="inspect">Inspect complete catalogue</button><button id="template">Prepare scope and bindings</button></div>
+<label><input id="carry-choices" type="checkbox" checked>Carry current choices into a refreshed template for the same case and catalogue</label><p class="note">Attach the complete archive and the selected scope file in the original case. Download its current case and fresh seed after attaching sources, then retain those current files here. Existing scope decisions and customer bindings can be carried into the refreshed template.</p>
+</section>
+<section id="scope-section" hidden><h2>2. Select the work to commission</h2><p>Every source record remains in the complete archive. Record a purpose for both included work and material retained as context.</p>
+<label>Original case source ID for the complete archive<input id="archive-source-id"></label>
+<div class="form-grid"><label>Source family<select id="family"><option value="">All families</option></select></label><label>Find source records<input id="query" type="search" placeholder="Title, identity, or state"></label></div>
+<div class="form-grid"><label>Decision for matching records<select id="bulk-decision"><option value="false">Retain as context</option><option value="true">Include in commissioned work</option></select></label><label>Purpose for matching records<textarea id="bulk-purpose" rows="2" maxlength="4000"></textarea></label></div>
+<button id="bulk-apply">Apply to all matching records</button>
+<p id="scope-count"></p><div id="scope"></div><div class="actions"><button id="previous">Previous records</button><button id="next">Next records</button></div>
+<details><summary>Every original archive file</summary><label>Find a file<input id="file-query" type="search"></label><p id="file-count"></p><div id="archive-files"></div><div class="actions"><button id="file-previous">Previous files</button><button id="file-next">Next files</button></div></details><div class="actions"><button id="download-selection">Download complete selected scope</button><button id="download-source">Download complete source report</button></div>
+</section>
+<section id="bindings-section" hidden><h2>3. Complete customer bindings</h2><p>The original Workshare, funding assignments, acceptance steps and plan selection remain in their original seed.</p><div id="binding-selection"></div><div id="bindings"></div>
+<div class="actions"><button id="download-bindings">Download complete bindings</button><button id="save-draft">Download complete editor draft</button><label class="file-button">Open editor draft<input id="open-draft" type="file" accept=".json,application/json"></label></div>
+<label>Original case source ID for the selected scope file<input id="selection-source-id"></label>
+<button id="prepare">Prepare complete Installation</button>
+</section>
+<section id="pending-section" hidden><h2>Continue the original request</h2><p id="pending-description"></p><div class="actions"><button id="resume">Reconcile and continue</button><button id="new-draft">Retain request and start a new draft</button></div></section>
+<section><h2>Prepared work and complete files</h2><div id="result"><p>Select an existing preparation or prepare the current complete inputs.</p></div></section>
+<section><h2>Retained preparation history</h2><p>Reopen the same request after a lost response. Each changed input set belongs to a new preparation.</p><div id="history"></div><button id="more-history" hidden>More retained requests</button></section>
+</div></main>
+<footer>Catalogue installation · Local preparation · Original Operations preview and save</footer>
+</body></html>

@@ -10,7 +10,7 @@ export function providerQuery(input) {
   const from=day(input.from),to=day(input.to);if(from>to)throw new InputError('Start date must be before end date');
   if(kind==='usgs-daily') {
     const station=clean(input.stationId);if(!/^USGS-\d{8,15}$/.test(station))throw new InputError('USGS station must include the USGS- prefix and 8–15 digits');
-    const u=new URL('/ogcapi/v0/collections/daily/items',USGS);
+    const u=new URL('/ogcapi/v1/collections/daily/items',USGS);
     u.search=new URLSearchParams({f:'json',limit:'10000',monitoring_location_id:station,parameter_code:'00060',statistic_id:'00003',datetime:`${from}/${to}`}).toString();
     return {kind,url:u.href,from,to};
   }
@@ -27,7 +27,7 @@ export function providerQuery(input) {
 function allowed(url,kind) {
   const u=new URL(url);
   if(u.protocol!=='https:'||u.username||u.password)throw new InputError('Provider returned an invalid continuation URL',502);
-  if(kind==='usgs-daily' && u.origin===USGS && u.pathname==='/ogcapi/v0/collections/daily/items')return u;
+  if(kind==='usgs-daily' && u.origin===USGS && u.pathname==='/ogcapi/v1/collections/daily/items')return u;
   if(kind!=='usgs-daily'&&['www.waterqualitydata.us','waterqualitydata.us'].includes(u.hostname)&&/^\/(wqx3|data)\/(Result|Station)\/search$/.test(u.pathname))return u;
   throw new InputError('Provider continuation or redirect left the original public-data endpoint',502);
 }
@@ -66,5 +66,5 @@ export async function fetchProvider(input,{fetcher=fetch,signal}={}) {
   }
   const text=query.kind==='usgs-daily'?JSON.stringify({type:'FeatureCollection',features,links:[],numberReturned:features.length}):pages[0].text;
   return {kind:query.kind,label:input.label||`${query.kind}: ${input.stationId||input.huc} ${query.from}–${query.to}`,text,
-    origin:{type:'provider',retrievedAt:new Date().toISOString(),query,pages},mapping:input.mapping||{}};
+    origin:{type:'provider',retrievedAt:new Date().toISOString(),query,pages},mapping:query.kind==='usgs-daily'?{...input.mapping,_usgs_daily:'usgs-daily-source/v2'}:input.mapping||{}};
 }

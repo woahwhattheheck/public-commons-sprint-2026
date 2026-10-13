@@ -15,6 +15,8 @@ import json
 import zipfile
 
 import operations_domain as domain
+import forecast_currency as currency
+import forecast_customer_funding as customer_funding
 from model import canonical, csv_bytes, digest, short_id, text
 
 SCHEMA = "stellar-forge.sf47-operating-forecast.v1"
@@ -78,8 +80,10 @@ def source_identity(context):
 
 def normalize(context, raw):
     raw = obj(deepcopy(raw), "Forecast", ("name", "asOfDate", "calendarStart", "openingCash",
-              "packageOverrides", "invoiceOverrides", "grantReceipts", "commercial", "capacity", "note"))
+              "packageOverrides", "invoiceOverrides", "grantReceipts", "commercial", "capacity", "note", "fxRates", "customerFunding"))
     as_of = domain.calendar(raw.get("asOfDate"), "Forecast as-of date")
+    fx_rates = currency.normalize_rates(context, raw.get("fxRates", []), as_of)
+    rate_map = {row["id"]: row for row in fx_rates}
     anchor = domain.calendar(raw.get("calendarStart") or context["program"].get("calendarStart")
                              or context["plan"]["planning"].get("calendarStart"), "Explicit plan day-zero date")
     first = date.fromisoformat(as_of) + timedelta(days=1)
@@ -165,7 +169,7 @@ def normalize(context, raw):
     for row in rows(raw.get("commercial", []), "Commercial delivery scenarios", 50):
         obj(row, "Commercial scenario", ("id", "title", "caseRef", "sourceUrl", "sourceIds", "stage", "selected",
             "priceUsd", "totalDeliveryCostUsd", "remainingHours", "startDate", "endDate", "paymentMode",
-            "receipts", "cashIds", "invoiceIds", "directCashIds", "scope", "note", "timing"))
+            "receipts", "cashIds", "invoiceIds", "directCashIds", "scope", "note", "timing", "nativePricing"))
         ident = short_id(row.get("id"), "Commercial scenario identity")
         receipt_ids = domain.reference_list(row.get("cashIds", []), cash, "Observed customer receipts")
         for cid in receipt_ids:
@@ -180,16 +184,30 @@ def normalize(context, raw):
             if iid in used_invoices or any(line["costId"] is not None for line in invoices[iid]["lines"]):
                 domain.fail("Assign each unplanned invoice to one commercial scenario; grant-package invoices stay with their original packages.", "FORECAST_INVOICE_CONFLICT", 409)
             used_invoices.add(iid)
+        commercial_direct = direct_ids(row.get("directCashIds", []))
+        native_pricing = None
+        if "nativePricing" in row:
+            currency.no_usd_fields(row, ("priceUsd", "totalDeliveryCostUsd"), "Native commercial scenario")
+            native_pricing = currency.normalize_pricing(row["nativePricing"], rate_map,
+                receipt_ids, invoice_ids, commercial_direct, invoices)
+            price, amount_key = native_pricing["price"]["amount"], "amountNative"
+        else:
+            price, amount_key = domain.usd(row.get("priceUsd"), "Original commercial price", True), "amountUsd"
         receipts = []
         for entry in rows(row.get("receipts", []), "Commercial receipt milestones", 30):
-            obj(entry, "Commercial receipt", ("id", "label", "amountUsd", "date"))
+            obj(entry, "Commercial receipt", ("id", "label", "amountNative", "amountUsd", "date")
+                if native_pricing is not None else ("id", "label", "amountUsd", "date"))
+            if native_pricing is not None:
+                currency.no_usd_fields(entry, ("amountUsd",), "Native commercial receipt")
+                amount = currency.quantity(entry.get("amountNative"), "Original quoted native receipt", True,
+                    2 if native_pricing["price"]["currency"] == "USD" else 8)
+            else:
+                amount = domain.usd(entry.get("amountUsd"), "Original quoted receipt", True)
             receipts.append({"id": short_id(entry.get("id"), "Receipt milestone identity"),
                 "label": text(entry.get("label"), "Receipt milestone", 300, True),
-                "amountUsd": domain.usd(entry.get("amountUsd"), "Original quoted receipt", True),
-                "date": future(entry.get("date"), "Forecast customer collection date", True)})
+                amount_key: amount, "date": future(entry.get("date"), "Forecast customer collection date", True)})
         unique(receipts, "id", "Commercial receipts")
-        price = domain.usd(row.get("priceUsd"), "Original commercial price", True)
-        if not receipts or sum((Decimal(item["amountUsd"]) for item in receipts), ZERO) != Decimal(price):
+        if not receipts or sum((Decimal(item[amount_key]) for item in receipts), ZERO) != Decimal(price):
             domain.fail("Commercial milestone amounts must equal the retained total price exactly.", "INVALID_FORECAST")
         timing = None
         if "timing" in row:
@@ -216,13 +234,14 @@ def normalize(context, raw):
             "sourceIds": domain.reference_list(row.get("sourceIds", []), sources, "Commercial source attachments"),
             "stage": domain.enum(row.get("stage", "QUOTED"), ("QUOTED", "AGREED", "IN_PROGRESS"), "Original commercial stage"),
             "selected": boolean(row.get("selected", True), "Include commercial scenario"),
-            "priceUsd": price, "totalDeliveryCostUsd": domain.usd(row.get("totalDeliveryCostUsd"), "Current customer-specific delivery cost estimate"),
+            **({"nativePricing": native_pricing} if native_pricing is not None else
+                {"priceUsd": price, "totalDeliveryCostUsd": domain.usd(row.get("totalDeliveryCostUsd"), "Current customer-specific delivery cost estimate")}),
             "remainingHours": domain.quantity(row.get("remainingHours"), "Remaining customer-specific hours", 4),
             "startDate": future(row.get("startDate"), "Forecast commercial work start", timing is not None),
             "endDate": future(row.get("endDate"), "Forecast commercial work finish", timing is not None),
             "paymentMode": domain.enum(row.get("paymentMode", "accrual"), ("accrual", "completion"), "Commercial cost timing"),
             "receipts": receipts, "cashIds": receipt_ids, "invoiceIds": invoice_ids,
-            "directCashIds": direct_ids(row.get("directCashIds", [])),
+            "directCashIds": commercial_direct,
             "scope": text(row.get("scope", ""), "Customer-specific scope / prerequisites", 12000),
             "note": text(row.get("note"), "Commercial cost and date assumption", 8000, True)}
         if timing is not None:
@@ -243,7 +262,10 @@ def normalize(context, raw):
     return {"name": text(raw.get("name"), "Forecast name", 300, True), "asOfDate": as_of,
             "calendarStart": anchor, "openingCash": opening, "packageOverrides": packages,
             "invoiceOverrides": invoice_overrides, "grantReceipts": grants, "commercial": commercial,
-            "capacity": capacity, "note": text(raw.get("note", ""), "Forecast decisions / assumptions", 12000)}
+            "capacity": capacity, "note": text(raw.get("note", ""), "Forecast decisions / assumptions", 12000),
+            **({"fxRates": fx_rates} if "fxRates" in raw or any("nativePricing" in row for row in commercial) else {}),
+            **({"customerFunding": customer_funding.normalize(context, raw["customerFunding"], commercial, opening, as_of)}
+               if "customerFunding" in raw else {})}
 
 
 def split_amount(amount, weights, places=2):
@@ -269,6 +291,8 @@ def date_range(start, end):
 
 def build(context, inputs):
     as_of, anchor = inputs["asOfDate"], date.fromisoformat(inputs["calendarStart"])
+    native_mode = "fxRates" in inputs
+    rate_map = {row["id"]: row for row in inputs.get("fxRates", [])}
     first = (date.fromisoformat(as_of) + timedelta(days=1)).isoformat()
     last = (date.fromisoformat(first) + timedelta(days=MAX_DAYS-1)).isoformat()
     # Current source states remain visible; this is not a historical-state reconstruction.
@@ -408,42 +432,71 @@ def build(context, inputs):
         issue("UNASSIGNED_GRANT_RECEIPTS", ",".join(unassigned_grant), "These observed grant inflows need an original tranche assignment before they can reduce a specific conditional payout.")
 
     for row in inputs["commercial"]:
+        is_native = "nativePricing" in row
         observed = sum((Decimal(cash[cid]["usdValue"]) for cid in row["cashIds"]), ZERO)
         direct = sum((Decimal(cash[cid]["usdValue"]) for cid in row["directCashIds"]), ZERO)
         invoiced = sum((Decimal(invoice_map[iid]["totalUsd"]) for iid in row["invoiceIds"] if invoice_map[iid]["state"] != "VOID"), ZERO)
-        remaining = max(ZERO, Decimal(row["totalDeliveryCostUsd"]) - invoiced - direct)
+        if is_native:
+            row, remaining_value, uncollected = currency.materialize(row, rate_map, cash, invoice_map)
+            remaining = None if remaining_value is None else Decimal(remaining_value)
+            valuation = row["currencyValuation"]
+            if row["selected"] and (row["priceUsd"] is None or uncollected is None):
+                issue("COMMERCIAL_PRICE_VALUATION_REQUIRED", row["id"],
+                    "Retain a rate for the quoted currency and a native credit for each assigned customer cash record. Original quote and cash amounts remain visible in currency valuation.")
+            if row["selected"] and remaining is None:
+                issue("COMMERCIAL_COST_VALUATION_REQUIRED", row["id"],
+                    "Retain a rate for the estimated cost currency and native credits for assigned original invoices and direct expenses. The remaining cost is unvalued until these inputs are complete.")
+        else:
+            remaining = max(ZERO, Decimal(row["totalDeliveryCostUsd"]) - invoiced - direct)
+            uncollected = money(max(ZERO, Decimal(row["priceUsd"]) - observed))
         assigned_paid = sum((Decimal(invoice["paidUsd"]) for invoice in invoice_rows if invoice["id"] in row["invoiceIds"]), ZERO)
         open_invoice = sum((Decimal(invoice["openUsd"]) for invoice in invoice_rows if invoice["id"] in row["invoiceIds"] and invoice["included"]), ZERO)
         left, receipts = observed, []
         for receipt in row["receipts"]:
-            original_amount = Decimal(receipt["amountUsd"])
-            settled = min(left, original_amount)
-            left -= settled
-            outstanding = original_amount - settled
-            receipts.append({**receipt, "appliedObservedUsd": money(settled), "remainingUsd": money(outstanding)})
-            if row["selected"] and receipt["date"]:
+            if is_native:
+                outstanding = None if receipt["remainingUsd"] is None else Decimal(receipt["remainingUsd"])
+                receipts.append(receipt)
+            else:
+                original_amount = Decimal(receipt["amountUsd"])
+                settled = min(left, original_amount)
+                left -= settled
+                outstanding = original_amount - settled
+                receipts.append({**receipt, "appliedObservedUsd": money(settled), "remainingUsd": money(outstanding)})
+            if row["selected"] and receipt["date"] and outstanding is not None:
+                native_fields = {"nativeCurrency": row["nativePricing"]["price"]["currency"],
+                    "nativeAmount": receipt["remainingNative"], "fxRateId": row["nativePricing"]["price"]["fxRateId"]} if is_native else {}
                 event(receipt["date"], outstanding, "FORECAST_CUSTOMER", row["id"] + "/" + receipt["id"],
-                      row["title"] + " · " + receipt["label"], True, commercialId=row["id"], stage=row["stage"])
-            elif row["selected"] and outstanding:
+                      row["title"] + " · " + receipt["label"], True, commercialId=row["id"], stage=row["stage"], **native_fields)
+            elif row["selected"] and not receipt["date"] and outstanding:
                 issue("CUSTOMER_DATE_REQUIRED", row["id"] + "/" + receipt["id"], "This customer receipt has no selected collection date and is excluded from the cash curve.", outstanding)
         if row["selected"]:
             if row["startDate"] is not None and row["endDate"] is not None:
-                for stamp, amount in schedule(remaining, row["paymentMode"], row["startDate"], row["endDate"]):
-                    event(stamp, -amount, "COMMERCIAL_COST", row["id"], row["title"], True, commercialId=row["id"], stage=row["stage"])
+                if remaining is not None:
+                    for stamp, amount in schedule(remaining, row["paymentMode"], row["startDate"], row["endDate"]):
+                        event(stamp, -amount, "COMMERCIAL_COST", row["id"], row["title"], True, commercialId=row["id"], stage=row["stage"])
                 work(row["id"], row["remainingHours"], row["startDate"], row["endDate"])
             else:
                 issue("COMMERCIAL_WORK_DATE_REQUIRED", row["id"],
                     "Original event-dependent work is retained in scope totals. Select its work window after reviewing the start condition; its uninvoiced costs and hours are outside the dated curves.", remaining)
+        contribution = None if row["priceUsd"] is None or row["totalDeliveryCostUsd"] is None else money(Decimal(row["priceUsd"]) - Decimal(row["totalDeliveryCostUsd"]))
         commercial_rows.append({**row, "receipts": receipts, "observedReceiptsUsd": money(observed),
-            "uncollectedPriceUsd": money(max(ZERO, Decimal(row["priceUsd"]) - observed)),
+            "uncollectedPriceUsd": uncollected,
             "invoicedDeliveryUsd": money(invoiced), "paidInvoiceUsd": money(assigned_paid),
-            "openInvoiceUsd": money(open_invoice), "directPaidUsd": money(direct), "remainingUninvoicedCostUsd": money(remaining),
-            "totalRemainingCashCostUsd": money(remaining + open_invoice),
-            "forecastContributionBeforeOtherCostsUsd": money(Decimal(row["priceUsd"]) - Decimal(row["totalDeliveryCostUsd"]))})
-        if left:
-            issue("CUSTOMER_OVER_RECEIPT", row["id"], "Observed receipts exceed the retained quoted price; the original cash is preserved.", left)
-        if invoiced + direct > Decimal(row["totalDeliveryCostUsd"]):
-            issue("COMMERCIAL_COST_OVERRUN", row["id"], "Recorded customer-specific costs exceed the estimate.", invoiced + direct - Decimal(row["totalDeliveryCostUsd"]))
+            "openInvoiceUsd": money(open_invoice), "directPaidUsd": money(direct), "remainingUninvoicedCostUsd": None if remaining is None else money(remaining),
+            "totalRemainingCashCostUsd": None if remaining is None else money(remaining + open_invoice),
+            "forecastContributionBeforeOtherCostsUsd": contribution})
+        if is_native:
+            if valuation["overCreditNative"] is not None and Decimal(valuation["overCreditNative"]):
+                issue("CUSTOMER_NATIVE_OVER_CREDIT", row["id"],
+                    "Assigned native receipt credits exceed the quoted price by " + valuation["overCreditNative"] + " " + row["nativePricing"]["price"]["currency"] + ". Review the original cash assignment and credit basis.")
+            if valuation["costOverrunNative"] is not None and Decimal(valuation["costOverrunNative"]):
+                issue("COMMERCIAL_NATIVE_COST_OVERRUN", row["id"],
+                    "Assigned original costs exceed the native estimate by " + valuation["costOverrunNative"] + " " + row["nativePricing"]["deliveryCost"]["currency"] + ".")
+        else:
+            if left:
+                issue("CUSTOMER_OVER_RECEIPT", row["id"], "Observed receipts exceed the retained quoted price; the original cash is preserved.", left)
+            if invoiced + direct > Decimal(row["totalDeliveryCostUsd"]):
+                issue("COMMERCIAL_COST_OVERRUN", row["id"], "Recorded customer-specific costs exceed the estimate.", invoiced + direct - Decimal(row["totalDeliveryCostUsd"]))
 
     for ident in future_cash:
         issue("FUTURE_CASH_EXCLUDED", ident, "This original cash record is dated after the as-of date and has not paid or funded this forecast.")
@@ -505,16 +558,34 @@ def build(context, inputs):
             "endBalanceUsd": None if opening is None else money(opening + balances[key])}
     invoice_total = sum((Decimal(row["openUsd"]) for row in invoice_rows if row["included"]), ZERO)
     package_total = sum((Decimal(row["remainingCostUsd"]) for row in package_rows), ZERO)
-    commercial_total = sum((Decimal(row["remainingUninvoicedCostUsd"]) for row in commercial_rows if row["selected"]), ZERO)
-    return {"schema": SCHEMA + ".report", "engineVersion": ENGINE_VERSION, "mode": context["program"]["mode"],
+    commercial_total = sum((Decimal(row["remainingUninvoicedCostUsd"]) for row in commercial_rows
+                            if row["selected"] and row["remainingUninvoicedCostUsd"] is not None), ZERO)
+    commercial_cost_complete = all(row["remainingUninvoicedCostUsd"] is not None for row in commercial_rows if row["selected"])
+    currency_coverage = currency.coverage(commercial_rows, rate_map, as_of) if native_mode else None
+    if native_mode:
+        known_scenario = deepcopy(scenarios["commercial"])
+        if not currency_coverage["datedCashComplete"]:
+            scenarios["commercial"] = {key: None for key in known_scenario}
+        scenarios["commercial"].update({"valuationComplete": currency_coverage["datedCashComplete"],
+            "scopeValuationComplete": currency_coverage["complete"], "valuedPortion": known_scenario,
+            "basis": "Dated commercial metrics include complete valued flows. The valued portion retains known dated flows when currency or original-record credits are incomplete; scope coverage also includes selected undated work."})
+        for day in days:
+            day["knownCommercialDeltaUsd"] = day["commercialDeltaUsd"]
+            day["knownCommercialBalanceUsd"] = day["commercialBalanceUsd"]
+            if not currency_coverage["datedCashComplete"]:
+                day["commercialDeltaUsd"] = day["commercialBalanceUsd"] = None
+    report = {"schema": SCHEMA + ".report", "engineVersion": ENGINE_VERSION, "mode": context["program"]["mode"],
         "asOfDate": as_of, "firstForecastDate": first, "lastForecastDate": end,
         "basis": "Current retained record states; observed cash/work cut off at the as-of date. Opening balance is end-of-day. Forecast dates begin the next day.",
         "actual": {"cash": actual["cash"], "applicationStage": actual["applicationStage"],
                    "originalApplicationState": actual["originalApplicationState"], "futureCashIds": future_cash, "futureWorkIds": future_work},
         "openingCash": inputs["openingCash"], "scenarios": scenarios,
         "totals": {"openInvoiceUsd": money(invoice_total), "remainingPackageCostUsd": money(package_total),
-            "selectedCommercialUninvoicedCostUsd": money(commercial_total),
-            "remainingCashOutflowWithCommercialUsd": money(invoice_total + package_total + commercial_total),
+            "selectedCommercialUninvoicedCostUsd": money(commercial_total) if commercial_cost_complete else None,
+            "remainingCashOutflowWithCommercialUsd": money(invoice_total + package_total + commercial_total) if commercial_cost_complete else None,
+            **({"knownSelectedCommercialUninvoicedCostUsd": money(commercial_total),
+                "knownRemainingCashOutflowWithCommercialUsd": money(invoice_total + package_total + commercial_total),
+                "commercialCostValuationComplete": commercial_cost_complete} if native_mode else {}),
             "remainingGrantPackageHours": hours(sum((Decimal(row["remainingHours"]) for row in package_rows), ZERO)),
             "selectedCommercialHours": hours(sum((Decimal(row["remainingHours"]) for row in commercial_rows if row["selected"]), ZERO))},
         "capacity": {"basis": capacity_basis, "weeklyHours": None if weekly is None else hours(weekly),
@@ -524,10 +595,14 @@ def build(context, inputs):
             "distribution": "Remaining hours are distributed over inclusive calendar dates. Seven-day equivalent is a planning comparison, not a staff roster."},
         "packages": package_rows, "invoices": invoice_rows, "grants": grant_rows, "commercial": commercial_rows,
         "events": events, "days": days, "workDays": daily_work, "issues": issues,
-        **({"eventTiming": event_timing(commercial_rows)} if any("timing" in row for row in commercial_rows) else {})}
+        **({"eventTiming": event_timing(commercial_rows, native_mode)} if any("timing" in row for row in commercial_rows) else {}),
+        **({"currencyValuation": currency_coverage} if native_mode else {})}
+    if "customerFunding" in inputs:
+        report["customerFunding"] = customer_funding.build(report, inputs["customerFunding"])
+    return report
 
 
-def event_timing(commercial):
+def event_timing(commercial, native_mode=False):
     """Only the new explicit timing mode adds report fields; dated v1 saves stay unchanged."""
     projects = []
     for row in commercial:
@@ -545,12 +620,19 @@ def event_timing(commercial):
             "undatedDeliveryCostUsd": row["remainingUninvoicedCostUsd"] if selected and undated else "0.00",
             "undatedHours": row["remainingHours"] if selected and undated else "0",
             "receipts": [{**receipt, "condition": conditions[receipt["id"]]} for receipt in row["receipts"]]})
+    unvalued_costs = [row["id"] for row in projects if row["undatedDeliveryCostUsd"] is None]
+    unvalued_receipts = [row["id"] + "/" + receipt["id"] for row in projects if row["selected"]
+        for receipt in row["receipts"] if not receipt["date"] and receipt["remainingUsd"] is None]
+    known_cost = money(sum((Decimal(row["undatedDeliveryCostUsd"]) for row in projects if row["undatedDeliveryCostUsd"] is not None), ZERO))
+    known_receipts = money(sum((Decimal(receipt["remainingUsd"]) for row in projects if row["selected"]
+        for receipt in row["receipts"] if not receipt["date"] and receipt["remainingUsd"] is not None), ZERO))
     return {"projects": projects,
-        "undatedDeliveryCostUsd": money(sum((Decimal(row["undatedDeliveryCostUsd"]) for row in projects), ZERO)),
+        "undatedDeliveryCostUsd": None if unvalued_costs else known_cost,
         "undatedHours": hours(sum((Decimal(row["undatedHours"]) for row in projects), ZERO)),
-        "undatedCustomerReceiptsUsd": money(sum((Decimal(receipt["remainingUsd"])
-            for row in projects if row["selected"] for receipt in row["receipts"] if not receipt["date"]), ZERO)),
-        "basis": "Full selected costs and hours stay in scope totals. Dated cash and capacity contain only selected dates; original invoices retain their independent due dates. Relative terms do not create cash or accept a handover."}
+        "undatedCustomerReceiptsUsd": None if unvalued_receipts else known_receipts,
+        "basis": "Full selected costs and hours stay in scope totals. Dated cash and capacity contain only selected dates; original invoices retain their independent due dates. Relative terms do not create cash or accept a handover.",
+        **({"knownUndatedDeliveryCostUsd": known_cost, "knownUndatedCustomerReceiptsUsd": known_receipts,
+            "unvaluedDeliveryProjectIds": unvalued_costs, "unvaluedReceiptIds": unvalued_receipts} if native_mode else {})}
 
 
 def preview(context, raw):
@@ -590,7 +672,8 @@ def summary(value):
     return {key: value[key] for key in ("id", "createdAt", "actor", "source", "sha256", "previewSha256")} | {
         "name": value["inputs"]["name"], "asOfDate": value["inputs"]["asOfDate"],
         "totals": value["report"]["totals"], "scenarios": value["report"]["scenarios"],
-        "issueCount": len(value["report"]["issues"])}
+        "issueCount": len(value["report"]["issues"]),
+        **({"currencyValuation": value["report"]["currencyValuation"]} if "currencyValuation" in value["report"] else {})}
 
 
 def export(value):
@@ -631,6 +714,8 @@ def export(value):
         files["event-dependent-receipts.csv"] = csv_bytes(["projectId", "id", "label", "condition", "amountUsd",
             "appliedObservedUsd", "remainingUsd", "date"], [{"projectId": row["id"], **receipt}
             for row in report["eventTiming"]["projects"] for receipt in row["receipts"]])
+    files.update(currency.export_files(report))
+    files.update(customer_funding.export_files(report))
     manifest = {"schema": SCHEMA + ".bundle", "forecastId": value["id"], "forecastSha256": value["sha256"],
                 "files": [{"path": name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()} for name, raw in sorted(files.items())]}
     files["MANIFEST.json"] = (canonical(manifest) + "\n").encode()

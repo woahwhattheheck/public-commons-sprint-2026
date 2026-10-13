@@ -1,6 +1,6 @@
 # Native buyer work in delivery Operations
 
-Receive original SF88 Inbox observations in an existing SF47 grant delivery case. The exporter reads selected original jobs and verifies saved response files through the maintained buyer reader. The receiver links those observations to the original deployment and purchase records, retains the complete private source, and includes it in the normal case export and reopen workflow.
+Receive original SF88 Inbox observations or a delivered Node accounting export in an existing SF47 grant delivery case. The existing reader dispatches each original schema to its maintained validator. The receiver retains exact private source bytes, explicitly associates the accountable deployment, and links a purchase only when the original source has payment terms. Original source editions and the complete case remain available through the same browser, CLI, MCP, export and reopen workflow.
 
 ## Start with the existing purchase
 
@@ -29,6 +29,47 @@ node sf88-operator-buyer-cli/operations-handoff/cli.mjs inspect \
 ```
 
 This returns the interpreted source and a portable HTML review. Its output is a private operations artifact.
+
+## Receive an original Node accounting export
+
+Use the already exported `Operation_Accounting.json` from the original Node operation. Its schema is `stellar-forge.node-operation-accounting-export.v1`; do not rename its fields into an Inbox handoff, substitute a response body, or copy a ledger into it. The unchanged `inspectNodeAccountingExport` validates the embedded original attempt and checkout evidence, exact source hashes, context, command and saved SF36 accounting result. The original SF52 analyzer supplies the response and payment observations. No worker, signer, ledger or provider connection is opened.
+
+The same **Native buyer receiving** page accepts this file. Review the source disposition, original command/context, producing-attempt and checkout timestamps, accounting completion time, and the separately shown output coverage. Select an existing accountable BUYER/BOTH deployment or enter an actual deployment with its original participant class and environment. A native source does not determine independent-customer attribution.
+
+| Original source result | Case disposition |
+| --- | --- |
+| `UNPAID_RESPONSE / NO_PAYMENT_REQUIRED` | An immutable source/deployment observation with `purchase:null`. It adds no purchase, approved intent, paid amount, cash, grant receipt or independent-customer count. |
+| Saved original paid finalization | The original approved terms, exact atomic amount and saved SF36 finality bind the purchase. Network, asset, transaction, request digest and available verified facts remain exact. |
+| Original unresolved paid accounting | The source stays visibly unresolved. Its approved amount is retained as original terms, not evidence of a settled amount. A conflicting or out-of-bounds source requires review; no rounding or substituted outcome occurs. |
+| Reported HTTP success | An original response observation. The Node accounting carrier embeds no response body; it does not establish a currently verified output file. |
+
+For an unpaid row, the selected `purchaseId` must be `null`. A matching original Node identity keeps its deployment across later source editions; any previously established purchase binding also stays on that original purchase. Receiving the same source and associations is idempotent. A new source edition retains the exact earlier editions rather than replacing them.
+
+Node accounting evidence does not overwrite an existing Inbox purchase's independently observed output state, byte count or hash. Missing settlement facts preserve earlier known state; an unresolved carrier cannot unset an established settlement or signed attempt. If a first-time accounting source predates the current purchase observation, the current purchase projection and clock are retained while that new immutable source edition records its actual original times. Preview exposes `currentObservationPreserved` for that case. The operator is not asked to alter a source timestamp to make it current.
+
+A Node preview includes `source.schema`, `source.sourceIdentitySha256`, `source.commandId`, `source.contextSha256` and one original row. That row retains `sourceKind:"NODE_ACCOUNTING"`, `disposition`, `node`, `outcome`, `output`, nullable `purchase`, saved `finality`, existing `operationMatches` and `suggestedDeploymentId`. `NEW_ORIGINAL_OPERATION` and `OBSERVE_ORIGINAL_OPERATION` are valid receiving states for unpaid observations, alongside the existing paid/Inbox states. The original dates have distinct meanings and are never replaced with the receiving time.
+
+### Operate through the same CLI and client
+
+The existing CLI arguments and saved request envelope are unchanged. Substitute the exact original Node file in the preview/receive commands below. A selection for its unpaid observation is:
+
+```json
+[{"jobId":"SOURCE_IDENTITY_SHA256_FROM_PREVIEW","purchaseId":null}]
+```
+
+Use `previewSha256` from the current original preview, the actual deployment ID and a stable request ID. Keep the same bytes, filename, note, actor, selections and reviewed version after an uncertain response. The existing case transaction returns an accepted request before reconsidering its old version; do not replace its identity to recover a lost reply.
+
+The original typed client methods `buyerPreview(caseId, expectedVersion, bytes, filename)` and `buyerReceive(caseId, bytes, body)` accept the same exact Node bytes. The configured MCP actions are `merchant_grant_buyer_preview` and `merchant_grant_buyer_receive`, with the original registered workspace/source aliases and expected source SHA. Their existing retained-file input, preview digest, deployment/selections and request-recovery rules remain in force. An unpaid receive returns `purchaseIds:[]` plus `selectedJobIds` and `operationalObservationIds`; selected original jobs and resulting purchase associations are deliberately separate counts.
+
+### Export and receive the original case
+
+The normal case report adds `delivery.nodeAccounting` only when original Node observations are present. It groups editions by original Node source identity and retains all source hashes, native dispositions, deployments, any purchase binding, original timestamps and response coverage. `unpaidOperations` counts original identities with an unpaid source observation; the immutable editions show the actual outcomes over time. None of this section changes the existing purchase or financial denominators.
+
+The same complete-case ZIP adds `node-accounting-observations.json` and `node-accounting-observations.csv` alongside the exact original carrier, native HTML review, ordinary reports, pinned plan, records, request/event history and frozen reviews. The JSON retains each original identity and all editions. CSV rows retain source identity, original command/context, deployment, nullable purchase, exact native units, HTTP/body coverage and distinct timestamps. Unavailable amounts stay empty; they are not exported as zero.
+
+Trusted case receiving uses the installed original Node reader again to validate every Node carrier and its source/deployment/purchase associations, the accepted event that retained them, and original Node associations copied into frozen reviews. It checks the exact JSON/CSV projections and report section before import. Earlier cases without Node observations retain their existing format. Reopen the imported case through the original receiving workflow, review the source disposition, and download the exact original carrier from **Received original buyer sources**. Receiving does not launch a buyer or contact a provider.
+
+The selected **grant-operations** application carries the complete SF47 workspace, this guide and the new Node reader adapter through its existing component selection. The adapter's relative static imports select the original Node/SF52/SF86 reader closure; the existing explicit `sf86-rpc-transfer-reconcile/networks.json` entry retains the required import-time data. Keep the producer's selected edition and source manifest. The historical original Inbox receiving runtime manifest and its active operator remain with their source owner; this extension does not silently rewrite that operation.
 
 ## Review and receive in the original browser
 
@@ -80,7 +121,7 @@ The review returns `previewSha256`, complete original rows, existing purchases a
 ]
 ```
 
-Use the exact existing purchase ID instead of `null` when the preview identifies a prior intent/transaction. Save the selection and a new deployment's explicit fields in private JSON files, then run:
+Use the exact existing purchase ID instead of `null` when the preview identifies a prior paid intent/transaction. An unpaid Node row always uses `purchaseId:null` and retains only its original deployment/source association. Save the selection and a new deployment's explicit fields in private JSON files, then run:
 
 ```bash
 python3 cli.py operations --workspace /ABSOLUTE/GRANT-WORKSPACE buyer-receive \
@@ -107,7 +148,7 @@ Use the original authenticated SF47 HTTP server and its same-origin request rule
 {"expectedVersion":1,"filename":"buyer-operations.json","contentBase64":"EXACT_ORIGINAL_BASE64"}
 ```
 
-It returns `caseId`, `version`, source identity, native reader provenance, complete counts/rows, native HTML, existing deployments/purchases and `previewSha256`. Each row includes `jobId`, `intentId`, original source hashes, native outcome/finalization/output, proposed ordinary purchase fields, `issues`, `canReceive`, `matches`, `suggestedPurchaseId`, `identityConflicts` and `receiving` (`NEW_ORIGINAL`, `OBSERVE_ORIGINAL` or `CONFLICT`). Preview performs no case mutation.
+It returns `caseId`, `version`, source identity, native reader provenance, complete counts/rows, native HTML, existing deployments/purchases and `previewSha256`. Each row includes `jobId`, `intentId`, original source hashes, native outcome/finalization/output, proposed ordinary purchase fields, `issues`, `canReceive`, `matches`, `suggestedPurchaseId`, `identityConflicts` and `receiving` (`NEW_ORIGINAL`, `OBSERVE_ORIGINAL`, `NEW_ORIGINAL_OPERATION`, `OBSERVE_ORIGINAL_OPERATION` or `CONFLICT`). Preview performs no case mutation.
 
 Receive through the existing `POST /api/operations/{caseId}/command` envelope:
 
@@ -128,7 +169,7 @@ Receive through the existing `POST /api/operations/{caseId}/command` envelope:
 }
 ```
 
-Use `deploymentId:null` plus `deployment:{...}` for a new reviewed deployment. A successful original command returns the case/version/action, deployment `recordId`, `sourceIds`, source SHA-256, selected `purchaseIds`/`selectedJobIds`, all-source job count, `unselectedJobIds` and `unchanged`. Repeating the same original request ID requires exactly the same input. This source action uses the existing record collections, source table, transaction and journal; there is no second buyer ledger.
+Use `deploymentId:null` plus `deployment:{...}` for a new reviewed deployment. A successful original command returns the case/version/action, deployment `recordId`, `sourceIds`, source SHA-256, selected `purchaseIds`/`selectedJobIds`, original Node `operationalObservationIds` when applicable, all-source job count, `unselectedJobIds` and `unchanged`. Repeating the same original request ID requires exactly the same input. This source action uses the existing record collections, source table, transaction and journal; there is no second buyer ledger.
 
 ## Export, restore and continue
 
