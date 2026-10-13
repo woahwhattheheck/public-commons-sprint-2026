@@ -127,6 +127,12 @@ Each accepted release resource retains its original `context_snapshot`. Its grou
 
 Complete workspace export and cold restoration retain the selected source format, original source files, both publication fields, graph edition, review decisions and original operation history. No target Arches API is called by this adapter.
 
+### Native Value coverage
+
+This additive format changes publication interpretation; it does not turn every native Value type into a Starches preferred-label binding. The pinned native `ConceptDataType.validate` checks whether the stored Value UUID exists without limiting its value type. The current receiving adapter resolves graph-declared collection membership through `prefLabels`. The SKOS receiver retains other original `native_values`, including alternate labels and notes, but those fields are not silently substituted into preferred-label selection. A native record selecting a Value outside the retained preferred-label map remains a blocking diagnostic until its original type and membership have an explicit receiving implementation. No identity is derived from matching label text.
+
+Source: [Native concept datatype validation and display](https://github.com/archesproject/arches/blob/2127517966462ea024ffb000b2e1fd46bf66d6dd/arches/app/datatypes/concept_types.py).
+
 ### What the original native fixtures establish
 
 The publisher's `resource_export_tests.py` imports the exact scheme/collection RDF pair and complete `resource_export_test.json` graph before round-tripping `resource_export_business_data_truth.json`. The original graph is `ab74af76-fa0e-11e6-9e3e-026d961c88e6`; both original resources save and export publication `f546e4de-aa0d-11ec-99a5-8e0f431ffc6d`. The graph has 78 nodes and 23 nodegroups; both resources retain nine tiles. This actual cohort establishes the current-publication equality case and the genuine ownership/node/group relationships.
