@@ -110,6 +110,7 @@
       "paths": [
         "docs/MONITORING_EXPORT_STREAMING.md",
         "docs/MONITORING_FIELDWORK_RETURN.md",
+        "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "model/MONITORING.md",
         "model/MONITORING_FIELDWORK.md",
@@ -129,6 +130,7 @@
         "model/monitoring_study_transfer.py",
         "model/monitoring_workspace.py",
         "model/requirements-monitoring.txt",
+        "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py",
         "operator/MONITORING_API.md",
         "operator/extensions/monitoring.json",
@@ -178,11 +180,13 @@
     "watershed-context": {
       "paths": [
         "docs/UTILITY_MONITORING.md",
+        "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/UTILITY_MONITORING_RECEIVING.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
         "model/client_briefing.py",
         "model/utility_monitoring.py",
+        "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
         "source_tools/receive_utility_monitoring.py"
@@ -195,10 +199,12 @@
     "utility-source-receiving": {
       "paths": [
         "docs/UTILITY_MONITORING.md",
+        "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/UTILITY_MONITORING_RECEIVING.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
         "model/utility_monitoring.py",
+        "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
         "source_tools/receive_utility_monitoring.py"
@@ -250,18 +256,32 @@
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PROGRAMME_CASE_CONSOLE.md",
         "docs/PROGRAMME_LARGE_DESIGNS.md",
+        "docs/UTILITY_MONITORING_COMPARISONS.md",
         "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
         "model/programme_case_status.py",
         "model/programme_views.py",
         "model/record_catalog.py",
+        "model/utility_monitoring_comparison.py",
         "operator/web/parameter_case_console.mjs"
       ]
     },
     "monitoring-report": {
       "paths": [
+        "docs/UTILITY_MONITORING_COMPARISONS.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
+        "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py"
+      ]
+    },
+    "monitoring-budget-comparison": {
+      "paths": [
+        "model/utility_monitoring_comparison.py",
+        "model/utility_monitoring_report.py",
+        "model/utility_monitoring.py",
+        "model/monitoring_comparison_report.py",
+        "docs/UTILITY_MONITORING_REPORTS.md",
+        "docs/UTILITY_MONITORING_COMPARISONS.md"
       ]
     }
   },
@@ -293,6 +313,7 @@
     "utility_monitoring_reports": "6fc93c3def3dff865354ce2563cb97c6bfd2cad0",
     "implementation_selected_lineage": "6499a12661e26c8fe31eef40d59ea8f48cb6cf91",
     "implementation_native_study_join": "1718cababa3c6b99834e57e6881387681f2c5e04",
-    "programme_large_designs": "8fd5ce83cda967610504c1ca38cec513e150bbe6"
+    "programme_large_designs": "8fd5ce83cda967610504c1ca38cec513e150bbe6",
+    "utility_monitoring_comparisons": "9714fad1b0a762481821cf7db77b3b712ab8af7d"
   }
 }
