@@ -3,11 +3,14 @@ from model import decisions
 from model.common import file_digest
 
 ACTIONS = {"decision.view.save"}
-READS = {"catalog", "view"}
+READS = {"catalog", "view", "assessment.upload"}
 
 
 def read(operator, workspace_key, operation, payload):
     workspace = operator.ws(workspace_key)
+    if operation == "assessment.upload":
+        from model import decision_transfer
+        return decision_transfer.upload(workspace, payload)
     if operation == "catalog":
         result = decisions.catalog(workspace)
         result["workspace_key"] = workspace_key
