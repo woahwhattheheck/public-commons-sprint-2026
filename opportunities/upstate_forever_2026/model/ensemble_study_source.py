@@ -20,6 +20,7 @@ from .ensembles import Ensembles
 from . import ensemble_report, ensemble_scientific_source as shared
 from . import ensemble_scientific_figures as drawing
 from . import ensemble_study_scope as source_scope
+from . import ensemble_coefficient_evidence as coefficient_sources
 
 VERSION = 2
 DIRECTORY = "ensemble-study-sources"
@@ -145,7 +146,7 @@ def _snapshot(workspace, ensemble_id, scenario_reference=None):
     return selection, plan, release, original, runs
 
 
-def _package(workspace, directory, plan, release, content, runs):
+def _package(workspace, directory, plan, release, content, runs, coefficient_records=()):
     """Keep all report inputs; retain native raster identities without duplicating them."""
     report_root = workspace.root / "ensemble_reports" / release["id"]
     for name, item in release["files"].items():
@@ -244,6 +245,7 @@ def _package(workspace, directory, plan, release, content, runs):
             "retained paths, bytes and SHA256 identities. They are not replaced by the report figures."),
     }
     atomic_json(directory / "native-input-inventory.json", inventory, immutable=True)
+    source_records.extend(coefficient_records)
     atomic_json(directory / "original-source-editions.json", source_records, immutable=True)
     return source_records, profiles, scenarios, scope
 
@@ -584,7 +586,8 @@ def latest(workspace, ensemble_id, *, verify=False, scenario_contrast=False, sou
                       and current.get("report_state") in {"current", "partial"}
                       and operation["selection"]["producer_sha256"] == file_digest(Path(__file__))
                       and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__))
-                      and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__)))
+                      and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__))
+                      and coefficient_sources.current(workspace, operation["selection"].get("coefficient_evidence")))
     if operation["selection"].get("scenario_reference"):
         from . import ensemble_scenario_contrasts
         source_current = (
@@ -595,7 +598,8 @@ def latest(workspace, ensemble_id, *, verify=False, scenario_contrast=False, sou
                 == file_digest(Path(ensemble_scenario_contrasts.__file__))
             and operation["selection"]["producer_sha256"] == file_digest(Path(__file__))
             and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__))
-            and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__)))
+            and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__))
+            and coefficient_sources.current(workspace, operation["selection"].get("coefficient_evidence")))
     if verify:
         for item in operation.get("files", {}).values():
             verify_file(workspace.root, item)
@@ -620,11 +624,14 @@ def _remember_contrast(workspace, operation):
         atomic_json(path, record)
 
 
-def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
+def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None, coefficient_evidence=None):
     """Freeze the original report, register its typed source and render ordinary exports."""
     if not isinstance(render, bool):
         raise ValueError("Render must be true or false")
     selection, plan, release, content, runs = _snapshot(workspace, ensemble_id, scenario_reference)
+    if coefficient_evidence is not None:
+        selection["coefficient_evidence"] = coefficient_sources.bind(
+            workspace, coefficient_evidence, coefficient_sources.context(workspace, plan["id"]))
     pointer_name = "latest-scenario-contrasts.json" if scenario_reference is not None else "latest-scientific-study.json"
     key = digest(selection)
     directory = workspace.root / DIRECTORY / key
@@ -643,11 +650,17 @@ def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
             if not operation.get("source"):
                 manifest = source_directory / "sources.json"
                 if not manifest.exists():
-                    source_records, profiles, scenarios, scope = _package(workspace, source_directory, plan, release, content, runs)
+                    coefficients = coefficient_sources.collect(workspace, source_directory,
+                                                                 selection.get("coefficient_evidence"))
+                    source_records, profiles, scenarios, scope = _package(
+                        workspace, source_directory, plan, release, content, runs,
+                        coefficient_records=coefficients["source_records"])
                     graphics = _figures(source_directory, content)
                     title = ("Scenario contrasts: " + content["report"]["title"]
                              if scenario_reference is not None else "Native study: " + plan["title"])
-                    _manifest(source_directory, title, selection, _sections(plan, content, profiles, scenarios, scope), graphics)
+                    sections = _sections(plan, content, profiles, scenarios, scope)
+                    sections.extend(coefficients["sections"])
+                    _manifest(source_directory, title, selection, sections, graphics)
                 recipe = read_json(source_directory / "scientific-report.json")
                 if recipe["basis"] != selection:
                     raise ValueError("Prepared report source has another native study basis")
@@ -665,6 +678,10 @@ def prepare(workspace, ensemble_id, *, render=True, scenario_reference=None):
                                    ("native_input_inventory", "native-input-inventory.json"),
                                    ("source_scope", source_scope.SCOPE_FILE)):
                     operation["files"][name] = describe_file(workspace.root, source_directory / path)
+                for name in ("ensemble_coefficient_manifest", "ensemble_coefficient_cells"):
+                    path = coefficient_sources.MANIFEST if name.endswith("manifest") else coefficient_sources.CELLS
+                    if selection.get("coefficient_evidence") is not None:
+                        operation["files"][name] = describe_file(workspace.root, source_directory / path)
                 atomic_json(operation_path, operation)
             else:
                 workspace.source_file(operation["source"]["source_collection_id"], SOURCE_ID)

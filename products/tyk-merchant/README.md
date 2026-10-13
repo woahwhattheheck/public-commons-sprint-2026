@@ -97,3 +97,7 @@ the complete source and native receiving path.
 The original shared catalogue exposes 22 workspace actions and 28 Tyk MCP tools.
 Actual native and rendered results remain attached to the original receiving
 operation; source availability alone does not establish customer-facing readiness.
+
+## Staging and production Gateway commissioning
+
+The installed application includes a complete [two-Gateway course](GATEWAY_COMMISSIONING.md): full source intake and recovery, original native request preparation/dispatch, explicit reload, source-bound operational acceptance, production deployment of the accepted full active definitions and whole-history receiving. The Dashboard native migration course stays available in its existing section.

@@ -78,6 +78,14 @@ def parser():
         help="Publish the original native design contrasts, figures and complete numeric sources")
     study_source.add_argument("--ensemble-id", required=True)
     study_source.add_argument("--source-only", action="store_true")
+    for source_command in (scientific, study_source):
+        source_command.add_argument("--coefficient-evidence", metavar="JSON",
+            help="Explicit original source selection JSON: evidence_ids and range_ids; omission keeps original behavior")
+    evidence_choices = commands.add_parser("coefficient-evidence",
+        help="List original evidence/ranges and their actual saved member coverage")
+    cohort = evidence_choices.add_mutually_exclusive_group(required=True)
+    cohort.add_argument("--ensemble-id")
+    cohort.add_argument("--consumer-id")
     study_selection = commands.add_parser("study-selection",
         help="Append the retained native study source to an existing ordered scientific selection")
     study_selection.add_argument("--ensemble-id", required=True)
@@ -90,8 +98,14 @@ def main(argv=None):
     args = parser().parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
-        if args.command == "study-source":
-            result = ensemble_study_source.prepare(workspace, args.ensemble_id, render=not args.source_only)
+        if args.command == "coefficient-evidence":
+            from . import ensemble_coefficient_evidence as coefficients
+            lineage = (coefficients.consumer_context(workspace, args.consumer_id) if args.consumer_id else
+                       coefficients.context(workspace, args.ensemble_id))
+            result = coefficients.catalog(workspace, lineage)
+        elif args.command == "study-source":
+            result = ensemble_study_source.prepare(workspace, args.ensemble_id, render=not args.source_only,
+                coefficient_evidence=read_json(args.coefficient_evidence) if args.coefficient_evidence else None)
         elif args.command == "study-selection":
             retained = ensemble_study_source.latest(workspace, args.ensemble_id, verify=True)
             if not retained or not retained.get("source"):
@@ -104,7 +118,8 @@ def main(argv=None):
                 atomic_json(Path(args.output), result, immutable=True)
         elif args.command == "scientific-source":
             result = ensemble_scientific_source.prepare(workspace, args.consumer_id,
-                                                       render=not args.source_only)
+                                                       render=not args.source_only,
+                coefficient_evidence=read_json(args.coefficient_evidence) if args.coefficient_evidence else None)
         elif args.command == "scientific-selection":
             retained = ensemble_scientific_source.latest(workspace, args.consumer_id)
             if not retained or not retained.get("source"):

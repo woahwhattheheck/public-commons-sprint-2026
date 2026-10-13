@@ -1,0 +1,87 @@
+{
+  "schema": "commons.customer-working-course-integration.v1",
+  "sources": [
+    {
+      "path": "operations/lead-case-handoff-20261012/native-service-browser.mjs",
+      "preimage": "6a41b7b02de3604994a79411cd701ae2b83cdff06843e2ee0c4c279353d3957a",
+      "postimage": "4ef20cf752c89fb11de95f782531eae0f4ce4f3161bf7e1233998c712493344c",
+      "replacements": [
+        [
+          "import {commissionCustomerReview} from './customer-review-receiving.mjs';",
+          "import {commissionCustomerReview} from './customer-review-receiving.mjs';\nimport {runCustomerWorkingCourses,validateCustomerWorkingCourses} from './customer-working-courses.mjs';"
+        ],
+        [
+          "packIds,customers,customerFiles=[],supportingPackages=[],expectedRevision,workingRecord,signal}){",
+          "packIds,customers,customerFiles=[],supportingPackages=[],customerCourses=[],expectedRevision,workingRecord,signal}){"
+        ],
+        [
+          "  const byId=new Map(customers.map(row=>[row.id,row]));",
+          "  const byId=new Map(customers.map(row=>[row.id,row]));\n  validateCustomerWorkingCourses(customerCourses);\n  need(customerCourses.every(course=>byId.has(course.pack_id)),'Operate the selected existing customer in this original workspace.');"
+        ],
+        [
+          "    need(report.page_errors.length===0&&report.request_errors.length===0,",
+          "    if(customerCourses.length){\n      report.customer_working_courses=await runCustomerWorkingCourses({browser,courses:customerCourses,outputDirectory,signal});\n      report.files.push(...report.customer_working_courses.files);\n    }\n    need(report.page_errors.length===0&&report.request_errors.length===0,"
+        ]
+      ]
+    },
+    {
+      "path": "operations/lead-case-handoff-20261012/complete-native-lead-service.mjs",
+      "preimage": "68d1a623383a0b252e8d8f5b4aa831d8b80eb0288d34345d13f224391b46d497",
+      "postimage": "a01d0d4baf36b684daddce4742eebf8756d5b14d5e368a9f596e7d2190f62ef7",
+      "replacements": [
+        [
+          "import {runNativeServiceBrowser} from './native-service-browser.mjs';",
+          "import {runNativeServiceBrowser} from './native-service-browser.mjs';\nimport {validateCustomerWorkingCourses} from './customer-working-courses.mjs';"
+        ],
+        [
+          "  return request;\n}",
+          "  validateCustomerWorkingCourses(request.browser.customer_courses||[]);\n  return request;\n}"
+        ],
+        [
+          "module:request.browser.module,executable:request.browser.executable,packIds:request.browser.pack_ids,",
+          "module:request.browser.module,executable:request.browser.executable,packIds:request.browser.pack_ids,\n              customerCourses:request.browser.customer_courses||[],"
+        ]
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "source": "customer-working-courses.mjs",
+      "path": "operations/lead-case-handoff-20261012/customer-working-courses.mjs",
+      "sha256": "5480d34a2ade5174a329bafe97bf9b86b57c2104bab6113560874f331e250719"
+    },
+    {
+      "source": "run_revenue_tools_receiving.mjs",
+      "path": "operations/lead-case-handoff-20261012/working-tools/run_revenue_tools_receiving.mjs",
+      "sha256": "6cdf282f209c941f49a9556e7a2cd28380af3bd6f8dda33bf0343c6ca3e653bc"
+    },
+    {
+      "source": "run_tweak_receiving.mjs",
+      "path": "operations/lead-case-handoff-20261012/working-tools/run_tweak_receiving.mjs",
+      "sha256": "1b07740f46d1a2aab9630f69f4fdcf8cf5b37eb8a86ba6ed22bd2ef9058d9a90"
+    }
+  ],
+  "customers": [
+    {
+      "id": "milestage-working-tools",
+      "directory": "milestage",
+      "record": "milestage-working-record.json",
+      "module": "run_revenue_tools_receiving.mjs",
+      "export_name": "runMileStageReceiving"
+    },
+    {
+      "id": "glassdart-working-tools",
+      "directory": "glassdart",
+      "record": "glassdart-working-record.json",
+      "module": "run_revenue_tools_receiving.mjs",
+      "export_name": "runGlassdartReceiving"
+    },
+    {
+      "id": "tweak-review-pilot",
+      "directory": "tweak",
+      "record": "tweak-working-record.json",
+      "module": "run_tweak_receiving.mjs",
+      "export_name": "runTweakReceiving"
+    }
+  ]
+}

@@ -7,7 +7,12 @@ const number = value => value === null || value === undefined ? '—' :
   typeof value === 'number' ? value.toLocaleString(undefined, {maximumSignificantDigits: 7}) : String(value);
 const copy = value => JSON.parse(JSON.stringify(value));
 const active = value => ['queued', 'running'].includes(value);
-const ticketURL = ticket => /^\/api\/file\/[a-f0-9]{64}$/.test(ticket?.url || '') ? ticket.url : '';
+const ticketURL = ticket => {
+  const url = ticket?.url || '';
+  if (/^\/api\/file\/[a-f0-9]{64}$/.test(url)) return url;
+  const preview = /^\/api\/file\/receptor-preview\/([A-Za-z0-9_-]+)\/([a-f0-9]{64})$/.exec(url);
+  return preview && preview[1] === ticket.workspace && preview[2] === ticket.id ? url : '';
+};
 const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'}[key] || label(key));
 
 export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme, openScientificReport}) {

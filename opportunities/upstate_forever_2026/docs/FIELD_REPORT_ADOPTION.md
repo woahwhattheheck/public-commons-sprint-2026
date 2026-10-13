@@ -16,14 +16,16 @@ Use the same completed operation's:
 
 The original report directories are `implementation/plans/PLAN_ID/reports/REPORT_ID/`. Preserve all their original filenames and complete inventories. The separate engineering-handback entry in the presentation receipt belongs to its existing customer workflow; this operation selects only the two QC and three action entries.
 
-The current original renderer's `handoff-receipt.json` may include recipient-use records and viewed-image notes in addition to the producer's source fields. Retain the **whole exact file**. Its complete bytes and SHA-256 bind this adoption request; do not reconstruct or truncate it.
+The original `render_actual_packets.py` writes `actual-presentation-receipt.json` at the **attachment-fix root**, alongside its `readable/` output directory. In the current native operation the exact source is `/workspace/scratch/7b7a26b9784e/round2/science/attachment-fix/actual-presentation-receipt.json`. It is not a file beneath `readable/`.
+
+The transported source carrier separately includes a combined member named `handoff-receipt.json`, which may add recipient-use records and viewed-image notes. That name describes the carried file; it does not rename the native producer's receipt. If using this carried member, materialize it explicitly and pass its actual path. In either case, retain the **whole exact selected receipt**. Its complete bytes and SHA-256 bind the adoption request, so continue retries with that same file rather than switching between the original and combined receipt.
 
 ## Run the maintained native adoption
 
 From the complete installed application, with its existing scientific Python:
 
 ~~~text
-python -B -m model.field_report_adoption adopt --workspace /absolute/original/workspace --field-operation ORIGINAL_FIELD_OPERATION_ID --receipt /absolute/actual-presentation/handoff-receipt.json --output /absolute/new-field-presentation.json
+python -B -m model.field_report_adoption adopt --workspace /absolute/original/workspace --field-operation ORIGINAL_FIELD_OPERATION_ID --receipt /absolute/attachment-fix/actual-presentation-receipt.json --output /absolute/new-field-presentation.json
 ~~~
 
 Replace these paths and the operation ID with the original native values. The destination is the same saved project that completed the field campaign; this command does not create a Workspace, execute native hydrology, author a measurement or render another report.
@@ -100,6 +102,55 @@ On the independent received project:
 - Operate the existing field, QC, corrective-action, customer and project receiving controls with the original case identities. Preserve the original distinction between customer responses and engineering disposition.
 
 The producing peer must actually open, render, LOOK at and use the exact outgoing application and **all attachments**. Personally view the actual screenshots; source review or image capture alone is insufficient. Extract the outgoing archives and open the contained editable project, HTML, PDF, data and reports. Watch/listen to any final media; use actual application recordings and natural narration. Repair unreadable, cramped, clipped, broken or unstyled output in the maintained original source, preserve industrial design and original scientific content, and continue the existing owners' operation. Keep this instruction in the consumed build/receiving guidance and delegation. No new model run, controller or broad review suite is required by adoption.
+
+## Bind the selected adoption to the next whole-project archive
+
+The maintained adoption module exposes a separate archive binding. It preserves the original `inspect_adoption` result, adoption ID and presentation ID.
+
+```python
+from model import field_report_adoption
+
+adoption = field_report_adoption.inspect_adoption(workspace, adoption_id)
+selection = field_report_adoption.attach_to_archive(
+    workspace, adoption_id, original_archive_selection)
+binding = selection["field_report_adoption"]
+required_members = ["workspace/" + item["path"]
+                    for item in binding["retained_files"]]
+
+```
+
+The binding contains the exact project, field operation, native plan, original receipt SHA and presentation ID. Its complete sorted file inventory contains:
+
+- The immutable original receipt, request and completion, plus all five per-report adoption records.
+- Every file and native manifest from the five original reports and five selected readable reports.
+- Each original historical plan revision used by those reports.
+
+Every descriptor has its ordinary Workspace-relative path, full byte count and streamed SHA-256. Both native scientific/source inspection and each member identity are rechecked before the value is returned. The helper requires completed adoption. It rejects a conflicting existing adoption key rather than replacing an earlier archive's choice.
+
+For an inspectable JSON binding from the actual native Workspace:
+
+```sh
+python -B -m model.field_report_adoption archive-binding \
+  --workspace /absolute/original/workspace \
+  --operation ORIGINAL_ADOPTION_ID
+
+```
+
+The companion source-owner composition adds `--field-presentation-adoption ORIGINAL_ADOPTION_ID` to the existing `source_tools/simulated_headwaters.py` command. Use the same original workspace, output directory and recipe as its existing operation. The argument names an already completed adoption; it does not copy reports or choose a latest directory. On a resumed operation, an already recorded explicit choice remains selected if the flag is omitted. An explicitly different completed adoption is retained as another presentation choice, and the existing archive editions remain intact.
+
+The complete producer composition performs these operations before and after the ordinary native backup:
+
+1. Inspect the selected adoption against the original campaign, project and plan; retain its exact original result and archive binding in the existing demo receipt.
+2. Add the complete binding and actual adoption/presentation source file hashes before computing the archive edition name.
+3. Require every bound report, manifest, plan revision and journal member in the archive. Verify each member's size and SHA, including when recovering a previously published archive.
+4. Reinspect the same adoption and byte binding in the restored Workspace.
+5. Start the existing cold receiver using the received application. Its explicit `field_report_adoption` check verifies every bound member against the actual archive manifest, reconstructs the native result and binding, and returns both under the original cold receiving result.
+
+This closes the case where report adoption leaves the editable plan's current revision unchanged: an earlier archive now has a different selection identity and cannot be silently reused for the selected readable reports. Later unrelated plan edits do not relabel or replace the historical revisions used by those reports.
+
+The code carrier includes the complete producer and cold-receiver composition with exact prior source hashes and individual literal hooks. Their existing source owner composes those two shared leaves with any newer changes before publishing; the adoption helper and this guide can be installed independently. Confirm the producer's `--help` includes the option before passing it. Preserve newer scientific, regional, Programme and customer branches when joining the shared files.
+
+After whole-project receiving, compare the returned adoption ID, presentation ID, complete original/selected mapping and binding to the captured source. Continue the original recorded page using its explicit presentation selection. Source and archive checks establish receiving identity; the exact outgoing reports and controls still require the actual desktop and narrow-screen inspection described above.
 
 ## Complete current owner direction
 

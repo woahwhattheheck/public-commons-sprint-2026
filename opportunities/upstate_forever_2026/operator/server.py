@@ -877,8 +877,11 @@ class Operator:
     def _ticket(self, workspace, path, expected, label=None):
         self.team.check_workspace(workspace)
         path = Path(path).resolve()
-        key = digest({"workspace": workspace, "path": str(path), "sha256": expected["sha256"], "bytes": expected["bytes"]})
-        item = {"id": key, "workspace": workspace, "path": str(path), "filename": expected.get("filename") or path.name,
+        filename = expected.get("filename") or path.name
+        # Equal CAS bytes can be authored companions with distinct download names.
+        key = digest({"workspace": workspace, "path": str(path), "sha256": expected["sha256"],
+                      "bytes": expected["bytes"], "filename": filename})
+        item = {"id": key, "workspace": workspace, "path": str(path), "filename": filename,
                 "label": label or path.name, "bytes": expected["bytes"], "sha256": expected["sha256"]}
         with self.lock:
             self.downloads[key] = item
