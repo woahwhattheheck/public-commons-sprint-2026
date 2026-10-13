@@ -166,7 +166,7 @@ def prepare(workspace, project_id, revision, actor, operation, capture_operation
                 "target": {"api_base": profile["api_base"], "object_structure": profile["object_structure"],
                            "scope_equals": profile["scope_equals"]},
                 "method": "POST", "url": endpoint(profile, "os/"+profile["object_structure"], {"lean":"1"}),
-                "headers": {"Content-Type":"application/json", "x-method-override":"BULK",
+                "headers": {"Content-Type":"application/json", "x-method-override":"BULK", "x-public-uri":profile["api_base"],
                             "allornothing":"1" if mapping["allornothing"] else "0", "transactionid": operation,
                             **({"patchtype":"MERGE"} if mapping["action"] == "Update" else {})},
                 "body_base64": base64.b64encode(body).decode(), "body_sha256": SHA(body),
@@ -214,8 +214,8 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
         supplied = meta.get("status")
         status = int(supplied) if isinstance(supplied, (int, str)) and str(supplied).isdigit() else None
         data = response.get("_responsedata") if isinstance(response, dict) else None
-        error = data.get("Error") if isinstance(data, dict) else None
-        outcome = "accepted_pending" if status == 202 and not error else "reported_success" if status is not None and 200 <= status < 300 and not error else "reported_rejection" if status is not None and status >= 400 else "unknown"
+        has_error = isinstance(data, dict) and "Error" in data
+        outcome = "accepted_pending" if status == 202 and not has_error else "reported_success" if status is not None and 200 <= status < 300 and not has_error else "reported_rejection" if status is not None and status >= 400 else "unknown"
         results.append({**expected, "reported_status": status, "outcome": outcome,
                         "resource_location": meta.get("Location", meta.get("location")), "original_response": response})
     all_or_nothing = saved["headers"]["allornothing"] == "1"

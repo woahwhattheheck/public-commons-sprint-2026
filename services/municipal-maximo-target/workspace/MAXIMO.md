@@ -28,6 +28,8 @@ Select either a verified actual `source_link` field containing each exact origin
 
 The `fields` object maps the existing target display/comparison fields to explicit original JSON pointers. Org/site values are checked for every row in both complete observations. The actual original schema is acquired before the first walk and after the second. Configured attributes and aliases must exist in that schema. The collector requests `_dropnulls=0`, the original `_rowstamp`, persistent fields, and each explicitly mapped root selector. It does not invent geometry from scalar coordinates or convert business identifiers into provider links.
 
+Requests also bind `x-public-uri` to the selected API base. [IBM's API-key guide](https://ibm-maximo-dev.github.io/maximo-restapi-documentation/authentication/apikey/) specifies this exact `/api` route header so response hrefs remain on that public API route; returned links are still retained and validated individually.
+
 Use the existing secret provisioning method to set the profile's `apikey_env` in the operator's environment. The profile stores only the variable's name.
 
 ```sh
