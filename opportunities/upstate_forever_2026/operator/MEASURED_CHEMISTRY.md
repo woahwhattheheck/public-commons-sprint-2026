@@ -168,3 +168,26 @@ the resulting native records.
 ## Rendered product inspection
 
 Before the October 13 14:00 UTC sprint handoff, the producing worker opens this exact populated workflow and LOOKS at its rendered desktop and narrow screens. Operate inspection, invalid input, saving, reopening, native case navigation, request recovery and export. View the actual screenshots and scientific output, then repair clipping, unreadable tables, missing styles or broken controls. Preserve the images with the receiving output. Source review alone does not establish the outgoing product's visual readiness.
+
+
+## Reopen a binding from an independently received Chemistry case
+
+A complete scientific Workspace transfer retains its saved binding library.
+An editable Chemistry project can also carry the binding source independently.
+
+Select the received physical case, then open **Reopen a binding carried by a
+received Chemistry case** and choose **Read selected case sources**. The list
+shows the original source titles returned by the native case. Choose its measured
+binding source and **Inspect original binding and review**.
+
+The panel reads the original source ticket and displays the retained title,
+reviewer, scientific rationale, station assignments, exact characteristic/method/
+fraction definitions, component operators, basis evidence, uncertainty, timing
+and full original population. Its source digest must match the received case's
+retained reference, and the source's physical project must match the selected case.
+
+Only **Adopt this original binding in the received workspace** creates the
+receiver's native binding record. The native producer validates the case/source
+relationship and preserves the originating selection. Failed lookup or adoption
+leaves the existing working definition and saved binding intact. The reopened
+binding supplies the original native payload to the same Chemistry queue.
