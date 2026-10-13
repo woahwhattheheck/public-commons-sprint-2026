@@ -122,6 +122,14 @@
         "after": "    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]\n    if first not in source:\n        source = add(source, \"function toast(message){\", registration, \"extension browser instance\", before=True)\n    else:\n        if source.count(first) != 1 or source.count(last) != 1:\n            raise ValueError(\"Expected one complete current extension browser instance\")\n        start, end = source.index(first), source.index(last, source.index(first)) + len(last)\n        current, cursor = source[start:end], 0\n        for original_line in registration.splitlines(keepends=True):\n            found = current.find(original_line, cursor)\n            if found < 0:\n                raise ValueError(\"Preserve and compose the current extension host capability: \" + original_line.strip())\n            cursor = found + len(original_line)\n",
         "marker": "first, last = registration.splitlines(keepends=True)[0]"
       }
+    ],
+    "operator/web/index.html": [
+      {
+        "id": "journey-save-header",
+        "before": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "after": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"journey-save-view\" title=\"Save the selected analysis and notes in this workspace\">Save view and notes</button><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "marker": "data-action=\"journey-save-view\""
+      }
     ]
   }
 }

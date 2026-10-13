@@ -700,53 +700,48 @@ class Operator:
         return result
 
     def source_info(self, workspace, collection, source, layer=None):
-        gate = self.gates[token(workspace)]
-        if not gate.acquire(blocking=False):
-            raise Fault("NATIVE_BUSY", "The current model operation is using this workspace. Inspect the retained source after it finishes.", 409)
-        try:
-            path, entry = self.ws(workspace).source_file(collection, source)
-            result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
-            if entry["kind"] == "table":
-                import csv
-                with path.open(encoding="utf-8-sig", newline="") as original:
-                    reader = csv.DictReader(original)
+        # Retained sources are immutable; inspection remains available during native execution.
+        path, entry = self.ws(workspace).source_file(collection, source)
+        result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
+        if entry["kind"] == "table":
+            import csv
+            with path.open(encoding="utf-8-sig", newline="") as original:
+                reader = csv.DictReader(original)
+                rows = []
+                for row in reader:
+                    rows.append(row)
+                    if len(rows) == 30:
+                        break
+            result.update(columns=reader.fieldnames, sample=rows, sample_limit=30)
+        elif entry["kind"] == "vector":
+            import fiona
+            from model.rasters import vector_environment, native_vector_path
+            native_path = native_vector_path(path)
+            with vector_environment():
+                layers = list(fiona.listlayers(native_path))
+                selected = layer or entry.get("layer") or (layers[0] if layers else None)
+                if selected not in layers:
+                    raise Fault("SOURCE_LAYER", "Select one of the original native vector layers.")
+                with fiona.open(native_path, layer=selected) as original:
+                    result.update(layers=layers, selected_layer=selected, feature_count=len(original),
+                                  geometry_type=original.schema["geometry"], fields=dict(original.schema["properties"]),
+                                  crs=original.crs_wkt or str(original.crs), bounds=list(original.bounds))
                     rows = []
-                    for row in reader:
-                        rows.append(row)
-                        if len(rows) == 30:
+                    for feature in original:
+                        rows.append({"native_id": str(feature.id), **dict(feature.properties)})
+                        if len(rows) == 20:
                             break
-                result.update(columns=reader.fieldnames, sample=rows, sample_limit=30)
-            elif entry["kind"] == "vector":
-                import fiona
-                from model.rasters import vector_environment, native_vector_path
-                native_path = native_vector_path(path)
-                with vector_environment():
-                    layers = list(fiona.listlayers(native_path))
-                    selected = layer or entry.get("layer") or (layers[0] if layers else None)
-                    if selected not in layers:
-                        raise Fault("SOURCE_LAYER", "Select one of the original native vector layers.")
-                    with fiona.open(native_path, layer=selected) as original:
-                        result.update(layers=layers, selected_layer=selected, feature_count=len(original),
-                                      geometry_type=original.schema["geometry"], fields=dict(original.schema["properties"]),
-                                      crs=original.crs_wkt or str(original.crs), bounds=list(original.bounds))
-                        rows = []
-                        for feature in original:
-                            rows.append({"native_id": str(feature.id), **dict(feature.properties)})
-                            if len(rows) == 20:
-                                break
-                        result.update(sample=rows, sample_limit=20)
-            elif entry["kind"] == "raster":
-                import rasterio
-                with rasterio.open(path) as original:
-                    result.update(width=original.width, height=original.height, count=original.count,
-                                  crs=str(original.crs), transform=list(original.transform)[:6],
-                                  resolution=list(original.res), bounds=list(original.bounds),
-                                  dtypes=list(original.dtypes),
-                                  nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
-                                  native_tags=original.tags())
-            return result
-        finally:
-            gate.release()
+                    result.update(sample=rows, sample_limit=20)
+        elif entry["kind"] == "raster":
+            import rasterio
+            with rasterio.open(path) as original:
+                result.update(width=original.width, height=original.height, count=original.count,
+                              crs=str(original.crs), transform=list(original.transform)[:6],
+                              resolution=list(original.res), bounds=list(original.bounds),
+                              dtypes=list(original.dtypes),
+                              nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
+                              native_tags=original.tags())
+        return result
 
     def state(self, workspace):
         ws = self.ws(workspace)
@@ -777,6 +772,14 @@ class Operator:
     def task_view(self, key):
         task = self.task(key)
         result = task.get("result", {})
+        core_results = {"source.import": "sources", "profile.save": "profiles", "scenario.save": "scenarios",
+                        "grid.prepare": "grids", "run.prepare": "runs", "run.start": "runs",
+                        "run.compare": "comparisons", "observation.import": "observations",
+                        "observation.compare": "observation_comparisons", "delivery.build": "deliveries"}
+        if task["state"] == "complete" and task["action"] in core_results and result.get("id"):
+            kind = core_results[task["action"]]
+            task["_item"] = {"kind": kind, "id": result["id"]}
+            task["_downloads"] = self.item(task["workspace"], kind, result["id"])["_downloads"]
         if task["action"] == "workspace.backup" and task["state"] == "complete":
             task["_downloads"] = [self._ticket(task["workspace"], result["path"], result, "Complete scientific workspace")]
         if task["action"] == "spatial.review.save" and task["state"] == "complete":
