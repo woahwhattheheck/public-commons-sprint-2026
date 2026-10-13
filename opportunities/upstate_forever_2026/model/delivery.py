@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-5"
+DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-6"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -299,6 +299,14 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            if "grid_record" not in state["files"]:
+                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+                retained_grid = directory / "grid" / "grid.json"
+                _copy(original_grid, retained_grid, describe_file(workspace.root, original_grid))
+                state["files"]["grid_record"] = describe_file(directory, retained_grid)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["grid_record"])
             analysis_product = analysis_delivery.retain_analysis(workspace, directory, state, analysis_link)
             if analysis_product is not None:
                 atomic_json(state_path, state)
@@ -646,6 +654,15 @@ def build(workspace, selection):
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                    "record": state["files"]["grid_record"]["path"],
+                    "audit_scope": "regional-30m" if (
+                        math.isclose(float(cells["width"]), 30.0, rel_tol=0.0, abs_tol=1e-6)
+                        and math.isclose(float(cells["height"]), 30.0, rel_tol=0.0, abs_tol=1e-6)
+                        and abs(float(grid["grid"]["transform"][1])) < 1e-8
+                        and abs(float(grid["grid"]["transform"][3])) < 1e-8
+                        and float(grid["spec"]["upstream_buffer_m"]) > 0)
+                        else "source-native"},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
                 "project_assets": [state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],

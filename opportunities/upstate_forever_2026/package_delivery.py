@@ -90,8 +90,12 @@ def collect_references(data, *, limits=None):
         require(isinstance(key, str) and len(key) <= 200, 'Map IDs must be bounded strings')
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
+    if 'grid' in data:
+        require(isinstance(data['grid'], dict), 'Declared native grid must be an object')
+        references.append({'role': 'native_grid', 'path': data['grid'].get('record')})
     assets = data.get('project_assets', [])
-    require(isinstance(assets, list) and len(assets) <= limits['max_references'] and
+    require(isinstance(assets, list) and (limits['max_references'] is None
+            or len(assets) <= limits['max_references']) and
             all(isinstance(path, str) and path for path in assets),
             'project_assets must be explicit relative paths within max_references=' +
             str(limits['max_references']))
@@ -203,9 +207,10 @@ def pack(manifest_path, output, *, limits=None):
             'Raster companion presence changed during packaging; choose a fresh capture')
     audit_raw = json_bytes(audit)
     require(len(audit_raw) <= limits['max_index_bytes'] and
-            len(audit_raw) <= limits['max_file_bytes'],
+            (limits['max_file_bytes'] is None or len(audit_raw) <= limits['max_file_bytes']),
             'Generated audit exceeds the selected metadata/member byte budget')
-    require(sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
+    require(limits['max_total_bytes'] is None or
+            sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
             <= limits['max_total_bytes'],
             'Captured source and audit exceed the selected total byte budget')
     write_new(output / 'audit.json', audit_raw)
@@ -259,7 +264,7 @@ def main():
     for command in (create, check):
         for key, default in DEFAULT_LIMITS.items():
             command.add_argument('--' + key.replace('_', '-'), type=int, default=default,
-                                 help='Positive integer; default %(default)s' +
+                                 help='Optional positive integer; default %(default)s' +
                                       (' references' if key == 'max_references' else ' bytes'))
     args = parser.parse_args()
     try:
