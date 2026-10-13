@@ -216,6 +216,9 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     ET.SubElement(step, "procdate").text = "Unknown"
     if dataset is None:
         step.find("procdesc").text += " The original conversion completion date is not separately recorded."
+        step.find("procdesc").text += " Original artifact conversion/quantity record: " + json.dumps(
+            {key: raster[key] for key in ("native_units", "units", "pixel_area_ha", "valid_cells", "sum", "sum_units")
+             if key in raster}, ensure_ascii=False, sort_keys=True)
     if native_execution:
         add("idinfo/descript/supplinf", "Original producing-model metadata: " +
             json.dumps(native_model, ensure_ascii=False, sort_keys=True) +
@@ -226,11 +229,23 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("spdoinfo/rastinfo/rowcount", grid["grid"]["height"])
     add("spdoinfo/rastinfo/colcount", grid["grid"]["width"])
     add("spdoinfo/rastinfo/vrtcount", 1)
-    add("spref/horizsys/planar/mapproj/mapprojn", crs.name)
     operation = crs.coordinate_operation
-    if operation and "albers" in operation.method_name.lower():
+    names = {p.name.lower(): p.value for p in operation.params} if operation else {}
+    zone = crs.utm_zone
+    if zone:
+        add("spref/horizsys/planar/gridsys/gridsysn", "Universal Transverse Mercator")
+        zone_number = int(zone[:-1]) * (-1 if zone[-1].upper() == "S" else 1)
+        add("spref/horizsys/planar/gridsys/utm/utmzone", zone_number)
+        transverse = ET.SubElement(root.find("spref/horizsys/planar/gridsys/utm"), "transmer")
+        for tag, phrase in (("sfctrmer", "scale factor"), ("longcm", "longitude"),
+                            ("latprjo", "latitude"), ("feast", "easting"), ("fnorth", "northing")):
+            values = [value for name, value in names.items() if phrase in name]
+            if len(values) != 1:
+                raise ValueError("Retained UTM coordinate operation must supply one " + tag)
+            ET.SubElement(transverse, tag).text = str(values[0])
+    elif operation and "albers" in operation.method_name.lower():
+        add("spref/horizsys/planar/mapproj/mapprojn", crs.name)
         albers = ET.SubElement(root.find("spref/horizsys/planar/mapproj"), "albers")
-        names = {p.name.lower(): p.value for p in operation.params}
         parameters = {name: [] for name in ("stdparll", "longcm", "latprjo", "feast", "fnorth")}
         for name, value in names.items():
             tag = ("stdparll" if "standard parallel" in name else
@@ -241,10 +256,18 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
             if tag:
                 parameters[tag].append(value)
         for tag, values in parameters.items():
+            if not (1 <= len(values) <= 2 if tag == "stdparll" else len(values) == 1):
+                raise ValueError("Retained Albers coordinate operation has incomplete " + tag)
             for value in values:
                 ET.SubElement(albers, tag).text = str(value)
     else:
-        add("spref/horizsys/planar/mapproj/mapprojp/otherprj", crs.to_wkt())
+        # The published DTD and XSD differ on otherprj nesting. The common
+        # local-planar production retains the complete original definition.
+        add("spref/horizsys/planar/localp/localpd", crs.to_wkt())
+        add("spref/horizsys/planar/localp/localpgi",
+            "Original projected coordinates use the complete retained CRS definition above. "
+            "The raster affine transform is " + json.dumps(grid["grid"]["transform"]) +
+            "; coordinate values and original pixel alignment are unchanged.")
     add("spref/horizsys/planar/planci/plance", "row and column")
     add("spref/horizsys/planar/planci/coordrep/absres", cells["width"])
     add("spref/horizsys/planar/planci/coordrep/ordres", cells["height"])
@@ -295,9 +318,9 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         # the later comparison or normalization process.
         step.find("procdate").text = "Unknown"
         add("idinfo/timeperd/timeinfo/sngdate/caldate", "Unknown")
-        add("idinfo/timeperd/current", "The original derived-dataset processing date is not recorded. "
-            "Producing-stage completion dates remain in the retained run records; "
-            "the actual packaging date is recorded in the packaging process step.")
+        add("idinfo/timeperd/current", "Derived comparison or priority of the retained modeled annual quantities; "
+            "no single ground-condition date is recorded. Original input periods remain in lineage; "
+            "derivation, producing-stage and packaging dates are separate process records.")
         transfer = ET.SubElement(lineage, "procstep")
         ET.SubElement(transfer, "procdesc").text = (
             "Retain the original dataset and present companions for editable GIS delivery; "
@@ -333,6 +356,8 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
             "; original and delivered SHA256 " + raster["sha256"] +
             ". Citation/metadata dates describe this packaging edition, not source observation.")
         ET.SubElement(transfer, "procdate").text = day
+    add("idinfo/descript/supplinf", (root.findtext("idinfo/descript/supplinf") or "") +
+        " Original retained CRS WKT: " + crs.to_wkt())
     ET.indent(root)
     atomic_bytes(path, ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n")
 
