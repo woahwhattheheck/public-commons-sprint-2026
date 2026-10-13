@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hive application workspace</title><link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar"><div><strong>Hive application workspace</strong><span id="workspace-name">Loading saved workspace</span></div><button id="refresh" type="button">Refresh</button></header>
+<div class="shell">
+<nav aria-label="Workspace sections">
+<button data-section="editions" aria-current="page">Editions</button>
+<button data-section="native">Native deployments</button>
+<button data-section="programme">Client programme</button>
+<button data-section="cutover">Cutover and rollback</button>
+<button data-section="delivery">Delivery</button>
+<div class="nav-note">Original Hive Router<br>v0.3.4</div>
+</nav>
+<main>
+<div id="status" role="status" aria-live="polite"></div>
+<section id="editions" class="section">
+<div class="section-title"><div><h1>Original and changed editions</h1><p>Keep the complete configuration, supergraph, client operations and original supporting files together.</p></div><span class="count" id="edition-count"></span></div>
+<div class="two-columns">
+<form id="import-form" class="card"><h2>Import complete edition</h2><label>Original edition directory<input name="directory" required placeholder="/work/hive/original-edition"></label><label>Edition name<input name="name" placeholder="Original application"></label><p class="help">Select the directory containing edition.json and all of its original files.</p><button class="primary">Import edition</button></form>
+<div class="card"><h2>Saved editions</h2><div class="table-scroll"><table><thead><tr><th>Edition</th><th>Files</th><th>Operations</th><th></th></tr></thead><tbody id="edition-rows"></tbody></table></div></div>
+</div>
+<div class="card"><div class="heading-row"><h2>Review native configuration</h2><select id="config-edition" aria-label="Configuration edition"></select></div><p class="help">Review every configured feature against the original Hive implementation. Save the decisions with the complete edition.</p><form id="configuration-review"><div id="feature-rows"></div><label>Complete configuration review<textarea name="note" rows="3" required placeholder="Explain the selected authentication, routing, operation and observability behavior."></textarea></label><button class="primary">Save configuration review</button></form></div>
+<div class="card"><h2>Create a changed edition</h2><form id="change-form"><div class="three-columns"><label>Original edition<select name="edition" id="change-edition"></select></label><label>Selected file<select name="path" id="change-file"></select></label><label>Changed edition name<input name="name" required placeholder="Reviewed public schema"></label></div><label>Complete changed file<textarea id="changed-source" name="content" class="code" rows="14" spellcheck="false" required></textarea></label><div class="button-row"><button id="stage-change" type="button">Add file to changed edition</button></div><div id="changed-files-summary" class="summary"></div><p class="help">Stage every related file change, then save the complete edition. The original files remain available in their saved edition.</p><button class="primary">Save changed edition</button></form></div>
+</section>
+<section id="native" class="section" hidden>
+<div class="section-title"><div><h1>Native deployments</h1><p>Run the original Hive executable with the complete saved edition and the selected existing environment.</p></div></div>
+<form id="prepare-form" class="card"><h2>Prepare deployment</h2><div class="two-columns"><label>Saved edition<select name="edition" id="native-edition"></select></label><label>Deployment name<input name="name" placeholder="Initial application"></label><label>Original Hive executable<input name="binary" required placeholder="/opt/hive/hive_router_linux_amd64"></label><label>Existing environment-variable names<input name="environment_names" placeholder="HIVE_CDN_KEY, CUSTOMER_AUTH_KEY"></label></div><p class="help">The edition selects its loopback listener and native settings. Private values stay in the selected host environment.</p><button class="primary">Prepare native deployment</button></form>
+<div class="card"><h2>Saved native processes</h2><div class="table-scroll"><table><thead><tr><th>Deployment</th><th>State</th><th>Listener</th><th>Original attempts</th><th>Actions</th></tr></thead><tbody id="native-rows"></tbody></table></div></div>
+</section>
+<section id="programme" class="section" hidden>
+<div class="section-title"><div><h1>Client programme</h1><p>Run every selected client operation and inspect its complete native HTTP and GraphQL result.</p></div><span id="programme-count" class="count"></span></div>
+<form id="run-form" class="card"><div class="three-columns"><label>Native deployment<select name="deployment" id="run-deployment"></select></label><label>Programme name<input name="name" placeholder="Initial client programme"></label><label>Existing programme ID, if continuing<input name="run_id" placeholder="Leave empty for a new selected run"></label></div><button class="primary">Run complete programme</button></form>
+<div class="card"><div class="heading-row"><h2>Complete native results</h2><select id="result-programme" aria-label="Saved programme"></select></div><div id="programme-summary" class="summary"></div><div class="table-scroll"><table><thead><tr><th>Client operation</th><th>Outcome</th><th>HTTP</th><th>GraphQL errors</th><th>Time</th><th>Original result</th></tr></thead><tbody id="result-rows"></tbody></table></div></div>
+<div class="card"><h2>Review complete programme</h2><form id="programme-review"><div id="result-review-rows"></div><label>Engineering review<textarea name="note" rows="3" required placeholder="Explain the complete observed application behavior and any expected native errors."></textarea></label><button class="primary">Save result review</button></form></div>
+<div class="card"><h2>Compare complete programmes</h2><form id="compare-form" class="inline-form"><label>Baseline<select name="baseline" id="compare-baseline"></select></label><label>Candidate<select name="candidate" id="compare-candidate"></select></label><button class="primary">Compare all results</button></form><div id="comparison-view"></div></div>
+</section>
+<section id="cutover" class="section" hidden>
+<div class="section-title"><div><h1>Cutover and rollback</h1><p>Select the reviewed native deployment served by this workspace's stable GraphQL endpoint.</p></div></div>
+<div class="card"><h2>Current endpoint</h2><div id="active-deployment"></div><p class="help">HTTP requests, native errors, response headers and streaming bodies are forwarded to the selected original router. The original native listener serves WebSocket clients directly.</p></div>
+<form id="activate-form" class="card"><h2>Change the selected deployment</h2><div class="two-columns"><label>Ready native deployment<select name="deployment" id="activate-deployment"></select></label><label>Accepted programme from its current attempt<select name="programme" id="activate-programme"></select></label></div><label>Deployment decision<textarea name="note" rows="3" required placeholder="Describe the selected application change or reason for restoring the earlier edition."></textarea></label><div class="button-row"><button class="primary" name="operation" value="cutover">Cut over</button><button name="operation" value="rollback">Roll back</button></div></form>
+<div class="card"><h2>Deployment history</h2><div class="table-scroll"><table><thead><tr><th>When</th><th>Action</th><th>Deployment</th><th>Decision</th></tr></thead><tbody id="deployment-history"></tbody></table></div></div>
+</section>
+<section id="delivery" class="section" hidden>
+<div class="section-title"><div><h1>Complete delivery</h1><p>Carry the editable operator source, original files, native history, reviews and results into a fresh receiving installation.</p></div></div>
+<div class="two-columns"><form id="export-form" class="card"><h2>Export complete workspace</h2><p>Generate one complete ZIP containing the saved workspace and every file in the application source inventory.</p><button class="primary">Create complete ZIP</button><div id="export-result"></div></form><div class="card"><h2>Workspace condition</h2><p id="workspace-summary"></p><button id="verify-workspace" type="button">Inspect saved workspace</button></div></div>
+<form id="receive-form" class="card"><h2>Receive an existing complete edition</h2><label>Original ZIP path<input name="archive" required placeholder="/work/Hive_Complete_Workspace.zip"></label><label>Fresh receiving directory<input name="destination" required placeholder="/work/hive-received"></label><div class="button-row"><button name="operation" value="inspect">Inspect edition</button><button name="operation" value="compare">Compare history</button><button class="primary" name="operation" value="receive">Receive complete edition</button></div><div id="receive-result"></div></form>
+<div class="card"><h2>Receiving installation</h2><p>Open the received source with its saved workspace. Select the existing host's original Hive binary and environment, prepare a new local deployment, then run and review the full client programme before changing the receiving endpoint.</p><pre class="command">python3 -m hive_desk serve /work/hive-received/workspace</pre><p class="help">Run the command from /work/hive-received/source. The complete operating and receiving guides travel in the same archive.</p></div>
+</section>
+</main></div>
+<dialog id="detail-dialog"><div class="heading-row"><h2 id="detail-title"></h2><button id="close-detail" type="button">Close</button></div><pre id="detail-body" tabindex="0"></pre></dialog>
+<script src="/app.js"></script>
+</body></html>
