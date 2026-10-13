@@ -661,12 +661,21 @@ def native(journey):
 def bundle(output, complete):
     verify_checkpoint(output, complete, complete["operation_id"])
     selected = output_files(output)
+    extra = {}
+    if (output / "uploads/simulated-headwaters/selected-case.json").is_file():
+        from source_tools.simulated_headwaters_handover import build_members, member_identity, write_members
+        extra = build_members(output, complete)
+    if set(extra) & {path.relative_to(output).as_posix() for path in selected}:
+        raise ValueError("A generated handover member collides with an original retained file")
     manifest = {"schema": "upstate.rehearsal-complete-delivery/v1",
                 "operation_id": complete["operation_id"], "rehearsal_id": complete["rehearsal_id"],
                 "files": {path.relative_to(output).as_posix(): {
                     "bytes": path.stat().st_size, "sha256": file_digest(path)}
                     for path in sorted(selected)},
                 "meaning": "Complete original scientific and teaching archives, native/browser receipts, exact queued requests, and receiving records. Live connection capabilities and operator-state credentials are excluded."}
+    if extra:
+        manifest["files"].update({name: member_identity(value) for name, value in extra.items()})
+        manifest["opening_page"] = "START_HERE.html"
     manifest_bytes = canonical(manifest) + b"\n"
     name = "rehearsal-delivery-" + hashlib.sha256(manifest_bytes).hexdigest() + ".zip"
     destination = output / name
@@ -679,6 +688,8 @@ def bundle(output, complete):
                     z.writestr("DELIVERY.json", manifest_bytes)
                     for path in sorted(selected):
                         z.write(path, path.relative_to(output).as_posix())
+                    if extra:
+                        write_members(z, extra)
                 raw.flush(); os.fsync(raw.fileno())
             os.link(temporary, destination)
         finally:

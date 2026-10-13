@@ -8,7 +8,9 @@
         "source/implementation/run_sample_qc_browser.mjs",
         "docs/SIMULATED_FIELDWORK_BROWSER.md",
         "integration/component_fragments/simulated-field-recording.json",
-        "source_tools/simulated_headwaters_narration.py"
+        "source_tools/simulated_headwaters_narration.py",
+        "source_tools/simulated_headwaters_handover.py",
+        "docs/SIMULATED_HEADWATERS_HANDOVER.md"
       ]
     }
   },
