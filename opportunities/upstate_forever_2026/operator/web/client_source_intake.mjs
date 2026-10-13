@@ -145,7 +145,7 @@ export function createClientSourceIntake(host){
     need(value.state==='complete'&&Array.isArray(value.files),'Wait for the complete original inspection.');
     for(const choice of candidate.selections){
       const file=value.files[choice.file_index],part=file?.inspection?.parts?.[choice.part_index];
-      need(part&&!file.error&&roles[part.kind]?.includes(choice.role),'A saved choice does not match an inspected original part.');
+      need(part&&!file.error&&!part.error&&roles[part.kind]?.includes(choice.role),'A saved choice does not match an inspected original part.');
       const ids=new Set(arr(part.fields).map(field=>field.id));
       need(Object.values(choice.mapping).every(column=>ids.has(column))&&
         ['identifier_field','label_field'].every(name=>choice[name]===''||ids.has(choice[name])),
@@ -241,8 +241,9 @@ export function createClientSourceIntake(host){
       return '<article class="ci-file"><h3>'+esc(f.filename)+'</h3>'+arr(f.inspection.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+
         f.inspection.parts.map((part,pi)=>'<details class="ci-part" open><summary>'+esc(part.name)+' · '+esc(part.kind)+'</summary>'+
           '<dl>'+Object.entries(part).filter(([k])=>['crs','bounds','geometry','feature_count','width','height','dtype','nodata','band','declared_unit','scale','offset','header_row','formula_mode'].includes(k)).map(([k,v])=>'<div><dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(Array.isArray(v)?v.join(', '):v??'Not supplied')+'</dd></div>').join('')+'</dl>'+
-          arr(part.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+table(part)+
-          actionButton('add-choice','Review this source','data-ci-file="'+fi+'" data-ci-part="'+pi+'" data-ci-mutating')+'</details>').join('')+'</article>';
+          (part.error?'<p role="alert">'+esc(part.error.message)+'</p><p>This worksheet remains in the original workbook. Other readable worksheets remain available. Choose a different header row and inspect again to review this sheet.</p>':
+            arr(part.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+table(part)+
+            actionButton('add-choice','Review this source','data-ci-file="'+fi+'" data-ci-part="'+pi+'" data-ci-mutating'))+'</details>').join('')+'</article>';
     }).join('')+'<div class="ci-downloads">'+arr(inspection._downloads).map(x=>'<a href="'+esc(x.url)+'?download=1" download>'+esc(x.label||x.filename)+'</a>').join('')+'</div>';
   }
   function renderChoices(){
@@ -350,6 +351,7 @@ export function createClientSourceIntake(host){
   }
   function addChoice(fi,pi){
     const file=inspection.files[fi],part=file.inspection.parts[pi];
+    need(!file.error&&!part.error,'Correct this worksheet’s reading choices and inspect again before selecting it.');
     if(draft.selections.some(x=>x.file_index===fi&&x.part_index===pi))throw Error('This source is already in your reviewed choices.');
     saveChange(v=>{
       v.inspection_id=inspection.id;
