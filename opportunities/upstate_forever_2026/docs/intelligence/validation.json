@@ -1,0 +1,51 @@
+{
+  "package": "ASTRA-ECO-INTEL13",
+  "version": "1.0.0",
+  "journeys_passed": 5,
+  "journey_seconds": 0.328,
+  "native_integration": "Older and current route/store seams exercised using controlled integration fixtures",
+  "provider_integration": "Chat Completions tool protocol exercised with controlled transport",
+  "capacity": {
+    "million_row_profile_seconds": 2.048062281000057,
+    "million_row_complete_join_seconds": 12.64251560699995,
+    "16777215_cell_comparison_seconds": 0.36868108799990296,
+    "rows_per_table": 1000000,
+    "paired_raster_cells": 16777215,
+    "all_assertions_passed": true,
+    "exercise": "Authored capacity workload, not a scientific model run",
+    "peak_rss_kib": 357328,
+    "total_seconds": 15.643874635999964
+  },
+  "browser": {
+    "browser": "Chromium offline DOM with live local HTTP API binding",
+    "tests": "Create, full table comparison, complete collection execution, HTML export, reopen, tenant switch, mobile width",
+    "evidence_reopened": 4,
+    "javascript_errors": [],
+    "mobile_width": {
+      "viewport": 390,
+      "body": 390
+    },
+    "passed": true
+  },
+  "installers": [
+    {
+      "mode": "legacy",
+      "two_installs_and_fresh_import": "passed",
+      "original_app_preserved": true
+    },
+    {
+      "mode": "catalog",
+      "two_installs_and_fresh_import": "passed",
+      "original_app_preserved": true
+    }
+  ],
+  "python": "3.13.5",
+  "packages": {
+    "fastapi": "0.128.2",
+    "pydantic": "2.13.5",
+    "httpx": "0.28.1",
+    "rasterio": "1.5.0",
+    "numpy": "2.3.5",
+    "fiona": "1.10.1"
+  }
+}
