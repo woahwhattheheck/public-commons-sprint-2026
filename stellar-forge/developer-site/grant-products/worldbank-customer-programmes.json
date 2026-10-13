@@ -1,0 +1,270 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "worldbank-customer-programmes",
+  "heading": "## World Bank customer programmes and complete analytical delivery",
+  "sources": [
+    {
+      "id": "worldbank-customer-programmes",
+      "label": "Named World Bank programmes and original customer report refresh",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/PROGRAMMES.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "3414c431e63278f290ae63aa47fdc82dcd36f13a",
+          "bytes": 10669,
+          "sha256": "ceb5eccdb04bd572ad92d52b952027979bddd338a2e10f8180dcfb51faa82930"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-analysis-programmes",
+      "label": "Existing Analysis workflow, source review and restored portable delivery",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/ANALYSIS_PROGRAMMES.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "7228508c02ea91a430bd0938c49197021331cf49",
+          "bytes": 7308,
+          "sha256": "2820d0dbdd0e43825053cc7b2842c89f9cdc2dc497b244a1789cbe6ab863fd9a"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-programme-model",
+      "label": "Saved programme revisions, source selection and original request coordinator",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/worldbank_programmes.py",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "c78274963308ad9163e7c557762a3d57121e9348",
+          "bytes": 37351,
+          "sha256": "ca4e8631fb97bb05a9570619ca335aaf6f0317f270207bee585987c1e129a2d8"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-original-analysis",
+      "label": "Original World Bank analytical source and receiving operations",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/worldbank_analysis.py",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "8dfd5b32d6cd6edde367251481d67c034d82a8dc",
+          "bytes": 42871,
+          "sha256": "66af0f3b80cf5ebdb76e589a84e9f35a984dab185e43764828eeab112d36cf93"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-programme-receiving",
+      "label": "Complete original programme/browser/independent receiving implementation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/worldbank_programmes_receive.py",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "1e0065e1447fb179fe7668d89ae2af3f0af881ae",
+          "bytes": 46361,
+          "sha256": "0b706a0bd7f65191aa5a92abcb6a6ad6373a439e6484e7861a4379fb3564a702"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-programme-course",
+      "label": "Original source, live programme and portable continuation course",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/PROGRAMME_RECEIVING.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "87f64f6da060426e7bdfabf653dd572f2ff69c51",
+          "bytes": 8605,
+          "sha256": "dca3437e6a1f98cde8a81b3d7b79d75c37609e392a8de8a88a6ea06d90afc496"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-installed-programme",
+      "label": "Installed source-selected programme and complete receiving guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/INSTALLED_PROGRAMME_RECEIVING.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "required": true,
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "0e1d153204ee1aca21637bcf836eb1aae95a7535",
+          "bytes": 5330,
+          "sha256": "aa4fbf142d7c7563e3ee752fa3b7a60588a5bdfcd16d27e9f13e8ce28cb091f5"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-source-workspace",
+      "label": "Original World Bank acquisition, source semantics and portable editions",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/worldbank/README.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "e6efc87bc50b155f000ff9cee3d7a7c5d1e775be",
+          "bytes": 9600,
+          "sha256": "c28bebcb6a0a72df4216f1f816e5cdb0ccd1e01625dd7d82515c4091f28f27cb"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-source-merchant",
+      "label": "Original reviewed dataset release and customer acquisition",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/worldbank/NATIVE.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "774f4e75069805d601e29ec1f9a9f8ca1f5e04c1",
+          "bytes": 10141,
+          "sha256": "baba50ae09ed7b0f9027bf3880df98b179f58a6fefcd2dcea1ae5b1b4874924c"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-analytical-delivery",
+      "label": "Original economic calculations, report/workbook files and native receiving",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/worldbank/ANALYSIS.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "128b74a368f6bfb204406fc2f60c713ff5c90102",
+          "bytes": 12782,
+          "sha256": "0a1386b17eb96b0c1e26bc0a50e6e8b35f716808f67d9aae35c32417aa85b2b6"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-complete-product",
+      "label": "Complete installed World Bank customer operation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/OPERATING.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "f15ac2a667d66b9f0eacdb3fb96e2b3696c9271b",
+          "bytes": 8427,
+          "sha256": "c9c5922c4701a4d80135f8174d74bd5557215dd2e54f7d21af34d142d47ffd78"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-recurring-customer",
+      "label": "Customer-edited query, report and workbook continuation across editions",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/RECURRING.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "cd4b0d67e32dc049f04a85b4c657e876b31bf347",
+          "bytes": 9558,
+          "sha256": "e33bfaad6872c06440e225eb77fb655d3a473c6aa17d8487a99cac493bff63fd"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-intake-operation",
+      "label": "Approved original ZIP intake and source registration",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/recurring/OPERATING.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "904cc868b4eb79a7e2f24fe6154ea0a4ca8d1163",
+          "bytes": 6319,
+          "sha256": "31e86141df863759d54c5c80ed44f67c020450c43b1a3fdc4473ac7e7d0e290c"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-merchant-source-agent",
+      "label": "Shared source/browser and merchant agent operating contract",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/WORLDBANK-WORKSPACES.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "2cf0928329d48cff4024fa8aa89e3149850bcdff",
+          "bytes": 12426,
+          "sha256": "b0f2a1e7093dc1c38516336ff59b3f6528bc6a2b84c37bd635a33f4bd6d34159"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-merchant-programme-agent",
+      "label": "Named programme agent, workflow periods and complete customer transfer",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/WORLDBANK_PROGRAMMES.md",
+      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "editions": [
+        {
+          "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+          "git_blob": "1503114f204e0d44c15de849d152bbee80dcc2c0",
+          "bytes": 15410,
+          "sha256": "e8f4782f44d8aa4b5dacba6ed77a41480576fe5e5c41a35ab686fae90103aab6"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-customer-commissioning",
+      "label": "Complete World Bank customer commissioning, acceptance and delivery",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/worldbank/CUSTOMER_DELIVERY.md",
+      "commit": "c8f0d4eae25b1138c3af3580bf2fd837162c977c",
+      "editions": [
+        {
+          "commit": "c8f0d4eae25b1138c3af3580bf2fd837162c977c",
+          "git_blob": "e7d9fbba94d7abbec49a15ad9eedae5bad71090b",
+          "bytes": 14204,
+          "sha256": "e222c769e84b4a16dd7b07e235bf409a07a4a8489fdcefca48261e82533f3f2b"
+        }
+      ]
+    }
+  ]
+}

@@ -118,7 +118,9 @@
     "stellar-forge/mcp-merchant-operator/WORLDBANK-WORKSPACES.md",
     "stellar-forge/mcp-merchant-operator/examples/worldbank-managed-receiving.mjs",
     "stellar-forge/mcp-merchant-operator/examples/worldbank-native-receiving.mjs",
-    "stellar-forge/mcp-merchant-operator/examples/worldbank-reference-capture.json"
+    "stellar-forge/mcp-merchant-operator/examples/worldbank-reference-capture.json",
+    "stellar-forge/developer-site/grant-chapters/worldbank-customer-programmes.md",
+    "stellar-forge/developer-site/grant-products/worldbank-customer-programmes.json"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
