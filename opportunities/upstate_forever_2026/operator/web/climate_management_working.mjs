@@ -107,7 +107,7 @@ export function createManagementWorking(host){
       button('recovery','Download unfinished recovery')+(row.request?button('retry','Reconcile original save'):'')+
       (original?button('export','Export complete saved history')+button('study','Export editable working Study'):'')+'</div>'+
       '<p class="cm-meta">A saved revision retains blank controls, exact original forcing studies, scenario-role mappings and reporting-source editions. Scientific preview still validates the completed design. Download a recovery before closing if browser storage is unavailable.</p>'+
-      '<details><summary>Open saved designs, original revisions and browser recoveries</summary>'+
+      '<details'+(view?' open':'')+'><summary>Open saved designs, original revisions and browser recoveries</summary>'+
       (heads.length?'<ul>'+heads.map(x=>'<li>'+esc(x.name)+' · revision '+esc(x.revision)+' · '+esc(x.author)+' '+
         button('open','Open original revision','data-revision="'+esc(x.id)+'"')+
         button('history','Review complete history','data-revision="'+esc(x.id)+'"')+'</li>').join('')+'</ul>':'<p>No named working revisions have been retained in this workspace.</p>')+
