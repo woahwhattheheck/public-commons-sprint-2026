@@ -10,7 +10,7 @@ export class OriginalDesignEditor {
   constructor(host,preparation,close){
     this.host=host;this.workspace=host.getState().workspace_key;
     this.preparation=preparation;this.close=close;this.gone=false;
-    this.controller=new AbortController();this.frame=null;this.original=null;this.flushes=new Map();
+    this.controller=new AbortController();this.frame=null;this.original=null;this.flushes=new Map();this.deliveries=new Map();
     window.addEventListener("message",event=>void this.message(event),{signal:this.controller.signal});
   }
   current(){
@@ -20,6 +20,7 @@ export class OriginalDesignEditor {
   async queue(action,payload){
     this.current();
     const key="upstate.design-editor-operation/"+await fingerprint({workspace:this.workspace,action,payload});
+    this.current();
     let retained;
     try{retained=JSON.parse(sessionStorage.getItem(key)||"null");}catch{}
     if(!retained){retained={operation_id:"design-editor-"+crypto.randomUUID(),id:null};sessionStorage.setItem(key,JSON.stringify(retained));}
@@ -34,8 +35,9 @@ export class OriginalDesignEditor {
     while(true){
       this.current();
       const task=await this.host.api(this.host.endpoint("/api/task",{id:retained.id,workspace:this.workspace}));
+      this.current();
       if(task.state==="complete"){
-        this.current();sessionStorage.removeItem(key);return task;
+        this.deliveries.set(task.id,key);return task;
       }
       if(task.state==="interrupted"&&!resumed){
         await this.host.api("/api/task/resume",{method:"POST",body:{id:task.id}});
@@ -51,6 +53,10 @@ export class OriginalDesignEditor {
       await wait(pause);pause=Math.min(1500,pause+150);
     }
   }
+  acknowledge(task){
+    const key=this.deliveries.get(task.id);
+    if(key){sessionStorage.removeItem(key);this.deliveries.delete(task.id);}
+  }
   async start(){
     const task=await this.queue("conservation.design.editor.open",{preparation_id:this.preparation.id});
     this.current();this.original=task.result.response;
@@ -59,7 +65,7 @@ export class OriginalDesignEditor {
       workspace:this.workspace,path:"/api/projects/"+this.preparation.project_id}});
     this.current();
     if(this.original.project.id!==this.preparation.project_id)throw Error("The current editor record belongs to another project.");
-    this.render(this.root);
+    this.acknowledge(task);this.render(this.root);
   }
   render(root){
     if(this.gone)return;
@@ -77,11 +83,12 @@ export class OriginalDesignEditor {
       {signal:this.controller.signal});
     this.frame.src=this.host.endpoint("/api/file/conservation-design/"+encodeURIComponent(this.workspace)+"/editor/index.html",{workspace:this.workspace,project:this.preparation.project_id});
   }
-  fail(error){const element=this.root?.querySelector("[data-editor-status]");if(element){element.textContent=error.message||String(error);element.setAttribute("role","alert");}}
+  fail(error){if(this.gone||this.host.getState()?.workspace_key!==this.workspace)return;const element=this.root?.querySelector("[data-editor-status]");if(element){element.textContent=error.message||String(error);element.setAttribute("role","alert");}}
   reply(source,id,result){
-    if(this.gone||source!==this.frame?.contentWindow)return;
+    if(this.gone||this.host.getState()?.workspace_key!==this.workspace||source!==this.frame?.contentWindow)return false;
     const data={channel,id,workspace:this.workspace,...result};
     source.postMessage(data,location.origin,data.raw instanceof ArrayBuffer?[data.raw]:[]);
+    return true;
   }
   async message(event){
     if(this.gone||event.origin!==location.origin||event.source!==this.frame?.contentWindow)return;
@@ -137,9 +144,9 @@ export class OriginalDesignEditor {
         if(raw.byteLength!==result.file.bytes)throw Error("The retained editor export length differs from its original descriptor.");
         const actual=[...new Uint8Array(await crypto.subtle.digest("SHA-256",raw))].map(x=>x.toString(16).padStart(2,"0")).join("");
         if(actual!==result.file.sha256)throw Error("The retained editor export differs from its original hash.");
-        this.current();this.reply(event.source,request.id,{raw,mime_type:result.mime_type});return;
+        this.current();if(this.reply(event.source,request.id,{raw,mime_type:result.mime_type}))this.acknowledge(task);return;
       }
-      this.current();this.reply(event.source,request.id,{value:result});
+      this.current();if(this.reply(event.source,request.id,{value:result}))this.acknowledge(task);
     }catch(error){this.reply(event.source,request.id,{error:{message:error.message||String(error),status:error.status||400}});}
   }
   async finish(){
@@ -150,11 +157,11 @@ export class OriginalDesignEditor {
       this.frame.contentWindow.postMessage({channel,kind:"flush",workspace:this.workspace,id},location.origin);
       await ready;
     }
-    this.detach();await this.close();
+    this.current();this.detach();await this.close();
   }
   detach(){
     this.gone=true;this.controller.abort();
     for(const item of this.flushes.values())item.reject(Error("The original editor view was detached."));
-    this.flushes.clear();this.frame=null;
+    this.flushes.clear();this.deliveries.clear();this.frame=null;
   }
 }
