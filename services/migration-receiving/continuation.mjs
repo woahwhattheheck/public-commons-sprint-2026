@@ -45,16 +45,26 @@ function contains(actual,expected){
  return actual&&typeof actual==='object'&&Object.entries(expected).every(([k,v])=>contains(actual[k],v));
 }
 /** Continue one original browser workspace, its requests and complete immutable outputs. */
-export async function openMigrationReceiving({page,outputDirectory,applicationPath,engine,title,resultFilename}){
+export async function openMigrationReceiving({page,outputDirectory,applicationPath,engine,title,resultFilename,workspaceModel,browserControls}){
+ const defaultModel={id:'ordered-operations-v1',identity:ws=>({id:ws.id,title:ws.title,createdAt:ws.createdAt}),revision:ws=>ws.revision,operations:ws=>ws.operations,sequence:op=>op.revision};
+ const model=workspaceModel||defaultModel;
+ need(typeof model.id==='string'&&model.id&&['identity','revision','operations','sequence'].every(k=>typeof model[k]==='function'),'Supply the exact original workspace history model.');
+ const identityOf=ws=>{const value=model.identity(ws);need(value&&['id','title','createdAt'].every(k=>typeof value[k]==='string'&&value[k]),'Read the original logical workspace identity.');return value;};
+ const revisionOf=ws=>{const value=model.revision(ws);need(Number.isSafeInteger(value)&&value>=0,'Read the original workspace revision.');return value;};
+ const operationsOf=ws=>{const value=model.operations(ws);need(Array.isArray(value)&&value.length===revisionOf(ws),'Read the complete original ordered operation history.');return value;};
+ const sequenceOf=op=>{const value=model.sequence(op);need(Number.isSafeInteger(value)&&value>0,'Read the original operation sequence.');return value;};
+ const controls={ready:'#top-json',workspaceDownload:'#top-json',...browserControls};
+ need(typeof controls.ready==='string'&&controls.ready&&typeof controls.workspaceDownload==='string'&&controls.workspaceDownload,'Supply the actual original workspace download control.');
+
  need(path.isAbsolute(outputDirectory)&&path.isAbsolute(applicationPath),'Use absolute original receiving and application paths.');
  await fs.mkdir(outputDirectory,{recursive:true,mode:0o700});const root=await fs.realpath(outputDirectory),release=await kernelLease(root);
  try{
   const currentApplication=await fs.readFile(applicationPath),application={bytes:currentApplication.length,sha256:sha(currentApplication)},intentPath=path.join(root,'receiving-intent.json'),statePath=path.join(root,'receiving-state.json'),oldIntent=await optional(intentPath);
   let intent;
-  if(oldIntent){intent=JSON.parse(oldIntent);need(intent.schema==='tjlabs.migration-receiving-intent.v1'&&intent.application.sha256===application.sha256&&intent.application.bytes===application.bytes&&intent.title===title&&intent.resultFilename===resultFilename,'Continue the exact original application and receiving programme; preserve a changed application as a following original operation.');}
+  if(oldIntent){intent=JSON.parse(oldIntent);need(intent.schema==='tjlabs.migration-receiving-intent.v1'&&intent.application.sha256===application.sha256&&intent.application.bytes===application.bytes&&intent.title===title&&intent.resultFilename===resultFilename&&(intent.workspaceModel||defaultModel.id)===model.id,'Continue the exact original application and receiving programme; preserve a changed application as a following original operation.');}
   else{
    const workspace=engine.createWorkspace({id:randomUUID(),title,createdAt:new Date().toISOString()}),copyId=randomUUID();
-   intent={schema:'tjlabs.migration-receiving-intent.v1',id:randomUUID(),title,resultFilename,application,copyId,workspaceId:workspace.id,initialPortable:engine.exportWorkspace(workspace),createdAt:new Date().toISOString()};
+   intent={schema:'tjlabs.migration-receiving-intent.v1',id:randomUUID(),title,resultFilename,workspaceModel:model.id,application,copyId,workspaceId:identityOf(workspace).id,initialPortable:engine.exportWorkspace(workspace),createdAt:new Date().toISOString()};
    await immutable(intentPath,json(intent));
   }
   await immutable(path.join(root,'original-application.html'),currentApplication);
@@ -79,25 +89,29 @@ export async function openMigrationReceiving({page,outputDirectory,applicationPa
   if(final){const receipt=JSON.parse(final);need(receipt.receiving?.intentId===intent.id,'Reopen the original completed receiving receipt.');for(const row of receipt.receiving.files)await restore(row);await release();return{completed:receipt};}
   const attempt=path.join(root,'attempts',randomUUID());await fs.mkdir(attempt,{recursive:true,mode:0o700});
   const save=()=>replace(statePath,json(state));
-  const workspacePrefix=(current,prior)=>current.id===prior.id&&current.title===prior.title&&current.createdAt===prior.createdAt&&current.revision>=prior.revision&&JSON.stringify(current.operations.slice(0,prior.operations.length))===JSON.stringify(prior.operations);
+  const workspacePrefix=(current,prior)=>['id','title','createdAt'].every(k=>identityOf(current)[k]===identityOf(prior)[k])&&revisionOf(current)>=revisionOf(prior)&&JSON.stringify(operationsOf(current).slice(0,operationsOf(prior).length))===JSON.stringify(operationsOf(prior));
   let portable=intent.initialPortable;
-  if(state.checkpoint){portable=(await fs.readFile(await restore(state.checkpoint.file))).toString('utf8');need(engine.importWorkspace(portable).id===intent.workspaceId,'The original receiving checkpoint belongs to another workspace.');}
-  const base=bootFrom(originalApp).data,start=seededHTML(originalApp,{...base,copyId:intent.copyId,portable,drafts:{corrections:{},mappings:{},multipliers:{},policies:{}}}),resumeFile=path.join(attempt,'continue-original.html');
-  await immutable(resumeFile,Buffer.from(start));const programmeFile=path.join(root,'original-programme.html');await replace(programmeFile,Buffer.from(start));await page.goto(pathToFileURL(programmeFile).href);await page.locator('#top-json').waitFor();
+  if(state.checkpoint){portable=(await fs.readFile(await restore(state.checkpoint.file))).toString('utf8');need(identityOf(engine.importWorkspace(portable)).id===intent.workspaceId,'The original receiving checkpoint belongs to another workspace.');}
+  const start=controls.seedHTML?await controls.seedHTML(originalApp,{copyId:intent.copyId,portable}):
+   seededHTML(originalApp,{...bootFrom(originalApp).data,copyId:intent.copyId,portable,drafts:{corrections:{},mappings:{},multipliers:{},policies:{}}});
+  need(typeof start==='string'&&start,'Retain the complete original application with its saved receiving record.');
+  const resumeFile=path.join(attempt,'continue-original.html');
+  await immutable(resumeFile,Buffer.from(start));const programmeFile=path.join(root,'original-programme.html');await replace(programmeFile,Buffer.from(start));await page.goto(pathToFileURL(programmeFile).href);await page.locator(controls.ready).waitFor();
   let snapshotNumber=0;
   async function checkpoint(){
-   const pending=page.waitForEvent('download');await page.locator('#top-json').click();const d=await pending,file=path.join(attempt,'workspace-'+(++snapshotNumber)+'.json');await d.saveAs(file);
+   const restoreView=controls.beforeCheckpoint?await controls.beforeCheckpoint(page):null;let file;
+   try{const pending=page.waitForEvent('download');await page.locator(controls.workspaceDownload).click();const d=await pending;file=path.join(attempt,'workspace-'+(++snapshotNumber)+'.json');await d.saveAs(file);}finally{if(restoreView)await restoreView();}
    const raw=await fs.readFile(file),ws=engine.importWorkspace(raw.toString('utf8')),prior=engine.importWorkspace(portable);
-   need(ws.id===intent.workspaceId&&workspacePrefix(ws,prior),'The browser contains a different original workspace/history. Preserve its complete download.');
-   const retained=await bank(file);portable=engine.exportWorkspace(ws);state.checkpoint={revision:ws.revision,file:retained};await save();return ws;
+   need(identityOf(ws).id===intent.workspaceId&&workspacePrefix(ws,prior),'The browser contains a different original workspace/history. Preserve its complete download.');
+   const retained=await bank(file);portable=engine.exportWorkspace(ws);state.checkpoint={revision:revisionOf(ws),file:retained};await save();return ws;
   }
   const opened=await checkpoint();need(workspacePrefix(opened,engine.importWorkspace(intent.initialPortable)),'The browser did not reopen the original receiving workspace.');
   async function mutation(key,revision,expected,perform){
    const request={key,revision,expected},old=state.mutations[key];if(old)need(JSON.stringify(old.request)===JSON.stringify(request),'The saved receiving request changed: '+key);
    else{state.mutations[key]={request,state:'PREPARED'};await save();}
    let ws=await checkpoint();
-   if(ws.revision<revision){need(ws.revision===revision-1,'Continue every preceding original receiving mutation.');await perform();await page.waitForFunction(n=>{const text=document.querySelector('header')?.innerText||'';return Number(text.match(/Revision (\d+)/)?.[1])>=n;},revision);ws=await checkpoint();}
-   const actual=ws.operations[revision-1];need(actual&&actual.revision===revision&&contains(actual,expected.operation||expected),'The saved browser operation differs from the original receiving request: '+key);
+   if(revisionOf(ws)<revision){need(revisionOf(ws)===revision-1,'Continue every preceding original receiving mutation.');await perform();await page.waitForFunction(n=>{const text=document.querySelector('header')?.innerText||'';return Number(text.match(/Revision (\d+)/)?.[1])>=n;},revision);ws=await checkpoint();}
+   const actual=operationsOf(ws)[revision-1];need(actual&&sequenceOf(actual)===revision&&contains(actual,expected.operation||expected),'The saved browser operation differs from the original receiving request: '+key);
    if(expected.source){const source=ws.sources.find(s=>s.id===(actual.sourceInputId||actual.input.sourceId));need(source&&contains(source,expected.source),'The original source bound to this receiving request changed: '+key);if(expected.rowRecord!==undefined)need(source.rows.find(r=>r.id===actual.input.rowId)?.record===expected.rowRecord,'The original corrected receiving record changed.');}
    if(expected.supporting){const file=ws.supportingFiles?.find(f=>f.id===actual.supportingInputId);need(file&&contains(file,expected.supporting),'The original supporting bytes changed: '+key);}
    state.mutations[key]={request,state:'COMPLETE',receipt:actual};await save();return ws;
