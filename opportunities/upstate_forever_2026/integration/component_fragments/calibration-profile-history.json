@@ -1,0 +1,59 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "calibration-profile-history",
+  "source_reference": "model/CALIBRATION_HISTORY.md",
+  "extend_components": {
+    "calibration": {
+      "paths": [
+        "model/calibration_history.py",
+        "model/calibration_history_export.py",
+        "operator/calibration.py",
+        "operator/web/calibration_history.mjs",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_HISTORY.md",
+        "integration/component_fragments/calibration-profile-history.json"
+      ]
+    },
+    "parameter-studies": {
+      "paths": [
+        "model/calibration_history.py",
+        "model/calibration_history_export.py",
+        "operator/calibration.py",
+        "operator/web/calibration_history.mjs",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_HISTORY.md",
+        "integration/component_fragments/calibration-profile-history.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/calibration_history.py",
+        "model/calibration_history_export.py",
+        "operator/calibration.py",
+        "operator/web/calibration_history.mjs",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_HISTORY.md",
+        "integration/component_fragments/calibration-profile-history.json"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/calibration_history.py",
+        "model/calibration_history_export.py",
+        "operator/calibration.py",
+        "operator/web/calibration_history.mjs",
+        "operator/web/calibration.mjs",
+        "operator/extensions/calibration.json",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_HISTORY.md",
+        "integration/component_fragments/calibration-profile-history.json"
+      ]
+    }
+  }
+}
