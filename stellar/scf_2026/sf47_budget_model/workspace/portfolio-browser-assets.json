@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/portfolio.mjs",
+      [
+        "portfolio.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.css",
+      [
+        "portfolio.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio-working-copies.mjs",
+      [
+        "portfolio-working-copies.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio-working-copy-store.mjs",
+      [
+        "portfolio-working-copy-store.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/PORTFOLIO_WORKING_COPIES.md",
+      [
+        "PORTFOLIO_WORKING_COPIES.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/PORTFOLIO_WORKING_COPIES_BROWSER.md",
+      [
+        "PORTFOLIO_WORKING_COPIES_BROWSER.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ]
+  ]
+}

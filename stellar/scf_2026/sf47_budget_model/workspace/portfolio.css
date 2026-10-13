@@ -57,3 +57,6 @@
 .portfolio [data-dialog-error]{min-height:1.4rem;font-weight:600}
 @media(max-width:800px){.portfolio-source-bar{grid-template-columns:1fr}.portfolio-capacity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.portfolio-fields{grid-template-columns:1fr}.portfolio-profile-toolbar>label{min-width:100%}.portfolio-heading>.portfolio-actions{width:100%}.portfolio-table{max-height:30rem}}
 @media print{.portfolio button,.portfolio-source-bar,.portfolio-tabs,.portfolio-editor,.portfolio-review-bar,.portfolio-pending,.portfolio-dialog{display:none!important}.portfolio-table{max-height:none;overflow:visible}.portfolio details{break-inside:avoid}.portfolio th{position:static}.portfolio-metrics{grid-template-columns:repeat(3,1fr)}}
+
+/* Complete original working copies share the existing Portfolio controls. */
+.portfolio-working{border:1px solid #b6b6b6;background:#f6f6f6;padding:1rem;margin:1rem 0}.portfolio-working h4{margin:0 0 .5rem}.portfolio-working .portfolio-actions{margin:.7rem 0}.portfolio-working input,.portfolio-working select{min-width:0}.portfolio-working p{max-width:90ch}.portfolio [data-portfolio-numeric]{font-variant-numeric:tabular-nums}@media(max-width:700px){.portfolio-working{padding:.75rem}.portfolio-working .portfolio-actions>button{flex:1 1 14rem;white-space:normal}}@media print{.portfolio-working{display:none}}
