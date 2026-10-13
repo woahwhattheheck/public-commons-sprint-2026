@@ -20,24 +20,82 @@ import sys
 import time
 
 APPLICATION = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(APPLICATION))
-
-from model.common import (atomic_bytes, atomic_json, describe_file, digest, held,
-                          identifier, now, read_json, verify_file)
-from model.compute_programme import ComputeProgrammes
-from model.model_selection import run_models, validate_completed_run
-from model.native import runtime
-from model.native_equivalence import NativeInputMatcher
-from model.profiles import inspect_table
-from model.reuse import verify_stage
-from model import portable, programme_source_updates, source_refresh
-from model.workspace import Workspace
 
 SCHEMA = "upstate.programme-reuse-course/v1"
 CAPTURE_SCHEMA = "upstate.programme-reuse-course-capture/v1"
 DEFAULT_DEADLINE = "2026-10-13T14:00:00Z"
 SCRIPT_PATH = "source_tools/continue_programme_source_reuse.py"
 
+
+
+def prepare_application(args):
+    """Compose existing guarded installers before importing the actual application."""
+    global APPLICATION
+    APPLICATION = Path(args.application).resolve(strict=True) if args.application else APPLICATION
+    required = ("model/common.py", "model/workspace.py", "model/compute_programme.py",
+                "model/source_refresh.py", "model/source_refresh_compat.py",
+                "model/source_refresh_legacy.py", "model/portable.py",
+                "operator/extension_registry.py", "operator/web/programmes.mjs")
+    missing = [name for name in required if not (APPLICATION / name).is_file()]
+    if missing:
+        raise ValueError("Receive the maintained full application at its existing source boundary: "
+                         + ", ".join(missing))
+    receipts = []
+    if args.source_root:
+        if args.cold_workspace or not args.workspace or not args.output:
+            raise ValueError("Source composition needs the actual Workspace and course output")
+        source = Path(args.source_root).resolve(strict=True)
+        workspace = Path(args.workspace).resolve(strict=True)
+        if not (workspace / "workspace.json").is_file():
+            raise ValueError("Select the existing original scientific Workspace")
+        destination = Path(args.output).resolve()
+        if destination == workspace or destination.is_relative_to(workspace) or destination.is_relative_to(APPLICATION):
+            raise ValueError("Retain source-installation output outside the Workspace and application")
+        destination.mkdir(parents=True, exist_ok=True)
+        if "beginFormOpening" not in (APPLICATION / "operator/web/programmes.mjs").read_text("utf-8"):
+            raise ValueError("First receive the maintained Programme form-continuation source")
+        for name in ("install_programme_source_updates.py", "install_programme_reuse.py"):
+            installer = source / "operator" / name
+            if not installer.is_file():
+                raise ValueError("The complete source family is missing " + str(installer))
+            argv = [sys.executable, "-B", str(installer),
+                    "--application", str(APPLICATION), "--source-root", str(source)]
+            child = subprocess.run(argv, text=True, capture_output=True,
+                                   env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+            (destination / (name + ".stdout")).write_text(child.stdout, encoding="utf-8")
+            (destination / (name + ".stderr")).write_text(child.stderr, encoding="utf-8")
+            if child.returncode:
+                raise RuntimeError("Maintained source composition failed: " + name + ": " + child.stderr[-4000:])
+            receipts.append({"installer": name, "argv": argv, "returncode": child.returncode,
+                             "result": json.loads(child.stdout)})
+    sys.path.insert(0, str(APPLICATION))
+    from model import common, portable as original_portable
+    from model import programme_source_updates as successor, source_refresh as refresh
+    from model.compute_programme import ComputeProgrammes as Programmes
+    from model.model_selection import run_models as selected, validate_completed_run as completed
+    from model.native import runtime as original_runtime
+    from model.native_equivalence import NativeInputMatcher as Matcher
+    from model.profiles import inspect_table as table
+    from model.reuse import verify_stage as stage
+    from model.workspace import Workspace as OriginalWorkspace
+    for name in ("atomic_bytes", "atomic_json", "describe_file", "digest", "held", "identifier", "now", "read_json", "verify_file"):
+        globals()[name] = getattr(common, name)
+    globals().update(ComputeProgrammes=Programmes, run_models=selected,
+                     validate_completed_run=completed, runtime=original_runtime,
+                     NativeInputMatcher=Matcher, inspect_table=table, verify_stage=stage,
+                     portable=original_portable, programme_source_updates=successor,
+                     source_refresh=refresh, Workspace=OriginalWorkspace)
+    if not callable(getattr(refresh, "SourceRefresh", None)):
+        raise ValueError("The installed source-refresh facade must support the retained roots engine")
+    expected = (APPLICATION / SCRIPT_PATH).resolve()
+    if not expected.is_file() or sha(expected) != sha(Path(__file__)):
+        raise ValueError("Install this exact continuation script in the outgoing application")
+    installed = {}
+    for name in ("programme-source-updates", "programme-native-reuse"):
+        path = APPLICATION / "operator/installed" / name / "current.json"
+        installed[name] = read_json(path) if path.exists() else {"state": "source_present_without_install_journal"}
+    return {"application": str(APPLICATION), "script_sha256": sha(expected),
+            "installations": receipts, "installed_components": installed}
 
 def sha(path):
     h = hashlib.sha256()
@@ -181,13 +239,12 @@ def select_programme(ws, args, output):
     return candidates[0]
 
 
-class CourseWorkspace(Workspace):
-    """Use the existing executor, checking the owner boundary before each case."""
-    cutoff = None
-
-    def run(self, key, **kwargs):
-        deadline(self.cutoff)
-        return super().run(key, **kwargs)
+def course_workspace(root, cutoff):
+    class ReceivingWorkspace(Workspace):
+        def run(self, key, **kwargs):
+            deadline(cutoff)
+            return super().run(key, **kwargs)
+    return ReceivingWorkspace(root)
 
 
 class Course:
@@ -438,8 +495,7 @@ def cold_check(workspace, capture_id):
 
 def run(args):
     output = Path(args.output).resolve()
-    ws = CourseWorkspace(Path(args.workspace).resolve(strict=True))
-    ws.cutoff = args.deadline
+    ws = course_workspace(Path(args.workspace).resolve(strict=True), args.deadline)
     if output == ws.root or output.is_relative_to(ws.root) or output.is_relative_to(APPLICATION):
         raise ValueError("Use a separate course output directory outside the Workspace and application")
     output.mkdir(parents=True, exist_ok=True)
@@ -556,6 +612,8 @@ def run(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", help="Actual complete application; defaults to this script's parent application")
+    parser.add_argument("--source-root", help="Complete current source-update/reuse family; compose maintained installers in order")
     parser.add_argument("--workspace")
     parser.add_argument("--output")
     choice = parser.add_mutually_exclusive_group()
@@ -568,12 +626,18 @@ def main(argv=None):
     parser.add_argument("--capture-id", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     try:
+        if not args.cold_workspace:
+            deadline(args.deadline)
+        preparation = prepare_application(args)
         if args.cold_workspace:
             result = cold_check(args.cold_workspace, args.capture_id)
         else:
             if not args.workspace or not args.output:
                 parser.error("--workspace and --output are required")
             result = run(args)
+        result["application_preparation"] = preparation
+        if args.output and not args.cold_workspace:
+            atomic_json(Path(args.output).resolve() / "programme-source-reuse-result.json", result)
         print(json.dumps(result, sort_keys=True, allow_nan=False), flush=True)
         return 0
     except (ValueError, OSError, KeyError, ImportError, RuntimeError, TimeoutError) as exc:
