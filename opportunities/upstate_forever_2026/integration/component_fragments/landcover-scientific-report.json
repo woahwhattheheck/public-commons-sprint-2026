@@ -10,7 +10,9 @@
         "model/LANDCOVER_REPORT_SOURCE.md",
         "model/landcover_study_transfer.py",
         "model/landcover_report_figures.py",
-        "model/LANDCOVER_REPORT_FIGURES.md"
+        "model/LANDCOVER_REPORT_FIGURES.md",
+        "model/observed_landcover_study_transfer.py",
+        "model/OBSERVED_LANDCOVER_STUDY_TRANSFER.md"
       ],
       "requires": [
         "observed-context",
@@ -20,7 +22,9 @@
     },
     "study-transfer": {
       "paths": [
-        "model/landcover_study_transfer.py"
+        "model/landcover_study_transfer.py",
+        "model/observed_landcover_study_transfer.py",
+        "model/OBSERVED_LANDCOVER_STUDY_TRANSFER.md"
       ],
       "requires": []
     }
