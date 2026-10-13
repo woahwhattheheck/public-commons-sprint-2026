@@ -519,6 +519,120 @@ def prepare_geometry(index_directory, capture_directory, output, *,
         return {"manifest": str(root / "sources.json"), "source_ids": [e["id"] for e in entries], **summary}
 
 
+
+def join_screen(index_directory, screen_path, output, *, county,
+                reference_field="T_Map_Number", county_field="County"):
+    """Reproduce the whole grouped-screen/native-index join without collapsing FIDs."""
+    index_root, index, records, index_entry = _prepared_index(index_directory)
+    source = Path(screen_path).resolve(strict=True)
+    body = source.read_bytes()
+    screen = json.loads(body)
+    if screen.get("exceededTransferLimit"):
+        raise ValueError("Complete the original grouped screen before joining its rows")
+    features = screen.get("features")
+    if not isinstance(features, list) or not features:
+        raise ValueError("Select the retained original grouped screen response")
+    if not isinstance(county, str) or not county.strip():
+        raise ValueError("Select the screen's exact original county value")
+    canonical = lambda value: value.strip().rstrip(".")
+    by_reference = {}
+    for fid, record in records.items():
+        for field in ("PIN", "taxMapNumber"):
+            original = record.get(field, "")
+            reference = canonical(original)
+            if reference:
+                by_reference.setdefault(reference, {}).setdefault(fid, []).append(field)
+    joined, matches, seen = [], [], set()
+    for ordinal, feature in enumerate(features):
+        attributes = feature.get("attributes")
+        if not isinstance(attributes, dict) or attributes.get(county_field) != county:
+            raise ValueError("Every original screen row must name the selected county")
+        reference = attributes.get(reference_field)
+        if not isinstance(reference, str) or not canonical(reference):
+            raise ValueError("An original screen row lacks its native string reference")
+        key = canonical(reference)
+        if key in seen:
+            raise ValueError("The original screen must have one grouped row per native reference")
+        seen.add(key)
+        selected = by_reference.get(key, {})
+        county_rows = []
+        for fid, fields in selected.items():
+            original = records[fid]
+            row = {"native_fid": fid, "match_fields": fields,
+                   "source_ordinal": original[PREFIX + "source_ordinal"],
+                   "index_page_sha256": original[PREFIX + "index_page_sha256"],
+                   "original_feature_uri": _feature_url(index, fid),
+                   "original_attributes": {field: original[field] for field in index["fields"]}}
+            county_rows.append(row)
+            matches.append({"screen_data_row": ordinal + 1, "screen_reference": reference,
+                            "native_fid": fid, "match_fields": "|".join(fields),
+                            "source_ordinal": row["source_ordinal"],
+                            "index_page_sha256": row["index_page_sha256"],
+                            "original_feature_uri": row["original_feature_uri"],
+                            **row["original_attributes"]})
+        joined.append({"screen_data_row": ordinal + 1, "original_screen_attributes": attributes,
+                       "county_matches": county_rows})
+    root = Path(output).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with held(root / "prepare.lock", blocking=False):
+        retained_screen = _bank(root, source, "original/grouped-screen.json",
+                                hashlib.sha256(body).hexdigest())
+        companions = [retained_screen,
+            _bank(root, index_root / "index.json", "original/index.json"),
+            _bank(root, index_root / "county-index.jsonl", "original/county-index.jsonl"),
+            _bank(root, index_root / "original/index-manifest.json", "original/index-manifest.json")]
+        for i, item in enumerate(index["original_pages"]):
+            companions.append(_bank(root, verify_file(index_root, item),
+                "original/index-pages/" + str(i).zfill(4) + ".txt", item["sha256"]))
+        summary = {"schema": "upstate.thinkgis-grouped-screen-join/v1",
+                   "county": county, "reference_field": reference_field,
+                   "county_field": county_field, "index_records": index["records"],
+                   "screen_rows": len(joined), "matched_screen_rows": sum(bool(r["county_matches"]) for r in joined),
+                   "native_match_rows": len(matches),
+                   "multiple_match_rows": sum(len(r["county_matches"]) > 1 for r in joined),
+                   "unmatched_references": [r["original_screen_attributes"][reference_field]
+                                            for r in joined if not r["county_matches"]],
+                   "original_screen": retained_screen,
+                   "index_manifest_sha256": index["source_manifest_sha256"],
+                   "method": "Match original PIN or taxMapNumber after whitespace/trailing-full-stop normalization; preserve every native FID and source attribute.",
+                   "acreage": "Distinct county recorded-acreage strings are listed, never added across same-reference FIDs.",
+                   "screen_selection": "All rows of the original grouped response are retained; no new forestry selection criterion is applied."}
+        atomic_json(root / "joined-screen.json", {**summary, "rows": joined}, immutable=True)
+        queue = []
+        for record in joined:
+            attrs, county_rows = record["original_screen_attributes"], record["county_matches"]
+            distinct = lambda field: "|".join(sorted({r["original_attributes"].get(field, "")
+                                                     for r in county_rows} - {""}))
+            queue.append({
+                "screen_data_row": record["screen_data_row"], "original_reference": attrs[reference_field],
+                "county_feature_count": len(county_rows),
+                "native_fids": "|".join(r["native_fid"] for r in county_rows),
+                "county_use_classes": distinct("taxUseClass"),
+                "distinct_county_recorded_acres": distinct("taxTotNumberAcres"),
+                "match_status": "unmatched" if not county_rows else "multiple" if len(county_rows) > 1 else "single",
+                "original_screen_attributes_json": json.dumps(attrs, ensure_ascii=False, separators=(",", ":")),
+            })
+        queue_fields = ["screen_data_row", "original_reference", "county_feature_count", "native_fids",
+                        "county_use_classes", "distinct_county_recorded_acres", "match_status",
+                        "original_screen_attributes_json"]
+        _emit_csv(root / "screen-queue.csv", queue_fields, queue)
+        match_fields = ["screen_data_row", "screen_reference", "native_fid", "match_fields",
+                        "source_ordinal", "index_page_sha256", "original_feature_uri", *index["fields"]]
+        if len(set(match_fields)) != len(match_fields):
+            raise ValueError("Original county attribute collides with the native match-table identity fields")
+        _emit_csv(root / "county-matches.csv", match_fields, matches)
+        atomic_json(root / "join.json", summary, immutable=True)
+        companions.extend(describe_file(root, root / name) for name in
+                          ("joined-screen.json", "county-matches.csv", "join.json"))
+        entry = _entry(root, root / "screen-queue.csv",
+            source_id="thinkgis-screen-" + digest(summary)[:20],
+            title="Original grouped forestry screen joined to native county features",
+            kind="table", role="PARCEL_SCREEN", uri=index["origin"] + "/", vintage=index["vintage"],
+            companions=companions, metadata=summary)
+        atomic_json(root / "sources.json", {"schema": "upstate.sources/v1",
+            "title": entry["title"], "entries": [entry], "scope": summary}, immutable=True)
+        return {"manifest": str(root / "sources.json"), "source_id": entry["id"], **summary}
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -541,6 +655,13 @@ def main(argv=None):
     prepare.add_argument("--ring-assignments")
     prepare.add_argument("--allow-partial", action="store_true")
     prepare.add_argument("--boundary-only", action="store_true")
+    joining = sub.add_parser("join-screen", help="Join an original grouped screen to every matching native FID")
+    joining.add_argument("--index", required=True)
+    joining.add_argument("--screen", required=True)
+    joining.add_argument("--output", required=True)
+    joining.add_argument("--county", required=True)
+    joining.add_argument("--reference-field", default="T_Map_Number")
+    joining.add_argument("--county-field", default="County")
     args = parser.parse_args(argv)
     if args.command == "index":
         result = prepare_index(args.manifest, args.original_root, args.output, vintage=args.vintage)
@@ -549,6 +670,9 @@ def main(argv=None):
                if args.fids.startswith("@") else args.fids.split(","))
         result = capture_features(args.index, args.output, [f.strip() for f in ids if f.strip()],
                                   retry_failed=args.retry_failed, interval=args.interval, timeout=args.timeout)
+    elif args.command == "join-screen":
+        result = join_screen(args.index, args.screen, args.output, county=args.county,
+                            reference_field=args.reference_field, county_field=args.county_field)
     else:
         result = prepare_geometry(args.index, args.capture, args.output,
             ring_assignments=args.ring_assignments, allow_partial=args.allow_partial, boundary_only=args.boundary_only)
