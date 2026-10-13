@@ -38,14 +38,15 @@ export function createAnalysisDelivery({getState,api,endpoint,openDelivery,openR
     const plan=choices.find(row=>row.id===selectedPlan);
     const releaseRows=rows(value.releases).map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.state)+'</td><td>'+esc(short(row.id))+'</td><td>'+
       button('release','Open original delivery','data-id="'+esc(row.id)+'"')+'</td></tr>').join('');
-    const cases=table(['Native case','Role','Grid','Profile','Compared native models','Last run runtime','Requested InVEST'],rows(value.cases).map(row=>{
+    const cases=table(['Native case','Role','Grid','Profile','Saved compared native models','Saved last run runtime','Requested InVEST'],rows(value.cases).map(row=>{
       const saved=rows(record.runs).find(run=>run.id===(row.run_id||row.id));
-      const versions=saved?.model_versions||row.model_versions;
+      const versions=saved?.model_versions||row.saved_model_versions;
+      const provenance=saved?.native_version||row.saved_native_version||{};
       const label=versions?nativeModelVersionLabel({...saved,model_versions:versions}):
-        ((row.native_version?.comparison_version||row.native_version?.observed||row.native_version?.requested||'Not retained')+
+        ((provenance.comparison_version||provenance.observed||provenance.requested||'Not retained')+
          ' · original saved run-level provenance');
       return [row.title,row.role,short(row.grid_id),short(row.profile_id),label,
-        row.native_version?.observed||'Not retained',row.native_version?.requested||'Not retained'];
+        provenance.observed||'Not retained',provenance.requested||'Not retained'];
     }));
     const capRows=Object.entries(binding.normalization?.caps||{}).map(([name,cap])=>[
       name.replaceAll('_',' '),cap,binding.normalization?.cap_units?.[name]||'Original native unit']);

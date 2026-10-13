@@ -14,6 +14,7 @@ from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      describe_file, digest, file_digest, held, identifier, now, read_json, verify_file)
 from .workspace import Workspace
 from . import rasters
+from .native_versions import model_versions
 
 SCHEMA = "upstate.scenario-decisions/v1"
 SELECTION_SCHEMA = "upstate.scenario-decision-selection/v1"
@@ -81,6 +82,16 @@ def available_pollutants(run):
     return result
 
 
+def _selected_models(pollutants):
+    return tuple(dict.fromkeys(OUTPUTS[name]["stage"] for name in pollutants))
+
+
+def _supported_pollutants(run, pollutants):
+    versions = model_versions(run, _selected_models(pollutants))
+    return [name for name in pollutants
+            if versions[OUTPUTS[name]["stage"]]["comparison_version"] == INVEST_VERSION]
+
+
 def catalog(workspace):
     """Fast original run/source choices; build verifies the chosen file bodies."""
     profiles = {p["id"]: p for p in workspace._list("profiles")}
@@ -92,12 +103,19 @@ def catalog(workspace):
             selected = run["selection"]
             profile = profiles[selected["profile_id"]]
             scenario = scenarios[selected["scenario_id"]]
-            outputs = available_pollutants(run)
-            ready = (run.get("state") == "complete" and bool(outputs)
-                     and run.get("runtime", {}).get("version") == INVEST_VERSION)
+            available = available_pollutants(run)
+            outputs = _supported_pollutants(run, available)
+            versions = model_versions(run, _selected_models(available))
+            ready = run.get("state") == "complete" and bool(outputs)
             runs.append({
                 "id": run["id"], "state": run.get("state"), "reportable": ready,
                 "selection": selected, "pollutants": outputs,
+                "available_pollutants": available, "model_versions": versions,
+                "excluded_pollutants": [
+                    {"pollutant": name, "model": OUTPUTS[name]["stage"],
+                     "version": versions[OUTPUTS[name]["stage"]]["comparison_version"],
+                     "required_version": INVEST_VERSION}
+                    for name in available if name not in outputs],
                 "scenario_title": scenario.get("title", scenario["id"]),
                 "scenario_kind": scenario["kind"],
                 "profile_title": profile.get("title", profile["id"]),
@@ -513,21 +531,28 @@ def build(workspace, requested, *, progress=None):
     runs = [workspace.inspect_run(key) for key in requested["run_ids"]]
     if any(run.get("state") != "complete" for run in runs):
         raise ValueError("Select completed original model runs")
-    common_pollutants = [p for p in OUTPUTS if all(p in available_pollutants(r) for r in runs)]
+    common_pollutants = [
+        p for p in OUTPUTS
+        if all(p in _supported_pollutants(r, available_pollutants(r)) for r in runs)]
     selected_pollutants = requested.get("pollutants", common_pollutants)
     if not selected_pollutants:
         raise ValueError("The selected runs share no completed native pollutant output")
     unavailable = set(selected_pollutants) - set(common_pollutants)
     if unavailable:
-        raise ValueError("Finish these native outputs in every selected run: " + ", ".join(sorted(unavailable)))
+        raise ValueError("Complete these native outputs with retained InVEST " + INVEST_VERSION +
+                         " in every selected run: " + ", ".join(sorted(unavailable)))
     outputs = {p: OUTPUTS[p] for p in OUTPUTS if p in selected_pollutants}
     grid_ids = {run["selection"]["grid_id"] for run in runs}
     if len(grid_ids) != 1:
         raise ValueError("Select runs on the same retained reporting/model grid")
+    selected_models = _selected_models(outputs)
+    executed_versions = {run["id"]: model_versions(run, selected_models) for run in runs}
     for run in runs:
-        version = run.get("runtime", {}).get("version")
-        if version != INVEST_VERSION:
-            raise ValueError("Scenario decisions use retained native InVEST " + INVEST_VERSION + "; run has " + str(version))
+        for model, provenance in executed_versions[run["id"]].items():
+            if provenance["comparison_version"] != INVEST_VERSION:
+                raise ValueError("Scenario decisions use retained native " + model.upper() +
+                                 " InVEST " + INVEST_VERSION + "; run " + run["id"] +
+                                 " has " + str(provenance["comparison_version"]))
     grid = workspace.get_grid(runs[0]["selection"]["grid_id"])
     zones, crs = _geometry_zones(workspace, grid, requested.get("zones", []))
     details = []
@@ -541,7 +566,11 @@ def build(workspace, requested, *, progress=None):
                 "landcover_under_common_profile" if scenario["kind"] == "landcover" else
                 "same_profile_baseline")
         details.append({"id": run["id"], "selection": run["selection"],
-                        "completed_at": run.get("completed_at"), "runtime": run["runtime"],
+                        "completed_at": run.get("completed_at"), "runtime": run.get("runtime"),
+                        "model_versions": executed_versions[run["id"]],
+                        "stage_runtimes": {
+                            model: (run.get("stages", {}).get(model) or {}).get("runtime")
+                            for model in selected_models},
                         "scenario_title": scenario.get("title", scenario["id"]),
                         "scenario_kind": scenario["kind"], "scenario": scenario,
                         "profile_title": profile.get("title", profile["id"]),
