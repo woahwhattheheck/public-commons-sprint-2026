@@ -110,6 +110,7 @@
       "paths": [
         "docs/MONITORING_EXPORT_STREAMING.md",
         "docs/MONITORING_FIELDWORK_RETURN.md",
+        "docs/UTILITY_MONITORING_REPORTS.md",
         "model/MONITORING.md",
         "model/MONITORING_FIELDWORK.md",
         "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -128,6 +129,7 @@
         "model/monitoring_study_transfer.py",
         "model/monitoring_workspace.py",
         "model/requirements-monitoring.txt",
+        "model/utility_monitoring_report.py",
         "operator/MONITORING_API.md",
         "operator/extensions/monitoring.json",
         "operator/monitoring.py",
@@ -177,9 +179,11 @@
       "paths": [
         "docs/UTILITY_MONITORING.md",
         "docs/UTILITY_MONITORING_RECEIVING.md",
+        "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
         "model/client_briefing.py",
         "model/utility_monitoring.py",
+        "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
         "source_tools/receive_utility_monitoring.py"
       ],
@@ -192,8 +196,10 @@
       "paths": [
         "docs/UTILITY_MONITORING.md",
         "docs/UTILITY_MONITORING_RECEIVING.md",
+        "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
         "model/utility_monitoring.py",
+        "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
         "source_tools/receive_utility_monitoring.py"
       ],
@@ -225,6 +231,30 @@
         "model/monitoring_packet.py",
         "model/portable_implementation.py"
       ]
+    },
+    "programme-activity": {
+      "paths": [
+        "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PROGRAMME_CASE_CONSOLE.md",
+        "model/parameter_case_status.py",
+        "model/programme_case_status.py",
+        "operator/web/parameter_case_console.mjs"
+      ]
+    },
+    "retained-application-source": {
+      "paths": [
+        "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PROGRAMME_CASE_CONSOLE.md",
+        "model/parameter_case_status.py",
+        "model/programme_case_status.py",
+        "operator/web/parameter_case_console.mjs"
+      ]
+    },
+    "monitoring-report": {
+      "paths": [
+        "docs/UTILITY_MONITORING_REPORTS.md",
+        "model/utility_monitoring_report.py"
+      ]
     }
   },
   "source_reference": {
@@ -250,6 +280,10 @@
     "utility_monitoring": "0d7ec3bd2d40c05a211a109b29c8cedb98a22d01",
     "utility_monitoring_receiving": "9f6a6ca4e8529f38416e3f8869091267c75c7326",
     "parameter_native_recovery": "10730eac84000f38c1ac33b54c61ec6402bd0634",
-    "parameter_case_console": "3edfb2f55b0b80dc31edcc477d12348d4cf95486"
+    "parameter_case_console": "3edfb2f55b0b80dc31edcc477d12348d4cf95486",
+    "programme_case_console": "ebed7e1af621fbf56a35b953e76c4fe1216fd35e",
+    "utility_monitoring_reports": "6fc93c3def3dff865354ce2563cb97c6bfd2cad0",
+    "implementation_selected_lineage": "6499a12661e26c8fe31eef40d59ea8f48cb6cf91",
+    "implementation_native_study_join": "1718cababa3c6b99834e57e6881387681f2c5e04"
   }
 }
