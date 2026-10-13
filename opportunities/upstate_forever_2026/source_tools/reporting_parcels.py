@@ -192,7 +192,14 @@ def _receive_original_reporting(root):
             receipt = {"uri": prefix+name, "received_at": now(),
                        "transfer": "bundled-original-source", "retained_from": str(bundled),
                        "bytes": len(body), "sha256": expected, "expected_sha256": expected}
-            atomic_json(responses/(name + ".bundled.json"), receipt, immutable=True)
+            receipt_path = responses/(name + ".bundled.json")
+            if receipt_path.exists():
+                previous = read_json(receipt_path)
+                for key in ("uri", "transfer", "bytes", "sha256", "expected_sha256"):
+                    if previous.get(key) != receipt[key]:
+                        raise ValueError("Bundled reporting receipt differs: " + name)
+            else:
+                atomic_json(receipt_path, receipt, immutable=True)
             atomic_bytes(target, body, immutable=True)
             print(json.dumps({"stage": "reporting-original", "path": str(target),
                               "bytes": len(body), "sha256": expected,
