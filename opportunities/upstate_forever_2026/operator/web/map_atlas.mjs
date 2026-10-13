@@ -99,6 +99,7 @@ export function attachMapAtlas(host) {
  let opened=null, error='', busy=false, operationId=null, generation=0, storageWarned=false, handoff=0;
  const drafts=new Map(), sourcePreview=new Map();
  let sourceContext=null, contextLoading=false, contextError='', inspection=null, inspectionRequest=0;
+ const pairDrafts=new Map();
  const inspector=createSpatialWorkspace({
   request:(...args)=>host.api(...args),
   getWorkspace:()=>host.getWorkspace?.()||host.getState()?.workspace_key||'',
@@ -343,6 +344,47 @@ export function attachMapAtlas(host) {
  function retainedFile(record){
   return opened?._downloads?.find(f=>f.sha256===record?.sha256&&f.bytes===record?.bytes);
  }
+ function pairChoices(){
+  const entries=[];
+  for(const row of opened?.atlas?.pages||[]){
+   if(!row.scenario_run_id)continue;
+   for(const [index,panel] of (row.panels||[]).entries()){
+    const scale=panel.display_scale;
+    if(!scale||!Number.isFinite(scale.minimum)||!Number.isFinite(scale.maximum)||scale.minimum>=scale.maximum)continue;
+    const units=['dimensionless','dimensionless (0-1)','dimensionless (0–1)'].includes(panel.units)?'dimensionless':panel.units;
+    const group=JSON.stringify([row.family,panel.title,Boolean(panel.signed),units,scale.minimum,scale.maximum]);
+    entries.push({id:JSON.stringify([row.map_key,index]),group,row,panel,index,
+     label:(row.subtitle||row.scenario_run_id)+' · '+panel.title+' · page '+row.page});
+   }
+  }
+  return entries.filter(entry=>entries.some(other=>other.group===entry.group&&other.row.scenario_run_id!==entry.row.scenario_run_id));
+ }
+ function pairDraft(choices=pairChoices()){
+  const key=workspace+'/'+opened?.id,value=pairDrafts.get(key)||{mode:'compare'};
+  const left=choices.find(item=>item.id===value.left)||choices[0];
+  const rights=left?choices.filter(item=>item.group===left.group&&item.row.scenario_run_id!==left.row.scenario_run_id):[];
+  const right=rights.find(item=>item.id===value.right)||rights[0];
+  const result={left:left?.id||'',right:right?.id||'',mode:['compare','swipe'].includes(value.mode)?value.mode:'compare'};
+  pairDrafts.set(key,result);return {value:result,left,right,rights,choices};
+ }
+ function pairControls(){
+  const {value,left,right,rights,choices}=pairDraft();
+  if(!left||!right)return '<h3>Compare alternative maps</h3><p class="atlas-note">Paired inspection is available when this release retains the same quantity for at least two alternatives. You can revise the selection to include other completed alternatives.</p>';
+  const options=(items,selected)=>items.map(item=>'<option value="'+esc(item.id)+'" '+(item.id===selected?'selected':'')+'>'+esc(item.label)+'</option>').join('');
+  return '<h3>Compare alternative maps</h3><p class="atlas-note">Choose the same map family and pollutant from two alternatives. Original pixels, native geography and the common atlas scale stay together.</p>'+
+   '<div class="atlas-grid"><label class="atlas-field"><span>Left source</span><select data-atlas-pair="left">'+options(choices,value.left)+'</select></label>'+
+   '<label class="atlas-field"><span>Right source</span><select data-atlas-pair="right">'+options(rights,value.right)+'</select></label>'+
+   '<label class="atlas-field"><span>View</span><select data-atlas-pair="mode"><option value="compare" '+(value.mode==='compare'?'selected':'')+'>Linked side by side</option><option value="swipe" '+(value.mode==='swipe'?'selected':'')+'>Swipe between sources</option></select></label></div>'+
+   '<p class="atlas-note">'+(left.panel.signed?'Each source is its selected alternative minus the release’s original baseline. Negative values show lower modeled export; positive values show higher export.':'Both sources show the same original absolute quantity.')+
+   ' Shared range: '+esc(left.panel.display_scale.minimum)+' to '+esc(left.panel.display_scale.maximum)+' '+esc(left.panel.units)+'.</p>'+
+   button('compare-panels','Open paired inspection');
+ }
+ function changePair(target){
+  const {value}=pairDraft();value[target.dataset.atlasPair]=target.value;
+  pairDrafts.set(workspace+'/'+opened.id,value);
+  const node=root.querySelector('[data-atlas-pair-controls]');
+  if(node){node.innerHTML=pairControls();node.querySelector('[data-atlas-pair="'+target.dataset.atlasPair+'"]')?.focus();}
+ }
  function outputPanel(){
   if(!opened)return '<h2>Saved releases</h2><div data-atlas-catalogue>'+catalogue()+'</div>';
   const atlas=opened.atlas,all=opened._downloads||[],atlasFile=retainedFile(opened.files?.map_atlas);
@@ -362,6 +404,7 @@ export function attachMapAtlas(host) {
    '<p class="atlas-note">For offline map review, extract the complete GIS package and open <code>index.html</code>.</p>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
    sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
+   (opened.state==='complete'&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
    '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('receptor_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^receptor_/,'')))).join('')+'</div>'+
    table(['Page / family','Map','Legend and units',''],rows.map(row=>{
     const file=retainedFile(row.file);
@@ -378,16 +421,17 @@ export function attachMapAtlas(host) {
  function inspectionPanel(){
   const target=inspection.target,lineage=target.lineage;
   return '<section class="atlas-inspection"><div class="atlas-actions">'+button('return-release','Back to atlas and files')+
-   button('show-print','Open original printed sheet')+'</div><h2>'+esc(target.title)+' / '+esc(target.panel)+'</h2>'+
+   (target.comparison?target.sides.map(side=>button('show-print','Open '+side.slot+' original sheet','data-side="'+esc(side.slot)+'"')).join(''):button('show-print','Open original printed sheet'))+'</div><h2>'+esc(target.title)+' / '+esc(target.panel)+'</h2>'+
+   (target.comparison?table(['Side','Alternative','Atlas page'],target.sides.map(side=>'<tr><td>'+esc(human(side.slot))+'</td><td>'+esc(side.label)+'<small>'+esc(side.scenario_run_id)+'</small></td><td>'+esc(side.atlas_page)+'</td></tr>')):'')+
    '<p class="atlas-note">Original raster: '+esc(target.units)+' · retained range '+esc(target.scale.minimum)+' to '+esc(target.scale.maximum)+
-   ' · atlas page '+esc(lineage.atlas_page)+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
+   ' · '+(target.comparison?'atlas pages '+target.sides.map(side=>esc(side.atlas_page)).join(' / '):'atlas page '+esc(lineage.atlas_page))+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
    (target.context_notes||[]).map(note=>'<p class="atlas-note">'+esc(note)+'</p>').join('')+
    '<div data-atlas-spatial></div></section>';
  }
  function render(){
   if(!root)return;
   inspector.suspend();
-  root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>'+
+  root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">SCIENTIFIC WORKBENCH</p>'+
    '<h1>Map atlas and delivery</h1><p>Prepare the seven-family release, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
    '<div class="atlas-actions">'+button('prepare','Prepare release')+button('releases','Saved releases')+'</div></header>'+
    '<div class="atlas-error" role="alert" data-atlas-error '+(!error?'hidden':'')+'>'+esc(error)+'</div>'+
@@ -406,7 +450,7 @@ export function attachMapAtlas(host) {
  function showError(e){error=e?.message||String(e);const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=false;node.textContent=error;node.scrollIntoView({block:'nearest'});}}
  function clearError(){error='';const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=true;node.textContent='';}}
  function edit(event){
-  if(event?.target?.closest?.('[data-atlas-spatial]'))return;
+  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls]'))return;
   operationId=null;
   try{collect();persist();renderProblems();}catch{/* Keep incomplete field text until the next explicit action. */}
  }
@@ -505,13 +549,29 @@ export function attachMapAtlas(host) {
   ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
   const existing=inspection?.target?.lineage;
-  if(existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
+  if(!inspection?.target?.comparison&&existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
    mode='inspect';render();return;
   }
   const result=await host.api('/api/map-atlas/inspect',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,map_key:mapKey,panel_index:panelIndex}});
   ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
   if(result.workspace_key!==atWorkspace||result.target?.kind!=='atlas-panel')throw Error('The native atlas inspection belongs to another workspace.');
   inspection={target:result.target};inspector.suspend();
+  await inspector.openTarget({...result.target,workspace:atWorkspace});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  mode='inspect';render();
+ }
+ async function inspectPair(){
+  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  const {left,right,value}=pairDraft();
+  if(!left||!right)throw Error('Choose the same panel from two retained alternatives.');
+  const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
+  const cache=JSON.stringify([deliveryId,value.left,value.right,value.mode]);
+  if(inspection?.comparisonKey===cache){mode='inspect';render();return;}
+  const choice=item=>({map_key:item.row.map_key,panel_index:item.index});
+  const result=await host.api('/api/map-atlas/compare',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,left:choice(left),right:choice(right),mode:value.mode}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  if(result.workspace_key!==atWorkspace||result.target?.kind!=='atlas-panel'||!result.target.comparison)throw Error('The paired atlas inspection belongs to another workspace or selection.');
+  inspection={target:result.target,comparisonKey:cache};inspector.suspend();
   await inspector.openTarget({...result.target,workspace:atWorkspace});
   ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
   mode='inspect';render();
@@ -531,9 +591,11 @@ export function attachMapAtlas(host) {
    else if(action==='item')await host.openItem?.(b.dataset.kind,b.dataset.id);
    else if(action==='inspect-source')await inspectSource(b.dataset.sourceCardId);
    else if(action==='inspect-panel')await inspectPanel(b.dataset.mapKey,Number(b.dataset.panelIndex));
+   else if(action==='compare-panels')await inspectPair();
    else if(action==='return-release'){mode='outputs';render();}
    else if(action==='show-print'){
-    const row=opened?.atlas?.pages?.find(item=>item.map_key===inspection?.target?.lineage?.map_key);
+    const mapKey=b.dataset.side?inspection?.target?.sides?.find(side=>side.slot===b.dataset.side)?.map_key:inspection?.target?.lineage?.map_key;
+    const row=opened?.atlas?.pages?.find(item=>item.map_key===mapKey);
     const file=retainedFile(row?.file),url=safeFileURL(file?.url);
     if(!url)throw Error('The original printed map is unavailable.');
     const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.click();
@@ -564,6 +626,7 @@ export function attachMapAtlas(host) {
   if(event.target.closest?.('[data-atlas-spatial]'))return;
   const target=event.target,atWorkspace=workspace,epoch=generation;
   try{
+   if(target.matches('[data-atlas-pair]')){changePair(target);return;}
    if(target.matches('[data-atlas-import]')){clearError();await importSelection(target.files?.[0]);return;}
    if(target.matches('[data-atlas-receptor-import]')){clearError();await importReceptors(target.files?.[0]);return;}
    if(target.name==='baseline'||/__collection$|__source$|__enabled$/.test(target.name||'')){
