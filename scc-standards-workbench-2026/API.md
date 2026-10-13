@@ -326,3 +326,21 @@ The in-process export signature adds optional final `packet_id` and `response_id
 ## Member ballot exchange
 
 [BALLOT-EXCHANGE.md](BALLOT-EXCHANGE.md) describes the complete typed return, correction and adoption contract. The existing operation envelope adds `ballot.packet`, `ballot.receive` and `ballot.adopt`; original project revision and request persistence apply. `GET /api/projects/PROJECT/ballot-exchange/status` and `POST /api/projects/PROJECT/ballot-exchange/preview` expose the complete original-member context. Exports add `ballot_member` with `packet_id` and private `ballot_decision` with `ballot_id`. The existing `private_restore` archive retains all new immutable records, exact returned files and original vote history.
+
+
+## Complete prime application workflow
+
+The optional immutable collections `application_drafts` and `application_editions` are empty-compatible with earlier projects. Their first accepted mutation records the explicit collection addition in the existing history. Generic record.save/remove cannot alter a retained application draft or edition.
+
+- `GET .../application/status`: current project revision, complete draft/edition summaries, actual selected applicant, financials and mapper findings.
+- `POST .../application/inspect`: body `{selection,reviewed,include_source_ids?}`; returns one complete input snapshot and its SHA-256 from a consistent original-source read transaction. Empty reviewed inputs receive explicit draft defaults.
+- `POST .../application/request`: the complete original operation command; reads its durable request identity and returns `found,matches?,revision,result?`. It does not create an operation.
+- `application.save`: payload `{id?,title,selection,reviewed,include_source_ids?,predecessor_id?}`; appends a complete immutable draft and returns application_draft_id and input_sha256.
+- `application.freeze`: payload `{id?,draft_id,title?,review_note?}`; freezes the exact saved input and returns application_edition_id and input_sha256.
+- `GET .../export?audience=application&application_id=ID`: generate fresh documents for that frozen input and include its selected originals. The standard complete private_restore audience retains all application editions and their editable project history.
+
+Selection requires `answer_source_id,form_source_id,rfp_source_id,edition_id,engineering_budget_row`, with optional evidence_source_ids. The mapper schema in application_input.schema.json defines the complete reviewed object. Money and fractional hours use exact decimal strings; integer counts and nullable calendar fields follow that schema. The renderer requires the exact selected issuer assets and reads them through retained source custody.
+
+Restore validates the application snapshot identity, original edition and complete selected source bindings, then recomputes the pure reviewed-input mapper and compares its complete renderer inputs. This preserves the relationship between authored answers, structured financials and generated documents.
+
+The existing operation envelope, project revision, actor and request ID remain authoritative. The original command must be persisted before dispatch and reused without modification after an uncertain response. See APPLICATION-WORKBENCH.md for browser working files and the resumable installed receiving helper.

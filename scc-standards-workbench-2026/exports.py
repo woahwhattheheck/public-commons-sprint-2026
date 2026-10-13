@@ -10,10 +10,10 @@ from copy import deepcopy
 from pathlib import PurePosixPath
 
 if __package__:
-    from . import engine, consultation, ballot_exchange
+    from . import engine, consultation, ballot_exchange, applications
     from .workspace import json_read
 else:
-    import engine, consultation, ballot_exchange
+    import engine, consultation, ballot_exchange, applications
     from workspace import json_read
 
 PRIVATE_SCHEMA="standards-private-continuation/v1"
@@ -86,11 +86,20 @@ def public_edition(edition):
     result["projection_note"]="Selected public text and public citations from the retained edition; contributor identities and internal notes are excluded."
     return result
 
-def export_project(workspace,project_id,audience="private_restore",edition_id=None,publication_id=None,comparison_edition_id=None,include_source_ids=None,packet_id=None,response_id=None,ballot_id=None):
-    if audience not in ("private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision"):
+def export_project(workspace,project_id,audience="private_restore",edition_id=None,publication_id=None,comparison_edition_id=None,include_source_ids=None,packet_id=None,response_id=None,ballot_id=None,application_id=None):
+    if audience not in ("private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision","application"):
         raise ValueError("Choose a supported full continuation, edition, review or ballot handover.")
     state,events,requests,originals=workspace.snapshot(project_id)
     include_source_ids=list(dict.fromkeys(include_source_ids or []))
+    if audience=="application":
+        if not application_id:raise ValueError("Select the frozen application edition.")
+        if include_source_ids:raise ValueError("The frozen application retains its explicit private source selection.")
+        files,record=applications.application_files(state,application_id,originals)
+        manifest={"schema":HANDOVER_SCHEMA,"audience":audience,"classification":"private_application",
+                  "project_id":project_id,"revision":state["revision"],"application_id":application_id,
+                  "input_sha256":record["input_sha256"],"edition_id":record["edition_id"],
+                  "continuation":"Use the complete private_restore archive for editable project history."}
+        return _zip(files,manifest)
     if audience in ("ballot_member","ballot_decision"):
         if include_source_ids:raise ValueError("Ballot handovers retain their explicitly selected source scope.")
         manifest={"schema":HANDOVER_SCHEMA,"audience":audience,"project_id":project_id,"revision":state["revision"]}
