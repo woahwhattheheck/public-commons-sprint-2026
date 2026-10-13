@@ -140,7 +140,7 @@ function manifestFor(files,hashBytes,byteLength){
    "Each source entry retains the complete relative source directory as companions, including the independent offline report and its linked original files.",
    "Censored and not-reported source measurements remain blank; their source condition and actual detection/quantitation limits are separate fields.",
    "Exact numerical summaries separate station, year, analytical method, activity type and original unit spelling.",
-   "The source-comments presentation retains all original records by default; its optional information-only filter records the selected cohort in print and downloadable selection metadata."]};
+   "The source-comments presentation applies no comment-based exclusion by default; its optional information-only filter records the selected cohort in print and downloadable selection metadata."]};
 }
 
 function renderEcoli(out,raw,meta,map,browser,css,parseSource){

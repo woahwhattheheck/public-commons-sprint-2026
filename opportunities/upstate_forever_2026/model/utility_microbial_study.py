@@ -15,7 +15,7 @@ from .common import (atomic_bytes, atomic_json, describe_file, digest, file_dige
 SCHEMA = "upstate.utility-microbial-study/v1"
 FOLDER = "utility-microbial-studies"
 TITLE = "Utility-focus E. coli observations — 2021–2025"
-MANIFEST_SHA256 = "2468f562a28c924f20fc7e554dca25840b3429c3ccc68d08e892f61866f2e3fd"
+MANIFEST_SHA256 = "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
 SOURCE_EDITIONS = {
     MANIFEST_SHA256: "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff",
     "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26",
