@@ -12,6 +12,9 @@ LAYERS = {
     "stream_order": "https://hydro.nationalmap.gov/arcgis/rest/services/NHDPlus_HR/MapServer/3",
     "freshwater": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
 }
+SPATIAL_RELATIONS = {"intersects": "esriSpatialRelIntersects",
+                     "envelope": "esriSpatialRelEnvelopeIntersects",
+                     "index": "esriSpatialRelIndexIntersects"}
 DOMAIN_HASH = "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
 
 def encode(value):
@@ -38,7 +41,7 @@ class OriginalSource:
         self.root, self.timeout = Path(root), timeout
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def read(self, label, url, parameters=None):
+    def read(self, label, url, parameters=None, split_timeouts=False):
         parameters = parameters or {}
         query = urllib.parse.urlencode(parameters)
         # Long native-ID selections use the publisher's equivalent POST query.
@@ -76,6 +79,8 @@ class OriginalSource:
                     "response_headers": response_headers})
                 return value, str(body_path.relative_to(self.root)), str(record_path.relative_to(self.root))
             except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+                if split_timeouts and subdivision_candidate(error):
+                    raise
                 if attempt == 2:
                     raise
                 wait = 2 ** (attempt + 1)
@@ -101,7 +106,37 @@ def load_domain(path, output):
         write(output / "feature-bindings.json", archive.read("feature-bindings.json"))
     return summary, hucs
 
-def capture_layer(source, kind, summary, hucs, chunk, counts_only=False):
+
+def subdivision_candidate(error):
+    """Split only transient envelope failures; quota errors retain normal backoff."""
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code in (408, 502, 503, 504)
+    if isinstance(error, TimeoutError):
+        return True
+    reason = getattr(error, "reason", None)
+    return isinstance(reason, TimeoutError) or "timed out" in str(reason).lower()
+
+def subdivide_scope(scope):
+    """Four adjoining envelopes exactly cover the parent, including its boundary."""
+    envelope = json.loads(scope["geometry"])
+    xmin, ymin, xmax, ymax = (envelope[key] for key in ("xmin", "ymin", "xmax", "ymax"))
+    xmid, ymid = (xmin + xmax) / 2, (ymin + ymax) / 2
+    if not xmin < xmid < xmax or not ymin < ymid < ymax:
+        raise ValueError("Envelope cannot be subdivided without losing coordinate precision")
+    children = []
+    for row in range(2):
+        for column in range(2):
+            bounds = {
+                "xmin": xmin if column == 0 else xmid,
+                "ymin": ymin if row == 0 else ymid,
+                "xmax": xmid if column == 0 else xmax,
+                "ymax": ymid if row == 0 else ymax,
+                "spatialReference": envelope.get("spatialReference", {"wkid": 3857})}
+            child = dict(scope, geometry=encode(bounds).decode())
+            children.append(child)
+    return children
+
+def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_grid=1, stream_max_depth=4, stream_spatial_relation="intersects"):
     url = LAYERS[kind]
     metadata, metadata_path, metadata_receipt = source.read(kind + "-metadata", url, {"f": "pjson"})
     oid = [field["name"] for field in metadata["fields"] if field["type"] == "esriFieldTypeOID"]
@@ -109,24 +144,101 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False):
         raise ValueError("Publisher must identify its native object ID field")
     oid = oid[0]
     if kind == "freshwater":
-        scope = {"where": "H2OCLASS = 'FW' AND HUC_12 IN (" + ",".join("'" + huc + "'" for huc in hucs) + ")"}
+        scopes = [{"where": "H2OCLASS = 'FW' AND HUC_12 IN (" + ",".join("'" + huc + "'" for huc in hucs) + ")"}]
         meaning = {"selection": "publisher HUC_12 membership and H2OCLASS='FW'", "huc_ids": "domain-huc12s.json"}
     else:
+        relation = SPATIAL_RELATIONS[stream_spatial_relation]
+        supported = metadata.get("supportedSpatialRelationships", [])
+        if supported and relation not in supported:
+            raise ValueError("Original publisher metadata does not support " + relation)
         xmin, ymin, xmax, ymax = summary["native_bounds"]
-        envelope = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax, "spatialReference": {"wkid": 3857}}
-        scope = {"where": "1=1", "geometry": encode(envelope).decode(), "geometryType": "esriGeometryEnvelope",
-                 "inSR": "3857", "spatialRel": "esriSpatialRelIntersects"}
-        meaning = {"selection": "native model-domain envelope candidates", "domain_bounds_3857": summary["native_bounds"],
+        if not xmin < xmax or not ymin < ymax:
+            raise ValueError("Original model-domain bounds must have positive extent")
+        scopes = []
+        for row in range(stream_grid):
+            for column in range(stream_grid):
+                envelope = {
+                    "xmin": xmin + (xmax - xmin) * column / stream_grid,
+                    "ymin": ymin + (ymax - ymin) * row / stream_grid,
+                    "xmax": xmax if column + 1 == stream_grid else xmin + (xmax - xmin) * (column + 1) / stream_grid,
+                    "ymax": ymax if row + 1 == stream_grid else ymin + (ymax - ymin) * (row + 1) / stream_grid,
+                    "spatialReference": {"wkid": 3857}}
+                scopes.append({"where": "1=1", "geometry": encode(envelope).decode(),
+                               "geometryType": "esriGeometryEnvelope", "inSR": "3857",
+                               "spatialRel": relation})
+        meaning = {"selection": "union of native model-domain envelope tile candidates",
+                   "domain_bounds_3857": summary["native_bounds"], "tile_rows": stream_grid,
+                   "candidate_spatial_relationship": relation,
+                   "tile_columns": stream_grid,
                    "exact_domain_membership": "water_context_geometry.select_domain_objects"}
-    count, count_path, count_receipt = source.read(kind + "-count", url + "/query", dict(scope, f="json", returnCountOnly="true"))
-    ids, ids_path, ids_receipt = source.read(kind + "-ids", url + "/query", dict(scope, f="json", returnIdsOnly="true"))
-    native_ids = ids.get("objectIds") or []
-    if ids.get("exceededTransferLimit") or len(native_ids) != len(set(native_ids)) or len(native_ids) != count["count"]:
-        raise ValueError("Original count and complete unique native IDs disagree")
-    native_ids.sort()
+    native_id_set, queries, companions = set(), [], [metadata_receipt]
+    inventory_progress = {"schema": "upstate.native-query-progress/v1",
+                          "kind": kind, "scope": meaning, "completed": [], "subdivisions": []}
+    progress_path = source.root / (kind + "-inventory-progress.json")
+    previous_subdivisions = {}
+    if progress_path.exists():
+        previous = json_file(progress_path)
+        if previous.get("schema") != inventory_progress["schema"]:
+            raise ValueError("Existing inventory progress uses a different schema")
+        if previous.get("kind") == kind and previous.get("scope") == meaning:
+            inventory_progress["subdivisions"] = list(previous.get("subdivisions", []))
+            previous_subdivisions = {item["suffix"]: item for item in inventory_progress["subdivisions"]}
+
+    def inventory(scope, suffix, depth):
+        previous = previous_subdivisions.get(suffix)
+        if previous and previous.get("scope") == scope and previous.get("depth") == depth:
+            companions.extend(previous.get("retained_count_sources", []))
+            for index, child in enumerate(subdivide_scope(scope)):
+                inventory(child, suffix + "-q" + str(index), depth + 1)
+            return
+        adaptive = kind == "stream_order" and depth < stream_max_depth
+        retained_count_sources = []
+        try:
+            count, count_path, count_receipt = source.read(kind + "-count" + suffix, url + "/query",
+                                                          dict(scope, f="json", returnCountOnly="true"), split_timeouts=adaptive)
+            retained_count_sources = [count_path, count_receipt]
+            ids, ids_path, ids_receipt = source.read(kind + "-ids" + suffix, url + "/query",
+                                                    dict(scope, f="json", returnIdsOnly="true"), split_timeouts=adaptive)
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            if kind != "stream_order" or depth >= stream_max_depth or not subdivision_candidate(error):
+                raise
+            children = subdivide_scope(scope)
+            inventory_progress["subdivisions"].append({
+                "suffix": suffix, "depth": depth, "scope": scope,
+                "error_type": type(error).__name__, "error": str(error),
+                "retained_count_sources": retained_count_sources,
+                "children": [suffix + "-q" + str(index) for index in range(4)]})
+            companions.extend(retained_count_sources)
+            dump(progress_path, inventory_progress)
+            print(json.dumps({"kind": kind, "scope": suffix, "subdivide": True,
+                              "depth": depth, "reason": str(error)}), flush=True)
+            for index, child in enumerate(children):
+                inventory(child, suffix + "-q" + str(index), depth + 1)
+            return
+        selected = ids.get("objectIds") or []
+        if ids.get("exceededTransferLimit") or len(selected) != len(set(selected)) or len(selected) != count["count"]:
+            raise ValueError("Original count and complete unique native IDs disagree for " + kind + suffix)
+        if ids.get("objectIdFieldName", oid) != oid:
+            raise ValueError("Native inventory object ID field differs from the original metadata")
+        native_id_set.update(selected)
+        query = {"count": count_path, "ids": ids_path, "request": ids_receipt}
+        queries.append(query)
+        companions.extend([count_receipt, ids_receipt])
+        inventory_progress["completed"].append({
+            "suffix": suffix, "depth": depth, "scope": scope,
+            "count": len(selected), "sources": query})
+        inventory_progress["unique_native_ids"] = len(native_id_set)
+        dump(progress_path, inventory_progress)
+        print(json.dumps({"kind": kind, "scope": suffix or "whole",
+                          "scope_count": len(selected), "unique_native_ids": len(native_id_set)}), flush=True)
+
+    for scope_index, scope in enumerate(scopes):
+        suffix = "" if len(scopes) == 1 else "-tile-" + str(scope_index).zfill(4)
+        inventory(scope, suffix, 0)
+    native_ids = sorted(native_id_set)
     descriptor = {"kind": kind, "uri": url, "metadata": metadata_path,
-                  "queries": [{"count": count_path, "ids": ids_path, "request": ids_receipt}],
-                  "pages": [], "scope": meaning, "companions": [metadata_receipt, count_receipt, ids_receipt]}
+                  "queries": queries, "pages": [], "scope": meaning,
+                  "companions": companions + [str(progress_path.relative_to(source.root))]}
     if kind == "freshwater":
         descriptor.update(huc_ids="domain-huc12s.json", expected_huc_count=217)
     print(json.dumps({"kind": kind, "original_count": len(native_ids)}), flush=True)
@@ -136,13 +248,51 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False):
         return descriptor
     size = min(chunk, int(metadata.get("maxRecordCount", 2000)))
     received = set()
-    for start in range(0, len(native_ids), size):
-        batch = native_ids[start:start + size]
+    geometry_progress_path = source.root / (kind + "-geometry-progress.json")
+    geometry_progress = {"schema": "upstate.native-geometry-progress/v1",
+                         "kind": kind, "native_ids_sha256": sha(encode(native_ids)),
+                         "subdivisions": []}
+    if geometry_progress_path.exists():
+        previous = json_file(geometry_progress_path)
+        if previous.get("schema") != geometry_progress["schema"]:
+            raise ValueError("Existing geometry progress uses a different schema")
+        if previous.get("kind") == kind and previous.get("native_ids_sha256") == geometry_progress["native_ids_sha256"]:
+            geometry_progress["subdivisions"] = list(previous.get("subdivisions", []))
+    split_batches = {item["label"]: item for item in geometry_progress["subdivisions"]}
+    descriptor["companions"].append(str(geometry_progress_path.relative_to(source.root)))
+    dump(geometry_progress_path, geometry_progress)
+
+    def capture_geometry(batch, label):
+        batch_hash = sha(encode(batch))
+        previous = split_batches.get(label)
+        if previous and previous.get("native_ids_sha256") == batch_hash:
+            middle = len(batch) // 2
+            if middle < 1:
+                raise ValueError("Saved geometry subdivision cannot split a singleton")
+            capture_geometry(batch[:middle], label + "-a")
+            capture_geometry(batch[middle:], label + "-b")
+            return
         query = {"f": "json", "objectIds": ",".join(map(str, batch)), "outFields": "*",
                  "returnGeometry": "true", "returnTrueCurves": "false",
                  "returnZ": "true" if metadata.get("hasZ") else "false",
                  "returnM": "true" if metadata.get("hasM") else "false"}
-        value, page, receipt = source.read(kind + "-geometry-" + str(start // size).zfill(4), url + "/query", query)
+        try:
+            value, page, receipt = source.read(label, url + "/query", query,
+                                               split_timeouts=len(batch) > 1)
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            if len(batch) <= 1 or not subdivision_candidate(error):
+                raise
+            decision = {"label": label, "native_ids_sha256": batch_hash,
+                        "count": len(batch), "error_type": type(error).__name__, "error": str(error)}
+            geometry_progress["subdivisions"].append(decision)
+            split_batches[label] = decision
+            dump(geometry_progress_path, geometry_progress)
+            print(json.dumps({"kind": kind, "geometry_batch": label,
+                              "subdivide": True, "count": len(batch), "reason": str(error)}), flush=True)
+            middle = len(batch) // 2
+            capture_geometry(batch[:middle], label + "-a")
+            capture_geometry(batch[middle:], label + "-b")
+            return
         rows = value.get("features")
         if not isinstance(rows, list) or value.get("exceededTransferLimit"):
             raise ValueError("Publisher geometry page is absent or truncated")
@@ -155,7 +305,12 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False):
         descriptor["pages"].append(page)
         descriptor["companions"].append(receipt)
         dump(checkpoint, descriptor)
-        print(json.dumps({"kind": kind, "page": start // size + 1, "received": len(received), "total": len(native_ids)}), flush=True)
+        print(json.dumps({"kind": kind, "geometry_batch": label,
+                          "received": len(received), "total": len(native_ids)}), flush=True)
+
+    for start in range(0, len(native_ids), size):
+        batch = native_ids[start:start + size]
+        capture_geometry(batch, kind + "-geometry-" + str(start // size).zfill(4))
     if received != set(native_ids):
         raise ValueError("Original geometry capture is incomplete")
     return descriptor
@@ -168,15 +323,25 @@ def main(argv=None):
     parser.add_argument("--chunk", type=int, default=500)
     parser.add_argument("--timeout", type=int, default=60)
     parser.add_argument("--counts-only", action="store_true")
+    parser.add_argument("--stream-grid", type=int, default=1,
+                        help="Split the entire NHD envelope into NxN native count/ID queries; union IDs before geometry download")
+    parser.add_argument("--stream-max-depth", type=int, default=4,
+                        help="Recursively split timed-out NHD tiles up to this depth; 0 disables adaptive splitting")
+    parser.add_argument("--stream-spatial-relation", choices=list(SPATIAL_RELATIONS), default="intersects",
+                        help="Native candidate query: intersects, feature envelope, or primary spatial index; exact domain selection follows")
     args = parser.parse_args(argv)
     if not 1 <= args.chunk <= 2000:
         parser.error("--chunk must be from 1 to 2000")
+    if not 1 <= args.stream_grid <= 16:
+        parser.error("--stream-grid must be from 1 to 16")
+    if not 0 <= args.stream_max_depth <= 8:
+        parser.error("--stream-max-depth must be from 0 to 8")
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     summary, hucs = load_domain(args.domain_archive, output)
     reader = OriginalSource(output, args.timeout)
     kinds = list(LAYERS) if args.layer == "all" else [args.layer]
-    layers = [capture_layer(reader, kind, summary, hucs, args.chunk, args.counts_only) for kind in kinds]
+    layers = [capture_layer(reader, kind, summary, hucs, args.chunk, args.counts_only, args.stream_grid, args.stream_max_depth, args.stream_spatial_relation) for kind in kinds]
     packet = {"schema": "upstate.water-context-capture/v1", "operation_id": OPERATION,
               "captured_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
               "scope": {"domain_source_id": summary["source_id"], "huc_ids": "domain-huc12s.json",
