@@ -126,20 +126,41 @@ def prepare(operator, workspace_key, workspace, store, study_id, version_id, mem
         raise ValueError("The selected retained study edition changed")
     if not isinstance(member, str) or member not in record["source_entries"]:
         raise ValueError("Choose a registered original report member")
-    if PurePosixPath(member).suffix.lower() not in {".html", ".htm"}:
-        raise ValueError("Choose an original HTML report")
     inventory = {entry["path"]: entry for entry in record["source_files"]}
     if len(inventory) != len(record["source_files"]):
         raise ValueError("The retained source inventory contains duplicate paths")
+
+    def source_path(name):
+        if name not in record["source_entries"]:
+            raise ValueError("Original report member is not registered: " + name)
+        return store.source_file(study_id, name, version_id)[0]
+
+    return prepare_inventory(
+        operator, workspace_key, workspace,
+        {"study_id": study_id, "version_id": version_id,
+         "source_collection_id": record["source_collection_id"]},
+        member, inventory, source_path)
+
+
+def prepare_inventory(operator, workspace_key, workspace, binding, member, inventory, source_path):
+    """Render one verified retained source through its caller's original inventory.
+
+    The caller resolves its exact native source binding and supplies original
+    member paths. This shared rendering step creates no study or source records.
+    """
+    if not isinstance(member, str) or member not in inventory:
+        raise ValueError("Choose a registered original report member")
+    if PurePosixPath(member).suffix.lower() not in {".html", ".htm"}:
+        raise ValueError("Choose an original HTML report")
     paths = {}
 
     def original(name, limit):
         descriptor = inventory.get(name)
-        if descriptor is None or name not in record["source_entries"]:
+        if descriptor is None:
             raise ValueError("Original report member is not registered: " + name)
         if type(descriptor.get("bytes")) is not int or not 0 <= descriptor["bytes"] <= limit:
             raise ValueError("Original report member exceeds preview capacity: " + name)
-        path, _ = store.source_file(study_id, name, version_id)
+        path = source_path(name)
         with path.open("rb") as stream:
             raw = stream.read(limit + 1)
         if len(raw) != descriptor["bytes"] or hashlib.sha256(raw).hexdigest() != descriptor["sha256"]:
@@ -157,8 +178,7 @@ def prepare(operator, workspace_key, workspace, store, study_id, version_id, mem
     identity = {
         "schema": "upstate.published-report-preview/v1", "version": VERSION,
         "project_id": workspace.project["id"], "workspace": workspace_key,
-        "study_id": study_id, "version_id": version_id,
-        "source_collection_id": record["source_collection_id"], "member": member,
+        **binding, "member": member,
         "source": inventory[member], "links": [
             {**row, "source": inventory[row["path"]]} for row in parser.links],
         "assets": {name: inventory[name] for name in sorted(set(paths) - {member})},
@@ -200,7 +220,7 @@ def prepare(operator, workspace_key, workspace, store, study_id, version_id, mem
         # source_file verifies the unchanged source body's CAS before the ticket.
         path = paths.get(name)
         if path is None:
-            path, _ = store.source_file(study_id, name, version_id)
+            path = source_path(name)
         description = describe_file(workspace.root, path)
         if any(description[key] != inventory[name][key] for key in ("bytes", "sha256")):
             raise ValueError("Original report download differs from its retained inventory: " + name)
@@ -211,15 +231,14 @@ def prepare(operator, workspace_key, workspace, store, study_id, version_id, mem
              for row in parser.links]
     return {
         "schema": "upstate.published-report-preview/v1", "id": token,
-        "workspace": workspace_key, "study_id": study_id, "version_id": version_id,
-        "source_collection_id": record["source_collection_id"], "member": member,
+        "workspace": workspace_key, **binding, "member": member,
         "source": inventory[member], "title": PurePosixPath(member).name,
         "preview": {**ticket, "url": "/api/file/published-study-preview/" + quote(workspace_key, safe="") + "/" + ticket["id"]},
         "download": download(member), "links": links, "embedded_images": images,
     }
 
 
-def file_reply(operator, workspace_key, ticket_id):
+def file_reply(operator, workspace_key, ticket_id, *, policy_for=None):
     operator.ws(workspace_key)
     ticket_id = identifier(ticket_id)
     with operator.lock:
@@ -233,4 +252,11 @@ def file_reply(operator, workspace_key, ticket_id):
             ticket.get("filename") != "original-study-report-preview.html"):
         raise ValueError("This ticket is not an original-report preview")
     identifier(path.stem)
-    return {key: value for key, value in ticket.items() if key != "path"}, POLICY
+    policy = POLICY
+    if policy_for is not None:
+        with path.open("rb") as stream:
+            body = stream.read(ticket["bytes"] + 1)
+        if len(body) != ticket["bytes"] or hashlib.sha256(body).hexdigest() != ticket["sha256"]:
+            raise ValueError("Original-report preview differs from its retained ticket")
+        policy = policy_for(body)
+    return {key: value for key, value in ticket.items() if key != "path"}, policy

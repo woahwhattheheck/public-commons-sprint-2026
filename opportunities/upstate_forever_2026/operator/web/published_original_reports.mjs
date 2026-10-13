@@ -6,19 +6,19 @@ function downloadURL(ticket,workspace) {
      ticket.url!=="/api/file/"+ticket.id)throw Error("The original download belongs to another file or Workspace.");
   return ticket.url+"?download=1";
 }
-function previewURL(ticket,workspace) {
+function previewURL(ticket,workspace,prefix="/api/file/published-study-preview/") {
   if(!ticket||ticket.workspace!==workspace||!/^[a-f0-9]{64}$/.test(ticket.id||"")||
-     ticket.url!=="/api/file/published-study-preview/"+encodeURIComponent(workspace)+"/"+ticket.id)
+     ticket.url!==prefix+encodeURIComponent(workspace)+"/"+ticket.id)
     throw Error("The report preview belongs to another file or Workspace.");
   return ticket.url;
 }
 
 export function createPublishedOriginalReports(host,options) {
   let node=null,events=null,request=null,serial=0,current=null,history=[],frame=null,binding=null;
-  let loading=false,error="",status="",retry=null,frameTimer=null,framePending=false;
+  let loading=false,error="",status="",retry=null,frameTimer=null,framePending=false,suspended=false;
   const context=()=>options.context();
   const key=value=>value&&JSON.stringify([value.workspace,value.study_id,value.version_id,value.view]);
-  const valid=mark=>Boolean(node)&&mark.serial===serial&&key(context())===mark.key&&
+  const valid=mark=>Boolean(node)&&!suspended&&(!options.isCurrent||options.isCurrent())&&mark.serial===serial&&key(context())===mark.key&&
     host.getWorkspace()===mark.workspace;
   function mark() {
     const value=context();
@@ -44,7 +44,7 @@ export function createPublishedOriginalReports(host,options) {
     node.hidden=false;
     node.innerHTML='<header class="ps-original-header"><div><h2>Original study report</h2>'+
       '<p data-original-title></p></div><button type="button" data-original-action="close">Close report</button></header>'+
-      '<p class="ps-help">This report keeps its complete original observation scope. Its own filters are independent of the selected tables in the study desk.</p>'+
+      '<p class="ps-help">'+esc(options.scopeNote||'This report keeps its complete original observation scope. Its own filters are independent of the selected tables in the study desk.')+'</p>'+
       '<div class="ps-actions"><button type="button" data-original-action="back">Previous report</button>'+
       '<button type="button" data-original-action="print">Print this report</button>'+
       '<button type="button" data-original-action="retry" hidden>Retry opening</button>'+
@@ -66,6 +66,7 @@ export function createPublishedOriginalReports(host,options) {
     node.querySelector('[data-original-action="retry"]').hidden=!retry;
     node.querySelector('[data-original-action="retry"]').disabled=loading;
     node.querySelector('[data-original-action="export"]').disabled=loading||!current;
+    node.querySelector('[data-original-action="export"]').hidden=typeof options.exportComplete!=="function";
     const original=node.querySelector("[data-original-download]");
     original.hidden=!current;
     if(current)original.href=downloadURL(current.result.download,binding.workspace);
@@ -84,9 +85,9 @@ export function createPublishedOriginalReports(host,options) {
     binding=opening;loading=true;error="";status="";retry=null;clearFrame();render();
     const controller=new AbortController();request=controller;
     try {
-      const result=await host.api("/api/published-studies/report-preview",{
+      const result=await (options.loadPreview?options.loadPreview(opening,selection.path,controller.signal):host.api("/api/published-studies/report-preview",{
         method:"POST",body:{workspace:opening.workspace,study_id:opening.study_id,
-          version_id:opening.version_id,path:selection.path},signal:controller.signal});
+          version_id:opening.version_id,path:selection.path},signal:controller.signal}));
       if(!valid(opening))return;
       if(result.workspace!==opening.workspace||result.study_id!==opening.study_id||
          result.version_id!==opening.version_id||result.member!==selection.path||
@@ -99,7 +100,7 @@ export function createPublishedOriginalReports(host,options) {
           throw Error("The report companion binding is invalid.");
         seen.add(row.id);downloadURL(row.download_ticket,opening.workspace);
       }
-      const url=new URL(previewURL(result.preview,opening.workspace),window.location.origin);
+      const url=new URL(previewURL(result.preview,opening.workspace,options.previewPrefix),window.location.origin);
       if(selection.query) {
         const query=new URLSearchParams(selection.query);query.delete("download");url.search=query.toString();
       }
@@ -134,7 +135,7 @@ export function createPublishedOriginalReports(host,options) {
   }
   async function open(path) {
     if(typeof path!=="string"||!path)throw Error("Choose an original report.");
-    close();shell();await navigate({path,query:"",fragment:""});
+    close();suspended=false;shell();await navigate({path,query:"",fragment:""});
     if(node&&!error)node.scrollIntoView?.({block:"start",behavior:"smooth"});
   }
   function activate(row) {
@@ -198,6 +199,12 @@ export function createPublishedOriginalReports(host,options) {
     node.addEventListener("click",click,{signal:events.signal});
     window.addEventListener("message",message,{signal:events.signal});
   }
-  function detach() {close();events?.abort();events=null;node=null;}
-  return {mount,detach,sync,open};
+  function suspend() {
+    if(loading)close();
+    if(frameTimer!==null){clearTimeout(frameTimer);frameTimer=null;}
+    suspended=true;
+  }
+  function resume() {suspended=false;return Boolean(current&&frame&&!framePending);}
+  function detach() {close();events?.abort();events=null;node=null;suspended=false;}
+  return {mount,detach,sync,open,suspend,resume};
 }
