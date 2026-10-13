@@ -186,6 +186,77 @@ Lab/SF88 source. They need no Python process to reopen an already prepared XLSX
 or XLS result. Existing file-reservation scope is honored by the original
 `writeBytes` helper during publication.
 
+## Continue the original supplier delivery
+
+The full supplier-job continuation is
+`MCCAMPBELL-LAB-MCP-RECEIVING-9F77-20261012`. Its two original vendor downloads
+are retained in the supplied source package:
+
+| Original input | Bytes | Exact ZIP SHA256 |
+| --- | ---: | --- |
+| `Equis3.zip` | 9,862 | `9253032d539ced2d60b04f1c3e9188dc55c8a2c0ce873c2e8cd4273f28db203d` |
+| `Equis4_CSV.zip` | 10,432 | `a57c18f4bf8054503155e1c8ccdb0bf7b736e4cc5eefef5e8d4c61a145ed2879` |
+
+They were retrieved from the original
+[McCampbell EQuIS 3 download](https://www.mccampbell.com/EDDs/Equis3.zip) and
+[EQuIS 4 CSV download](https://www.mccampbell.com/EDDs/Equis4_CSV.zip).
+Their exact original source is retained at
+`stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/`.
+Each supplier edition's complete records, profile identity and counterpart choices
+remain in the original laboratory operation. A completed model projection or
+commercial case receipt is not that operation's completed job result.
+
+The original
+`stellar-forge/mcp-merchant-operator/lab-edd-receiving.mjs` already downloads
+the full result through `downloadLaboratoryFile`, verifies it with
+`readLabResult`, receives it into the independent original workspace and
+cold-reopens both result records. Its completed `result.json` retains
+`families[family.id].result.sha256` and both source identities. The corresponding
+complete download directory is
+`downloads/<family.id>-complete-native-result` under that original receiving
+directory.
+
+After that original programme returns `COMPLETE`, reuse its saved transfer.
+The following is an additional customer delivery step in that same caller;
+`family` is its original configured family and `completed` is its retained
+complete receiving result. `reopenLaboratoryDownload` is the unchanged function
+already imported by that operator.
+
+```js
+const saved = completed.families[family.id].result;
+const transfer = await reopenLaboratoryDownload({
+  directory: originalCompleteDownloadDirectory,
+  expectedSha256: saved.sha256,
+});
+
+const delivery = await receiveLabResult({
+  file: transfer.filename,
+  directory: customerDeliveryDirectory,
+  expected: {
+    archiveSha256: saved.sha256,
+    jobId: family.reference,
+    sourceSha256: saved.currentSourceSha256,
+    ...(saved.baselineSourceSha256
+      ? { baselineSourceSha256: saved.baselineSourceSha256 }
+      : {}),
+  },
+  signal,
+});
+```
+
+The receiving step consumes the saved complete bytes. It preserves the original
+reference, checkout, approved request, worker result and transfer journal.
+If the original operation has not yet produced a complete result, keep this
+customer step pending on that operation. The fixture below remains its separate
+format acceptance input.
+
+For a complete customer-folder acceptance on the finished supplier result,
+run `received-result-receiving.mjs` with that returned `transfer.filename`,
+its exact `saved.sha256`, a private receiving directory and a source-kind
+description identifying the original complete supplier job. That programme
+performs the same CLI receive, same-folder continuation, independent full copy
+and fresh-process reopen while recording the real incoming job identity.
+
 ## Retained original native receiving
 
 The complete operating exercise uses the exact
