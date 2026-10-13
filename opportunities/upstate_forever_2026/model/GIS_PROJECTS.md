@@ -295,8 +295,8 @@ adapter are the direct maintained entrypoints of this source edition.
 ## Original operator integration
 
 The contribution includes the complete grayscale `Editable GIS projects` panel,
-queued `gis.project.export`, `gis.project.receive` and
-`gis.project.adopt-sources` operations, original upload
+queued `gis.project.export`, `gis.project.receive`, `gis.project.adopt-sources`,
+`gis.project.review` and `gis.vector.review` operations, original upload
 receiving, independent archive copies and the original hash-checked downloads.
 
 Apply the component installer to the current complete application. It uses the
@@ -311,11 +311,25 @@ python install_gis_projects.py --application /path/to/original/application
 The installer composes the actual registration source, preserves unrelated
 source, validates Python syntax before mutation, checks source predecessors and
 retains exact before-images. On a registry application it calls the installed
-`install_extensions.py` source transformations and registers only the GIS-owned
-descriptor and leaves. It removes the exact former GIS-owned direct hooks when
+`install_extensions.py` source transformations and registers the complete
+`gis-projects` and `gis-vector-reviews` descriptors and their source files. It removes the exact former GIS-owned direct hooks when
 migrating an older GIS installation, so the shared registry owns the actions,
 navigation, assets and file routes once. Reapplying the same edition makes no
-changes. Start
+changes.
+
+Both review references are installed together. The `gis-projects` provider
+compares an exported working edition with the received edition; the separate
+`gis-vector-reviews` provider compares original source features with their
+received working features. The installer carries their original model modules,
+providers and descriptors. On a pre-registry application, it upgrades an existing
+GIS installation with the original vector action, authorized catalogue/inspect
+routes, retained-item lookup and task decoration. Reapplying keeps those hooks
+single; migration to the shared registry removes their exact former direct joins
+before the descriptors become the active owners. The application's existing
+authorization, Workspace selection, queue, download tickets and file policies
+remain the same.
+
+Start
 the original `operator/server.py` with its original startup command, then select
 **Editable GIS projects**. Choose an actual source edition, prepared grid and/or
 completed cases. Click **Build complete GIS project**, inspect the original task,
