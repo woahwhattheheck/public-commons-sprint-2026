@@ -5,6 +5,21 @@ Upper Savannah workspace and Regional watersheds desk. It uses the native
 `model.watershed_context.build_watershed_context` implementation and the normal
 `Workspace.import_sources` / `Workspace.source_file` path.
 
+## Use the included original edition
+
+The complete original edition is included at
+`source/water_context/20261013-prepared/`. Import it into the current workspace
+through its regular source-import command:
+
+```sh
+python -m model.cli --workspace /path/to/current/workspace source-import \
+  source/water_context/20261013-prepared/complete-sources.json
+```
+
+Its five data files preserve the exact captured context, coverage, query responses
+and classified-stream geometry. The manifest connects those companions so the
+operator can reconstruct the edition after workspace transfer.
+
 ## Prepare the full original edition
 
 From the existing application directory, using the original source files already

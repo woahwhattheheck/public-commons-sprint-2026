@@ -798,7 +798,7 @@ def render_watershed_report(report: Mapping) -> str:
     ))
     lines.extend(["", "## Source coverage", "",
         f"Coverage status: **{coverage['status']}**. "
-        f"Selected classes: {', '.join(coverage['selected_classes'])}. "
+        f"Selected South Carolina classes: {', '.join(coverage['selected_classes'])}. "
         f"{summary['queried_zero_target_huc_count']} watersheds have a complete query "
         "and zero records for these selected classes. "
         f"{summary['unverified_zero_target_huc_count']} zero-record watersheds lack "
