@@ -9,8 +9,8 @@
       "kind": "document",
       "role": "observed_water_quality_hydrologic_context",
       "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-      "bytes": 1409355,
-      "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f",
+      "bytes": 1545351,
+      "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "Original USGS NLDI responses captured 2026-10-13",
       "metadata": {
@@ -182,7 +182,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -256,8 +256,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -301,8 +301,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -381,8 +381,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -649,7 +649,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -723,8 +723,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -768,8 +768,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -848,8 +848,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -868,8 +868,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -1115,7 +1115,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -1189,8 +1189,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -1234,8 +1234,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -1314,8 +1314,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -1339,8 +1339,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
@@ -1582,7 +1582,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -1656,8 +1656,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -1701,8 +1701,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -1781,8 +1781,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-locations.csv",
@@ -1801,8 +1801,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -2051,7 +2051,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -2125,8 +2125,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -2170,8 +2170,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-station-catchments.geojson",
@@ -2245,8 +2245,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -2270,8 +2270,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -2520,7 +2520,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -2594,8 +2594,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -2639,8 +2639,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -2714,8 +2714,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -2739,8 +2739,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -2988,7 +2988,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -3062,8 +3062,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -3107,8 +3107,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -3187,8 +3187,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -3207,8 +3207,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -3454,7 +3454,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -3528,8 +3528,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -3573,8 +3573,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -3653,8 +3653,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -3673,8 +3673,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -3920,7 +3920,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -3989,8 +3989,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -4034,8 +4034,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -4114,8 +4114,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -4139,8 +4139,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -4387,7 +4387,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -4461,8 +4461,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -4506,8 +4506,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -4581,8 +4581,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -4606,8 +4606,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -4855,7 +4855,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -4924,8 +4924,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -4969,8 +4969,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -5049,8 +5049,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -5074,8 +5074,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -5150,8 +5150,8 @@
       "kind": "document",
       "role": "THREE_TWENTY_OBSERVATION_REPORT",
       "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-      "bytes": 1181211,
-      "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d",
+      "bytes": 1320090,
+      "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "Original SCDES/WQP observations from 2021–2025 and 2026; USGS NLDI geography captured 2026-10-13",
       "metadata": {
@@ -5330,7 +5330,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -5444,8 +5444,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -5524,8 +5524,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -5549,8 +5549,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -5803,7 +5803,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -5877,8 +5877,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparisons.csv",
@@ -5917,8 +5917,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -5997,8 +5997,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -6022,8 +6022,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -6276,7 +6276,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -6350,8 +6350,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -6390,8 +6390,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -6470,8 +6470,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -6495,8 +6495,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -6749,7 +6749,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -6818,8 +6818,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -6863,8 +6863,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -6943,8 +6943,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -6968,8 +6968,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -7222,7 +7222,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -7296,8 +7296,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -7336,8 +7336,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -7416,8 +7416,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -7441,8 +7441,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -7695,7 +7695,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -7769,8 +7769,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -7809,8 +7809,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -7889,8 +7889,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -7914,8 +7914,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -8168,7 +8168,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -8242,8 +8242,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -8282,8 +8282,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -8362,8 +8362,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -8387,8 +8387,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -8641,7 +8641,7 @@
         {
           "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
           "bytes": 3768,
-          "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+          "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -8715,8 +8715,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-          "bytes": 1181211,
-          "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+          "bytes": 1320090,
+          "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -8755,8 +8755,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-          "bytes": 15427,
-          "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+          "bytes": 15865,
+          "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -8835,8 +8835,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-          "bytes": 40060,
-          "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+          "bytes": 40082,
+          "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -8860,8 +8860,8 @@
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-          "bytes": 1409355,
-          "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+          "bytes": 1545351,
+          "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
         },
         {
           "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
