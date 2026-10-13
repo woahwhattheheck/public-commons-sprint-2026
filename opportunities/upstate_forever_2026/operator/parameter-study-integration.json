@@ -18,6 +18,18 @@
       "completed_window_resume": true,
       "original_input_verification": true,
       "unchanged_kernel_order": true
+    },
+    "exports": {
+      "module": "model.parameter_exports",
+      "edition": "parameter-study-exports/2",
+      "requested_by": "selection.difference_maps",
+      "retained_path": "experiments/<id>/difference-maps/<comparison-id>",
+      "original_comparison_direction": "alternative minus baseline",
+      "original_units": "annual mass per pixel",
+      "result_field": "difference_maps",
+      "artifacts_field": "artifacts",
+      "archive": "experiment-results.zip",
+      "refresh_completed_without_native_execution": true
     }
   },
   "preserve": {
