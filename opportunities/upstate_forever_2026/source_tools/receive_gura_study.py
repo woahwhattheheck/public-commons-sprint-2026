@@ -55,7 +55,7 @@ def main(argv=None):
     for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ.setdefault(key, "1")
     os.environ.setdefault("GDAL_CACHEMAX", "64")
-    import receive_gura_reference as receiver
+    import receive_gura_native as receiver
     import receive_gura_planning as planning
     from model.client_economics import inspect_edition
     from model.common import describe_file, digest, held, identifier, read_json

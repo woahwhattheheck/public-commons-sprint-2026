@@ -31,6 +31,9 @@ def _selection(args, application):
             ("reported_discharge", "observations/eighteenmile_2023/npdes/model-sources.json"),
             ("monthly_discharge_flow", "observations/eighteenmile_2023/npdes/flow_context/model-sources.json"),
             ("discharge_routing", "observations/eighteenmile_2023/npdes/routing-model-sources.json"),
+            ("lake_paired_analysis", "eighteenmile_lake_paired_analysis.sources.json"),
+            ("nutrient_flow", "eighteenmile_routine_nutrient_flow.sources.json"),
+            ("calibration_hydrology", "source/hydrology-huc05-07-20261013/model-sources.json"),
             ("study_figures", "eighteenmile_scientific_figures.sources.json"),
             ("flow_report", "observed_hydrology_context.sources.json")):
         context_manifest = application / relative
@@ -116,6 +119,43 @@ def _public_water(workspace, collection, spec_path, output):
             "selection": "receiving-waters-spec.json", "source_areas": "scenario-source-areas.json"}
 
 
+def _nutrient_flow(workspace, manifest, collection_id, application, output):
+    """Run the original retained endpoint importer against the same Workspace."""
+    import subprocess
+    from model.common import read_json, file_digest, relative_file
+
+    dated, entry = workspace.source_file(
+        collection_id, "observed-hydrology-nutrient-flow-dated-20261013")
+    importers = [item for item in entry["companions"]
+                 if Path(item.get("source_path", "")).name == "import_into_workspace.py"]
+    if len(importers) != 1:
+        raise ValueError("Select the single retained original nutrient-flow importer companion")
+    original = importers[0]
+    body_relative = entry["body"].get("view_path", entry["body"]["filename"])
+    view_root = dated
+    for _ in Path(body_relative).parts:
+        view_root = view_root.parent
+    if relative_file(view_root, body_relative) != dated.resolve():
+        raise ValueError("The nutrient-flow source view no longer matches its retained primary body")
+    script = relative_file(
+        view_root, original.get("view_path", original["filename"]))
+    if script.stat().st_size != original["bytes"] or file_digest(script) != original["sha256"]:
+        raise ValueError("The original nutrient-flow importer differs from its source companion")
+    receipt_path = output / "nutrient-flow-observations.json"
+    command = [
+        sys.executable, "-B", str(script),
+        "--application", str(application), "--workspace", str(workspace.root),
+        "--manifest", str(manifest), "--output", str(receipt_path),
+    ]
+    subprocess.run(command, cwd=application, check=True, stdout=sys.stderr, stderr=sys.stderr)
+    receipt = read_json(receipt_path)
+    if (receipt.get("schema") != "upstate.nutrient-flow-native-import/v1"
+            or receipt.get("project_id") != workspace.project["id"]
+            or receipt.get("source_collection_id") != collection_id):
+        raise ValueError("The nutrient-flow intake returned another original Workspace or source edition")
+    return receipt
+
+
 def _source_inventory(workspace, collections, output):
     """Describe original retained tables and point to their complete original bodies."""
     from model.common import file_digest
@@ -187,6 +227,8 @@ th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}s
     document += "<p>Workspace: " + e(workspace.project["title"]) + "<br>Receiving operation: <code>" + e(state["id"]) + "</code></p>"
     observation_import = state.get("observation_import", {})
     document += "<h2>Dated observation views</h2><p>The existing Observed water quality desk now contains " + e(observation_import.get("views", 0)) + " retained views of original measurements, discharge, stage and available effluent source context. Choose a view, station and parameter to inspect original dated values, censor bounds and coverage. <a href=\"observations.json\">Open the observation import record</a>.</p>"
+    if state.get("nutrient_flow_import"):
+        document += '<p><a href="nutrient-flow-observations.json">Routine nutrient interval views</a> retain the paired lower and upper endpoints of the same original records, alongside their sampling calendar and flow contrasts.</p>'
     document += "<h2>Maps and geographic joins</h2><ul>" + "".join(packs) + "</ul>"
     document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
     document += "<h2>Source tables and geographic layers</h2><p>Table counts describe actual retained rows. Source scope and complete collection identities are in <a href=\"source-inventory.json\">the source inventory</a>. The existing operator Sources desk provides table previews and every original companion download; Spatial review and Exports display these same saved views.</p>"
@@ -275,6 +317,24 @@ def receive(args):
                 "rows_across_views": sum(item["rows"] for item in observations["observations"]),
                 "context_rows_across_views": sum(item["context_count"] for item in observations["observations"]),
             }
+            nutrient_manifest = next(
+                (item for item in manifests if item["role"] == "nutrient_flow"), None)
+            if nutrient_manifest is not None:
+                nutrient_collection = next(
+                    item for item in collections if item["role"] == "nutrient_flow")
+                nutrient = _nutrient_flow(
+                    workspace, nutrient_manifest["path"],
+                    nutrient_collection["source_collection_id"], application, output)
+                state["nutrient_flow_import"] = nutrient
+                observation_summary = state["observation_import"]
+                observation_summary["additional_receipts"] = ["nutrient-flow-observations.json"]
+                observation_summary["observation_ids"].extend(
+                    item["id"] for item in nutrient["observations"])
+                observation_summary["views"] += len(nutrient["observations"])
+                observation_summary["rows_across_views"] += sum(
+                    item["rows"] for item in nutrient["observations"])
+                observation_summary["context_rows_across_views"] += sum(
+                    item["context_count"] for item in nutrient["observations"])
             state["updated_at"] = now()
             atomic_json(state_path, state)
             water = next(item for item in collections if item["role"] == "public_water")
@@ -315,6 +375,9 @@ def receive(args):
                              "source-inventory.json", "observations.json", "index.html", "receiving-waters-spec.json",
                              "scenario-source-areas.json", "assessment/operation.json",
                              "assessment/point-inspections.json", "assessment/station-domain-joins.csv")])
+            if state.get("nutrient_flow_import"):
+                state["files"].append(describe_file(
+                    workspace.root, output / "nutrient-flow-observations.json"))
             state["attempts"][-1].update(state="complete", completed_at=now())
             atomic_json(state_path, state)
         except BaseException as error:

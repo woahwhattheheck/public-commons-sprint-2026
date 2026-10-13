@@ -8,8 +8,8 @@
       "title": "Observed Upper Savannah hydrology and Eighteenmile scientific context",
       "kind": "document",
       "path": "observed_hydrology_context.report.json",
-      "bytes": 71738,
-      "sha256": "340378a254b2f0c9d9736a549a3aa0d7e13afbf341caaa6c8891318bf71566d5",
+      "bytes": 93309,
+      "sha256": "213ea3efd7219f8d6997947089332c09f40562eb17abe9835eb2ba7acac7bf0a",
       "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
       "vintage": "2023 water quality and discharge; 2020–2025 observed hydrology; source recovery 2026-10-13",
       "metadata": {
@@ -22,13 +22,86 @@
         "flow_gauges": 16,
         "eighteenmile_daily_flow_records": 2192,
         "original_scientific_sections": 5,
-        "scientific_figures": 4
+        "scientific_figures": 4,
+        "routine_nutrient_result_rows": 96,
+        "routine_nutrient_activities": 24,
+        "routine_nutrient_value_rows": 120
       },
       "companions": [
+        {
+          "path": "eighteenmile_lake_paired_analysis.sources.json",
+          "bytes": 37871,
+          "sha256": "34af2770b39339760994263833e981692cc1c75806206f78dbd9705c30b8eee8"
+        },
+        {
+          "path": "eighteenmile_routine_nutrient_flow.sources.json",
+          "bytes": 148361,
+          "sha256": "7194c489dec601281a398b07f390923e723c8582142688c8ee23dcbfc57d4b54"
+        },
+        {
+          "path": "observations/calibration_context_20261013/assessment.json",
+          "bytes": 31899,
+          "sha256": "b10e72b665bed3bf610e1ede4abf2ad897cded67dc8dae27f2fd7c7eeaa823e0"
+        },
         {
           "path": "observations/calibration_context_20261013/observed-flow-report.html",
           "bytes": 1373441,
           "sha256": "fca9a66915aa588f26069c480f9d842bdd5ef41137603702a3679b28c1be9f40"
+        },
+        {
+          "path": "observations/calibration_context_20261013/README.md",
+          "bytes": 6797,
+          "sha256": "030f9fa787956d6012630224cb6a0d01fd2a219fa0894755b73f6678e15b43e0"
+        },
+        {
+          "path": "observations/calibration_context_20261013/station_year_context.csv",
+          "bytes": 3085,
+          "sha256": "c9e8da04d1dc3d30e028bd58a0dbedcea4ebab541aae795b9aeb70c77352753e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+          "bytes": 644,
+          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "bytes": 7667,
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "bytes": 8424,
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
         },
         {
           "path": "observations/eighteenmile_2023/continuous_monthly_do.csv",
@@ -501,6 +574,116 @@
           "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
         },
         {
+          "path": "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
+          "bytes": 2429,
+          "sha256": "6ef3f2d64800d3808e327e93d639b8518668dab0ce805d417b275f1fbf07e13a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pair-summary.csv",
+          "bytes": 1843,
+          "sha256": "76819273f6bcf20e67df4c60d75dd1eb2ea04df7e92092e3ffdd6d2fa7bdd8c6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pairs.csv",
+          "bytes": 34728,
+          "sha256": "857e88df18b3afd96e953b66d3d040a5ed47c148865b733039db6749b46dbe75"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-station-summary.csv",
+          "bytes": 394,
+          "sha256": "a133e613bb42976311bad1185b36fa1ff510e73ae6a6b65483aed623c89e0836"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/cross-analyte-links.csv",
+          "bytes": 48164,
+          "sha256": "2ed47ca6dbbee1ee24a246a0c594ec5b60c058047b1f5cbe49f68efd4b0fce72"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/input-manifest.json",
+          "bytes": 3476,
+          "sha256": "3b3e8c4daa96c82b4f1943cec5b8fbf78727edf267965865cb12c4dc1ff13aab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/methods.json",
+          "bytes": 2604,
+          "sha256": "4b674bf9ec972ae857000d04f710e1bae41553872165e6c49e1ad9735be97b23"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-campaign-support.csv",
+          "bytes": 22959,
+          "sha256": "84268ac3973433dbff7bb0e93e5c18e48f62de40c32dbc5b3f4f090ec21174b2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pair-summary.csv",
+          "bytes": 999,
+          "sha256": "d4e6795d03face071f6ee69275fe10aad596a3b56432003106a7f51a8c09136e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pairs.csv",
+          "bytes": 32274,
+          "sha256": "951cc21b3ec387079a6243f7bde0f070b94550f09647fd8ef49ab6000395644a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+          "bytes": 14000,
+          "sha256": "f550d2c2ac73dde011c4d052a17a1b9c11bd6e05f5239e44afb48bb2e667d874"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+          "bytes": 14277,
+          "sha256": "97d5e652810e9dce7d56376599002c51089db3aee1be98bbfc8953d4c4f9ccc8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
+          "bytes": 16606,
+          "sha256": "2eab15e17422dece65c34ceb4f4dcc8b7bdb5f4676fb208e8db5f22dfdd33b49"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired-observations.json",
+          "bytes": 456848,
+          "sha256": "db6a21764d0c56a18d55d73a4e179156f2a47de0c68fead5c825d815244afe0b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/README.md",
+          "bytes": 5057,
+          "sha256": "30dfdb28eaa342623c985f9142e031abdd4600d1a3f687f447f182cdbd6ef755"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/source-records.csv",
+          "bytes": 123444,
+          "sha256": "56f1fdc441d0039704877518a9059670cb201f24b8c4f19953ecd487813d1bbc"
+        },
+        {
           "path": "observations/eighteenmile_2023/paired_station_observations.csv",
           "bytes": 503,
           "sha256": "f1bf9a6459b64cb4161e67be0ef5d5a0aeee6597f31b11748cb76f85d05ea971"
@@ -554,6 +737,71 @@
           "path": "observations/eighteenmile_2023/surface_ranges.csv",
           "bytes": 1234,
           "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+          "bytes": 34350,
+          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+          "bytes": 281844,
+          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+          "bytes": 10282,
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+          "bytes": 6288,
+          "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+          "bytes": 3615,
+          "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+          "bytes": 22213,
+          "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+          "bytes": 32166,
+          "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+          "bytes": 4482,
+          "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+          "bytes": 19733,
+          "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+          "bytes": 47412,
+          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+          "bytes": 1089,
+          "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+          "bytes": 1764,
+          "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
         },
         {
           "path": "observations/eighteenmile_2023/wqp/build_flow_context.mjs",
@@ -701,6 +949,16 @@
           "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
         },
         {
+          "path": "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
+          "bytes": 17048,
+          "sha256": "2b711f112b1fe189d2f7714e3e8b3a55384adf2c639cfdcfe56a9860b8fce634"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/calibration-context.json",
+          "bytes": 29339,
+          "sha256": "db0efcbadc09c23c401fbeef970e8d12f025cc52cb2924a73b45e4b07ccd5baa"
+        },
+        {
           "path": "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv",
           "bytes": 334352,
           "sha256": "0ea7464700941ae5ff747629cde13f1ac003710e3ee7225b55ad0fa1f439995f"
@@ -784,6 +1042,76 @@
           "path": "observations/observed_hydrology_20261013/model-sources.json",
           "bytes": 25766,
           "sha256": "48efe065df256ee81b614dbe42ac10efd17a2a3dd36e77b52aae9b700acecd37"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/dated_values.csv",
+          "bytes": 171981,
+          "sha256": "0cccdbcc3831f376caad25bb81b783ab76dda3430197ace0927ec42a126e5a2b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/june12_contrast.csv",
+          "bytes": 3669,
+          "sha256": "fa4eef5696dbb8cca9cbc7aa0e031eebd89f269cf41ef3bc034a295ef4a2e93f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/model-sources.json",
+          "bytes": 11704,
+          "sha256": "4429768ba2fafebb2399bb038282d943b598a49549436644247323cf8144e11b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/report-sections.json",
+          "bytes": 10624,
+          "sha256": "20dc830f374b351ed2f0d1c04d3b934300b3821237d07fbc4e880efdb97eaf3b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/same_date.csv",
+          "bytes": 1922,
+          "sha256": "47d4516fee1f7a14089270b2ee1d3b270a3edb3c5ee1412d66c9bb8d31231392"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/sampling_calendar.csv",
+          "bytes": 8008,
+          "sha256": "c7775e8948e8ed775776bb3dab17a3f5b66252e88adc4bd5a8a80b4088674a89"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_contrasts.csv",
+          "bytes": 13645,
+          "sha256": "ee99785f67ecdd1673bee08d818e31b918d05c7690354fc17e77d71b6fb8b09b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_flow_summary.csv",
+          "bytes": 37633,
+          "sha256": "6034e6740be5fd3fd87be57c189b3acf62cedab8c68bc1e2eb16c37a28224fd7"
         },
         {
           "path": "observations/observed_hydrology_20261013/original/chauga_series_metadata.json",
@@ -1141,119 +1469,9 @@
           "sha256": "19ecc87b71a3e74c4ee714015e0885cd0d62a4570e1ff61fd60d9a88160354bc"
         },
         {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
-          "bytes": 47412,
-          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
-          "bytes": 281844,
-          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+          "path": "source_tools/assess_observed_context.mjs",
           "bytes": 1764,
-          "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
-          "bytes": 32166,
-          "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
-          "bytes": 24946,
-          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
-          "bytes": 22213,
-          "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
-          "bytes": 19733,
-          "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
-          "bytes": 1089,
-          "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
-          "bytes": 4482,
-          "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
-          "bytes": 3615,
-          "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
-          "bytes": 6288,
-          "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
-          "bytes": 10282,
-          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
-        },
-        {
-          "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
-          "bytes": 34350,
-          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
-          "bytes": 43187,
-          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
-          "bytes": 7667,
-          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
-          "bytes": 8424,
-          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
-          "bytes": 8067,
-          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
-          "bytes": 1926,
-          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
-          "bytes": 8581,
-          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
-          "bytes": 1149,
-          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
-          "bytes": 4380,
-          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
-        },
-        {
-          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
-          "bytes": 644,
-          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36"
-        },
-        {
-          "path": "source_tools/observed_flow_report.mjs",
-          "bytes": 27207,
-          "sha256": "e9b8a2114e6030e979fae51d56c3d6260c675af5bb9f33a9cdcebf0bc13db9af"
+          "sha256": "edbaa86c3dd8d54c999ffaba82f0bf874dae9a952b09df1a70288f3e3e9ced2f"
         },
         {
           "path": "source_tools/build_observed_flow_report.mjs",
@@ -1266,34 +1484,9 @@
           "sha256": "71f9929288059da19124886e04cb0808a919424ce742dfc9066b869276e110e9"
         },
         {
-          "path": "source_tools/assess_observed_context.mjs",
-          "bytes": 1764,
-          "sha256": "edbaa86c3dd8d54c999ffaba82f0bf874dae9a952b09df1a70288f3e3e9ced2f"
-        },
-        {
-          "path": "observations/calibration_context_20261013/assessment.json",
-          "bytes": 31899,
-          "sha256": "b10e72b665bed3bf610e1ede4abf2ad897cded67dc8dae27f2fd7c7eeaa823e0"
-        },
-        {
-          "path": "observations/calibration_context_20261013/README.md",
-          "bytes": 6797,
-          "sha256": "030f9fa787956d6012630224cb6a0d01fd2a219fa0894755b73f6678e15b43e0"
-        },
-        {
-          "path": "observations/calibration_context_20261013/station_year_context.csv",
-          "bytes": 3085,
-          "sha256": "c9e8da04d1dc3d30e028bd58a0dbedcea4ebab541aae795b9aeb70c77352753e"
-        },
-        {
-          "path": "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
-          "bytes": 17048,
-          "sha256": "2b711f112b1fe189d2f7714e3e8b3a55384adf2c639cfdcfe56a9860b8fce634"
-        },
-        {
-          "path": "observations/observed_hydrology_20261013/calibration-context.json",
-          "bytes": 29339,
-          "sha256": "db0efcbadc09c23c401fbeef970e8d12f025cc52cb2924a73b45e4b07ccd5baa"
+          "path": "source_tools/observed_flow_report.mjs",
+          "bytes": 27207,
+          "sha256": "e9b8a2114e6030e979fae51d56c3d6260c675af5bb9f33a9cdcebf0bc13db9af"
         }
       ]
     }

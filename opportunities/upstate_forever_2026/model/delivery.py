@@ -9,9 +9,10 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import atlas_browser, cartography, map_atlas, native_study, portable, rasters
+from . import atlas_browser, cartography, client_report, map_atlas, native_study, portable, rasters
 import tempfile
 from .report_release import bind_report, retain_report
+from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
@@ -22,6 +23,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
+DELIVERY_EDITION = "2026-10-13-integrated-report-2"
 DELIVERY_FORMAT_VERSION = "retained-grid-study-analysis-economic-report-9"
 
 def _copy(source, target, expected=None):
@@ -114,6 +116,7 @@ def _delivery_audit_scope(selection, grid):
                 and abs(b) < 1e-8 and abs(d) < 1e-8
                 and grid["spec"]["upstream_buffer_m"] > 0)
     return "regional-30m" if regional else "source-native"
+
 
 def _grid_measurements(grid):
     """Describe the actual retained pixel geometry and physical area."""
@@ -256,6 +259,10 @@ def build(workspace, selection):
         selection["observed_context_binding"] = observed_link
     else:
         selection.pop("observed_context_binding", None)
+    selection["report_renderer_version"] = scientific_report.REPORT_VERSION
+    selection["client_companion_edition"] = client_report.REPORT_EDITION
+    selection["delivery_edition"] = DELIVERY_EDITION
+    selection["application_sha256"] = portable.application_digest()
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -318,7 +325,9 @@ def build(workspace, selection):
                   "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
                   "map_atlas": map_atlas.ATLAS_VERSION,
-                  "overlay_labels": OVERLAY_LABELS})
+                  "overlay_labels": OVERLAY_LABELS,
+                  **({"parcel_source_lineage": LINEAGE_VERSION}
+                     if selection.get("overlays", {}).get("parcels") else {})})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
@@ -505,6 +514,7 @@ def build(workspace, selection):
                 "current_nutrient_export": ([panel("nitrogen_export"), panel("phosphorus_export")], []),
                 "current_sediment_export": ([panel("sediment_export")], []),
                 "combined_pollutant_export": ([score_panel], []),
+
             }
             if "drinking_water" in overlays:
                 all_specs["critical_drinking_water"] = ([score_panel], [overlays["drinking_water"]] +
@@ -578,17 +588,25 @@ def build(workspace, selection):
                                    for value in selection.get("observation_comparison_ids", [])]
             if any(v["run_id"] not in [baseline["id"]] + scenario_ids for v in observation_results):
                 raise ValueError("Observation comparison is not bound to a selected delivery run")
-            working = directory / "working" / "scientific-workspace.zip"
-            if "working_archive" not in state["files"]:
-                working.parent.mkdir(parents=True, exist_ok=True)
-                if working.exists():
-                    previous = portable.inspect_archive(working, verify=True)
-                    if previous["project"] != workspace.project:
-                        raise ValueError("Existing working archive belongs to another original project")
-                else:
-                    portable.backup(workspace, working, include_intermediates=True, include_deliveries=False)
-                state["files"]["working_archive"] = describe_file(directory, working)
+            from .scenario_summary import build_delivery_summary, write_summary
+            summary_keys = ("scenario_summary_json", "scenario_summary_csv", "scenario_summary_markdown")
+            if not all(name in state["files"] for name in summary_keys):
+                summary = build_delivery_summary(workspace, selection, comparison,
+                    baseline=baseline, alternatives=alternatives, grid=grid)
+                for name, item in write_summary(directory, summary).items():
+                    state["files"]["scenario_summary_" + name] = item
+                state["scenario_summary_id"] = summary["id"]
                 atomic_json(state_path, state)
+            else:
+                summary = read_json(verify_file(directory, state["files"]["scenario_summary_json"]))
+            if "native_grid_record" not in state["files"]:
+                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+                grid_path = directory / "grid" / "grid.json"
+                _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+                state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_grid_record"])
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
@@ -688,6 +706,17 @@ def build(workspace, selection):
                     sections.extend(observed_product["sections"])
                 sections.extend(scientific_report.economic_coverage_sections(economic_decision))
                 sections.extend(scientific_report.delivery_sections(state))
+                if "working_archive" not in state["files"]:
+                    # The final package target is fixed, but its actual descriptor is
+                    # registered only after these final report bytes enter the snapshot.
+                    sections.append(("Complete scientific workspace", [
+                        "The completed delivery includes the original application, inputs, "
+                        "native outputs and these reports at the package-relative link below. "
+                        "Keep the extracted delivery folder structure when opening it.",
+                        scientific_report.link(
+                            "Open complete scientific workspace",
+                            "working/scientific-workspace.zip"),
+                    ]))
                 target = directory / "report.pdf"
                 scientific_report.report_pdf(target, selection.get("title", workspace.project["title"]),
                                              sections, contact=contact, source_records=records)
@@ -713,14 +742,23 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
-            if "native_grid_record" not in state["files"]:
-                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
-                grid_path = directory / "grid" / "grid.json"
-                _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
-                state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+            companion_keys = ("client_report", "client_report_html",
+                              "client_report_markdown", "client_report_model")
+            if not all(name in state["files"] for name in companion_keys):
+                generated = client_report.build_report(
+                    workspace=workspace, directory=directory, selection=selection,
+                    state=state, baseline=baseline, alternatives=alternatives,
+                    grid=grid, profile=profile, records=records,
+                    observation_results=observation_results, comparison=comparison,
+                    scenario_summary=summary,
+                    additional_sections=receiving_water_delivery.report_section(water_product),
+                    output_stem="client-report", file_key_prefix="client_")
+                for name, relative in generated.items():
+                    state["files"][name] = describe_file(directory, directory / relative)
+                state["client_companion_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
-            else:
-                verify_file(directory, state["files"]["native_grid_record"])
+            working_relative = "working/scientific-workspace.zip"
+            archive_roles = {"working_archive", "manifest", "package_index", "delivery_archive"}
             manifest = {"schema": native_study.SCHEMA if study_mode else "upstate-ec-sdc-2026/delivery-v1",
                 "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
                          "record": state["files"]["native_grid_record"]["path"],
@@ -731,17 +769,23 @@ def build(workspace, selection):
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "project_assets": [state["files"]["native_grid_record"]["path"],
-                                   state["files"]["combined_priority"]["path"],
-                                   state["files"]["working_archive"]["path"],
+                "report_edition": CLIENT_REPORT_EDITION,
+                "report_renderer_version": scientific_report.REPORT_VERSION,
+                "delivery_edition": DELIVERY_EDITION,
+                "project_assets": [state["files"]["combined_priority"]["path"],
+                                   working_relative,
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
-            manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
-                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_",
-                                                                 "map_atlas", "source_report_", "economic_", "native_study_",
-                                                                 "observed_context_")))
+            primary_files = set(rasters.MASS_UNITS) | {
+                name + "_metadata" for name in rasters.MASS_UNITS} | {
+                "report", "manifest", "package_index", "delivery_archive"}
+            map_paths = {item["path"] for item in state["maps"].values()}
+            manifest["project_assets"] = list(dict.fromkeys(
+                [item["path"] for name, item in state["files"].items()
+                 if name not in primary_files and name not in archive_roles
+                 and item["path"] not in map_paths] + [working_relative]))
             if report_link is not None:
                 manifest["source_report"] = report_link
             if economic_link is not None:
@@ -760,10 +804,70 @@ def build(workspace, selection):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
-            # The browser snapshots the final captured members, including reports and analyses.
-            atlas_browser.write(directory, state, manifest)
-            atomic_json(state_path, state)
+            # The browser includes the final scientific/client/analysis inventory.
+            # Omit derived package descriptors from its view: a previous working ZIP
+            # checksum would change this captured HTML again on every retry.
+            atlas_state = {**state, "files": {
+                name: item for name, item in state["files"].items()
+                if name not in archive_roles}}
+            state["files"][atlas_browser.BROWSER_KEY] = atlas_browser.write(
+                directory, atlas_state, manifest)
+            # Capture the exact final manifest too, so the restored offline atlas
+            # can open delivery.json. It names the fixed working path, not ZIP bytes.
             atomic_json(audit_manifest, manifest)
+            state["files"]["manifest"] = describe_file(directory, audit_manifest)
+            atomic_json(state_path, state)
+            working = directory / working_relative
+            working.parent.mkdir(parents=True, exist_ok=True)
+            snapshot = {
+                **{name: item for name, item in state["files"].items()
+                   if name not in archive_roles},
+                "manifest": state["files"]["manifest"],
+                **{"map_" + name: item for name, item in state["maps"].items()}}
+            registered = state["files"].get("working_archive")
+            if registered is not None:
+                retained_working = verify_file(directory, registered)
+                if retained_working.resolve() != working.resolve():
+                    raise ValueError("Registered working archive has a different original path")
+            if working.exists():
+                previous = portable.inspect_archive(working, verify=True)
+                captured = previous.get("delivery", {})
+                retained = captured.get("files", {})
+                matches = (
+                    previous["project"] == workspace.project
+                    and captured.get("id") == state["id"]
+                    and captured.get("record", {}).get("selection") == state["selection"]
+                    and set(retained) == set(snapshot)
+                    and all(retained[name].get("path") == "delivery/" + item["path"]
+                            and all(retained[name].get(field) == item[field]
+                                    for field in ("bytes", "sha256"))
+                            for name, item in snapshot.items()))
+                if not matches:
+                    label = "scientific-workspace-previous-" + digest(previous)
+                    retained_path = working.with_name(label + ".zip")
+                    suffix = 0
+                    while retained_path.exists():
+                        suffix += 1
+                        retained_path = working.with_name(label + "-" + str(suffix) + ".zip")
+                    working.rename(retained_path)
+                    state["files"].pop("working_archive", None)
+                    state.setdefault("previous_working_archives", []).append({
+                        "path": retained_path.relative_to(directory).as_posix(),
+                        "project_id": previous["project"].get("id"),
+                        "delivery_id": captured.get("id"),
+                        "reason": "Retained capture selects different delivery assets",
+                        "retained_at": now()})
+                    atomic_json(state_path, state)
+            if not working.exists():
+                portable.backup(workspace, working, include_intermediates=True,
+                    include_deliveries=False, delivery_root=directory,
+                    delivery_files=snapshot, delivery_state=state)
+            state["files"]["working_archive"] = describe_file(directory, working)
+            atomic_json(state_path, state)
+            working_descriptor = state["files"]["working_archive"]
+            if working_descriptor["path"] != working_relative:
+                raise ValueError("Working archive differs from the report's package-relative link")
+            verify_file(directory, working_descriptor)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
                 sys.path.insert(0, str(source_root))

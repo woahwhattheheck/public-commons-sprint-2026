@@ -33,7 +33,23 @@ MASS_UNITS = {
 }
 
 
-def inspect(manifest_path):
+MAX_JSON_BYTES = 16 * 1024 * 1024
+
+
+def _read_json(path, *, maximum):
+    if type(maximum) is not int or maximum <= 0:
+        raise ValueError("The audit JSON byte limit must be a positive integer")
+    with Path(path).open("rb") as incoming:
+        body = incoming.read(maximum + 1)
+    if len(body) > maximum:
+        raise ValueError("JSON document exceeds the selected audit byte limit: " + str(maximum))
+    value = json.loads(body.decode("utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("The original study JSON root must be an object")
+    return value
+
+
+def inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):
     root = Path(manifest_path).resolve().parent
     findings = []
     summary = {"raster_layers": 0, "map_files": 0, "valid_cells": {},
@@ -80,7 +96,7 @@ def inspect(manifest_path):
         return path
 
     try:
-        data = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        data = _read_json(manifest_path, maximum=max_manifest_bytes)
         if not isinstance(data, dict) or data.get("schema") != SCHEMA:
             raise ValueError("Choose the explicit commons.native-study-delivery/v1 manifest")
         require(data.get("delivery_mode") == "native_study", "mode",
@@ -119,7 +135,7 @@ def inspect(manifest_path):
 
         context_path = child("native-study/study.json", "context.record")
         if context_path:
-            require(json.loads(context_path.read_text(encoding="utf-8")) == context,
+            require(_read_json(context_path, maximum=max_manifest_bytes) == context,
                     "context.record", "The manifest and retained original context record differ")
         for key, descriptor in context["files"].items():
             exact_file(descriptor, "context." + key)
@@ -210,7 +226,7 @@ def inspect(manifest_path):
                 summary["raster_layers"] += 1
         add("REVIEW", "interpretation",
             "Read the actual modeled study geography, native parameter references, original source editions and paired-cell scenario support with the maps.")
-    except (OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, ET.ParseError,
+    except (OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError, ET.ParseError,
             rasterio.errors.RasterioError) as error:
         add("FAIL", "native_study", type(error).__name__ + ": " + str(error))
     failed = sum(item["level"] == "FAIL" for item in findings)
@@ -224,8 +240,10 @@ def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
+    parser.add_argument("--max-manifest-bytes", type=int, default=MAX_JSON_BYTES,
+                        help="Maximum bytes for the original manifest and retained study JSON")
     args = parser.parse_args(argv)
-    result = inspect(args.manifest)
+    result = inspect(args.manifest, max_manifest_bytes=args.max_manifest_bytes)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
     return 0 if result["status"] == "TECHNICAL_PRECHECK_PASS" else 1
 

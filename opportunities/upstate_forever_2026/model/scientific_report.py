@@ -5,6 +5,8 @@ scenarios. PDF, offline HTML and structured report data share the same blocks.
 """
 from __future__ import annotations
 
+import base64
+from hashlib import sha256
 from html import escape as html_escape
 import math
 from pathlib import Path
@@ -13,7 +15,7 @@ from urllib.parse import unquote, urlsplit
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v8"
+REPORT_VERSION = "upstate.scientific-report/v10"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -514,6 +516,19 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
             ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
             rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8], caption=caption,
         ))
+        if changes:
+            blocks.append(_table(
+                ["Pollutant", "Baseline on paired cells", "Alternative on paired cells",
+                 "Unit", "Paired cells", "Coverage"],
+                [[_label(key), _quantity(value, "baseline_sum_on_common_cells"),
+                  _quantity(value, "alternative_sum_on_common_cells"), _mass_units(key, value),
+                  _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
+                 for key, value in changes.items()],
+                widths=[1.0, 1.3, 1.3, 1.2, .8, .8],
+                caption="Native run " + str(run_id) + ". These retained annual totals use "
+                        "the same valid baseline and alternative cells as the paired change. "
+                        "An absent or zero valid-cell count means an unavailable quantity.",
+            ))
     return blocks
 
 
@@ -524,10 +539,25 @@ def receiving_sections(product):
     inventory = product["inventory"]
     measurement = inventory.get("measurement", {})
     blocks = ["Receiving-water quantity scope: " + inventory["quantity_scope"].replace("_", " ") + ".",
-              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap")
+              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship")
                 if measurement.get(key)]]
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
+    retained_settings = [[_label(key), _plain(value)] for key, value in normalization.items()
+                         if key not in ("caps", "weights", "cap_units")]
+    if retained_settings:
+        blocks.append(_table(
+            ["Original normalization setting", "Retained value"], retained_settings,
+            widths=[1.6, 4.4],
+            caption="Original settings for the dimensionless priority maps. "
+                    "The physical annual quantities below keep their own units.",
+        ))
+    if inventory.get("identity"):
+        blocks.append(_table(
+            ["Receiving-water identity", "Retained value"],
+            [[_label(key), _plain(value)] for key, value in inventory["identity"].items()],
+            widths=[1.6, 4.4],
+        ))
     for family, union in inventory.get("families", {}).items():
         blocks.append("Unduplicated family union: " + str(union.get("title", family)) + ".")
         blocks.append("Each contributing cell is counted once within this family. "
@@ -549,11 +579,24 @@ def receiving_sections(product):
                       + " ha; area within the selected quantity scope: "
                       + _number(receptor.get("area_in_quantity_scope_ha")) + " ha.")
         metrics = receptor["metrics"]
+        blocks.append(_table(
+            ["Contributing-footprint support", "Recorded value"],
+            [["Selected grid cells", _count(metrics.get("selected_cells"))],
+             ["Selected pixel area (ha)", _number(metrics.get("selected_pixel_area_ha"))]],
+            widths=[2.6, 3.4],
+            caption="Pixel selection and geometry areas retain their original distinct definitions.",
+        ))
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
         if receptor.get("source"):
-            blocks.append("Original receiving-water source: " + _plain(receptor["source"]))
+            blocks.append(_table(
+                ["Original receiving-water source", "Retained value"],
+                [[_label(key), link("Open original source", value) if key == "uri" else _plain(value)]
+                 for key, value in receptor["source"].items()],
+                widths=[1.6, 4.4],
+                caption="Original source identifiers, editions and selected feature IDs are retained.",
+            ))
     return [("Receiving-water quantities and priorities", blocks)]
 
 
@@ -668,6 +711,10 @@ def delivery_sections(state):
                        ("working_archive", "Complete scientific workspace"),
                        ("display_scales", "Map scale definitions"),
                        ("receptor_inventory", "Source-water contributing areas"),
+                       ("parcel_source_lineage_report", "County parcel source editions"),
+                       ("parcel_source_lineage", "Complete typed parcel source lineage"),
+                       ("parcel_source_editions", "County parcel supplier spreadsheet"),
+                       ("parcel_source_coverage", "Captured county parcel coverage"),
                        ("receiving_water_index", "Receiving-water source inventory")):
         item = state.get("files", {}).get(key)
         if item and item.get("path"):
@@ -810,7 +857,20 @@ def report_pdf(path, title, sections, *, contact, source_records):
                           story, onFirstPage=page_number, onLaterPages=page_number)
 
 
-def _html_block(block):
+def _figure_image(block, root):
+    """Encode the exact verified source bytes for self-contained HTML viewing."""
+    figure = _figure(block)
+    directory = Path(root).resolve(strict=True)
+    source = (directory / figure["path"]).resolve(strict=True)
+    if not source.is_relative_to(directory):
+        raise ValueError("Scientific figure is outside the original delivery")
+    payload = source.read_bytes()
+    if len(payload) != figure["bytes"] or sha256(payload).hexdigest() != figure["sha256"]:
+        raise ValueError("Scientific figure differs from its retained original SVG")
+    return "data:image/svg+xml;base64," + base64.b64encode(payload).decode("ascii")
+
+
+def _html_block(block, *, figure_images=None):
     def cell(value):
         value = _cell(value)
         if isinstance(value, dict):
@@ -821,7 +881,8 @@ def _html_block(block):
         title = ("<strong>" + cell(figure["title"]) + "</strong> "
                  if figure.get("title") else "")
         return ('<figure class="scientific-figure"><img src="' +
-                html_escape(figure["path"], quote=True) + '" alt="' +
+                html_escape(figure_images[figure["path"]] if figure_images is not None
+                            else figure["path"], quote=True) + '" alt="' +
                 html_escape(figure["alt"], quote=True) + '"><figcaption>' +
                 title + cell(figure["caption"]) + "</figcaption></figure>")
     if isinstance(block, dict) and block.get("kind") == "links":
@@ -858,11 +919,12 @@ def _markdown_report(title, sections, prepared):
         for block in blocks:
             if isinstance(block, dict) and block.get("kind") == "figure":
                 figure = _figure(block)
-                # Reuse the maintained link/cell escaping for original captions and paths.
-                lines.extend(["!" + _markdown_cell(link(figure["alt"], figure["path"])), ""])
+                target = figure["path"].replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+                alt = figure["alt"].replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("\n", " ")
+                lines.extend(["![" + alt + "](" + target + ")", ""])
                 if figure.get("title"):
-                    lines.extend([_markdown_cell(figure["title"]), ""])
-                lines.extend([_markdown_cell(figure["caption"]), ""])
+                    lines.extend([str(figure["title"]), ""])
+                lines.extend([figure["caption"], ""])
             elif isinstance(block, dict) and block.get("kind") == "table":
                 if block.get("caption"):
                     lines.extend([_markdown_cell(block["caption"]), ""])
@@ -885,15 +947,18 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     all_sections = list(sections) + [("Source editions", [_source_block(source_records)])]
+    figure_images = {}
     for _, blocks in all_sections:
         for block in blocks:
             if isinstance(block, dict) and block.get("kind") == "figure":
-                _figure(block, directory)
+                figure = _figure(block)
+                figure_images[figure["path"]] = _figure_image(figure, directory)
     headings = "".join("<li><a href=\"#section-" + str(index) + "\">" + html_escape(str(heading))
                        + "</a></li>" for index, (heading, _) in enumerate(all_sections))
     content = "".join("<section id=\"section-" + str(index) + "\"><h2>"
                       + html_escape(str(heading)) + "</h2>"
-                      + "".join(_html_block(block) for block in blocks) + "</section>"
+                      + "".join(_html_block(block, figure_images=figure_images)
+                                for block in blocks) + "</section>"
                       for index, (heading, blocks) in enumerate(all_sections))
     supplied_contact = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
     prepared = ("Prepared by " + supplied_contact if supplied_contact

@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 
 from .common import atomic_bytes, atomic_json, describe_file, digest, verify_file
+from .source_lineage import presentation_state, supplier_rows, supplier_tables, write_supplier_files
 
 VERSION = 3
 SCHEMA = "upstate.conservation-presentation/v1"
@@ -103,7 +104,8 @@ CONTRIBUTION_FIELDS = [
 def identity():
     return {"schema": SCHEMA, "version": VERSION,
             "implementation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            "conservation_implementation_sha256": hashlib.sha256(Path(__file__).with_name("conservation.py").read_bytes()).hexdigest()}
+            "conservation_implementation_sha256": hashlib.sha256(Path(__file__).with_name("conservation.py").read_bytes()).hexdigest(),
+            "source_lineage_implementation_sha256": hashlib.sha256(Path(__file__).with_name("source_lineage.py").read_bytes()).hexdigest()}
 
 
 def _json(value):
@@ -524,6 +526,10 @@ def _copy_criterion_source(workspace, directory, state):
 def write_supplements(workspace, directory, state, candidates, *, plan=None):
     directory = Path(directory)
     files = {}
+    state = presentation_state(workspace, state)
+    sources = state["selection"]["bindings"]["sources"]
+    if supplier_rows(sources):
+        files.update(write_supplier_files(directory, sources, relative_to=workspace.root))
     records = source_register(state)
     document = {
         "schema": "upstate.conservation-source-register/v1", "study_id": state["id"],
@@ -762,6 +768,9 @@ def extend_report(base, state, candidates, *, plan=None):
             sections.append("<p>The expandable preview contains the first 60 of " + str(len(point_rows)) +
                             " published-practice units. The complete criterion, metric and source records for every "
                             "unit are available in the linked CSV and JSON files.</p>")
+    supplier_section = supplier_tables(state["selection"]["bindings"]["sources"], registry="source-register.json")
+    if supplier_section:
+        sections.append(supplier_section)
     sources = source_register(state)
     source_rows = []
     for source in sources:
@@ -799,6 +808,7 @@ def presentation_members(workspace, directory, state, candidates, *, plan=None):
     from . import conservation
 
     directory = Path(directory)
+    state = presentation_state(workspace, state)
     original_geometry = verify_file(workspace.root, state["files"]["geometries"])
     from .common import read_json
     geometry_document = read_json(original_geometry)
