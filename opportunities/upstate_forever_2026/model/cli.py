@@ -62,6 +62,30 @@ def parser():
     preparation_operation = commands.add_parser("delivery-preparation-operation",
         help="Recover the retained result or state of an original preparation request")
     preparation_operation.add_argument("operation_id")
+    commands.add_parser("structural-study-catalog",
+        help="List original grids, completed runs and retained structural studies")
+    structural_preview = commands.add_parser("structural-study-preview",
+        help="Read changed sources, physical stream areas and readiness without a native run")
+    structural_preview.add_argument("selection", type=Path)
+    structural_prepare = commands.add_parser("structural-study-prepare",
+        help="Retain explicit native cases, including validated completed original run selections")
+    structural_prepare.add_argument("selection", type=Path)
+    structural_prepare.add_argument("--operation-id", required=True,
+        help="The caller's original request ID; retain and reuse this exact ID and selection")
+    for name, help_text in (
+        ("structural-study-inspect", "Read the original study, native cases and verified report"),
+        ("structural-study-result", "Read complete original support, mass and changed-factor results"),
+        ("structural-study-run", "Execute or resume the original prepared native cases and shared-support diagnostic"),
+        ("structural-study-report", "Build or reopen the complete human report and diagnostic GIS package"),
+    ):
+        structural = commands.add_parser(name, help=help_text)
+        structural.add_argument("study_id")
+        if name in ("structural-study-run", "structural-study-report"):
+            structural.add_argument("--operation-id", required=True,
+                help="The original request ID for this action; reuse it after an uncertain response")
+    structural_operation = commands.add_parser("structural-study-operation",
+        help="Read the exact original request, task context and first retained result")
+    structural_operation.add_argument("operation_id")
     for name in ("run", "run-inspect"):
         command = commands.add_parser(name)
         command.add_argument("run_id")
@@ -132,6 +156,26 @@ def perform(args):
         if args.command == "delivery-preparation-build":
             return preparations.build(request, operation_id=args.operation_id)
         raise ValueError("Unknown delivery preparation operation")
+    if args.command.startswith("structural-study-"):
+        from .structural_studies import StructuralStudies
+        studies = StructuralStudies(workspace)
+        if args.command == "structural-study-catalog":
+            return studies.catalog()
+        if args.command == "structural-study-preview":
+            return studies.preview(read_json(args.selection))
+        if args.command == "structural-study-prepare":
+            return studies.prepare(read_json(args.selection), operation_id=args.operation_id)
+        if args.command == "structural-study-inspect":
+            return studies.inspect(args.study_id)
+        if args.command == "structural-study-result":
+            return studies.result(args.study_id)
+        if args.command == "structural-study-run":
+            return studies.execute(args.study_id, operation_id=args.operation_id)
+        if args.command == "structural-study-report":
+            return studies.report(args.study_id, operation_id=args.operation_id)
+        if args.command == "structural-study-operation":
+            return studies.operation(args.operation_id)
+        raise ValueError("Unknown structural study operation")
     operations = {"profile-save": workspace.save_profile, "scenario-save": workspace.save_scenario,
                   "grid-prepare": workspace.prepare_grid, "run-prepare": workspace.prepare_run,
                   "delivery-build": workspace.build_delivery,
