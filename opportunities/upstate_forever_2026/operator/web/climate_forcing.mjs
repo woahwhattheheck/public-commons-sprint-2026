@@ -1,4 +1,5 @@
 /* Climate forcing in the original operator. Scientific calculations remain in model. */
+import {createClimateWorking, sameWorking} from './climate_working.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const json = value => escape(JSON.stringify(value, null, 2));
 const fmt = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString(undefined, {maximumSignificantDigits:8}) : String(value ?? '—');
@@ -20,13 +21,28 @@ export function createClimateForcing(context) {
   let root=null,workspace=null,epoch=0,listener=null,timer=null,readAbort=null,busy=false,pollBusy=false;
   let catalog=null,draft=newDraft(),preview=null,study=null,report=null,error='',notice='',storageNotice='';
   let pending=[],tasks=[],selectedId='',currentRead=0,draftRevision=0;
+  const working=createClimateWorking({
+    getDraft:()=>draft, workspace:()=>workspace, token:()=>({workspace,epoch}),
+    current:token=>active(token.workspace,token.epoch), persist:()=>persist(), render:()=>render(),
+    setDraft:value=>{draft=value;draftRevision++;preview=null;study=null;report=null;selectedId='';},
+    read:(operation,params)=>api(url(operation,params)),
+    send:async request=>{
+      if(!pending.some(row=>row.operation_id===request.operation_id))pending.push(request);
+      persist();render();return submitRequest(request);
+    },
+    submit:(action,payload)=>submit(action,payload),
+    openStudy:async selected=>{
+      if(typeof context.openDesk!=='function')throw new Error('Open editable Study delivery in the original operator.');
+      return context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[selected]});
+    }
+  });
   const $ = selector => root?.querySelector(selector);
   const $$ = selector => [...(root?.querySelectorAll(selector) || [])];
   const key = () => 'upstate.climate-forcing.v1:' + workspace;
   const active = (target, generation) => !!root && workspace === target && epoch === generation && getState()?.workspace_key === target;
   function persist() {
     try {
-      sessionStorage.setItem(key(),JSON.stringify({draft,pending,tasks,selectedId}));
+      sessionStorage.setItem(key(),JSON.stringify({draft,pending,tasks,selectedId,working:working.snapshot()}));
       storageNotice='';
     } catch (_) { storageNotice='Browser draft storage is unavailable. Submitted operations are retained by the operator; keep this view open until pending submissions are acknowledged.'; }
   }
@@ -38,6 +54,7 @@ export function createClimateForcing(context) {
         pending=Array.isArray(value.pending)?value.pending.filter(x=>x?.workspace===workspace && x.operation_id && x.action):[];
         tasks=Array.isArray(value.tasks)?value.tasks:[];
         selectedId=typeof value.selectedId==='string'?value.selectedId:'';
+        if(value.working)working.restore(value.working);
       }
     } catch (_) { storageNotice='The saved browser draft could not be read. Retained studies and tasks remain available from the operator.'; }
   }
@@ -48,7 +65,9 @@ export function createClimateForcing(context) {
     return (catalog?.sources?.[role] || []).find(row=>sourceKey(row)===keyValue);
   }
   function selection() {
-    return structuredClone(draft);
+    const value=structuredClone(draft),origin=working.origin();
+    if(origin)value.working_origin=origin;
+    return value;
   }
   function sourceControl(role, row, index) {
     const selected=row.overrides?.[role];
@@ -75,6 +94,7 @@ export function createClimateForcing(context) {
       '<div class="cf-columns"><label>Study title<input data-draft="title" value="' + escape(draft.title) + '" required></label>' +
       '<label>Completed baseline<select data-draft="baseline_run_id">' + option('','Select a completed native run',draft.baseline_run_id) +
       runs.map(row=>option(row.id,(row.title || row.id) + ' · ' + (row.models || []).join(' + ') + ' · '+row.id,draft.baseline_run_id)).join('') +
+      (draft.baseline_run_id&&!baseline?option(draft.baseline_run_id,'Retained baseline — not currently complete',draft.baseline_run_id):'')+
       '</select></label></div><label>Purpose<textarea rows="2" data-draft="purpose" required>' + escape(draft.purpose) + '</textarea></label>' +
       (baseline?details('Baseline model selection',baseline.selection):'') +
       draft.cases.map((row,index)=>'<article class="cf-case"><div class="cf-case-heading"><h3>Case ' + (index+1) + '</h3>' +
@@ -88,6 +108,7 @@ export function createClimateForcing(context) {
       ((catalog?.reporting_areas || []).length ? (catalog.reporting_areas || []).map((area,index)=>'<label class="cf-check"><input type="checkbox" data-area="' + index + '"' +
         (draft.reporting_areas.some(row=>row.source_collection_id===area.source_collection_id && row.source_id===area.source_id && (row.layer || '')===(area.layer || ''))?' checked':'') + '> ' +
         escape(area.title || area.source_id) + (area.layer?' · '+escape(area.layer):'') + '</label>').join('') : '<p class="cf-meta">No additional vector reporting areas are registered in this workspace.</p>') + '</fieldset>' +
+      (draft.reporting_areas.some(row=>!(catalog?.reporting_areas||[]).some(area=>area.source_collection_id===row.source_collection_id&&area.source_id===row.source_id&&(area.layer||'')===(row.layer||'')))?'<p class="cf-warning">This draft retains reporting areas absent from the current picker. Their exact saved definitions remain in the working history; scientific preview verifies them.</p>':'')+
       '<div class="cf-actions">' + button('preview','Preview retained inputs',busy?'disabled':'') + '</div></section>';
   }
   function previewMarkup() {
@@ -178,6 +199,7 @@ export function createClimateForcing(context) {
       button('retry','Reconcile pending submissions',busy?'disabled':''):'')+
       '<ul class="cf-task-list">'+tasks.map(task=>'<li><span>'+escape(task.action)+' · '+escape(task.state || 'submitted')+'</span> '+
       (task.id?button('task','Open task','data-task="'+escape(task.id)+'"'):'')+
+      ((task._downloads||task.result?.downloads||[]).length?'<div class="cf-actions">'+(task._downloads||task.result.downloads).map(file=>'<a href="'+escape(file.url+(file.url.includes('?')?'&':'?')+'download=1')+'" download="'+escape(file.filename)+'">'+escape(file.label||file.filename)+'</a>').join('')+'</div>':'')+
       (task.error?'<p>'+escape(typeof task.error==='string'?task.error:task.error.message || JSON.stringify(task.error))+'</p>':'')+'</li>').join('')+'</ul></section>';
   }
   function render() {
@@ -193,12 +215,14 @@ export function createClimateForcing(context) {
       '<section><div class="cf-columns"><label>Retained study<select data-saved-study>' +
       option('','Select a saved study',selectedId)+(catalog?.studies || []).map(row=>option(row.id,(row.title || row.id)+' · '+row.state,selectedId)).join('')+
       '</select></label><div class="cf-actions">'+button('open-study','Open study',busy?'disabled':'')+button('new','New study',busy?'disabled':'')+button('refresh','Refresh',busy?'disabled':'')+'</div></div></section>'+
-      (!catalog?'<p>Loading retained sources and completed baselines…</p>':draftMarkup())+previewMarkup()+studyMarkup()+reportMarkup()+tasksMarkup();
+      working.markup()+(!catalog?'<p>Loading retained sources and completed baselines…</p>':draftMarkup())+previewMarkup()+studyMarkup()+reportMarkup()+tasksMarkup();
     if(restoreFocus){const next=$$('input,textarea,select').find(el=>el.tagName===restoreFocus.tag&&JSON.stringify({...el.dataset})===JSON.stringify(restoreFocus.data));if(next){next.focus({preventScroll:true});if(typeof restoreFocus.start==='number'&&next.setSelectionRange){try{next.setSelectionRange(restoreFocus.start,restoreFocus.end);}catch(_){}}}}
 
   }
   function changed(event) {
     const el=event.target;
+    if(working.changed(el))return;
+    if(el.matches('[data-working-import]'))return;
     if(el.matches('[data-saved-study]')){selectedId=el.value;persist();return;}
     draftRevision++;
     if(el.matches('[data-draft]'))draft[el.dataset.draft]=el.type==='checkbox'?el.checked:el.value;
@@ -222,7 +246,7 @@ export function createClimateForcing(context) {
     readAbort?.abort();readAbort=new AbortController();
     const value=await api(url('catalog'),{signal:readAbort.signal});
     if(!active(target,generation)||request!==currentRead)return;
-    catalog=value;
+    catalog=value;working.catalogue(value.working_designs||[]);
     if(loadStudy && selectedId) {
       const requestedId=selectedId;
       const record=await api(url('study',{id:requestedId}),{signal:readAbort.signal});
@@ -248,7 +272,16 @@ export function createClimateForcing(context) {
     if(!active(target,generation)||selectedId!==requestedId||study?.id!==requestedId)return null;
     if(version!==draftRevision)throw new Error('The draft changed while the saved study was loading. Open the saved study again to replace that draft.');
     if(!study.selection || !Array.isArray(study.selection.cases))throw new Error('The retained study does not include an editable selection.');
-    draft=structuredClone(study.selection);draftRevision++;preview=null;persist();render();
+    if(study.selection.working_origin?.revision_id){
+      const originalStudy=study,originalReport=report;
+      await working.openRevision(study.selection.working_origin.revision_id);
+      if(!active(target,generation))return null;
+      study=originalStudy;report=originalReport;selectedId=requestedId;
+    }else{
+      working.stash();draft=structuredClone(study.selection);delete draft.working_origin;
+      working.reset(false);draftRevision++;preview=null;
+    }
+    persist();render();
     return study;
   }
   function rememberTask(value,request) {
@@ -257,10 +290,11 @@ export function createClimateForcing(context) {
     if(record?.action && record.action!==request.action)throw new Error('The operator returned a different action.');
     if(!record?.id)throw new Error('The operator response did not include a task identity; the exact submission remains pending.');
     const at=tasks.findIndex(row=>row.id===record.id);
-    const next={...record,action:record.action || request.action,payload:record.payload || request.payload};
+    if(record.payload&&!sameWorking(record.payload,request.payload))throw new Error('The operator returned a different retained payload.');
+    const next={...record,workspace:record.workspace||request.workspace,action:record.action || request.action,payload:record.payload || request.payload};
     if(at<0)tasks.push(next);else tasks[at]=next;
     pending=pending.filter(row=>row.operation_id!==request.operation_id);
-    persist();
+    working.settle(next);persist();
     return next;
   }
   async function submitRequest(request) {
@@ -313,7 +347,11 @@ export function createClimateForcing(context) {
     const target=workspace,generation=epoch;
     busy=true;error='';notice='';render();
     try {
-      if(action==='preview') {
+      if(await working.action(action,el)) {
+        if(!active(target,generation))return;
+        await refresh({loadStudy:false});
+        notice='Working-design action retained. Scientific preview remains a separate step.';
+      } else if(action==='preview') {
         if(!draft.baseline_run_id)throw new Error('Select a completed baseline run.');
         if(!draft.cases.length)throw new Error('Add at least one alternative forcing case.');
         if(draft.cases.some(row=>!Object.keys(row.overrides || {}).length))throw new Error('Select at least one changed forcing source for every alternative case.');
@@ -353,7 +391,7 @@ export function createClimateForcing(context) {
         if(!study || !getState()?.climate_management || typeof context.openDesk!=='function')throw new Error('Open the installed management comparison desk from a retained forcing study.');
         await context.openDesk('climate-management','openForStudy',{workspace_key:workspace,study_id:study.id});
       } else if(action==='new') {
-        draft=newDraft();draftRevision++;preview=null;study=null;report=null;selectedId='';persist();
+        working.stash();draft=newDraft();working.reset(false);draftRevision++;preview=null;study=null;report=null;selectedId='';persist();
       } else if(action==='add-case') {
         let n=draft.cases.length+1;while(draft.cases.some(row=>row.id==='period-'+n))n++;
         draft.cases.push(emptyCase(n));draftRevision++;preview=null;persist();
@@ -387,7 +425,10 @@ export function createClimateForcing(context) {
         const task=value?.task || value;
         if(task.id!==old.id || (task.workspace && task.workspace!==target))throw new Error('The returned task does not match this retained operation.');
         const at=tasks.findIndex(row=>row.id===old.id);
-        if(at>=0)tasks[at]={...old,...task};
+        if(task.payload&&!sameWorking(task.payload,old.payload))throw new Error('The retained operation changed its original payload.');
+        const retained={...old,...task};
+        if(at>=0)tasks[at]=retained;
+        working.settle(retained);
         if(terminal(task.state))refreshNeeded=true;
         if(task.state==='complete' && task.action==='climate-forcing.prepare' && task.result?.id) {
           selectedId=task.result.id;study=task.result;
@@ -412,10 +453,15 @@ export function createClimateForcing(context) {
     detach();root=node;workspace=(state || getState())?.workspace_key;
     catalog=null;draft=newDraft();preview=null;study=null;report=null;pending=[];tasks=[];selectedId='';error='';notice='';storageNotice='';
     if(!workspace){root.textContent='Open a workspace to compare climate forcing.';return;}
-    restore();listener=new AbortController();
+    working.clear();restore();listener=new AbortController();
     root.addEventListener('click',event=>{const el=event.target.closest('[data-cf]');if(el&&root.contains(el)){event.preventDefault();act(el.dataset.cf,el);}},{signal:listener.signal});
     root.addEventListener('input',event=>{if(!event.target.matches('select,input[type="checkbox"]'))changed(event);},{signal:listener.signal});
-    root.addEventListener('change',event=>{if(event.target.matches('select,input[type="checkbox"]'))changed(event);},{signal:listener.signal});
+    root.addEventListener('change',event=>{
+      if(event.target.matches('[data-working-import]')){
+        const file=event.target.files?.[0],target=workspace,generation=epoch;
+        if(file)working.importFile(file).catch(cause=>{if(active(target,generation)){error=cause.message;render();}});
+      }else if(event.target.matches('select,input[type="checkbox"]'))changed(event);
+    },{signal:listener.signal});
     render();const target=workspace,generation=epoch;
     refresh().catch(cause=>{if(active(target,generation)&&cause.name!=='AbortError'){error=cause.message;render();}});schedule();
   }
@@ -429,5 +475,11 @@ export function createClimateForcing(context) {
       persist();schedule();
     }
   }
-  return {mount,update,detach,openSavedStudy};
+  async function openWorkingRevision(value){
+    if(!root||value?.workspace_key!==workspace||getState()?.workspace_key!==workspace)
+      throw new Error('Open the receiving workspace before restoring its working design.');
+    if(!/^[0-9a-f]{64}$/.test(value?.revision_id||''))throw new Error('Choose an original working revision.');
+    return working.openRevision(value.revision_id);
+  }
+  return {mount,update,detach,openSavedStudy,openWorkingRevision};
 }
