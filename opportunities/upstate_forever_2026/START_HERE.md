@@ -16,6 +16,8 @@ python -B -m model.cli runtime
 
 The runtime command reads the actual installed version and verifies the selected NDR and SDR module sources. The environment definition pins InVEST and Python; the package manager resolves their compatible GIS dependencies. The [InVEST installation guide](https://invest.readthedocs.io/en/3.20.0/installing.html) recommends conda-forge for this installation path.
 
+The environment requests `matplotlib-base` for the workbench's static map renderer. The maintained cartography module uses `Agg` / `FigureCanvasAgg` and writes PNG, SVG and PDF files; the browser operator serves those outputs through its existing local server. This keeps the plotting library and its required dependencies without adding the Qt/PySide6 desktop backend solely through the `matplotlib` metapackage. [Matplotlib's dependency guide](https://matplotlib.org/stable/install/dependencies.html) and the [conda-forge packaging guidance](https://conda-forge.org/docs/maintainer/knowledge_base/#matplotlib) document this package split. InVEST remains pinned to 3.20.0, Python remains pinned to 3.12, and all other declared scientific and GIS dependencies remain the same.
+
 From this application directory, create a study and open the operator:
 
 ```sh
