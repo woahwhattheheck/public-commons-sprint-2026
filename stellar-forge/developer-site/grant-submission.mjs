@@ -2,6 +2,9 @@ import {HANDOVER_ROUTES,attachGrantHandover} from './grant-handover.mjs';
 // MIT. Connect the complete submission workspace to the existing grant composer.
 export const SUBMISSION_OPERATION = 'SCF-SUBMISSION-WORKSPACE-22B705-20261012';
 export const SUBMISSION_ROUTES = [
+  ["/grant-application-return.mjs",["grant-application-return.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-application-return-workspace.mjs",["grant-application-return-workspace.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-application-return-working.mjs",["grant-application-return-working.mjs","text/javascript; charset=utf-8"]],
   ["/grant-submission-working-copy.mjs",["grant-submission-working-copy.mjs","text/javascript; charset=utf-8"]],
   ["/grant-form-workbook.mjs",["grant-form-workbook.mjs","text/javascript; charset=utf-8"]],
   ["/grant-form-workbook-workspace.mjs",["grant-form-workbook-workspace.mjs","text/javascript; charset=utf-8"]],
@@ -46,6 +49,7 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     working_copy:{schema:'stellar-forge.grant-submission-working-copy.v1',export_schema:'stellar-forge.grant-submission-working-export.v1',route:'/grant-submission.html',query:'working',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
     form_workbook:{schema:'stellar-forge.grant-form-workbook.v1',view:'fields',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
     offline_editor:{schema:'stellar-forge.grant-offline-editor.v1',route:'/grant-submission.html',format:'self-contained-html',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
+    application_returns:{schema:'stellar-forge.grant-application-returns.v1',route:'/grant-submission.html',view:'returns',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_APPLICATION_RETURNS.md'},
     form_map_schema:'stellar-forge.grant-form-map.v1',operation:SUBMISSION_OPERATION,
     planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',update_schema:'stellar-forge.grant-plan-update.v1',target_schema:'stellar-forge.grant-plan-target.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
     product_sources:{schema:'stellar-forge.grant-product-authoring.v1',

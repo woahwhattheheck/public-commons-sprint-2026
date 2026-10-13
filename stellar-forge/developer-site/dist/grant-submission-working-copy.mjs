@@ -1,3 +1,4 @@
+import {validateApplicationReturnWorking} from './grant-application-return-working.mjs';
 // MIT. Complete unfinished preparation beside the original saved submission.
 import {SCHEMA, MAX_BYTES, createDraft, validateDraftShape, measureText} from './grant-submission-core.mjs';
 import {verifyHandoverContents, verifyReviewerSource, contentHash} from './grant-handover-source.mjs';
@@ -11,7 +12,7 @@ const need=(value,message)=>{if(!value)throw new Error(message);};
 const text=(value,name,max=SUBMISSION_WORKING_MAX_BYTES)=>need(typeof value==='string'&&value.length<=max,name+' must be complete text within its allowance.');
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
 const date=value=>need(typeof value==='string'&&Number.isFinite(Date.parse(value)),'Retain the original working date.');
-const views=['answers','fields','review','source','planning','products','handover','history','saved'];
+const views=['answers','fields','review','source','planning','products','returns','handover','history','saved'];
 // These are JSON-only editor snapshots. Count complete strings without making
 // whole encoded copies on every autosave; reject values JSON would silently lose.
 function jsonSize(value,limit=SUBMISSION_WORKING_MAX_BYTES){
@@ -37,7 +38,7 @@ export function newSubmissionWorkingCopy({id=crypto.randomUUID(),at=new Date().t
   return {schema:SUBMISSION_WORKING_SCHEMA,id,createdAt:at,label:'Untitled application',folder:'SCF submission working — Untitled application',
     draft:null,incoming:null,incomingLabel:'Current application reader',
     ui:{view:'answers',format:'plain',selectedAnswer:'project',selectedField:null},
-    limits:[],workbook:null,native:{id:null,revision:0,dirty:false},receivedFrom:null};
+    limits:[],workbook:null,applicationReturn:null,native:{id:null,revision:0,dirty:false},receivedFrom:null};
 }
 export function checkSubmissionWorkingCopy(value){
   need(object(value)&&value.schema===SUBMISSION_WORKING_SCHEMA,'Open the complete submission working copy.');
@@ -61,6 +62,7 @@ export function checkSubmissionWorkingCopy(value){
   }
   need(object(value.native)&&(value.native.id===null||typeof value.native.id==='string')&&Number.isSafeInteger(value.native.revision)&&value.native.revision>=0&&typeof value.native.dirty==='boolean','Retain the original native save reference.');
   need(value.native.id!==null||value.native.revision===0,'A separate native draft starts at revision zero.');
+  validateApplicationReturnWorking(value.applicationReturn);
   jsonSize(value);return value;
 }
 export function submissionWorkingDraft(value){
