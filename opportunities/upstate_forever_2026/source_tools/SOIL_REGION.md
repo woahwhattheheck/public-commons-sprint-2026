@@ -140,6 +140,48 @@ python3 -B -m source_tools.soil_region prepare \
 
 Preparation additionally uses the existing NumPy/Rasterio stack. The original `rasters.grid_definition` creates the exact 30 m grid at the retained reference's native upper-left anchor, and the source remains categorical during nearest-neighbor alignment.
 
+### Completed original 2025 NLCD reference
+
+The existing Annual NLCD acquisition now retains the complete original regional
+TIFF: **9,237,060 bytes**, SHA-256
+`a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157`.
+Its source ID is `usgs-annual-nlcd-2025-native-region-a9f6bfedc4bd3936`.
+The selected original region contains 217 HUC12s plus the same 1,000 m buffer,
+6,443 by 6,319 cells in EPSG:5070, assembled from the original 49 tiles.
+
+The [original retained source and receiver](https://chatgpt.com/space/page_4d1a1acaf17c8191934049834ea8a222)
+contains the complete eleven-file receiving source and all 18 binary volumes.
+The maintained receiver is `source/annual-nlcd-native-20261013/receive.py`:
+
+~~~sh
+"$UPSTATE_PYTHON" -B "$APPLICATION/source/annual-nlcd-native-20261013/receive.py" \
+  --parts "$RETAINED_18_VOLUME_RESPONSES" \
+  --output "$CURRENT_PROJECT/sources/nlcd-2025-native"
+~~~
+
+Use the receiver's verified `raster` stdout path as `UPSTATE_NLCD` for the
+existing prepare command. Its original filenames are `land-cover.tif` and
+`source-manifest.json`. The receiver verifies the retained compressed and
+pixel-strip hashes, complete TIFF, native georeference and class counts.
+Reuse these completed source bytes when continuing the original soil capture.
+
+The TIFF's exact original affine is
+`[29.999999995403137, 0, 1114859.9994590343, 0, -30.000000026127967, 1428209.9983569037]`.
+Each axis independently satisfies the maintained nominal-30-metre tolerance
+(`rel_tol=1e-9, abs_tol=1e-12`). Recognize this existing nominal-30 case
+before applying the separate square-axis rule used for other native grids.
+Opposite source rounding makes the axis difference approximately
+`3.072483067967369e-8` metres, just above that generic square threshold.
+
+The existing normalization still anchors exact 30 m cells at the original
+upper-left coordinate and retains the complete source affine and dimensions
+in `grid.reference_normalization`. For the original full 6,443 by 6,319
+reference window, the maximum corner shift from nominal normalization is
+approximately **0.000167738125 metres**. The actual model window's measured
+shift is recorded by the grid builder. The original TIFF is unchanged.
+Explicit requested-resolution assertions and all other native-grid tolerances
+retain their existing behavior.
+
 The whole-soil interpretation remains `chorizon.kwfact`, **Dominant Condition / Surface Layer**. Native Choice strings are bound to their original legend. Missing choices stay missing. The preparer converts customary K once by **0.1317**, retaining the existing SDR units `t*ha*h/(ha*MJ*mm)`. This is the same source interpretation and conversion used by the maintained soil pipeline; the [official SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html) supplies the model's K input context.
 
 Minimum and maximum mapunit/rating ranks preserve the original overlap behavior. Conflicting physical ratings remain NoData. The explicit `nlcd-water-zero` option sets K to zero only where original numeric NLCD class 11 is present, a native rating is absent, and ratings do not conflict. `--null-policy preserve` retains all those missing values instead.
