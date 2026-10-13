@@ -209,3 +209,86 @@ Continue the existing native four-RFP-HUC operation using the original 217-HUC i
 The complete current owner brief travels in `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, alongside `AGENTS.md` and this consumed guide. Read both before continuing, relay the complete brief to downstream native/provider workers, and include the path/version with the next result. The original actual-geography native execution remains the immediate priority; this report/receiving work joins its usable handoff. Preserve the October 13 **14:00 UTC / 10:00 EDT** cutoff and all active source and run identities.
 
 Received-card admission summaries verify the retained initial comparison, complete original input entries and CAS bytes directly. This keeps listing and Study capture free of source-view writes. Opening a saved copy still performs the maintained full source resolution. The unchanged admission and the initial comparison travel with revised-only Study exports.
+
+## Complete recipient package from an original saved comparison
+
+Open an existing saved comparison, then use **Recipient package** below its report controls.
+Refresh completed reports and choose the retained scientific edition that should travel with
+this comparison. The catalogue lists only complete editions whose ordered source selection
+contains the exact comparison source collection and source ID. Reports with a similar title,
+an earlier comparison, or a source from another collection do not qualify.
+
+**Create recipient package** uses the original completed scientific report and comparison.
+It prepares one offline report reader through the existing maintained packager, preserves the
+original scientific PDF, native saved-report ZIP and complete comparison ZIP, and invokes the
+original selected-Study exporter with this exact scientific-report edition as its sole root.
+The configured original investigation snapshot is included through the existing Study transfer
+provider. The resulting handover identity binds the actual exported Study ID, byte count and
+SHA256, so a package cannot silently substitute an earlier captured investigation generation.
+
+Download **Complete recipient package ZIP**, extract it fully and open **START_HERE.html**.
+The starting page links to the original PDF, standalone report reader, selected-watershed
+comparison, complete original CSV/source/archive files and the editable Study. It also gives
+normal operator and command-line restoration instructions. Keep extracted folders together:
+the original comparison's relative links retain their original targets.
+
+The ordinary **Editable_Study.zip** file contains the captured application and exact report
+source dependencies. It is streamed into the outer package and is never embedded as base64 in
+the starting page. Native Python/GIS runtime dependencies remain separately installed.
+The package carries original project, comparison, report, ordered source and Study identities
+in **Package_Manifest.json**, with every member's full bytes and SHA256.
+
+### Maintained native API and receiving behavior
+
+- Queued action: `observed.landcover.handover`.
+- Exact payload: `{comparison_id: ORIGINAL_COMPARISON_ID, report_id: COMPLETED_REPORT_EDITION_ID}`.
+- Catalogue: `GET /api/observed-landcover/handover-catalog?workspace=KEY&id=COMPARISON_ID`.
+- Complete retained package: `GET /api/observed-landcover/handover?workspace=KEY&id=HANDOVER_ID`.
+- Retained folder: `observed-landcover-handovers/HANDOVER_ID/`.
+- Download tickets use the original operator file transport; each ticket has its exact
+  package-relative `member` identity and a readable purpose label.
+
+The helper holds only its own handover-directory lock. The original report exporter and Study
+exporter retain their original independent Workspace guards. A complete handover's source
+inventory and original file hashes are verified before reopening. Nothing in this action
+executes a model, recomputes annual land-cover quantities or renders a different scientific
+report. Each explicitly captured Study generation remains its own immutable package.
+
+Before sending the actual recipient edition, the existing native operator must open and LOOK
+at its populated desktop and narrow-screen starting page, original report, PDF, comparison
+and full source attachments; operate every primary download and restore the included editable
+Study through its captured application. Exercise loading, empty and error cases in the desk.
+Attach the actual viewed PNGs and original output identities to the same receiving result.
+The current owner direction and 14:00 UTC cutoff remain controlling.
+
+
+## Continue the original selected-HUC operation into the recipient package
+
+This continuation uses the existing completed selected-HUC comparison and Scientific Report. It does not import another annual source, render another scientific edition, rerun a model, or replace either earlier Workspace or selected-Study archive. Keep the original operation's actual workspace, state directory, output directory and operation ID.
+
+After installing this complete feature at the existing source boundary, use the same qualified native Python:
+
+```sh
+PYTHON -B APP/source_tools/receive_observed_landcover.py \
+  --workspace ORIGINAL_WORKSPACE \
+  --state-directory ORIGINAL_OPERATOR_STATE \
+  --output ORIGINAL_RECEIVING_OUTPUT \
+  --operation-id ORIGINAL_OPERATION_ID \
+  --recipient-handover \
+  --reviewed-source-revision ACTUAL_REVIEWED_SOURCE_COMMIT
+```
+
+Carry the original `--restore-directory` if it was supplied. `--resume-failed` resumes the original accepted failed task after an actual source repair. The optional mode is dispatched before the original configuration is rebuilt; its selection is read from the completed `native_products` record. Earlier complete tasks, source revision history and scientific identities remain intact. New courses without explicit HUC arguments default to the actual four RFP watersheds: `030601010703`, `030601010704`, `030601020502`, and `030601020507`. Previously completed selections remain their original selections.
+
+The command appends `recipient_handover` to the existing `selected-huc-receiving.json`. It submits the original `observed.landcover.handover` action using the saved comparison and report IDs, verifies the public reader and all seven original authenticated downloads, independently streams every ZIP member against `Package_Manifest.json`, and extracts the complete package under `recipient-handover/HANDOVER_ID/package`. The PDF, original report ZIP and comparison ZIP must match the earlier completed native products. Scientific source order, exact HUC12s and the editable Study identity are retained separately.
+
+The exact inner `Editable_Study.zip` then enters the existing native upload and `workspace.restore` action. The receiving check opens the original comparison through Received Studies, checks its actual selection download, restarts the operator and reopens the accepted queue requests. A separate isolated process runs the archived application's own reader and compares the original scientific selection, source binding, support quantities and report/source hashes. Its expected model source comes from the original archive manifest. The complete command, result, stdout, stderr, source revisions and archive identities stay in this same continuation. The earlier `selected_study` checkpoint and its original archives are preserved.
+
+### Operate and look at the exact outgoing product
+
+Read and carry the complete `CURRENT_OWNER_DIRECTION.md` version **2026-10-13.3** and the application `AGENTS.md`; both travel with this feature. The producing worker must personally open, render and LOOK at the final package, app and actual screenshots. Native source/hash checks are part of receiving; they do not establish visual acceptance.
+
+Open the extracted `START_HERE.html` at desktop and 390px width. Use its PDF, offline reader, selected comparison, complete CSVs, original ZIPs and editable Study controls. In the offline reader, operate the source search/selection/download controls and original figure viewer; inspect populated, empty and error states where applicable. Keep HUC12 labels intact, every original transition and support quantity present, and scientific data separate from retained source-history information. Open the actual PDF pages, HTML, figures, JSON, CSV, ZIP and other attachments in their applicable recipient viewers. Follow the editable Study into the original operator, open the received source card and saved comparison, and verify its retained selection after leaving and returning. Save actual desktop/narrow screenshots with the existing native receipt and expose them as normal image attachments for source-author review. Repair any actual human-visible failure in its maintained source and repeat the affected original controls before sending the final recipient package.
+
+This is continuation of the existing selected-HUC receiving operation, including its original accepted native handle. Actual geographic baseline/restoration/matched-control NDR/SDR work remains the owner's priority; this annual categorical comparison retains its observational units and paired-valid support. Preserve active owners and processes, carry the actual elapsed operation history, and stop/preserve at **14:00 UTC on 13 October 2026** without an automatic restart.
+

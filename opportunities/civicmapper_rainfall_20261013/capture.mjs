@@ -104,7 +104,7 @@ async function completedCapture(task,taskPath,output){
  const retained=await json(output);const reviewed=R.release(retained);
  const original={...task.metadata},actual={...retained.metadata};delete original.retrieved_at;delete actual.retrieved_at;
  if(canonical(original)!==canonical(actual)||canonical(task.request)!==canonical(retained.request)||task.raw_sha256&&task.raw_sha256!==reviewed.fingerprint)throw Error("The existing output belongs to a different original capture. Preserve it and use the matching source.");
- task.completed_at=task.completed_at||retained.metadata.retrieved_at;task.output=path.resolve(output);task.raw_sha256=reviewed.fingerprint;delete task.last_error;await save(taskPath,task);
+ task.completed_at=task.completed_at||retained.acquisition?.completed_at||retained.metadata.retrieved_at;task.output=path.resolve(output);task.raw_sha256=reviewed.fingerprint;delete task.last_error;await save(taskPath,task);
  process.stdout.write(JSON.stringify({capture:output,sha256:reviewed.fingerprint,reopened:true,sensors:reviewed.summaries,warnings:reviewed.warnings},null,2)+"\n");return true;
 }
 
@@ -158,11 +158,13 @@ async function capture(){
     }
    }
   }
-  const metadata={...task.metadata,retrieved_at:new Date().toISOString()};
-  const result={schema:"rainfall-release/v1",metadata,raw_text:text,raw_sha256:R.sha256Text(text),request:task.request,acquisition:{schema:"rainfall-acquisition/v1",created_at:task.created_at,completed_at:metadata.retrieved_at,exchanges:task.exchanges||[]}};
+  const completedAt=new Date().toISOString(),rawSha=R.sha256Text(text);
+  const originalResponse=task.exchanges?.slice().reverse().find(x=>x.response?.sha256===rawSha&&x.response.status>=200&&x.response.status<300);
+  const metadata={...task.metadata,retrieved_at:originalResponse?.response?.received_at||completedAt};
+  const result={schema:"rainfall-release/v1",metadata,raw_text:text,raw_sha256:rawSha,request:task.request,acquisition:{schema:"rainfall-acquisition/v1",created_at:task.created_at,completed_at:completedAt,exchanges:task.exchanges||[]}};
   await save(args.out,result,{immutable:true});
   let reviewed;try{reviewed=R.release(result);}catch(e){throw Error(e.message+" Original provider response was saved in "+args.out+" for correction and continued review.");}
-  task.completed_at=metadata.retrieved_at;task.output=args.out;task.raw_sha256=result.raw_sha256;delete task.last_error;await save(taskPath,task);
+  task.completed_at=completedAt;task.output=args.out;task.raw_sha256=result.raw_sha256;delete task.last_error;await save(taskPath,task);
   process.stdout.write(JSON.stringify({capture:args.out,sha256:result.raw_sha256,sensors:reviewed.summaries,warnings:reviewed.warnings},null,2)+"\n");return;
  }
  throw Error("Job continues on the provider. Resume the saved job with capture --out "+args.out+" --resume yes.");

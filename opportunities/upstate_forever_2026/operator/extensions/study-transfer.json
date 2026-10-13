@@ -15,7 +15,8 @@
     "study_report_navigation.mjs",
     "economic_received_comparisons.mjs",
     "received_published_reviews.mjs",
-    "received_published_reviews.css"
+    "received_published_reviews.css",
+    "assessment_received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"

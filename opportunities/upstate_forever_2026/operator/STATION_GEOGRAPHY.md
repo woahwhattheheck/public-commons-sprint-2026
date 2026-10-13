@@ -10,6 +10,26 @@ Materialize the station contribution files under a source directory, then run:
 
 The installer copies the complete declared station, assessment, microbial and original WBD component inventory, including the current observed-station catalogue, saved assessment-report helper, native watershed figure helpers, prepared-source Scientific reports composer and complete 22-file original microbial source directory. It also installs the complete preparation, supervised native receiving and browser course declared by the assessment component, with their operating guides and original course example. The same installation includes all four original input manifests and their source families: SCDES705, the two complete normalized published assessment editions and publisher-text companion, WQP8 with the exact draft101 CSV, and WQP2. Before changing the application, it checks each selected source manifest's primary bodies and companions against the available files and declared original hashes. The dry-run receipt includes these original-source identities. It preserves prior versions and invokes the existing install_extensions.py when the application has not yet installed its extension host. Restart the existing operator to discover operator/extensions/station-geography.json. Run the model commands below from APPLICATION, the directory containing model and operator.
 
+The same installation adds editable assessment reopening to the existing Study
+transfer desk. Its maintained component fragment selects the complete typed
+source resolver, native adoption model, receiving file tickets, shared Study
+summary/provider, assessment desk actions and received-Study controls. Selected
+scientific reports retain their original ordered sources and complete native
+packages. A received source can reopen verified local station/context/parcel
+editions or queue their normal native ZIP receiving and then open the returned
+editable editions.
+
+This contribution installs those new and changed Study sources together with
+their original local import and client-asset dependencies, including Published
+review admission, Economic comparisons and Comparability receiving. The same
+pass upgrades the shared native Study engine and client sources. The receiving
+application supplies its existing complete operator and mount-ready cross-desk
+navigation. Before writing, the installer checks the staged Study APIs and the
+installed host, records their previous hashes, and checks the destination hashes
+again before replacing staged files. The normal staged backup and concurrent-source checks
+apply to the complete contribution. Restart the existing operator after the
+installation so queued actions and desk descriptors use the same source edition.
+
 Runtime dependencies are the application's existing pyproj, shapely and fiona stack. The browser uses the existing local host and an SVG map. Model observations, measurement imports, chemistry and annual-load calculations keep their existing interfaces.
 
 ## Prepare, receive and operate the same complete study
@@ -185,3 +205,9 @@ without renaming fields, reclassifying causes or altering the original body.
 The known published 159-station preset prefers the two complete normalized banks
 and retains the existing accepted CSV inventory fallback. Portable receiving
 reuses the same reader and exact original array positions.
+
+
+The source family retains the current application `AGENTS.md` and
+`CURRENT_OWNER_DIRECTION.md` with its original owner instruction version. Install
+at the receiving application's normal safe boundary so an already-running native
+scientific operation continues under the source edition it loaded.

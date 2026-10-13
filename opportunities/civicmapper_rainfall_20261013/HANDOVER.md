@@ -10,7 +10,7 @@ Use Node 20 or later from the product source directory:
 node handover.mjs build --before /absolute/release.json --public-sources /absolute/public-source-packet.json --notes /absolute/reviewer-notes.txt --out /absolute/rainfall-handover
 ```
 
-The output directory must be new. `--public-sources` and `--notes` are optional. Add `--after /absolute/later-release.json` for an actual later release of exactly the same sensor/time selection. The underlying reviewer checks compatibility and computes deltas only for paired valid intervals. Single-release packages contain complete coverage and interval tables.
+The output directory must be new. `--public-sources` and `--notes` are optional. Without an override, the retained original publisher metadata at `source/20261013/publisher-selection.json` is included automatically with its actual observation date. This original source file also travels in the editable source tree, so its source-note reference and a later rebuild remain complete. Add `--after /absolute/later-release.json` for an actual later release of exactly the same sensor/time selection. The underlying reviewer checks compatibility and computes deltas only for paired valid intervals. Single-release packages contain complete coverage and interval tables.
 
 Open `OPEN_FIRST.html` in the assembled directory, or extract `rainfall-handover.zip` and open that file. `reviewer.html` has the real saved review already loaded through the existing importer. The empty original reviewer stays at `source/index.html`. Save review project preserves the original captures and reviewer notes. Exported HTML and CSV come from the current selection. No service, installation or network request is needed for recipient use.
 

@@ -1,11 +1,12 @@
 """Assessment geographic-context extension for the maintained operator queue."""
 from pathlib import Path
-from model import assessment_context as model, assessment_report_context as report
+from model import (assessment_context as model, assessment_report_context as report,
+                   assessment_source_adoption as adoption)
 from model.common import identifier, relative_file, verify_file
 
 ACTIONS=frozenset(("assessment.context.build","assessment.context.receive",
                    "assessment.context.parcels","assessment.context.receive_parcels",
-                   "assessment.context.report"))
+                   "assessment.context.report", "assessment.context.adopt_source"))
 
 class AssessmentContext:
     def __init__(self,operator,fault):
@@ -53,6 +54,9 @@ class AssessmentContext:
                     "Earlier completed reports remain available in their original tasks.", 409)
             return report.prepare(ws,identifier(value.get("context_id")),
                 parcel_id=value.get("parcel_id") or None, delivery_id=value.get("delivery_id") or None)
+        if action=="assessment.context.adopt_source":
+            return adoption.adopt_source(ws, value,
+                max_extracted_bytes=self.operator.extraction_limit)
         if action=="assessment.context.build":
             result=model.build(ws,value.get("selection",value))
         elif action in ("assessment.context.receive","assessment.context.receive_parcels"):
@@ -77,6 +81,16 @@ class AssessmentContext:
                 verify_file(ws.root,item),item,Path(item["path"]).name) for item in result.get("files",[]))
             task["_assessment_context"]={"id":result.get("context_id"),"view":"assessment-context",
                 "report":True,"parcel_id":result.get("parcel_id")}
+            return task
+        if task["action"]=="assessment.context.adopt_source":
+            row=self.edition(task["workspace"],result["context_id"],complete=False)
+            task.setdefault("_downloads",[]).extend(row["_downloads"])
+            if result.get("parcel_id"):
+                parcel=self.edition(task["workspace"],result["parcel_id"],complete=False,parcels=True)
+                task["_downloads"].extend(parcel["_downloads"])
+            task["_assessment_context"]={"id":row["id"],"view":"assessment-context",
+                "adopted":True,"parcel_id":result.get("parcel_id"),
+                "station_geography_id":result["station_geography_id"]}
             return task
         if result.get("id"):
             parcels=task["action"] in ("assessment.context.parcels","assessment.context.receive_parcels")

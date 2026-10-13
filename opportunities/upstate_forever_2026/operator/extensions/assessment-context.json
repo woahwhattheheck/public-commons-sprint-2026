@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "assessment-context",
   "title": "Assessment geographic context",
-  "version": "1.4.5",
+  "version": "1.5.0",
   "order": 67,
   "assets": [
     "assessment_context.mjs",
@@ -22,7 +22,8 @@
       "assessment.context.receive",
       "assessment.context.parcels",
       "assessment.context.receive_parcels",
-      "assessment.context.report"
+      "assessment.context.report",
+      "assessment.context.adopt_source"
     ],
     "invoke": {
       "handler": "invoke",
@@ -139,7 +140,8 @@
       "navigate",
       "closeDetail",
       "openDelivery",
-      "openScientificReport"
+      "openScientificReport",
+      "openDesk"
     ],
     "styles": [
       "/web/assessment_context.css"
@@ -158,7 +160,8 @@
     "dispatch": "dispatch",
     "action_prefixes": [
       "assessment-context-result-",
-      "assessment-context-report-"
+      "assessment-context-report-",
+      "assessment-context-source-"
     ]
   }
 }

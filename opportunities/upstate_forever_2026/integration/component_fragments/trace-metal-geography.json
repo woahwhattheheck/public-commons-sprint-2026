@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "trace-metal-geography",
+  "source_reference": "Original Ecosystem operation 1791890856.084609; same trace receiving1791885974.666719.",
+  "components": {
+    "trace-metal-geography": {
+      "title": "Original trace-metal station geography and complete native receiving",
+      "paths": [
+        "model/trace_metal_geography.py",
+        "model/TRACE_METAL_GEOGRAPHY.md",
+        "source_tools/receive_trace_metal_geography.py",
+        "model/station_geography.py",
+        "operator/web/station_geography.mjs"
+      ],
+      "requires": [
+        "trace-metal-published-study",
+        "station-geography"
+      ]
+    }
+  },
+  "required_components": [
+    "trace-metal-geography"
+  ]
+}

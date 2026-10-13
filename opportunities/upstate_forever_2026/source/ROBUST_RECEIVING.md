@@ -464,3 +464,37 @@ cutoff. The producing peer must open and operate the exact outgoing desktop and
 narrow-screen Economic and received-Study views, exercise the original
 comparison opener, and inspect every exported attachment and the reopened
 application/project. Source checks do not substitute for that inspection.
+
+## Original report-source lineage dependencies
+
+A current shared report dispatcher can refer to a newer original source adapter
+even when the receiving application already contains its older source engine.
+Receive the exact source adapter and the native helper chain together. The
+installer now checks the maintained Source Updates report/transfer/receiving
+modules, both original source-plan implementations and their compatibility
+facade when the shared Study source imports that lineage. It also checks the
+original observed-landcover transfer and retained-input helpers when the
+land-cover adapter delegates to them.
+
+These are the existing original source bodies, not replacement engines. The
+additive `study-source-lineage-dependencies` component fragment places their
+explicit paths in the existing Study, Source Updates and land-cover families
+without a new higher-level component dependency. The usual current/predecessor
+checks still protect advancing source. Keep the complete native application;
+this bounded receiving layer is not a substitute for the separately owned
+whole-application source intake.
+
+The completed-run Study source at PR4126 retains the actual original donor run
+and donor-relative argument descriptors for every reused native stage. Preserve
+that maintained successor when applying the source layer. A copied output and
+its donor's original argument record have different native directory roots;
+the receiver must retain both exact histories without rerunning the model.
+
+The Measurements continuation at PR4165 adds only the original managed
+`measurement-observations/measurements.sqlite` member to the portable mutable
+database allowlist. Full Workspace backup therefore captures its committed
+SQLite state through the existing online snapshot path, including live WAL
+commits. The separate Measurements-only export and ordinary scientific SQLite
+files keep their existing behavior. See `model/MEASUREMENTS_PORTABLE.md` in the
+same source layer. Actual native import, editable reopen and outgoing product
+viewing remain the original receiving owner's required work.

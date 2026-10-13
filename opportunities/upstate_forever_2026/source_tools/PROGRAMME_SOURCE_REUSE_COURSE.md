@@ -6,7 +6,7 @@ The original Programme, its report and its native run records are retained byte 
 
 ## Run the accepted original case once
 
-Use the existing Workspace writer's next idle checkpoint. Keep the actual regional Workspace and its active model process separate. Install the current complete application source at its existing source-install boundary; the `programme-native-reuse` component includes both this guide and the command. The command must be physically present in the application before export, so the cold child runs the same restored source.
+Use the existing Workspace writer's next idle checkpoint. Keep the actual regional Workspace and its active model process separate. Install the current complete application source at its existing source-install boundary; the `programme-native-reuse` component includes both this guide and the command. The command must be physically present in the application before export, so the cold child runs the same restored source. A complete staged source-family packet can be composed by this same command with --application ACTUAL_APP --source-root STAGED_FAMILY; it runs the original source-update installer first and the native-reuse installer second, preserves their guarded shared-file seams and records their actual results. It checks the maintained core/facade/Programme form prerequisites before any Workspace mutation.
 
 ```bash
 /dev/shm/ecosystems-7b7a26b9784e/runtime/bin/python -B \
@@ -19,6 +19,8 @@ Use the existing Workspace writer's next idle checkpoint. Keep the actual region
 ```
 
 Those are the accepted SAME5156 paths. On another receiving host use its actual restored paths and original receipt. The existing adopter resolves and verifies every original run/source/grid/profile identity from that receipt, including its matched-control source collection. It reuses a completed Programme/report without rewriting them.
+
+For a source-family receiving operation, invoke the staged family's source_tools/continue_programme_source_reuse.py, add --application with the actual native-app path and --source-root with the complete16-file stage, and keep all original Workspace/receipt/output arguments above. This is one command: source composition, native continuation, report, archive and cold reopening. The staging file and installed outgoing script must be exact matches. An actual missing base dependency identifies the maintained cumulative-source join needed; the command never replaces shared original Programme/portable files wholesale.
 
 For another explicitly selected completed cohort, replace `--receipt` with `--programme-id ACTUAL_ID`. With neither option the command writes `original-catalog.json` and proceeds only when exactly one complete, idle, common-profile NDR+SDR Programme is eligible. An ambiguous catalogue returns the actual candidates; it does not select by file order or title.
 

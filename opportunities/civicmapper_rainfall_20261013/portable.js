@@ -30,7 +30,7 @@ function preparedHtml(html,project) {
 function build({R,sourceFiles,captureTexts,notes="",publicSourceTexts=[],createdAt=new Date().toISOString()}) {
  if(!R||!sourceFiles||!Array.isArray(captureTexts)||captureTexts.length<1||captureTexts.length>2)throw Error("Provide maintained source and one or two original captures.");
  if(typeof notes!=="string")throw Error("Reviewer notes must be text.");
- const required=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md"];
+ const required=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md","source/20261013/publisher-selection.json"];
  for(const name of required)if(typeof sourceFiles[name]!=="string")throw Error("Missing complete source: "+name);
  if(!sourceFiles["index.html"].includes("<script>"+sourceFiles["core.js"]+"</script>"))throw Error("The reviewer and editable calculation source differ. Build from one complete source edition.");
  const releases=captureTexts.map(text=>R.release(JSON.parse(text)));

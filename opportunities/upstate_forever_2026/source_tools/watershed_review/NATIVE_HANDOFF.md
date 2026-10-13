@@ -52,6 +52,19 @@ Current owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIREC
 
 The same original saved task report was refreshed after fixing table widths and keyboard scrolling. Current formatter source is included in the native archive. The guarded `apply_native_report_layout.py --application ACTUAL_APPLICATION` composes only table markup and CSS with a compatible maintained formatter. Its nine non-presentation report files remain byte-identical; all original plan revisions and the earlier report edition remain retained.
 
+
+## Continue an interrupted native intake
+
+The same command and output directory now resume one frozen original selection. Before importing a source or creating a plan, the receiver retains the complete delivery member inventory, project/workspace/output identity, original saved-review bytes, title and planning date in `intake-selection.json`. A changed input uses another output directory.
+
+A stopped source import reuses the original collection. A stopped plan creation or original-review attachment reconciles the plan keyed to the same saved JSON. The receiver uses the native attachment API and verifies its original bytes; a later deliberately removed visible attachment link is preserved when its original committed history already retains the file. It never replaces the current plan with the incoming saved review. Unrelated plans may advance normally while this additive intake runs.
+
+Before rendering, `report-selection.json` freezes the actual plan revision, original document digest, planning date and installed native renderer sources. If the native report published its final manifest before interruption, the receiver verifies and retains that exact report instead of rendering again. An incomplete report is moved with its complete member inventory to an owned `incomplete-report-*` directory; the same frozen revision can then finish. If the renderer changed while that original report was incomplete, continue with its retained application edition. A completed report remains reusable after a source upgrade.
+
+The report and exported plan describe that frozen revision. Later native notes/tasks remain in the current plan and its saved history. Use another output directory to request a separately retained report of those later edits. Repeating a completed output returns the original receiving result and report identity. Original v1 output/report editions are accepted through their native manifest and saved revision checks.
+
+At the original producer's existing browser boundary, personally open and use the populated review desk at desktop and narrow width, save/reopen the selected review JSON, receive that same selection, edit the resulting native task, reopen the original report and download the full editable project. Inspect every outgoing attachment and its important controls, including the restored recipient view. This is the existing product course under `CURRENT_OWNER_DIRECTION.md` v2026-10-13.3, with the 14:00 UTC handover deadline.
+
 ## Maintained application adoption
 
 The original eight-file source delivery is retained unchanged in
@@ -88,12 +101,11 @@ then open its retained source view and original Implementation plan. That
 completed plan is already revision 2; source adoption alone does not receive it
 again or regenerate its reports.
 
-For a genuinely interrupted queue intake, rerun the original intake with a new
-output directory and the same exact saved review JSON. The existing plan and
-manual edits are retained. If the first process stopped between plan creation
-and attaching that JSON, the receiver completes only the missing original
-attachment and records the resulting revision. Repeating a complete attachment
-does not advance the plan. All other pre-existing plans retain their revisions.
+For an interrupted intake, continue the same exact command and output directory
+under the frozen original selection described above. A completed original report
+is verified and reused; a new output directory explicitly selects a separate
+report edition from later native edits. The original committed attachment history
+is authoritative, so deliberately removed visible links are not added back.
 
 ## Recipient use and current owner instructions
 

@@ -110,6 +110,8 @@ def _source(closure, choice, expected_source):
     observation_comparability_study_transfer.include_source(closure, collection_id, entry)
     from . import economic_comparison_study_transfer
     economic_comparison_study_transfer.include_source(closure, collection_id, entry)
+    from . import assessment_study_transfer
+    assessment_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],
