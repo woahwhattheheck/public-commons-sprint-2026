@@ -56,8 +56,25 @@ async function transaction(name,action,dispatch,artifact,lose=false){
     const accepted=await read(name+'-accepted.json');need(accepted&&response,'The original action has no accepted reply.');return accepted;
   }finally{await page.unroute('**/api/action');}
 }
+async function recoverOutstanding(){
+  if(await page.locator('#download-request').isDisabled())return;
+  const pendingPath=screenDir+'/original-pending-request.json';
+  await download(()=>page.locator('#download-request').click(),pendingPath);
+  const held=await read(pendingPath);
+  need(held?.format==='commons.audit-exchange.pending.v1'&&held.workspaceId===selection.workspaceId&&held.envelope,
+    'Preserve the original pending request; it belongs to another workspace or has incomplete custody.');
+  const names={'recipient.prepare':'prepare','recipient.stage':'stage','recipient.apply':'apply'},name=names[held.envelope.action];
+  need(name,'Preserve the unrelated original pending request before continuing this recipient course.');
+  const issued=await read(name+'-request.json');
+  need(issued&&same(issued,held.envelope),
+    'Preserve both originals: the browser pending body does not match this course\'s retained request.');
+  need(held.envelope.inputs?.actor===selection.operator,'The pending request belongs to a different original operator.');
+  const artifacts={prepare:'Audit_Recipient_Complete.zip',stage:'Audit_Recipient_Staged.zip',apply:'Audit_Recipient_Accepted.zip'};
+  await transaction(name,held.envelope.action,()=>{throw Error('An original pending request cannot be replaced.');},artifacts[name]);
+  need(await page.locator('#download-request').isDisabled(),'The original pending request was not reconciled.');
+}
 try{
- await connect();await shot('01-installed-exports');
+ await connect();await recoverOutstanding();await shot('01-installed-exports');
  // Actual current data exposes both the populated source selection and the empty return selection.
  await page.locator('#recipient-return').selectOption('');await shot('02-unselected-return');
  await page.locator('#recipient-author-export').selectOption(selection.originalExportId);
