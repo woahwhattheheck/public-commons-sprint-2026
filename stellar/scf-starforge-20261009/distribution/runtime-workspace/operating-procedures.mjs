@@ -12,6 +12,8 @@ import { inspectOperatingPlan, createOperatingPlan, createOperatingStep,
 import { inspectOperatingPlanReturn, createOperatingPlanReturn, compareOperatingPlanReturn,
   decideOperatingPlanReturn, applyOperatingPlanReturn,
   renderOperatingPlanReturnHTML } from '../discovery/operating-plan-return.mjs';
+import { checkedProcedureOutput, captureProcedureOutput, inspectProcedureOutputs, verifyProcedureOutputs, verifyProcedureRecordOutputs } from './output-procedure.mjs';
+import { renderOutputReviewHTML } from './public/output-review.mjs';
 
 export const RUNTIME_PROCEDURE_SCHEMA = 'stellar-forge.runtime-operating-procedure.v1';
 export const RUNTIME_CAPTURE_SCHEMA = 'stellar-forge.runtime-operating-capture.v1';
@@ -29,7 +31,7 @@ const stamp = value => need(typeof value==='string' && Number.isFinite(Date.pars
 const bounded = (value, maximum, code) => { const b=bytes(value); need(b.length<=maximum, code, 'Keep the complete original document; this selected document exceeds its native capacity.', 413); return b; };
 function checkedPlan(value) { bounded(value,PLAN_MAX,'RUNTIME_PROCEDURE_PLAN_CAPACITY'); return inspectOperatingPlan(value); }
 function selection(value={}) {
-  only(value,['runtimeIds','operationIds','archiveIds','backupOperationIds','storageDirectory']);
+  only(value,['runtimeIds','operationIds','archiveIds','backupOperationIds','storageDirectory','output']);
   const result={};
   for(const key of ['runtimeIds','operationIds','archiveIds','backupOperationIds']) {
     const values=value[key]??[]; need(Array.isArray(values),'RUNTIME_PROCEDURE_SELECTION');
@@ -37,6 +39,7 @@ function selection(value={}) {
     result[key]=values.map(check); need(new Set(result[key]).size===result[key].length,'RUNTIME_PROCEDURE_DUPLICATE_SELECTION');
   }
   if(value.storageDirectory!==undefined)result.storageDirectory=absolute(value.storageDirectory);
+  if(value.output!==undefined)result.output=checkedProcedureOutput(value.output);
   return result;
 }
 function checkedCapture(value) {
@@ -52,7 +55,7 @@ export function inspectRuntimeProcedure(input) {
   need(input.schema===RUNTIME_PROCEDURE_SCHEMA,'RUNTIME_PROCEDURE_SCHEMA');
   operationId(input.id); operationId(input.workspaceId); stamp(input.createdAt);
   need(Number.isSafeInteger(input.revision)&&input.revision>0,'RUNTIME_PROCEDURE_REVISION');
-  const plan=checkedPlan(input.plan); need(plan.id==='runtime-procedure-'+input.id,'RUNTIME_PROCEDURE_PLAN_IDENTITY');
+  const plan=checkedPlan(input.plan); inspectProcedureOutputs(plan); need(plan.id==='runtime-procedure-'+input.id,'RUNTIME_PROCEDURE_PLAN_IDENTITY');
   need(Array.isArray(input.captures)&&Array.isArray(input.returnReviews)&&Array.isArray(input.requests),'RUNTIME_PROCEDURE_COLLECTIONS');
   const captures=new Set(), files=new Map();
   for(const revision of plan.revisions)for(const step of revision.steps)for(const file of step.files??[]){
@@ -106,8 +109,9 @@ const HTML = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt
 function completeHTML(record) {
   const encoded=bytes(record).toString('base64'), summary=summarizeOperatingPlan(record.plan);
   const frames=record.plan.revisions.map(r=>'<section><h2>Saved plan revision '+r.revision+'</h2><iframe title="Plan revision '+r.revision+'" sandbox="allow-downloads" srcdoc="'+HTML(renderOperatingPlanHTML(record.plan,{revision:r.revision}))+'"></iframe></section>').join('');
+  const outputViews=inspectProcedureOutputs(record.plan).map(({captureId,output,file})=>'<section><h2>Complete output review '+HTML(captureId)+'</h2><iframe title="Retained original output review" sandbox="allow-scripts allow-downloads" srcdoc="'+HTML(renderOutputReviewHTML(output,file))+'"></iframe></section>').join('');
   const reviews=record.returnReviews.map(r=>'<section><h2>Returned work '+HTML(r.id)+'</h2><iframe title="Returned plan review" sandbox="allow-downloads" srcdoc="'+HTML(renderOperatingPlanReturnHTML(r))+'"></iframe></section>').join('');
-  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+HTML(summary.title)+'</title><style>body{font:16px system-ui;color:#202020;background:#fff;max-width:1100px;margin:2rem auto;padding:0 1rem}h1,h2{line-height:1.2}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:1rem}iframe{width:100%;height:48rem;border:1px solid #aaa}a{color:inherit}section{margin:2rem 0}</style><h1>'+HTML(summary.title)+'</h1><p>Complete Runtime operating procedure '+HTML(record.id)+' · saved record '+record.revision+'</p><p><a download="'+record.id+'.json" href="data:application/json;base64,'+encoded+'">Download complete editable procedure and history</a></p><p>Captured source is the actual original Runtime response or saved backup record at the stated observation time. Continue runtime lifecycle work through its original controls.</p>'+frames+reviews+'<details><summary>Complete source captures and request history</summary><pre>'+HTML(json({captures:record.captures,requests:record.requests}))+'</pre></details></html>\n';
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+HTML(summary.title)+'</title><style>body{font:16px system-ui;color:#202020;background:#fff;max-width:1100px;margin:2rem auto;padding:0 1rem}h1,h2{line-height:1.2}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:1rem}iframe{width:100%;height:48rem;border:1px solid #aaa}a{color:inherit}section{margin:2rem 0}</style><h1>'+HTML(summary.title)+'</h1><p>Complete Runtime operating procedure '+HTML(record.id)+' · saved record '+record.revision+'</p><p><a download="'+record.id+'.json" href="data:application/json;base64,'+encoded+'">Download complete editable procedure and history</a></p><p>Captured source is the actual original Runtime response or saved backup record at the stated observation time. Continue runtime lifecycle work through its original controls.</p>'+frames+outputViews+reviews+'<details><summary>Complete source captures and request history</summary><pre>'+HTML(json({captures:record.captures,requests:record.requests}))+'</pre></details></html>\n';
 }
 /** Passive backup inspection: never initialize a store, launch a worker or probe a lease. */
 async function savedBackups(root,options={}) {
@@ -132,7 +136,7 @@ async function savedBackups(root,options={}) {
 export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
   absolute(root);operationId(workspaceId);
   const home=join(root,'operating-procedures'), path=id=>join(home,operationId(id)+'.json');
-  async function read(id,optional=false){try{await privateDirectory(home);}catch(error){if(optional&&error.code==='ENOENT')return null;throw error;}const value=await readComplete(path(id),optional);return value?inspectRuntimeProcedure(value):null;}
+  async function read(id,optional=false){try{await privateDirectory(home);}catch(error){if(optional&&error.code==='ENOENT')return null;throw error;}const value=await readComplete(path(id),optional);if(!value)return null;const checked=inspectRuntimeProcedure(value);await verifyProcedureRecordOutputs(checked);return checked;}
   async function mutate(action,input,keys,callback,{create=false}={}) {
     only(input,['requestId',...(create?[]:['procedureId','expectedSha256']),...keys]);
     const requestId=operationId(input.requestId),id=create?requestId:operationId(input.procedureId);
@@ -153,6 +157,7 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
         next.revision=(current?.revision??0)+1;
         next.requests.push({requestId,inputSha256,at,action,revision:next.revision});
         const checked=inspectRuntimeProcedure(next);
+        await verifyProcedureRecordOutputs(checked);
         await saveJSON(path(id),checked,Boolean(current));return view(checked);
       }finally{await lock.close();}
     });
@@ -172,15 +177,16 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
       const current=await savedBackups(root,selected);
       backups={...current,operations:selected.backupOperationIds.map(id=>{const item=current.operations.find(o=>o.operationId===id);need(item,'RUNTIME_PROCEDURE_BACKUP_MISSING');return item;})};
     }
+    const retainedOutput=selected.output?await captureProcedureOutput(model,workspaceId,id,selected.output):null;
     const content={schema:RUNTIME_CAPTURE_SCHEMA,id,workspaceId,directory:root,startedAt,capturedAt:now(),selection:selected,
       scope:'Complete selected original Runtime views and saved backup records read during this capture interval. Captures do not execute lifecycle work. Full native archive bytes remain at their original named archive identity and download controls.',
-      runtimes,operations,archives,backups};
+      runtimes,operations,archives,backups,...(retainedOutput?{output:retainedOutput.output}:{})};
     const raw=bytes(content),file=createOperatingFile({id:'runtime-capture-'+id,name:'Runtime-source-'+id+'.json',mediaType:'application/json',bytes:raw,note:content.scope});
-    return {file,meta:{id,stepId:'',fileId:file.id,capturedAt:content.capturedAt,sha256:hash(raw),bytes:raw.length,selection:selected}};
+    return {file,files:[file,...(retainedOutput?[retainedOutput.file]:[])],meta:{id,stepId:'',fileId:file.id,capturedAt:content.capturedAt,sha256:hash(raw),bytes:raw.length,selection:selected}};
   }
   function appendCapture(record,stepId,captured,draft) {
     captured.meta.stepId=stepId;record.captures.push(captured.meta);
-    return addOperatingFile(draft,stepId,captured.file);
+    let next=draft;for(const file of captured.files)next=addOperatingFile(next,stepId,file);return next;
   }
   function reviewIndex(record,id){const i=record.returnReviews.findIndex(r=>r.id===id);need(i>=0,'RUNTIME_PROCEDURE_RETURN_MISSING');return i;}
   return {
@@ -200,7 +206,7 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
       return mutate('create',input,['title','customer','owner','period','purpose','selection'],async(_,at)=>{
         const captured=await capture(input.requestId,input.selection);
         const stepId='review-retained-source';
-        const first=createOperatingStep({id:stepId,title:'Review retained Runtime source',instruction:'Read the complete selected runtime, operation, archive and backup records. Record the chosen operating scope and unresolved observations.',expectedResult:'An attributed operating decision tied to the complete captured source.',owner:input.owner??'',files:[captured.file]});
+        const first=createOperatingStep({id:stepId,title:'Review retained Runtime source',instruction:'Read the complete selected runtime, operation, archive and backup records. Record the chosen operating scope and unresolved observations.',expectedResult:'An attributed operating decision tied to the complete captured source.',owner:input.owner??'',files:captured.files});
         const steps=[first,
           createOperatingStep({id:'perform-runtime-work',title:'Perform approved Runtime work',instruction:'Use the original Runtime application, installation, backup or receiving controls for the selected work. Record actual outcomes and capture the resulting native operation records.',expectedResult:'Saved native outcomes and an attributed result.',owner:input.owner??''}),
           createOperatingStep({id:'review-receiving',title:'Review received and reopened work',instruction:'Reopen the selected native output through its original receiving workflow. Capture the saved receiving operation and record what the receiving operator observed.',expectedResult:'A retained receiving result with the exact native source identity.',owner:input.owner??''}),
@@ -226,7 +232,8 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
     },
     async runtimeProcedureReturn(input) {
       return mutate('return',input,['incoming','reviewer','notes'],async(record,at)=>{
-        const review=createOperatingPlanReturn(record.plan,checkedPlan(input.incoming),{id:input.requestId,reviewer:input.reviewer??'',notes:input.notes??'',createdAt:at});
+        const receivedPlan=checkedPlan(input.incoming);await verifyProcedureOutputs(receivedPlan);
+        const review=createOperatingPlanReturn(record.plan,receivedPlan,{id:input.requestId,reviewer:input.reviewer??'',notes:input.notes??'',createdAt:at});
         record.returnReviews.push(review);return record;
       });
     },
@@ -252,7 +259,7 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
     },
     async runtimeProcedureReceive(input) {
       only(input,['requestId','document']);operationId(input.requestId);
-      const incoming=inspectRuntimeProcedure(input.document);
+      const incoming=inspectRuntimeProcedure(input.document);await verifyProcedureRecordOutputs(incoming);
       return withWorkspaceWrite(root,async()=>{
         const config=await readJSON(join(root,'workspace.json'));need(config?.workspaceId===workspaceId,'RUNTIME_PROCEDURE_WORKSPACE_CHANGED');
         await ensureDirectory(home);const lock=await operationLease(join(home,incoming.id+'.lock'));
@@ -264,13 +271,23 @@ export function createRuntimeProceduresAPI(root,workspaceId,getModel) {
           need(!incoming.requests.some(r=>r.requestId===input.requestId),'RUNTIME_PROCEDURE_REQUEST_REUSED');
           const received=clone(incoming);received.revision++;
           received.requests.push({requestId:input.requestId,inputSha256,at:now(),action:'receive',revision:received.revision});
-          const checked=inspectRuntimeProcedure(received);
+          const checked=inspectRuntimeProcedure(received);await verifyProcedureRecordOutputs(checked);
           await saveJSON(path(incoming.id),checked,Boolean(current));return view(checked,Boolean(current));
         }finally{await lock.close();}
       });
     },
     async runtimeProcedureExport(input) {
-      only(input,['procedureId','format','reviewId']);const record=await read(input.procedureId);
+      only(input,['procedureId','format','reviewId','captureId']);const record=await read(input.procedureId);
+      if(input.format==='output-json'||input.format==='output-html'||input.format==='output-index'){
+        need(input.reviewId===undefined,'PROCEDURE_OUTPUT_EXPORT_SELECTION');
+        const item=inspectProcedureOutputs(record.plan).find(value=>value.captureId===input.captureId);need(item,'PROCEDURE_OUTPUT_CAPTURE_MISSING');
+        const {output,file}=item;let content,filename,mediaType;
+        if(input.format==='output-html'){content=renderOutputReviewHTML(output,file);filename=file.name+'.review.html';mediaType='text/html; charset=utf-8';}
+        else if(input.format==='output-json'){content=json({schema:'stellar-forge.runtime-output-handover.v1',captureId:item.captureId,output,file});filename=file.name+'.review.json';mediaType='application/json';}
+        else {const {matches,...review}=output.review;content=JSON.stringify({schema:'stellar-forge.runtime-output-review-export.v1',type:'selection',...output,review})+'\n'+matches.map(row=>JSON.stringify({type:'match',offset:row[0],endOffset:row[1],contextOffset:row[2],contextEndOffset:row[3]})+'\n').join('')+JSON.stringify({type:'complete',matches:matches.length,endOffset:review.endOffset,complete:true})+'\n';filename=file.name+'.matches.jsonl';mediaType='application/x-ndjson';}
+        return {filename,mediaType,content,sha256:hash(content),bytes:Buffer.byteLength(content)};
+      }
+      need(input.captureId===undefined,'PROCEDURE_OUTPUT_EXPORT_SELECTION');
       let content,mediaType='application/json',suffix='.json';
       if(input.format==='json')content=json(record);
       else if(input.format==='plan-json')content=json(record.plan);

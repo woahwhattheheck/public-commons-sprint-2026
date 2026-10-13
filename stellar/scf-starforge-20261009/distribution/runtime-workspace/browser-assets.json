@@ -344,6 +344,20 @@
         "application-input-set-archive-format.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/output-review.mjs",
+      [
+        "output-review.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/output-review.css",
+      [
+        "output-review.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }

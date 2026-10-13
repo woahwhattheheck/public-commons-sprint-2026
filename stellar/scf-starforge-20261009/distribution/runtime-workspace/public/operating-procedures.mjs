@@ -2,6 +2,7 @@
 import { operatingPlanDraft, operatingPlanRevision, inspectOperatingPlan, saveOperatingPlanRevision, createOperatingStep,
   createOperatingFile, operatingFileBytes, OPERATING_FILE_MAX_BYTES } from './operating-plan.mjs';
 import { compareOperatingPlanReturn } from './operating-plan-return.mjs';
+import { mountOutputReview } from './output-review.mjs';
 const BASE = '/api/runtime-procedures', LIMIT = 256 * 1024 * 1024, BODY_LIMIT = 257 * 1024 * 1024;
 const clone = value => structuredClone(value);
 const el = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
@@ -48,8 +49,13 @@ async function readSelectedFile(file) {
 }
 export function createOperatingProceduresView({ root, api, getState, getToken, getView, message, error,
   openLog, chooseRuntime, switchView, openApplication }) {
+  if(!document.getElementById('runtime-output-review-style')){
+    const style=el('link');style.id='runtime-output-review-style';style.rel='stylesheet';style.href=new URL('./output-review.css',import.meta.url).href;document.head.append(style);
+  }
   let state = null, selectedId = null, loaded = null, draft = null, dirty = false, busy = null, loading = false;
   let epoch = 0, selectedStep = null, request = null, requestVersion = 0, incoming = null, pendingDraft = null, draftQueue = Promise.resolve();
+  let outputChoiceVersion = 0, outputChoiceQueue = Promise.resolve();
+  function queueOutputChoice(write){const next=outputChoiceQueue.catch(()=>{}).then(write);outputChoiceQueue=next;return next;}
   let editorVersion = 0, renderedEditor = null, renderedRecord = null, sourceSignature = null, selection = emptySelection();
   const temporarilyDisabled = new WeakMap();
   const draftSession = (() => { const key = 'starforge-runtime-procedure-editor-session';
@@ -81,7 +87,7 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
     '<p id="rp-context" class="note"></p><button id="rp-request-history" type="button">Open retained browser requests</button><div id="rp-request-history-list" hidden></div><div id="rp-request" class="panel" hidden></div>' +
     '<div class="columns"><section class="panel"><h3>Saved procedures</h3><div id="rp-list"></div></section>' +
     '<section class="panel"><h3>New procedure</h3><form id="rp-create"><label>Title<input name="title" required></label><label>Customer or team<input name="customer"></label><label>Owner<input name="owner" required></label><label>Recurrence or trigger<input name="period"></label><label>Useful result<textarea name="purpose" rows="3"></textarea></label><button type="submit">Create procedure with selected source</button></form></section></div>' +
-    '<section class="panel"><h3>Selected Runtime source</h3><p class="note">Select complete saved records for creation or the next observation. Large archives keep their original digest and native download reference.</p><div id="rp-sources"></div><label>Backup storage directory (optional)<input id="rp-storage" autocomplete="off" placeholder="/absolute/private/workspace.backups"></label></section>' +
+    '<section class="panel"><h3>Selected Runtime source</h3><p class="note">Select complete saved records for creation or the next observation. Large archives keep their original digest and native download reference.</p><div id="rp-sources"></div><div id="rp-output-choice"></div><button id="rp-output-history" type="button">Reopen retained output selections</button><div id="rp-output-history-list" hidden></div><label>Backup storage directory (optional)<input id="rp-storage" autocomplete="off" placeholder="/absolute/private/workspace.backups"></label></section>' +
     '<section class="panel"><h3>Receive an existing procedure</h3><form id="rp-receive"><label>Complete Runtime procedure JSON<input id="rp-receive-file" type="file" accept=".json,application/json" required></label><button type="submit">Inspect receiving file</button></form><div id="rp-incoming" hidden></div></section>' +
     '<section id="rp-selected" hidden><div class="section-title"><h3 id="rp-title"></h3><span id="rp-revision" class="status"></span></div><div id="rp-stale" class="panel" hidden></div>' +
     '<div class="actions"><button id="rp-json" type="button">Download complete procedure JSON</button><button id="rp-html" type="button">Download readable HTML</button><button id="rp-plan" type="button">Download original Operating Plan</button><button id="rp-plan-html" type="button">Download plan HTML</button><button id="rp-draft-download" type="button">Download current draft</button></div>' +
@@ -147,8 +153,8 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
       });
     } finally { db.close(); }
   }
-  async function requestHistory() {
-    const prefix = key('request:'), db = await openStorage();
+  async function requestHistory(suffix='request:') {
+    const prefix = key(suffix), db = await openStorage();
     try {
       return await new Promise((resolve, reject) => {
         const tx = db.transaction('entries', 'readonly'), store = tx.objectStore('entries'), values = [];
@@ -255,6 +261,62 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
     }
     if (source.error || source.unavailable) target.append(detail('Source availability', source));
   }
+  function renderOutputChoice() {
+    const target=$('output-choice');target.replaceChildren();
+    const output=selection.output;
+    if(!output){target.append(el('p','Use “Use in operating procedure” in an original output search to carry its complete selected bytes and every match.','note'));return;}
+    target.append(el('h4','Output selected for the next capture'),
+      el('p',output.kind+' · '+JSON.stringify(output.input)+' · exact query '+JSON.stringify(output.query)),
+      el('p','Saving a named observation reads the entire retained selection through its original output reader. File replacement, truncation or capacity refusal preserves the original request.','note'),
+      detail('Exact fixed-end output selection',output),
+      button('Download selected output request',()=>saveDownload(json(output),'runtime-output-selection.json')),
+      button('Remove from next capture',()=>run(async current=>{
+        const version=++outputChoiceVersion;
+        const pointerKey=key('output-selection-active:'+draftSession);
+        await queueOutputChoice(async()=>{
+          if(!current()||version!==outputChoiceVersion)return;
+          await savedValue(pointerKey,null,true);
+          if(!current()||version!==outputChoiceVersion)return;
+          delete selection.output;renderOutputChoice();
+        });
+      })));
+  }
+  async function selectOutput(output) {
+    if(busy)throw new Error('Finish or retain the current procedure action before selecting another output.');
+    const own=identity(),originalScope=scope(),current=()=>originalScope()&&getState()?.workspaceId===own,version=++outputChoiceVersion;
+    if(!own||getState()?.workspaceId!==own)throw new Error('Open the original Runtime workspace first.');
+    if(!output||!['application','runtime'].includes(output.kind)||typeof output.selection!=='string'||
+      typeof output.query!=='string')throw new Error('Select an original fixed-end output search.');
+    const retained={id:crypto.randomUUID(),workspaceId:own,output:clone(output),at:new Date().toISOString()};
+    const historyKey=key('output-selection:'+draftSession+':'+retained.id,own),pointerKey=key('output-selection-active:'+draftSession,own);
+    return queueOutputChoice(async()=>{
+      await savedValue(historyKey,retained,true);
+      if(!current()||version!==outputChoiceVersion)return false;
+      await savedValue(pointerKey,retained,true);
+      if(!current()||version!==outputChoiceVersion)return false;
+      selection.output=clone(retained.output);renderOutputChoice();controls();return true;
+    });
+  }
+  function renderOutputReviews() {
+    const target=$('captures');target.replaceChildren();
+    const files=new Map();
+    for(const revision of loaded.record.plan.revisions)for(const step of revision.steps)for(const file of step.files??[])
+      if(!files.has(file.id))files.set(file.id,file);
+    for(const capture of loaded.record.captures??[]){
+      target.append(detail('Capture '+capture.id+' · '+capture.capturedAt,capture));
+      const file=files.get(capture.fileId);if(!file)continue;
+      const body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(operatingFileBytes(file)));
+      if(!body.output)continue;
+      const original=files.get(body.output.fileId);
+      if(!original)throw new Error('The capture is missing its complete original output.');
+      const pane=el('details');pane.append(el('summary','Read complete retained output · '+body.output.filename+
+        ' · '+body.output.review.matches.length+' matches'));target.append(pane);
+      let mounted=false;
+      pane.addEventListener('toggle',()=>{
+        if(pane.open&&!mounted){mountOutputReview(pane,body.output,original);mounted=true;}
+      });
+    }
+  }
   function renderList() {
     const target = $('list'); target.replaceChildren();
     if (!state?.procedures?.length) { target.append(el('p', 'No saved procedures in this workspace.', 'empty')); return; }
@@ -321,7 +383,7 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
     }
   }
   function render() {
-    renderList(); renderSources(); renderRequest();
+    renderList(); renderSources(); renderRequest(); renderOutputChoice();
     $('context').textContent = state ? 'Original Runtime workspace: ' + state.workspaceId : 'Open the original Runtime workspace.';
     $('selected').hidden = !loaded;
     if (!loaded) { controls(); return; }
@@ -349,7 +411,7 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
     const previousStep = selectedStep ?? $('step').value, steps = operatingPlanRevision(loaded.record.plan).steps;
     $('step').replaceChildren(new Option('Choose a saved step', ''), ...steps.map(step => new Option(step.title || step.id, step.id)));
     $('step').value = steps.some(step => step.id === previousStep) ? previousStep : '';
-    $('captures').replaceChildren(...(loaded.record.captures ?? []).map(capture => detail('Capture ' + capture.id + ' · ' + capture.capturedAt, capture)));
+    if(renderedRecord!==loaded.recordSha256)renderOutputReviews();
     if (renderedRecord !== loaded.recordSha256) {
       renderReturns(); $('full').textContent = $('full-details').open ? json(loaded.record) : ''; renderedRecord = loaded.recordSha256;
     }
@@ -357,7 +419,7 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
   }
   async function refresh({ keepSelection = false } = {}) {
     if ((loading && !keepSelection) || (busy && !keepSelection)) return;
-    const ticket = {}, version = requestVersion, current = scope(); loading = ticket;
+    const ticket = {}, version = requestVersion, outputVersion=outputChoiceVersion, current = scope(); loading = ticket;
     try {
       const storageDirectory = $('storage').value.trim();
       const result = await api(BASE + (storageDirectory ? '?storageDirectory=' + encodeURIComponent(storageDirectory) : ''));
@@ -365,6 +427,12 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
       if (state && result.workspaceId !== state.workspaceId) { reset(); throw new Error('The Runtime workspace changed; reopen its procedure selection.'); }
       const retained = await pendingRequest(result.workspaceId);
       if (loading !== ticket || !current() || requestVersion !== version || $('storage').value.trim() !== storageDirectory) return;
+      const outputChoice=await savedValue(key('output-selection-active:'+draftSession,result.workspaceId));
+      if(loading!==ticket||!current()||requestVersion!==version)return;
+      if(outputVersion===outputChoiceVersion){
+        if(outputChoice?.workspaceId===result.workspaceId)selection.output=clone(outputChoice.output);
+        else delete selection.output;
+      }
       state = result; selectRequest(retained ?? null);
       render();
     } finally { if (loading === ticket) loading = false; }
@@ -383,6 +451,14 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
         await retainRequest(retained); if (!active()) return; renderRequest();
       })));
     if (!values.length) target.append(el('p', 'No retained requests in this browser for this workspace.'));
+  }));
+  $('output-history').addEventListener('click',()=>run(async current=>{
+    const values=await requestHistory('output-selection:'+draftSession+':');if(!current())return;
+    const target=$('output-history-list');target.hidden=false;target.replaceChildren();
+    for(const value of values)target.append(el('p',value.at+' · '+value.output.kind+' · '+JSON.stringify(value.output.query)),
+      button('Download exact source selection',()=>saveDownload(json(value),'runtime-output-selection-'+value.id+'.json')),
+      button('Use this retained output selection',()=>{selectOutput(value.output).catch(error);}));
+    if(!values.length)target.append(el('p','No output selections retained in this procedure window.'));
   }));
   $('storage').addEventListener('change', () => {
     selection.backupOperationIds = []; sourceSignature = null; refresh().catch(error);
@@ -455,14 +531,15 @@ export function createOperatingProceduresView({ root, api, getState, getToken, g
     if (draft) saveDownload(json({ procedureId: selectedId, expectedSha256: loaded.recordSha256, draft }), 'runtime-procedure-draft.json');
   });
   function reset() {
-    epoch++; state = null; selectedId = null; loaded = null; draft = null; dirty = false; busy = null;
+    epoch++; outputChoiceVersion++; state = null; selectedId = null; loaded = null; draft = null; dirty = false; busy = null;
     loading = false; selectRequest(null); pendingDraft = null; incoming = null; selectedStep = null; renderedRecord = null;
     selection = emptySelection(); sourceSignature = null; editorVersion++; renderedEditor = null;
     $('incoming').replaceChildren(); $('incoming').hidden = true; $('storage').value = '';
+    $('output-history-list').replaceChildren();$('output-history-list').hidden=true;
     $('request-history-list').replaceChildren(); $('request-history-list').hidden = true;
     $('receive-file').value = ''; $('return').reset(); render();
   }
-  return { refresh, reset, choose };
+  return { refresh, reset, choose, selectOutput };
 }
 
 

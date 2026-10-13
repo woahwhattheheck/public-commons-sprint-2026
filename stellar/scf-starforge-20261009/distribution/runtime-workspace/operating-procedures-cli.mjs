@@ -13,7 +13,7 @@ export const runtimeProcedureHelp = [
   '  runtime-workspace procedure-decide --workspace DIRECTORY --request COMPLETE_JSON',
   '  runtime-workspace procedure-apply --workspace DIRECTORY --request COMPLETE_JSON',
   '  runtime-workspace procedure-receive --workspace DIRECTORY --request COMPLETE_JSON',
-  '  runtime-workspace procedure-export --workspace DIRECTORY --procedure-id UUID --format json|html|plan-json|plan-html [--review-id UUID --output NEW_FILE]',
+  '  runtime-workspace procedure-export --workspace DIRECTORY --procedure-id UUID --format json|html|plan-json|plan-html|output-json|output-html|output-index [--capture-id UUID --review-id UUID --output NEW_FILE]',
 ].join('\n');
 const methods = {create:'runtimeProcedureCreate',save:'runtimeProcedureSave',record:'runtimeProcedureRecord',
   return:'runtimeProcedureReturn',decide:'runtimeProcedureDecide',apply:'runtimeProcedureApply',receive:'runtimeProcedureReceive'};
@@ -21,7 +21,7 @@ export const runtimeProcedureCommands = {
   'procedure-state':['--workspace','--storage-directory'],
   'procedure-open':['--workspace','--procedure-id'],
   ...Object.fromEntries(Object.keys(methods).map(k=>['procedure-'+k,['--workspace','--request']])),
-  'procedure-export':['--workspace','--procedure-id','--format','--review-id','--output'],
+  'procedure-export':['--workspace','--procedure-id','--format','--review-id','--capture-id','--output'],
 };
 export async function runRuntimeProcedureCommand(model,command,options){
   need(Object.hasOwn(runtimeProcedureCommands,command),'RUNTIME_PROCEDURE_COMMAND');
@@ -34,7 +34,8 @@ export async function runRuntimeProcedureCommand(model,command,options){
   if(command==='procedure-export'){
     need(options['--procedure-id']&&options['--format'],'RUNTIME_PROCEDURE_EXPORT_SELECTION');
     const value=await model.runtimeProcedureExport({procedureId:options['--procedure-id'],format:options['--format'],
-      ...(options['--review-id']?{reviewId:options['--review-id']}:{})});
+      ...(options['--review-id']?{reviewId:options['--review-id']}:{}),
+      ...(options['--capture-id']?{captureId:options['--capture-id']}:{})});
     if(!options['--output'])return value;
     const output=resolve(options['--output']);await saveTextExport(output,value.content);
     return {output,filename:value.filename,mediaType:value.mediaType,sha256:value.sha256,bytes:value.bytes};
