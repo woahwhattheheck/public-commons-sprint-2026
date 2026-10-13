@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "2d8fe39c96ca83436896e439ca763f5d66097f54",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition.",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review and hydrologic-source dependencies in cumulative application assembly.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,8 +53,13 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 12124,
-      "sha256": "6bab6ac094b8940f143fd718c10e5fb384df60884f6a29b0b1b2d1d77c08d931"
+      "bytes": 12192,
+      "sha256": "8c3ec14a15512ab709237eaa752b42c3782c381413ecec092cb7573f0ee373bd"
+    },
+    {
+      "path": "integration/component_fragments/published-study-reviews.json",
+      "bytes": 2559,
+      "sha256": "17bd57faab6778befb5e27c5790ebed08f8bef0275085b190f4771923b432766"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
