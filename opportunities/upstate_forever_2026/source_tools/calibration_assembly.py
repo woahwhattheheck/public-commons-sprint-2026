@@ -39,7 +39,13 @@ REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
             "operator/web/extension_host.mjs", "install_extensions.py",
             "operator/web/calibration_design.mjs", "operator/CALIBRATION_DESIGN.md",
             "operator/calibration_design_patch.json", "operator/install_calibration_design.py",
-            "source/calibration-design/upper-savannah-reference-support.json")
+            "source/calibration-design/upper-savannah-reference-support.json",
+            "model/observed_report_render.py",
+            "operator/source_reports.py",
+            "operator/source_report_editions.py",
+            "operator/web/source_reports.mjs",
+            "operator/web/source_report_editions.mjs",
+            "operator/extensions/source-reports.json")
 
 
 def _tool(name, path):
@@ -196,7 +202,13 @@ def _extension_changes(assembly, installer, current, additions):
                              "model/observation_support.py", "model/observation_diagnostics.py",
                              "operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
                              "operator/extension_registry.py", "operator/web/extension_host.mjs",
-                             "install_extensions.py"}
+                             "install_extensions.py",
+                             "model/observed_report_render.py",
+                             "operator/source_reports.py",
+                             "operator/source_report_editions.py",
+                             "operator/web/source_reports.mjs",
+                             "operator/web/source_report_editions.mjs",
+                             "operator/extensions/source-reports.json"}
     owned.update((SELF_NAME, INSTALLER_NAME, "operator/CALIBRATION.md"))
     for layer in additions:
         for name, incoming in layer.files.items():

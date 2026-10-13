@@ -13,6 +13,10 @@ import tempfile
 
 FILES = [
     "model/chemistry.py",
+    "model/chemistry_reports.py",
+    "model/CHEMISTRY_REPORTS.md",
+    "model/reach_chemistry/reporting.py",
+    "integration/component_fragments/chemistry_reports.json",
     "model/chemistry_cli.py",
     "model/chemistry_receiving.py",
     "model/reach_chemistry/__init__.py",
@@ -62,6 +66,18 @@ PREVIOUS_NATIVE_SHA256 = {
 }
 
 
+REPORT_PREVIOUS_SHA256 = {
+    "model/chemistry.py": "ed38b793b2ddc2daa7adcfbd599b9b1b7365877fba52a1300fb2e16798cee999",
+    "model/reach_chemistry/io.py": "110bbd797349ffaa46b841e9f36ab87dc984642b2e69469ffc62449c41647cb0",
+    "model/chemistry_receiving.py": "d6056c3199ff5540d0dae1cf34124230772d435d5906ff0a519d1cba0626d6f1",
+    "operator/chemistry.py": "57fa5edc576aae87e22808667f2ded8a64a2dfbbeccc4622e116d73e92b097f4",
+    "operator/extensions/chemistry.json": "d03ccae5a2d15920f9bd7aef314d42952b0359bc57238b873db3300ba8ca712b",
+    "operator/web/chemistry.mjs": "2663db7f04ec625a8abb9503692c52f9fb4e7deecebcb7d3d62ab96113bed3a6",
+    "operator/install_chemistry.py": "d3de5d3f3e6ec6219faba50cafcb48281fbe0f70a0639d76ebffa08be471c2a8",
+    "operator/CHEMISTRY_OPERATOR.md": "31e678a1d4daa278b43410d04cbda4a40efbd7240e6ab3de52cf703fe48fc414",
+    "operator/web/chemistry-native.mjs": "9520e37557315888f6fe96b147e9731a018dc4e044ab7caa38bf81a8fb808440"
+}
+
 def install(application, source_root=None, dry_run=False):
     target = Path(application).resolve(strict=True)
     source = Path(source_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
@@ -85,7 +101,7 @@ def install(application, source_root=None, dry_run=False):
             current = destination.read_bytes() if destination.is_file() else None
             if (current is not None and current != body
                     and hashlib.sha256(current).hexdigest() not in
-                    {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name)}):
+                    {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name), REPORT_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         descriptor = json.loads(pending["operator/extensions/chemistry.json"])

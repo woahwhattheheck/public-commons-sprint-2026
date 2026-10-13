@@ -7,7 +7,7 @@ export const OPERATING_COMPARISON_SCHEMA = 'stellar-forge.operating-plan-compari
 export const STEP_STATES = Object.freeze(['planned', 'in-progress', 'completed', 'skipped']);
 const KINDS = ['command', 'source', 'feature', 'export', 'application', 'merchant'];
 const BODY_KEYS = ['title', 'customer', 'purpose', 'period', 'owner', 'receiving', 'notes', 'steps'];
-const STEP_KEYS = ['id', 'title', 'instruction', 'inputs', 'expectedResult', 'owner', 'due', 'status', 'recordedResult', 'argv', 'selection'];
+const STEP_KEYS = ['id', 'title', 'instruction', 'inputs', 'expectedResult', 'owner', 'due', 'status', 'recordedResult', 'argv', 'selection', 'files'];
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const copy = value => JSON.parse(JSON.stringify(value));
 const fail = (code, message) => { const error = new TypeError(message); error.code = code; throw error; };
@@ -69,6 +69,93 @@ function validateSelection(value) {
   'PLAN_RUNTIME_INVALID', 'Keep every declared runtime group with its original registration.');
   return value;
 }
+
+export const OPERATING_FILE_MAX_BYTES = 24 * 1024 * 1024;
+const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+/** Complete carried output. Legacy steps keep their original shape until files are attached. */
+export function inspectOperatingFile(value) {
+  only(value, ['id', 'name', 'mediaType', 'bytes', 'encoding', 'content', 'note'], 'Operating file');
+  identity(value.id, 'File ID'); text(value.name, 'File name', 255, true);
+  need(!/[\\/\x00-\x1f\x7f]/.test(value.name) && !['.', '..'].includes(value.name),
+    'PLAN_FILE_NAME_INVALID', 'Use a file name without path separators or control characters.');
+  text(value.mediaType, 'File media type', 255, true); text(value.note, 'File note');
+  need(Number.isSafeInteger(value.bytes) && value.bytes >= 0 && value.bytes <= OPERATING_FILE_MAX_BYTES,
+    'PLAN_FILE_SIZE_INVALID', 'A carried file must fit within 24 MiB; the complete saved plan must fit its receiving application.');
+  need(value.encoding === 'base64' && typeof value.content === 'string' &&
+    value.content.length === Math.ceil(value.bytes / 3) * 4 &&
+    !/[^A-Za-z0-9+/=]/.test(value.content),
+    'PLAN_FILE_CONTENT_INVALID', 'Keep the complete file bytes as canonical base64.');
+  const padding = value.content.endsWith('==') ? 2 : value.content.endsWith('=') ? 1 : 0;
+  need(!value.content.slice(0, value.content.length - padding).includes('=') &&
+    value.content.length / 4 * 3 - padding === value.bytes &&
+    (padding !== 2 || (BASE64.indexOf(value.content.at(-3)) & 15) === 0) &&
+    (padding !== 1 || (BASE64.indexOf(value.content.at(-2)) & 3) === 0),
+    'PLAN_FILE_CONTENT_INVALID', 'The file length or base64 padding does not match its complete contents.');
+  return copy(value);
+}
+export function createOperatingFile({ id, name, mediaType = 'application/octet-stream', bytes, note = '' }) {
+  need(bytes instanceof Uint8Array && bytes.length <= OPERATING_FILE_MAX_BYTES,
+    'PLAN_FILE_BYTES_REQUIRED', 'Read the complete output as bytes within 24 MiB.');
+  const chunks = []; let chunk = '';
+  for (let index = 0; index < bytes.length; index += 3) {
+    const value = (bytes[index] << 16) | ((bytes[index + 1] ?? 0) << 8) | (bytes[index + 2] ?? 0);
+    chunk += BASE64[value >>> 18] + BASE64[(value >>> 12) & 63] +
+      (index + 1 < bytes.length ? BASE64[(value >>> 6) & 63] : '=') +
+      (index + 2 < bytes.length ? BASE64[value & 63] : '=');
+    if (chunk.length >= 16384) { chunks.push(chunk); chunk = ''; }
+  }
+  chunks.push(chunk);
+  return inspectOperatingFile({ id, name, mediaType: mediaType || 'application/octet-stream',
+    bytes: bytes.length, encoding: 'base64', content: chunks.join(''), note });
+}
+export function operatingFileBytes(value) {
+  const file = inspectOperatingFile(value), bytes = new Uint8Array(file.bytes);
+  for (let position = 0, output = 0; position < file.content.length; position += 4) {
+    const a = BASE64.indexOf(file.content[position]), b = BASE64.indexOf(file.content[position + 1]);
+    const c = BASE64.indexOf(file.content[position + 2]), d = BASE64.indexOf(file.content[position + 3]);
+    bytes[output++] = (a << 2) | (b >> 4);
+    if (output < bytes.length) bytes[output++] = ((b & 15) << 4) | (Math.max(c, 0) >> 2);
+    if (output < bytes.length) bytes[output++] = ((Math.max(c, 0) & 3) << 6) | Math.max(d, 0);
+  }
+  return bytes;
+}
+export function operatingFileSummary(value) {
+  const { content, ...summary } = inspectOperatingFile(value);
+  return summary;
+}
+export function addOperatingFile(draft, stepId, file) {
+  const next = copy(draft); validateBody(next.content);
+  const step = next.content.steps.find(item => item.id === stepId);
+  need(step, 'PLAN_STEP_MISSING', 'Open the intended operating step before adding its output.');
+  const added = inspectOperatingFile(file);
+  need(!(step.files ?? []).some(item => item.id === added.id),
+    'PLAN_FILE_ID_EXISTS', 'This step already contains that file ID.');
+  step.files = [...(step.files ?? []), added]; validateBody(next.content); return next;
+}
+export function removeOperatingFile(draft, stepId, fileId) {
+  const next = copy(draft); validateBody(next.content);
+  const step = next.content.steps.find(item => item.id === stepId);
+  need(step?.files?.some(item => item.id === fileId), 'PLAN_FILE_MISSING', 'The selected step file is unavailable.');
+  step.files = step.files.filter(item => item.id !== fileId);
+  if (!step.files.length) delete step.files;
+  return next;
+}
+/** Complete file differences, including content, notes and order, without copying encoded bodies into the index. */
+export function compareOperatingFiles(previous = [], returned = []) {
+  previous.forEach(inspectOperatingFile); returned.forEach(inspectOperatingFile);
+  return {
+    orderChanged: !equal(previous.map(file => file.id), returned.map(file => file.id)),
+    previous: previous.map(operatingFileSummary), returned: returned.map(operatingFileSummary),
+    added: returned.filter(file => !previous.some(old => old.id === file.id)).map(operatingFileSummary),
+    removed: previous.filter(file => !returned.some(next => next.id === file.id)).map(operatingFileSummary),
+    changed: returned.filter(file => previous.some(old => old.id === file.id && !equal(old, file))).map(file => ({
+      id: file.id, previous: operatingFileSummary(previous.find(old => old.id === file.id)),
+      returned: operatingFileSummary(file),
+      contentChanged: previous.find(old => old.id === file.id).content !== file.content,
+    })),
+  };
+}
+
 function validateStep(value) {
   only(value, STEP_KEYS, 'Operating step');
   identity(value.id, 'Step ID'); text(value.title, 'Step title', 300, true);
@@ -79,6 +166,11 @@ function validateStep(value) {
     value.argv.every(arg => typeof arg === 'string' && arg.length <= 32000 && !arg.includes('\u0000')),
   'PLAN_ARGUMENTS_INVALID', 'Command arguments must be a JSON array of text values.');
   if (value.selection !== null) validateSelection(value.selection);
+  if (value.files !== undefined) {
+    need(Array.isArray(value.files) && value.files.length <= 1000, 'PLAN_FILES_INVALID', 'Keep at most 1,000 complete files per operating step.');
+    value.files.forEach(inspectOperatingFile);
+    need(new Set(value.files.map(file => file.id)).size === value.files.length, 'PLAN_FILE_ID_EXISTS', 'Each carried file needs its own step-local ID.');
+  }
   return value;
 }
 function validateBody(value) {
@@ -154,11 +246,11 @@ export function snapshotRegistration(value, itemId) {
     runtimeGroups: selected.items.filter(group => group.kind === 'feature' && item.featureIds.includes(group.name)) }));
 }
 export function createOperatingStep({ id, title, selection = null, instruction = '', inputs = '',
-  expectedResult = '', owner = '', due = '', status = 'planned', recordedResult = '', argv } = {}) {
+  expectedResult = '', owner = '', due = '', status = 'planned', recordedResult = '', argv, files } = {}) {
   if (selection !== null) validateSelection(selection);
   return copy(validateStep({ id, title: title ?? selection?.item?.name ?? 'Operating step',
     instruction, inputs, expectedResult, owner, due, status, recordedResult,
-    argv: argv ?? selection?.item?.helpArgv ?? [], selection: copy(selection) }));
+    argv: argv ?? selection?.item?.helpArgv ?? [], selection: copy(selection), ...(files === undefined ? {} : { files: copy(files) }) }));
 }
 export function addOperatingStep(draft, step, beforeId = null) {
   const next = copy(draft); validateBody(next.content); validateStep(step);
@@ -255,6 +347,11 @@ export function renderOperatingPlanMarkdown(plan, { revision } = {}) {
     if (step.due) lines.push('Due: ' + step.due, '');
     for (const [key, label] of [['instruction', 'Work'], ['inputs', 'Inputs'], ['expectedResult', 'Expected result'],
       ['recordedResult', 'Recorded result']]) if (step[key]) lines.push('**' + label + '**', '', step[key], '');
+    if (step.files?.length) {
+      lines.push('**Complete output files**', '', 'The complete editable JSON and HTML handover retain these original file bytes.', '');
+      for (const file of step.files) lines.push('- ' + md(file.name) + ' · ' + file.bytes + ' bytes · ' +
+        md(file.mediaType) + ' · file ' + md(file.id) + (file.note ? ' · ' + md(file.note) : ''), '');
+    }
     if (step.argv.length) lines.push('**Selected command arguments**', '', fenced(operatingStepCommand(step), 'sh'), '');
     if (step.selection) lines.push('**Retained registration and declared runtime**', '',
       fenced(JSON.stringify(step.selection, null, 2), 'json'), '');
@@ -276,6 +373,10 @@ export function renderOperatingPlanHTML(plan, { revision } = {}) {
     (step.due ? '<dt>Due</dt><dd>' + html(step.due) + '</dd>' : '') + '</dl>' +
     [['instruction', 'Work'], ['inputs', 'Inputs'], ['expectedResult', 'Expected result'], ['recordedResult', 'Recorded result']]
       .map(([key, label]) => step[key] ? '<h3>' + label + '</h3><p class="text">' + html(step[key]) + '</p>' : '').join('') +
+    (step.files?.length ? '<h3>Complete output files</h3><ul>' + step.files.map(file =>
+      '<li><a download="' + html(file.name) + '" href="data:application/octet-stream;base64,' + file.content + '">' +
+      html(file.name) + '</a> · ' + file.bytes + ' bytes · ' + html(file.mediaType) +
+      (file.note ? '<p class="text">' + html(file.note) + '</p>' : '') + '</li>').join('') + '</ul>' : '') +
     (step.argv.length ? '<h3>Selected command arguments</h3><pre>' + html(operatingStepCommand(step)) + '</pre>' : '') +
     (step.selection ? '<details><summary>Retained registration and declared runtime</summary><pre>' +
       html(JSON.stringify(step.selection, null, 2)) + '</pre></details>' : '') + '</article>').join('');

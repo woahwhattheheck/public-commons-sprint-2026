@@ -19,8 +19,9 @@ export const extendSamplingFiles = function extendSamplingFiles(input, digest){
  for(const e of sources.entries){verify(e);for(const d of e.companions||[])verify(d);}
  for(const d of recipe.inputs||[])verify(d);
  if(digest(files["acquisition-plan.json"]).sha256!==manifest.plan_sha256)throw Error("Original acquisition plan differs");
- const study=deriveStudy(files,manifest),review=buildSamplingReview(study);
+ const study=deriveStudy(files,manifest);
  const originalIdentity=study.records.map(r=>[r.record_id,r.result_id,r.activity_id,JSON.stringify(r.interval)]);
+ const review=buildSamplingReview(study);
  const reviewIDs=review.compatible_measurement_cohorts.cohorts.flatMap(c=>c.activity_rows.flatMap(a=>a.member_ids.map(m=>m.record_id)));
  if(reviewIDs.length!==study.records.length||new Set(reviewIDs).size!==study.records.length)throw Error("Review changed original result membership");
  if(JSON.stringify(originalIdentity)!==JSON.stringify(study.records.map(r=>[r.record_id,r.result_id,r.activity_id,JSON.stringify(r.interval)])))throw Error("Original result mutated");

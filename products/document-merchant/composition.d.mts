@@ -1,3 +1,4 @@
+import type {DocumentCorrectionLineage} from './corrections.mjs';
 import type {DocumentProviderId,DocumentFormat,JsonValue} from './index.mjs';
 import type {
   DocumentBatchInput,DocumentBatchProgress,SavedDocumentBatch,DocumentBatchExport
@@ -37,6 +38,8 @@ export interface DocumentCompositionRequest {
   bindings?:Record<string,string>;
   templates:DocumentCompositionTemplateInput[];
   maxGeneratedBytes?:number;
+  /** Present only for an explicit selection derived from a saved composition. */
+  correction?:DocumentCorrectionLineage;
 }
 export interface NormalizedDocumentComposition extends Omit<DocumentCompositionRequest,
   'merchantOrigin'|'bindings'|'templates'|'maxGeneratedBytes'> {

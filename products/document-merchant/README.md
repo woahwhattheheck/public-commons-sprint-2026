@@ -120,3 +120,7 @@ The same `commission review` and `commission prepare` commands accept `--account
 The existing **Document merchant** Applications entry also accepts the complete commissioning options JSON. It prepares on first Start and owns the same original managed service/facilitator lifetime through Open, Stop and reopen. See [commissioning in Applications](APPLICATIONS.md#commission-the-existing-account-in-applications).
 
 Existing invoices and reports can enter through **Bundle existing PDFs** in Document production. The browser retains their full PDF bytes and chosen order, prepares the original assembly price, follows existing paid jobs and downloads all final volumes and sources in one complete bundle. The [assembly operating guide](ASSEMBLY.md#existing-pdf-intake-in-the-customer-browser) includes uploads, large local source plans, interruption recovery and installed API use.
+
+### Correct a saved customer document
+
+Document production can select individual invoices or reports from a saved set, edit their complete records and templates, and prepare a new source set containing only those replacements. An unchanged repeat preserves the selected rendered source. Both flows retain the original task reference and source relationship, then use the existing merchant quote, customer checkout, full PDF receiving and Collection export. See [Correct selected documents](COMPOSITION.md#correct-selected-documents-or-order-an-unchanged-repeat) for the browser and CLI workflow.

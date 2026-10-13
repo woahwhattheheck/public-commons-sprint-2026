@@ -1,11 +1,70 @@
 """Maintained standalone scientific report rendering and original Workspace receiving."""
 from __future__ import annotations
 
+import hashlib
+import os
 from pathlib import Path
-from .common import (atomic_bytes, atomic_json, describe_file, digest, held,
-                     read_json, relative_file, verify_file)
+import tempfile
+from .common import (atomic_json, describe_file, digest, held,
+                     file_digest, read_json, relative_file, verify_file)
 from . import portable, observed_context, scientific_report
 from .workspace import Workspace
+
+
+PRESENTATION_EDITION = "observed-report-presentation-20261013-v2"
+SUBTITLE = "Original observations, scientific context and retained source editions"
+FOOTER = "Original source records and selected scientific report editions"
+
+
+def _rendering_paths():
+    return {"model/observed_report_render.py": Path(__file__),
+               "model/scientific_report.py": Path(scientific_report.__file__),
+               "model/scientific_figures.py": Path(scientific_report.__file__).with_name("scientific_figures.py"),
+               "model/observed_context.py": Path(observed_context.__file__)}
+
+
+def _rendering_sources():
+    """Bind the installed rendering code for each newly reviewed report edition."""
+    return {name: {"bytes": path.stat().st_size, "sha256": file_digest(path)}
+            for name, path in sorted(_rendering_paths().items())}
+
+
+def _retain_original(source, target, descriptor):
+    """Publish an original companion in bounded chunks without replacing it."""
+    source, target = Path(source), Path(target)
+    expected = {**descriptor, "path": target.name}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        verify_file(target.parent, expected)
+        return
+    fd, temporary_name = tempfile.mkstemp(prefix=".observed-source-", dir=target.parent)
+    temporary = Path(temporary_name)
+    try:
+        count, checksum = 0, hashlib.sha256()
+        with os.fdopen(fd, "wb") as outgoing, source.open("rb") as incoming:
+            while chunk := incoming.read(1024 * 1024):
+                count += len(chunk)
+                if count > descriptor["bytes"]:
+                    raise ValueError("An original report companion grew during retention")
+                checksum.update(chunk)
+                outgoing.write(chunk)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+        if count != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
+            raise ValueError("An original report companion changed during retention")
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            verify_file(target.parent, expected)
+        if os.name != "nt":
+            directory_fd = os.open(target.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        verify_file(target.parent, expected)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def prepare(workspace, choices, *, title=None, contact=None, manifest_paths=None):
@@ -44,23 +103,26 @@ def prepare(workspace, choices, *, title=None, contact=None, manifest_paths=None
         sources[0]["title"] if len(sources) == 1
         else "Observed science: " + "; ".join(source["title"] for source in sources))
     if contact is None:
-        contact = {"name": "Upper Savannah project team",
-                   "organization": "Internal scientific review", "email": ""}
+        contact = {}
     if (not isinstance(contact, dict)
             or any(not isinstance(contact.get(key, ""), str)
                    for key in ("name", "organization", "email"))):
         raise ValueError("Report contact details must be text")
     identity = {"schema": "upstate.observed-report-native/v1", "workspace": str(workspace.root),
                 "selection": selection, "binding": bound, "contact": contact,
-                "report_version": scientific_report.REPORT_VERSION}
-    # Preserve the original CLI's historical single-report identity.
-    if len(choices) > 1 or title is not None:
-        identity["title"] = resolved_title
+                "report_version": scientific_report.REPORT_VERSION,
+                "title": resolved_title,
+                "presentation": {"edition": PRESENTATION_EDITION,
+                                 "subtitle": SUBTITLE, "footer": FOOTER},
+                "rendering_sources": _rendering_sources()}
+    # New previews retain their actual presentation and installed code. Existing
+    # saved editions continue to open/export using their original stored identity.
     return {"schema": "upstate.observed-report-preview/v1", "state": "preview",
             "title": resolved_title, "source_count": len(sources), "sources": sources,
             "selection": selection, "binding": bound, "workspace": str(workspace.root),
             "render_identity": identity, "operation_id": "observed-report-" + digest(identity)[:20],
-            "source_records": records}
+            "source_records": records, "presentation": identity["presentation"],
+            "rendering_sources": identity["rendering_sources"]}
 
 
 def render(ws, preview, output):
@@ -87,18 +149,35 @@ def render(ws, preview, output):
             for item in result["files"].values():
                 verify_file(output, item)
         else:
+            if (identity.get("rendering_sources") is not None
+                    and identity["rendering_sources"] != _rendering_sources()):
+                raise ValueError("The scientific report renderer changed after preview; review this edition again")
+            presentation = identity.get("presentation")
+            html_options = ({"subtitle": presentation["subtitle"], "footer": presentation["footer"]}
+                            if presentation is not None else {})
+            pdf_options = ({"footer": presentation["footer"]} if presentation is not None else {})
             state = {"files": {}}
             product = observed_context.collect(ws, selection, output, state)
             if product is None or product["binding"] != bound:
                 raise ValueError("The rendered source differs from the original selection")
             files = dict(product["files"])
+            if identity.get("rendering_sources") is not None:
+                paths = _rendering_paths()
+                for index, (name, descriptor) in enumerate(sorted(identity["rendering_sources"].items())):
+                    role = "rendering_source_%03d" % index
+                    if role in files or name not in paths:
+                        raise ValueError("The selected original report conflicts with its retained rendering sources")
+                    target = output / "rendering-source" / name
+                    _retain_original(paths[name], target, descriptor)
+                    files[role] = describe_file(output, target)
             for item in files.values():
                 verify_file(output, item)
             scientific_report.report_pdf(output / "report.pdf", title, product["sections"],
-                                         contact=contact, source_records=records)
+                                         contact=contact, source_records=records, **pdf_options)
             files.update(scientific_report.write_companions(
                 output, title, product["sections"], contact=contact, source_records=records,
-                binding={"observed_context": bound, "workspace": str(ws.root), "selection": selection}))
+                binding={"observed_context": bound, "workspace": str(ws.root), "selection": selection},
+                **html_options))
             files["report_pdf"] = describe_file(output, output / "report.pdf")
             files["selection"] = describe_file(output, output / "selection.json")
             for item in files.values():
@@ -148,7 +227,7 @@ def archive_report(workspace, directory, result, archive_path, receive_path=None
                                          for parent in target.parents
                                          if parent.is_relative_to(workspace.root)):
                 raise ValueError("Keep retained report members as regular Workspace files")
-            atomic_bytes(target, source.read_bytes(), immutable=True)
+            _retain_original(source, target, item)
             verify_file(retained, item)
             verify_file(directory, item)
         captured = {"schema": "upstate.observed-report-capture/v1",

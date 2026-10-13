@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "landcover-ledger",
   "title": "Land-cover changes",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "order": 57,
   "assets": [
     "landcover_ledger.mjs",
@@ -43,6 +43,20 @@
         ],
         "path": "/api/landcover-ledger/edition",
         "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/landcover-ledger/inputs",
+        "operation": "inputs",
         "handler": "read",
         "args": [
           "operator",

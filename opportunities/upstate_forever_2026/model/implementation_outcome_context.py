@@ -329,6 +329,10 @@ def _source(workspace, context, root):
         "implementation_outcome_identity": context["source_identity"],
         "implementation_outcome_selection": result["selection"],
     }
+    if result.get("figures"):
+        recipe["figure_spec"] = "outcome/outcome-figures.json"
+        recipe["figures"] = [{"id": figure["id"], "path": "outcome/" + figure["path"]}
+                             for figure in result["figures"]]
     atomic_json(root / RECIPE_NAME, recipe, immutable=True)
     entry = {
         "id": "implementation-outcome-" + context["source_key"],

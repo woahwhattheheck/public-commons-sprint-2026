@@ -67,3 +67,13 @@ The receiver checks the exact task request, transfer lineage, scientific project
 | Exported handbacks | Which complete handback packages were created for the selected saved edition? |
 
 The desk uses the existing grayscale interface, authenticated operator tasks and retained Workspace. Model runs and scientific calculations continue through their original workflows; a handback selects their completed outputs for review.
+
+## Continue safely when the form changes
+
+The operator reuses one form element for review selection, engineering responses, returned responses and package imports. Each review form now stays bound to its original visible controls and selected workspace. Closing it or opening another form releases the original engineering draft listeners. A delayed revised-file inventory cannot replace the new editor or read its fields into an earlier draft.
+
+The original engineering draft remains retained under its workspace, review, customer-response and predecessor identifiers. Reopen that same engineering response to continue it. Changing the revised selection keeps edits made while the new evidence inventory is loading, but only within that same visible original form.
+
+For returned response JSON and complete handback ZIP uploads, the selected file must still be the same file in the same open form when upload finishes. If the file, form or workspace changed, the original action is not queued; inspect the current selection and submit it explicitly. Closing an in-flight upload does not submit a hidden import. The ordinary review-package receiver retains its existing matching checks.
+
+A delayed comparison similarly leaves a newer form open. Its original before/after review IDs must still be selected before the comparison is shown. Saved review records, customer response generations, engineering editions and native task identities continue through their existing APIs.

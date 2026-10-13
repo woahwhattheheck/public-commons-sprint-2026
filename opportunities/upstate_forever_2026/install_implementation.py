@@ -20,6 +20,7 @@ import tempfile
 
 FILES = (
     "model/scientific_report.py",
+    "model/observed_report_render.py",
     "model/implementation_qc.py",
     "model/implementation_qc_actions.py",
     "operator/implementation_qc.py",
@@ -47,6 +48,7 @@ FILES = (
     "model/implementation_observations.py",
     "model/implementation_observation_quality.py",
     "model/implementation_outcomes.py",
+    "model/implementation_outcome_figures.py",
     "model/implementation_outcome_context.py",
     "model/observed_context.py",
     "model/scientific_figures.py",
@@ -65,6 +67,8 @@ FILES = (
     "operator/web/implementation_lab.mjs",
     "operator/web/implementation_briefing.mjs",
     "operator/web/implementation_dispatch.mjs",
+    "operator/web/implementation_source_reports.mjs",
+    "operator/web/source_report_editions.mjs",
     "operator/web/implementation_results.mjs",
     "operator/web/implementation_outcomes.mjs",
     "operator/web/implementation_core.mjs",
@@ -93,6 +97,8 @@ OPTIONAL_FILES = (
     "docs/IMPLEMENTATION_LAB_DISPATCH.md",
     "docs/IMPLEMENTATION_EVIDENCE_INTEGRATION.md",
     "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
+    "docs/IMPLEMENTATION_SOURCE_REPORTS.md",
+    "docs/OBSERVED_REPORT_RENDERING.md",
     "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
     "model/IMPLEMENTATION_OUTCOMES_METHOD.md",
     "model/IMPLEMENTATION_OUTCOME_CONTEXT.md",

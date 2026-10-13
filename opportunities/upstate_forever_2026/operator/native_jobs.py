@@ -428,6 +428,30 @@ class NativeJobs:
             return {}
         return values if identity_matches(identity) else {}
 
+    @staticmethod
+    def _resource_observation(execution, heartbeat):
+        """Use only a saved observation from this exact owned worker."""
+        request = execution["request"]
+        identity = execution.get("identity")
+        if not isinstance(identity, dict):
+            return None
+        for source, record in (("heartbeat", heartbeat), ("worker_start", execution["worker"])):
+            if not isinstance(record, dict):
+                continue
+            if (record.get("execution_id") != request["execution_id"]
+                    or record.get("identity") != identity):
+                continue
+            observation = record.get("resources")
+            if not isinstance(observation, dict):
+                continue
+            if observation.get("pid", identity.get("pid")) != identity.get("pid"):
+                continue
+            return {"source": source, "execution_id": request["execution_id"],
+                    "observed_at": observation.get("recorded_at") or record.get("at")
+                                   or record.get("started_at"),
+                    "values": observation}
+        return None
+
     def snapshot(self, task):
         ws, run = self._selection(task)
         execution = self._latest(task)
@@ -456,7 +480,8 @@ class NativeJobs:
                      stop_requested=bool(stop), stop_requested_at=(stop or {}).get("requested_at"),
                      reconnected=_read(directory / "reconnected.json"),
                      supervision=supervision, failure=_read(directory / "failure.json"),
-                     resources=self._resources(execution.get("identity")))
+                     resources=self._resources(execution.get("identity")),
+                     resource_observation=self._resource_observation(execution, heartbeat))
         if value["alive"] and value["elapsed_seconds"] is None:
             start = dt.datetime.fromisoformat(request["created_at"])
             value["elapsed_seconds"] = max(0, (dt.datetime.now(dt.timezone.utc) - start).total_seconds())

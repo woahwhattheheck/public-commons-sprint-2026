@@ -22,6 +22,7 @@
     "/api/conservation-optimization/plan",
     "/api/economic-desk/preview",
     "/api/ensembles/preview",
+    "/api/landcover-ledger/inputs",
     "/api/map-atlas/compare",
     "/api/map-atlas/inspect",
     "/api/map-atlas/review",

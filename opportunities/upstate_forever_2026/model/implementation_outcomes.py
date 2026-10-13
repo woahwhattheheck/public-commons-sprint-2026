@@ -622,7 +622,7 @@ def _period_rows(result):
     return rows
 
 
-def render_html(result):
+def render_html(result, figure_svgs=None):
     """Render the complete saved evaluation as a self-contained neutral report."""
     esc = lambda value: html.escape(_cell(value), quote=True)
     selection, binding, summary = result["selection"], result["plan_binding"], result["summary"]
@@ -635,6 +635,7 @@ def render_html(result):
         "h3{margin-top:28px}p,li{max-width:100ch}.table{overflow:auto}table{border-collapse:collapse;width:100%;margin:16px 0}"
         "th,td{text-align:left;vertical-align:top;border:1px solid #ccc;padding:8px}th{background:#eee}"
         "code{overflow-wrap:anywhere}small{color:#444}a{color:inherit;text-decoration:underline}"
+        ".outcome-figure{margin:24px 0}.outcome-figure svg{display:block;width:100%;height:auto}.outcome-figure figcaption{margin-top:12px}"
         "@media print{body{margin:0;max-width:none;padding:0}.table{overflow:visible}tr{break-inside:avoid}}</style>"
         "<main><h1>" + esc(selection["title"]) + "</h1>",
         "<p>" + esc(binding["title"]) + " · saved revision " + str(binding["revision"]) + "</p>",
@@ -690,6 +691,15 @@ def render_html(result):
                 _table(["Date", "Period", "Impact incomplete", "Missing or incomplete reference sites"],
                        [[row["date"], row["period"], row["impact_incomplete"], row["missing_or_incomplete_control_site_ids"]]
                         for row in effect["controls"]["unpaired_impact_dates"]]) + "</details>")
+    if result.get("figures"):
+        sections.append("<h2>Original comparison figures</h2><p>Each figure keeps one site and original measurement group together. "
+                        "Its plotted bounds and complete numeric specification are retained with the report.</p>")
+        for figure in result["figures"]:
+            svg = (figure_svgs or {}).get(figure["path"], "")
+            sections.append('<figure class="outcome-figure"><h3>' + esc(figure["title"]) + "</h3>" + svg +
+                            "<figcaption>" + esc(figure["caption"]) + '</figcaption><p><a href="' +
+                            esc(figure["path"]) + '">Open or save this original SVG</a></p></figure>')
+        sections.append('<p><a href="outcome-figures.json">Complete original figure specification and support</a></p>')
     sections += ["<h2>Interpretation and methods</h2><ul>" +
                  "".join("<li>" + esc(text) + "</li>" for text in result["interpretation"]) + "</ul>",
                  "<h2>Original observations</h2><p>Every selected site and group record is retained here, including excluded dates and unresolved results. "
@@ -729,6 +739,25 @@ def _retained_result(store, directory):
             or any(result.get("selection", {}).get(key) != binding.get(key)
                    for key in ("plan_id", "revision", "document_digest"))):
         raise ImplementationError("The outcome edition and original saved plan binding differ.")
+    figures = result.get("figures", [])
+    if figures:
+        if not isinstance(figures, list) or "outcome-figures.json" not in edition["members"]:
+            raise ImplementationError("The retained outcome lacks its original figure specification.")
+        specification = json.loads((directory / "outcome-figures.json").read_text(encoding="utf-8"))
+        if specification.get("schema") != "upstate.scientific-figure-spec/v1":
+            raise ImplementationError("The retained outcome figure schema differs.")
+        originals = specification.get("figures", [])
+        if not isinstance(originals, list):
+            raise ImplementationError("The retained outcome figure inventory differs.")
+        expected = [{key: figure[key] for key in ("id", "path", "title", "caption")} for figure in originals]
+        if (expected != figures or len({figure["id"] for figure in figures}) != len(figures)
+                or len({figure["path"] for figure in figures}) != len(figures)):
+            raise ImplementationError("The saved comparison figures differ from their original specification.")
+        for figure in figures:
+            path = figure["path"]
+            if (not isinstance(path, str) or Path(path).name != path or "\\" in path
+                    or not path.endswith(".svg") or path not in edition["members"]):
+                raise ImplementationError("The retained outcome figure file is unavailable.")
     files = []
     for name in edition["members"]:
         path = directory / name
@@ -773,11 +802,19 @@ def build(workspace, selection):
     store = ImplementationStore(workspace)
     plan = store.get(selection.get("plan_id"), selection.get("revision"))
     result = analyze(plan, selection)
+    from .implementation_outcome_figures import build_figures
+    figure_spec, figure_svgs = build_figures(result, _interval_text)
+    result["figures"] = [{key: figure[key] for key in ("id", "path", "title", "caption")}
+                         for figure in figure_spec["figures"]]
     with tempfile.TemporaryDirectory(prefix="implementation-outcomes-") as temporary:
         directory = Path(temporary) / "report"
         store.report(plan["id"], directory, as_of=result["selection"]["after"]["end"], revision=plan["revision"])
         (directory / "report.html").rename(directory / "implementation-plan.html")
-        (directory / "report.html").write_text(render_html(result), encoding="utf-8")
+        (directory / "report.html").write_text(render_html(result, figure_svgs), encoding="utf-8")
+        if result["figures"]:
+            (directory / "outcome-figures.json").write_bytes(canonical_bytes(figure_spec) + b"\n")
+            for name, svg in figure_svgs.items():
+                (directory / name).write_text(svg, encoding="utf-8")
         (directory / "outcomes.json").write_bytes(canonical_bytes(result) + b"\n")
         tables = {
             "outcome_rows.csv": (result["records"], [
