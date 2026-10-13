@@ -15,7 +15,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 from .ensembles import Ensembles
 
 SCHEMA = "upstate.ensemble-report-release/v1"
-RENDERER_VERSION = 6
+RENDERER_VERSION = 7
 POLLUTANTS = {"nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
               "sediment_export": "Sediment"}
 PAIR_FIELDS = (
@@ -468,7 +468,7 @@ h1{font-size:32px;line-height:1.2;max-width:1000px;margin:10px 0 16px}h2{font-si
 .facts strong{display:block;font-size:22px;margin-top:8px}.table-wrap{overflow-x:auto;border:1px solid #d0d2d4}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:12px}
 th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid #dedfe1}
-th{background:#f3f4f5;font-weight:650;white-space:normal}td{overflow-wrap:anywhere}
+th{background:#f3f4f5;font-weight:650;white-space:normal}td{overflow-wrap:break-word}
 details{border:1px solid #d0d2d4;padding:14px}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
 footer{margin-top:32px;border-top:1px solid #999;padding-top:16px;color:#505458;font-size:12px}code{overflow-wrap:anywhere}
 @media(max-width:700px){body{padding:20px 14px}.facts{grid-template-columns:repeat(2,1fr)}h1{font-size:25px}}
