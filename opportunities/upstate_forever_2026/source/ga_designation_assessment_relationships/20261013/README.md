@@ -82,3 +82,8 @@ The Scientific Reports document contains the complete thirty-reach interpretatio
 - EPD assessment publication: https://epd.georgia.gov/water-quality-georgia
 - Stream/beach service: https://services1.arcgis.com/p0dLjwtOaJHU8zq2/arcgis/rest/services/GA_2024_305b303d_StreamsBeaches_xmlalt/FeatureServer/0
 - Lake/sound service: https://services1.arcgis.com/p0dLjwtOaJHU8zq2/arcgis/rest/services/GA_2024_305(b)303(d)_Lakes_and_Sounds/FeatureServer/0
+
+
+## Continue the original 217-catchment geographic result
+
+The complete native continuation is in [NATIVE_GEOGRAPHY.md](NATIVE_GEOGRAPHY.md). It consumes the existing Georgia geography-sources.json, preserves all original bodies and sidecars, binds the 37 reviewed original features to their actual HUC memberships, and produces a map, CSV, printable briefing and Scientific Reports source for the same existing Workspace.
