@@ -1,3 +1,4 @@
+import {attachMonitoringReport} from './monitoring-report.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
 const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
@@ -9,7 +10,8 @@ function component() {
 }
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
+export function attachMonitoring(context) {
+  const {getState, api, endpoint, showTask, toast}=context;
   const nodes = new Map(), pendingMemory = new Map();
   const storage = {
     get(key) {
@@ -96,8 +98,11 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     if(active===node && node.parentNode===root)return;
     active=node;root.replaceChildren(node);
     await node.ready;
+    node.monitoringReport ||= attachMonitoringReport(node,context,key);
+    node.monitoringReport.update();
   }
   async function update() {
+    active?.monitoringReport?.update();
     if (!active?.isConnected || active.busy || updating) return;
     const node = active, key = workspace(), version = generation;
     const current = () => active === node && generation === version &&
@@ -114,6 +119,6 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }
