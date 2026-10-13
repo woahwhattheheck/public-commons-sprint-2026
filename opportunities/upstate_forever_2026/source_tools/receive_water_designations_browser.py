@@ -11,9 +11,10 @@ Example:
     --native-result /path/to/water-designation-receiving.json \
     --browser /usr/bin/chromium --output /path/to/browser-results
 
-Add --require-delivery-form when this Workspace has the original completed
-baseline and alternative runs. The source-only receiving Workspace otherwise
-displays the original delivery prerequisite after the real handoff is invoked.
+The journey follows the registered Map atlas desk, with the original delivery
+dialog as fallback. Add --require-delivery-form when this Workspace has the
+original completed baseline and alternative runs. Source-only receiving can
+inspect the atlas draft; the legacy dialog shows its native run prerequisite.
 Supply --delivery-selection /path/to/delivery-selection.json to also fill the
 original delivery form with those actual prepared choices and submit its build.
 The high-quality-water overlay is the revision saved by this browser journey.
@@ -476,23 +477,136 @@ def main(argv=None):
                 "The applied choice differs from the saved revision's rule or native source edition.")
         report["applied_delivery_selection"] = applied_delivery
         checkpoint("saved_revision_applied", selection_id=saved_id)
+
+        def submit_delivery(submit_control):
+            with page.expect_response(match_response("/api/actions", "POST")) as built:
+                submit_control.click()
+            build_request = built.value.request.post_data_json
+            require(build_request["action"] == "delivery.build"
+                    and build_request["workspace"] == workspace_key,
+                    "The original form did not submit its native delivery build.")
+            submitted = build_request["payload"]
+            require(submitted["overlays"]["high_quality_waters"] == applied_overlay
+                    and submitted["source_roles"]["HIGH_QUALITY_WATERS"] == applied_overlay,
+                    "The original form discarded saved water selection lineage during submission.")
+            require(submitted["baseline_run_id"] == prepared_delivery["baseline_run_id"]
+                    and set(submitted["scenario_run_ids"]) == set(prepared_delivery["scenario_run_ids"]),
+                    "The original form changed the actual prepared baseline or alternatives.")
+            require(submitted["source_roles"]["SOURCE_WATER_PROTECTION_AREAS"]
+                    == submitted["overlays"]["drinking_water"],
+                    "The delivery editor did not retain the selected drinking-water source role.")
+            protected_overlay = submitted["overlays"].get("protected_lands")
+            if protected_overlay is not None:
+                require(submitted["source_roles"].get("PROTECTED_LANDS_OVERLAY") == protected_overlay,
+                        "The delivery editor lost the separate protected-land overlay source role.")
+            else:
+                require("PROTECTED_LANDS_OVERLAY" not in submitted["source_roles"],
+                        "A removed protected-land overlay left a stale source role in the delivery.")
+            for key in ("source_collection_id", "source_id"):
+                require(submitted["source_roles"]["PROTECTED_LANDS"].get(key)
+                        == prepared_delivery["source_roles"]["PROTECTED_LANDS"].get(key),
+                        "The protected-land overlay replaced the separately selected analysis source.")
+            build_task = task_object(response_json(built.value))
+            build_id = build_task.get("id") or build_task.get("task_id")
+            require(build_id, "The delivery build did not return a native task ID.")
+            report["delivery"].update({"task_id": build_id, "submitted_selection": submitted})
+            checkpoint("delivery_build_queued", task_id=build_id)
+            deadline = time.monotonic() + args.timeout_seconds
+            previous_state = None
+            while task_state(build_task) not in SUCCESS_STATES:
+                state = task_state(build_task)
+                require(state not in {"failed", "interrupted", "cancelled", "canceled"},
+                        "The native delivery build ended in " + state + ": " + str(build_task.get("error") or ""))
+                require(time.monotonic() < deadline, "The native delivery build is still retained as task " + build_id + ".")
+                if state != previous_state:
+                    checkpoint("delivery_build_running", task_id=build_id, state=state)
+                    previous_state = state
+                page.wait_for_timeout(1000)
+                task_response = context.request.get(
+                    report["origin"] + "/api/task",
+                    params={"id": build_id, "workspace": workspace_key},
+                    headers={"Authorization": "Bearer " + token})
+                build_task = task_object(response_json(task_response))
+            result = build_task.get("result") or {}
+            report["delivery"].update({"outcome": "native_delivery_built",
+                                      "task_state": task_state(build_task),
+                                      "result_id": result.get("id") or result.get("delivery_id")})
+            report["outcome"] = "saved_exported_and_native_delivery_built"
+            checkpoint("delivery_build_complete", task_id=build_id, result_id=report["delivery"]["result_id"])
+
         page.wait_for_function(
             """prerequisite => {
                 const dialog = document.querySelector('#form-dialog');
+                const atlas = document.querySelector('.map-atlas [data-atlas-form]');
                 const open = dialog && (dialog.open || dialog.getAttribute('aria-hidden') === 'false');
                 const text = ['.wd [data-ref="notice"]','#global-error','#toast']
                     .map(s => document.querySelector(s)?.textContent || '').join(' ');
-                return open || text.includes(prerequisite) || text.includes('Could not open the delivery editor.');
+                return !!atlas || open || text.includes(prerequisite) || text.includes('Could not open the delivery editor.');
             }""", arg=DELIVERY_PREREQUISITE)
         dialog = page.locator("#form-dialog")
-        if dialog.is_visible():
+        atlas = page.locator(".map-atlas")
+        if atlas.is_visible():
+            expect(atlas.locator("h1")).to_have_text("Map atlas and delivery")
+            expect(atlas.locator("[data-atlas-form]")).to_have_attribute("data-atlas-workspace", workspace_key)
+            complete_choices = atlas.locator('select[name="baseline"] option').evaluate_all(
+                "(nodes) => nodes.filter(node => node.value).length")
+            report["delivery"] = {"outcome": "editor_opened", "editor": "map-atlas",
+                                  "complete_run_choices": complete_choices, "overlay": applied_overlay,
+                                  "heading": atlas.locator("h1").inner_text()}
+            report["outcome"] = "saved_exported_and_delivery_editor_opened"
+            atlas.locator('[data-atlas-action="step"][data-step="1"]').click()
+            for name, key in [("collection", "source_collection_id"), ("source", "source_id"), ("layer", "layer")]:
+                bound = atlas.locator('[name="overlays__high_quality_waters__' + name + '"]')
+                expect(bound).to_have_value(applied_overlay[key])
+                expect(bound).to_be_disabled()
+            with page.expect_download() as atlas_exported:
+                atlas.locator('[data-atlas-action="download-selection"]').click()
+            atlas_selection_path = output / "atlas-delivery-selection.json"
+            atlas_exported.value.save_as(atlas_selection_path)
+            require(atlas_exported.value.failure() is None, "The atlas selection download failed.")
+            atlas_choice = read_json(atlas_selection_path)["selection"]
+            require(atlas_choice["overlays"]["high_quality_waters"] == applied_overlay
+                    and atlas_choice["source_roles"]["HIGH_QUALITY_WATERS"] == applied_overlay,
+                    "The atlas lost saved water metadata when retaining its native draft.")
+            report["exports"][atlas_selection_path.name] = file_info(atlas_selection_path)
+            report["screenshots"]["delivery_context"] = capture(output / "water-designations-atlas-context.png")
+            if prepared_delivery is not None:
+                joined = json.loads(json.dumps(prepared_delivery))
+                joined.setdefault("overlays", {})["high_quality_waters"] = applied_overlay
+                joined.setdefault("source_roles", {})["HIGH_QUALITY_WATERS"] = applied_overlay
+                joined["notes"] = list(dict.fromkeys(
+                    list(joined.get("notes") or []) + list(applied_delivery.get("notes") or [])))
+                joined_path = output / "browser-delivery-selection.json"
+                joined_path.write_text(json.dumps(joined, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                report["prepared_browser_selection"] = file_info(joined_path)
+                atlas.locator("[data-atlas-import]").set_input_files(joined_path)
+                expect(atlas.locator('[name="title"]')).to_have_value(joined["title"])
+                expect(atlas.locator('[name="baseline"]')).to_have_value(joined["baseline_run_id"])
+                chosen_runs = atlas.locator('[name="alternatives"]:checked').evaluate_all(
+                    "(nodes) => nodes.map(node => node.value)")
+                require(chosen_runs == joined["scenario_run_ids"],
+                        "The atlas changed the supplied ordered native alternatives.")
+                atlas.locator('[data-atlas-action="step"][data-step="1"]').click()
+                for name, key in [("collection", "source_collection_id"), ("source", "source_id"), ("layer", "layer")]:
+                    expect(atlas.locator('[name="overlays__high_quality_waters__' + name + '"]')).to_have_value(applied_overlay[key])
+                atlas.locator('[data-atlas-action="step"][data-step="2"]').click()
+                expect(atlas.locator('[name="dpi"]')).to_have_value(str(joined.get("map_settings", {}).get("dpi", 220)))
+                atlas.locator('[data-atlas-action="step"][data-step="3"]').click()
+                for key in ("name", "organization", "email"):
+                    expect(atlas.locator('[name="contact_' + key + '"]')).to_have_value(joined["contact"][key])
+                expect(atlas.locator("[data-atlas-problems]")).to_have_text("Ready to submit the complete native delivery.")
+                report["screenshots"]["prepared_delivery"] = capture(output / "water-designations-prepared-delivery.png")
+                submit_delivery(atlas.locator('[data-atlas-form] button[type="submit"]'))
+        elif dialog.is_visible():
             expect(page.locator("#form-title")).to_have_text("Build complete seven-map delivery")
             overlay = applied_overlay
             for name, key in [("collection", "source_collection_id"), ("source", "source_id"), ("layer", "layer")]:
                 control = page.locator('#operation-form [name="overlay_high_quality_waters_' + name + '"]')
                 expect(control).to_have_value(overlay[key])
             require(overlay["layer"] == "selected_features", "The saved overlay did not retain its native layer.")
-            report["delivery"] = {"outcome": "editor_opened", "overlay": overlay,
+            report["delivery"] = {"outcome": "editor_opened", "editor": "original-dialog",
+                                  "complete_run_choices": page.locator('#operation-form [name="baseline"] option').evaluate_all(
+                                      "(nodes) => nodes.filter(node => node.value).length"), "overlay": overlay,
                                   "heading": page.locator("#form-title").inner_text()}
             report["outcome"] = "saved_exported_and_delivery_editor_opened"
             if prepared_delivery is not None:
@@ -557,49 +671,7 @@ def main(argv=None):
                 require(form.evaluate("(node) => node.checkValidity()"),
                         "The prepared delivery choices do not complete the actual delivery form.")
                 report["screenshots"]["prepared_delivery"] = capture(output / "water-designations-prepared-delivery.png")
-                with page.expect_response(match_response("/api/actions", "POST")) as built:
-                    page.locator("#form-submit").click()
-                build_request = built.value.request.post_data_json
-                require(build_request["action"] == "delivery.build"
-                        and build_request["workspace"] == workspace_key,
-                        "The original form did not submit its native delivery build.")
-                submitted = build_request["payload"]
-                require(submitted["overlays"]["high_quality_waters"] == applied_overlay
-                        and submitted["source_roles"]["HIGH_QUALITY_WATERS"] == applied_overlay,
-                        "The original form discarded saved water selection lineage during submission.")
-                require(submitted["baseline_run_id"] == prepared_delivery["baseline_run_id"]
-                        and set(submitted["scenario_run_ids"]) == set(prepared_delivery["scenario_run_ids"]),
-                        "The original form changed the actual prepared baseline or alternatives.")
-                require(submitted["source_roles"]["SOURCE_WATER_PROTECTION_AREAS"]
-                        == submitted["overlays"]["drinking_water"],
-                        "The original form did not retain the selected drinking-water source role.")
-                build_task = task_object(response_json(built.value))
-                build_id = build_task.get("id") or build_task.get("task_id")
-                require(build_id, "The delivery build did not return a native task ID.")
-                report["delivery"].update({"task_id": build_id, "submitted_selection": submitted})
-                checkpoint("delivery_build_queued", task_id=build_id)
-                deadline = time.monotonic() + args.timeout_seconds
-                previous_state = None
-                while task_state(build_task) not in SUCCESS_STATES:
-                    state = task_state(build_task)
-                    require(state not in {"failed", "interrupted", "cancelled", "canceled"},
-                            "The native delivery build ended in " + state + ": " + str(build_task.get("error") or ""))
-                    require(time.monotonic() < deadline, "The native delivery build is still retained as task " + build_id + ".")
-                    if state != previous_state:
-                        checkpoint("delivery_build_running", task_id=build_id, state=state)
-                        previous_state = state
-                    page.wait_for_timeout(1000)
-                    task_response = context.request.get(
-                        report["origin"] + "/api/task",
-                        params={"id": build_id, "workspace": workspace_key},
-                        headers={"Authorization": "Bearer " + token})
-                    build_task = task_object(response_json(task_response))
-                result = build_task.get("result") or {}
-                report["delivery"].update({"outcome": "native_delivery_built",
-                                          "task_state": task_state(build_task),
-                                          "result_id": result.get("id") or result.get("delivery_id")})
-                report["outcome"] = "saved_exported_and_native_delivery_built"
-                checkpoint("delivery_build_complete", task_id=build_id, result_id=report["delivery"]["result_id"])
+                submit_delivery(page.locator("#form-submit"))
         else:
             message = " ".join(page.locator(selector).inner_text()
                                for selector in ['.wd [data-ref="notice"]', "#global-error", "#toast"]
@@ -616,9 +688,12 @@ def main(argv=None):
                 report["loaded_assets"].append({"path": response_path(response), "bytes": len(content),
                                                  "sha256": hashlib.sha256(content).hexdigest()})
         require(not report["page_errors"], "The browser reported an uncaught application exception.")
-        require(not (args.require_delivery_form or args.delivery_selection)
-                or report["delivery"]["outcome"] in {"editor_opened", "native_delivery_built"},
+        require(not args.require_delivery_form
+                or (report["delivery"]["outcome"] in {"editor_opened", "native_delivery_built"}
+                    and report["delivery"].get("complete_run_choices", 0) >= 2),
                 "This receiving lane requires the original completed baseline and alternative runs.")
+        require(not args.delivery_selection or report["delivery"]["outcome"] == "native_delivery_built",
+                "The explicitly supplied native delivery selection has not completed its build.")
         report["finished_at"] = datetime.now(timezone.utc).isoformat()
         checkpoint("journey_complete", outcome=report["outcome"], selection_id=saved_id)
         print(json.dumps({"report": str(report_path), "outcome": report["outcome"],

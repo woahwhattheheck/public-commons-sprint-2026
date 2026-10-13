@@ -9,10 +9,10 @@ from html import escape as html_escape
 import math
 from pathlib import Path
 
-from .common import atomic_bytes, atomic_json, describe_file
+from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v5"
+REPORT_VERSION = "upstate.scientific-report/v6"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -27,7 +27,7 @@ PARAMETERS = {
     "runoff_proxy_av": ("Reference runoff proxy average", "original proxy units"),
     "sdr_max": ("Maximum sediment delivery ratio", "fraction"),
     "ic_0_param": ("Reference connectivity index", "dimensionless"),
-    "l_max": ("Maximum USLE slope length", "m"),
+    "l_max": ("Maximum USLE L factor", "dimensionless"),
 }
 
 
@@ -121,7 +121,94 @@ def _current_exports(baseline, grid):
     ]
 
 
-def _profile(profile):
+def _biophysical(workspace, profile):
+    """Read the exact original CSV bound to the saved native profile."""
+    from .model_selection import selected
+    from .profiles import inspect_table
+
+    path, entry = workspace.source_file(
+        profile["source_collection_id"], profile["biophysical_source_id"])
+    if entry["kind"] != "table":
+        raise ValueError("Select the original biophysical CSV source")
+    if entry["body"]["sha256"] != profile["table_summary"]["sha256"]:
+        raise ValueError("Original biophysical table differs from the saved profile")
+    active = selected(profile)
+    table = inspect_table(path, selected_models=active)
+
+    def cell(row, key):
+        value = row.get(key)
+        if value is None:
+            return "(missing source cell)"
+        return value if value != "" else "(empty source cell)"
+
+    blocks = [
+        "Original biophysical coefficients",
+        "The following tables preserve every row and source value from the CSV selected by this profile. "
+        "The nutrient loading basis is retained for each land-cover code. "
+        "Values are the saved input assumptions used by the native model.",
+        _table(["Source property", "Retained value"], [
+            ["Profile", str(profile.get("id", profile["title"]))],
+            ["Selected native models", ", ".join(name.upper() for name in active)],
+            ["Source collection", str(profile["source_collection_id"])],
+            ["Source ID", str(profile["biophysical_source_id"])],
+            ["Source title", str(entry.get("title", entry["id"]))],
+            ["Source edition", _plain(entry.get("vintage"))],
+            ["Original reference", _plain(entry.get("uri"))],
+            ["Original CSV", str(entry["body"]["filename"])],
+            ["SHA256", str(entry["body"]["sha256"])],
+            ["Original rows / columns", str(len(table["rows"])) + " / " + str(len(table["columns"]))],
+        ], widths=[1.4, 4.6]),
+    ]
+    used = {"lucode"}
+    if "ndr" in active:
+        for nutrient, name in (("n", "Nitrogen"), ("p", "Phosphorus")):
+            fields = ["lucode", "load_" + nutrient, "load_type_" + nutrient,
+                      "eff_" + nutrient, "crit_len_" + nutrient]
+            headings = ["Land-cover code", "Load (kg/ha/year)", "Loading basis",
+                        "Maximum retention (fraction)", "Critical length (m)"]
+            widths = [.7, .9, 1.4, 1.0, 1.0]
+            if nutrient == "n":
+                fields.append("proportion_subsurface_n")
+                headings.append("Subsurface share (fraction)")
+                widths.append(1.0)
+            used.update(fields)
+            blocks.append(_table(
+                headings, [[cell(row, key) for key in fields] for row in table["rows"]],
+                widths=widths, caption=name + " coefficients in original source order.",
+            ))
+        blocks.append(
+            "Loading basis follows the selected InVEST engine: application-rate inputs are adjusted "
+            "using load * (1 - eff); measured-runoff inputs enter without that on-pixel adjustment. "
+            "The displayed loads remain the original CSV values. Retention and subsurface shares "
+            "are fractions; critical lengths are metres."
+        )
+    if "sdr" in active:
+        fields = ["lucode", "usle_c", "usle_p"]
+        used.update(fields)
+        blocks.append(_table(
+            ["Land-cover code", "Cover-management factor C", "Support-practice factor P"],
+            [[cell(row, key) for key in fields] for row in table["rows"]],
+            widths=[.8, 2.1, 2.1],
+            caption="Sediment coefficients in original source order. Both USLE factors are dimensionless.",
+        ))
+    extra = [key for key in table["columns"] if key not in used]
+    if extra:
+        blocks.append(_table(
+            ["Land-cover code", "Original field", "Original value"],
+            [[cell(row, "lucode"), key, cell(row, key)]
+             for row in table["rows"] for key in extra],
+            widths=[.8, 1.4, 3.8],
+            caption="Additional original CSV fields, including source descriptions and references. "
+                    "Fields outside the selected model requirements retain their original names and values.",
+        ))
+    blocks.append("Field definitions for the pinned native engine: "
+                  + "; ".join("https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/"
+                              + INVEST_VERSION + "/userguide/en/" + name + ".html"
+                              for name in active) + ".")
+    return blocks
+
+
+def _profile(profile, workspace):
     rows = []
     for model in ("ndr", "sdr"):
         for key, value in profile.get(model, {}).items():
@@ -136,6 +223,7 @@ def _profile(profile):
             blocks.append("Profile reference: " + _plain(reference))
     if profile.get("model_period"):
         blocks.append("Model period: " + _plain(profile["model_period"]))
+    blocks.extend(_biophysical(workspace, profile))
     return blocks
 
 
@@ -197,8 +285,10 @@ def _scenario_sections(workspace, alternatives, comparison):
 
 def _priorities(priority):
     caps, weights = priority.get("caps", {}), priority.get("weights", {})
+    cap_units = priority.get("cap_units", {})
     rows = [[_label(key), _number(weights.get(key)), _number(caps.get(key)),
-             _unit(rasters.MASS_UNITS.get(key, ""))] for key in rasters.MASS_UNITS if key in caps or key in weights]
+             _unit(cap_units.get(key, rasters.MASS_UNITS.get(key, "")))]
+            for key in rasters.MASS_UNITS if key in caps or key in weights]
     blocks = [
         "The combined map is a dimensionless planning index. Each pollutant stays in its own physical "
         "unit before normalization; the selected weights express the planning emphasis.",
@@ -208,6 +298,9 @@ def _priorities(priority):
         blocks.append("Reference cap percentile: " + _number(priority["percentile"]) + ".")
     if priority.get("method"):
         blocks.append("Recorded normalization method: " + _plain(priority["method"]) + ".")
+    for key in ("reference", "scope", "comparison"):
+        if priority.get(key) is not None:
+            blocks.append("Recorded normalization " + key + ": " + _plain(priority[key]) + ".")
     blocks.append("Use the separate physical export and scenario-change tables when comparing annual quantities.")
     return blocks
 
@@ -341,7 +434,7 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
                     profile, grid, priority, observation_results, receptor_inventory=None):
     """Replace machine-record paragraphs and retain independently installed sections."""
     replacements = {
-        "Selected parameter profile": _profile(profile),
+        "Selected parameter profile": _profile(profile, workspace),
         "Current quantitative exports": _current_exports(baseline, grid),
         "Future conservation and development scenarios": _scenario_sections(workspace, alternatives, comparison),
         "Combined priorities": _priorities(priority),

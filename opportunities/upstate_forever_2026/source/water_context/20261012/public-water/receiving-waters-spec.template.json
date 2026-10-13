@@ -80,10 +80,10 @@
           }
         },
         "protection_source": {
-          "path": "raw/arjws-prwd-swpa.esri.json",
+          "path": "raw/scdes-arjws-prwd-source-water-protection-original.json",
           "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson",
           "bytes": 2389556,
-          "sha256": null,
+          "sha256": "ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
           "geometry_type": "esriGeometryPolygon",
           "source_crs": "EPSG:26917",
           "selected_object_ids": [
@@ -93,7 +93,7 @@
             132
           ],
           "stable_reference": "notion-file-block://55b55378-16a8-45b0-8a70-4ccc6fbb22c5/29e2ae2c-6f30-45da-bfc5-60c54cd06f0f?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-arjws-prwd-source-water-protection-original.json",
-          "scope": "Original full polygon query for the two named RFP utilities; native receiver computes SHA256 of received original bytes"
+          "scope": "Original full polygon query for the two named RFP utilities; bundled captured bytes with their original geometry and attributes"
         }
       }
     },
@@ -160,10 +160,10 @@
           }
         },
         "protection_source": {
-          "path": "raw/arjws-prwd-swpa.esri.json",
+          "path": "raw/scdes-arjws-prwd-source-water-protection-original.json",
           "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson",
           "bytes": 2389556,
-          "sha256": null,
+          "sha256": "ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
           "geometry_type": "esriGeometryPolygon",
           "source_crs": "EPSG:26917",
           "selected_object_ids": [
@@ -173,7 +173,7 @@
             132
           ],
           "stable_reference": "notion-file-block://55b55378-16a8-45b0-8a70-4ccc6fbb22c5/29e2ae2c-6f30-45da-bfc5-60c54cd06f0f?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-arjws-prwd-source-water-protection-original.json",
-          "scope": "Original full polygon query for the two named RFP utilities; native receiver computes SHA256 of received original bytes"
+          "scope": "Original full polygon query for the two named RFP utilities; bundled captured bytes with their original geometry and attributes"
         }
       }
     },
@@ -240,10 +240,10 @@
           }
         },
         "protection_source": {
-          "path": "raw/arjws-prwd-swpa.esri.json",
+          "path": "raw/scdes-arjws-prwd-source-water-protection-original.json",
           "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson",
           "bytes": 2389556,
-          "sha256": null,
+          "sha256": "ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
           "geometry_type": "esriGeometryPolygon",
           "source_crs": "EPSG:26917",
           "selected_object_ids": [
@@ -253,7 +253,7 @@
             132
           ],
           "stable_reference": "notion-file-block://55b55378-16a8-45b0-8a70-4ccc6fbb22c5/29e2ae2c-6f30-45da-bfc5-60c54cd06f0f?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-arjws-prwd-source-water-protection-original.json",
-          "scope": "Original full polygon query for the two named RFP utilities; native receiver computes SHA256 of received original bytes"
+          "scope": "Original full polygon query for the two named RFP utilities; bundled captured bytes with their original geometry and attributes"
         }
       }
     },
@@ -320,10 +320,10 @@
           }
         },
         "protection_source": {
-          "path": "raw/arjws-prwd-swpa.esri.json",
+          "path": "raw/scdes-arjws-prwd-source-water-protection-original.json",
           "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson",
           "bytes": 2389556,
-          "sha256": null,
+          "sha256": "ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
           "geometry_type": "esriGeometryPolygon",
           "source_crs": "EPSG:26917",
           "selected_object_ids": [
@@ -333,7 +333,7 @@
             132
           ],
           "stable_reference": "notion-file-block://55b55378-16a8-45b0-8a70-4ccc6fbb22c5/29e2ae2c-6f30-45da-bfc5-60c54cd06f0f?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-arjws-prwd-source-water-protection-original.json",
-          "scope": "Original full polygon query for the two named RFP utilities; native receiver computes SHA256 of received original bytes"
+          "scope": "Original full polygon query for the two named RFP utilities; bundled captured bytes with their original geometry and attributes"
         }
       }
     }

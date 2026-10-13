@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": "4",
+  "version": "5",
   "order": 65,
   "assets": [
     "receptors.mjs",
@@ -207,7 +207,9 @@
       "openForm",
       "submitAction",
       "refreshState",
-      "openItem"
+      "openItem",
+      "navigate",
+      "closeDetail"
     ],
     "styles": [
       "/web/receptors.css"
@@ -221,6 +223,11 @@
       "mount": "mount",
       "update": "update",
       "detach": "detach"
-    }
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "receptor-result-"
+    ]
   }
 }

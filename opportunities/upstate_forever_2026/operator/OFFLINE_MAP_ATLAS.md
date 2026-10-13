@@ -26,7 +26,7 @@ The delivered-file table is built from the same final manifest passed to the exi
 
 ## Continue an existing project
 
-Create or revise a release through the existing delivery workflow. The atlas renderer identity is seven-family-atlas/v3, so this product edition receives its own delivery identity while keeping the same selected native runs. The existing pipeline reuses completed native outputs and writes the browser after the final declared source and receiving-water assets have been assembled.
+Create or revise a release through the existing delivery workflow. The atlas renderer identity is seven-family-atlas/v4, so this product edition receives its own delivery identity while keeping the same selected native runs. The existing pipeline reuses completed native outputs and writes the browser after the final declared source and receiving-water assets have been assembled.
 
 The new browser is recorded as files.map_atlas_browser and as maps/atlas-browser.html in project_assets. The existing packager captures and verifies it with the other members. The package entry point shows **Browse map atlas** when the exact captured member is present.
 

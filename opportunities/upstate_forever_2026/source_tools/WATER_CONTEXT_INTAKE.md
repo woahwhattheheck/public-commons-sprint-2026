@@ -86,6 +86,77 @@ All acquired responses accompany the source edition. The resulting vector keeps
 the entire original selected feature geometry, and the intake record carries
 both the provider candidate count and the selected feature count.
 
+## Physical-domain freshwater selection
+
+Freshwater defaults to `huc_selection_mode: "publisher"`. In that mode each
+selected feature's original `HUC_12` must belong to the retained HUC12 list,
+preserving the existing publisher-membership operation.
+
+Use `huc_selection_mode: "geometry"` for a capture selected against the actual
+retained watershed polygons:
+
+```json
+{
+  "kind": "freshwater",
+  "source_id": "sc-hydroclass-fw-physical-domain",
+  "huc_selection_mode": "geometry",
+  "huc_ids": "retained/domain-huc12s.json",
+  "expected_huc_count": 217,
+  "selected_ids": "comparison/physical-selected-ids.json",
+  "selection_geometry": "domain/model-domain.esri.json.gz",
+  "selection_method": "Union of original native-ID intersection queries against every retained domain polygon"
+}
+```
+
+These fields extend a complete layer descriptor containing the original metadata,
+count/ID queries, pages and companions. Geometry mode requires all three of
+`selected_ids`, `selection_geometry` and `selection_method`. The selected IDs
+must be a subset of the full original query union; every acquired ID must still
+have its original geometry page. Unknown selection modes are rejected.
+
+A selected reach can physically intersect the retained study while its original
+publisher HUC label names another watershed, or is null or blank. Geometry mode
+preserves that native label and retains the selected reach's full geometry.
+The layer-intake record contains:
+
+- The explicit selection mode and retained original selection geometry reference.
+- `publisher_huc_inventory`, an ordered inventory of original values and feature counts.
+- `publisher_huc_mismatches`, with native object ID, original publisher HUC value and reason.
+- `publisher_huc_mismatch_count`, also exposed in the source manifest, binding and intake summary.
+
+Native nulls and blanks remain distinct values. Their JSON ordering is explicit
+and does not convert original labels into new HUC identifiers. The separate
+many-HUC relationships and physical/publisher cohort comparisons can travel as
+source companions. The consumer uses the retained polygon relationships for
+spatial interpretation.
+
+The acquisition companion `source_tools/freshwater_domain_coverage.py` reuses
+the complete original publisher-HUC pages, captures count/ID intersections for
+the original domain polygons, downloads geometry only for additional native IDs,
+and supplies this geometry-mode descriptor to the ordinary `assemble`,
+`export_edition` and `bind_workspace` interfaces.
+
+A genuine zero-result original ArcGIS response containing `objectIds: null`
+is accepted only alongside an original integer count of zero. Missing ID fields,
+truncated responses and inconsistent nonzero counts are rejected. Original
+response bytes remain retained unchanged.
+
+## Recovered response times and native geometry
+
+If a process retained all original response bodies but every original query
+receipt lost its capture timestamp, use `captured_at: null` with
+`capture_time_status: "unavailable_after_response_recovery"` in the capture
+descriptor. This explicit recovery case remains null through the intake,
+bindings and original source metadata. The manifest's required nonempty vintage
+uses the label `Capture time unavailable after response recovery`. Retained
+responses with actual timestamps continue to use their original capture time.
+
+The intake preserves provider-returned linear paths from the selected
+`returnTrueCurves=false` responses. Curved native `curvePaths` or
+`curveRings` require a separately retained provider linear representation;
+the receiver does not flatten them locally. All original response bytes and
+declared Z/M dimensions remain companions to the assembled vector.
+
 ## Build and import
 
 Install the file as `source_tools/water_context_intake.py` in the current
@@ -163,8 +234,8 @@ consumer's saved relationship method.
 
 The receiver requires complete count/ID/page membership, detects changed duplicate
 objects between responses, keeps a valid zero-feature selection, preserves the
-requested 217-HUC membership, and records null StreamOrder values as original
-nulls. Geometry pages use one declared coordinate reference and consistent Z/M
+retained 217-HUC selection and explicit membership mode, and records null
+StreamOrder values as original nulls. Geometry pages use one declared coordinate reference and consistent Z/M
 dimensions. Source acquisition and scientific interpretation stay explicit in
 the retained study.
 
