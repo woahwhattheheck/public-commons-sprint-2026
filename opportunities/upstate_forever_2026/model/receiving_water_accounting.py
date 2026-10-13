@@ -51,6 +51,15 @@ def _union(geometries):
     return unary_union(geometries)
 
 
+def _polygon_domain(geometry):
+    """Match the core receiving-water positive-area/empty-polygon rule."""
+    from shapely.geometry import Polygon
+    from .receiving_waters import _polygon
+    if geometry.is_empty or geometry.area <= 0:
+        return Polygon()
+    return _polygon(geometry, "Accounting source-domain intersection")
+
+
 def compile_groups(plan, source_geometries, domain, selection):
     """Return ordinary analysis subjects plus exact runtime pixel-mask recipes."""
     requested = selection.get("accounting")
@@ -104,7 +113,7 @@ def compile_groups(plan, source_geometries, domain, selection):
             if area > tolerance:
                 raise ValueError("Upstream domain " + value + " extends outside parent " + parent_id
                                  + "; select compatible original contribution domains")
-        total = parent_shape.intersection(domain)
+        total = _polygon_domain(parent_shape.intersection(domain))
         group = {
             "id": key, "title": title.strip(), "parent_receptor_id": parent_id,
             "upstream_receptor_ids": upstream, "reservoir_receptor_ids": reservoirs,
@@ -137,7 +146,8 @@ def compile_groups(plan, source_geometries, domain, selection):
                 whole = whole.intersection(_union(include))
             if exclude:
                 whole = whole.difference(_union(exclude))
-            shape = whole.intersection(domain)
+            whole = _polygon_domain(whole)
+            shape = _polygon_domain(whole.intersection(domain))
             definition = {
                 "id": subject_id, "kind": "accounting", "title": title.strip() + " / " + ROLES[role],
                 "family": parent["family"], "source": parent["source"],
