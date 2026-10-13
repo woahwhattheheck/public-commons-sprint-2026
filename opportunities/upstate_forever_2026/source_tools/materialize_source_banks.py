@@ -29,29 +29,71 @@ def checked(data, size, checksum, label):
     return data
 
 
+def _json_whitespace(text):
+    """Undo Canvas spacing outside JSON strings; keep every string byte intact."""
+    output, quoted, escaped = [], False, False
+    for character in text:
+        if quoted:
+            output.append(character)
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                quoted = False
+        else:
+            if character == '"':
+                quoted = True
+            output.append(" " if character == "\u00a0" else character)
+    return "".join(output)
+
+
+def _document_text(text, label):
+    """Read original JSON or one explicitly labelled source-transfer JSON fence."""
+    try:
+        return json.loads(_json_whitespace(text))
+    except json.JSONDecodeError as error:
+        # The published receiving Canvases have exactly one JSON fence each.
+        # Bash/Python instructions remain inert text and are never evaluated.
+        fences = re.findall(r"(?m)^" + chr(96) * 3 +
+                            r"json[ \t]*\r?\n([\s\S]*?)^" + chr(96) * 3 +
+                            r"[ \t]*\r?$", text)
+        if len(fences) != 1:
+            raise ValueError("Save one complete source JSON or receiving Canvas: " + label) from error
+        return json.loads(_json_whitespace(fences[0]))
+
+
 def document(path):
-    value = json.loads(Path(path).read_text(encoding="utf-8"))
-    # Accept a saved native structured tool result as well as its direct body.
-    for _ in range(12):
-        if isinstance(value, dict) and isinstance(value.get("schema"), str):
+    label = str(path)
+    value = _document_text(Path(path).read_text(encoding="utf-8"), label)
+    # Preserve the original saved wrapper; reject errors before unwrapping it.
+    for _ in range(16):
+        if not isinstance(value, dict):
+            break
+        if value.get("isError") is True or value.get("error"):
+            raise ValueError("The saved provider response reports an error; inspect " + label)
+        if isinstance(value.get("schema"), str):
             return value
-        if isinstance(value, dict) and isinstance(value.get("structuredContent"), dict):
+        if isinstance(value.get("markdown_content"), str):
+            value = _document_text(value["markdown_content"], label)
+            continue
+        if isinstance(value.get("structuredContent"), dict):
             value = value["structuredContent"]
             continue
-        if isinstance(value, dict) and isinstance(value.get("content"), str):
+        if isinstance(value.get("content"), str):
             text = value["content"]
             if value.get("encoding") == "base64":
-                text = base64.b64decode(text).decode("utf-8")
-            value = json.loads(text)
+                text = base64.b64decode(text, validate=True).decode("utf-8")
+            value = _document_text(text, label)
             continue
-        if isinstance(value, dict) and isinstance(value.get("content"), list):
+        if isinstance(value.get("content"), list):
             text = [item["text"] for item in value["content"]
                     if isinstance(item, dict) and item.get("type") == "text"]
             if len(text) == 1:
-                value = json.loads(text[0])
+                value = _document_text(text[0], label)
                 continue
         break
-    raise ValueError("Save the complete original JSON tool body: " + str(path))
+    raise ValueError("Save the complete original JSON tool body or receiving Canvas: " + label)
 
 
 def target(root, name):
