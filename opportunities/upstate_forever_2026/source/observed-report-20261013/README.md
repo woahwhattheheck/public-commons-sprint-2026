@@ -6,7 +6,7 @@ Maintained by TokenJunkieLabs. Code follows the repository MIT license. Scientif
 
 ## Install in the current application
 
-Use the current maintained application containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. The merged PR3111 collector v4 supports both the regional source namespace and the separately retained original study. Then run:
+Use the maintained application with the original observation sources merged in [PR3046](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3046) and receiving workflow merged in [PR2920](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2920), containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. The merged PR3111 collector v4 supports both the regional source namespace and the separately retained original study. Then run:
 
 ```sh
 python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12/original-workspace
@@ -71,8 +71,8 @@ The installer also accepts `--manifest observations/eighteenmile_2023/report_con
 The renderer defaults to `observed_hydrology_context.sources.json` beneath `--app-root`, matching the installer's regional context. An explicit renderer `--manifest` path resolves from the current working directory. Add `--create-workspace` with the worker's own fresh `--workspace` and `--output` paths to run the same retained source on another Linux worker. Existing workspaces remain selected when this option is omitted. The output operation records the actual collection and source IDs, report section and figure counts, and file descriptors.
 
 Related maintained source:
-- Original scientific report source edition: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP
-- Maintained report application: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026
+- Maintained scientific report: [model/scientific_report.py](../../model/scientific_report.py)
+- Maintained complete delivery and receiving guide: [model/CLIENT_REPORT.md](../../model/CLIENT_REPORT.md)
 - Observed-data desk and native intake: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QM61KRQ
 - Complete 62-file study source and offline figures: https://chatgpt.com/space/page_fb63164ad5208191b42417dd980ffb6a
 - Original observed hydrology and monthly discharge companion: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2

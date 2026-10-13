@@ -12,6 +12,7 @@ const FAMILIES = [
 ];
 const ROLES = [['PROTECTED_LANDS','Protected lands'],['PARCEL','Parcels'],
  ['NHD','Hydrography'],['NWI','Wetlands']];
+const OPTIONAL_ROLES = [['OBSERVED_CONTEXT','Observed water-quality context']];
 const OVERLAYS = [['drinking_water','Drinking-water source areas',true],
  ['high_quality_waters','Designated high-quality waters',true],
  ['protected_lands','Protected-land map overlay',false],['parcels','Parcel priority inventory',false]];
@@ -168,7 +169,9 @@ export function attachMapAtlas(host) {
  }
  function sourceCard(group,key,label,required) {
   const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Object.prototype.hasOwnProperty.call(draft[group]||{},key);
-  const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
+  const eligible=e=>key==='OBSERVED_CONTEXT'?e.kind==='document'&&e.metadata?.report_schema==='upstate.observed-report/v1':group==='overlays'?e.kind==='vector':true;
+  const sources=(data().sources||[]).filter(collection=>key!=='OBSERVED_CONTEXT'||collection.entries?.some(eligible));
+  const rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(eligible);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
   const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
   return '<fieldset class="atlas-source" data-source-card="'+name+'"><legend>'+esc(label)+'</legend>'+
@@ -201,7 +204,7 @@ export function attachMapAtlas(host) {
    }
   }
   if(step===1){
-   for(const [group,items] of [['source_roles',ROLES.map(r=>[...r,true])],['overlays',OVERLAYS]]){
+   for(const [group,items] of [['source_roles',[...ROLES.map(r=>[...r,true]),...OPTIONAL_ROLES.map(r=>[...r,false])]],['overlays',OVERLAYS]]){
     next[group]??={};for(const [key,,required] of items){
      const name=group+'__'+key,enabled=(!isStudy(next)&&required)||f.elements.namedItem(name+'__enabled')?.checked;
      if(!enabled){delete next[group][key];continue;}
@@ -248,7 +251,7 @@ export function attachMapAtlas(host) {
  function problems(selection=draft) {
   const out=[...deliveryEligibility(data(),selection).reasons];
   if(!selection.title?.trim())out.push('Enter the release title.');
-  for(const [group,items]of [['source_roles',ROLES.filter(r=>!isStudy(selection)||selection.source_roles?.[r[0]])],['overlays',OVERLAYS.filter(r=>(!isStudy(selection)&&r[2])||selection.overlays?.[r[0]])]]){
+  for(const [group,items]of [['source_roles',[...ROLES.filter(r=>!isStudy(selection)||selection.source_roles?.[r[0]]),...OPTIONAL_ROLES.filter(r=>selection.source_roles?.[r[0]])]],['overlays',OVERLAYS.filter(r=>(!isStudy(selection)&&r[2])||selection.overlays?.[r[0]])]]){
    for(const [key,label]of items){const choice=selection[group]?.[key],entry=sourceEntry(choice);
     if(!choice?.source_collection_id||!choice?.source_id)out.push('Choose '+label.toLowerCase()+'.');
     else if(!entry)out.push(label+': the retained source is unavailable.');
@@ -610,7 +613,7 @@ export function attachMapAtlas(host) {
    (mode==='inspect'&&inspection?inspectionPanel():mode==='outputs'?outputPanel():
    '<nav class="atlas-steps" aria-label="Delivery preparation">'+STEPS.map((label,i)=>'<button type="button" data-atlas-action="step" data-step="'+i+'" '+(i===step?'aria-current="step"':'')+'>'+String(i+1)+'. '+esc(label)+'</button>').join('')+'</nav>'+
    '<form data-atlas-form data-atlas-workspace="'+esc(workspace)+'"><h2>'+STEPS[step]+'</h2>'+
-   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
+   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+OPTIONAL_ROLES.map(([k,l])=>sourceCard('source_roles',k,l,false)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
    '<footer class="atlas-footer"><div class="atlas-actions">'+(step?button('previous','Back'):'')+
     (step<3?'<button type="submit">Continue</button>':'<button type="submit" class="atlas-primary" '+(busy?'disabled':'')+'>'+(busy?'Submitting…':'Build atlas and complete GIS delivery')+'</button>')+
     '</div><div class="atlas-actions">'+button('download-selection','Download selection')+
