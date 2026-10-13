@@ -100,8 +100,15 @@ def preview(workspace, value):
             "includes_all_completed_cases": len(case_ids) == len(packet["cases"]),
             "completed_cases": packet["completed_cases"], "total_cases": packet["total_cases"],
             "comparison_id": packet["comparison_id"],
+            "reference": {
+                "run_id": packet["selection"].get("baseline_run_id"),
+                "profile_id": packet["baseline_selection"].get("profile_id"),
+                "scenario_id": packet["baseline_selection"].get("scenario_id"),
+                "grid_id": packet["baseline_selection"].get("grid_id"),
+                "run_selection": deepcopy(packet["baseline_selection"]),
+            },
             "comparison_basis": "Original case minus baseline on paired valid cells, separately for each reporting area.",
-            "range_basis": ("Original saved full-study ranges appear only when every completed case is selected. "
+            "range_basis": ("Original saved completed-case ranges appear only when every completed case is selected. "
                             "Selecting fewer cases does not recalculate or relabel those ranges.")}
 
 
@@ -245,25 +252,87 @@ def _freeze(workspace, key, directory, selected, state):
 
 def _sections(selected, rows, ranges):
     selection = selected["selection"]
+    positions = {key: index + 1 for index, key in enumerate(selection["case_ids"])}
+    reference = selected.get("reference", {})
+
+    def percent_value(row):
+        if row["percent_change"] is not None:
+            return row["percent_change"]
+        if not row["paired_valid_cells"]:
+            return "Undefined: no paired valid cells"
+        if row["baseline_mass"] == 0:
+            return "Undefined: zero paired baseline"
+        return "Undefined in original result"
+
+    def mask_agreement(row):
+        if not row["paired_valid_cells"]:
+            return "No paired valid cells"
+        return "No" if row["support_changed"] else "Yes"
+
+    def response_value(row, name):
+        if "parameter" not in row:
+            return "Not applicable / not reported"
+        if name == "elasticity" and row.get(name) is None:
+            if row["baseline_mass"] in (None, 0):
+                return "Undefined: zero or unavailable baseline mass"
+            if row.get("baseline_parameter") == 0:
+                return "Undefined: zero baseline parameter"
+            return "Undefined in original result"
+        return row.get(name)
+
     sections = [
         ["Saved Parameter result selection", [
             selected["comparison_basis"],
-            "Every displayed value comes from the selected saved result edition. "
+            "Every displayed physical value comes from the selected saved result edition. "
             "Changing report choices runs no model and changes no scientific value.",
-            _table(["Study", "Result SHA256", "Completed / original cases", "Selected cases", "Selected areas", "Pollutants"],
-                   [[selection["experiment_id"], selection["expected_artifact_sha256"],
-                     str(selected["completed_cases"]) + " / " + str(selected["total_cases"]),
-                     len(selection["case_ids"]), len(selection["area_ids"]), ", ".join(selection["pollutants"])]]),
-            _table(["Original case", "Case ID", "Native run", "Profile", "Parameter assignments"],
-                   [[row["label"], row["id"], row["run_id"], row["profile_id"], row.get("overrides", {})]
-                    for row in selected["cases"]]),
+            _table(["Original selection", "Retained value"], [
+                ["Study", selection["experiment_id"]],
+                ["Result SHA256", selection["expected_artifact_sha256"]],
+                ["Completed original cases", selected["completed_cases"]],
+                ["Cases in the original design", selected["total_cases"]],
+                ["Completed cases selected for this report", len(selection["case_ids"])],
+                ["Selected reporting areas", len(selection["area_ids"])],
+                ["Selected pollutants", ", ".join(selection["pollutants"])],
+            ]),
+            "Completed-case counts include the native study's reference case when it is retained. "
+            "A partial study preserves its completed results and the original design count; "
+            "unfinished cases do not become zero responses. A report may explicitly select fewer "
+            "completed cases than the study contains.",
+        ]],
+        ["Original fixed baseline and case key", [
+            "Every parameter case is compared with this original baseline, including when the "
+            "baseline case itself was excluded from the report selection. Land cover and grid "
+            "remain the original study selections.",
+            _table(["Reference selection", "Original identity"], [
+                ["Baseline native run", reference.get("run_id") or "Unspecified in the original selection"],
+                ["Baseline profile", reference.get("profile_id") or "Unspecified in the original selection"],
+                ["Land-cover scenario", reference.get("scenario_id") or "Unspecified in the original selection"],
+                ["Prepared grid", reference.get("grid_id") or "Unspecified in the original selection"],
+            ]),
+            "Case positions below match the existing figure ticks and coordinate exports for this "
+            "retained report selection. They keep the same case across reporting areas and pollutants. "
+            "They are display keys, not parameter values or persistent native case IDs.",
+            _table(["Position", "Original case", "Native case ID"], [
+                [positions[row["id"]], row["label"], row["id"]] for row in selected["cases"]
+            ]),
+            _table(["Position", "Original profile", "Native run", "Parameter assignments"], [
+                [positions[row["id"]], row["profile_id"], row["run_id"], row.get("overrides", {})]
+                for row in selected["cases"]
+            ]),
         ]],
         ["Reporting geography", [
-            "Each polygon is intersected with the original model reporting mask. "
-            "Amounts describe paired valid cells; independent full totals retain their own support.",
-            _table(["Area", "Area ID", "Original area (ha)", "Intersection (ha)", "Original source"],
-                   [[row["name"], row["id"], row.get("source_area_ha"),
-                     row.get("reporting_intersection_ha"), row.get("source", {})] for row in selected["areas"]]),
+            "Each selected polygon is intersected with the original model reporting mask at pixel centres. "
+            "Paired masses use cells valid in both the baseline and the case within that area. "
+            "Own-valid full totals use each run's own valid cells inside the same area and reporting mask.",
+            _table(["Area", "Area ID", "Original area (ha)", "Reporting intersection (ha)"], [
+                [row["name"], row["id"], row.get("source_area_ha"), row.get("reporting_intersection_ha")]
+                for row in selected["areas"]
+            ]),
+            _table(["Area", "Original source selection"], [
+                [row["name"], row.get("source", {})] for row in selected["areas"]
+            ]),
+            "These original areas and paired hectare values retain the native grid's own area calculation. "
+            "They are not derived from a fixed nominal pixel size in this report.",
         ]],
     ]
     for area in selected["areas"]:
@@ -271,30 +340,86 @@ def _sections(selected, rows, ranges):
             chosen = [row for row in rows if row["area_id"] == area["id"] and row["pollutant"] == pollutant]
             for offset in range(0, len(chosen), 80):
                 page = chosen[offset:offset + 80]
-                sections.append([area["name"] + " / " + pollutant.replace("_export", "") +
-                                 " / cases " + str(offset + 1) + "–" + str(offset + len(page)), [
-                    "Change = selected case minus original baseline. A zero baseline leaves percentage change undefined.",
-                    _table(["Case", "Units", "Baseline", "Case mass", "Change", "Change (%)",
-                            "Paired cells", "Baseline cells", "Case cells", "Support changed"],
-                           [[row["case"], row["units"], row["baseline_mass"], row["case_mass"],
-                             row["change"], row["percent_change"], row["paired_valid_cells"],
-                             row["baseline_valid_cells"], row["case_valid_cells"], row["support_changed"]]
-                            for row in page]),
-                    _table(["Case ID", "Baseline full mass", "Case full mass", "Paired area (ha)",
-                            "Parameter", "Response / parameter unit", "Elasticity"],
-                           [[row["case_id"], row["baseline_full_mass"], row["case_full_mass"],
-                             row["paired_area_ha"], row.get("parameter"),
-                             row.get("response_per_parameter_unit"), row.get("elasticity")] for row in page]),
+                title = (area["name"] + " / " + pollutant.replace("_export", "") +
+                         " / selected cases " + str(offset + 1) + "–" + str(offset + len(page)))
+                sections.append([title + " — paired annual mass", [
+                    "Change is the original selected case minus baseline on cells valid in both runs. "
+                    "Negative change means lower modeled export. The position identifies the original "
+                    "case in the fixed-baseline case key and figures.",
+                    _table(["Position", "Units", "Baseline paired mass", "Case paired mass",
+                            "Signed change", "Change (%)"], [
+                        [positions[row["case_id"]], row["units"], row["baseline_mass"], row["case_mass"],
+                         row["change"], percent_value(row)] for row in page
+                    ]),
+                    "No paired valid cells leaves both paired masses, change and percent undefined. "
+                    "With paired cells present, a zero baseline mass leaves percent undefined even "
+                    "when the stored mass change is defined. Original missing values do not become zero.",
                 ]])
+                sections.append([title + " — original geographic support", [
+                    _table(["Position", "Baseline valid", "Case valid", "Paired valid",
+                            "Paired area (ha)", "Pair masks identical"], [
+                        [positions[row["case_id"]], row["baseline_valid_cells"], row["case_valid_cells"],
+                         row["paired_valid_cells"], row["paired_area_ha"], mask_agreement(row)]
+                        for row in page
+                    ]),
+                    "Pair masks identical means the original support_changed field is false with "
+                    "paired cells present. Both runs can still share missing cells. Counts cover this "
+                    "selected area inside the reporting mask; they do not establish whole-catchment "
+                    "coverage. Changed-support pairs retain their own original intersection.",
+                    _table(["Position", "Units", "Baseline own-valid full mass", "Case own-valid full mass"], [
+                        [positions[row["case_id"]], row["units"], row["baseline_full_mass"],
+                         row["case_full_mass"]] for row in page
+                    ]),
+                    "The two own-valid full totals can cover different cells. Their subtraction "
+                    "does not replace the original paired change. A run without valid cells has an "
+                    "undefined own-valid mass; a valid stored zero remains zero.",
+                ]])
+                if any("parameter" in row for row in page):
+                    sections.append([title + " — finite parameter response", [
+                        _table(["Position", "Varied parameter", "Baseline parameter", "Case parameter"], [
+                            [positions[row["case_id"]], row.get("parameter", "Not applicable / not reported"),
+                             response_value(row, "baseline_parameter"), response_value(row, "case_parameter")]
+                            for row in page
+                        ]),
+                        _table(["Position", "Mass units", "Response per parameter unit", "Elasticity"], [
+                            [positions[row["case_id"]], row["units"],
+                             response_value(row, "response_per_parameter_unit"),
+                             response_value(row, "elasticity")] for row in page
+                        ]),
+                        "The native producer reports a response only for a single numeric override, "
+                        "a nonzero tested parameter step and a defined paired change. It is the saved "
+                        "finite change per original parameter unit. Elasticity also needs nonzero "
+                        "baseline mass and baseline parameter. Routing choices and multi-parameter "
+                        "cases have no single-parameter response. These values describe the tested "
+                        "step; they are not a fitted derivative, calibration or probability estimate.",
+                    ]])
     if ranges:
-        sections.append(["Original full-study ranges", [
+        sections.append(["Original ranges over eligible completed cases", [
             selected["range_basis"],
-            "These are descriptive ranges over the tested cases with unchanged support.",
-            _table(["Area", "Pollutant", "Units", "Cases", "Minimum", "Maximum",
-                    "Minimum case", "Maximum case", "Changed-support cases"],
-                   [[row[name] for name in ("area", "pollutant", "units", "cases", "minimum_mass",
-                     "maximum_mass", "minimum_case_id", "maximum_case_id", "support_changed_cases")]
-                    for row in ranges]),
+            "The retained ranges describe completed original cases with paired data and unchanged "
+            "baseline support in each area, including the native reference case. They do not describe "
+            "unfinished cases or a probability distribution. Their values are copied from the saved "
+            "producer; this report does not recalculate them.",
+            _table(["Area", "Pollutant", "Units", "Eligible completed cases", "Minimum case mass",
+                    "Maximum case mass"], [
+                [row[name] for name in ("area", "pollutant", "units", "cases", "minimum_mass",
+                                       "maximum_mass")] for row in ranges
+            ]),
+            _table(["Area / pollutant", "Minimum case ID", "Maximum case ID",
+                    "Changed-support cases with paired data"], [
+                [row["area"] + " / " + row["pollutant"], row["minimum_case_id"],
+                 row["maximum_case_id"], row["support_changed_cases"]] for row in ranges
+            ]),
+            "Changed-support cases with paired data are excluded from these ranges and remain "
+            "visible in the original paired/support tables. Cases without paired data are separate "
+            "undefined rows and are not included in that changed-support count.",
+        ]])
+    else:
+        sections.append(["Original completed-case range selection", [
+            selected["range_basis"],
+            "No original range rows are included in this source selection. Selecting only some "
+            "completed cases does not create a new range. The original selected pair rows remain "
+            "available with their own geographic support.",
         ]])
     sections.append(["Original files and spatial interpretation", [
         "The complete original report retains every case, area, pollutant, executed version and requested difference map. "
