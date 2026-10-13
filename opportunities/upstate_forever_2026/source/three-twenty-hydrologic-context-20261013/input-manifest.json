@@ -1,0 +1,142 @@
+{
+  "schema": "three-twenty.hydrologic-original-inputs/v1",
+  "title": "Original four-station NLDI geographic inputs",
+  "captured_at": "2026-10-13",
+  "path_base": "application root",
+  "source_page": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+  "navigation": {
+    "origin": "21SC60WQ_WQX-SV-833",
+    "mode": "DM",
+    "distance_km": 100,
+    "whole_reaches": true
+  },
+  "expected": {
+    "stations": 4,
+    "downstream_reaches": 65,
+    "downstream_vertices": 650,
+    "upstream_reaches": 45
+  },
+  "files": [
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-feature-original.json",
+      "station": "RS-26250",
+      "role": "feature",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-RS-26250?f=json",
+      "bytes": 586,
+      "sha256": "a6a5e73d97d849c87d0aab0f31553ceb2c31faa1109f4f64dce392fe3d67a881"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-feature-original.json",
+      "station": "SV-735",
+      "role": "feature",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-735?f=json",
+      "bytes": 576,
+      "sha256": "bff07db20857dbd945e97341ac5e02148345542249da4ada4912554eec2417e8"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-feature-original.json",
+      "station": "SV-111",
+      "role": "feature",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-111?f=json",
+      "bytes": 576,
+      "sha256": "0fe2a180083e337ce8c971edcf0ec53fba6aa3d1770761ae1d0deffcd52bc976"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv833-nldi-downstream-whole-reaches-100km-original.json",
+      "station": "SV-833",
+      "role": "downstream_flowlines",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/navigation/DM/flowlines?f=json&distance=100",
+      "bytes": 26527,
+      "sha256": "9f2f631b3cfa5435ea668296173ca3bb104deb23bf156fe141365f77366ee04c"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-hydrolocation-original.json",
+      "station": "RS-26250",
+      "role": "hydrolocation",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.70322019%2034.64971302)",
+      "bytes": 727,
+      "sha256": "ed6384155ceefa06041089829a22a426daff08da03937196c3a0162e8059fecf"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-hydrolocation-original.json",
+      "station": "SV-735",
+      "role": "hydrolocation",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.746416%2034.627544)",
+      "bytes": 722,
+      "sha256": "7911eed7d00c90cd489a945acff45da5f1d5395f422630d00dd57f815ac1cb93"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-hydrolocation-original.json",
+      "station": "SV-111",
+      "role": "hydrolocation",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.77229111%2034.59978497)",
+      "bytes": 725,
+      "sha256": "780aace0f2025dfd78931d8be93d6d5a89f432c625939657fa92bd9a7703a431"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+      "bytes": 575,
+      "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68",
+      "role": "feature",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833?f=json",
+      "station": "SV-833"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+      "bytes": 722,
+      "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db",
+      "role": "hydrolocation",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.636966%2034.704792)",
+      "station": "SV-833"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+      "bytes": 23115,
+      "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8",
+      "role": "upstream_flowlines",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/navigation/UT/flowlines?f=json&distance=100",
+      "station": "SV-833"
+    },
+    {
+      "station": "RS-26250",
+      "role": "station_catalogue",
+      "filename": "three-twenty-rs-26250-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+      "bytes": 1306,
+      "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0",
+      "file_upload_id": "3f8dd772-3100-8184-a78f-00b260693a17",
+      "notion_reference": "notion-file-block://3899bd54-4d7a-4007-822f-6380ad6a3f96/74eca35c-1e25-447f-8d87-fcf8e727e5dd?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-rs-26250-station-2026-original.csv"
+    },
+    {
+      "station": "SV-735",
+      "role": "station_catalogue",
+      "filename": "three-twenty-sv-735-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+      "bytes": 1287,
+      "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16",
+      "file_upload_id": "3f8dd772-3100-8145-85ac-00b2f3cbbdc0",
+      "notion_reference": "notion-file-block://277c4b0c-2b8d-43cd-8dc0-dac4c1a3a14f/147abb7c-c37f-4a9a-9529-7e58ba86e7a9?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-735-station-2026-original.csv"
+    },
+    {
+      "station": "SV-111",
+      "role": "station_catalogue",
+      "filename": "three-twenty-sv-111-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+      "bytes": 1290,
+      "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939",
+      "file_upload_id": "3f8dd772-3100-8118-879b-00b261ff6f88",
+      "notion_reference": "notion-file-block://26dabf58-0e8d-4334-bd5d-0802f1b2c05b/8705116f-c39a-4389-87bf-d92f7f498acf?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-111-station-2026-original.csv"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "role": "station_catalogue",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "station": "SV-833"
+    }
+  ]
+}
