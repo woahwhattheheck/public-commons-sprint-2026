@@ -43,12 +43,12 @@
           "bytes": 8144
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
           "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
           "bytes": 11158
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
           "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
           "bytes": 1786
         },
@@ -98,9 +98,9 @@
           "bytes": 5904
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/model-sources.json",
-          "sha256": "06bc4f929212cf3179a0c936f8eb166d2a75f6f88efc18464b014eb9790870a7",
-          "bytes": 14486
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
         },
         {
           "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
@@ -280,9 +280,9 @@
           "bytes": 22544
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/README.md",
-          "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115",
-          "bytes": 5941
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
         },
         {
           "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
@@ -315,12 +315,12 @@
           "bytes": 8144
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
           "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
           "bytes": 11158
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
           "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
           "bytes": 1786
         },
@@ -375,9 +375,9 @@
           "bytes": 5904
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/model-sources.json",
-          "sha256": "06bc4f929212cf3179a0c936f8eb166d2a75f6f88efc18464b014eb9790870a7",
-          "bytes": 14486
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
         },
         {
           "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
@@ -553,9 +553,9 @@
           "bytes": 22544
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/README.md",
-          "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115",
-          "bytes": 5941
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
         },
         {
           "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
@@ -597,12 +597,12 @@
           "bytes": 8144
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
           "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
           "bytes": 11158
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
           "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
           "bytes": 1786
         },
@@ -657,9 +657,9 @@
           "bytes": 5904
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/model-sources.json",
-          "sha256": "06bc4f929212cf3179a0c936f8eb166d2a75f6f88efc18464b014eb9790870a7",
-          "bytes": 14486
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
         },
         {
           "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
@@ -835,9 +835,9 @@
           "bytes": 22544
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/README.md",
-          "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115",
-          "bytes": 5941
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
         },
         {
           "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
@@ -886,12 +886,12 @@
           "bytes": 8144
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration_context.mjs",
           "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
           "bytes": 11158
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/calibration-inputs.json",
           "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
           "bytes": 1786
         },
@@ -941,9 +941,9 @@
           "bytes": 5904
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/model-sources.json",
-          "sha256": "06bc4f929212cf3179a0c936f8eb166d2a75f6f88efc18464b014eb9790870a7",
-          "bytes": 14486
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/model-sources.json",
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683",
+          "bytes": 14382
         },
         {
           "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
@@ -1123,9 +1123,9 @@
           "bytes": 22544
         },
         {
-          "path": "source/hydrology-huc05-07-20261013/README.md",
-          "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115",
-          "bytes": 5941
+          "path": "observations/observed_report_regional_20261013/source/hydrology-huc05-07-20261013/README.md",
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e",
+          "bytes": 5914
         },
         {
           "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
