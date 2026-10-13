@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.9",
+  "version": "2.4.10",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -11,6 +11,11 @@
     "url": "https://chatgpt.com/space/page_fb63164ad5208191b42417dd980ffb6a"
   },
   "files": [
+    {
+      "path": "PUBLISHED_STUDIES.md",
+      "bytes": 35486,
+      "sha256": "2f08448b279d4246ec56f4287522adb12971acabbaf5c020e9b8cddd03bfe528"
+    },
     {
       "path": "eighteenmile_chlorophyll_reconciled.sources.json",
       "bytes": 8289,
@@ -52,9 +57,19 @@
       "sha256": "d169eaa09e680fa6a9efd530e9b77decb60bdaf79c17e40d8cc807c03d25c538"
     },
     {
+      "path": "examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json",
+      "bytes": 61974,
+      "sha256": "93c0cffe276ae443409733b8d0ef77306051c862e5fec5557e81ecc34aaf6980"
+    },
+    {
+      "path": "examples/selected-microbial-activities-20261013/receive.py",
+      "bytes": 12540,
+      "sha256": "395211fd171bcde5e838df3b4c481da11f8692e9dca77f7b588fa69b7c883815"
+    },
+    {
       "path": "install_published_studies.py",
-      "bytes": 21036,
-      "sha256": "aa45e728bb259c32c3d8b12153d8d4d3a44b8730d157ec05760c9f5f9887dd53"
+      "bytes": 21311,
+      "sha256": "270afad63480aa5d2e5745a1f818b7d741b208cb212237f7e125a385595458cf"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -82,9 +97,44 @@
       "sha256": "1dd1b46b8b5d2dfcb077c9dc4397c476187c64734238a6e23732f551c3409565"
     },
     {
+      "path": "integration/component_fragments/selected-microbial-studies.json",
+      "bytes": 1038,
+      "sha256": "1ff7d49a54b8eaa15747fbb9c0f96ee28c5b05e34b3fe6af1b165e59c6de8ac8"
+    },
+    {
       "path": "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
       "bytes": 7619,
       "sha256": "85f06278d911c2d6b9f408307cc6ae286cdbded7179f3e1675846ad7b36b3902"
+    },
+    {
+      "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
+      "bytes": 5368,
+      "sha256": "0d2d48b0788575f1ff842270d0a5d519db647ecf9660298c2d14959975fc23f1"
+    },
+    {
+      "path": "measurement_workspace/RL18151_OBSERVATIONS.md",
+      "bytes": 17575,
+      "sha256": "df533cd90360baac9409f1f5ad909727ed645fded0e74d174854380f6c013fcf"
+    },
+    {
+      "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
+      "bytes": 17209,
+      "sha256": "21e70d6a80e6a3034781ceae52f7691e8f6c3e7a1e54b836716781c4dbc9c995"
+    },
+    {
+      "path": "measurement_workspace/STUDY_REVIEWS.md",
+      "bytes": 23073,
+      "sha256": "5fe30b9de12b2d7c7002c9c3efb38d231b4212ec4cc7d0d121004be976f1e3e5"
+    },
+    {
+      "path": "measurement_workspace/SV833_OBSERVATIONS.md",
+      "bytes": 9511,
+      "sha256": "febb3f395b6dd388ec5e47b10b7bf77cfda40761d0397dd413cfd92f185e043a"
+    },
+    {
+      "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
+      "bytes": 10457,
+      "sha256": "eb56905a50771d539c27ef6b5a371c91a076f477c6c4d653386a726165eea1b3"
     },
     {
       "path": "measurement_workspace/geographic_study_selection.py",
@@ -97,11 +147,6 @@
       "sha256": "1e2fb1d67ee571d9a86c839afbd8ccef70e5740403b8e7cf021dc2d5ecc15b9e"
     },
     {
-      "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
-      "bytes": 5368,
-      "sha256": "0d2d48b0788575f1ff842270d0a5d519db647ecf9660298c2d14959975fc23f1"
-    },
-    {
       "path": "measurement_workspace/observation_support.py",
       "bytes": 14477,
       "sha256": "3cde49622b18951f37500c44b8d24d7a4b04c5abbc94c695e64d0778d288607a"
@@ -112,24 +157,14 @@
       "sha256": "3dc26da3cbbe039e500c35de35017f54056657ebb00eaadbfa447e8cafdf760e"
     },
     {
-      "path": "measurement_workspace/RL18151_OBSERVATIONS.md",
-      "bytes": 17575,
-      "sha256": "df533cd90360baac9409f1f5ad909727ed645fded0e74d174854380f6c013fcf"
-    },
-    {
       "path": "measurement_workspace/rl18151_observations.py",
       "bytes": 16348,
       "sha256": "c084e6ab67212aec29d9ba6c158588bbc92a88c91bdc374d53d36916c60edac4"
     },
     {
       "path": "measurement_workspace/source_observations.py",
-      "bytes": 10566,
-      "sha256": "6a49535945d72266e856c4dd790d45d7ab5b9f24bdc196369642940d71216968"
-    },
-    {
-      "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
-      "bytes": 17209,
-      "sha256": "21e70d6a80e6a3034781ceae52f7691e8f6c3e7a1e54b836716781c4dbc9c995"
+      "bytes": 24079,
+      "sha256": "175b548293e9ee1167d19fa70bf4ec1404bdf7af227d8a4333b742e466bb5335"
     },
     {
       "path": "measurement_workspace/study_context.py",
@@ -137,19 +172,9 @@
       "sha256": "ea57a8f0c58b520f82bde051f03e4d2c0802382cd486d792fc56556462e7c10f"
     },
     {
-      "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 23073,
-      "sha256": "5fe30b9de12b2d7c7002c9c3efb38d231b4212ec4cc7d0d121004be976f1e3e5"
-    },
-    {
       "path": "measurement_workspace/study_reviews.py",
       "bytes": 19638,
       "sha256": "8817e1384471a501c22c1c46fb7507ac0c110aa3a686e4a84c686ba04544c3dd"
-    },
-    {
-      "path": "measurement_workspace/SV833_OBSERVATIONS.md",
-      "bytes": 9511,
-      "sha256": "febb3f395b6dd388ec5e47b10b7bf77cfda40761d0397dd413cfd92f185e043a"
     },
     {
       "path": "measurement_workspace/sv833_observations.py",
@@ -157,19 +182,14 @@
       "sha256": "3a964c8fdd6034a6b019bbef7fb3463512e103f85deacfe038533dbc4413fe2c"
     },
     {
-      "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
-      "bytes": 10457,
-      "sha256": "eb56905a50771d539c27ef6b5a371c91a076f477c6c4d653386a726165eea1b3"
+      "path": "measurement_workspace/utility_microbiology.py",
+      "bytes": 26480,
+      "sha256": "df46c984a7dce49a3760588a2fb172ed148384d66f42f1c1123e9d3fe36a6686"
     },
     {
       "path": "measurement_workspace/utility_microbiology_context.py",
       "bytes": 17468,
       "sha256": "e0a53f527f293d994f67b658be86cbac1dac7dd47bf256c5ed9add45e75e46c5"
-    },
-    {
-      "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 24338,
-      "sha256": "042aed4b83e098ff08f16ba11a9ee8f940d0af6bff4e047abd7af902206adf53"
     },
     {
       "path": "measurement_workspace/wqp_profiles.py",
@@ -187,6 +207,11 @@
       "sha256": "a0b1e5242e88a4c1d2510d192bb9d9b1492ddcda025ac8cb2be63e3ae78c78e5"
     },
     {
+      "path": "model/UTILITY_MICROBIAL_STUDY.md",
+      "bytes": 11603,
+      "sha256": "1cc219e58173ebb0875de43c98a622dba50968fe438612a7937dfa311e62859f"
+    },
+    {
       "path": "model/published_review_report_source.py",
       "bytes": 33477,
       "sha256": "82657950f516682859ba6f8a31e3fe3f8b7b929e0d895ce50ab3ba6838354d02"
@@ -202,9 +227,14 @@
       "sha256": "59e7359f57d2cbcb12228dc98de20c7629a28a81ce0e4d3fcb1ca656b4aa0a12"
     },
     {
-      "path": "model/UTILITY_MICROBIAL_STUDY.md",
-      "bytes": 11603,
-      "sha256": "1cc219e58173ebb0875de43c98a622dba50968fe438612a7937dfa311e62859f"
+      "path": "observations/eighteenmile_2023/README.md",
+      "bytes": 2360,
+      "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+      "bytes": 4380,
+      "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
     },
     {
       "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
@@ -227,19 +257,14 @@
       "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
     },
     {
-      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
-      "bytes": 4380,
-      "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+      "bytes": 8581,
+      "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
     },
     {
       "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
       "bytes": 1149,
       "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
-    },
-    {
-      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
-      "bytes": 8581,
-      "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
     },
     {
       "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
@@ -262,14 +287,19 @@
       "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
     },
     {
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+    },
+    {
       "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
       "bytes": 2433,
       "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
     },
     {
-      "path": "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
       "bytes": 731,
-      "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+      "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
     },
     {
       "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.cjs",
@@ -277,9 +307,9 @@
       "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
     },
     {
-      "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
-      "bytes": 731,
-      "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+      "bytes": 3679,
+      "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
     },
     {
       "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
@@ -305,11 +335,6 @@
       "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
       "bytes": 169,
       "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
-    },
-    {
-      "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
-      "bytes": 3679,
-      "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
     },
     {
       "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
@@ -345,6 +370,11 @@
       "path": "observations/eighteenmile_2023/microcystin_support_20261013/original-campaign-support.json",
       "bytes": 104610,
       "sha256": "77ea745496c41a02c0f2b1539d7f4149ba424b14d98ca7402f009fcf1672fe9d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/README.md",
+      "bytes": 5057,
+      "sha256": "30dfdb28eaa342623c985f9142e031abdd4600d1a3f687f447f182cdbd6ef755"
     },
     {
       "path": "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
@@ -397,11 +427,6 @@
       "sha256": "951cc21b3ec387079a6243f7bde0f070b94550f09647fd8ef49ab6000395644a"
     },
     {
-      "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
-      "bytes": 12502,
-      "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
-    },
-    {
       "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
       "bytes": 92801,
       "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
@@ -427,14 +452,9 @@
       "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
     },
     {
-      "path": "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
-      "bytes": 14000,
-      "sha256": "f550d2c2ac73dde011c4d052a17a1b9c11bd6e05f5239e44afb48bb2e667d874"
-    },
-    {
-      "path": "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
-      "bytes": 14277,
-      "sha256": "97d5e652810e9dce7d56376599002c51089db3aee1be98bbfc8953d4c4f9ccc8"
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+      "bytes": 12502,
+      "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
     },
     {
       "path": "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
@@ -447,14 +467,24 @@
       "sha256": "db6a21764d0c56a18d55d73a4e179156f2a47de0c68fead5c825d815244afe0b"
     },
     {
-      "path": "observations/eighteenmile_2023/paired_analysis/README.md",
-      "bytes": 5057,
-      "sha256": "30dfdb28eaa342623c985f9142e031abdd4600d1a3f687f447f182cdbd6ef755"
+      "path": "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+      "bytes": 14000,
+      "sha256": "f550d2c2ac73dde011c4d052a17a1b9c11bd6e05f5239e44afb48bb2e667d874"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+      "bytes": 14277,
+      "sha256": "97d5e652810e9dce7d56376599002c51089db3aee1be98bbfc8953d4c4f9ccc8"
     },
     {
       "path": "observations/eighteenmile_2023/paired_analysis/source-records.csv",
       "bytes": 123444,
       "sha256": "56f1fdc441d0039704877518a9059670cb201f24b8c4f19953ecd487813d1bbc"
+    },
+    {
+      "path": "observations/eighteenmile_2023/physical_context/README.md",
+      "bytes": 9917,
+      "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
     },
     {
       "path": "observations/eighteenmile_2023/physical_context/activity-physical-context.csv",
@@ -532,11 +562,6 @@
       "sha256": "d4d69de758607378adee564216ebd00dd677aa902b2a5a0a2cc8999e9ea20e3e"
     },
     {
-      "path": "observations/eighteenmile_2023/physical_context/README.md",
-      "bytes": 9917,
-      "sha256": "5c650b68d29e369a4873cc310182187fc3765a9a6d954e8de39034e16991ddfe"
-    },
-    {
       "path": "observations/eighteenmile_2023/physical_context/report.mjs",
       "bytes": 21118,
       "sha256": "0af0c4a7fb61ae223a7507272d0e7c9d7fd9fe2b03118f849c35858496d52a55"
@@ -565,11 +590,6 @@
       "path": "observations/eighteenmile_2023/physical_context/within-station-associations.csv",
       "bytes": 5753,
       "sha256": "6a84a8d6bf280b4e2eff228e28818545a34848cfa35eada2a44b63eb03bf261b"
-    },
-    {
-      "path": "observations/eighteenmile_2023/README.md",
-      "bytes": 2360,
-      "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
     },
     {
       "path": "observations/eighteenmile_2023/reported_npdes_permits.csv",
@@ -617,6 +637,91 @@
       "sha256": "f1b187f3c4a6ddbebf80ce1140f789eb1d9951b6c0f6f8e12f60c9601d4f9283"
     },
     {
+      "path": "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_PUBLIC.md",
+      "bytes": 5480,
+      "sha256": "000714744a41caba9d0823f42e50895befca77b57144e575df5a6500420e9503"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow-context-public-sources.json",
+      "bytes": 5713,
+      "sha256": "f7e5d9b4ceac543d8beafdd069e4133ba1bb5430ffd7ca2365a9b4f8ccc81108"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_context.mjs",
+      "bytes": 4678,
+      "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_context_methods.public.json",
+      "bytes": 4562,
+      "sha256": "6d3127bec00175f656b07a13807baf6a0b6e6e9f21b05b0965411b8191cc8b28"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_original_source.mjs",
+      "bytes": 2370,
+      "sha256": "3c1a40457a4b87d677395f2b2bd4a19485f97062d7df248edc8836bc19b4476f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+      "bytes": 11724,
+      "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+      "bytes": 92801,
+      "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+      "bytes": 92708,
+      "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+      "bytes": 71625,
+      "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+      "bytes": 71632,
+      "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/usgs_02186702_2023_2023.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/reproduce_study_flow.mjs",
+      "bytes": 3827,
+      "sha256": "74aa69ebe47b46833c7801692f384d0c918487b41c9a8a40c6ddb2ffa73d2dc5"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+      "bytes": 27050,
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+      "bytes": 10282,
+      "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+    },
+    {
       "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
       "bytes": 34350,
       "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
@@ -625,11 +730,6 @@
       "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
       "bytes": 281844,
       "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
-      "bytes": 10282,
-      "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
     },
     {
       "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
@@ -687,84 +787,19 @@
       "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
     },
     {
-      "path": "observations/eighteenmile_2023/wqp/flow_context_methods.public.json",
-      "bytes": 4562,
-      "sha256": "6d3127bec00175f656b07a13807baf6a0b6e6e9f21b05b0965411b8191cc8b28"
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/README.md",
+      "bytes": 701,
+      "sha256": "d310691225a1ae1f89c6e7de514bf03817e35c89363f1593368cd3a6c42415a1"
     },
     {
-      "path": "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_PUBLIC.md",
-      "bytes": 5480,
-      "sha256": "000714744a41caba9d0823f42e50895befca77b57144e575df5a6500420e9503"
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md",
+      "bytes": 6007,
+      "sha256": "e9fe4d1f464584ccbf4305a75c9f68cd1e2dc20b129840ce7a9e9b38affb1925"
     },
     {
-      "path": "observations/eighteenmile_2023/wqp/flow_context.mjs",
-      "bytes": 4678,
-      "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/flow_original_source.mjs",
-      "bytes": 2370,
-      "sha256": "3c1a40457a4b87d677395f2b2bd4a19485f97062d7df248edc8836bc19b4476f"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/flow-context-public-sources.json",
-      "bytes": 5713,
-      "sha256": "f7e5d9b4ceac543d8beafdd069e4133ba1bb5430ffd7ca2365a9b4f8ccc81108"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
-      "bytes": 11724,
-      "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
-      "bytes": 92801,
-      "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
-      "bytes": 92708,
-      "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
-      "bytes": 71625,
-      "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
-      "bytes": 71632,
-      "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
-      "bytes": 16829,
-      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
-      "bytes": 17299,
-      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
-      "bytes": 16792,
-      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/originals/usgs_02186702_2023_2023.json",
-      "bytes": 29226,
-      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/reproduce_study_flow.mjs",
-      "bytes": 3827,
-      "sha256": "74aa69ebe47b46833c7801692f384d0c918487b41c9a8a40c6ddb2ffa73d2dc5"
-    },
-    {
-      "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
-      "bytes": 27050,
-      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/README.md",
+      "bytes": 7824,
+      "sha256": "82987fa097a99e0a268f5082ce935eb80c4d933db4f370ed0e13ac583e8cf00e"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/activity-nutrients-flow.csv",
@@ -862,21 +897,6 @@
       "sha256": "622caf002d5dd47e1c1d2f96dd6b4b2beb20d308622e8c7a4eda56f144fa015e"
     },
     {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity_report.mjs",
-      "bytes": 12417,
-      "sha256": "f797675b060cf2c96448426aa8771ccff84c1444c2f0b4eab2e9e83aa9ad000d"
-    },
-    {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md",
-      "bytes": 6007,
-      "sha256": "e9fe4d1f464584ccbf4305a75c9f68cd1e2dc20b129840ce7a9e9b38affb1925"
-    },
-    {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity.mjs",
-      "bytes": 9721,
-      "sha256": "95f24b9d4bd5017c38d6faba4848bee3c7f6f4220a78b7adeb71b35df188d54e"
-    },
-    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-nitrogen-components.csv",
       "bytes": 6896,
       "sha256": "65db2355418943f74fbe641e0611e935338601fe8920286147c190efc7097100"
@@ -907,9 +927,14 @@
       "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7"
     },
     {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/README.md",
-      "bytes": 7824,
-      "sha256": "82987fa097a99e0a268f5082ce935eb80c4d933db4f370ed0e13ac583e8cf00e"
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity.mjs",
+      "bytes": 9721,
+      "sha256": "95f24b9d4bd5017c38d6faba4848bee3c7f6f4220a78b7adeb71b35df188d54e"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity_report.mjs",
+      "bytes": 12417,
+      "sha256": "f797675b060cf2c96448426aa8771ccff84c1444c2f0b4eab2e9e83aa9ad000d"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/report.mjs",
@@ -977,24 +1002,19 @@
       "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
     },
     {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/README.md",
-      "bytes": 701,
-      "sha256": "d310691225a1ae1f89c6e7de514bf03817e35c89363f1593368cd3a6c42415a1"
-    },
-    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/seasonal_summaries.csv",
       "bytes": 127,
       "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
     },
     {
-      "path": "observations/eighteenmile_stream_nutrients_2020_2025/source_notes.json",
-      "bytes": 2036,
-      "sha256": "a45bfc62444dc6a0fe5074545520390b50d748e344712eff4ccf00a9569cd11f"
-    },
-    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/source-summary.json",
       "bytes": 3783,
       "sha256": "67c5026007938183f3ca8b62f72b2c72ead6b07dd88324a03b6b80716f03bd62"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/source_notes.json",
+      "bytes": 2036,
+      "sha256": "a45bfc62444dc6a0fe5074545520390b50d748e344712eff4ccf00a9569cd11f"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/stations.csv",
@@ -1025,6 +1045,11 @@
       "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
       "bytes": 55405,
       "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+    },
+    {
+      "path": "observations/sv833_2021_2026/README.md",
+      "bytes": 7853,
+      "sha256": "98837e63c11f38707ecf11ad1cd772ef4139d0f5e84c7d96bbcbc50f73511901"
     },
     {
       "path": "observations/sv833_2021_2026/activity-characteristic-measurements.csv",
@@ -1122,11 +1147,6 @@
       "sha256": "fc124e84f5251ffe20a38ba0e997f8a1de7a78f0fffa8200666471fe36cbf7ed"
     },
     {
-      "path": "observations/sv833_2021_2026/README.md",
-      "bytes": 7853,
-      "sha256": "98837e63c11f38707ecf11ad1cd772ef4139d0f5e84c7d96bbcbc50f73511901"
-    },
-    {
       "path": "observations/sv833_2021_2026/repeated-original-results.csv",
       "bytes": 14257,
       "sha256": "337b8e481530f594aeb17e758b0c722c87e36ada0843ae48ffcb709a5bdabb6a"
@@ -1167,6 +1187,21 @@
       "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
     },
     {
+      "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
+      "bytes": 15804,
+      "sha256": "84aa48061127d302f9873fa65e1cac030db0e9cc498ab784d9b528a87fb6edbd"
+    },
+    {
+      "path": "operator/RECEIVED_PUBLISHED_REVIEWS.md",
+      "bytes": 9704,
+      "sha256": "9315d7d740a0d7a2df4877626b662fc9625359e94162bcf4d34f1773b5e57d61"
+    },
+    {
+      "path": "operator/SELECTED_MICROBIAL_STUDY.md",
+      "bytes": 13702,
+      "sha256": "792b0767a9dd673e5909c44e7310bf3615b02e06854bb142a383e956672bbce8"
+    },
+    {
       "path": "operator/extensions/published-studies.json",
       "bytes": 5132,
       "sha256": "1aa58c9fe23ec42072b56f03f207cf98b6f50034c5ec5bff0d3a9f2002ae5651"
@@ -1177,19 +1212,9 @@
       "sha256": "49fc2fdd5a8c2d98162fbd981e34e64fc74e6f2df50b3d70d261a48be3b4dba9"
     },
     {
-      "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
-      "bytes": 15804,
-      "sha256": "84aa48061127d302f9873fa65e1cac030db0e9cc498ab784d9b528a87fb6edbd"
-    },
-    {
       "path": "operator/published_study_operator.py",
       "bytes": 26955,
       "sha256": "8d229833413b8173703ecd3c1044404509f973bdd00c7ce9e358288f86c97f9a"
-    },
-    {
-      "path": "operator/RECEIVED_PUBLISHED_REVIEWS.md",
-      "bytes": 9704,
-      "sha256": "9315d7d740a0d7a2df4877626b662fc9625359e94162bcf4d34f1773b5e57d61"
     },
     {
       "path": "operator/received_published_reviews.py",
@@ -1237,64 +1262,29 @@
       "sha256": "46f355426b380ed3ba03a788489a9ef86307e878f3a18a1fe42ece7685570e8f"
     },
     {
-      "path": "PUBLISHED_STUDIES.md",
-      "bytes": 35486,
-      "sha256": "2f08448b279d4246ec56f4287522adb12971acabbaf5c020e9b8cddd03bfe528"
-    },
-    {
       "path": "receive_published_studies.py",
       "bytes": 2617,
       "sha256": "838ff46aea53861766c620b40d91d67302c5e00a3020d35bd9b4547f6aa961b9"
     },
     {
-      "path": "source_tools/build_eighteenmile_stream_study.mjs",
-      "bytes": 15219,
-      "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
+      "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
+      "bytes": 4401,
+      "sha256": "75c3234c22751e414251703de2095ebf7c6ecd07598b80cbb52aa5a476f354c3"
     },
     {
-      "path": "source_tools/continue_study_report.py",
-      "bytes": 29224,
-      "sha256": "67a4b0156548d8883cfa8e93aa6e8220ab77170b47b076f7a327d61c8ad88009"
+      "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
+      "bytes": 6530,
+      "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
     },
     {
-      "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
-      "bytes": 5164,
-      "sha256": "674a5b62e8ea26f372c7b3354aee458855f01a3c64b057aac988fd279ea666da"
+      "path": "source/ecoli_temporal_analysis/20261013/PUBLICATION_FIGURES.md",
+      "bytes": 5459,
+      "sha256": "44ba5f106b0c4958a6dbf1bf10f7b092a95dec80bdaee1026c15f14eb7b9f2be"
     },
     {
-      "path": "source_tools/offline_handover/build_offline_handover.py",
-      "bytes": 10788,
-      "sha256": "966abe3b72846126ae85c7baf824f3ca9d29cc48b6fc506e17772da9da2c80e6"
-    },
-    {
-      "path": "source_tools/offline_handover/offline_handover.html",
-      "bytes": 23314,
-      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
-    },
-    {
-      "path": "source_tools/offline_handover/README.md",
-      "bytes": 9808,
-      "sha256": "978129046b0862957e18da170ac4bfa0f5951b530799e5e125ccffc48c9971e7"
-    },
-    {
-      "path": "source_tools/receive_geographic_study_review.py",
-      "bytes": 24454,
-      "sha256": "7d998e420b8d374b0f478cb1aba4d292b27b321b02462793c89dd87cff404c1a"
-    },
-    {
-      "path": "source_tools/receive_original_study.py",
-      "bytes": 39119,
-      "sha256": "2281854bad8ff8298f474c354b8b6720504d85c6865516d1ead78c8e439378ee"
-    },
-    {
-      "path": "source_tools/receive_rl18151_study.py",
-      "bytes": 502,
-      "sha256": "bffba18e4d2a938910fd013be19cff27927c96cccfc0d0a8b2c6411ac7d51025"
-    },
-    {
-      "path": "source_tools/receive_sv833_study.py",
-      "bytes": 498,
-      "sha256": "894d5a0ec4871cf9fc5410420508441b97ba56ac6d27c824d377e46529a79c7f"
+      "path": "source/ecoli_temporal_analysis/20261013/README.md",
+      "bytes": 10529,
+      "sha256": "0e986818ee59d1cb6db66e947b5bb53bd9ddcc35d3fdc335be1df6affc547d4e"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
@@ -1322,11 +1312,6 @@
       "sha256": "5cff009450b0ed86d9948be632eded9f7e181439c5e021f74fd0aa39f751405f"
     },
     {
-      "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
-      "bytes": 4401,
-      "sha256": "75c3234c22751e414251703de2095ebf7c6ecd07598b80cbb52aa5a476f354c3"
-    },
-    {
       "path": "source/ecoli_temporal_analysis/20261013/calendar-support-comparisons.csv",
       "bytes": 17589,
       "sha256": "11e7a36b5eeca7a7aee55e654c30446effb473c8b2da795b239eb8b6576cd878"
@@ -1350,11 +1335,6 @@
       "path": "source/ecoli_temporal_analysis/20261013/compare-calendar-support.mjs",
       "bytes": 6915,
       "sha256": "3aeb39798609ccce35a85e87cb46d8f9da6f744fbbd983d9dcbff6031cdd2742"
-    },
-    {
-      "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
-      "bytes": 6530,
-      "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/explorer.mjs",
@@ -1412,11 +1392,6 @@
       "sha256": "33f2e1de6c004efe3af90230a0b42d422e547fefaf0b6a4fb73e4c76495df391"
     },
     {
-      "path": "source/ecoli_temporal_analysis/20261013/PUBLICATION_FIGURES.md",
-      "bytes": 5459,
-      "sha256": "44ba5f106b0c4958a6dbf1bf10f7b092a95dec80bdaee1026c15f14eb7b9f2be"
-    },
-    {
       "path": "source/ecoli_temporal_analysis/20261013/publication-figure-source-points.csv",
       "bytes": 66758,
       "sha256": "bcf377990d2d998d96712105b2217817a301d2f75d232e90abc8c0ead3692744"
@@ -1435,11 +1410,6 @@
       "path": "source/ecoli_temporal_analysis/20261013/publication-figures.mjs",
       "bytes": 8374,
       "sha256": "f86d6421ee81839d694010778067984f8603dee77646f8f5cb121d7b71efa75e"
-    },
-    {
-      "path": "source/ecoli_temporal_analysis/20261013/README.md",
-      "bytes": 10529,
-      "sha256": "0e986818ee59d1cb6db66e947b5bb53bd9ddcc35d3fdc335be1df6affc547d4e"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
@@ -1485,6 +1455,11 @@
       "path": "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
       "bytes": 30692,
       "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/README.md",
+      "bytes": 7374,
+      "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
     },
     {
       "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
@@ -1557,11 +1532,6 @@
       "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
     },
     {
-      "path": "source/ecoli_utility_context/20261013/README.md",
-      "bytes": 7374,
-      "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
-    },
-    {
       "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
       "bytes": 368696,
       "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
@@ -1605,6 +1575,11 @@
       "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
       "bytes": 2297,
       "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+      "bytes": 13711,
+      "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
     },
     {
       "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
@@ -1682,11 +1657,6 @@
       "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92"
     },
     {
-      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
-      "bytes": 13711,
-      "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
-    },
-    {
       "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
       "bytes": 5733,
       "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547"
@@ -1752,6 +1722,26 @@
       "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
     },
     {
+      "path": "source/rl18151-lake-phosphorus-20261013/README.md",
+      "bytes": 9886,
+      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+    },
+    {
+      "path": "source/rl18151-lake-phosphorus-20261013/RL_NATIVE_RECEIVING.md",
+      "bytes": 5488,
+      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+    },
+    {
+      "path": "source/rl18151-lake-phosphorus-20261013/SAMPLING_SUPPORT.md",
+      "bytes": 7388,
+      "sha256": "ff51f08c1a217fad972b62ca79ed2bc65cb056c70cf7138cf113d93a95824d72"
+    },
+    {
+      "path": "source/rl18151-lake-phosphorus-20261013/SOURCE_CAPTURE.md",
+      "bytes": 3129,
+      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+    },
+    {
       "path": "source/rl18151-lake-phosphorus-20261013/acquisition-plan.json",
       "bytes": 9199,
       "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
@@ -1772,14 +1762,14 @@
       "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
     },
     {
-      "path": "source/rl18151-lake-phosphorus-20261013/capture_rl18151.py",
-      "bytes": 18835,
-      "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
-    },
-    {
       "path": "source/rl18151-lake-phosphorus-20261013/capture-manifest.json",
       "bytes": 47483,
       "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+    },
+    {
+      "path": "source/rl18151-lake-phosphorus-20261013/capture_rl18151.py",
+      "bytes": 18835,
+      "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/derived/annual-cohorts.csv",
@@ -1937,11 +1927,6 @@
       "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
     },
     {
-      "path": "source/rl18151-lake-phosphorus-20261013/README.md",
-      "bytes": 9886,
-      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
-    },
-    {
       "path": "source/rl18151-lake-phosphorus-20261013/render-report.mjs",
       "bytes": 19383,
       "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
@@ -1950,16 +1935,6 @@
       "path": "source/rl18151-lake-phosphorus-20261013/report.html",
       "bytes": 1251821,
       "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
-    },
-    {
-      "path": "source/rl18151-lake-phosphorus-20261013/RL_NATIVE_RECEIVING.md",
-      "bytes": 5488,
-      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
-    },
-    {
-      "path": "source/rl18151-lake-phosphorus-20261013/SAMPLING_SUPPORT.md",
-      "bytes": 7388,
-      "sha256": "ff51f08c1a217fad972b62ca79ed2bc65cb056c70cf7138cf113d93a95824d72"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/sampling-review.html",
@@ -1982,11 +1957,6 @@
       "sha256": "16c65ff05ce1c2f2d9cd586cc611da50897bbf36453ca0175d65f1a3954e1be5"
     },
     {
-      "path": "source/rl18151-lake-phosphorus-20261013/SOURCE_CAPTURE.md",
-      "bytes": 3129,
-      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
-    },
-    {
       "path": "source/rl18151-lake-phosphorus-20261013/sources.json",
       "bytes": 46667,
       "sha256": "a1777d38b212150aa6a4d71d3d3639e30007fcc2a8d183191c0e522b9bc14e85"
@@ -2000,6 +1970,11 @@
       "path": "source/rl18151-lake-phosphorus-20261013/supplemental-requests.json",
       "bytes": 1967,
       "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/README.md",
+      "bytes": 5587,
+      "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
     },
     {
       "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
@@ -2070,11 +2045,6 @@
       "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
       "bytes": 1169,
       "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
-    },
-    {
-      "path": "source/sv833-hydrologic-context-20261013/README.md",
-      "bytes": 5587,
-      "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
     },
     {
       "path": "source/sv833-hydrologic-context-20261013/report.mjs",
@@ -2165,6 +2135,56 @@
       "path": "source/sv833-water-quality-20261013/retained-assessment-context.json",
       "bytes": 8285,
       "sha256": "582f5465696d291e3e9de8d66357227f6f405422609f83dff7dc66c2aa6a87f5"
+    },
+    {
+      "path": "source_tools/build_eighteenmile_stream_study.mjs",
+      "bytes": 15219,
+      "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
+    },
+    {
+      "path": "source_tools/continue_study_report.py",
+      "bytes": 29224,
+      "sha256": "67a4b0156548d8883cfa8e93aa6e8220ab77170b47b076f7a327d61c8ad88009"
+    },
+    {
+      "path": "source_tools/offline_handover/README.md",
+      "bytes": 9808,
+      "sha256": "978129046b0862957e18da170ac4bfa0f5951b530799e5e125ccffc48c9971e7"
+    },
+    {
+      "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
+      "bytes": 5164,
+      "sha256": "674a5b62e8ea26f372c7b3354aee458855f01a3c64b057aac988fd279ea666da"
+    },
+    {
+      "path": "source_tools/offline_handover/build_offline_handover.py",
+      "bytes": 10788,
+      "sha256": "966abe3b72846126ae85c7baf824f3ca9d29cc48b6fc506e17772da9da2c80e6"
+    },
+    {
+      "path": "source_tools/offline_handover/offline_handover.html",
+      "bytes": 23314,
+      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
+    },
+    {
+      "path": "source_tools/receive_geographic_study_review.py",
+      "bytes": 24454,
+      "sha256": "7d998e420b8d374b0f478cb1aba4d292b27b321b02462793c89dd87cff404c1a"
+    },
+    {
+      "path": "source_tools/receive_original_study.py",
+      "bytes": 39119,
+      "sha256": "2281854bad8ff8298f474c354b8b6720504d85c6865516d1ead78c8e439378ee"
+    },
+    {
+      "path": "source_tools/receive_rl18151_study.py",
+      "bytes": 502,
+      "sha256": "bffba18e4d2a938910fd013be19cff27927c96cccfc0d0a8b2c6411ac7d51025"
+    },
+    {
+      "path": "source_tools/receive_sv833_study.py",
+      "bytes": 498,
+      "sha256": "894d5a0ec4871cf9fc5410420508441b97ba56ac6d27c824d377e46529a79c7f"
     },
     {
       "path": "sv833_hydrologic_context.sources.json",
@@ -2315,6 +2335,20 @@
         "git_blob": "2937bc4c81ac10cbcc4bfb469badfe53f8022436",
         "sha256": "1e2fb1d67ee571d9a86c839afbd8ccef70e5740403b8e7cf021dc2d5ecc15b9e"
       }
+    },
+    "selected_microbial_activities": {
+      "implementation_merge_commit": "bcf225fe7778a8034b8605f7472a3152d3dc34d8",
+      "original_input_manifest": "native-selection-input/sources.json",
+      "original_input_carrier": "transfers/selected-microbial-activities-20261013/original-input.json",
+      "original_input_commit": "fe8ca2f4f2b5b3369c75b6a059a74714b312a643",
+      "original_observation_count": 730,
+      "receiver": "examples/selected-microbial-activities-20261013/receive.py",
+      "selection": "examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json",
+      "guide": "operator/SELECTED_MICROBIAL_STUDY.md",
+      "selector": "measurement_workspace/source_observations.py",
+      "retained_builder": "measurement_workspace/utility_microbiology.py",
+      "scope": "The original full source is validated before selecting exact activity IDs; saved review, scientific report and cold receive retain complete original inputs.",
+      "receiving_application": "Use the complete current application or compose this full family at the native boundary; preserve advancing shared browser, renderer and Study hooks."
     }
   }
 }
