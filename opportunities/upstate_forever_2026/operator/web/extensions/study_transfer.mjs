@@ -16,6 +16,7 @@ const ROOTS = [
   ['calibration-reviews', 'Calibration scientific reviews'],
   ['calibration-report-sources', 'Calibration report sources'],
   ['parameter-working', 'Parameter working designs'],
+  ['climate-working', 'Climate forcing working designs'],
   ['multivariate-controls', 'Matched-control designs'],
   ['multivariate-control-outcomes', 'Matched-control native outcomes'],
   ['climate-forcing-studies', 'Climate forcing studies'],
@@ -268,6 +269,19 @@ export function attachStudyTransfer(host) {
     try{return await host.openDesk('multivariate-control','openSavedDesign',{workspace_key:origin,design_id:id});}
     catch(error){if(workspaceNow()!==origin)return null;throw error;}
   }
+  function climateWorkingControl(row){
+    if(row?.kind!=='climate-working'||row.state==='unreadable'||
+       !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
+    return button('open-climate-working','Open working design','data-revision-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openClimateWorking(id){
+    const row=[...visiblePage().items,...(plan?.nodes||[])].find(value=>
+      value.kind==='climate-working'&&value.id===id&&value.state!=='unreadable');
+    if(!row||typeof host.openDesk!=='function')throw Error('Refresh the original saved Climate working design.');
+    const origin=workspaceNow();
+    try{return await host.openDesk('climate-forcing','openWorkingRevision',{workspace_key:origin,revision_id:id});}
+    catch(error){if(workspaceNow()!==origin)return null;throw error;}
+  }
   function climateForcingControl(row){
     if(row?.kind!=='climate-forcing-studies'||row.state==='unreadable'||
        !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
@@ -380,7 +394,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&samplingOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
@@ -445,7 +459,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -654,6 +668,7 @@ export function attachStudyTransfer(host) {
       else if(action==='open-control-design'){await openControlDesign(target.dataset.studyId);}
       else if(action==='open-control-outcome'){await openControlOutcome(target.dataset.studyId);}
       else if(action==='open-terrain'){await openTerrain(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-climate-working'){await openClimateWorking(target.dataset.revisionId);}
       else if(action==='open-climate-forcing'){await openClimateForcing(target.dataset.studyId);}
       else if(action==='open-climate-management'){await openClimateManagement(target.dataset.studyId);}
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}

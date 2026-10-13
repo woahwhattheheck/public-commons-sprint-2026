@@ -143,6 +143,10 @@ def visit(closure, kind, key, value):
         raise ValueError("The selected forcing design changed its original scientific identity")
     if climate_forcing._read(closure.workspace, key) != value:
         raise ValueError("The forcing checkpoint changed during Study selection")
+    working_origin = identity["selection"].get("working_origin")
+    if working_origin is not None:
+        closure.need("climate-working", identifier(working_origin["revision_id"]),
+                     "Original named forcing working design and complete ancestry")
     retained = _capture_selection(closure, key)
     cases = [_case(case) for case in value["cases"]]
     if retained is not None:

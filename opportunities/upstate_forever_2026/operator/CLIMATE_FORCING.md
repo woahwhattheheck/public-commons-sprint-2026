@@ -97,3 +97,7 @@ Receive this complete source family into the current assembled application. Pres
 Exercise the actual browser at desktop and narrow width: source selection, case editing, preview, preparation, run queue/log access, report download, source collection opening, workspace switch during a read, and saved-study reopening. Confirm the full editable archive retains source, study, native outputs and report files. Report native execution and visual review separately from source parsing or code review.
 
 A failed native process remains an original run/task with its own logs. Refresh and reopen that task to recover the same retained state; do not manufacture another scientific baseline or overwrite an accepted completed run.
+
+## Unfinished named designs
+
+The same desk now retains raw unfinished controls as named immutable revisions, explicit branches and portable histories. See [CLIMATE_WORKING.md](CLIMATE_WORKING.md) for save/retry, source-bound scientific preview and selected Study/cold-reopen workflow. These actions do not prepare or execute a native model.
