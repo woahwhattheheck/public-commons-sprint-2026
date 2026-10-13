@@ -231,7 +231,35 @@ for a complete authored population; it compares every native record after receiv
 The original verification/journey.mjs and collections_journey.mjs remain available.
 The capacity rows are labeled software workloads, not field observations.
 
-## Current-source recovery integration, 13 October 2026
+## Current receiving continuation, edition 1.2.3
+
+The original guided Measurements course has subsequently completed its actual
+eight-station source journey in the native application at desktop 1440 and narrow
+390 pixels. It retained all eight public station records, the original CSV and
+preparation history, operated the controls and downloads, and reopened the complete
+preparation and received workspace independently. This case contains station
+metadata and zero measurement observations.
+
+The original returned artifacts are:
+
+* [Complete editable workspace, 29,987 bytes](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791919476969529?thread_ts=1791724121.853269),
+  SHA-256 6bec430d350c7c9a15a5d29891df6579f78584dc3b43e3268ed0ca78ed2c440c.
+* [Complete preparation, 6,034 bytes](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791919477927209?thread_ts=1791724121.853269),
+  SHA-256 2d90690f5aac9f59952b9e3f6c52748941b543b17fe2294c2e6cb17359abc367.
+* [Unchanged public station CSV, 3,640 bytes](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791919478770659?thread_ts=1791724121.853269),
+  SHA-256 21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e.
+
+The local-file continuation in this edition uses that same original application
+and receiving ownership. Its full-source execution reproduced the earlier
+same-size overwrite and failed-read truncation, then exercised complete replay,
+original-prefix checks and interrupted publication recovery. Select the current
+source at the original equipped operator's composition boundary and retain the
+actual command, complete original files, native commit and independently reopened
+handover together. The separate original 533-row source course retains its own
+source identity. The following 1.2.1/1.2.2 paragraphs are historical observations
+from those specific source editions.
+
+## Historical source recovery, edition 1.2.1 (13 October 2026)
 
 Installer 1.2.1 composes the original 1.2.0 engine and pane into the current
 collection and Chemistry controllers. It preserves the native atomic snapshot,
@@ -242,7 +270,7 @@ The original release ZIP remains byte-preserved separately; no legacy controller
 is installed over a newer peer implementation. An unrelated exact hunk change
 still stops installation for explicit composition.
 
-### Recovery operation and remaining inspection
+### Original receiving and browser observations for edition 1.2.1
 
 The compatible native source executed complete 800-record receiving and an authored
 350,000-row software workload on 13 October 2026. The larger course completed all
@@ -251,14 +279,14 @@ comparison in 147.343 seconds, peak reported RSS 233,428 KiB. Of the authored ro
 346,391 were accepted and 3,609 excluded with original reasons retained. These are
 software workloads, not field observations or a watershed-model acceptance.
 
-This source recovery is a draft. The composed visual interface has not been
-accepted: local Chromium failed with socket Operation not permitted. The cloud
+At this edition's original receiving boundary, the source recovery was recorded
+as a draft. Its composed visual interface had not yet been accepted: local Chromium failed with socket Operation not permitted. The cloud
 browser could not reach the local HTTP server (ERR_CONNECTION_REFUSED); rebinding
 its internal chrome-error page also returned a protocol-policy denial. The error
 page was not read or bypassed. No screenshot inspection or browser-control
-completion is claimed. Do not present this as a ready client application. Complete
-the original loaded/empty/error/download/reopen desktop and narrow-width journey
-in an authorized browser before product delivery. No denied route is retried.
+completion was recorded in that source edition. The original receiving course
+therefore retained its loaded/empty/error/download/reopen desktop and narrow-width
+journey for the equipped browser owner. The recorded denied routes were not retried.
 
 The preserved original 1.2.0 ZIP SHA256 is
 29e9100f210c38682891656e225acf7242e56c4bc952650aad0117d9ef7380a7.
@@ -312,7 +340,7 @@ Pass this complete brief into every current child, provider and cloud work order
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
 
-## Streamed original continuity, recovery edition 1.2.2
+## Historical streamed-original continuity, edition 1.2.2
 
 DD6B's complete 804f9822 read-adapter correction is composed into this edition.
 The original atomic fullSnapshot calls portableDocument inside its read
@@ -328,7 +356,8 @@ original collection publication and independent complete native receiving now
 retain identical original content, rejected rows and every native table. Current
 40,609-byte Chemistry binding and 35,156-byte browser helper are retained from
 the maintained application; their hashes are pinned in the source inventory.
-The package remains a draft pending actual visual product use.
+At the original 1.2.2 handoff, this source package was recorded as a draft pending
+actual visual product use; that historical observation is retained here.
 
 ## Complete current native source composition
 
