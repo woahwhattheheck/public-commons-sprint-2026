@@ -6,6 +6,7 @@ import {nativeArchiveOperations} from './native-analysis-archives-schema.mjs';
 import {nativeResearchOperations} from './native-analysis-research-schema.mjs';
 import {nativeLineageOperations} from './native-analysis-lineage-schema.mjs';
 import {nativePublicationOperations} from './native-analysis-publication-schema.mjs';
+import {nativeEventOperations} from './native-analysis-events-schema.mjs';
 const name={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_-]{0,63}$'};
 const id={type:'string',pattern:'^[a-f0-9]{32}$'};
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
@@ -114,6 +115,7 @@ export const nativeAnalysisOperations=Object.freeze({
   ...nativeResearchOperations,
   ...nativeLineageOperations,
   ...nativePublicationOperations,
+  ...nativeEventOperations,
 
 });
 export const nativeAnalysisActions=Object.freeze(['analysis']);

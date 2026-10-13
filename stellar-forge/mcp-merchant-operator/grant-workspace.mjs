@@ -422,6 +422,15 @@ export class MerchantGrantWorkspaces {
         body.document=await this.#modelInputs(alias,args,'Installation');
       original=await client.installationWorkflowSeed(caseId,body);
     }
+    else if (verb === 'installation_workshares') {
+      const {caseId,...body}=rest; original=await client.installationWorkshares(caseId,body);
+    }
+    else if (verb === 'installation_workshare_seed') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const hasDocument=inputs!==undefined||input!==undefined||inputPointer!==undefined||expectedInputSha256!==undefined;
+      if(hasDocument)body.document=await this.#modelInputs(alias,args,'Installation');
+      original=await client.installationWorkshareSeed(caseId,body);
+    }
     else if (verb === 'installation_preview'||verb === 'installation_save') {
       const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
       const document=await this.#modelInputs(alias,args,'Installation');
@@ -496,6 +505,7 @@ export class MerchantGrantWorkspaces {
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
       ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','installationId','revision','after','before','limit','kind',
         'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
+        'workshareCaseId','expectedSourceSha256','packetSourceId','expectedPacketSha256',
         'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','asOfAt','receiptId','cohortReviewIds','implementationReviewIds','sha256',
         'expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
   }

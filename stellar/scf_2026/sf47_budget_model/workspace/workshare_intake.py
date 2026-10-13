@@ -82,7 +82,7 @@ def business_end(start, days, calendar):
     fail("The entered duration exceeds the original forecast horizon.")
 
 
-def load_workshares(commissioning, receiving_packet=None):
+def load_workshares(commissioning, receiving_packet=None, *, require_proposed_usd=True):
     """Read every original phase and reconcile the matching complete case packet."""
     supported = ("sec-workshare.commissioning-inputs.v1", "dealscout.workshare-commissioning-inputs.v1")
     if commissioning.get("version") not in supported:
@@ -105,7 +105,7 @@ def load_workshares(commissioning, receiving_packet=None):
         if packets and packets[case_id]["workshare_input"] != row["workshare_input"]:
             fail("The receiving and commissioning Workshare inputs differ: " + case_id)
         commercial = plan["commercial"]
-        if commercial["currency"] != "USD" or commercial["price_status"] != "PROPOSED":
+        if require_proposed_usd and (commercial["currency"] != "USD" or commercial["price_status"] != "PROPOSED"):
             fail("This intake supports the retained USD proposed-work contract.")
         amount = decimal(commercial["amount"], "Original proposed fee")
         milestones = commercial["milestones"]

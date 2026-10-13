@@ -332,3 +332,7 @@ JS += _analysis_worldbank_ui.JS
 # The dataset package and original publisher share this same Analysis workspace.
 HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="publication-link" href="/publication">Dataset publication</a>', 1)
 JS += "\ndocument.getElementById('publication-link').href='/publication#'+capability;\n"
+
+
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="event-programmes-link" href="/event-programmes">Event programmes</a>', 1)
+JS += "\ndocument.getElementById('event-programmes-link').href='/event-programmes#'+capability;\n"
