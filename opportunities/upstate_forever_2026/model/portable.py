@@ -96,6 +96,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "grids").glob("*/.grid.lock")):
                 stack.enter_context(held(path, blocking=False))
+            for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):
+                stack.enter_context(held(path, blocking=False))
             initial = _inventory(root, excluded=excluded, **selection)
             with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=3, allowZip64=True) as archive:
