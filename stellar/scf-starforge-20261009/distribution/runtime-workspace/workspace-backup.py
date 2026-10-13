@@ -95,21 +95,51 @@ def read_json(path, optional=False, maximum=MAX_MANIFEST):
 def signature(info):
     return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns, info.st_mode)
 
-def regular_hash(path, expected=None):
+def regular_hash(path, expected=None, *, cache=None, work=None, bucket=None):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(fd, "rb") as handle:
         before = os.fstat(handle.fileno())
         require(stat.S_ISREG(before.st_mode), "WORKSPACE_BACKUP_FILE", "Only original regular files can be captured.")
         if expected: require(signature(before) == expected, "WORKSPACE_BACKUP_CHANGED", "Source changed before copying.")
-        digest = hashlib.sha256(); length = 0
-        while True:
-            chunk = handle.read(CHUNK)
-            if not chunk: break
-            digest.update(chunk); length += len(chunk)
+        observed = signature(before); cached = cache.get(str(path)) if cache is not None else None
+        if cached is not None and cached[0] == observed:
+            result = dict(cached[1]); length = result["bytes"]
+            if work is not None: work["sourceDigestReuses"] += 1
+        else:
+            digest = hashlib.sha256(); length = 0
+            while True:
+                chunk = handle.read(CHUNK)
+                if not chunk: break
+                digest.update(chunk); length += len(chunk)
+                if work is not None and bucket: work[bucket + "Bytes"] += len(chunk)
+            result = {"bytes": length, "sha256": digest.hexdigest()}
+            if work is not None and bucket: work[bucket + "Files"] += 1
         after = os.fstat(handle.fileno())
     require(signature(before) == signature(after) and before.st_size == length,
             "WORKSPACE_BACKUP_CHANGED", "Source changed while reading: " + str(path))
-    return {"bytes": length, "sha256": digest.hexdigest()}, signature(before)
+    if cache is not None: cache[str(path)] = (observed, dict(result))
+    return result, observed
+
+def export_read_work():
+    # Actual bytes consumed by this Python invocation, independent of OS caching.
+    return {"inventoryPasses": 0, "sourceHashFiles": 0, "sourceHashBytes": 0,
+            "sourceDigestReuses": 0, "copiedFiles": 0, "copiedBytes": 0,
+            "archiveHashFiles": 0, "archiveHashBytes": 0,
+            "archiveMemberPasses": 0, "archiveMemberBytes": 0}
+
+class CopiedSource:
+    def __init__(self, handle, work):
+        self.handle = handle; self.work = work; self.digest = hashlib.sha256(); self.length = 0
+
+    def read(self, size=-1):
+        chunk = self.handle.read(size)
+        self.digest.update(chunk); self.length += len(chunk); self.work["copiedBytes"] += len(chunk)
+        return chunk
+
+    def verify(self, row):
+        require(self.length == row["bytes"] and self.digest.hexdigest() == row["sha256"],
+                "WORKSPACE_BACKUP_CHANGED", "Copied source differs from its complete reviewed bytes: " + row["path"])
+        self.work["copiedFiles"] += 1
 
 def inside(path, root):
     return path == root or root in path.parents
@@ -273,8 +303,9 @@ def inherited_gate(root):
         else: raise Failure("WORKSPACE_BACKUP_GATE", "An exclusive original workspace gate is required.")
     finally: os.close(other)
 
-def snapshot_inventory(root):
+def snapshot_inventory(root, cache=None, work=None):
     rows = []; total = 0; locks = []
+    if work is not None: work["inventoryPasses"] += 1
     for parent, dirs, files in os.walk(root, topdown=True, followlinks=False):
         dirs.sort(); files.sort()
         for name in sorted(dirs + files):
@@ -290,7 +321,7 @@ def snapshot_inventory(root):
             elif stat.S_ISDIR(info.st_mode):
                 row = {"path": rel, "kind": "directory", "mode": mode}
             elif stat.S_ISREG(info.st_mode):
-                content, identity = regular_hash(path, signature(info)); total += content["bytes"]
+                content, identity = regular_hash(path, signature(info), cache=cache, work=work, bucket="sourceHash"); total += content["bytes"]
                 row = {"path": rel, "kind": "file", "mode": mode, **content}
                 if name.endswith(".lock") and not mode & 0o077:
                     require(info.st_nlink == 1, "WORKSPACE_BACKUP_LEASE", "Keep each original private lease inode.")
@@ -347,7 +378,10 @@ def require_settled_operations(root, rows):
                 "Stop or recover this original running or initializing operation before backup: " + str(operation))
 
 @contextlib.contextmanager
-def quiescent(root):
+def quiescent(root, cache=None, work=None):
+    # A new cache is confined to this lease acquisition. Nothing is retained
+    # across the earlier review and a later export or operation continuation.
+    if cache is None: cache = {}
     inherited_gate(root); handles = []; held_paths = set()
     def hold(path, create=False):
         fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | (os.O_CREAT if create else 0), 0o600)
@@ -367,10 +401,10 @@ def quiescent(root):
         # A retained QUEUED request need not run merely to obtain a backup.
         # Its original worker inode is held before the first full inventory.
         for operation in original_operation_directories(root): hold(operation / "worker.lock", create=True)
-        rows, paths = snapshot_inventory(root)
+        rows, paths = snapshot_inventory(root, cache, work)
         for path in paths:
             if path not in held_paths: hold(path)
-        held, current = snapshot_inventory(root)
+        held, current = snapshot_inventory(root, cache, work)
         require(held == rows and current == paths, "WORKSPACE_BACKUP_CHANGED", "The workspace changed while acquiring its original resource leases.")
         require_settled_operations(root, rows)
         yield rows
@@ -442,7 +476,8 @@ def review(params):
     if prior:
         require(source_directory(prior) == str(root) and prior["label"] == params["label"], "WORKSPACE_BACKUP_REVIEW_REUSED", "Request UUID belongs to another backup review.")
         return overview(prior)
-    with quiescent(root) as rows:
+    cache = {}
+    with quiescent(root, cache) as rows:
         config = config_for(root)
         discovery = {"parsedJsonFiles": 0, "unscannedJsonFiles": [], "externalTreesCopied": False}
         declared = bindings(root, rows, config, discovery)
@@ -454,7 +489,7 @@ def review(params):
         # only that controller record is regenerated during another restore.
         if any(row["path"] == MARKER for row in rows):
             manifest["previousReceiving"] = read_json(root / MARKER)
-        after, _ = snapshot_inventory(root)
+        after, _ = snapshot_inventory(root, cache)
         require(after == rows, "WORKSPACE_BACKUP_CHANGED", "The source changed during complete review.")
         require(len(encoded(manifest)) <= MAX_MANIFEST, "WORKSPACE_BACKUP_MANIFEST_LIMIT", "Complete manifest exceeds 64 MiB.")
         validate_manifest(manifest)
@@ -499,13 +534,25 @@ def validate_manifest(manifest):
             "WORKSPACE_BACKUP_CONFIG_LIMIT", "Keep the original runtime configuration within its native 4 MiB reader limit.")
     return by_name
 
-def archive_read(path, expected_sha, callback=None):
-    path = absolute(str(path)); actual, source_stat = regular_hash(path)
+def archive_identity(source_stat):
+    return {"dev": str(source_stat[0]), "ino": str(source_stat[1]), "size": str(source_stat[2]),
+            "mtimeNs": str(source_stat[3]), "ctimeNs": str(source_stat[4])}
+
+def archive_read(path, expected_sha, callback=None, *, work=None):
+    path = absolute(str(path))
+    hashed = regular_hash(path, work=work, bucket="archiveHash")
+    return archive_read_hashed(path, expected_sha, hashed, callback, work=work)
+
+def archive_read_hashed(path, expected_sha, hashed, callback=None, *, work=None):
+    # Private same-invocation continuation of regular_hash. Never admit a
+    # retained inspection's identity or a caller-supplied hash record here.
+    actual, source_stat = hashed
     require(actual["sha256"] == digest_id(expected_sha), "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "The complete selected archive SHA-256 does not match.")
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(fd, "rb") as raw:
         require(signature(os.fstat(raw.fileno())) == source_stat, "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "Archive changed before reading.")
         with tarfile.open(fileobj=raw, mode="r|gz") as archive:
+            if work is not None: work["archiveMemberPasses"] += 1
             members = iter(archive)
             first = next(members, None)
             require(first is not None and first.name == "manifest.json" and first.isfile() and first.size <= MAX_MANIFEST,
@@ -529,6 +576,7 @@ def archive_read(path, expected_sha, callback=None):
                         chunk = stream.read(CHUNK)
                         if not chunk: break
                         count += len(chunk); digest.update(chunk)
+                        if work is not None: work["archiveMemberBytes"] += len(chunk)
                         if config_bytes is not None: config_bytes.extend(chunk)
                         if writer: writer.write(chunk)
                     require(count == expected[name]["bytes"] and digest.hexdigest() == expected[name]["sha256"],
@@ -542,12 +590,14 @@ def archive_read(path, expected_sha, callback=None):
             require(seen == set(expected), "WORKSPACE_BACKUP_INCOMPLETE", "Receive every original workspace file.")
         require(signature(os.fstat(raw.fileno())) == source_stat, "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "Archive changed during receiving.")
     return {"archiveId": expected_sha, **actual, "manifestSha256": sha(manifest_bytes), "review": overview(manifest),
-            "archiveIdentity": {"dev": str(source_stat[0]), "ino": str(source_stat[1]), "size": str(source_stat[2]),
-                                "mtimeNs": str(source_stat[3]), "ctimeNs": str(source_stat[4])}}, manifest
+            "archiveIdentity": archive_identity(source_stat)}, manifest
 
 def inspect(params):
     store = private(absolute(params["store"])); archive = absolute(params["archivePath"])
     result, manifest = archive_read(archive, params["sha256"])
+    return retain_inspection(store, archive, result, manifest)
+
+def retain_inspection(store, archive, result, manifest):
     directory = make_private(store / "inspections" / result["archiveId"])
     record = {**result, "archivePath": str(archive), "inspectedAt": timestamp()}
     previous = read_json(directory / "inspection.json", optional=True)
@@ -571,19 +621,22 @@ def export(params):
     manifest = read_json(source); validate_manifest(manifest)
     require(sha(encoded(manifest)) == digest_id(params["reviewSha256"]), "WORKSPACE_BACKUP_REVIEW_CHANGED", "Review the original complete inventory.")
     directory = private(absolute(params["operationDirectory"])); destination = directory / "workspace.tar.gz"
+    work = export_read_work()
     if destination.exists():
-        digest, _ = regular_hash(destination); result, actual = archive_read(destination, digest["sha256"])
+        hashed = regular_hash(destination, work=work, bucket="archiveHash")
+        result, actual = archive_read_hashed(destination, hashed[0]["sha256"], hashed, work=work)
         require(actual == manifest, "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "Retained archive belongs to this exact review.")
     else:
-        with quiescent(root) as rows:
+        cache = {}
+        with quiescent(root, cache, work) as rows:
             require(rows == manifest["entries"] and config_for(root) == manifest["workspace"],
                     "WORKSPACE_BACKUP_REVIEW_CHANGED", "The workspace changed after review; retain this review and create a fresh one.")
             pending = directory / "workspace.tar.gz.pending"
             if pending.exists():
-                previous, _ = regular_hash(pending)
+                previous, _ = regular_hash(pending, work=work, bucket="archiveHash")
                 retained = directory / ("interrupted-" + previous["sha256"] + ".tar.gz")
                 if retained.exists():
-                    require(regular_hash(retained)[0] == previous, "WORKSPACE_BACKUP_PREDECESSOR", "Interrupted archive identity changed.")
+                    require(regular_hash(retained, work=work, bucket="archiveHash")[0] == previous, "WORKSPACE_BACKUP_PREDECESSOR", "Interrupted archive identity changed.")
                     pending.unlink()
                 else: os.rename(pending, retained)
                 fsync_directory(directory)
@@ -597,19 +650,29 @@ def export(params):
                         path = root / row["path"]; fd_ = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
                         with os.fdopen(fd_, "rb") as file_:
                             before = os.fstat(file_.fileno())
-                            require(stat.S_ISREG(before.st_mode) and before.st_size == row["bytes"], "WORKSPACE_BACKUP_CHANGED", "Original source changed.")
+                            require(stat.S_ISREG(before.st_mode) and before.st_size == row["bytes"] and
+                                    signature(before) == cache[str(path)][0],
+                                    "WORKSPACE_BACKUP_CHANGED", "Original source changed before copying.")
                             header = tarfile.TarInfo("files/" + row["path"]); header.size = row["bytes"]; header.mode = 0o600
-                            archive.addfile(header, file_)
+                            copied = CopiedSource(file_, work); archive.addfile(header, copied); copied.verify(row)
                             require(signature(before) == signature(os.fstat(file_.fileno())), "WORKSPACE_BACKUP_CHANGED", "Original source changed while copying.")
                 raw.flush(); os.fsync(raw.fileno())
-            after, _ = snapshot_inventory(root)
+            after, _ = snapshot_inventory(root, cache, work)
             require(after == rows, "WORKSPACE_BACKUP_CHANGED", "The original complete workspace changed during backup.")
-            digest, _ = regular_hash(pending); result, actual = archive_read(pending, digest["sha256"])
+            hashed = regular_hash(pending, work=work, bucket="archiveHash")
+            result, actual = archive_read_hashed(pending, hashed[0]["sha256"], hashed, work=work)
             require(actual == manifest, "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "Verify the entire completed backup before publication.")
             os.rename(pending, destination); fsync_directory(directory)
-    result.update({"filename": "Runtime_Workspace_" + manifest["workspace"]["workspaceId"] + ".tar.gz", "archivePath": str(destination)})
-    inspection = inspect({"store": str(store), "archivePath": str(destination), "sha256": result["sha256"]})
-    return operation_record(params, "COMPLETE", result={**result, "inspectedAt": inspection["inspectedAt"]})
+    # Re-establish the complete final bytes and identity after rename. The
+    # already verified manifest/member pass belongs to exactly this digest.
+    final, final_stat = regular_hash(destination, work=work, bucket="archiveHash")
+    require(final == {"bytes": result["bytes"], "sha256": result["sha256"]},
+            "WORKSPACE_BACKUP_ARCHIVE_CHANGED", "The final published archive differs from its verified bytes.")
+    result["archiveIdentity"] = archive_identity(final_stat)
+    inspection = retain_inspection(store, destination, result, manifest)
+    result.update({"filename": "Runtime_Workspace_" + manifest["workspace"]["workspaceId"] + ".tar.gz",
+                   "archivePath": str(destination), "readWork": work, "inspectedAt": inspection["inspectedAt"]})
+    return operation_record(params, "COMPLETE", result=result)
 
 def marker_for(params, manifest, phase):
     value = {"schema": RECEIVING_SCHEMA, "receivingId": params["operationId"], "operationId": params["operationId"],
