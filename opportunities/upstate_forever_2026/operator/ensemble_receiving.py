@@ -10,7 +10,8 @@ def decorate(operator, workspace_key, result):
         for item in members:
             path = Path(workspace.root) / item["path"]
             rows.append(operator._ticket(
-                workspace_key, str(path), {**item, "filename": path.name},
+                workspace_key, str(path),
+                {**item, "filename": item.get("filename") or Path(item.get("label") or path.name).name},
                 item.get("label") or path.name))
         return rows
 
