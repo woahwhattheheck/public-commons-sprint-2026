@@ -14,6 +14,14 @@ The Community report keeps the exact saved plan, original community table, inter
 
 The task’s completed-result buttons remain available after reopening the operator. Source preparation does not change the original plan or report.
 
+## Read changes between saved plans
+
+Build a new Community report from a saved revised plan to receive its **Changes from previous saved plan** register. Open that report in Communities to see interventions added or removed, exact field and order changes, plan-detail changes, selected whole block groups, entered cost estimates, and original scientific/CSV lineage. **Open previous saved plan** returns to the retained parent edition.
+
+Entered-estimate totals and their difference carry the number of interventions with and without an estimate. Missing estimates remain separate. Community counts describe the original whole source block groups, including their overlapping utility and watershed memberships.
+
+The report retains `previous-plan.json`, `plan-revision-summary.json` and `plan-revision-changes.csv`. The CSV stores exact before/after values as JSON. Preparing this report as a scientific source carries those same original files and register sections into the ordered composer. Initial plans and reports created before this register retain their existing content; a new report edition adds the register without changing an earlier report.
+
 ## Native course
 
 From the maintained application root, use the actual saved report ID and its `files["community-report.json"]["sha256"]`:
@@ -53,7 +61,7 @@ The producer lives inside the original Community report root; imported sources a
 
 ## Reading the scientific context
 
-The prepared source uses community-planning edition 2. Its human-readable sections show selected whole-block-group counts in separate rows, with the complete total, available subtotal and number of groups supplying each measure. Missing values remain explicit. Utility and watershed summaries carry the same coverage fields while retaining their separate membership scopes.
+The prepared source uses community-planning edition 3. Its human-readable sections show selected whole-block-group counts in separate rows, with the complete total, available subtotal and number of groups supplying each measure. Missing values remain explicit. Utility and watershed summaries carry the same coverage fields while retaining their separate membership scopes.
 
 Poverty percentages retain the saved paired-group calculation: the numerator counts households below poverty and the denominator counts all households in the same groups with both values present. The report labels both the complete selected-group percentage and the known paired-group percentage, including the number of contributing groups. It does not average the printed block-group percentages. Income rows retain the source currency, reference value and citation, known-group count and range of original block-group medians. Those bounds are not a pooled median or mean income.
 

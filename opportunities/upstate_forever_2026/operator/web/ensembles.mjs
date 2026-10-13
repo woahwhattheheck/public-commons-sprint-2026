@@ -29,7 +29,7 @@ const choices = (name, rows, empty) => rows.length ? rows.map(row =>
   '</small></span></label>').join('') : '<p class="note">'+escapeHTML(empty)+'</p>';
 
 export function attachEnsembles(context) {
-  const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem, refresh, openDelivery} = context;
+  const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem, refresh, openDelivery, openScientificReport} = context;
   let root=null, generation=0, controller=null, catalog=null, axisCounter=0;
   let mountedWorkspace=null, rowSignature='', designVersion=0;
   if(!document.querySelector('[data-view="ensembles"]')) {
@@ -438,7 +438,10 @@ export function attachEnsembles(context) {
         'daily-flow dates and qualifiers. The same typed content appears in PDF, HTML, Markdown and structured data.</p>'+
         '<div class="page-actions">'+button('scientific-prepare',
           scientific?.state==='complete'?'Refresh scientific report':'Prepare scientific report',id,true)+
-        (scientific?.source?button('scientific-delivery','Include in delivery',id):'')+'</div>'+
+        (scientific?.source?button('scientific-compose','Compose scientific report',id)+
+          button('scientific-delivery','Include in delivery',id):'')+'</div>'+
+        (scientific?.source?'<p class="note">Compose combines this saved source with other scientific studies in the Sources report draft. '+
+          'The existing source order, title and contact remain editable.</p>':'')+
         (scientific?.error?'<div class="notice error">'+escapeHTML(scientific.error.message)+'</div>':'')+
         (scientific?.source?'<p>Registered scientific source: '+escapeHTML(scientific.source.source_id)+
           ' · '+escapeHTML(label(scientific.state))+'.</p>':'')+'</section>';
@@ -451,6 +454,27 @@ export function attachEnsembles(context) {
     detail(plan.selection.title||'Saved scientific result',html,{kind:'ensemble-consumer',id});
   }
 
+
+  async function scientificReport(selection={}) {
+    const workspace=currentWorkspace(), version=++designVersion;
+    if(selection.workspace_key && selection.workspace_key!==workspace)
+      throw Error('Open the saved scientific source in its original workspace.');
+    const value=await api(endpoint('/api/ensembles/scientific-source',{consumer_id:selection.consumer_id}));
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    const prepared=value.scientific_report_selection;
+    if(value.workspace_key!==workspace || prepared?.workspace_key!==workspace ||
+        !Array.isArray(prepared.sources) || !prepared.sources.length)
+      throw Error('Reopen this saved result with its current scientific source provider.');
+    await refresh({force:true});
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    return openScientificReport({
+      workspace_key:workspace,
+      sources:prepared.sources.map(row=>({
+        source_collection_id:row.source_collection_id,source_id:row.source_id
+      })),
+      title:prepared.title
+    });
+  }
 
   async function scientificDelivery(selection={}) {
     const workspace=currentWorkspace(), version=++designVersion;
@@ -774,9 +798,10 @@ export function attachEnsembles(context) {
     if(action==='consumer-open')return openConsumer(id);
     if(action==='scientific-prepare') {
       const task=await submitAction('ensemble.scientific-source',{consumer_id:id});
-      toast('The saved scientific report is queued. Reopen this result for PDF, original sources and Include in delivery.');
+      toast('The saved scientific report is queued. Reopen this result for PDF, original sources and Compose scientific report.');
       return task;
     }
+    if(action==='scientific-compose')return scientificReport({consumer_id:id});
     if(action==='scientific-delivery')return scientificDelivery({consumer_id:id});
     if(action==='flow-prepare'){
       const choice=form()?.elements.namedItem('consumer_saved_references')?.value||'';
@@ -808,5 +833,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificDelivery};
+  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificReport,scientificDelivery};
 }

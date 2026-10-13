@@ -1,3 +1,4 @@
+import type {DocumentCorrectionDraft,DocumentCorrectionSelection} from './corrections.mjs';
 import type {DocumentAssemblyWorkspace} from './assembly-workspace.mjs';
 import type {DocumentAssemblyRequest,DocumentAssemblyView,DocumentAssemblyCounts,DocumentAssemblyDelivery} from './assembly.mjs';
 import type {JobWorkspace} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/index.mjs';
@@ -15,7 +16,7 @@ export interface DocumentCompositionSourceSummary {
   id:string;name:string;provider:DocumentProviderId;merchantOrigin:string;directory:string;
   sourceSha256:string;sourceBytes:number;counts:DocumentCompositionCounts;
 }
-export type DocumentCompositionAction='stage'|'restore'|'prepare'|'run'|'receive'|'export'|'assembly-stage'|'assembly-prepare'|'assembly-run'|'assembly-receive'|'assembly-export';
+export type DocumentCompositionAction='stage'|'correct'|'restore'|'prepare'|'run'|'receive'|'export'|'assembly-stage'|'assembly-prepare'|'assembly-run'|'assembly-receive'|'assembly-export';
 export interface DocumentCompositionOperation {
   id:string;compositionId:string;kind:DocumentCompositionAction;
   state:'RUNNING'|'COMPLETE'|'CONTINUATION_REQUIRED'|'STOPPED'|'FAILED';
@@ -81,7 +82,10 @@ export interface DocumentCompositionWorkspace {
   assembly(options:DocumentCompositionSelection&{assemblyId:string;assemblySha256:string;signal?:AbortSignal}):Promise<DocumentAssemblyView&{
     exports:Array<{id:string;complete:boolean;counts?:DocumentAssemblyCounts;files?:DocumentAssemblyDelivery['files'];
       native?:DocumentAssemblyDelivery['native'];archive?:DocumentAssemblyDelivery['archive'];error?:{code:string;message:string}}>}>;
+  correctionDraft(options:DocumentCompositionSelection&Omit<DocumentCorrectionSelection,'id'>&{
+    newId:string;signal?:AbortSignal}):Promise<DocumentCorrectionDraft>;
   operation(options:{operationId:string}):DocumentCompositionOperation;
+  start(kind:'correct',input:{id:string;draft:DocumentCorrectionDraft}):DocumentCompositionOperation;
   start(kind:'stage',input:DocumentCompositionStageInput):DocumentCompositionOperation;
   start(kind:'restore',input:DocumentCompositionSelection&({sourceFile:string;source?:never}|{source:DocumentUploadedSource;sourceFile?:never})):DocumentCompositionOperation;
   start(kind:'run',input:DocumentCompositionSelection&{planSha256:string}):DocumentCompositionOperation;

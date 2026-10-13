@@ -41,6 +41,10 @@ CSV_FIELDS = (
     "baseline_run_id", "scenario_id", "profile_id", "grid_id", "comparison_id",
     "native_model", "native_output_id", "native_units", "units", "pixel_area_ha",
     "artifact_path", "artifact_sha256", "difference_path", "difference_sha256",
+    "scenario_kind", "net_changed_cells", "net_changed_hectares", "change_area_basis",
+    "change_area_reason", "reporting_avoided_export_per_net_changed_model_ha",
+    "reporting_avoided_export_per_net_changed_model_ha_units", "treatment_normalization_basis",
+    "treatment_normalization_reason",
 )
 
 
@@ -56,7 +60,64 @@ def _scenario_assumptions(scenario):
     return {key: scenario.get(key) for key in ("kind", "source_collection_id", "patches")}
 
 
-def _run_context(workspace, run, names, baseline=None, comparison=None):
+def _changed_landcover(run, scenario, grid):
+    """Use final patch ownership already retained by the native scenario kernel."""
+    if scenario["kind"] == "baseline":
+        return {"net_changed_cells": 0, "net_changed_hectares": 0.0,
+                "change_area_basis": "Original baseline land cover"}
+    edits = run.get("stages", {}).get("landcover", {}).get("edits")
+    patches = scenario.get("patches", [])
+    if (not isinstance(edits, list) or len(edits) != len(patches) or not edits
+            or any(not isinstance(item, dict)
+                   or "final_owned_cells" not in item
+                   or "final_owned_hectares" not in item for item in edits)):
+        return {"change_area_reason":
+                "The retained run lacks final ownership counts for its land-cover patches."}
+    pixel_area = finite(grid["grid"]["pixel_area_ha"], "Changed-cell area", positive=True)
+    total = 0
+    for item, patch in zip(edits, patches):
+        if item.get("patch") != patch:
+            raise ValueError("Retained land-cover patch differs from its saved scenario")
+        cells = _cells(item["final_owned_cells"], "Patch final-owned cells")
+        area = finite(item["final_owned_hectares"], "Patch final-owned hectares", minimum=0)
+        if not math.isclose(area, cells * pixel_area, rel_tol=1e-10, abs_tol=1e-12):
+            raise ValueError("Retained land-cover area differs from the native grid")
+        total += cells
+    if total > grid["grid"]["width"] * grid["grid"]["height"]:
+        raise ValueError("Retained final land-cover ownership exceeds the native grid")
+    return {"net_changed_cells": total, "net_changed_hectares": total * pixel_area,
+            "change_area_basis":
+                "Final difference from original model-grid land cover; each cell belongs "
+                "to its last value-changing patch, with reverted cells excluded"}
+
+
+def _per_changed_hectare(row, baseline):
+    """Normalize a comparable modeled benefit by actual net changed model area."""
+    row["treatment_normalization_basis"] = (
+        "Reporting-area avoided export per net changed model hectare; includes the full "
+        "modeled response to the retained land-cover intervention")
+    reason = None
+    if baseline["scenario_kind"] != "baseline":
+        reason = "The comparison reference is not the original land-cover baseline."
+    elif row["comparison_kind"] != "landcover_alternative":
+        reason = "Changed-hectare benefit requires unchanged native parameter assumptions."
+    elif "net_changed_hectares" not in row:
+        reason = row["change_area_reason"]
+    elif row["net_changed_hectares"] <= 0:
+        reason = "The retained scenario has zero final changed model hectares."
+    elif (row["joint_valid_cells"] <= 0
+          or row["joint_valid_cells"] != baseline["valid_cells"]
+          or row["joint_valid_cells"] != row["valid_cells"]):
+        reason = "The native comparison lacks nonempty complete shared valid reporting support."
+    if reason:
+        row["treatment_normalization_reason"] = reason
+    else:
+        row["reporting_avoided_export_per_net_changed_model_ha"] = (
+            row["avoided_export"] / row["net_changed_hectares"])
+        row["reporting_avoided_export_per_net_changed_model_ha_units"] = row["sum_units"] + "/changed_ha"
+
+
+def _run_context(workspace, run, names, baseline=None, comparison=None, *, grid):
     scenario = workspace._get("scenarios", run["selection"]["scenario_id"])
     profile = workspace._get("profiles", run["selection"]["profile_id"])
     profile_changed = baseline is not None and profile["id"] != baseline["profile"]["id"]
@@ -85,6 +146,7 @@ def _run_context(workspace, run, names, baseline=None, comparison=None):
         "scenario_changed": scenario_changed, "landcover_changed": landcover_changed,
         "runtime": run.get("runtime"), "completed_at": run["completed_at"],
         "landcover_edits": run.get("stages", {}).get("landcover", {}).get("edits", []),
+        "landcover_footprint": _changed_landcover(run, scenario, grid),
     }
 
 
@@ -103,6 +165,7 @@ def _quantity(run, context, pollutant, grid):
     row = {
         "run_id": run["id"], "run_names": context["run_names"],
         "scenario_id": context["scenario"]["id"], "scenario_title": context["scenario"]["title"],
+        "scenario_kind": context["scenario"]["kind"], **context["landcover_footprint"],
         "profile_id": context["profile"]["id"], "profile_title": context["profile"]["title"],
         "comparison_kind": context["comparison_kind"], "comparison_label": context["comparison_label"],
         "profile_changed": context["profile_changed"], "scenario_changed": context["scenario_changed"],
@@ -182,13 +245,14 @@ def _build(workspace, metadata, ids, aliases, comparison, pollutants, delivery=N
             raise ValueError("Retained run exports differ from the selected native models")
         alternative = comparison["alternatives"][index - 1] if index else None
         context = _run_context(workspace, run, aliases[run_id],
-                               baseline=runs[0] if index else None, comparison=alternative)
+                               baseline=runs[0] if index else None, comparison=alternative, grid=grid)
         runs.append(context)
         for pollutant in pollutants:
             row = _quantity(run, context, pollutant, grid)
             row.update(baseline_run_id=ids[0], comparison_id=comparison_id)
             if index:
                 _add_change(row, baseline_rows[pollutant], alternative, comparison_id)
+                _per_changed_hectare(row, baseline_rows[pollutant])
             else:
                 baseline_rows[pollutant] = row
             rows.append(row)
@@ -200,6 +264,7 @@ def _build(workspace, metadata, ids, aliases, comparison, pollutants, delivery=N
             "Change is alternative minus baseline over joint-valid cells. Avoided export is the negative of that change; positive avoided export means less modeled delivery to streams.",
             "Percentage benefit is 100 times avoided export divided by baseline export, when joint-valid coverage equals both original runs and baseline export is positive.",
             "Land-cover alternatives share the baseline parameter profile. Sensitivity labels identify changed parameter profiles and combinations of parameter and land-cover changes.",
+            "Changed hectares count final model-grid land-cover differences once after ordered patches, excluding reversions. Avoided export per net changed hectare divides the reporting-area modeled benefit by those changed model hectares, for an original land-cover baseline, unchanged parameters and complete shared reporting support.",
         ])
     model_names = {POLLUTANTS[name][1] for name in pollutants}
     meanings = []
@@ -436,6 +501,29 @@ def _markdown(summary):
         for row in reasons:
             reason = " ".join(row[key] for key in ("benefit_percent_reason", "average_reason") if key in row)
             lines.append("- " + _text(row["scenario_title"] + " / " + row["pollutant_label"] + ": " + reason))
+    changed_rows = [row for row in summary["rows"]
+                    if row["run_id"] != summary["baseline_run_id"]
+                    and row.get("scenario_kind") == "landcover"]
+    if changed_rows:
+        lines.extend(["", "## Changed land cover", "",
+                      "Changed area is the final difference from the original model-grid land cover. "
+                      "Ordered patches count each cell once and exclude reversions. The benefit "
+                      "column uses reporting-area avoided export per net changed model hectare.", "",
+                      "| Scenario | Net changed model ha | Pollutant | Reporting-area avoided export per net changed model ha |",
+                      "| --- | ---: | --- | ---: |"])
+        for row in changed_rows:
+            units = row.get("reporting_avoided_export_per_net_changed_model_ha_units", row["sum_units"] + "/changed_ha")
+            cells = [row["scenario_title"], _number(row.get("net_changed_hectares")),
+                     row["pollutant_label"],
+                     _quantity_text(row.get("reporting_avoided_export_per_net_changed_model_ha"), units,
+                                    signed=True).replace("/changed_ha", " per changed ha")]
+            lines.append("| " + " | ".join(_text(cell) for cell in cells) + " |")
+        explanations = sorted(set(
+            row["scenario_title"] + ": " + row["treatment_normalization_reason"]
+            for row in changed_rows if row.get("treatment_normalization_reason")))
+        if explanations:
+            lines.append("")
+            lines.extend("- " + _text(item) for item in explanations)
     lines.extend(["", "## Compared selections" if compared else "## Selected run", "",
                   "| Run name | Scenario | Comparison | Parameter profile |",
                   "| --- | --- | --- | --- |"])

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "gauge-support",
   "title": "Gauge support",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "order": 45,
   "assets": [
     "gauge_support.mjs",
@@ -130,7 +130,8 @@
       "navigate",
       "openItem",
       "showTask",
-      "openDelivery"
+      "openDelivery",
+      "openScientificReport"
     ],
     "styles": [
       "/web/gauge_support.css"
