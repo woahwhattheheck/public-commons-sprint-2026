@@ -22,6 +22,9 @@ def _validate_figure(figure):
             for tick in spec.get("ticks", []):
                 _number(tick["value"])
         for series in panel.get("series", []):
+            if "markers" in series and (not isinstance(series["markers"], bool)
+                    or (series["markers"] is False and series.get("geometry") != "line")):
+                raise ValueError("Scientific series markers must be boolean; marker-free geometry must be a line")
             if series.get("geometry") not in ("line", "scatter", "boxplot"):
                 raise ValueError("Unknown scientific figure geometry")
             for point in series.get("points", []):
@@ -150,7 +153,8 @@ def panel_drawing(panel, width):
         if kind=="line" and len(segment)>2:
             drawing.add(PolyLine(segment,strokeColor=ink,strokeWidth=.8,strokeDashArray=[] if si==0 else [4,2]))
         for x,y,is_open in marker_points:
-            _marker(drawing,x,y,str(marker),2.1,ink,is_open)
+            if series.get("markers", True):
+                _marker(drawing,x,y,str(marker),2.1,ink,is_open)
     # Place the original annotation text and threshold labels in the figure.
     # Candidate boxes are scored against earlier labels and every source marker.
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -220,8 +224,9 @@ def panel_drawing(panel, width):
         mark = series.get("marker", "circle")
         if isinstance(mark, dict):
             mark = mark.get("shape", "circle")
-        _marker(drawing,cursor+7,legend_y,str(mark).removesuffix("-open"),2.0,ink,
-                str(mark).endswith("-open"))
+        if series.get("markers", True):
+            _marker(drawing,cursor+7,legend_y,str(mark).removesuffix("-open"),2.0,ink,
+                    str(mark).endswith("-open"))
         drawing.add(String(cursor+20,legend_y-2.5,label,fontName="Helvetica",
                            fontSize=7,fillColor=ink))
         cursor += needed + 8
