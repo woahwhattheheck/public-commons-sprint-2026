@@ -460,8 +460,13 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         for ticket in reopened_review_task["_downloads"]:
             stream, _ = operator.open_download(ticket["id"])
             stream.close()
+        from gis_source_selection_receiving import prepare as prepare_source_selection
+        source_selection = prepare_source_selection(operator, key,
+            collection["id"], outcome["adopted_source_collection_id"],
+            state_directory / "source-selection")
         outcome.update(status="passed", restart_reopened=True,
-                       source_only_collection_export=collection_result)
+                       source_only_collection_export=collection_result,
+                       source_selection_continuation=source_selection)
         atomic_json(report_path, outcome)
         return outcome
     finally:

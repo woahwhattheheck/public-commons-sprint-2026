@@ -4,6 +4,8 @@ import {promises as fs,createReadStream} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {dirname,resolve,relative,join,isAbsolute,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
+import {receiveGISSourceSelection} from '../operator/gis_source_selection_receiving.mjs';
+import {spawn} from 'node:child_process';
 
 const SCHEMA='upstate.gis-edition-review-browser-request/v1';
 const RESULT='upstate.gis-edition-review-browser-result/v1';
@@ -300,6 +302,45 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
     await operator.setViewportSize({width:390,height:844});
     await anchor.scrollIntoViewIfNeeded();
     await capture(operator,'operator-390-project-card',{context:'operator',viewport:{width:390,height:844}});
+    if(request.source_selection){
+      const continuation=request.source_selection;
+      demand(typeof continuation.input_path==='string'&&typeof continuation.output_directory==='string',
+        'Retain the complete original county source-selection input and continuation directory.');
+      const inputBytes=await fs.readFile(continuation.input_path);
+      demand(inputBytes.length===continuation.input.bytes&&createHash('sha256').update(inputBytes).digest('hex')===continuation.input.sha256,
+        'The complete source-selection input changed before the existing browser continuation.');
+      const api=async(route,body)=>{
+        demand(typeof route==='string'&&route.startsWith('/api/'),'Use the original Operator API route.');
+        checkRunning();
+        const response=await context.request.fetch(spec.origin+route,{
+          method:body===undefined?'GET':'POST',headers:{
+            Authorization:'Bearer '+spec.token,'X-Workspace':request.workspace_key,'Content-Type':'application/json'},
+          ...(body===undefined?{}:{data:body}),timeout:60000});
+        const value=await response.json();demand(response.ok(),JSON.stringify(value));return value;
+      };
+      result.source_selection=await receiveGISSourceSelection(operator,{
+        inputPath:continuation.input_path,outputDirectory:continuation.output_directory,
+        workspace:request.workspace_key,api,ownerCheck:async()=>checkRunning(),
+        nativeVerify:async browserResult=>{
+          checkRunning();
+          demand(typeof continuation.python==='string'&&typeof continuation.application==='string'&&typeof continuation.private_controller_path==='string',
+            'Use the original receiving Python and retained private controller.');
+          const command=join(continuation.application,'operator/gis_source_selection_receiving.py');
+          const value=await new Promise((resolve,reject)=>{
+            const child=spawn(continuation.python,[command,'--controller',continuation.private_controller_path,'--browser-result',browserResult],
+              {stdio:['ignore','pipe','pipe'],detached:false});
+            let out='',err='';child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');
+            child.stdout.on('data',part=>{out+=part;});child.stderr.on('data',part=>{err+=part;});
+            child.on('error',reject);child.on('close',code=>{
+              if(code!==0)return reject(Error('Original native GIS reopening failed: '+safeError(err)));
+              try{resolve(JSON.parse(out));}catch(error){reject(error);}
+            });
+          });
+          checkRunning();return value;
+        },
+        taskTimeoutSeconds:continuation.task_timeout_seconds||900});
+      await checkpoint();
+    }
     await context.close();context=null;
     // A fresh browser context opens the independently extracted complete report with no operator session.
     context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,colorScheme:'light'});

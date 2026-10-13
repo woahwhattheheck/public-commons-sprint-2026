@@ -263,7 +263,8 @@ def run_browser_child(command, log, timeout):
 
 
 def browser_course(application, workspace, output, report, folder, reopened, gis, *,
-                   node, playwright_module, browser_executable, operator_url_file, timeout):
+                   node, playwright_module, browser_executable, operator_url_file, timeout,
+                   source_selection_input=None):
     """Use the actual installed browser client and existing operator file transport."""
     from model.common import digest
     browser_output = output / "browser" / (timestamp().replace(":", "-") + "-" + uuid.uuid4().hex[:8])
@@ -310,6 +311,15 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
                           "reopened": (reopened / "REVIEW.html").as_uri(),
                           "operator_origin": origin, "operator_url": operator_url,
                           "operator_review_path": prefix + "REVIEW.html"}}
+        if source_selection_input is not None:
+            complete_input = Path(source_selection_input).resolve(strict=True)
+            source_identity = gis.record(complete_input.parent, complete_input)
+            request["source_selection"] = {
+                "input_path": str(complete_input),
+                "output_directory": str(output / "source-selection" / source_identity["sha256"]),
+                "input": source_identity, "task_timeout_seconds": timeout,
+                "python": sys.executable, "application": str(application),
+                "workspace_directory": str(workspace.root), "private_controller_path": str(request_path)}
         descriptor = os.open(request_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             json.dump(request, stream, ensure_ascii=False, allow_nan=False)
@@ -335,6 +345,17 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
                     "workspace_key": key}
         if any(result.get(name) != value for name, value in expected.items()):
             raise ValueError("The browser result did not complete this exact GIS receiving course")
+        if source_selection_input is not None:
+            complete = result.get("source_selection", {})
+            if (complete.get("state") != "complete" or not complete.get("cold_browser_complete")
+                    or complete.get("native_reopened", {}).get("state") != "complete"):
+                raise ValueError("Complete the same source-selection native archive and cold browser receiving")
+            if complete.get("project_id") != workspace.project["id"] or complete.get("workspace_key") != key:
+                raise ValueError("The source-selection continuation belongs to another original Workspace")
+            for descriptor in complete.get("artifacts", {}).values():
+                actual = gis.record(Path(descriptor["path"]).parent, Path(descriptor["path"]))
+                if any(actual[name] != descriptor[name] for name in ("bytes", "sha256")):
+                    raise ValueError("A complete source-selection artifact changed")
         artifacts = result.get("artifacts")
         if (not isinstance(artifacts, list) or not artifacts
                 or len({item["path"] for item in artifacts}) != len(artifacts)
@@ -356,7 +377,8 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
 
 def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             require_raster=False, inspect=False, native_only=False, node="node", gis_selection=None, pair_result=None,
-            playwright_module=None, browser_executable=None, operator_url_file=None, browser_timeout=900):
+            playwright_module=None, browser_executable=None, operator_url_file=None, browser_timeout=900,
+            source_selection_input=None):
     application, output = Path(application).resolve(), Path(output).resolve()
     sys.path[:0] = [str(application / "operator"), str(application)]
     from model.workspace import Workspace
@@ -493,7 +515,8 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
                 state["browser"] = phase("actual_browser_course", lambda:
                     browser_course(application, workspace, output, verified, folder, reopened, gis,
                         node=node, playwright_module=playwright_module, browser_executable=browser_executable,
-                        operator_url_file=operator_url_file, timeout=browser_timeout))
+                        operator_url_file=operator_url_file, timeout=browser_timeout,
+                        source_selection_input=source_selection_input))
                 state["state"] = "browser_course_complete"
             state["finished_at"] = timestamp()
             gis.save(journal_path, state)
@@ -518,6 +541,8 @@ def main():
                         help="Completed native-study-gis-result.json containing the actual original pair")
     parser.add_argument("--gis-selection", type=Path,
                         help="Explicit existing GIS selection to export/receive if its compatible pair is absent")
+    parser.add_argument("--source-selection-input", type=Path,
+                        help="Same original county receiver source-selection-input.json for the existing browser continuation")
     parser.add_argument("--require-raster", action="store_true")
     parser.add_argument("--inspect", action="store_true")
     parser.add_argument("--native-only", action="store_true",
@@ -537,7 +562,7 @@ def main():
         inspect=args.inspect, native_only=args.native_only, node=args.node,
         playwright_module=args.playwright_module, browser_executable=args.browser_executable,
         operator_url_file=args.operator_url_file,
-        browser_timeout=args.browser_timeout)
+        browser_timeout=args.browser_timeout, source_selection_input=args.source_selection_input)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
 
 
