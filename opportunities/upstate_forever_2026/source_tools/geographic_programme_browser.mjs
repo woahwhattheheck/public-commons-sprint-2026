@@ -53,7 +53,7 @@ export async function operateGeographicProgramme(options){
  const snapshot=async()=>{
   const [saved,state]=await Promise.all([api('/api/geographic-headwaters/case',{case_id:caseId}),api('/api/state')]);
   requireValue(equal(saved.case,prepared),'The Geographic preparation changed during Programme inspection');
-  const operations=new Map(rows(saved.programme_operations).map(row=>[row.id,row]));
+  const operations=new Map(rows(saved.programme_operations).filter(row=>row.action==='geography.adopt-programme').map(row=>[row.id,row]));
   for(const row of rows(state.tasks))if(row.action==='geography.adopt-programme'&&row.payload?.case_id===caseId)
    operations.set(row.id,{...operations.get(row.id),...row,restored:false});
   return {saved,state,operations:[...operations.values()].filter(row=>(row.payload?.delivery_id||'')===deliveryId)
