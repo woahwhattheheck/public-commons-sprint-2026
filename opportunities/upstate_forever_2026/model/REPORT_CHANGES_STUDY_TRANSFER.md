@@ -266,3 +266,64 @@ attachments, an empty comparison list and a current failure state. Repair visibl
 layout or file-navigation defects in the producing source before presenting the
 outgoing version. A JSON or controller replay does not replace opening and
 viewing the actual received application and exported documents.
+
+
+## Ask for a customer review of the complete comparison
+
+Open a saved comparison in **Report changes** and choose **Prepare customer
+review**. The existing Customer reviews form opens for that exact comparison.
+Give the review a title and purpose, enter the questions or requirements to be
+assessed, and retain any review notes. These authored fields belong to this
+review request. The complete comparison supplies one original document source:
+its overview, change pages, full CSV and SQLite register, matching plan, and
+both original report trees.
+
+Preview the request in the original form. The preview binds the authored
+questions to the saved comparison and its complete source identity. Changes to
+the request require another preview. Preparing the review uses the existing
+Workspace queue and its original creation time, so retrying that queued action
+reopens the same review. On completion, **Open original review** continues into
+the existing Customer reviews desk.
+
+Use the review's ordinary files, requirements, corrections, response history,
+handbacks, export and received-package sections. The source identity provides
+links back to the original comparison and its earlier and later saved editions.
+Export and receive feedback with the existing review workflow. The review
+retains the complete relative document tree needed by its linked HTML; the
+scientific reports and recorded differences remain the original saved files.
+
+### Move that review and its working scientific context
+
+Select this review in **Transfer editable study**. Its selected source follows
+the typed comparison identity to the original saved comparison and both local
+report editions. The closure includes their original editable dependencies,
+the full review source copy, original source receipt, captured responses,
+handbacks and receiving history. This direction starts from the selected
+review. Selecting a comparison alone continues its existing transfer behavior.
+
+Restore the resulting Study using the existing receiver. **Customer reviews and
+feedback** lists the retained review, its current response count, the reviewed
+comparison and both saved editions. Open the comparison or either report from
+that review, return to its original corrections and history, and append the next
+response through the existing review engine. Captured history remains a prefix
+of the retained history. The receiving record continues to identify the exact
+comparison that was reviewed.
+
+If the review contains a complete comparison source from another project, the
+source remains available as its original imported document tree. The receiving
+screen identifies that source's original project. Local navigation is reserved
+for the matching saved comparison and editions in this Workspace.
+
+The comparison review operation is `report-changes.review`; its read-only
+preview is `POST /api/report-changes/review-preview`. Both use the exact saved
+`comparison_id` and authored `review_selection`. The queue additionally pins
+the preview's `expected_operation_id`. The source role is
+`SCIENTIFIC_REPORT_COMPARISON_REVIEW`, with one typed identity containing the
+original pair identity and full member inventory. The existing CustomerReview
+Study receipt adds `report_comparisons` only for reviews that have these
+sources, retaining the shape of older receipts.
+
+Continue the original native receiving course through authored request,
+preview, queued creation, customer response, full review export, selected Study
+transfer and restore. Open and use the actual outgoing review, comparison and
+both report editions after receiving, including desktop and narrow layouts.
