@@ -1,6 +1,6 @@
 {
   "format": "upper-savannah-measurements-large-file-source/v1",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "files": [
     {
       "path": "install_measurement_large_files.py",
@@ -16,8 +16,8 @@
     },
     {
       "path": "MEASUREMENT_COLLECTION_WORKING.md",
-      "bytes": 17713,
-      "sha256": "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d",
+      "bytes": 25053,
+      "sha256": "d08d5e283bd7925e080bd08a047b8b83335d989f831743197c92544f0d301dd0",
       "role": "addition"
     },
     {
@@ -208,8 +208,8 @@
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 33724,
-      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274",
+      "bytes": 35680,
+      "sha256": "aff2954339fea1197bb3e29a1b5df12b153e3c82b4bc2e99d5fc5b6d0c97f2a3",
       "role": "native"
     },
     {
@@ -256,8 +256,8 @@
     },
     {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2773,
-      "sha256": "d9d5d444876604f9b516e76dbd141a43b18a5f913f7c5d01a61e983e541004bc",
+      "bytes": 2827,
+      "sha256": "6099b1a3d51cc77e7beb81a8b08f522f416e8c965420a274e1213fcf9396c0e7",
       "role": "native"
     },
     {
@@ -325,6 +325,18 @@
       "bytes": 26138,
       "sha256": "ea44cd53d2d07710dff71e92fa759a0d0ba4e319fd5440df3384c64ce78a2930",
       "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/web/collection_folder.mjs",
+      "bytes": 15721,
+      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55",
+      "role": "addition"
+    },
+    {
+      "path": "operator/web/collection_folder.mjs",
+      "bytes": 15721,
+      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55",
+      "role": "addition"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
@@ -370,6 +382,13 @@
       "entry": "measurement_workspace/engine/reconciliation-receiving.mjs --chapter large-collections",
       "guide": "measurement_workspace/COLLECTION_RECEIVING.md",
       "behavior": "The same owned receiver retains complete original requests and automatic browser backups, resumes interrupted checkpoints, reuses exact completed sender outputs, downloads every declared edition member and independently receives the whole selected project."
+    },
+    "collection_folder_receiving": {
+      "original_claim": "1791923626.838759",
+      "source_base": "c1a7e73390bdd762b52d116cd10592dd474a2b70",
+      "guide": "MEASUREMENT_COLLECTION_WORKING.md",
+      "behavior": "Explicitly selected whole-edition folder, immutable original source metadata, durable checked native chunk receiving, complete original file publication and read-only local reopening.",
+      "composed_main": "59e3f7376978e5ea90bbb9589d72f92cc780687f"
     }
   }
 }
