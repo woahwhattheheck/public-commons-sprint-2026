@@ -263,6 +263,7 @@ def join_registry_app(text):
     ):
         text = text.replace(old, "")
     text = text.replace("receivingWaters.detach();", "")
+    text = text.replace("(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+", "")
     text = text.replace("receivingWaters.taskActions(row)+", "")
     text = text.replace("openReceivingPlan:id=>receivingWaters.openPlan(id)",
                         "openReceivingPlan:id=>extensions.openExtension('receiving-waters','openPlan',id)")
