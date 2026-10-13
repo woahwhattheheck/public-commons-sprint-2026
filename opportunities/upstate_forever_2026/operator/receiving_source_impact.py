@@ -23,10 +23,14 @@ def read(operator, workspace_key, payload):
             workspace, values.get("refresh_plan_id"), kind=values.get("kind", "plans"),
             offset=values.get("offset"), limit=values.get("limit"),
             snapshot=values.get("snapshot"), index_snapshot=values.get("index_snapshot"))
-    elif action == "detail":
+    elif action in ("detail", "download"):
         result = receiving_source_impact.detail(
             workspace, values.get("refresh_plan_id"), values.get("kind"), values.get("id"),
             snapshot=values.get("snapshot"))
     else:
         raise ValueError("Choose a saved refresh catalog, impact page or study detail")
+    if action == "download":
+        return {"workspace_key": workspace_key,
+                "filename": "receiving-source-impact-" + result["kind"] + "-" + result["record"]["id"][:12] + ".json",
+                "content": json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n"}
     return {**result, "workspace_key": workspace_key}
