@@ -375,7 +375,7 @@ class ClientSourceIntake:
             "Open this source edition to inspect and download every original.",
             "Choose Prepare study inputs when native preparation is needed.",
             "Choose the original grid/profile/run views, selecting this source edition and the reviewed scientific settings.",
-            "For measurements, select the retained original workbook/CSV in the existing Measurements importer.",
+            "For measurements, open Prepare workbook measurements and select the retained source, then review its saved preparation in Measurements.",
             "Save/export the complete Workspace and reopen it with the existing restore workflow."]
         for entry in collection["entries"]:
             self._raw(ws, entry["body"])
