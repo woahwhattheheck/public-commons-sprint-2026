@@ -514,6 +514,19 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
             ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
             rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8], caption=caption,
         ))
+        if changes:
+            blocks.append(_table(
+                ["Pollutant", "Baseline on paired cells", "Alternative on paired cells",
+                 "Unit", "Paired cells", "Coverage"],
+                [[_label(key), _quantity(value, "baseline_sum_on_common_cells"),
+                  _quantity(value, "alternative_sum_on_common_cells"), _mass_units(key, value),
+                  _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
+                 for key, value in changes.items()],
+                widths=[1.0, 1.3, 1.3, 1.2, .8, .8],
+                caption="Native run " + str(run_id) + ". These retained annual totals use "
+                        "the same valid baseline and alternative cells as the paired change. "
+                        "An absent or zero valid-cell count means an unavailable quantity.",
+            ))
     return blocks
 
 
@@ -524,10 +537,25 @@ def receiving_sections(product):
     inventory = product["inventory"]
     measurement = inventory.get("measurement", {})
     blocks = ["Receiving-water quantity scope: " + inventory["quantity_scope"].replace("_", " ") + ".",
-              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap")
+              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship")
                 if measurement.get(key)]]
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
+    retained_settings = [[_label(key), _plain(value)] for key, value in normalization.items()
+                         if key not in ("caps", "weights", "cap_units")]
+    if retained_settings:
+        blocks.append(_table(
+            ["Original normalization setting", "Retained value"], retained_settings,
+            widths=[1.6, 4.4],
+            caption="Original settings for the dimensionless priority maps. "
+                    "The physical annual quantities below keep their own units.",
+        ))
+    if inventory.get("identity"):
+        blocks.append(_table(
+            ["Receiving-water identity", "Retained value"],
+            [[_label(key), _plain(value)] for key, value in inventory["identity"].items()],
+            widths=[1.6, 4.4],
+        ))
     for family, union in inventory.get("families", {}).items():
         blocks.append("Unduplicated family union: " + str(union.get("title", family)) + ".")
         blocks.append("Each contributing cell is counted once within this family. "
@@ -549,11 +577,24 @@ def receiving_sections(product):
                       + " ha; area within the selected quantity scope: "
                       + _number(receptor.get("area_in_quantity_scope_ha")) + " ha.")
         metrics = receptor["metrics"]
+        blocks.append(_table(
+            ["Contributing-footprint support", "Recorded value"],
+            [["Selected grid cells", _count(metrics.get("selected_cells"))],
+             ["Selected pixel area (ha)", _number(metrics.get("selected_pixel_area_ha"))]],
+            widths=[2.6, 3.4],
+            caption="Pixel selection and geometry areas retain their original distinct definitions.",
+        ))
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
         if receptor.get("source"):
-            blocks.append("Original receiving-water source: " + _plain(receptor["source"]))
+            blocks.append(_table(
+                ["Original receiving-water source", "Retained value"],
+                [[_label(key), link("Open original source", value) if key == "uri" else _plain(value)]
+                 for key, value in receptor["source"].items()],
+                widths=[1.6, 4.4],
+                caption="Original source identifiers, editions and selected feature IDs are retained.",
+            ))
     return [("Receiving-water quantities and priorities", blocks)]
 
 
@@ -862,11 +903,12 @@ def _markdown_report(title, sections, prepared):
         for block in blocks:
             if isinstance(block, dict) and block.get("kind") == "figure":
                 figure = _figure(block)
-                # Reuse the maintained link/cell escaping for original captions and paths.
-                lines.extend(["!" + _markdown_cell(link(figure["alt"], figure["path"])), ""])
+                target = figure["path"].replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+                alt = figure["alt"].replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("\n", " ")
+                lines.extend(["![" + alt + "](" + target + ")", ""])
                 if figure.get("title"):
-                    lines.extend([_markdown_cell(figure["title"]), ""])
-                lines.extend([_markdown_cell(figure["caption"]), ""])
+                    lines.extend([str(figure["title"]), ""])
+                lines.extend([figure["caption"], ""])
             elif isinstance(block, dict) and block.get("kind") == "table":
                 if block.get("caption"):
                     lines.extend([_markdown_cell(block["caption"]), ""])
