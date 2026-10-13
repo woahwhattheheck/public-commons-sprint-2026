@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // MIT. Native operator receiving over the complete original Merchant applications.
 // It creates useful source/workspace/report outputs and preserves every receiving edit.
-import {readFile,writeFile,mkdir,access} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,access,appendFile,rename} from 'node:fs/promises';
 import {resolve,join,dirname} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
+import {atomicJSON,writeArtifact,exists,nativeProcess,nativeResources,prepareNativeRecovery,recoverBrowserJourney} from './recovery.mjs';
 
 const options={};
 for(let i=2;i<process.argv.length;i++){
@@ -25,21 +26,69 @@ const sha256=value=>createHash('sha256').update(value).digest('hex');
 const need=(condition,message)=>{if(!condition)throw new Error(message);};
 const actor=options.actor||'Native receiving operator';
 const operation='SCF-CARBON-NATIVE-8D45-20261012';
-const result={schema:'stellar-forge.carbon-native-receiving.v1',operation,startedAt:new Date().toISOString(),
-  node:process.version,platform:process.platform,sourceRoot,output,artifacts:[],stages:[],workspaces:{},errors:[]};
+const recovery=await prepareNativeRecovery({resumeFrom:options['resume-from'],output,sourceRoot,operation});
+const result={...(recovery.recovered||{}),schema:'stellar-forge.carbon-native-receiving.v1',operation,startedAt:new Date().toISOString(),
+  node:process.version,platform:process.platform,actor,sourceRoot,sourceIdentity:recovery.source.identity,output,status:'running',
+  process:await nativeProcess(),artifacts:recovery.recovered?.artifacts||[],stages:recovery.recovered?.stages||[],
+  workspaces:recovery.recovered?.workspaces||{},errors:recovery.recovered?.errors||[],...(recovery.resume?{resume:recovery.resume}:{})};
+delete result.completedAt;delete result.delivery;
 const services=[];
 let browser=null,chromiumProcess=null,delivery=null;
-await mkdir(output,{mode:0o700});
-async function save(path,value){
-  const target=join(output,path),content=typeof value==='string'?value:JSON.stringify(value,null,2)+'\n';
-  await mkdir(dirname(target),{recursive:true,mode:0o700});await writeFile(target,content,{flag:'wx',mode:0o600});
-  result.artifacts.push({path,bytes:Buffer.byteLength(content),sha256:sha256(content)});return content;
+const completed=name=>result.stages.findLast(row=>row.name===name&&row.status==='complete');
+const requestsPath=join(output,'receiving-requests.json');
+const requests=await exists(requestsPath)?await readJSON(requestsPath):{};
+if(recovery.resume&&!result.artifacts.some(row=>row.path===recovery.resume.retainedReceipt))
+  result.artifacts.push({path:recovery.resume.retainedReceipt,bytes:recovery.resume.originalReceiptBytes,sha256:recovery.resume.originalReceiptSha256});
+async function requestFor(key,value){
+  const intent=sha256(JSON.stringify(value));let row=requests[key];
+  need(!row||row.intentSha256===intent,'Preserve the original intent for receiving request '+key+'.');
+  if(!row){row=requests[key]={requestId:randomUUID(),intentSha256:intent,createdAt:new Date().toISOString()};await atomicJSON(requestsPath,requests);}
+  return row.requestId;
 }
-async function checkpoint(){await writeFile(join(output,'receiving.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});}
-async function stage(name,work){
-  const startedAt=new Date().toISOString();console.log(JSON.stringify({operation,stage:name,status:'running',at:startedAt}));
-  try{const value=await work();result.stages.push({name,status:'complete',startedAt,completedAt:new Date().toISOString(),value});await checkpoint();return value;}
-  catch(error){result.stages.push({name,status:'interrupted',startedAt,error:{code:error.code||null,message:error.message}});await checkpoint();throw error;}
+async function observation(context){
+  const row=await nativeResources({operation,...context});
+  await appendFile(join(output,'native-resources.jsonl'),JSON.stringify(row)+'\n',{mode:0o600});
+  result.lastResources=row;return row;
+}
+async function save(path,value){
+  need(typeof path==='string'&&!path.startsWith('/')&&!path.includes('\\')&&path.split('/').every(part=>part&&part!=='.'&&part!=='..'),'Keep artifact paths inside this receiving output.');
+  const target=join(output,path),content=Buffer.isBuffer(value)?value:typeof value==='string'?value:JSON.stringify(value,null,2)+'\n';
+  const identity={path,bytes:Buffer.byteLength(content),sha256:sha256(content)};
+  await mkdir(dirname(target),{recursive:true,mode:0o700});
+  const prior=result.artifacts.find(row=>row.path===path);
+  if(recovery.resume&&await exists(target)){
+    const original=await readFile(target),same=original.length===identity.bytes&&sha256(original)===identity.sha256;
+    if(!same){
+      need(!prior,'Preserve the original saved artifact: '+path);
+      let preserved=join(output,'recovery/unrecorded',sha256(original),path);
+      await mkdir(dirname(preserved),{recursive:true,mode:0o700});
+      if(await exists(preserved))preserved+='.'+randomUUID();
+      await rename(target,preserved);await writeArtifact(target,content);
+      result.resume.preservedUnrecorded||=[];result.resume.preservedUnrecorded.push({path,retained:preserved,bytes:original.length,sha256:sha256(original)});
+    }
+  }else await writeArtifact(target,content);
+  if(prior)need(prior.bytes===identity.bytes&&prior.sha256===identity.sha256,'The retained artifact identity changed: '+path);
+  else result.artifacts.push(identity);
+  await checkpoint();return content;
+}
+async function checkpoint(){await atomicJSON(join(output,'receiving.json'),result);}
+async function stage(name,work,{reuse=true}={}){
+  const prior=completed(name);
+  if(recovery.resume&&reuse&&prior){
+    prior.reusedAt=new Date().toISOString();prior.reusedFrom=recovery.resume.originalReceiptSha256;
+    console.log(JSON.stringify({operation,stage:name,status:'reused',at:prior.reusedAt}));await checkpoint();return prior.value;
+  }
+  const row={name,status:'running',startedAt:new Date().toISOString()};result.stages.push(row);
+  console.log(JSON.stringify({operation,stage:name,status:'running',at:row.startedAt}));
+  await observation({stage:name,status:'running'});await checkpoint();
+  try{const value=await work();Object.assign(row,{status:'complete',completedAt:new Date().toISOString(),value});
+    await observation({stage:name,status:'complete'});await checkpoint();return value;}
+  catch(error){Object.assign(row,{status:'interrupted',error:{code:error.code||null,message:error.message}});
+    await observation({stage:name,status:'interrupted'});await checkpoint();throw error;}
+}
+async function retainedHandover(path,readCurrent){
+  if(recovery.resume&&await exists(join(output,path)))return readJSON(join(output,path));
+  const value=await readCurrent();await save(path,value);return value;
 }
 async function fetchOriginal(url){
   const response=await fetch(url),content=await response.text();
@@ -47,12 +96,12 @@ async function fetchOriginal(url){
   return {content,type:response.headers.get('content-type'),status:response.status};
 }
 async function closeServices({strict=false}={}){const failures=[];for(const service of services.splice(0).reverse())try{await service.close();}catch(error){failures.push(error);result.errors.push({stage:'close',message:error.message});}if(strict&&failures.length)throw new AggregateError(failures,'Close the original native services before reopening their workspaces.');}
-async function captureBrowser(){
+async function captureBrowser(browserRoot=output,artifactPrefix=''){
   const candidates=[options.chromium,process.env.CHROMIUM_BIN,'/usr/bin/chromium','/usr/bin/chromium-browser','/usr/bin/google-chrome','/opt/google/chrome/chrome'].filter(Boolean);
   let executable;
   for(const candidate of candidates)try{await access(candidate);executable=candidate;break;}catch{}
   need(executable,'Set --chromium to the existing native Chromium executable for the browser receiving stage.');
-  const profile=join(output,'browser-profile');await mkdir(profile,{mode:0o700});
+  const profile=join(browserRoot,'browser-profile');await mkdir(profile,{mode:0o700});
   const child=spawn(executable,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check',
     '--remote-debugging-port=0','--remote-debugging-address=127.0.0.1','--user-data-dir='+profile,
     ...(process.getuid?.()===0?['--no-sandbox']:[]),'about:blank'],{stdio:['ignore','ignore','pipe']});
@@ -93,13 +142,15 @@ async function captureBrowser(){
     },
     evaluate,until,
     async image(name){const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true},sessionId);
-      const bytes=Buffer.from(shot.data,'base64');await writeFile(join(output,name),bytes,{flag:'wx',mode:0o600});
-      result.artifacts.push({path:name,bytes:bytes.length,sha256:sha256(bytes)});},
+      const bytes=Buffer.from(shot.data,'base64'),path=artifactPrefix?artifactPrefix+'/'+name:name,target=join(output,path);
+      await mkdir(dirname(target),{recursive:true,mode:0o700});await writeArtifact(target,bytes);
+      result.artifacts.push({path,bytes:bytes.length,sha256:sha256(bytes)});await checkpoint();},
     async close(){try{await call('Browser.close');}catch{}socket.close();if(child.exitCode===null)child.kill('SIGTERM');await Promise.race([exited,delay(10000)]);if(child.exitCode===null){child.kill('SIGKILL');await exited;}chromiumProcess=null;}
   };
 }
 
 try{
+  await observation({stage:'Native continuation selection',status:'running'});await checkpoint();
   const [carbonStore,carbonServer,carbonClient,carbonEngine,giveStore,giveServer,giveClient,giveEngine,giveSource,giveLedger]=await Promise.all([
     moduleAt('stellarcarbon-statements','store.mjs'),moduleAt('stellarcarbon-statements','server.mjs'),
     moduleAt('stellarcarbon-statements','client.mjs'),moduleAt('stellarcarbon-statements','engine.mjs'),
@@ -110,22 +161,26 @@ try{
   const handover=await readJSON(options['carbon-handover']||join(sourceRoot,'receiving/stellarcarbon-current-handover.json'));
   const expected=await readJSON(join(sourceRoot,'receiving/expected-worked-manifest.json'));
   await stage('Receive both original carbon editions and saved statement versions',async()=>{
-    const sourceManifest=await readJSON(join(sourceRoot,'receiving/source-manifest.json'));
-    for(const file of sourceManifest.files){
-      const original=await readFile(join(sourceRoot,file.path));
-      const digest=createHash('sha1').update('blob '+original.length+'\0').update(original).digest('hex');
-      need(original.length===file.bytes&&digest===file.gitBlobSha1,'The retained source file changed: '+file.path);
-    }
-    const workspace=await carbonStore.StellarcarbonWorkspace.create(join(output,'stellarcarbon'),{handover});
+    const directory=join(output,'stellarcarbon');
+    const workspace=await exists(join(directory,'workspace.json'))?await carbonStore.StellarcarbonWorkspace.open(directory):
+      await carbonStore.StellarcarbonWorkspace.create(directory,{handover});
     const state=await workspace.snapshot();carbonStore.verifySources(state);
     need(state.editions.length===2,'Receive both original source editions.');
     result.workspaces.stellarcarbon={directory:workspace.directory,workspaceId:state.workspaceId};
     await workspace.close();
     return {editions:state.editions.map(source=>({id:source.id,sha256:source.sha256})),statementVersions:state.statements.map(row=>({id:row.id,versions:row.versions.length}))};
   });
+  const savedAccounting=completed('Original maintained accounting case and linked draft preparation')?.value||
+    (recovery.resume&&await exists(join(output,'accounting/case-result.json'))?await readJSON(join(output,'accounting/case-result.json')):null);
+  const accountingDirectory=options['accounting-directory']?resolve(options['accounting-directory']):savedAccounting?.directory;
+  const accountingWorkspaceId=options['expected-accounting-workspace-id']||savedAccounting?.binding?.workspaceId;
+  const accountingSourcesSha256=options['expected-accounting-sources-sha256']||savedAccounting?.binding?.sourcesSha256;
+  if(savedAccounting?.binding){
+    need(!options['expected-accounting-workspace-id']||options['expected-accounting-workspace-id']===savedAccounting.binding.workspaceId,'Continue the same saved accounting workspace.');
+    need(!options['expected-accounting-sources-sha256']||options['expected-accounting-sources-sha256']===savedAccounting.binding.sourcesSha256,'Continue the original accounting source binding.');
+  }
   const carbon=await carbonServer.createStellarcarbonServer({directory:join(output,'stellarcarbon'),
-    accountingDirectory:options['accounting-directory']?resolve(options['accounting-directory']):undefined,
-    expectedAccountingWorkspaceId:options['expected-accounting-workspace-id'],expectedAccountingSourcesSha256:options['expected-accounting-sources-sha256']});services.push(carbon);
+    accountingDirectory,expectedAccountingWorkspaceId:accountingWorkspaceId,expectedAccountingSourcesSha256:accountingSourcesSha256});services.push(carbon);
   const carbonAPI=new carbonClient.StellarcarbonClient({baseUrl:new URL('/api',carbon.url).href});
   await carbonAPI.state();
   const carbonState=await carbon.workspace.snapshot();
@@ -165,20 +220,25 @@ try{
     }
     return {november:{version:2,...expected.reports.november.totals},july:{version:1,...expected.reports.july.totals}};
   });
-  need(!options['accounting-config']||options['accounting-directory'],'Use the selected original accounting directory with its case configuration.');
+  need(!options['accounting-config']||accountingDirectory,'Use the selected original accounting directory with its case configuration.');
   const {prepareOriginalAccountingCase}=await import(pathToFileURL(join(sourceRoot,'receiving/accounting-case.mjs')).href);
-  const accountingConfig=options['accounting-config']?await readJSON(resolve(options['accounting-config'])):undefined;
-  result.accounting=await stage('Original maintained accounting case and linked draft preparation',()=>prepareOriginalAccountingCase({
+  const accountingConfig=!savedAccounting&&options['accounting-config']?await readJSON(resolve(options['accounting-config'])):undefined;
+  result.accounting=await stage('Original maintained accounting case and linked draft preparation',()=>savedAccounting||prepareOriginalAccountingCase({
     service:carbon,client:carbonAPI,sourceRoot,config:accountingConfig,save,actor}));
-  const carbonHandover=JSON.parse((await fetchOriginal(carbonAPI.handoverUrl())).content);
-  await save('stellarcarbon-complete-handover.json',carbonHandover);
-  let receivedCarbon;
+  if(savedAccounting?.binding&&accountingDirectory)result.accounting={...result.accounting,directory:accountingDirectory};
+  const carbonHandover=await retainedHandover('stellarcarbon-complete-handover.json',async()=>JSON.parse((await fetchOriginal(carbonAPI.handoverUrl())).content));
+  let receivedCarbon=result.workspaces.stellarcarbonReceived;
   await stage('Independent carbon receiving and the next operator edit',async()=>{
     const oldName=(await carbonAPI.state()).name;
-    receivedCarbon=await carbonAPI.receive(join(output,'stellarcarbon-received'),carbonHandover);
+    const directory=join(output,'stellarcarbon-received');
+    if(await exists(join(directory,'workspace.json'))){
+      const reopened=await carbonServer.createStellarcarbonServer({directory});services.push(reopened);
+      receivedCarbon={directory,workspaceId:reopened.workspace.state.workspaceId,url:reopened.url};
+    }else receivedCarbon=await carbonAPI.receive(directory,carbonHandover);
     const client=new carbonClient.StellarcarbonClient({baseUrl:new URL('/api',receivedCarbon.url).href});
-    const state=await client.state();
-    await client.apply('settings',{name:state.name+' · received by '+actor},{revision:state.revision,requestId:randomUUID(),actor});
+    const state=await client.state(),name=carbonHandover.workspace.name+' · received by '+actor;
+    if(state.name!==name)await client.apply('settings',{name},{revision:state.revision,
+      requestId:await requestFor('independent-carbon-name',{workspaceId:state.workspaceId,name}),actor});
     need((await carbonAPI.state()).name===oldName,'Receiving edited the original workspace.');
     const report=await client.statement('statement-november-2025',2);
     need(report.totals.allocated==='1.177'&&report.totals.remaining==='0.000','The received statement changed.');
@@ -186,30 +246,67 @@ try{
     result.workspaces.stellarcarbonReceived=receivedCarbon;return {directory:receivedCarbon.directory,url:receivedCarbon.url,editable:true};
   });
 
-  const giveWorkspace=await giveStore.GiveCreditWorkspace.create(join(output,'givecredit'),{name:'GiveCredit donor and initiative statements'});
+  receivedCarbon=result.workspaces.stellarcarbonReceived;
+  const giveDirectory=join(output,'givecredit');
+  const giveWorkspace=await exists(join(giveDirectory,'workspace.json'))?await giveStore.GiveCreditWorkspace.open(giveDirectory):
+    await giveStore.GiveCreditWorkspace.create(giveDirectory,{name:'GiveCredit donor and initiative statements'});
   await giveWorkspace.close();
   const give=await giveServer.createGiveCreditServer({directory:join(output,'givecredit')});services.push(give);
   const giveAPI=new giveClient.GiveCreditClient(give.url,{actor});
   let giveState=await giveAPI.state();
   result.workspaces.givecredit=give.startup;
-  const giveImport=async(source,label)=>{giveState=await giveAPI.state();return giveAPI.import({source,label},{revision:giveState.revision});};
+  const giveImport=async(source,label)=>{
+    const digest=giveStore.sourceDigest(source),state=await give.workspace.snapshot(),existing=state.editions.find(row=>row.sha256===digest);
+    if(existing)return {edition:{id:existing.id,label:existing.label},alreadyPresent:true};
+    giveState=await giveAPI.state();return giveAPI.import({source,label},{revision:giveState.revision,
+      requestId:await requestFor('source:'+digest,{sourceSha256:digest,label})});
+  };
   const priorCarbon=await giveImport(giveSource.receiveCarbon(prior,{network:'mainnet'}),'Original Stellarcarbon backup · April 14, 2026');
   const currentCarbon=await giveImport(giveSource.receiveCarbon(current,{network:'mainnet'}),'Complete Stellarcarbon mainnet edition · October 12, 2026');
   let registry=null,ledger=null;
-  await stage('Whole GiveCredit original source intake and ledger acquisition',async()=>{
+  const ledgerStage=await stage('Whole GiveCredit original source intake and ledger acquisition',async()=>{
     if(options['registry-source']){registry=await readJSON(resolve(options['registry-source']));await giveImport(registry,'Original authorized GiveCredit registry edition');}
-    if(options['ledger-source'])ledger=await readJSON(resolve(options['ledger-source']));
+    const priorLedgerFile=join(output,'givecredit-ledger-source.json');
+    if(recovery.resume&&await exists(priorLedgerFile))ledger=await readJSON(priorLedgerFile);
+    else if(options['ledger-source'])ledger=await readJSON(resolve(options['ledger-source']));
     else{
-      const input=options['capture-options']?await readJSON(resolve(options['capture-options'])):{};
+      const retainedOptions=join(output,'givecredit-capture-options.json');
+      const input=options['capture-options']?await readJSON(resolve(options['capture-options'])):
+        await exists(retainedOptions)?await readJSON(retainedOptions):{};
+      if(!await exists(retainedOptions))await atomicJSON(retainedOptions,input);
       if(options['sdk-module'])input.sdk=await import(pathToFileURL(resolve(options['sdk-module'])).href);
       if(registry)input.registrySource=registry;
-      if(options['capture-checkpoint'])input.checkpoint=await readJSON(resolve(options['capture-checkpoint']));
+      const checkpointPath=join(output,'givecredit-ledger-capture-checkpoint.json');
+      const checkpointSelection=options['capture-checkpoint']?resolve(options['capture-checkpoint']):
+        recovery.resume&&await exists(checkpointPath)?checkpointPath:null;
+      let checkpointIssue=null;
+      if(checkpointSelection){
+        try{input.checkpoint=await readJSON(checkpointSelection);}
+        catch(error){
+          if(options['capture-checkpoint']||!input.originalLedgerSources?.length)throw error;
+          const original=await readFile(checkpointSelection),name='recovery/incomplete-ledger-checkpoint-'+sha256(original)+'.json';
+          await save(name,original);
+          checkpointIssue={path:checkpointSelection,retained:name,bytes:original.length,sha256:sha256(original),message:error.message,
+            continuation:'Reacquire the same selected source using its retained complete original ledger responses.'};
+        }
+      }
+      result.capture={options:options['capture-options']?resolve(options['capture-options']):retainedOptions,checkpoint:checkpointSelection,checkpointIssue,status:'running'};
+      await observation({stage:'GiveCredit source capture',phase:'before-capture',checkpoint:checkpointSelection});await checkpoint();
       input.onProgress=async progress=>{
-        if(progress.checkpoint)await writeFile(join(output,'givecredit-ledger-capture-checkpoint.json'),JSON.stringify(progress.checkpoint,null,2)+'\n',{mode:0o600});
-        console.log(JSON.stringify({operation,phase:progress.phase,rows:progress.rows||null,at:new Date().toISOString()}));
+        if(progress.checkpoint)await atomicJSON(checkpointPath,progress.checkpoint);
+        const context={stage:'GiveCredit source capture',phase:progress.phase,rows:progress.rows||null,
+          hash:progress.hash||null,account:progress.account||null,ledger:progress.ledger||null};
+        await observation(context);await checkpoint();console.log(JSON.stringify({operation,...context,at:new Date().toISOString()}));
       };
-      try{ledger=await giveLedger.captureLedger(input);}
-      catch(error){if(error.checkpoint)await writeFile(join(output,'givecredit-ledger-capture-checkpoint.json'),JSON.stringify(error.checkpoint,null,2)+'\n',{mode:0o600});throw error;}
+      try{
+        if(input.checkpoint?.metadata?.status==='complete'){
+          giveSource.validateSourceEdition(input.checkpoint);ledger=input.checkpoint;
+        }else ledger=await giveLedger.captureLedger(input);
+      }catch(error){
+        if(error.checkpoint)await atomicJSON(checkpointPath,error.checkpoint);
+        result.capture.status='interrupted';throw error;
+      }
+      result.capture.status='complete';await observation({stage:'GiveCredit source capture',phase:'complete'});await checkpoint();
     }
     const imported=await giveImport(ledger,'Complete native GiveCredit ledger edition');
     ledger=(await give.workspace.snapshot()).editions.find(row=>row.id===imported.edition.id);
@@ -221,8 +318,10 @@ try{
     return {ledgerEditionId:ledger.id,counts:Object.fromEntries(Object.entries(ledger.tables).map(([key,rows])=>[key,rows.length])),
       originalDonorPayments:choices.donorPayments.length,sourcePayouts:choices.payouts.length,status:ledger.metadata.status};
   });
+  ledger=ledger||(await give.workspace.snapshot()).editions.find(row=>row.id===ledgerStage.ledgerEditionId);
+  need(ledger&&ledger.sha256===giveStore.sourceDigest(ledger),'Reopen the exact retained GiveCredit ledger edition.');
   let giveStatement;
-  await stage('Create the native GiveCredit period statement and all nine exports',async()=>{
+  const statementStage=await stage('Create the native GiveCredit period statement and all nine exports',async()=>{
     const state=await give.workspace.snapshot(),payments=giveEngine.nativePayments(ledger);
     const dates=payments.map(row=>row.createdAt.slice(0,10)).sort();
     const fromDate=options.from||ledger.metadata.selection?.from?.slice(0,10)||dates[0]||ledger.metadata.startedAt.slice(0,10);
@@ -232,42 +331,75 @@ try{
     const spec={title:'GiveCredit native donor contributions',basis:'LEDGER_CLOSED',fromDate,beforeDate,
       ledgerEditionId:ledger.id,carbonEditionId:currentCarbon.edition.id,...(registryEdition?{registryEditionId:registryEdition.id}:{}),
       note:'Original native donor calls and source-observed contract pool activity in this retained ledger edition.'};
-    giveStatement=await giveAPI.apply('statement',spec,{revision:state.revision});
+    const identical=state.statements.filter(row=>row.versions[0]&&Object.entries(spec).every(([key,value])=>JSON.stringify(row.versions[0].spec[key])===JSON.stringify(value)));
+    need(identical.length<2,'Choose the original retained native statement when the saved workspace contains multiple exact matches.');
+    if(identical.length)giveStatement={statementId:identical[0].id,statement:identical[0].versions[0]};
+    else giveStatement=await giveAPI.apply('statement',spec,{revision:state.revision,
+      requestId:await requestFor('native-period-statement',spec)});
+    result.giveStatementId=giveStatement.statementId;await checkpoint();
     for(const name of ['statement.html','statement.json','donations.csv','payments.csv','receipt-records.csv','payout-funding.csv','carbon-contributions.csv','carbon-allocations.csv','retirement-register.csv']){
       const file=await fetchOriginal(giveAPI.statementFileURL(giveStatement.statementId,name,1));await save('givecredit-statements/'+name,file.content);
     }
     return {statementId:giveStatement.statementId,totals:giveStatement.statement.totals,basis:spec.basis,fromDate,beforeDate};
   });
-  const giveHandover=JSON.parse((await fetchOriginal(giveAPI.handoverURL())).content);await save('givecredit-complete-handover.json',giveHandover);
-  let receivedGive;
+  if(!giveStatement)giveStatement={statementId:statementStage.statementId,statement:await giveAPI.statement(statementStage.statementId,1)};
+  const giveHandover=await retainedHandover('givecredit-complete-handover.json',async()=>JSON.parse((await fetchOriginal(giveAPI.handoverURL())).content));
+  let receivedGive=result.workspaces.givecreditReceived;
   await stage('Independent GiveCredit receiving and the next operator edit',async()=>{
-    const before=await giveAPI.state();receivedGive=await giveAPI.receive(join(output,'givecredit-received'),giveHandover);
+    const before=await giveAPI.state(),directory=join(output,'givecredit-received');
+    if(await exists(join(directory,'workspace.json'))){
+      const reopened=await giveServer.createGiveCreditServer({directory});services.push(reopened);receivedGive=reopened.startup;
+    }else receivedGive=await giveAPI.receive(directory,giveHandover);
     const client=new giveClient.GiveCreditClient(receivedGive.url,{actor}),state=await client.state();
     need(state.workspaceId!==before.workspaceId,'The independently received GiveCredit workspace needs its own identity.');
-    await client.apply('settings',{name:state.name+' · received by '+actor},{revision:state.revision});
+    const name=giveHandover.workspace.name+' · received by '+actor;
+    if(state.name!==name)await client.apply('settings',{name},{revision:state.revision,
+      requestId:await requestFor('independent-givecredit-name',{workspaceId:state.workspaceId,name})});
     need((await giveAPI.state()).name===before.name,'Receiving edited the original GiveCredit workspace.');
     await client.statement(giveStatement.statementId,1);
     await save('givecredit-received-handover.json',JSON.parse((await fetchOriginal(client.handoverURL())).content));
     result.workspaces.givecreditReceived=receivedGive;return {directory:receivedGive.directory,workspaceId:receivedGive.workspaceId,url:receivedGive.url,editable:true};
   });
-  let browserJourney;
-  await stage('Operate the complete customer, source, statement and receiving workflows in Chromium',async()=>{
-    browser=await captureBrowser();
+  receivedGive=result.workspaces.givecreditReceived;
+  let browserJourney,browserPrefix=result.browserArtifactsPrefix||'';
+  const browserStage=await stage('Operate the complete customer, source, statement and receiving workflows in Chromium',async()=>{
+    let browserCarbon={url:carbon.url,client:carbonAPI},browserGive={url:give.url,client:giveAPI},browserRoot=output;
+    const priorBrowserRoot=join(output,browserPrefix);
+    if(recovery.resume&&(await exists(join(priorBrowserRoot,'browser-profile'))||await exists(join(priorBrowserRoot,'browser-actions')))){
+      // Preserve the partial browser-edited stores. A new complete browser attempt
+      // starts from the actual pre-browser handovers; accounting is not replayed.
+      await closeServices({strict:true});
+      result.browserAttempts||=[];browserPrefix='browser-attempts/'+String(result.browserAttempts.length+1).padStart(3,'0');
+      browserRoot=join(output,browserPrefix);await mkdir(browserRoot,{recursive:true,mode:0o700});
+      const carbonCopy=await carbonStore.StellarcarbonWorkspace.create(join(browserRoot,'stellarcarbon'),{handover:carbonHandover});await carbonCopy.close();
+      const giveCopy=await giveStore.GiveCreditWorkspace.create(join(browserRoot,'givecredit'),{handover:giveHandover});await giveCopy.close();
+      const carbonService=await carbonServer.createStellarcarbonServer({directory:carbonCopy.directory});services.push(carbonService);
+      const giveService=await giveServer.createGiveCreditServer({directory:giveCopy.directory});services.push(giveService);
+      browserCarbon={url:carbonService.url,client:new carbonClient.StellarcarbonClient({baseUrl:new URL('/api',carbonService.url).href})};
+      browserGive={url:giveService.url,client:new giveClient.GiveCreditClient(giveService.url,{actor})};
+      await browserCarbon.client.state();await browserGive.client.state();
+      result.browserAttempts.push({prefix:browserPrefix,startedAt:new Date().toISOString(),preservedPreviousPrefix:result.browserArtifactsPrefix||'',
+        carbonHandover:'stellarcarbon-complete-handover.json',giveCreditHandover:'givecredit-complete-handover.json',
+        reason:'Continue the complete browser workflow from retained pre-browser handovers while preserving the interrupted attempt.'});
+    }
+    result.browserArtifactsPrefix=browserPrefix;await checkpoint();
+    browser=await captureBrowser(browserRoot,browserPrefix);
     const {operateCarbonBrowsers}=await import(pathToFileURL(join(sourceRoot,'receiving/browser-actions.mjs')).href);
     browserJourney=await operateCarbonBrowsers({browser,
-      carbon:{url:carbon.url,client:carbonAPI,currentSource:current,priorSource:prior},
-      give:{url:give.url,client:giveAPI,ledger,currentCarbonId:currentCarbon.edition.id,priorCarbonId:priorCarbon.edition.id,statementId:giveStatement.statementId},
-      output,save,actor});
+      carbon:{...browserCarbon,currentSource:current,priorSource:prior},
+      give:{...browserGive,ledger,currentCarbonId:currentCarbon.edition.id,priorCarbonId:priorCarbon.edition.id,statementId:giveStatement.statementId},
+      output:browserRoot,save:(path,value)=>save(browserPrefix?browserPrefix+'/'+path:path,value),actor});
     result.workspaces.stellarcarbonBrowserReceived=browserJourney.carbonReceived;
     result.workspaces.givecreditBrowserReceived=browserJourney.giveReceived;
-    await save('browser-observations.json',{version:browser.version,events:browser.events});
+    await save(browserPrefix?browserPrefix+'/browser-observations.json':'browser-observations.json',{version:browser.version,events:browser.events});
     need(!browser.events.some(row=>row.method==='Runtime.exceptionThrown'),'A browser script exception needs source repair.');
-    return {browser:browser.version,actions:browserJourney.actions,downloads:browserJourney.downloads,
+    return {browser:browser.version,artifactPrefix:browserPrefix,actions:browserJourney.actions,downloads:browserJourney.downloads,
       screenshots:browserJourney.screenshots,received:browserJourney.received,
       carbonStatementId:browserJourney.carbonStatementId,giveStatementId:browserJourney.giveStatementId};
   });
+  if(!browserJourney)browserJourney=await recoverBrowserJourney(output,browserStage,result.workspaces,browserPrefix);
+  await closeServices({strict:true});
   await stage('Close and reopen both independently received native workspaces',async()=>{
-    await closeServices({strict:true});
     const carbonReopened=await carbonStore.StellarcarbonWorkspace.open(receivedCarbon.directory);
     let giveReopened;
     try{
@@ -277,10 +409,10 @@ try{
       need(giveEngine.statementVersion(giveState,giveStatement.statementId,1).totals.paymentRecords===giveStatement.statement.totals.paymentRecords,'The persisted donor statement changed.');
       return {carbonRevision:carbonState.revision,giveCreditRevision:giveState.revision,carbonSources:carbonState.editions.length,giveCreditSources:giveState.editions.length};
     }finally{await carbonReopened.close();if(giveReopened)await giveReopened.close();}
-  });
+  },{reuse:false});
   await stage('Reopen the browser-received workspaces and their next editable state',async()=>{
-    const expectedCarbon=await readJSON(join(output,'browser-actions/stellarcarbon/received-after-edit.json'));
-    const expectedGive=await readJSON(join(output,'browser-actions/givecredit/received-after-edit.json'));
+    const expectedCarbon=await readJSON(join(output,browserPrefix,'browser-actions/stellarcarbon/received-after-edit.json'));
+    const expectedGive=await readJSON(join(output,browserPrefix,'browser-actions/givecredit/received-after-edit.json'));
     const reopenedCarbon=await carbonStore.StellarcarbonWorkspace.open(browserJourney.carbonReceived.directory);
     let reopenedGive;
     try{
@@ -297,14 +429,14 @@ try{
         giveEngine.statementVersion(giveState,giveStatement.statementId,version);
       }
       need(carbonEngine.statementVersion(carbonState,'statement-november-2025',2).totals.remaining==='0.000','The original current November statement changed.');
-      await save('browser-actions/reopened-workspaces.json',{stellarcarbon:carbonState,givecredit:giveState});
+      await save((browserPrefix?browserPrefix+'/':'')+'browser-actions/reopened-workspaces.json',{stellarcarbon:carbonState,givecredit:giveState});
       return {stellarcarbon:{directory:reopenedCarbon.directory,workspaceId:carbonState.workspaceId,revision:carbonState.revision,
         customerId:browserJourney.carbonCustomerId,customerVersion:carbonState.customers.find(row=>row.id===browserJourney.carbonCustomerId).version,
         statementId:browserJourney.carbonStatementId,versions:2,sources:carbonState.editions.length},
         givecredit:{directory:reopenedGive.directory,workspaceId:giveState.workspaceId,name:giveState.name,revision:giveState.revision,
         statementId:giveStatement.statementId,versions:2,sources:giveState.editions.length}};
     }finally{await reopenedCarbon.close();if(reopenedGive)await reopenedGive.close();}
-  });
+  },{reuse:false});
   if(result.accounting?.binding&&result.accounting.invoiceId)await stage('Reopen the original linked accounting draft and retained schedules',async()=>{
     const {prepareReceivablesServer}=await import(pathToFileURL(join(sourceRoot,'stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/server.mjs')).href);
     const reopened=await prepareReceivablesServer({directory:result.accounting.directory,port:0,expectedWorkspaceId:result.accounting.binding.workspaceId,expectedSourcesSha256:result.accounting.binding.sourcesSha256});
@@ -315,7 +447,7 @@ try{
       if(result.accounting.planDraft)plans.push(await reopened.paymentPlans.detail(result.accounting.planDraft.id));
       await save('accounting/reopened-original-case.json',{invoice,plans});return {invoiceId:invoice.invoice.id,status:invoice.invoice.status,plans:plans.length};
     }finally{await reopened.close();}
-  });
+  },{reuse:false});
   if(browser){await browser.close();browser=null;}
   const archivePath=resolve(options['archive-path']||output+'.tar.gz');
   result.status='complete';result.completedAt=new Date().toISOString();result.accountingCaseStatus=result.accounting?.status||'native-source-selection';
