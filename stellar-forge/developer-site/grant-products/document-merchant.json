@@ -15,6 +15,12 @@
           "bytes": 13664,
           "sha256": "fd05791f26cfc7edcd5276ec327cc52c1df4bf09ae3569fd5882d10907ba3ee7",
           "git_blob": "91cf506dc1e080229c4903bbde3dd7d0e0e4caf0"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 17965,
+          "sha256": "3c4d643dfc1f6ce88122359af5440adc995d36b4fc9a87251b34e36f66253a9e",
+          "git_blob": "ee22c98736e3049116325b88fabd000b0c51093c"
         }
       ]
     },
@@ -31,6 +37,12 @@
           "bytes": 36885,
           "sha256": "2346c8e10a73ce7bf395e851b5a3312905fe1bd1f82c98272d2a9a1ccb3fcdf1",
           "git_blob": "3da66df23663a65194d38173508457da110b965e"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 37497,
+          "sha256": "51100d4d343e651eaa32a6a8b6674b3aa935a1080c244be4ebca2f466685d611",
+          "git_blob": "0a98c0b89e2071b305accb6340f6fcb931794918"
         }
       ]
     },
@@ -44,6 +56,12 @@
       "editions": [
         {
           "commit": "7956a4acb2e567a5d7a445a7c0898095cd3e1400",
+          "bytes": 35693,
+          "sha256": "c7c3582cdad0aa5810810a5c65d465293e6437763f96e5b606cf5cfb8efc2226",
+          "git_blob": "49c6f0f6072ba1113d3746f1a7c17cda51e0d789"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
           "bytes": 35693,
           "sha256": "c7c3582cdad0aa5810810a5c65d465293e6437763f96e5b606cf5cfb8efc2226",
           "git_blob": "49c6f0f6072ba1113d3746f1a7c17cda51e0d789"
@@ -63,6 +81,12 @@
           "bytes": 16758,
           "sha256": "6f6e983a97ac086f313b81c21c282bd8c35c735e4d54d8034861415b471f0247",
           "git_blob": "63667552b98733b9496fbcb511a11d7dbfcfa40f"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 16758,
+          "sha256": "6f6e983a97ac086f313b81c21c282bd8c35c735e4d54d8034861415b471f0247",
+          "git_blob": "63667552b98733b9496fbcb511a11d7dbfcfa40f"
         }
       ]
     },
@@ -79,6 +103,12 @@
           "bytes": 33887,
           "sha256": "a4992988bc64764aeda7b2449e5c35f3d1fb421c663de2c4943a6d9fb2e73ddf",
           "git_blob": "844c65e7af9297d6c325291e8e58ce134657810d"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 34194,
+          "sha256": "4e23542b1f074df4213f2effb0a09290d58bf46df8f8b2f94208eefa95aeaa2e",
+          "git_blob": "651f13ce26c9efe26c9a13bd8d51afacab653d8f"
         }
       ]
     },
@@ -92,6 +122,12 @@
       "editions": [
         {
           "commit": "7956a4acb2e567a5d7a445a7c0898095cd3e1400",
+          "bytes": 21478,
+          "sha256": "657911af8ddac638e89e961cda36ef76bd92b0fbfee82b110a7677d8cdc9d5ff",
+          "git_blob": "28ece0ec0416d94198293f98d0d9c8dfc23195be"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
           "bytes": 21478,
           "sha256": "657911af8ddac638e89e961cda36ef76bd92b0fbfee82b110a7677d8cdc9d5ff",
           "git_blob": "28ece0ec0416d94198293f98d0d9c8dfc23195be"
@@ -111,6 +147,12 @@
           "bytes": 17748,
           "sha256": "718a99bf1ed02edbc8721d0fcfb1df01f1d220e7fe18bc656134e2dcfaacf2db",
           "git_blob": "41f1acc238e50a8436e9807c4663f3be082be311"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 26361,
+          "sha256": "64009ad39a20cd7caf83c68621b895a7365d4ef7841771ba5f815d76c5eaccd3",
+          "git_blob": "6ca481898dbc04526455c1cae26c1d7263a56ba3"
         }
       ]
     },
@@ -127,6 +169,92 @@
           "bytes": 28867,
           "sha256": "5c4485b286dc4e9349cff939e9860259c58d693b1d08cb0ecb8dbee459f776a3",
           "git_blob": "70a3d17c3ca12e9c89853a0675e45b0c09794f26"
+        },
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 28867,
+          "sha256": "5c4485b286dc4e9349cff939e9860259c58d693b1d08cb0ecb8dbee459f776a3",
+          "git_blob": "70a3d17c3ca12e9c89853a0675e45b0c09794f26"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-commissioning-guide",
+      "label": "Commission an existing native commerce account for complete document customer delivery",
+      "path": "products/document-merchant/COMMISSIONING.md",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 25385,
+          "sha256": "491348525d558494983ebc4b008ab4b6ee61fb89d4e809d3b659be22dfb190ee",
+          "git_blob": "e1197ac986b2c1ec91e8bfd9885fa1c553bed4ff"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-commissioning-core",
+      "label": "Retained native terms, original buyer/operator setup and document service commissioning",
+      "path": "products/document-merchant/commissioning.mjs",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 22084,
+          "sha256": "0dcca6f069ed5224861e7f6e52dacfe533049d2816e3a9b31bfa1434b084e3f5",
+          "git_blob": "0afa7f76ff22ce0beab5fc9e771221abe230c100"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-commissioning-application",
+      "label": "Original-account commissioning through the existing Document merchant Applications lifetime",
+      "path": "products/document-merchant/commissioning-application.mjs",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 5944,
+          "sha256": "5b12adfb4b8a8624833d4231d77858457a95215425c0f6120f17823c492a5dfa",
+          "git_blob": "2253dcabae728f7c9909be7590e1d0458cd2d4eb"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-existing-pdf-workspace",
+      "label": "Complete existing PDF intake, native assembly and customer source receiving",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/assembly-workspace.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 17691,
+          "sha256": "c94a670e76c9d8fe8036a02e48468c96a985f4ca495be17b08e5e154f0c151de",
+          "git_blob": "4b3931312eb9a5f9203696e89a44032692361cf4"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-native-facilitator",
+      "label": "One original facilitator lifetime for the exact selected rendering and assembly payments",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/commissioning-facilitator.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "ae86e3bcaedd1ee65309cda455984f8102948905",
+          "bytes": 3966,
+          "sha256": "415b9b985a939233bfc750d4c0ab205b446d8c1959399f7b0c6f404e4037bac5",
+          "git_blob": "14862983a72d58e7967a82632323ef2428cfa984"
         }
       ]
     }

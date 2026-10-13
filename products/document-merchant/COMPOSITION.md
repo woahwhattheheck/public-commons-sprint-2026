@@ -658,3 +658,7 @@ The full original interfaces are documented in [BATCHES.md](BATCHES.md), [OPERAT
 ## Ordered invoice and report bundles
 
 After receiving the original PDFs, use the same Document production browser's Ordered PDF bundle step or `document-merchant assemble` to prepare exact customer order, review the original assembly price, fulfill and receive every volume, and export one complete customer archive. The PDFMint-backed `assemblePdfs` function is enabled explicitly with its own native payment terms. Single-PDF volumes retain their original bytes without a merge purchase. See [ASSEMBLY.md](./ASSEMBLY.md) for complete merchant setup, local/batch source intake, CLI commands, continuation, output units and independent customer receiving.
+
+## Assemble PDFs that already exist
+
+Use **Bundle existing PDFs** in the same Document production application to upload complete invoices or reports, choose their order, review the original assembly price, receive the paid volumes and export the complete customer bundle. It also receives the original whole assembly source plan from an upload or a declared local file. [Existing PDF intake](ASSEMBLY.md#existing-pdf-intake-in-the-customer-browser) covers complete source and export continuation, limits, original payment units and the installed API. The same customer owner and Resource library remain in use.
