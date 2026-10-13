@@ -47,7 +47,7 @@ async function receive(out){
    result.connection="owned_chromium";
   }
   const createContext=async(viewport)=>{
-   const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);
+   const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);context.on("page",p=>p.on("dialog",dialog=>dialog.accept()));
    if(cdp){
     const allowed=new Map([["/release/Open_CMDB_Workspace.html",path.join(root,"release","Open_CMDB_Workspace.html")],["/received-handover/Open_CMDB_Workspace.html",path.join(root,"received-handover","Open_CMDB_Workspace.html")]]);
     await context.route("**/*",async route=>{

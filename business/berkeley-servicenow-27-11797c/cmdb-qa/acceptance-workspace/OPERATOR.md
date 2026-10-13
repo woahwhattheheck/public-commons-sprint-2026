@@ -108,3 +108,5 @@ The selected CSV remains available after leaving and returning to Intake. Its fi
 Unfinished groups are held in this session until their explicit recovery download. Browser storage continues to save recorded operations; it does not secretly persist incomplete forms. In temporary browser mode, also save the private workspace or complete handover before leaving. Recovery files are private operating records containing the original exports and entered notes. Transfer them through the same authorized channel as the complete workspace.
 
 Complete recovery files are limited to 256 MiB and each original CSV to 16 MiB. If a combined recovery is too large, save each listed group separately. Every such file includes its necessary original workspace edition, so it can be received independently.
+
+A retained mapped column that is absent from a newly selected export remains visible as “not present in selected export.” Its original name stays in recovery until you deliberately select a replacement. Review input problems before saving the corrected mapping.
