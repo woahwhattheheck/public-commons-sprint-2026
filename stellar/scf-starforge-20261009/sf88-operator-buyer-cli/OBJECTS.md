@@ -315,3 +315,19 @@ AbortSignal, an optional original workspace and an `onChunk` progress callback.
 It invokes the original queue executor and exposes no replacement signer or
 approval callback. The command wrapper is also available as `starforge buyer-object`
 in a distribution containing this release.
+
+## Recover a standalone free session
+
+A session created without a managed workspace can retain a complete original
+free response and its native inbox while its configured ledger remains absent.
+Use the [standalone Object recovery workflow](OBJECT_SESSION_RECOVERY.md) to
+review that full state, capture it through the original SF101 encryption, verify
+it independently and restore the same canonical session root. The original
+`session-backup-*` Object commands and typed Node `ObjectSessionRecovery`
+preserve session/request identity, zero-cap history, evidence, assembly files and
+lease history. A report or analytical export alone does not substitute for those
+complete native state members.
+
+Managed Object Buyer workspaces continue to use the existing
+`backup-review` / `backup` / `backup-verify` / `backup-restore` workflow above,
+which also captures their original operator keys and SF36 journals.

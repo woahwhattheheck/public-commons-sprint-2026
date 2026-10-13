@@ -1923,7 +1923,7 @@ def _native_check_received(api, workspace, record):
             "The received comparison selected different original editions.")
     report = api.get("/api/source-reports/scientific-edition", workspace=workspace, id=value["report_id"])
     require(report["edition"]["id"] == value["report_id"] and report["edition"]["state"] == "complete"
-            and _native_report_selection(report) == [pair],
+            and _native_report_selection(report) == _phase_report_choices(record),
             "The restored scientific report changed its saved original sources.")
     return detail, index, row, comparison, report
 
@@ -1945,6 +1945,129 @@ def _phase_json(journal, name, build):
     journal.save()
     return value
 
+
+
+def _phase_plan_choice(selected):
+    return selected.get("implementation_report", {"enabled": False, "as_of": None})
+
+
+def _phase_report_choices(record):
+    value = record["economic_comparison_report"]
+    return value.get("source_pairs") or [value["source_pair"]]
+
+
+def _native_plan_source(args, api, journal, workspace, selected):
+    """Use the original report producer; never replace or edit the selected plan."""
+    binding = selected["binding"]
+    choice = _phase_plan_choice(selected)
+    task = _native_queue(api, journal, "implementation_plan_report", workspace,
+                         "implementation.plan.report",
+                         {"id": binding["plan_id"], "revision": binding["revision"],
+                          "as_of": choice["as_of"]}, args.task_timeout_seconds)
+    result = task["result"]
+    require(result["plan_id"] == binding["plan_id"] and result["revision"] == binding["revision"]
+            and result["as_of"] == choice["as_of"], "The plan report changed its pinned revision or date.")
+    preview = _phase_json(journal, "implementation-plan-source-preview.json", lambda:
+        api.post("/api/implementation/report-source-preview",
+                 {"plan_id": binding["plan_id"], "report_id": result["report_id"]}, workspace))
+    wanted = {"plan_id": binding["plan_id"], "revision": binding["revision"],
+              "document_digest": binding["document_digest"]}
+    require(all(preview["plan_binding"][key] == value for key, value in wanted.items())
+            and preview["as_of"] == choice["as_of"] and not preview["delivery_selection_supplied"],
+            "The whole-plan scientific source changed its original saved revision.")
+    imported = _native_queue(api, journal, "implementation_plan_source", workspace,
+        "implementation.report-source.import",
+        {"plan_id": binding["plan_id"], "report_id": result["report_id"],
+         "expected_operation_id": preview["operation_id"]}, args.task_timeout_seconds)
+    source = api.get("/api/implementation/report-source-detail", workspace=workspace,
+                     source_key=imported["result"]["source_key"], operation_id=preview["operation_id"])
+    require(source["state"] == "imported" and source["operation_id"] == preview["operation_id"]
+            and source["report_id"] == result["report_id"]
+            and all(source["plan_binding"][key] == value for key, value in wanted.items())
+            and all(source[key] == imported["result"][key] for key in
+                    ("source_key", "source_collection_id", "source_id")),
+            "The retained whole-plan report source changed its accepted identity.")
+    pair = {key: source[key] for key in ("source_collection_id", "source_id")}
+    journal.record["implementation_plan_handoff"] = {
+        "binding": wanted, "as_of": choice["as_of"], "report_id": result["report_id"],
+        "report_task_id": task["id"], "source_task_id": imported["id"],
+        "source_key": source["source_key"], "source_operation_id": source["operation_id"],
+        "source_pair": pair, "source_identity": preview["source_identity"]}
+    _phase_save(journal, "implementation-plan-source.json",
+                {key: value for key, value in source.items() if key != "_downloads"})
+    journal.save()
+    return pair
+
+
+def _native_plan_field(detail, record):
+    value = record["implementation_plan_handoff"]
+    pair, wanted = value["source_pair"], value["binding"]
+    rows = [(index, row) for index, row in enumerate(detail.get("field_sources", []))
+            if all(row.get(key) == item for key, item in pair.items())]
+    require(len(rows) == 1, "The received Study lost or repeated its whole-plan source.")
+    index, row = rows[0]
+    native = row.get("native_plan") or {}
+    require(row["source_family"] == "report"
+            and row["source_identity"] == value["source_identity"]
+            and native.get("plan_id") == wanted["plan_id"]
+            and native.get("selected_revision") == wanted["revision"]
+            and native.get("selected_document_digest") == wanted["document_digest"]
+            and native.get("selected_report_id") == value["report_id"],
+            "The received Study lost its exact original editable plan revision.")
+    return index, row
+
+
+def _native_check_plan(api, journal, workspace, detail):
+    index, row = _native_plan_field(detail, journal.record)
+    wanted = journal.record["implementation_plan_handoff"]["binding"]
+    selected = api.get("/api/implementation/detail", workspace=workspace,
+                       id=wanted["plan_id"], revision=wanted["revision"])
+    original = json.loads((journal.root / "existing-cost-plan-original.json").read_text(encoding="utf-8"))
+    require(selected["document_digest"] == wanted["document_digest"] and selected["plan"] == original,
+            "The received original plan, source metadata, tasks or budgets changed.")
+    current = api.get("/api/implementation/detail", workspace=workspace, id=wanted["plan_id"])
+    require(current["plan"]["id"] == wanted["plan_id"]
+            and current["plan"]["revision"] >= wanted["revision"],
+            "The received current plan is missing its original revision history.")
+    return index, row, selected, current
+
+
+def _native_capture_plan_lineage(api, journal, workspace, study):
+    value = journal.record["implementation_plan_handoff"]
+    pair, wanted = value["source_pair"], value["binding"]
+    rows = [row for row in study["identity"].get("implementation_report_sources", [])
+            if all(row.get(key) == item for key, item in pair.items())]
+    require(len(rows) == 1, "The Study archive omitted its complete native Implementation lineage.")
+    row = rows[0]
+    native = row.get("native_plan") or {}
+    require(row["source_identity"] == value["source_identity"]
+            and native.get("plan_id") == wanted["plan_id"]
+            and native.get("selected_revision") == wanted["revision"]
+            and native.get("selected_document_digest") == wanted["document_digest"]
+            and native.get("selected_report_id") == value["report_id"],
+            "The captured editable work plan differs from its original source report.")
+    captured = api.get("/api/implementation/detail", workspace=workspace,
+                       id=wanted["plan_id"], revision=native["revision"])
+    require(captured["document_digest"] == native["document_digest"],
+            "The Study's captured current plan differs from its original saved revision.")
+    _phase_save(journal, "implementation-plan-captured-current.json", captured["plan"])
+    value["captured_native_plan"] = native
+    journal.save()
+
+
+def _receiving_plan_change(before, after, task_id, note, *, saved):
+    """Permit only this receiving note and the native revision/time stamps."""
+    expected = json.loads(json.dumps(before))
+    matches = [row for row in expected["tasks"] if row["id"] == task_id]
+    require(len(matches) == 1, "The receiving note no longer names its original work task.")
+    matches[0]["notes"] = note
+    ignored = {"updated_at"}
+    if saved:
+        require(after["revision"] == before["revision"] + 1, "The receiving edit must commit one revision.")
+        ignored.add("revision")
+    require({key: value for key, value in after.items() if key not in ignored}
+            == {key: value for key, value in expected.items() if key not in ignored},
+            "The receiving edit changed more than its explicit note; quantities and source definitions must stay exact.")
 
 def receive_native_phase(args, api, journal):
     """Complete the existing provider workflow without a browser dependency."""
@@ -2001,9 +2124,24 @@ def receive_native_phase(args, api, journal):
             _phase_save(journal, "existing-cost-plan-original.json", plan)
             return {"workspace_key": workspace, "binding": binding,
                     "review": review, "plan_id": plan["id"], "candidate_id": candidate["id"],
-                    "review_source": descriptor(raw_path, output), "review_source_path": str(source_path)}
+                    "review_source": descriptor(raw_path, output), "review_source_path": str(source_path),
+                    "implementation_report": {
+                        "enabled": args.include_implementation_plan,
+                        "as_of": (args.implementation_report_as_of or review.get("as_of"))
+                                  if args.include_implementation_plan else None}}
         selected = _phase_json(journal, "native-input.json", pin)
         record["native_input"] = selected
+        report_choice = _phase_plan_choice(selected)
+        require(not args.include_implementation_plan or report_choice["enabled"],
+                "This original journey did not select editable plan transfer; start a separate explicit journey.")
+        if args.implementation_report_as_of:
+            require(report_choice["enabled"] and args.implementation_report_as_of == report_choice["as_of"],
+                    "The resumed whole-plan report date differs from its pinned selection.")
+        if report_choice["enabled"]:
+            require(isinstance(report_choice["as_of"], str)
+                    and re.fullmatch(r"\d{4}-\d{2}-\d{2}", report_choice["as_of"]) is not None
+                    and datetime.strptime(report_choice["as_of"], "%Y-%m-%d").strftime("%Y-%m-%d") == report_choice["as_of"],
+                    "Choose an explicit original plan report date as YYYY-MM-DD.")
         binding = selected["binding"]
         retained_review = selected["review_source"]
         retained_path = output / _native_relative(retained_review["path"])
@@ -2172,13 +2310,20 @@ def receive_native_phase(args, api, journal):
                                     comparison_directory / (side + "-economic-edition"))
             require(nested["report_id"] == edition["report_id"], "A nested original report identity changed.")
 
+    choices = [pair]
+    if _phase_plan_choice(selected)["enabled"]:
+        with journal.stage("native_retain_original_editable_plan_report"):
+            choices.append(_native_plan_source(args, api, journal, workspace, selected))
+    record["economic_comparison_report"]["source_pairs"] = choices
+    journal.save()
+
     with journal.stage("native_render_and_export_original_scientific_report"):
-        report_request = {"sources": [pair], "contact": {}}
+        report_request = {"sources": choices, "contact": {}}
         report_preview = _phase_json(journal, "scientific-report-preview.json", lambda:
             api.post("/api/source-reports/scientific-preview", report_request, workspace))
         require(report_preview["workspace_key"] == workspace
                 and [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
-                     for row in report_preview["sources"]] == [pair],
+                     for row in report_preview["sources"]] == choices,
                 "The original scientific preview changed its exact source choice.")
         # A previously complete edition is opened without asking the installed
         # renderer to generate a new source identity.
@@ -2190,7 +2335,7 @@ def receive_native_phase(args, api, journal):
                     "The completed scientific report differs from its original preview.")
         report = api.get("/api/source-reports/scientific-edition", workspace=workspace, id=report_preview["id"])
         require(report["edition"]["id"] == report_preview["id"] and report["edition"]["state"] == "complete"
-                and _native_report_selection(report) == [pair],
+                and _native_report_selection(report) == choices,
                 "The retained scientific report changed its original ordered source.")
         _phase_save(journal, "comparison-scientific-report-edition.json", _native_report_snapshot(report))
         report_files = _native_report_files(api, journal, report)
@@ -2232,13 +2377,15 @@ def receive_native_phase(args, api, journal):
                 "The original Study archive changed its project, roots or native identity.")
         retained = next((row for row in study["identity"]["scientific_report_editions"]
                          if row["id"] == report["edition"]["id"]), None)
-        require(retained and retained["source_choices"] == [pair] and retained["sources"]
+        require(retained and retained["source_choices"] == choices and retained["sources"]
                 and all(row.get("body_sha256") for row in retained["sources"]),
                 "The original Study lost its complete scientific report or source bodies.")
         for item in retained["members"]:
             member = manifest["members"].get("workspace/" + item["path"])
             require(member and all(member[key] == item[key] for key in ("bytes", "sha256")),
                     "The original Study changed a scientific report member.")
+        if record.get("implementation_plan_handoff"):
+            _native_capture_plan_lineage(api, journal, workspace, study)
         _phase_save(journal, "comparison-study-inspection.json", inspected)
         record["economic_comparison_report"].update(study_id=study["id"], study_task_id=task["id"],
                                                    study_selection=selection, study_archive=study_file)
@@ -2277,6 +2424,16 @@ def receive_native_phase(args, api, journal):
         require(cold_comparison["comparison"] == comparison["comparison"]
                 and _native_report_snapshot(cold_report) == _native_report_snapshot(report),
                 "Cold reopening changed original comparison values or scientific report files.")
+        if record.get("implementation_plan_handoff"):
+            field_index, field, original_plan, received_plan = _native_check_plan(
+                api, journal, received_workspace, detail)
+            captured = json.loads((output / "implementation-plan-captured-current.json").read_text(encoding="utf-8"))
+            captured_revision = api.get("/api/implementation/detail", workspace=received_workspace,
+                                        id=captured["id"], revision=captured["revision"])
+            require(captured_revision["plan"] == captured,
+                    "The fresh Workspace changed the captured current work plan, tasks, budgets or source metadata.")
+            _phase_save(journal, "cold-received-implementation-plan.json", captured_revision["plan"])
+            record["implementation_plan_handoff"]["received_source_index"] = field_index
         # Retain source availability separately from captured comparison lineage.
         _phase_save(journal, "cold-received-economic-source.json", row)
         record["economic_comparison_report"].update(
@@ -2288,8 +2445,207 @@ def receive_native_phase(args, api, journal):
 
 
 
+
+def _browser_receive_plan(args, api, journal, page, workspace, capture):
+    """Operate the existing received-plan controls and save one separate receiving note."""
+    record, output = journal.record, journal.root
+    value = record["implementation_plan_handoff"]
+    study_id = record["economic_comparison_report"]["study_id"]
+    detail = api.get("/api/study-transfer/received-detail", workspace=workspace, study_id=study_id)
+    index, row, selected, current = _native_check_plan(api, journal, workspace, detail)
+    wanted = value["binding"]
+    sender = None
+    unavailable = None
+    if api.origin == record["operator_origin"]:
+        require(workspace != record["workspace_key"], "Edit only the independently restored Workspace.")
+        try:
+            observed_sender = api.get("/api/implementation/detail", workspace=record["workspace_key"],
+                                      id=wanted["plan_id"])
+            original = api.get("/api/implementation/detail", workspace=record["workspace_key"],
+                               id=wanted["plan_id"], revision=wanted["revision"])
+        except NativeHTTPError as error:
+            if error.status != 404:
+                raise
+            unavailable = {"status": 404, "message": journal.clean(str(error)),
+                           "original_workspace_key": record["workspace_key"],
+                           "browser_origin": api.origin, "browser_workspace_key": workspace}
+        else:
+            require(original["document_digest"] == wanted["document_digest"]
+                    and original["plan"] == selected["plan"], "The sender's selected source revision changed.")
+            sender = observed_sender
+    receiving = record.setdefault("implementation_receiving", {})
+    receiving["sender_verification"] = (
+        "Original sender accessible: current and selected revisions checked before and after receiving."
+        if sender is not None else
+        "Original sender is unavailable on this browser operator; exact native capture is retained. "
+        "Live sender verification must be completed by its original worker; this browser does not claim access.")
+    if unavailable:
+        receiving.setdefault("sender_unavailable_observations", []).append(unavailable)
+    journal.save()
+    page.locator('[data-view="study-transfer"]').click()
+    control = page.locator('.study-transfer [data-received-action="open"][data-id="' + study_id + '"]')
+    control.wait_for(state="visible")
+    with page.expect_response(lambda response: urlsplit(response.url).path == "/api/study-transfer/received-detail"
+                              and parse_qs(urlsplit(response.url).query).get("study_id") == [study_id]):
+        control.click()
+    action = "current" if row["native_plan"]["revision"] != row["native_plan"]["selected_revision"] else "plan"
+    card_revision = row["native_plan"]["revision"] if action == "current" else row["native_plan"]["selected_revision"]
+    with page.expect_response(lambda response: urlsplit(response.url).path == "/api/implementation/detail"
+                              and parse_qs(urlsplit(response.url).query).get("id") == [wanted["plan_id"]]
+                              and parse_qs(urlsplit(response.url).query).get("workspace") == [workspace]
+                              and parse_qs(urlsplit(response.url).query).get("revision") == [str(card_revision)]) as opened:
+        page.locator('[data-received-action="' + action + '"][data-index="' + str(index) + '"]').click()
+    check_response(opened.value, "Open the retained editable Implementation plan")
+    opened_plan = opened.value.json()["plan"]
+    require(opened_plan["id"] == wanted["plan_id"] and opened_plan["revision"] == card_revision,
+            "The plan card opened another plan or native revision.")
+    workbench = page.locator(".iw")
+    workbench.get_by_text(
+        "Opened the original saved plan at native revision " + str(opened_plan["revision"]) +
+        ". Its retained reports and source files are available below.", exact=True).wait_for(state="visible")
+    require(workbench.locator('[data-impl-change="plan"]').input_value() == wanted["plan_id"]
+            and workbench.locator(".iw-footer span").first.inner_text() == wanted["plan_id"]
+            and re.search(r"\brevision " + str(opened_plan["revision"]) + r"(?:\D|$)", workbench.locator(".iw-header .iw-muted").inner_text()) is not None,
+            "The editable workbench has not adopted the selected original plan revision.")
+    previous_footer = workbench.locator(".iw-footer").element_handle()
+    require(previous_footer is not None, "The native plan view has no mounted footer.")
+    with page.expect_response(lambda response: urlsplit(response.url).path == "/api/implementation/detail"
+                              and parse_qs(urlsplit(response.url).query).get("id") == [wanted["plan_id"]]) as reopened:
+        workbench.locator('[data-impl="reopen"]').click()
+    check_response(reopened.value, "Reopen the current received plan")
+    page.wait_for_function("(node) => !node.isConnected", arg=previous_footer)
+    previous_footer.dispose()
+    reopened_plan = reopened.value.json()["plan"]
+    require(workbench.locator('[data-impl-change="plan"]').input_value() == reopened_plan["id"] == wanted["plan_id"]
+            and re.search(r"\brevision " + str(reopened_plan["revision"]) + r"(?:\D|$)", workbench.locator(".iw-header .iw-muted").inner_text()) is not None,
+            "The reopened controller has not adopted its current native revision.")
+    workbench.locator('[data-impl="tab"][data-tab="tasks"]').click()
+    capture("phase-browser-received-work-plan-desktop.png")
+    page.set_viewport_size({"width": 390, "height": 844})
+    capture("phase-browser-received-work-plan-narrow.png")
+    page.set_viewport_size({"width": 1440, "height": 1000})
+    workbench.locator('[data-impl="tab"][data-tab="budget"]').click()
+    capture("phase-browser-received-plan-costs-desktop.png")
+    page.set_viewport_size({"width": 390, "height": 844})
+    capture("phase-browser-received-plan-costs-narrow.png")
+    page.set_viewport_size({"width": 1440, "height": 1000})
+
+    def intent():
+        current = api.get("/api/implementation/detail", workspace=workspace, id=wanted["plan_id"])
+        plan = current["plan"]
+        require(plan["tasks"], "This work-plan receiving course requires an actual retained task.")
+        task = plan["tasks"][0]
+        note = (task.get("notes") or "") + (
+            "\n\nReceiving note: opened the original work plan in an independent restored Workspace. "
+            "No task quantity, cost forecast, ledger classification or scientific source was changed.")
+        return {"workspace_key": workspace, "operator_origin": api.origin,
+                "plan": plan, "document_digest": current["document_digest"],
+                "task_id": task["id"], "note": note}
+    edit = _phase_json(journal, "received-plan-edit-intent.json", intent)
+    require(edit["workspace_key"] == workspace and edit["operator_origin"] == api.origin,
+            "Resume this receiving edit on its original restored Workspace and operator.")
+    name = "browser_received_plan_note"
+    requests = record.setdefault("native_requests", {})
+    if name not in requests:
+        fresh = api.get("/api/implementation/detail", workspace=workspace, id=wanted["plan_id"])
+        require(fresh["document_digest"] == edit["document_digest"] and fresh["plan"] == edit["plan"],
+                "The received plan changed after the note was reviewed; retain that edit and do not overwrite it.")
+        workbench.locator('[data-impl="tab"][data-tab="tasks"]').click()
+        workbench.locator('[data-impl="edit"][data-collection="tasks"][data-id="' + edit["task_id"] + '"]').click()
+        form = workbench.locator('dialog[open] [data-impl-form="tasks"]')
+        form.wait_for(state="visible")
+        form.locator('[name="notes"]').fill(edit["note"])
+        form.locator('button[type="submit"]').click()
+        workbench.locator("dialog[open]").wait_for(state="hidden")
+
+        def capture_request(route, request):
+            if request.method != "POST" or urlsplit(request.url).path != "/api/actions":
+                route.continue_()
+                return
+            try:
+                actual = request.post_data_json
+                require(actual["workspace"] == workspace and actual["action"] == "implementation.plan.save",
+                        "The receiving control attempted another native action.")
+                payload = actual["payload"]
+                require(payload["expected_revision"] == edit["plan"]["revision"],
+                        "The receiving save selected another base revision.")
+                _receiving_plan_change(edit["plan"], payload["document"], edit["task_id"], edit["note"], saved=False)
+                require(re.fullmatch(r"[A-Za-z0-9_-]{16,100}", actual["operation_id"]) is not None,
+                        "The receiving save omitted its original queue request identity.")
+                slot = {"request": actual, "created_at": now(), "state": "prepared",
+                        "captured_from": "Original Implementation Save native revision control"}
+                previous = requests.get(name)
+                require(previous is None or previous["request"] == actual,
+                        "The receiving control replaced its original save request.")
+                requests[name] = previous or slot
+                journal.save()  # Persist exact native request before allowing the POST.
+                route.continue_()
+            except Exception:
+                route.abort()
+                raise
+
+        page.route("**/api/actions", capture_request)
+        try:
+            with page.expect_response(lambda response: urlsplit(response.url).path == "/api/actions"
+                                      and response.request.method == "POST") as accepted:
+                workbench.locator('[data-impl="save"]').click()
+            check_response(accepted.value, "Save one independent received-plan note")
+            result = accepted.value.json()
+            task = result.get("task", result)
+            require(name in requests, "The native save was not journaled before submission.")
+            requests[name].update(task_id=task["id"], state=task["state"])
+            journal.save()
+        finally:
+            page.unroute("**/api/actions", capture_request)
+    request = requests[name]["request"]
+    task = _native_queue(api, journal, name, workspace, request["action"], request["payload"],
+                         args.task_timeout_seconds)
+    saved = api.get("/api/implementation/detail", workspace=workspace, id=wanted["plan_id"],
+                    revision=edit["plan"]["revision"] + 1)
+    _receiving_plan_change(edit["plan"], saved["plan"], edit["task_id"], edit["note"], saved=True)
+    require(task["result"]["plan"] == saved["plan"], "The receiving task returned a different saved revision.")
+    _phase_save(journal, "received-plan-edited-revision.json", saved["plan"])
+    selected_after = api.get("/api/implementation/detail", workspace=workspace,
+                             id=wanted["plan_id"], revision=wanted["revision"])
+    require(selected_after["plan"] == selected["plan"]
+            and selected_after["document_digest"] == wanted["document_digest"],
+            "The receiving note changed the original selected report revision.")
+    if sender is not None:
+        after = api.get("/api/implementation/detail", workspace=record["workspace_key"], id=wanted["plan_id"])
+        original_after = api.get("/api/implementation/detail", workspace=record["workspace_key"],
+                                 id=wanted["plan_id"], revision=wanted["revision"])
+        require(after["plan"] == sender["plan"] and after["document_digest"] == sender["document_digest"]
+                and original_after["plan"] == selected["plan"],
+                "The independent receiving edit changed the sender's plan.")
+        _phase_save(journal, "sender-plan-observed-" + after["document_digest"] + ".json", after["plan"])
+    close = page.locator('#detail-dialog button[data-action="detail-close"]')
+    if close.is_visible():
+        close.click()
+    previous_footer = workbench.locator(".iw-footer").element_handle()
+    require(previous_footer is not None, "The edited plan view has no mounted footer.")
+    with page.expect_response(lambda response: urlsplit(response.url).path == "/api/implementation/detail"
+                              and parse_qs(urlsplit(response.url).query).get("id") == [wanted["plan_id"]]) as reopened:
+        workbench.locator('[data-impl="reopen"]').click()
+    check_response(reopened.value, "Reopen the saved receiving note")
+    page.wait_for_function("(node) => !node.isConnected", arg=previous_footer)
+    previous_footer.dispose()
+    reopened_plan = reopened.value.json()["plan"]
+    require(reopened_plan["revision"] >= saved["plan"]["revision"]
+            and workbench.locator('[data-impl-change="plan"]').input_value() == reopened_plan["id"] == wanted["plan_id"]
+            and re.search(r"\brevision " + str(reopened_plan["revision"]) + r"(?:\D|$)", workbench.locator(".iw-header .iw-muted").inner_text()) is not None,
+            "The received workbench has not adopted its reopened saved revision.")
+    workbench.locator('[data-impl="tab"][data-tab="tasks"]').click()
+    capture("phase-browser-received-plan-note-reopened.png")
+    record["implementation_receiving"].update(
+        workspace_key=workspace, plan_id=wanted["plan_id"], original_revision=wanted["revision"],
+        applied_revision=saved["plan"]["revision"], document_digest=saved["document_digest"],
+        task_id=task["id"], note_task_id=edit["task_id"],
+        original_selected_revision_unchanged=True, sender_verified_live=sender is not None,
+        completed_at=now())
+    journal.save()
+
 def receive_browser_phase(args, original_url, api, journal):
-    """Inspect the original saved native IDs; this phase submits no queue action."""
+    """Inspect saved IDs; optional plan receiving commits only its separate reviewed note."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as error:
@@ -2396,6 +2752,10 @@ def receive_browser_phase(args, original_url, api, journal):
                 require(link.count() == 1, "Choose the saved comparison's original complete ZIP control.")
                 checked_download(link, output / "browser-downloads" / "comparison-package.zip", ticket)
                 dialog.locator('[data-ec-action="close"]').click()
+
+            if record.get("implementation_plan_handoff"):
+                with journal.stage("browser_receive_and_independently_edit_original_work_plan"):
+                    _browser_receive_plan(args, api, journal, page, workspace, capture)
 
             with journal.stage("browser_open_saved_scientific_report_and_all_downloads"):
                 close_details()
@@ -2506,6 +2866,8 @@ def phased_main(args, argv=None):
         require(args.timeout_seconds > 0 and args.task_timeout_seconds > 0, "Use positive HTTP and queue timeouts.")
         require(args.phase in {"native", "browser"},
                 "--resume-journey requires --phase native or --phase browser.")
+        require(not args.implementation_report_as_of or args.include_implementation_plan or args.resume_journey,
+                "--implementation-report-as-of requires the optional whole-plan receiving selection.")
         original_url, origin, token = read_url(args)
         application = Path(args.application).resolve(strict=True)
         require((application / "model" / "study_transfer.py").is_file(),
@@ -2601,7 +2963,9 @@ def phased_main(args, argv=None):
                 "instruction": ("Use the authorized original operator URL file. If the complete Study and journey "
                                 "were moved to another browser host, supply its current --workspace-key only after "
                                 "restoring that exact Study. The browser phase validates original project/results "
-                                "and never submits another cost, comparison, render, export or restore task.")}
+                                "and never submits another cost, comparison, render, export or restore task. "
+                                "When the optional whole-plan source was selected, it operates the received work-plan "
+                                "controls and saves one journaled receiving note in that independent Workspace.")}
             archive_path = directory / "economic-operator-receiving-package.zip"
             artifacts = [descriptor(item, directory) for item in sorted(directory.rglob("*"))
                          if item.is_file() and item not in {path, archive_path}
@@ -2639,6 +3003,10 @@ def parser():
     result.add_argument("--phase", choices=("all", "native", "browser"), default="all",
                         help="Default original browser course; native completes queued work, browser resumes its exact saved IDs")
     result.add_argument("--resume-journey", help="Exact phased operator-journey.json to rejoin without replacing original requests")
+    result.add_argument("--include-implementation-plan", action="store_true",
+                        help="With a new native phase, include the exact pinned whole-plan report and editable history in its Study")
+    result.add_argument("--implementation-report-as-of",
+                        help="Pinned YYYY-MM-DD date for the optional whole-plan report; defaults to the explicit cost review as_of")
     result.add_argument("--resume-interrupted-tasks", action="store_true",
                         help="Explicitly resume each retained failed/interrupted/cancelled original task at most once this invocation")
     result.add_argument("--workspace-key")
@@ -2670,6 +3038,8 @@ def main(argv=None):
     started = time.perf_counter()
     try:
         require(args.timeout_seconds > 0 and args.task_timeout_seconds > 0, "Use positive browser and queue timeouts")
+        require(not args.include_implementation_plan and not args.implementation_report_as_of,
+                "Whole-plan Study receiving is an optional --phase native course; the original all phase stays unchanged.")
         require(not args.comparison_report or args.compare_editions,
                 "--comparison-report requires the original --compare-editions course")
         require(not args.compare_editions or args.cost_review,

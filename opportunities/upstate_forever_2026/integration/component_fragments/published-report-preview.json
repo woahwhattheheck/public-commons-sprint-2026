@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "published-report-preview",
+  "source_reference": "Original retained report companion preview; exact source and opaque script isolation",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "operator/published_report_preview.py",
+        "operator/delivery_preview.py",
+        "operator/web/published_original_reports.mjs",
+        "operator/published_study_operator.py",
+        "operator/web/published_studies.mjs",
+        "operator/web/published_studies.css",
+        "operator/extensions/published-studies.json",
+        "operator/team_route_policy.json",
+        "PUBLISHED_STUDIES.md",
+        "install_published_studies.py"
+      ]
+    }
+  },
+  "required_components": []
+}

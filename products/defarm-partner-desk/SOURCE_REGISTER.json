@@ -1,0 +1,29 @@
+{
+  "schema": "tjlabs.public-source-register/1",
+  "sources": [
+    {
+      "repository": "https://github.com/defarm-repo/defarm-sdk-ts",
+      "commit": "e9b66dcb1e6e66011677be8af522f4e31ca9ed74",
+      "license": "MIT",
+      "member_count": 50,
+      "scope": "Whole original source/configuration/examples/tests except upstream CI and gitignore; original bytes unchanged."
+    },
+    {
+      "repository": "https://github.com/defarm-repo/tooling",
+      "commit": "6de60c9ad3539052e240461f4aa875bca88d2727",
+      "license": "MIT",
+      "retained_references": [
+        "README.md",
+        "docs/build-on-defarm.md",
+        "packages/sdk/src/types.ts"
+      ]
+    }
+  ],
+  "authored": "core.mjs, server.mjs, app.mjs, index.html, style.css, receive-case.mjs and this application's packaging/guides",
+  "gateway_contract": {
+    "ingest": "Original DefarmClient.ingest(items, {preview}) with unchanged JSON {items} and X-API-Key",
+    "verify": "Original DefarmClient.verify(dfid), public aggregator",
+    "payload_identity": "Exact JSON.stringify({items}) from the selected original fields/types",
+    "return_identity": "Original response text retained before original SDK decoding; no array-position row mapping"
+  }
+}

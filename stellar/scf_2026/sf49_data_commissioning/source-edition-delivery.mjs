@@ -388,6 +388,15 @@ export async function openSourceEditionDelivery({
         return {attachment:retained,transfer:await view(id)};
       },{token});
     },
+    async attachmentStatus({id,requestId}) {
+      available();identifier(id);identifier(requestId);
+      await request(id);
+      const folder=join(pathFor(id),'attachments',requestId);
+      const original=await optionalJson(join(folder,'request.json'));
+      if(!original)return null;
+      const saved=await optionalJson(join(folder,'result.json'),8*MAX_JSON);
+      return {request:original,result:saved,complete:Boolean(saved)};
+    },
     async command({id,requestId}) {
       available();identifier(id);identifier(requestId);
       const folder=join(pathFor(id),'commands',requestId);

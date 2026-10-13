@@ -371,7 +371,12 @@ The implementation extends the existing Applications components:
 | `public/applications.mjs` | Fresh saved-state read and opening the existing configuration form |
 | `server.mjs` | Local serving of setup modules and their shared codec |
 
-The existing Applications library supplies its catalog browsing, search, pins,
-recents, selection and operations navigation. The native application writer,
+The existing Applications library supplies its catalog browsing, search,
+selection and operations navigation. The native application writer,
 runtime process lifecycle and source-specific settings review remain the original
 product's implementations.
+
+
+## Public installed Grant receiving
+
+The same complete editor and setup commands are installed with the public Runtime. [Grant case handoff](../../../../products/grant-operations/HANDOFF.md) pairs the setup with a complete native operating case, or receives an original case ZIP into a newly reviewed setup. The current Applications writer retains each accepted save request independently, so recovery of an older accepted request preserves a later deliberate edit.

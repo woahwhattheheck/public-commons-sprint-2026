@@ -1,0 +1,17 @@
+{
+  "schema": "commons.original-parser-source/v1",
+  "name": "acorn",
+  "version": "8.19.0",
+  "upstream": {
+    "repository": "nodejs/node",
+    "path": "deps/acorn/acorn/dist/acorn.js",
+    "git_blob_sha1": "f2e9c2288173973efc6d39a11b5f8cf0e25f8b22",
+    "bytes": 246643,
+    "sha256": "b95392d79457d0357555c5ed3e56302d074b92dff119bcf3b44179500b10e9df"
+  },
+  "license": {
+    "path": "deps/acorn/acorn/LICENSE",
+    "git_blob_sha1": "9d71cc63a35e7d878787e5159b5b163739486220"
+  },
+  "modifications": []
+}
