@@ -1,4 +1,5 @@
 // The classification view shares the original workspace, revision and recovery path.
+import { mountClassificationReceiving } from './package-browser.mjs';
 const copy = value => structuredClone(value);
 const labels = {method:'Pay structures',roles:'Role classifications',roster:'Workforce editions',scenario:'Placement and cost'};
 const groups = {method:'methods',roles:'roles',roster:'rosters',scenario:'scenarios'};
@@ -86,7 +87,7 @@ function draftShape(kind,draft){
 
 export function mountClassificationBridge(target, api) {
   const document=target.ownerDocument, win=document.defaultView, workspaceId=api.getState().workspace.id;
-  let disposed=false,busy=false,loadSequence=0,data={methods:[],roles:[],rosters:[],scenarios:[]};
+  let disposed=false,busy=false,loadSequence=0,documentSequence=0,receivingController=null,data={methods:[],roles:[],rosters:[],scenarios:[]};
   let retained={tab:'method',actor:'',reviewer:'',drafts:Object.fromEntries(Object.keys(labels).map(k=>[k,fresh(k)])),opened:null,reviewNotes:''};
   let opened=null,inspectionPage=0,dbPromise=null,writeChain=Promise.resolve(),draftErrorShown=false;
   const cache=new Map(),disabled=new Map();
@@ -94,7 +95,7 @@ export function mountClassificationBridge(target, api) {
   notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');root.setAttribute('aria-label','Classification and placement workspace');
   const style=make('style');
   style.textContent='.classification .cl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.classification .cl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}.classification .cl-tabs [aria-selected=true]{background:#24272b;color:#fff}.classification .cl-json{font:12px/1.5 ui-monospace,monospace;min-height:130px}.classification .cl-wide{grid-column:1/-1}.classification .cl-rows td{vertical-align:top}.classification .cl-rows td:first-child{max-width:220px;overflow-wrap:anywhere}.classification .cl-meta{font-size:12px;color:#5e646b;overflow-wrap:anywhere}.classification .cl-issues{border-left:3px solid #72777e;padding-left:14px}.classification .cl-metrics{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0}.classification .cl-metric strong{display:block;font-size:21px}.classification details{margin:14px 0}.classification summary{cursor:pointer;font-weight:600}.classification .cl-source{font-size:12px;overflow-wrap:anywhere}.classification .cl-check{display:flex;align-items:center;gap:8px}.classification .cl-check input{width:auto}.classification .cl-record{border-top:1px solid #d9dde2;padding-top:16px;margin-top:16px}.classification .cl-internal{font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}.classification .cl-row-editor{border:1px solid #bcc3ca;background:#f7f8f9;padding:18px;margin:14px 0}.classification a{color:inherit;text-decoration:underline}.classification input,.classification select,.classification textarea{min-width:0;width:100%;box-sizing:border-box}.classification textarea{min-height:90px}.classification .cl-section{margin-top:20px}.classification table{min-width:640px}.classification .cl-json-export{white-space:pre-wrap;overflow-wrap:anywhere}.classification .cl-meta code{white-space:normal}@media(max-width:680px){.classification .cl-grid{grid-template-columns:1fr}.classification .actions{flex-wrap:wrap}.classification .cl-row-editor{padding:12px}.classification .cl-metric strong{font-size:18px}}';
-  const contents=make('div');root.append(style,notice,contents);target.replaceChildren(root);
+  const contents=make('div'),receivingRoot=make('div');root.append(style,notice,contents);target.replaceChildren(root);
   for(const type of ['click','submit','input','change'])root.addEventListener(type,event=>event.stopPropagation());
   function make(tag,value,className){const node=document.createElement(tag);if(value!==undefined)node.textContent=String(value??'');if(className)node.className=className;return node;}
   function actions(...nodes){const div=make('div',undefined,'actions');div.append(...nodes.filter(Boolean));return div;}
@@ -132,7 +133,7 @@ export function mountClassificationBridge(target, api) {
     wrap.append(t);return wrap;
   }
   function money(value){if(value==null)return '—';const match=String(value).match(/^(-?)(\d+)(?:\.(\d+))?$/);if(!match)return String(value);return match[1]+match[2].replace(/\B(?=(\d{3})+(?!\d))/g,',')+(match[3]?'.'+match[3]:'');}
-  function lock(){for(const control of root.querySelectorAll('button,input,select,textarea')){if(!disabled.has(control))disabled.set(control,control.disabled);control.disabled=true;}}
+  function lock(){for(const control of root.querySelectorAll('button,input,select,textarea')){if(receivingRoot.contains(control))continue;if(!disabled.has(control))disabled.set(control,control.disabled);control.disabled=true;}}
   async function perform(work){
     if(disposed||busy)return;busy=true;root.setAttribute('aria-busy','true');lock();
     try{await persist();await work();await persist();}
@@ -152,7 +153,7 @@ export function mountClassificationBridge(target, api) {
           try{drafts[kind]=draftShape(kind,original);}
           catch(error){drafts[kind]=fresh(kind);drafts[kind].recovery={message:error.message,retained:original};}
         }
-        retained={...retained,...value,drafts};if(!labels[retained.tab]&&retained.tab!=='history')retained.tab='method';
+        retained={...retained,...value,drafts};if(!labels[retained.tab]&&!['history','receiving'].includes(retained.tab))retained.tab='method';
       }}
     catch(error){show('Browser draft storage could not reopen: '+error.message,true);draftErrorShown=true;}
   }
@@ -162,12 +163,19 @@ export function mountClassificationBridge(target, api) {
     writeChain.catch(error=>{if(!draftErrorShown){show('The browser draft could not be retained: '+error.message,true);draftErrorShown=true;}});
     return writeChain;
   }
-  async function reload(){
-    const sequence=++loadSequence,next=await api.request('/api/extensions/classification/state');
+  async function reload(refreshReceiving=true){
+    const sequence=++loadSequence,selection=documentSequence,selected=retained.opened?copy(retained.opened):null;
+    const next=await api.request('/api/extensions/classification/state');
     if(disposed||sequence!==loadSequence||api.getState().workspace.id!==workspaceId)return;
     if(next.workspace_id!==workspaceId)throw new Error('Reopen classification from the selected workspace.');
-    data=next;if(retained.opened)opened=await getDoc(retained.opened.kind,retained.opened.id,true);
+    data=next;
+    if(selected&&selection===documentSequence){
+      const value=await getDoc(selected.kind,selected.id,true);
+      if(disposed||sequence!==loadSequence||api.getState().workspace.id!==workspaceId)return;
+      if(selection===documentSequence&&retained.opened?.id===selected.id&&retained.opened?.kind===selected.kind)opened=value;
+    }
     if(disposed||sequence!==loadSequence)return;render();
+    if(refreshReceiving&&retained.tab==='receiving'&&receivingController)await receivingController.refresh();
   }
   async function getDoc(kind,id,fresh=false){
     const key=kind+'/'+id;if(!fresh&&cache.has(key))return cache.get(key);
@@ -341,6 +349,7 @@ export function mountClassificationBridge(target, api) {
     await reload();await openDocument(kind,result.id);show('The complete original '+kind+' edition is retained. Record its source review below.');
   }
   async function editDocument(kind,id){
+    ++documentSequence;
     const doc=await getDoc(kind,id,true),draft=fresh(kind);
     if(kind==='scenario'){draft.config=copy(doc.content.config);for(const [key,value]of Object.entries(doc.parents))draft[key+'_id']=value.id;}
     else{draft.document=copy(doc.content);draft.original=doc.original_input?{content:doc.original_input.content,format:doc.original_input.format,filename:doc.original_input.filename}:null;draft.mapping=copy(doc.original_input?.mapping||{});draft.edited_rows=!!draft.original;if(kind==='roles')draft.method_id=doc.parents.method.id;if(kind==='roster')draft.roles_id=doc.parents.roles.id;}
@@ -349,7 +358,8 @@ export function mountClassificationBridge(target, api) {
   }
   async function openDocument(kind,id,expectedSha=null){
     if(!Object.hasOwn(labels,kind))throw new Error('Choose an original classification document kind.');
-    const value=await getDoc(kind,id,true);
+    const selection=++documentSequence,value=await getDoc(kind,id,true);
+    if(selection!==documentSequence)return;
     if(disposed||api.getState().workspace.id!==workspaceId)throw new Error('The workspace changed while opening the original edition.');
     if(expectedSha&&value.sha256!==expectedSha)throw new Error('The classification edition differs from the expected original identity.');
     opened=value;retained.opened={kind,id};inspectionPage=0;retained.reviewNotes='';retained.tab='history';await persist();render();
@@ -488,6 +498,15 @@ export function mountClassificationBridge(target, api) {
     if(doc.reviews?.length)review.append(details('Review history',table(['Recorded','Reviewer','Outcome','Rationale'],doc.reviews.map(row=>[row.created_at,row.reviewer,row.outcome,row.notes]))));
     p.append(review);return p;
   }
+  function receivingView(){
+    if(!receivingController)receivingController=mountClassificationReceiving(receivingRoot,api,{
+      actor:()=>retained.actor,onOpen:(kind,id,sha)=>{
+        if(busy)throw new Error('The classification view is completing its current action. Reopen this edition when it finishes.');
+        return perform(()=>openDocument(kind,id,sha));
+      },onReceived:()=>reload(false)
+    });
+    return receivingRoot;
+  }
   function historyView(){
     const fragment=make('div');if(opened)fragment.append(inspection(opened));
     for(const kind of Object.keys(labels)){const p=panel(labels[kind]);p.append(historyRows(kind));fragment.append(p);}
@@ -498,12 +517,12 @@ export function mountClassificationBridge(target, api) {
     const header=panel('Classification, placement and implementation cost'),grid=make('div',undefined,'cl-grid');
     grid.append(input('Person recording editions',retained.actor,v=>retained.actor=v));header.append(grid,hint('One workspace retains the classification method, job decisions, annual full-time workforce rates, cost assumptions and accepted outputs. Saved editions and calculation inputs remain individually reviewable.'));
     const tabs=make('div',undefined,'cl-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Classification workflow');
-    for(const [key,title]of [...Object.entries(labels),['history','Review and exports']]){
+    for(const [key,title]of [...Object.entries(labels),['history','Review and exports'],['receiving','Receive accepted package']]){
       const control=button(title,()=>{retained.tab=key;render();});control.setAttribute('role','tab');control.setAttribute('aria-selected',retained.tab===key?'true':'false');control.setAttribute('aria-controls','classification-panel');tabs.append(control);
     }
-    const body=make('div');body.id='classification-panel';body.setAttribute('role','tabpanel');const recovery=recoveryPanel(retained.tab,retained.drafts[retained.tab]);if(recovery)body.append(recovery);body.append(retained.tab==='history'?historyView():retained.tab==='scenario'?scenarioView():sourceView(retained.tab));
+    const body=make('div');body.id='classification-panel';body.setAttribute('role','tabpanel');const recovery=recoveryPanel(retained.tab,retained.drafts[retained.tab]);if(recovery)body.append(recovery);body.append(retained.tab==='receiving'?receivingView():retained.tab==='history'?historyView():retained.tab==='scenario'?scenarioView():sourceView(retained.tab));
     contents.replaceChildren(header,tabs,body);if(busy)lock();
   }
   const ready=(async()=>{await readDraft();await reload();if(retained.drafts.roles.method_id)await getDoc('method',retained.drafts.roles.method_id);if(!disposed)render();})();
-  return {ready,refresh:reload,open:async(kind,id,expectedSha=null)=>{await ready;return perform(()=>openDocument(kind,id,expectedSha));},destroy(){disposed=true;loadSequence++;writeChain.catch(()=>{}).then(()=>dbPromise?.then(db=>db.close()).catch(()=>{}));target.replaceChildren();}};
+  return {ready,refresh:reload,open:async(kind,id,expectedSha=null)=>{await ready;return perform(()=>openDocument(kind,id,expectedSha));},destroy(){disposed=true;loadSequence++;documentSequence++;receivingController?.destroy();writeChain.catch(()=>{}).then(()=>dbPromise?.then(db=>db.close()).catch(()=>{}));target.replaceChildren();}};
 }

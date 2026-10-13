@@ -139,3 +139,8 @@ All actions run through the original workspace transaction and operation ledger.
 HTTP uses `POST /api/extensions/classification/<action>` without the `classification.` prefix in the final component. Read `/state`, `/document/<kind>/<id>` and `/download/<kind>/<id>` beneath the same extension route. In Python, `Workspace.extension_read("classification", ...)` returns the same original records and downloads. An explicit derived-row import sends `edited_rows: true` while retaining the original content and mapping.
 
 The [main operating guide](../README.md) describes source editions, publisher cohorts, market calculations, receiving corrections, survey cycles, mutation recovery and complete restore. The [McGrath workshare](inputs/apex-fy27/MCGRATH_WORKSHARE.md) maps this implementation to the current Apex procurement and the prime's existing consulting workflow.
+
+
+## Receive complete accepted packages
+
+Use **Receive accepted package** to import complete accepted scenario JSON/ZIP exports with their original document IDs, source editions and ordered reviews. The original archive and individual members remain available unchanged, and the original Workspace backup carries the complete received case. See [the receiving workflow](RECEIVING.md) and [the original Apex receiving example](../examples/apex-accepted-package-receiving/README.md).

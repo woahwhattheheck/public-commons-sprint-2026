@@ -245,6 +245,7 @@ class Workspace:
         db = self.connect()
         try:
             db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
             fn = getattr(extension, method, None)
             if fn is None:
                 raise Problem("Extension read is absent", 404)
