@@ -7,7 +7,7 @@ from .common import atomic_json, describe_file, file_digest, read_json
 
 SCHEMA = "upstate.observed-report/v1"
 ROLE = "OBSERVED_CONTEXT"
-EDITION = "observed-context-20261013-v2"
+EDITION = "observed-context-20261013-v3"
 
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -72,6 +72,35 @@ def bind(workspace, selection):
     return source["binding"] if source else None
 
 
+def _bind_rows(source, rows, filename=None):
+    """Attach the actual retained recipe selector and its verified member."""
+    binding, members = source["binding"], source["members"]
+    for row in rows:
+        name = filename or row["source_file"]
+        member = members[name]
+        row["source_selector"] = {
+            "source_collection_id": binding["source_collection_id"],
+            "source_id": binding["source_id"],
+            "member_path": name, "member_sha256": member["sha256"],
+        }
+        row["source_member"] = {
+            "path": name, "bytes": member["bytes"], "sha256": member["sha256"],
+        }
+        original_name = row.get("original_source_path")
+        if original_name:
+            original = members.get(original_name)
+            if original is None:
+                raise ValueError("Original concentration response is absent: " + original_name)
+            if row.get("original_source_sha256") != original["sha256"]:
+                raise ValueError("Original concentration response identity differs: " + original_name)
+            row["original_source_selector"] = {
+                "source_collection_id": binding["source_collection_id"],
+                "source_id": binding["source_id"],
+                "member_path": original_name, "member_sha256": original["sha256"],
+            }
+    return rows
+
+
 def _concentration_support(source):
     """Use the maintained original-study row and series producers."""
     from measurement_workspace import published_studies
@@ -92,9 +121,9 @@ def _concentration_support(source):
     study = published_studies._json(originals["study.json"])
     if study.get("schema") != published_studies.STUDY_SCHEMA:
         raise ValueError("Observed concentration study has another original schema")
-    stations = published_studies._csv_rows(originals["stations.csv"], "stations")
-    seasonal = published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal")
-    rows = published_studies._combined_observations(originals)
+    stations = _bind_rows(source, published_studies._csv_rows(originals["stations.csv"], "stations"), "stations.csv")
+    seasonal = _bind_rows(source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"), "seasonal_summaries.csv")
+    rows = _bind_rows(source, published_studies._combined_observations(originals))
     sites = {row["site_id"] for row in stations}
     observations = published_studies._observation_context(
         rows, seasonal, study, sites, set(CONCENTRATIONS), {"surface"},
