@@ -1,5 +1,6 @@
 // Copyright TokenJunkieLabs. Data-only archive recovery; decoded source is never executed.
 import { createArchiveCodec } from "./archive_codec.mjs";
+import { createXzSourceDecoder } from "./xz_source.mjs";
 
 export const DEFAULT_LIMITS = Object.freeze({
   maxInputBytes: 64 * 1024 * 1024,
@@ -124,7 +125,8 @@ export function createSourceBankToolkit(options = {}) {
             (metadata.mode !== undefined && !["100644", "100755"].includes(metadata.mode)))
           fail("source-map metadata needs original bytes, SHA-256 and an optional regular-file mode: " + path);
         return { path, content: bank.files[path], bytes: metadata.bytes,
-                 sha256: metadata.sha256, mode: metadata.mode, declaredMetadata: metadata };
+                 sha256: metadata.sha256, mode: metadata.mode, encoding: metadata.encoding,
+                 declaredMetadata: metadata };
       });
     } else if (Array.isArray(bank.files)) entries = bank.files;
     else if (bank.files && typeof bank.files === "object")
@@ -434,6 +436,16 @@ export function createSourceBankToolkit(options = {}) {
     const inputSha256 = hash(a, expectedSha256, "input");
     let result;
     if (a.length >= 4 && [0x04034b50, 0x06054b50].includes(u32(a, 0))) result = zip(a);
+    else if (a.length >= 6 && [253,55,122,88,90,0].every((v,i)=>a[i]===v)) {
+      const recovered = createXzSourceDecoder(codec, {
+        maxInputBytes: limits.maxInputBytes, maxOutputBytes: limits.maxOutputBytes,
+        maxDictionaryBytes: 64 * 1024 * 1024, maxBlocks: limits.maxMembers
+      })(a);
+      result = unwrapJson(carrierJson(codec.utf8Decode(recovered.data)), depth + 1);
+      result.payloadSha256 = recovered.sha256;
+      result.xzBytes = a.length;
+      result.xz = { checkType: recovered.checkType, blocks: recovered.blocks };
+    }
     else if (a.length >= 2 && a[0] === 31 && a[1] === 139) {
       const raw = codec.gunzip(a, { maxOutputBytes: limits.maxOutputBytes, maxMembers: limits.maxGzipMembers });
       result = unwrapJson(carrierJson(codec.utf8Decode(raw)), depth + 1);

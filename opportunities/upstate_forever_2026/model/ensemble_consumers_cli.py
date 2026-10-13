@@ -7,7 +7,7 @@ import sys
 
 from .common import read_json
 from .workspace import Workspace
-from . import ensemble_consumers as consumers, ensemble_references
+from . import ensemble_consumers as consumers, ensemble_references, ensemble_flow_support
 
 
 def parser():
@@ -16,6 +16,12 @@ def parser():
     commands = top.add_subparsers(dest="command", required=True)
 
     commands.add_parser("annual-references", help="List imported original annual-load bindings and source periods")
+
+    flow = commands.add_parser("flow-support", help="Replay original daily-flow support for one admitted annual import")
+    flow.add_argument("--annual-import-id", required=True)
+    flow.add_argument("--source-root", help="Complete retained original hydrology source directory")
+    flow.add_argument("--node", help="Original Node.js interpreter")
+    commands.add_parser("flow-support-sources", help="List registered exact-period support sources")
 
     catalog = commands.add_parser("inspect", help="Read actual saved run states and usable scientific cohorts")
     catalog.add_argument("--ensemble-id", required=True)
@@ -42,6 +48,11 @@ def parser():
                            help="Existing calibration JSON: original observation_id, catchments, groups, objective and periods")
     reference.add_argument("--annual-import-id", help="Completed original annual-reference import in this workspace")
     calibration.add_argument("--reference-options", help="Optional analysis choices JSON for the fixed original import binding")
+    flow_choice = calibration.add_mutually_exclusive_group()
+    flow_choice.add_argument("--flow-support-source", help="JSON retained source reference: collection_id, source_id")
+    flow_choice.add_argument("--prepare-flow-support", action="store_true",
+                             help="Replay and register original daily support before evaluation")
+    calibration.add_argument("--flow-source-root", help="Complete original hydrology source directory for replay")
     calibration.add_argument("--prepare-only", action="store_true")
     calibration.add_argument("--standard-errors", type=float,
                              help="Use the existing published-standard-error sensitivity after completed calibration")
@@ -62,6 +73,11 @@ def main(argv=None):
         workspace = Workspace(args.workspace)
         if args.command == "annual-references":
             result = ensemble_references.catalog(workspace, include_records=True)
+        elif args.command == "flow-support":
+            result = ensemble_flow_support.prepare(workspace, args.annual_import_id,
+                                                   source_root=args.source_root, node=args.node)
+        elif args.command == "flow-support-sources":
+            result = ensemble_flow_support.catalog(workspace)
         elif args.command == "inspect":
             result = consumers.inspect(workspace, args.ensemble_id,
                                        profile_ids=args.profile_id, scenario_ids=args.scenario_id)
@@ -78,7 +94,9 @@ def main(argv=None):
                 workspace, args.ensemble_id, read_json(args.references) if args.references else None,
                 profile_ids=args.profile_id, pollutants=args.pollutant,
                 reference_import_id=args.annual_import_id,
-                reference_options=read_json(args.reference_options) if args.reference_options else None)
+                reference_options=read_json(args.reference_options) if args.reference_options else None,
+                flow_support_source=read_json(args.flow_support_source) if args.flow_support_source else None,
+                prepare_flow_support=args.prepare_flow_support, flow_source_root=args.flow_source_root)
             result = {"plan": plan}
             if not args.prepare_only:
                 result["result"] = consumers.run_calibration(

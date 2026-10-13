@@ -1,0 +1,14 @@
+{
+  "columns": {
+    "id": "account_id",
+    "email": "work_email",
+    "email_verified": "verified",
+    "created_at": "joined_at",
+    "deleted_at": "deleted_at"
+  },
+  "defaults": {
+    "status": "active",
+    "marketing_permission": "unknown"
+  },
+  "mode": "upsert"
+}

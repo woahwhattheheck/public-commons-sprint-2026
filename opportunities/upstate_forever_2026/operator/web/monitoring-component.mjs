@@ -74,7 +74,7 @@
       this.$("occurred").value=new Date().toISOString();
       this.$("domain-collection").onchange=()=>this.sourceChoices();
       this.$("station-collection").onchange=()=>this.sourceChoices();
-      this.run(async()=>{await this.refresh();await this.refreshSources();});
+      this.ready=this.run(async()=>{await this.refresh();await this.refreshSources();});
     }
     async refreshSources(){if(!this.transport)return;const catalog=await this.api("source.catalog");this.sourceCatalog=catalog;for(const id of ["domain-collection","station-collection"]){const select=this.$(id),old=select.value,placeholder=select.options[0]?.textContent||"Select retained source edition";select.replaceChildren(new Option(placeholder,""),...catalog.collections.map(row=>new Option(row.title,row.id)));select.value=old;}this.sourceChoices();}
     sourceChoices(){for(const [selectId,listId] of [["domain-collection","domain-entries"],["station-collection","station-entries"]]){const selected=this.$(selectId).value||(selectId==="station-collection"?this.$("domain-collection").value:"");const entries=this.sourceCatalog?.collections.find(c=>c.id===selected)?.entries||[];this.$(listId).replaceChildren(...entries.map(e=>new Option(e.title,e.id)));}}

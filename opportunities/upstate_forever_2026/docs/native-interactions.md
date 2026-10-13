@@ -10,9 +10,11 @@ When patch_indexes is omitted and the baseline has no patches, every action patc
 
 A non-prefix alternative requires explicit patch_indexes. Explicitly selected indexes keep their stated intent and order, allowing independent delta actions against an edited baseline without repeating full alternatives accidentally. For baseline [A] and full alternatives [A,B] and [A,C], the default combined application is [A,B,C].
 
-An action's scenario supplies its patch definitions and retained mask sources. The action scenario supplies no replacement grid, profile or model stages. Derived coalition runs preserve the baseline's actual grid ID, profile ID, selected model list when present, and InVEST version. This makes the modeled difference attributable to the selected ordered land-cover edits under that retained model configuration.
+An action's scenario supplies its patch definitions and retained mask sources. The action scenario supplies no replacement grid, profile or model stages. Derived coalition runs preserve the baseline's actual grid ID, profile ID and selected native model scope. Existing prepared cases reopen their saved run IDs and original requested software declarations; only new cases use the current Workspace preparation. Before scientific reduction, every completed coalition must have the same effective execution version for each selected native model. NDR and SDR may retain different versions within a run when the same per-model combination is present across every coalition. The original requested declarations remain visible.
 
 Source masks may come from different collections. Preparation creates a mask-only retained collection containing exact original body and companion descriptors. Each original collection/source pair gets a unique source ID. A deterministic composed-source manifest is retained through the original object store and exposed as the collection's original_manifest; its captured_at is the saved operation's creation time. Relative native-reader paths are preserved, including sidecars. Original sources, scenarios, profiles and runs remain available.
+
+Masks may be retained vectors or aligned binary rasters. Raster masks select valid cells whose value is one; zero and mask NoData select nothing. They do not accept vector layer or attribute filters. The original native scenario kernel checks the exact single-band grid, projected coordinate system, affine transform, dimensions, numeric type and valid zero/one values. The complete retained body and companion descriptors travel with the composed source collection; no resampling or second mask interpreter is introduced.
 
 The original scenario kernel determines each patch's effect. Its from_codes predicate reads values left by preceding patches; later edits can overwrite or reverse earlier edits. Native NoData remains NoData. A different global action order is a different management design and must be saved as a separate plan.
 
@@ -24,7 +26,7 @@ The public functions in model.native_interactions are:
 | save_plan(workspace, selection) | Immutable plan with source, scenario, profile and grid snapshots |
 | get_plan(workspace, plan_id) | Saved plan fields at the top level, plus current state |
 | list_plans(workspace) | Flat catalog summaries sorted by update time and ID |
-| apply_plan(workspace, plan_id, run_models=False) | Resumable preparation; optional original native execution and analysis |
+| apply_plan(workspace, plan_id, run_models=False, workers=1, reuse_source_run_ids=None) | Resumable preparation; optional original native execution and analysis; workers and donors are keyword-only execution options |
 | analyze_plan(workspace, plan_id) | Analysis of completed retained native cases without launching a model |
 | get_result(workspace, result_id, verify=True) | Retained result with verified downloadable artifacts |
 
@@ -42,7 +44,7 @@ The selection fields are:
 | include_pairwise | Include every two-action case and pair nonadditivity; default true |
 | zones | Optional retained vector selection: source_collection_id, source_id, id_field, optional layer and where |
 
-Preparation validates the immutable snapshots, recreates every case's exact selected scenario and run identity, and checks any existing checkpoint against that identity. Resuming prepares missing cases and reuses completed retained runs. Native execution calls Workspace.run, preserving its original stage cache. Coalitions with identical compiled land-cover inputs can therefore reuse matching native model stages.
+Preparation validates the immutable snapshots and recreates every case's exact selected scenario. Existing checkpoints reopen their original run identity and saved declaration, checking the scenario, grid, profile and model scope against the immutable plan. Only missing cases call the current native preparation. Resuming prepares missing cases and reuses completed retained runs. Native execution calls Workspace.run, preserving its original stage cache and signature execution slot. Coalitions with identical compiled land-cover inputs can therefore reuse matching native model stages.
 
 A preparation call does not run physical models. Applying with run_models=True resumes native execution, records each case's failure separately, and continues other prepared cases. The plan reports failed if any native case failed. Reapplying retries incomplete cases. Analysis begins only when every case in the frozen design has completed.
 
@@ -142,7 +144,7 @@ Native preparation retains each actual scenario and run through the original wor
 
 A monotonically increasing checkpoint_generation binds that progress record to its corresponding full state. Full state is atomically committed first. Readers ignore progress from an earlier generation; a catalog reads the compact progress record only when it is at least as new as the full state. This ordering prevents a previous phase's status from overwriting a newly committed phase or failure.
 
-The operator sees the current active case, latest emitted progress and exact completed-case count. Individual case status rows are a phase-boundary snapshot, with the active case overlaid; case_status_snapshot_at identifies that snapshot. Original native run records remain authoritative. Resume reconstructs every expected scenario/run selection from the immutable plan, verifies any retained checkpoint identities and refreshes case statuses from those actual runs. A process interrupted between progress emissions therefore retains its prepared/native work without requiring a full growing case-map rewrite after every operation.
+The operator sees the current active case, latest emitted progress and exact completed-case count. Individual case status rows are a phase-boundary snapshot, with the active case overlaid; case_status_snapshot_at identifies that snapshot. Original native run records remain authoritative. Resume reconstructs every expected scenario from the immutable plan, reopens and verifies retained run selections, and refreshes case statuses from those actual runs. A process interrupted between progress emissions therefore retains its prepared/native work without requiring a full growing case-map rewrite after every operation.
 
 Completed native cases are grouped by run ID once and update the completion count incrementally. Shared finite support is intersected in batches of at most sixteen verified open native rasters. Each batch reads and writes the shared mask once per window, instead of repeating a complete mask pass for each pollutant/coalition raster. Cells already excluded from the intersection need no further values within that window. Every input still receives exact grid checks, and annual mass accounting reads its actual finite values independently afterward.
 
@@ -150,3 +152,43 @@ The scientific design, native run identities, output units, support predicate an
 
 CSV files protect string cells beginning with spreadsheet formula/control characters by prefixing an apostrophe. Numeric negative values remain numeric and retain their sign. Exact source/action identifiers remain available in result JSON and the GeoPackage for programmatic joins.
 
+
+
+## Process dispatch and original native reuse
+
+An apply operation accepts a keyword-only workers count, defaulting to one. It is a positive execution resource choice and is not part of the scientific plan or native run identity. The effective count is at most the number of incomplete distinct native run IDs. Source collection composition, case preparation, snapshot checks, common-support analysis and result publication remain serial under the parent operation's existing plan lock.
+
+With multiple workers, model.interaction_dispatch creates a reusable ProcessPoolExecutor using multiprocessing's spawn context. Each child opens the existing Workspace from its root path and runs one original retained ID. Workspace instances, log handlers, GIS objects and model arrays are never passed between processes. The current native runner changes process-global logging state, so model calculations are isolated in processes.
+
+Parallel dispatch requires the maintained native execution_slot API. Its scientific input signature lock serializes production of matching native stages, and its cache recovery is checked after acquiring that lock. The dispatcher consumes this existing mechanism; it does not create a second cache or replace the shared runner. The current original argument builder uses n_workers=-1 for each model's internal TaskGraph. The outer worker count controls simultaneous retained native runs; choose it for the receiving host's available resources.
+
+Dispatch order prioritizes the empty baseline, full combination, standalone actions, pairs and then remaining subsets by cardinality. This makes useful actual baseline/combined cases available early. It changes neither the set of coalitions nor their fixed global raster edit order. Completed original runs are skipped, and the shared native cache handles matching physical stages.
+
+Optional reuse_source_run_ids selects explicit original native stage donors through Workspace.run. These IDs are execution choices outside the retained scientific selection. Omitting the option preserves each original run's retained donor selection; an explicit empty list clears it on the current runner. A target run is excluded from its own donor list. The dispatcher does not add every previously completed case as an explicit donor, because doing so would turn cache selection into another growing all-pairs search. Normal indexed cache reuse remains available without an explicit donor list.
+
+Each child returns a small completion/error message. The parent reopens the actual retained run.json, verifies its immutable selection against the prepared case and counts completion only when that record is complete. A future's successful return is not itself a physical result. Original selected-model exports are verified again by the common-support analysis.
+
+If another operation already owns an original run lock, a worker waits for that operation's actual completion. If its owner exits, the same retained run can resume with its completed native stages. An individual failed native case records its actual error while independent scheduled cases continue.
+
+If a child dies or the process pool breaks, the parent reconstructs available outcomes from the retained run records, cancels work that has not started, and persists a failed/interrupted orchestration state. Existing run IDs and stage journals remain available. Already running workers may finish their original records; a resumed dispatcher waits on their original locks instead of creating replacement run IDs or assuming the prior process failed to produce anything.
+
+Execution progress includes requested/effective workers, serial/spawn mode, submitted/finished runs, skipped completed runs and original/reused completed stage-record counts. Those stage counts describe retained lineage, not a measured runtime saving. active_cases exposes each currently dispatched coalition's actual native phase, model, process ID, host and submission time; completed_cases keeps its aggregate meaning. The existing active_case field mirrors the first active entry for older clients.
+
+Examples using an existing retained plan:
+
+    python -m model.native_interactions_cli --workspace WORKSPACE apply PLAN_ID --run-models --workers 2
+    python -m model.native_interactions_cli --workspace WORKSPACE apply PLAN_ID --run-models --workers 2 --reuse-runs donor-run-ids.json
+
+Preparation alone creates no process pool. Analyzing already completed cases creates no process pool. Both use the same scientific outputs regardless of the worker count that produced their retained runs.
+
+## Executed model provenance and historical results
+
+The shared `model.native_versions` resolver uses each completed model stage's retained runtime first, the observed run runtime when that stage record is absent, then an explicitly labeled historical requested-version fallback. It retains the model, effective version, each original declaration, stage completion time and complete reuse ancestry. A missing effective version or any per-model mismatch among coalitions stops analysis before shared-support rasters or annual sums are created. The existing completed-stage and full annual-output checks still apply.
+
+Every newly produced result includes `native_versions` with the shared resolver's `policy`, `models`, `versions` and per-run `runs` records. The native-run index download includes each case's corresponding model provenance. `native_version_binding` distinguishes `legacy_requested_equivalent` from `executed_model_cohort`.
+
+When every coalition has the same original requested declaration and each selected model's effective execution version agrees with that declaration, the original analysis selection and ID remain byte-for-byte unchanged. Existing completed results reopen without rerunning reductions. If actual stage versions differ from the declarations, or declarations differ across an otherwise compatible executed cohort, the complete resolved provenance enters `selection.native_versions` and produces a separate result identity. Original results and artifacts remain available. A requested-version difference by itself does not reject completed, execution-compatible cases.
+
+Historical result files without frozen runtime provenance retain their original shape. Opening a saved result validates its identity and retained files; it does not reconstruct a historical execution record from later metadata or require old source-run directories. New frozen provenance must agree with its bound selection, model scope, case declarations and native-run index. Reanalyzing a plan resolves the actual completed runs again before selecting the matching result identity.
+
+The complete install includes the ten component files plus the shared `model/native_versions.py` dependency. The installer retains an existing shared resolver that exposes the required public API, recording its actual bytes in the installation receipt; a fresh installation receives the exact authored dependency. It never replaces that shared resolver with a component-specific implementation.

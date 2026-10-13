@@ -15,6 +15,7 @@ FILES = (
     "model/watershed_context.py",
     "model/watershed_brief.py",
     "model/utility_watershed_context.py",
+    "model/utility_observed_context.py",
     "source/receptor-topology/20261013/utility-focus-profile.json",
     "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
@@ -32,6 +33,9 @@ OPTIONAL = (
     "integration/run_watershed_context_operator.py",
     "integration/WATERSHED_CONTEXT_RECEIVING.md",
     "source_tools/receive_watershed_edition.py",
+    "source_tools/utility_observed_context.mjs",
+    "source_tools/build_utility_observed_context.mjs",
+    "source_tools/receive_utility_source_context.py",
     "integration/watershed_completed_receiving.json",
     "model/WATERSHED_BRIEF.md",
     "model/WATERSHED_CONTEXT.md",
@@ -54,6 +58,7 @@ SOURCE_MANIFESTS = (
     "source/water_context/sources-20261013.json",
     "source/water_context/20261013/complete-sources.json",
     "source/water_context/20261013/complete-native-sources.json",
+    "utility_observed_context.sources.json",
 )
 
 

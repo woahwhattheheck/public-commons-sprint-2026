@@ -291,3 +291,78 @@ For the original receiving operation, open Annual load references → a complete
 The `annual-references` CLI includes each imported source's `reference_records`. Each admitted record retains its native `id`/`record_id`, observation and preparation IDs, original station/catchment IDs, parameter/method, period_start and exclusive period_end, original/comparison units, and complete `source_records`. When the original source explicitly names a flow_station_id, that identity is exposed separately; absence remains null. A water-quality station is not implicitly treated as its flow station.
 
 The existing hydrology support consumer can intersect those exact periods with retained daily dates, preserve unmatched station/series requests, and report captured versus requested support. Its available daily-flow edition and the annual estimate keep their separate source periods. A period-support summary describes the actual date/flow coverage; it does not supply a new annual pollutant estimate. The compact browser catalogue omits this potentially large per-record list; the saved scientific handoff and CLI keep the complete records. Applied observation_record_ids and objective filters remain in the original saved calibration selection.
+
+
+## Link original daily-flow support to the admitted annual reference
+
+The existing Scenario sensitivity evaluation form now offers **Original daily-flow
+context** whenever an imported annual-reference edition is selected. The
+reference keeps its admitted observation, original catchment, record IDs,
+constituents, methods and exclusive date intervals. The original hydrology
+processor supplies daily coverage for those exact records.
+
+**Prepare original flow context** queues the original source replay and registers
+its complete source family in the same Workspace. Open the task's original
+JSON/CSV and printable source-context report, then reopen the study's evaluation
+form and select that retained support. **Prepare original support and evaluate**
+performs the same source preparation and calibration in the existing evaluation
+task. Saved results show the chosen daily context and original downloads beside
+the annual-load evaluation. Both paths retain the original action queue and
+resumption behavior.
+
+The source producer is the maintained
+source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs, introduced with
+the complete source family in PR3183 / 1e393eb649f9858476fb5d1a603e612e57419125.
+It replays the original captured daily responses with Node.js and verifies the
+unchanged original calendar outputs before deriving exact reference-period
+support. The receiving runtime supplies Node.js; the Workspace retains the
+original command, stdout/stderr, source collection, preparation state and all
+source bodies. Its original Python consumer adds no daily-flow estimator.
+
+The complete command-line workflow is:
+
+~~~sh
+"$PYTHON" -B -m model.ensemble_consumers_cli --workspace "$WORKSPACE" \
+  flow-support --annual-import-id "$ANNUAL_IMPORT_TASK_ID"
+
+"$PYTHON" -B -m model.ensemble_consumers_cli --workspace "$WORKSPACE" \
+  flow-support-sources
+
+"$PYTHON" -B -m model.ensemble_consumers_cli --workspace "$WORKSPACE" \
+  calibration --ensemble-id "$ENSEMBLE_ID" \
+  --annual-import-id "$ANNUAL_IMPORT_TASK_ID" --prepare-flow-support
+~~~
+
+The standalone flow command accepts --source-root for the complete original
+hydrology source directory and --node for the actual Node.js interpreter.
+Calibration's --flow-source-root applies only with --prepare-flow-support.
+For an already registered source, save its actual catalogue source object
+(collection_id, source_id, source_sha256) and use --flow-support-source FILE
+instead. Existing --prepare-only, --standard-errors and calibration-resume
+continue to operate on the same original saved handoff.
+
+Source support is matched by the original import, Workspace, observation,
+preparation and each complete admitted record. The consumer checks original
+station/flow-station identity, method, constituent and [start,end) interval, then
+retains only the records chosen by the actual positive-weight calibration
+objectives. The complete original support JSON and CSV remain attached.
+
+Interpret the context table using its original daily support:
+
+- Numeric/requested days describes the exact reference interval. Days outside the
+  captured source period remain separate from dates absent within that period.
+- Approved, estimated and provisional flags are independent original qualifiers;
+  a complete numeric interval can contain estimated or provisional values.
+- Covered-days volume sums available original daily means. A complete-period
+  volume appears only when every requested date has numeric support.
+- Original explicit flow_station_id takes precedence. Otherwise the producer
+  uses only the same exact original USGS station ID. Unresolved or uncaptured
+  stations remain visible.
+- Annual calibration keeps its admitted load, spatial binding, objective and
+  temporal weighting. Daily context accompanies the reference and selected
+  native profile; it does not alter those retained scientific choices.
+
+The consumer saves readable companions under ensemble-flow-reports and resumable
+preparation under ensemble-flow-operations. Every published descriptor is
+Workspace-relative. Original source bodies, the scientific handoff, the linked
+context and its report travel in the maintained complete Workspace backup.

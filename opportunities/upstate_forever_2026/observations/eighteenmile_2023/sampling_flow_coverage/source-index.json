@@ -1,0 +1,158 @@
+{
+  "schema": "upstate.sampling-flow-sources/v1",
+  "component": "eighteenmile-sampling-flow-coverage",
+  "date": "2026-10-13",
+  "inputs": [
+    {
+      "path": "inputs/usgs_02186702_2023_original.json",
+      "role": "daily_flow",
+      "original_path": "npdes/flow_context/inputs/usgs_02186702_2023_original.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003",
+      "record_index_base": 0
+    },
+    {
+      "path": "inputs/wqp/derived/selected_chlorophyll.csv",
+      "role": "selected_chlorophyll",
+      "original_path": "wqp/derived/selected_chlorophyll.csv",
+      "bytes": 98672,
+      "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+      "record_index_base": 1
+    },
+    {
+      "path": "inputs/original/nutrients/wqp_SV-268_2023.csv",
+      "role": "routine_nutrients",
+      "original_path": "original/nutrients/wqp_SV-268_2023.csv",
+      "bytes": 19192,
+      "sha256": "bcd93081e98fc9c9abdda3b920a1020052b6d56a60e6c3cb202d99bd36ad6400",
+      "record_index_base": 0
+    },
+    {
+      "path": "inputs/original/nutrients/wqp_SV-374_2023.csv",
+      "role": "routine_nutrients",
+      "original_path": "original/nutrients/wqp_SV-374_2023.csv",
+      "bytes": 19783,
+      "sha256": "9ee56281988e39171afac146d08f3c28df87c6f1a771d01cb8e61d7d89d900ed",
+      "record_index_base": 0
+    },
+    {
+      "path": "inputs/wqp/originals/SV-268-2023.csv",
+      "role": "original_chlorophyll_response",
+      "original_path": "wqp/originals/SV-268-2023.csv",
+      "bytes": 92801,
+      "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+      "record_index_base": 1
+    },
+    {
+      "path": "inputs/wqp/originals/SV-374-2023.csv",
+      "role": "original_chlorophyll_response",
+      "original_path": "wqp/originals/SV-374-2023.csv",
+      "bytes": 92708,
+      "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+      "record_index_base": 1
+    },
+    {
+      "path": "inputs/wqp/originals/SV-838-2023.csv",
+      "role": "original_chlorophyll_response",
+      "original_path": "wqp/originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+      "record_index_base": 1
+    },
+    {
+      "path": "inputs/wqp/originals/SV-839-2023.csv",
+      "role": "original_chlorophyll_response",
+      "original_path": "wqp/originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+      "record_index_base": 1
+    },
+    {
+      "path": "inputs/wqp/originals/SV-840-2023.csv",
+      "role": "original_chlorophyll_response",
+      "original_path": "wqp/originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+      "record_index_base": 1
+    }
+  ],
+  "outputs": [
+    {
+      "path": "derived/results.json",
+      "bytes": 321257,
+      "sha256": "e8e6fdd5b22246be89df58e8819d698a3e08ccb810cf17b547a10e3f0024dad6"
+    },
+    {
+      "path": "figure-spec.json",
+      "bytes": 21333,
+      "sha256": "ff47d3801003d1d3ba39692e63d78899a5e2bf5f12834f00f33a617edcfd74fc"
+    },
+    {
+      "path": "flow_volume_and_sampling.svg",
+      "bytes": 13579,
+      "sha256": "2a1efa1d4951a61ab9b0a488d55b27fa71001417a132d2aaf00ec14ae5183fbd"
+    },
+    {
+      "path": "derived/duration.csv",
+      "bytes": 3221,
+      "sha256": "d1545aed38383c34c342035990576dced04f661e3403c6e38a1c7026e4dbfdc6"
+    },
+    {
+      "path": "derived/sampling.csv",
+      "bytes": 3669,
+      "sha256": "ffe4f42905da0614da992acb0415f02faf1dad70fef1e161956f87124f2ed432"
+    },
+    {
+      "path": "derived/ranked.csv",
+      "bytes": 2741,
+      "sha256": "c4db78e559c6f9fe740c88a28684c01d6bcbaecbce01f0d90a54fbdaaaf73e6c"
+    },
+    {
+      "path": "derived/spells.csv",
+      "bytes": 7726,
+      "sha256": "9872d96f9429013ab1ee5cef96d303f3265de4e91513c8de96c24aa2a9fdc06c"
+    },
+    {
+      "path": "derived/activities.csv",
+      "bytes": 69455,
+      "sha256": "1e90d31478dfd2299fee35f8570d68425738e60851653210b3cc99b5f9b36f14"
+    },
+    {
+      "path": "derived/daily.csv",
+      "bytes": 36897,
+      "sha256": "1cf4f4cbc9c27ec1bdd06aac183c9cf24913f6d63fc1a33250ebca940f7b530f"
+    },
+    {
+      "path": "derived/summary.json",
+      "bytes": 14225,
+      "sha256": "17e9896b1b5d783b656764fa94f181f54769dc2d9ef8256da9ce94c20ff4f8a6"
+    }
+  ],
+  "provenance": {
+    "selected_chlorophyll_record_index": "1-based data record number, excluding header; original field retained",
+    "routine_and_flow_record_index": "0-based array/data-record index, excluding CSV header",
+    "original_sampling_clocks": "Original EST/EDT labels are retained. Joins use original calendar dates; no timezone conversion or exact-time alignment.",
+    "original_flow_qualifiers": "All365 records contain approved qualifier A."
+  },
+  "vendor": [
+    {
+      "module": "d3-path",
+      "path": "vendor/d3-path.cjs",
+      "bytes": 2433,
+      "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+    },
+    {
+      "module": "d3-array",
+      "path": "vendor/d3-array.cjs",
+      "bytes": 17204,
+      "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+    },
+    {
+      "module": "d3-shape",
+      "path": "vendor/d3-shape.cjs",
+      "bytes": 30898,
+      "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+    }
+  ]
+}

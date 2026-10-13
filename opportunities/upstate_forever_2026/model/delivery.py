@@ -7,15 +7,16 @@ from pathlib import Path
 import shutil
 import sys
 import xml.etree.ElementTree as ET
-from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
+from .common import (INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import atlas_browser, cartography, client_report, map_atlas, native_study, portable, rasters
+from . import atlas_browser, cartography, client_report, map_atlas, native_study, native_versions, portable, rasters
 import tempfile
 from .report_release import bind_report, retain_report
 from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
+from .robust_decisions.eco_robust import decision_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
                                retain_economic, scientific_sections)
 
@@ -23,8 +24,8 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-native-study-report-11"
-DELIVERY_FORMAT_VERSION = "retained-grid-study-observed-client-report-11"
+DELIVERY_EDITION = "2026-10-13-integrated-native-decision-report-13"
+DELIVERY_FORMAT_VERSION = "retained-stage-version-decision-client-report-13"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -48,6 +49,12 @@ def _source_records(workspace, selection, grid, baseline):
                                                        "catalogue_source_id", "source_labels")
                             if key in entry}}
     source_choices = dict(selection.get("source_roles", {}))
+    selected_reports = observed_context.source_choices(selection)
+    if "observed_context_sources" in selection:
+        source_choices.pop(observed_context.ROLE, None)
+        for index, choice in enumerate(selected_reports):
+            role = observed_context.ROLE if index == 0 else observed_context.ROLE + "_%03d" % (index + 1)
+            source_choices[role] = choice
     overlay_choices = selection.get("overlays", {})
     for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
                        ("drinking_water", "SOURCE_WATER_PROTECTION_AREAS"),
@@ -72,10 +79,12 @@ def _source_records(workspace, selection, grid, baseline):
         item = baseline["stages"]["sdr"]["files"].get("ls")
         if not item:
             raise ValueError("The original SDR output registry must retain its computed LS factor")
+        sdr_version = native_versions.model_versions(baseline, ("sdr",))["sdr"]
         records["LS_FACTOR"] = {
             "id": "LS_FACTOR", "title": "Original InVEST SDR topographic LS factor",
-            "vintage": "InVEST " + INVEST_VERSION + "; DEM edition " + str(records["DEM"]["vintage"]),
-            "uri": SDR_GUIDE, "sha256": item["sha256"],
+            "vintage": native_versions.version_label(sdr_version) + "; DEM edition " + str(records["DEM"]["vintage"]),
+            "uri": native_versions.guide_url("sdr", sdr_version) or "https://github.com/natcap/invest",
+            "native_version": sdr_version, "sha256": item["sha256"],
             "derivation": "Original SDR terrain and flow calculation on the selected DEM",
             "source_dem_sha256": records["DEM"]["sha256"],
         }
@@ -131,9 +140,13 @@ def _grid_measurements(grid):
     return {"width": width_text, "height": height_text, "hectares": area_text,
             "pixels": pixels, "resolution": resolution}
 
-def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact):
+def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact,
+          native_model=None):
     from pyproj import CRS, Transformer
     cells = _grid_measurements(grid)
+    native_model = native_model or {}
+    model_label = (str(native_model.get("model", "native model")).upper() + ": "
+                   + native_versions.version_label(native_model))
     crs = CRS.from_user_input(grid["grid"]["crs"])
     transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
     west, south, east, north = transformer.transform_bounds(*grid["grid"]["bounds"], densify_pts=21)
@@ -149,8 +162,8 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("idinfo/citation/citeinfo/pubdate", day)
     add("idinfo/citation/citeinfo/title", title)
     add("idinfo/citation/citeinfo/geoform", "raster digital data")
-    add("idinfo/descript/abstract", title + " modeled with original InVEST " + INVEST_VERSION +
-        " NDR/SDR engines. Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
+    add("idinfo/descript/abstract", title + " derived from the retained " + model_label +
+        ". Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
         "are multiplied by " + cells["hectares"] + " hectares. The selected reporting mask preserves original NoData. "
         "Original run: " + selection["baseline_run_id"] + ". Parameter profile: " + profile["id"] + ".")
     add("idinfo/descript/purpose", selection.get("title", "Watershed source-water and land-conservation analysis") +
@@ -185,7 +198,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         ET.SubElement(node, "srccontr").text = "Original source SHA256 " + source["sha256"]
     step = ET.SubElement(lineage, "procstep")
     ET.SubElement(step, "procdesc").text = (
-        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, " + cells["resolution"] + " grid "
+        "Retained " + model_label + "; source selection, " + cells["resolution"] + " grid "
         "alignment, biophysical parameters, explicit land-cover changes and model settings are retained "
         "in the native working archive. Per-hectare rates converted to " + unit +
         " by multiplication by " + cells["hectares"] + ". Reporting-mask pixel-centre selection; no interpolated output values.")
@@ -250,6 +263,9 @@ def build(workspace, selection):
     analysis_link = analysis_delivery.bind_analysis(workspace, selection)
     if analysis_link is not None:
         selection["source_scenario_analysis_sha256"] = analysis_link["analysis_sha256"]
+    decision_link = decision_delivery.bind_decision(workspace, selection)
+    if decision_link is not None:
+        selection["source_decision"] = decision_link["source_decision"]
     economic_link = bind_economic(workspace, selection)
     if economic_link is not None:
         selection["economic_edition_sha256"] = economic_link["edition_sha256"]
@@ -320,7 +336,25 @@ def build(workspace, selection):
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
     cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
-    key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
+    report_title = (selection.get("title")
+                    or (selection["native_study"]["title"] if study_mode else None)
+                    or workspace.project.get("title") or "Source-water assessment")
+    version_provenance = {
+        "policy": native_versions.POLICY,
+        "runs": {run["id"]: native_versions.model_versions(run)
+                 for run in [baseline, *alternatives]},
+    }
+    baseline_versions = version_provenance["runs"][baseline["id"]]
+    versions = {model: info["comparison_version"]
+                for model, info in baseline_versions.items()}
+    version_provenance.update(models=list(versions), versions=dict(versions))
+    all_versions = {info["comparison_version"]
+                    for items in version_provenance["runs"].values()
+                    for info in items.values()}
+    common_version = next(iter(all_versions)) if len(all_versions) == 1 else None
+    key = digest({"selection": selection, "baseline": baseline["id"],
+                  "application_version": INVEST_VERSION,
+                  "native_version_provenance": version_provenance,
                   "map_renderer": cartography.MAP_RENDERER_VERSION,
                   "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
@@ -360,6 +394,9 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             if report_link is not None:
                 retain_report(workspace, directory, state, report_link)
+                atomic_json(state_path, state)
+            decision_product = decision_delivery.retain_decision(workspace, directory, state, decision_link)
+            if decision_product is not None:
                 atomic_json(state_path, state)
             economic_decision = retain_economic(workspace, directory, state, economic_link)
             if economic_decision is not None:
@@ -429,7 +466,8 @@ def build(workspace, selection):
                 metadata_key = name + "_metadata"
                 if metadata_key not in state["files"]:
                     _fgdc(metadata_path, cartography.LABELS[name], item, unit=item["units"],
-                          grid=grid, sources=records, selection=selection, profile=profile, contact=contact)
+                          grid=grid, sources=records, selection=selection, profile=profile, contact=contact,
+                          native_model=baseline_versions[native_versions.models_for_outputs((name,))[0]])
                     state["files"][metadata_key] = describe_file(directory, metadata_path)
                     atomic_json(state_path, state)
             settings = selection.get("map_settings", {})
@@ -548,7 +586,7 @@ def build(workspace, selection):
                                          [overlays["drinking_water"]] if "drinking_water" in overlays else [])
                     future_maps.setdefault(family, []).append(map_key)
             footer = ((selection["native_study"]["title"] + "; " if study_mode else "") +
-                      "Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
+                      "Baseline " + native_versions.run_label(baseline) + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
             atlas_pages = []
             for map_key, (panels, selected_overlays) in all_specs.items():
@@ -610,18 +648,20 @@ def build(workspace, selection):
             working_relative = "working/scientific-workspace.zip"
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
-                    ("Study scope", [selection.get("title", workspace.project["title"]),
+                    ("Study scope", [report_title,
                      "The reporting polygon is retained separately from the model domain and its " +
                      str(grid["spec"]["upstream_buffer_m"]) + " metre context buffer. "
                      "Model outputs and the explicit current-versus-future scenarios use the same original "
                      + cells["resolution"] + " land-cover reference alignment."]),
                     ("Model and units", [
-                     "The original InVEST " + INVEST_VERSION + " Nutrient Delivery Ratio and Sediment Delivery Ratio "
-                     "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
+                     "The retained baseline model versions are " + native_versions.run_label(baseline) + ". "
+                     "The original inputs and parameter profile accompany these results. Nitrogen and phosphorus "
                      "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
                      "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
-                     scientific_report.link("Original InVEST NDR guide", NDR_GUIDE),
-                     scientific_report.link("Original InVEST SDR guide", SDR_GUIDE)]),
+                     *[scientific_report.link(
+                         model.upper() + " reference — " + native_versions.version_label(info), guide)
+                       for model, info in baseline_versions.items()
+                       if (guide := native_versions.guide_url(model, info))]]),
                     ("Selected parameter profile", [profile["title"],
                      json.dumps({"ndr": profile["ndr"], "sdr": profile["sdr"]}, sort_keys=True),
                      "Original profile references: " + json.dumps(profile["references"], ensure_ascii=False)]),
@@ -702,6 +742,7 @@ def build(workspace, selection):
                         "Original study metadata, reporting polygon, model domain, mask and biophysical table are retained under native-study."]))
                 sections.extend(scientific_report.receiving_sections(water_product))
                 sections.extend(analysis_delivery.report_sections(analysis_product))
+                sections.extend(decision_delivery.report_sections(decision_product))
                 sections.extend(scientific_sections(economic_decision, state))
                 if observed_product is not None:
                     sections.extend(observed_product["sections"])
@@ -709,14 +750,15 @@ def build(workspace, selection):
                 sections.extend(scientific_report.delivery_sections(
                     state, working_archive_path=working_relative))
                 target = directory / "report.pdf"
-                scientific_report.report_pdf(target, selection.get("title", workspace.project["title"]),
+                scientific_report.report_pdf(target, report_title,
                                              sections, contact=contact, source_records=records)
                 state["files"].update(scientific_report.write_companions(
-                    directory, selection.get("title", workspace.project["title"]), sections,
+                    directory, report_title, sections,
                     contact=contact, source_records=records,
                     binding={
                         "delivery_id": key, "delivery_mode": native_study.mode(selection),
                         "native_study": state.get("native_study"), "baseline_run_id": baseline["id"],
+                        "native_version_provenance": version_provenance,
                         "scenario_run_ids": scenario_ids, "profile_id": profile["id"],
                         "grid_id": grid["id"], "grid_measurements": cells, "comparison_id": comparison["id"],
                         "observation_comparison_ids": selection.get("observation_comparison_ids", []),
@@ -727,6 +769,7 @@ def build(workspace, selection):
                         "source_report_id": selection.get("source_report_id"),
                         "source_report_sha256": selection.get("source_report_sha256"),
                         "source_report": report_link, "economic_decision": economic_link,
+                        "source_decision": decision_link,
                         "client_report_edition": CLIENT_REPORT_EDITION,
                         "observed_context": observed_link,
                     },
@@ -742,6 +785,7 @@ def build(workspace, selection):
                     grid=grid, profile=profile, records=records,
                     observation_results=observation_results, comparison=comparison,
                     scenario_summary=summary,
+                    decision_product=decision_product,
                     additional_sections=receiving_water_delivery.report_section(water_product),
                     output_stem="client-report", file_key_prefix="client_",
                     working_archive_path=working_relative)
@@ -754,7 +798,8 @@ def build(workspace, selection):
                 "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
                          "record": state["files"]["native_grid_record"]["path"],
                          "audit_scope": _delivery_audit_scope(selection, grid)},
-                "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
+                "model": {"name": "InVEST NDR and SDR", "version": common_version,
+                          "versions": versions, "native_version_provenance": version_provenance,
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
@@ -795,6 +840,7 @@ def build(workspace, selection):
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
             analysis_delivery.extend_assets(manifest, state)
+            decision_delivery.extend_assets(manifest, state)
             for report_name in ("report_html", "report_markdown", "report_data"):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:

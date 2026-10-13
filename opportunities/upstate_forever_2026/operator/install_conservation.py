@@ -187,7 +187,9 @@ KNOWN_PRIOR = {
         "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
         "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c",
         "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d",
-        "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b"
+        "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b",
+        "edae3aa44e2eef6ae09e0388772552aad492ec6daa1a9b28ba5bab1aef06ae41",
+        "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -368,10 +370,12 @@ KNOWN_PRIOR = {
         "34546b7109ee378b9e5d4207b7151c3104be54564da640ac2a03769039e4c7ad"
     ],
     "operator/conservation_experiment_browser_receiving.py": [
-        "3a4727836d1a78fb54e00cf16098e167618e16a7181623f32d67412365c78b2b"
+        "3a4727836d1a78fb54e00cf16098e167618e16a7181623f32d67412365c78b2b",
+        "b3d6ab4cf93b1bc65240a638ca7d2b378f2177b624c56d91cafeab11ea4e62b0"
     ],
     "operator/CONSERVATION_EXPERIMENT_BROWSER.md": [
-        "703700f71cc0c849991ea89a439d436e3fef10500525f6f0bbc7c87d261afa29"
+        "703700f71cc0c849991ea89a439d436e3fef10500525f6f0bbc7c87d261afa29",
+        "b440f3a59b96095aa6f8402d2521c3b25d179dcc8293255405070e057ef23057"
     ],
     "operator/web/conservation_optimization_bridge.mjs": [
         "2d79a5ff3bb86c434c9f895f00bee37a9b90c0a4bad0c26129a7d1bcb941a22a",
@@ -454,7 +458,11 @@ KNOWN_PRIOR = {
         "8384e6d464f8bb253df82d5abce78294785579f0855e111bd3b4b22b29257416"
     ],
     "model/CONSERVATION_NATIVE_VERSIONS.md": [
-        "712dda5ac675e597394d4e9d7b1976b1e2c7ab885e0fa83d1c375a5b79d7c81d"
+        "712dda5ac675e597394d4e9d7b1976b1e2c7ab885e0fa83d1c375a5b79d7c81d",
+        "66c4323cfa1def80a4cbc5c8e942daadb59fb1da76e47b0f04bc0718dddfe32f"
+    ],
+    "model/native_versions.py": [
+        "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2"
     ]
 }
 

@@ -861,5 +861,15 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       return;
     }
   }
-  return {render,mount,update,detach,dispatch,taskActions,openForObservations};
+  async function openForReview(selection){
+    const workspace=current();
+    if(!selection||selection.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection.review_id||''))throw Error('Open a retained calibration review from the current workspace.');
+    const revision=++resultRequest;
+    await reviewsDesk.open(selection.review_id);
+    if(current()!==workspace)throw Error('The workspace changed while opening this original review.');
+    if(revision!==resultRequest)return;
+    if(selection.preview&&reviewsDesk.active())return reviewsDesk.dispatch({dataset:{action:'calibration-review-preview',id:selection.review_id}});
+    return {workspace_key:workspace,review_id:selection.review_id};
+  }
+  return {render,mount,update,detach,dispatch,taskActions,openForObservations,openForReview};
 }

@@ -89,10 +89,10 @@ export function createPublishedStudiesDesk(host) {
       '<div class="ps-filter-grid"><label>Parameter<select name="parameter"><option value="">All parameters</option>' +
       Object.entries(PARAMETERS).map(([key, value]) => '<option value="' + key + '">' + esc(value) + "</option>").join("") +
       '</select></label><label>Depth stratum<select name="stratum"><option value="">All strata</option><option value="surface">Surface</option><option value="mid">Mid-water</option><option value="bottom">Bottom</option></select></label>' +
-      '<label>Continuous year<select name="year"><option value="">All years</option></select></label>' +
-      '<label>Continuous month<select name="month"><option value="">All months</option>' +
+      '<label><span data-ps-year-label>Continuous year</span><select name="year"><option value="">All years</option></select></label>' +
+      '<label><span data-ps-month-label>Continuous month</span><select name="month"><option value="">All months</option>' +
       MONTHS.map((month, index) => '<option value="' + (index + 1) + '">' + month + "</option>").join("") +
-      '</select></label></div><p class="ps-help">Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
+      '</select></label></div><p class="ps-help" data-ps-calendar-help>Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
       '<nav class="ps-tabs" aria-label="Study tables">' +
       [["seasonal","Seasonal"],["continuous","Continuous"],["observed","Report comparison"],["wqp","WQP source context"],["flow","Upstream flow"],["figures","Scientific figures"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
         .map(([id, title]) => '<button type="button" data-ps-tab="' + id + '" aria-pressed="' + (id === tab) + '">' + title + "</button>").join("") +
@@ -128,27 +128,46 @@ export function createPublishedStudiesDesk(host) {
       find("[data-ps-filters]").hidden = true; find("[data-ps-tables]").innerHTML = ""; return;
     }
     const {study, record} = complete, counts = record.counts || {}, grab = study.grab_sampling || {}, continuous = study.continuous || {};
+    const sourceCohort = study.observation_calendar_filters === true;
     target.innerHTML = '<section class="ps-summary"><h2>' + esc(study.title) + '</h2><p>' +
-      esc(study.issuing_body) + " · Technical report " + esc(study.technical_report) + " · " + esc(study.publication) +
+      esc(study.issuing_body) + (sourceCohort ? " · Original source records" : " · Technical report " + esc(study.technical_report)) + " · " + esc(study.publication) +
       '</p><dl class="ps-counts">' +
-      [["Stations",counts.stations],["Seasonal rows",counts.seasonal],["Monthly DO",counts.monthly_do],["Monthly pH",counts.monthly_ph],["Field range rows",counts.surface_ranges],["Comparison activities",counts.observed_activities || 0],["WQP result rows",counts.original_result_rows || 0],["WQP activities",counts.original_activity_count || 0],["Flow dates",counts.flow_dates || 0]]
+      [["Stations",counts.stations],["Seasonal rows",counts.seasonal],["Monthly DO",counts.monthly_do],["Monthly pH",counts.monthly_ph],["Field range rows",counts.surface_ranges],["Observed result rows",counts.observed_activities || 0],["WQP result rows",counts.original_result_rows || 0],["WQP activities",counts.original_activity_count || 0],["Flow dates",counts.flow_dates || 0]]
         .map(([key,value]) => "<div><dt>" + esc(key) + "</dt><dd>" + esc(value) + "</dd></div>").join("") +
-      '</dl><div class="ps-support"><p><strong>Grab sampling:</strong> ' + esc(grab.start) + " through " + esc(grab.end) +
-      "; surface " + esc(grab.surface_depth_m) + " m; " + esc(grab.visits_per_site) + " planned visits per site.</p>" +
-      '<p><strong>Continuous sensors:</strong> ' + esc(arr(continuous.stations).join(", ")) + "; " +
-      esc(continuous.interval_minutes) + " minute interval at approximately " + esc(continuous.approximate_depth_m) +
-      " m. Monthly sample counts are days.</p></div>" + reportLinks(complete) + "</section>";
+      '</dl><div class="ps-support">' + (sourceCohort
+        ? '<p><strong>Observed sampling:</strong> ' + esc(grab.start) + " through " + esc(grab.end) +
+          '.</p><p>' + esc(study.observation_scope) + '</p>'
+        : '<p><strong>Grab sampling:</strong> ' + esc(grab.start) + " through " + esc(grab.end) +
+          "; surface " + esc(grab.surface_depth_m) + " m; " + esc(grab.visits_per_site) + " planned visits per site.</p>" +
+          '<p><strong>Continuous sensors:</strong> ' + esc(arr(continuous.stations).join(", ")) + "; " +
+          esc(continuous.interval_minutes) + " minute interval at approximately " + esc(continuous.approximate_depth_m) +
+          " m. Monthly sample counts are days.</p>") + "</div>" + reportLinks(complete) + "</section>";
+    find("[data-ps-year-label]").textContent = sourceCohort ? "Sampling year" : "Continuous year";
+    find("[data-ps-month-label]").textContent = sourceCohort ? "Sampling month" : "Continuous month";
+    find("[data-ps-calendar-help]").textContent = sourceCohort
+      ? "Year and month select original sampling dates. Fractions, analytical methods, result types and original units remain separate series."
+      : "Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.";
+    find('select[name="stratum"]').closest("label").hidden = sourceCohort;
+    if (sourceCohort) selection.strata = [];
+    for (const button of node.querySelectorAll("[data-ps-tab]")) {
+      const id = button.dataset.psTab;
+      button.hidden = sourceCohort && ["seasonal", "continuous", "flow", "figures", "ranges"].includes(id);
+      if (id === "observed") button.textContent = sourceCohort ? "Observed series" : "Report comparison";
+    }
+    if (sourceCohort && ["seasonal", "continuous", "flow", "figures", "ranges"].includes(tab)) tab = "observed";
     const availableSites = arr(complete.available_stations || complete.tables.stations).map(row => row.site_id);
     selection.site_ids = selection.site_ids.filter(id => availableSites.includes(id));
     if (!selection.site_ids.length) selection.site_ids = availableSites;
     find("[data-ps-sites]").innerHTML = availableSites.map(id => '<label class="ps-check"><input type="checkbox" name="site" value="' +
       esc(id) + '"' + (selection.site_ids.includes(id) ? " checked" : "") + ">" + esc(id) + "</label>").join("");
-    const years = [...new Set([...arr(complete.tables.monthly_do),...arr(complete.tables.monthly_ph)].map(row => row.year))].sort();
+    const years = [...new Set(sourceCohort ? arr(complete.observation_rows).map(row => Number(row.date.slice(0,4))) : [...arr(complete.tables.monthly_do),...arr(complete.tables.monthly_ph)].map(row => row.year))].sort();
+    if (selection.year != null && !years.includes(selection.year)) selection.year = null;
     const yearControl = find('form[data-ps-filters] select[name="year"]');
     yearControl.innerHTML = '<option value="">All years</option>' + years.map(year => '<option value="' + year + '">' + year + "</option>").join("");
     yearControl.value = selection.year || "";
     const parameterControl = find('form[data-ps-filters] select[name="parameter"]');
-    const parameterOptions = [...new Set([...Object.keys(PARAMETERS), ...arr(complete.original_measurements).map(row => row.parameter)])].sort((a,b) => label(a).localeCompare(label(b)));
+    const parameterOptions = [...new Set([...(sourceCohort ? [] : Object.keys(PARAMETERS)), ...arr(complete.original_measurements).map(row => row.parameter)])].sort((a,b) => label(a).localeCompare(label(b)));
+    selection.parameters = selection.parameters.filter(value => parameterOptions.includes(value));
     parameterControl.innerHTML = '<option value="">All parameters</option>' + parameterOptions.map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
     parameterControl.value = selection.parameters[0] || "";
     find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";
@@ -159,8 +178,8 @@ export function createPublishedStudiesDesk(host) {
   function reportLinks(value) {
     const reports = arr(value?.retained_reports);
     if (!reports.length) return "";
-    return '<section class="ps-methods"><h3>Original sampling report</h3><p>Open the retained report to inspect its full observation cohorts, figures, original records and source files. Report filters are independent of the table selection below.</p><ul class="ps-source-list">' +
-      reports.map(report => "<li>" + link(report.url, "Open " + report.path.split("/").pop()) +
+    return '<section class="ps-methods"><h3>Original studies and scientific analyses</h3><p>Open each retained report to inspect its stated observation cohort, sampling dates, figures and source files. Full-study analyses keep their original scope when the tables below are filtered.</p><ul class="ps-source-list">' +
+      reports.map(report => "<li>" + link(report.url, report.title ? "Open " + report.title : "Open " + report.path.split("/").pop()) +
         " · " + link(report.download?.url + "?download=1", "Download original HTML") +
         '<span class="ps-help">' + Number(report.bytes).toLocaleString() + " bytes</span></li>").join("") +
       "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
@@ -168,12 +187,12 @@ export function createPublishedStudiesDesk(host) {
 
 
   function sourcePage(row) {
-    if (row.source_file?.startsWith("wqp") || row.source_file?.startsWith("cohort_reconciliation")) {
+    if (row.source_observation || row.source_file?.startsWith("wqp") || row.source_file?.startsWith("cohort_reconciliation")) {
       const source = arr(complete?.source_artifacts).find(item => item.path === row.source_file);
       let result = link(source?.download?.url, "Retained CSV · row " + row.source_csv_row);
       if (row.original_source_path) {
         const raw = arr(complete?.source_artifacts).find(item => item.path === row.original_source_path);
-        result += "<br>" + link(raw?.download?.url, "Original response · record " + row.original_source_record_index);
+        result += "<br>" + link(raw?.download?.url, "Original response · CSV row " + (Number(row.original_source_record_index) + 2));
       }
       return result;
     }
@@ -230,7 +249,7 @@ export function createPublishedStudiesDesk(host) {
       if (microcystinReport) output += '<p>' + link(microcystinReport.preview_url || microcystinReport.download?.url, "Table 8 candidate cohort and original microcystin reconciliation") +
         ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
-        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
+        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
@@ -248,6 +267,7 @@ export function createPublishedStudiesDesk(host) {
       if (supported.length) {
         output += table("Original concentration support", supported, [
           ["site_id","Station"],["parameter","Parameter"],["project_id","Project"],["activity_type","Activity type"],
+          ["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],
           ["record_count","Original rows"],["quantified_count","Quantified"],["below_limit_count","Below limit"],
           ["unresolved_count","Unresolved"],["mean_interval","All-row mean interval"],["unit","Unit"],
           ["limits","Original reporting limits"]
@@ -264,9 +284,10 @@ export function createPublishedStudiesDesk(host) {
       ],false);
       output += table("Original activity chronology", arr(observed.rows), [
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
-        ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["value","Value"],["unit","Unit"],
+        ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],["value","Value"],["unit","Unit"],
         ["detection_condition","Detection"],["detection_limit","Limit"],["detection_limit_unit","Limit unit"],
-        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"]
+        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"],
+        ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const cohort = context.cohort_reconciliation;
       if (cohort) {
@@ -285,7 +306,7 @@ export function createPublishedStudiesDesk(host) {
       }
     } else if (tab === "wqp") {
       const dated = context.dated_context || {};
-      output = '<section class="ps-methods"><h2>Original WQP source context</h2><p>Browse the complete acquired source year with original projects, fractions, depths, units, limits and activity identifiers. The report comparison uses its separately identified chlorophyll cohort. Station and parameter filters select these source rows.</p></section>';
+      output = '<section class="ps-methods"><h2>Original WQP source context</h2><p>' + esc(complete.study.observation_calendar_filters === true ? 'Browse original agency result records by station, characteristic and sampling calendar. Fractions, methods, calculated result labels, detection limits and all original source cells are preserved. Complete unfiltered agency responses remain in the study export.' : 'Browse the complete acquired source year with original projects, fractions, depths, units, limits and activity identifiers. The report comparison uses its separately identified chlorophyll cohort. Station and parameter filters select these source rows.') + '</p></section>';
       output += table("Source coverage", arr(dated.coverage), [
         ["site_id","Station"],["project_id","Project"],["characteristic","Original characteristic"],
         ["sample_fraction","Fraction"],["reported_unit","Unit"],["record_count","Rows"],
@@ -296,7 +317,8 @@ export function createPublishedStudiesDesk(host) {
         ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
         ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
         ["detection_limit_unit","Limit unit"],["detection_limit_type","Limit type"],["censor_direction","Censor direction"],["depth","Depth"],["depth_unit","Depth unit"],
-        ["cohort_selection","Cohort selection"],["activity_id","Activity identifier"]
+        ["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["cohort_selection","Cohort selection"],["activity_id","Activity identifier"],
+        ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const empty = arr(dated.summary?.empty_source_stations).filter(id => selection.site_ids.includes(id));
       if (empty.length) output += '<p class="ps-help">The exact organization/station/year query returned a header-only original response for ' + esc(empty.join(", ")) + '. Its original response is retained with the source collection.</p>';

@@ -267,6 +267,27 @@ REVIEW_POLICY = ("sandbox allow-downloads allow-same-origin; default-src 'none';
                  "frame-ancestors 'self'")
 
 
+def validate_review_journey(workspace, journey):
+    """Validate the one original dossier selected by the retained operating view."""
+    selection = journey.get("selection", {})
+    review_id = selection.get("calibration_review_id", "")
+    if not isinstance(review_id, str):
+        raise ValueError("Choose one saved calibration review identifier")
+    if not review_id:
+        return None
+    review = review_science.inspect(workspace, identifier(review_id))
+    context = {key: review.get(key) for key in
+               ("id", "calibration_id", "plan_id", "uncertainty_id", "map_id",
+                "selected_run_id", "selected_profile_id")}
+    recorded = journey.get("recorded_context", {})
+    if not isinstance(recorded, dict):
+        raise ValueError("Keep the original journey context as a record")
+    supplied = recorded.get("calibration_review")
+    if supplied is not None and supplied != context:
+        raise ValueError("The saved review context differs from its original dossier")
+    return context
+
+
 def _review_summary(record):
     return {key: record.get(key) for key in (
         "id", "title", "state", "calibration_id", "plan_id", "uncertainty_id", "map_id",

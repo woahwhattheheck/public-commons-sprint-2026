@@ -21,7 +21,7 @@ if (args.help) {
 }
 const sourceURL = 'https://repository.library.noaa.gov/view/noaa/57797/noaa_57797_DS1.pdf';
 const runLabel = args['run-label'] || new Date().toISOString().replace(/[:.]/g, '-');
-const title = 'Working source alternative · Cape Fear corn C=0.25 · ' + runLabel;
+let title = 'Working source alternative · Cape Fear corn C=0.25 · ' + runLabel;
 const output = resolve(args.output || join('artifacts', 'profile-workbench', runLabel));
 const journal = {
   schema: 'upstate.profile-workbench-journey/v1', started_at: new Date().toISOString(),
@@ -33,7 +33,8 @@ const journal = {
   },
   steps: [], screenshots: [], browser_errors: [],
 };
-let browser, context, page, privateURL = '', origin = '', capability = '';
+let browser, context, page, privateURL = '', origin = '', capability = '', journalWritable = false;
+const reportPath = join(output, 'journey.json');
 const redact = value => {
   let result = String(value);
   for (const secret of [privateURL, capability, origin].filter(Boolean)) result = result.split(secret).join('[private operator]');
@@ -112,35 +113,146 @@ function assertSaved(record) {
   requireValue(record.review_state?.status === 'working', 'The new revision did not retain its working review state.');
   requireValue(Boolean(record.table.sha256), 'The reopened native table did not supply its retained SHA-256.');
 }
+
+async function writeJournal() {
+  if (!journalWritable) return;
+  const pending = join(output, '.journey.pending.json');
+  await writeFile(pending, redact(JSON.stringify(journal, null, 2)) + '\n', { mode: 0o600 });
+  await rename(pending, reportPath);
+}
+async function continueJournal() {
+  let previous;
+  try { previous = JSON.parse(await readFile(reportPath, 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (previous) {
+    requireValue(previous.schema === journal.schema && previous.baseline_profile_id === args.profile,
+      'This output retains another original profile journey.');
+    requireValue(!args.workspace || !previous.workspace_id || previous.workspace_id === args.workspace,
+      'Continue the saved profile journey in its original workspace.');
+    requireValue(!args['run-label'] || previous.title === title,
+      'Continue the saved profile journey with its original run label.');
+    title = previous.title;
+    const attempts = [...(previous.attempts || []), {
+      started_at: previous.started_at, ended_at: previous.completed_at || null,
+      status: previous.status, error: previous.error || null,
+      browser_errors: previous.browser_errors || [],
+    }];
+    Object.assign(journal, previous, { title, status: 'running',
+      started_at: new Date().toISOString(), attempts, browser_errors: [] });
+    delete journal.error; delete journal.completed_at;
+  }
+  journalWritable = true;
+  await writeJournal();
+}
+function validSave(request) {
+  requireValue(request?.workspace === journal.workspace_id &&
+    request.action === 'profile.edition.save' &&
+    request.payload?.base_profile_id === args.profile &&
+    typeof request.operation_id === 'string',
+    'The retained save request belongs to another original profile selection.');
+}
+async function taskJSON(response, label) {
+  requireValue(response.ok(), label + ' returned HTTP ' + response.status());
+  const value = await response.json();
+  requireValue(value.id && value.action === 'profile.edition.save' &&
+    value.workspace === journal.workspace_id && value.payload?.base_profile_id === args.profile,
+    label + ' did not return the selected original profile task.');
+  if (journal.save_request) {
+    requireValue(value.operation_id === journal.save_request.operation_id,
+      'The native task has a different original save operation.');
+  }
+  return value;
+}
+async function continueSavedProfile() {
+  const headers = { Authorization: 'Bearer ' + capability };
+  let task;
+  if (journal.save_request) validSave(journal.save_request);
+  if (journal.save_task_id) {
+    task = await taskJSON(await page.request.get(origin + '/api/task?id=' +
+      encodeURIComponent(journal.save_task_id), { headers, maxRedirects: 0 }), 'Read retained profile save');
+    requireValue(task.id === journal.save_task_id, 'The native operator returned another retained task.');
+  } else {
+    task = await taskJSON(await page.request.post(origin + '/api/actions',
+      { headers, data: journal.save_request, maxRedirects: 0 }), 'Continue retained profile save');
+    journal.save_task_id = task.id;
+    await writeJournal();
+  }
+  if (['failed', 'interrupted', 'cancelled'].includes(task.state)) {
+    task = await taskJSON(await page.request.post(origin + '/api/task/resume',
+      { headers, data: { id: task.id }, maxRedirects: 0 }), 'Resume original profile save');
+  }
+  const deadline = Date.now() + 180000;
+  while (task.state !== 'complete') {
+    requireValue(!['failed', 'interrupted', 'cancelled'].includes(task.state),
+      'Original profile save is ' + task.state + ': ' + redact(task.error?.message || task.id));
+    requireValue(Date.now() < deadline, 'Original profile save remains active: ' + task.id);
+    await page.waitForTimeout(1000);
+    task = await taskJSON(await page.request.get(origin + '/api/task?id=' + encodeURIComponent(task.id),
+      { headers, maxRedirects: 0 }), 'Observe original profile save');
+  }
+  requireValue(task.result?.profile_id && task.result.profile_id !== args.profile,
+    'The original save has no retained working profile edition.');
+  if (journal.saved_profile_id) requireValue(journal.saved_profile_id === task.result.profile_id,
+    'The original save reopened another profile edition.');
+  journal.saved_profile_id = task.result.profile_id;
+  journal.steps.push({ step: 'Continue original saved working profile',
+    task_id: task.id, profile_id: journal.saved_profile_id });
+  await writeJournal();
+}
+
 async function main() {
   await mkdir(output, { recursive: true });
   requireValue(args.profile && /^[A-Za-z0-9_.:-]+$/.test(args.profile), 'Supply the actual retained baseline profile ID with --profile.');
+  await continueJournal();
   privateURL = (args['url-file'] ? await readFile(args['url-file'], 'utf8') : args.url || process.env.ECO_OPERATOR_URL || '').trim();
   requireValue(privateURL, 'Supply the original private operator URL through --url-file, --url or ECO_OPERATOR_URL.');
   let parsed;
   try { parsed = new URL(privateURL); } catch { throw Error('The private operator URL is not a valid URL.'); }
   requireValue(['http:', 'https:'].includes(parsed.protocol), 'The operator URL must use HTTP or HTTPS.');
   origin = parsed.origin; capability = new URLSearchParams(parsed.hash.slice(1)).get('token') || '';
+  requireValue(capability, 'Use the original operator startup URL containing its capability fragment.');
   browser = await chromium.launch({ headless: !args.headed, ...(args['browser-channel'] ? { channel: args['browser-channel'] } : {}) });
   context = await browser.newContext({
     viewport: { width: 1440, height: 1000 }, locale: 'en-US',
     ...(args.video ? { recordVideo: { dir: join(output, 'video'), size: { width: 1440, height: 1000 } } } : {}),
+  });
+  // Retain the original UI request before it crosses the network. A lost
+  // response can then reuse the same operation rather than saving a new edition.
+  await context.route('**/api/actions', async route => {
+    const request = route.request().postDataJSON();
+    if (request?.action === 'profile.edition.save') {
+      validSave(request);
+      requireValue(!journal.save_request, 'Continue the already-retained profile save.');
+      journal.save_request = request;
+      await writeJournal();
+    }
+    await route.continue();
   });
   page = await context.newPage(); page.setDefaultTimeout(60000);
   page.on('pageerror', error => { if (journal.browser_errors.length < 20) journal.browser_errors.push(redact(error.message)); });
   await page.goto(privateURL, { waitUntil: 'domcontentloaded' });
   await page.locator('#workspace-select').waitFor({ state: 'visible' });
   await findBaseline();
-  journal.workspace_id = await page.locator('#workspace-select').inputValue();
+  const selectedWorkspace = await page.locator('#workspace-select').inputValue();
+  requireValue(!journal.workspace_id || journal.workspace_id === selectedWorkspace,
+    'The retained profile journey opened another workspace.');
+  journal.workspace_id = selectedWorkspace;
+  await writeJournal();
   const baseline = await clickRead(profileButton(args.profile), 'inspect', { profile_id: args.profile });
   requireValue(baseline.profile_id === args.profile, 'The native inspector returned a different baseline profile.');
   requireValue(Array.isArray(baseline.table?.rows) && baseline.table.rows.length === 15, 'The selected baseline is not the retained 15-row reference table.');
   requireValue(Number(row82(baseline)?.usle_c) === 0.20, 'The selected reference does not contain code 82 usle_c=0.20.');
+  requireValue(!journal.baseline_table_sha256 || journal.baseline_table_sha256 === baseline.table.sha256,
+    'The original baseline coefficient table changed during continuation.');
   journal.baseline_table_sha256 = baseline.table.sha256;
   journal.steps.push({ step: 'Open retained baseline', profile_id: baseline.profile_id, rows: 15, lucode: 82, usle_c: row82(baseline).usle_c });
   await page.locator('[data-pw-action="revise"]').waitFor({ state: 'visible' });
   await shot('01-original-profile');
+  await writeJournal();
 
+  if (journal.save_request || journal.save_task_id) {
+    await continueSavedProfile();
+  } else {
   await page.locator('[data-pw-action="revise"]').click();
   await page.locator('[data-pw-field="profile.title"]').fill(title);
   const references = page.locator('[data-pw-field="profile.references"]');
@@ -180,11 +292,14 @@ async function main() {
   await page.locator('[data-pw-action="save"]').click();
   const task = await nativeJSON(await saveResponse, 'save working profile');
   journal.save_task_id = task.id;
+  await writeJournal();
   const savedButton = page.locator('[data-pw-library] [data-pw-action="open"]').filter({ has: page.getByText(title, { exact: true }) });
   await savedButton.waitFor({ state: 'visible', timeout: 180000 });
   journal.saved_profile_id = await savedButton.getAttribute('data-pw-id');
   requireValue(journal.saved_profile_id && journal.saved_profile_id !== args.profile, 'The saved revision did not acquire its own native profile ID.');
   journal.steps.push({ step: 'Save working source alternative', task_id: task.id, profile_id: journal.saved_profile_id });
+  await writeJournal();
+  }
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.locator('#workspace-select').waitFor({ state: 'visible' });
@@ -196,6 +311,7 @@ async function main() {
     review_state: reopened.review_state, rows: reopened.table.rows.length, lucode: 82, usle_c: row82(reopened).usle_c });
   await page.locator('[data-pw-reference]').waitFor({ state: 'visible' });
   await shot('04-saved-reopened-profile');
+  await writeJournal();
 
   await page.locator('[data-pw-reference]').selectOption(args.profile);
   const comparison = await clickRead(page.locator('[data-pw-action="compare"]'), 'compare',
@@ -230,7 +346,7 @@ try {
   await browser?.close().catch(() => {});
   journal.completed_at = new Date().toISOString();
   await mkdir(output, { recursive: true });
-  const report = join(output, 'journey.json');
-  await writeFile(report, JSON.stringify(journal, null, 2) + '\n');
+  const report = reportPath;
+  await writeJournal();
   process.stdout.write(JSON.stringify({ status: journal.status, report, saved_profile_id: journal.saved_profile_id || null }) + '\n');
 }

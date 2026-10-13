@@ -1136,6 +1136,10 @@ def verify_directory(destination, document, receipt):
                 raise ValueError("Received application contains a filesystem alias: " + name)
         if not path.is_file() or not stat.S_ISREG(path.stat().st_mode) or path.read_bytes() != body:
             raise ValueError("Received application source changed: " + name)
+        declared_mode = document["file_metadata"].get(name, {}).get("mode", "100644")
+        expected_mode = 0o755 if declared_mode == "100755" else 0o644
+        if stat.S_IMODE(path.stat().st_mode) != expected_mode:
+            raise ValueError("Received application permissions changed: " + name)
     return {"directory": str(destination), "files": len(document["files"])}
 
 

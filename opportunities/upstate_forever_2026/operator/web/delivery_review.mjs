@@ -184,7 +184,7 @@ export function createDeliveryReview(ctx) {
       'The PDF and HTML share the same saved quantities. Markdown supports editing; JSON carries the report values and provenance.',
       entries.filter(file => ['report', 'report_html', 'report_markdown', 'report_data', 'report_model'].includes(file.role)), used);
     html += group('Client companion',
-      'The decision guide retains the same original quantities, scenario support and seven-map context.',
+      'The decision guide retains the same original quantities, scenario support and selected map context.',
       entries.filter(file => /^client_report(?:_|$)/.test(file.role)), used);
     html += group('Complete delivery and working project',
       'Use the complete delivery for the report, maps and GIS outputs. The working scientific project restores the source files, model choices and retained native runs.',

@@ -112,8 +112,9 @@ handler override. Pure difference previews remain available to viewers.
 
 ## Extension integration
 
-team_route_policy.json records the reviewed route classification for the 56
-active installed manifests. It includes 80 permitted viewer POST reads,
+team_route_policy.json records the reviewed route classification for the 57
+active installed manifests: 228 method-specific routes, 11 file routes and
+168 task actions. It includes 85 permitted viewer POST reads,
 explicit mutating POST paths, and shared-source administrative paths.
 Unknown POST paths default to analyst access. HTTP method alone does not
 determine permission: for example GET of a saved paired view is a read, while

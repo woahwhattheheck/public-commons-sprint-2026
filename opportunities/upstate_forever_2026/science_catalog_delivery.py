@@ -119,6 +119,92 @@ def _companions(path, root):
             found.append(p)
     return found
 
+
+def _source_companions(datasets):
+    """Index native declared members without reading or materializing any file."""
+    indexed = {}
+    for row in datasets:
+        if not isinstance(row, dict):
+            continue
+        metadata = row.get("metadata") or {}
+        if not isinstance(metadata, dict) or metadata.get("native_kind") != "retained_source":
+            continue
+        binding = metadata.get("source_binding") or {}
+        if not isinstance(binding, dict) or binding.get("role") != "companion":
+            continue
+        key = tuple(binding.get(name) for name in ("collection_id", "source_id", "member"))
+        if all(isinstance(value, str) and value for value in key):
+            indexed.setdefault(key, []).append(row)
+    return indexed
+
+def _declared_companions(row, indexed):
+    """Expand only the selected native primary's original declared members."""
+    metadata = row.get("metadata") or {}
+    if not isinstance(metadata, dict) or metadata.get("native_kind") != "retained_source":
+        return []
+    binding = metadata.get("source_binding") or {}
+    if not isinstance(binding, dict) or binding.get("role") != "primary":
+        return []
+    source = metadata.get("source")
+    if not isinstance(source, dict) or not isinstance(source.get("companions", []), list):
+        raise CatalogDeliveryError("The retained source has invalid companion declarations.")
+    members = metadata.get("declared_companion_members")
+    if members is not None and (not isinstance(members, list)
+                               or len(members) != len(source.get("companions", []))):
+        raise CatalogDeliveryError("The retained companion member order differs from its source.")
+    result, seen = [], set()
+    for position, body in enumerate(source.get("companions", [])):
+        if not isinstance(body, dict):
+            raise CatalogDeliveryError("A declared source companion has no original descriptor.")
+        member = _member(body.get("view_path", members[position] if members is not None
+                                   else body.get("filename")))
+        if members is not None and member != _member(members[position]):
+            raise CatalogDeliveryError("The retained companion member differs from its original view.")
+        if member in seen:
+            raise CatalogDeliveryError("A retained source declares a companion more than once.")
+        seen.add(member)
+        expected, size = body.get("sha256"), body.get("bytes")
+        if (not isinstance(expected, str) or re.fullmatch(r"[0-9a-fA-F]{64}", expected) is None
+                or isinstance(size, bool) or not isinstance(size, int) or size < 0):
+            raise CatalogDeliveryError("A declared source companion has no original hash and byte count.")
+        key = (binding.get("collection_id"), binding.get("source_id"), member)
+        matches = indexed.get(key, [])
+        if len(matches) > 1:
+            raise CatalogDeliveryError("A declared source companion has multiple original datasets: " + member)
+        if matches:
+            companion = matches[0]
+            peer = companion.get("metadata") or {}
+            declared = {"path": companion.get("path"), "bytes": companion.get("bytes"),
+                        "sha256": companion.get("sha256"), "source_dataset_id": companion["id"],
+                        "source_binding": peer["source_binding"]}
+            if peer.get("source_record_sha256") != metadata.get("source_record_sha256"):
+                raise CatalogDeliveryError("A declared companion belongs to another retained edition: " + member)
+        else:
+            # A received collection keeps required files separately from the user's
+            # selected dataset records, so its exact retained binding reopens here.
+            retained = []
+            for item in metadata.get("retained_companions", []):
+                if not isinstance(item, dict):
+                    continue
+                peer = item.get("source_binding") or {}
+                if (isinstance(peer, dict) and peer.get("role") == "companion"
+                        and tuple(peer.get(name) for name in
+                                  ("collection_id", "source_id", "member")) == key):
+                    retained.append(item)
+            if len(retained) != 1:
+                raise CatalogDeliveryError("A declared source companion is unavailable: " + member)
+            declared = retained[0]
+        actual = declared.get("sha256")
+        if (not isinstance(actual, str) or actual.lower() != expected.lower()
+                or isinstance(declared.get("bytes"), bool) or declared.get("bytes") != size
+                or not isinstance(declared.get("source_dataset_id"), str)
+                or not declared["source_dataset_id"]):
+            raise CatalogDeliveryError("A declared companion differs from its original hash and bytes: " + member)
+        result.append({"path": declared.get("path"), "bytes": size, "sha256": expected.lower(),
+                       "source_dataset_id": declared["source_dataset_id"],
+                       "source_binding": copy.deepcopy(declared["source_binding"])})
+    return result
+
 def project_repository(repository, tenants):
     """Capture the exact StoreBackedRepository callbacks, without analyzing files."""
     if not all(callable(getattr(repository, name, None))
@@ -180,6 +266,7 @@ def prepare(catalog, allowed_root, refs=None):
             raise CatalogDeliveryError("Workspace root leaves the configured allowed root.")
         slot = hashlib.sha256(tenant.encode("utf-8")).hexdigest()[:24]
         row_out = {"root": "data/" + slot, "datasets": [], "jobs": [], "aois": [], "ensembles": []}
+        companion_index = _source_companions(original.get("datasets", []))
 
         def retain_file(row, kind, identifier, member=None):
             source = _resolve(row.get("path"), root)
@@ -210,16 +297,37 @@ def prepare(catalog, allowed_root, refs=None):
                 if clean.get("metadata") is not None:
                     raise CatalogDeliveryError("Scientific metadata must be an object.")
                 clean["metadata"] = {}
-            companions = []
-            for companion in _companions(source, root):
+            companions = {}
+            required = [{"path": path} for path in _companions(source, root)]
+            declared_members = _declared_companions(row, companion_index)
+            required.extend(declared_members)
+            if declared_members:
+                clean["metadata"]["declared_companion_members"] = [
+                    item["source_binding"]["member"] for item in declared_members]
+            for declared in required:
+                companion = _resolve(declared["path"], root)
                 comp_relative = companion.relative_to(root).as_posix()
                 comp_dest = row_out["root"] + "/" + comp_relative
-                comp_stat = companion.stat()
-                files.setdefault(comp_dest, {"source": companion, "descriptor": {
-                    "path": comp_dest, "bytes": comp_stat.st_size,
-                    "mtime_ns": comp_stat.st_mtime_ns, "sha256": None}})
-                companions.append({"path": comp_relative, "bytes": comp_stat.st_size})
-            clean["metadata"]["retained_companions"] = companions
+                comp_stat, comp_sha = companion.stat(), declared.get("sha256")
+                if "bytes" in declared and declared["bytes"] != comp_stat.st_size:
+                    raise CatalogDeliveryError("Declared companion byte count changed: " + companion.name)
+                prior = files.get(comp_dest)
+                if (prior and prior["descriptor"]["sha256"] and comp_sha
+                        and prior["descriptor"]["sha256"] != comp_sha):
+                    raise CatalogDeliveryError("Original records bind different hashes to one companion.")
+                if not prior or comp_sha:
+                    files[comp_dest] = {"source": companion, "descriptor": {
+                        "path": comp_dest, "bytes": comp_stat.st_size,
+                        "mtime_ns": comp_stat.st_mtime_ns, "sha256": comp_sha}}
+                retained = {"path": comp_relative, "bytes": comp_stat.st_size}
+                if comp_sha:
+                    retained["sha256"] = comp_sha
+                for key in ("source_dataset_id", "source_binding"):
+                    if key in declared:
+                        retained[key] = copy.deepcopy(declared[key])
+                companions[comp_relative] = {**companions.get(comp_relative, {}), **retained}
+            clean["metadata"]["retained_companions"] = [
+                companions[key] for key in sorted(companions)]
             index.append({"tenant_id": tenant, "kind": kind, "id": identifier,
                           "member": member, "filename": source.name, "path": dest,
                           "bytes": stat.st_size, "sha256": expected,
@@ -425,11 +533,13 @@ def _bundle(catalog, allowed_root, destination, refs=None):
             raise CatalogDeliveryError("A selected source edition changed before transfer completed.")
     copied, index = prepared["catalog"], prepared["index"]
     for tenant, row in copied["tenants"].items():
-        for dataset in row["datasets"]:
-            dataset["sha256"] = state["files"][row["root"] + "/" + dataset["path"]]["sha256"]
-        for job in row["jobs"]:
-            for artifact in job["artifacts"]:
-                artifact["sha256"] = state["files"][row["root"] + "/" + artifact["path"]]["sha256"]
+        retained = list(row["datasets"]) + [
+            artifact for job in row["jobs"] for artifact in job["artifacts"]]
+        for record in retained:
+            record["sha256"] = state["files"][row["root"] + "/" + record["path"]]["sha256"]
+            for companion in record["metadata"].get("retained_companions", []):
+                actual = state["files"][row["root"] + "/" + companion["path"]]
+                companion.update(actual)
     for item in index:
         item["sha256"] = state["files"][item["path"]]["sha256"]
     _write_json(stage / "catalog.json", copied)
