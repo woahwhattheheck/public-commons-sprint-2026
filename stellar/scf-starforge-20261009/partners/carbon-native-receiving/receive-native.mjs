@@ -224,7 +224,11 @@ try{
   const {prepareOriginalAccountingCase}=await import(pathToFileURL(join(sourceRoot,'receiving/accounting-case.mjs')).href);
   const accountingConfig=!savedAccounting&&options['accounting-config']?await readJSON(resolve(options['accounting-config'])):undefined;
   result.accounting=await stage('Original maintained accounting case and linked draft preparation',()=>savedAccounting||prepareOriginalAccountingCase({
-    service:carbon,client:carbonAPI,sourceRoot,config:accountingConfig,save,actor}));
+    service:carbon,client:carbonAPI,sourceRoot,config:accountingConfig,save,actor,requestFor,
+    readSaved:async path=>{
+      const target=join(output,path);if(!await exists(target))return undefined;
+      const value=await readFile(target,'utf8');return path.endsWith('.json')?JSON.parse(value):value;
+    }}));
   if(savedAccounting?.binding&&accountingDirectory)result.accounting={...result.accounting,directory:accountingDirectory};
   const carbonHandover=await retainedHandover('stellarcarbon-complete-handover.json',async()=>JSON.parse((await fetchOriginal(carbonAPI.handoverUrl())).content));
   let receivedCarbon=result.workspaces.stellarcarbonReceived;
@@ -365,12 +369,23 @@ try{
   const browserStage=await stage('Operate the complete customer, source, statement and receiving workflows in Chromium',async()=>{
     let browserCarbon={url:carbon.url,client:carbonAPI},browserGive={url:give.url,client:giveAPI},browserRoot=output;
     const priorBrowserRoot=join(output,browserPrefix);
-    if(recovery.resume&&(await exists(join(priorBrowserRoot,'browser-profile'))||await exists(join(priorBrowserRoot,'browser-actions')))){
+    if(recovery.resume&&(browserPrefix||await exists(join(priorBrowserRoot,'browser-profile'))||await exists(join(priorBrowserRoot,'browser-actions')))){
       // Preserve the partial browser-edited stores. A new complete browser attempt
       // starts from the actual pre-browser handovers; accounting is not replayed.
       await closeServices({strict:true});
-      result.browserAttempts||=[];browserPrefix='browser-attempts/'+String(result.browserAttempts.length+1).padStart(3,'0');
-      browserRoot=join(output,browserPrefix);await mkdir(browserRoot,{recursive:true,mode:0o700});
+      result.browserAttempts||=[];
+      await mkdir(join(output,'browser-attempts'),{recursive:true,mode:0o700});
+      let sequence=result.browserAttempts.length+1;
+      while(true){
+        browserPrefix='browser-attempts/'+String(sequence++).padStart(3,'0');
+        browserRoot=join(output,browserPrefix);
+        try{await mkdir(browserRoot,{mode:0o700});break;}
+        catch(error){if(error.code!=='EEXIST')throw error;}
+      }
+      result.browserAttempts.push({prefix:browserPrefix,startedAt:new Date().toISOString(),preservedPreviousPrefix:result.browserArtifactsPrefix||'',
+        carbonHandover:'stellarcarbon-complete-handover.json',giveCreditHandover:'givecredit-complete-handover.json',
+        reason:'Continue the complete browser workflow from retained pre-browser handovers while preserving the interrupted attempt.'});
+      result.browserArtifactsPrefix=browserPrefix;await checkpoint();
       const carbonCopy=await carbonStore.StellarcarbonWorkspace.create(join(browserRoot,'stellarcarbon'),{handover:carbonHandover});await carbonCopy.close();
       const giveCopy=await giveStore.GiveCreditWorkspace.create(join(browserRoot,'givecredit'),{handover:giveHandover});await giveCopy.close();
       const carbonService=await carbonServer.createStellarcarbonServer({directory:carbonCopy.directory});services.push(carbonService);
@@ -378,9 +393,6 @@ try{
       browserCarbon={url:carbonService.url,client:new carbonClient.StellarcarbonClient({baseUrl:new URL('/api',carbonService.url).href})};
       browserGive={url:giveService.url,client:new giveClient.GiveCreditClient(giveService.url,{actor})};
       await browserCarbon.client.state();await browserGive.client.state();
-      result.browserAttempts.push({prefix:browserPrefix,startedAt:new Date().toISOString(),preservedPreviousPrefix:result.browserArtifactsPrefix||'',
-        carbonHandover:'stellarcarbon-complete-handover.json',giveCreditHandover:'givecredit-complete-handover.json',
-        reason:'Continue the complete browser workflow from retained pre-browser handovers while preserving the interrupted attempt.'});
     }
     result.browserArtifactsPrefix=browserPrefix;await checkpoint();
     browser=await captureBrowser(browserRoot,browserPrefix);
