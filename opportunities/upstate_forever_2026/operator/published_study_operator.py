@@ -49,6 +49,9 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == "scdes-eighteenmile-trace-metals-2023":
+            from measurement_workspace import trace_metal_observations as trace_metals
+            return trace_metals.builtin_companion(self.builtin.parent.parent)
         if builtin_id == rl18151.BUILTIN_ID:
             return rl18151.builtin_companion(self.builtin.parent.parent)
         if builtin_id == sv833.BUILTIN_ID:
@@ -293,6 +296,12 @@ class PublishedStudyProvider:
                 microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
                 if microbial_source:
                     builtin.append(microbial_source)
+                trace_adapter = self.builtin.parent.parent / "measurement_workspace" / "trace_metal_observations.py"
+                if trace_adapter.is_file():
+                    from measurement_workspace import trace_metal_observations as trace_metals
+                    trace_source = trace_metals.catalog_entry(self.builtin.parent.parent)
+                    if trace_source:
+                        builtin.append(trace_source)
                 return {
                     **store.list_studies(),
                     "reviews": PublishedStudyReviews(store).catalog(),
