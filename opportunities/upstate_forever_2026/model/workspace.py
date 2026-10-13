@@ -15,7 +15,7 @@ from .common import (SCHEMA, INVEST_VERSION, ROLES, atomic_json, canonical,
 from .profiles import checked_parameters, inspect_table, scenario_spec
 from .model_selection import (normalize_selection, selected, grid_models, run_models,
                               required_roles, validate_completed_run)
-from .grid_reuse import reuse_grid_inputs
+from .grid_reuse import retain_grid_definition, reuse_grid_inputs
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -231,6 +231,7 @@ class Workspace:
         model_geometry = model_core if buffer_m == 0 else model_core.buffer(buffer_m)
         grid = rasters.grid_definition(
             reference, model_geometry, resolution=spec.get("resolution_m"))
+        grid = retain_grid_definition(self, spec, grid)
         key = digest({"spec": spec, "grid": grid})
         directory = self.root / "grids" / key
         directory.mkdir(parents=True, exist_ok=True)
@@ -316,6 +317,8 @@ class Workspace:
     def prepare_run(self, selection):
         profile = self._get("profiles", selection["profile_id"])
         scenario = self._get("scenarios", selection["scenario_id"])
+        from .scenario_footprint import validate_destination_codes
+        validate_destination_codes(profile, scenario)
         grid = self.get_grid(selection["grid_id"])
         selection, active = normalize_selection(selection, default=grid_models(grid))
         if not set(active).issubset(grid_models(grid)):

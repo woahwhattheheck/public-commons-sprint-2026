@@ -30,7 +30,6 @@ from model.common import atomic_json, canonical, digest, file_digest, held, now,
 from model.workspace import Workspace
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
@@ -54,9 +53,11 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "community.report.build", "portfolio.inventory.build", "portfolio.preview", "portfolio.save",
            "portfolio.scenario.prepare", "portfolio.report.build", "portfolio.decision.build",
            "portfolio.run.prepare", "portfolio.run.start"}
-ACTIONS.update(CONSERVATION_ACTIONS)
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
+# PROJECT-TRANSFER12 integration
+from project_transfer import ProjectTransfers, ACTIONS as PROJECT_TRANSFER_ACTIONS
+ACTIONS.update(PROJECT_TRANSFER_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
 
@@ -110,6 +111,7 @@ class Operator:
     def __init__(self, directory, state_directory, *, create=False, title=None,
                  source_manifests=(), source_roots=(), restore_directory=None, upload_limit=4*1024**3,
                  extraction_limit=64*1024**3):
+        self.project_transfers = ProjectTransfers(self, Fault)
         self.root = Path(state_directory).resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.owner = held(self.root / ".operator.lock", blocking=False)
@@ -121,7 +123,6 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
-        self.conservation = Conservation(self, Fault)
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -368,11 +369,11 @@ class Operator:
             atomic_json(self.root / "tasks" / (key + ".json"), task)
 
     def _invoke(self, task):
+        if task["action"] in PROJECT_TRANSFER_ACTIONS:
+            return self.project_transfers.invoke(task)
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
-        if action in CONSERVATION_ACTIONS:
-            return self.conservation.invoke(task)
         if action in REHEARSAL_ACTIONS:
             return self.rehearsals.invoke(task)
         if self.extensions.handles_action(action):
@@ -816,7 +817,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.conservation.decorate_task(self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task))))))
+        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.project_transfers.decorate_task(self.customer_reviews.decorate_task(task))))))
 
     def open_download(self, key):
         with self.lock:
@@ -943,10 +944,6 @@ class Handler(BaseHTTPRequestHandler):
             if url.path.startswith("/api/"):
                 self.authorized()
                 workspace = one("workspace", self.app.primary)
-                conservation_reads = {"/api/conservation/" + name: name for name in CONSERVATION_READS}
-                if url.path in conservation_reads:
-                    return self.send_json(200, self.app.conservation.read(workspace,
-                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))
                 rehearsal_reads = {"/api/rehearsals/" + name: name for name in REHEARSAL_READS}
                 if url.path in rehearsal_reads:
                     return self.send_json(200, self.app.rehearsals.read(workspace,

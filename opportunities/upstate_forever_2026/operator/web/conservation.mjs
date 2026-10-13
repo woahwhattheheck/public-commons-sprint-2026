@@ -105,7 +105,13 @@ export function attachConservation({
     if (!memories.has(key)) memories.set(key, {
       overview: null, overviewLoading: false, taskStamp: "", readVersion: 0,
       study: null, plan: null, selectedIds: new Set(), page: 1, pageSize: 25,
-      search: "", eligibility: "all", sort: "score", form: null,
+      search: "", eligibility: "all", sort: "score", direction: "desc", form: null,
+      ranges: Object.fromEntries(["rank", "score", "area_ha", "reporting_area_ha", "cost", "protected_fraction", "source_water_fraction"].flatMap(name => [[name + "_min", ""], [name + "_max", ""]])),
+      metricFilter: { pollutant: "", case: "baseline", field: "value", min: "", max: "", availability: "" },
+      catalogStatus: null, catalogPage: null, catalogQueryKey: null, catalogLoading: false,
+      catalogVersion: 0, catalogController: null, catalogTimer: null,
+      retainedSelection: null, excludedIds: new Set(), selectedPage: new Set(),
+      detailVersion: 0, detailRow: null, detailLoading: false,
       draft: freshStudy(), portfolio: freshPortfolio(), detailId: null,
       notice: null, busy: false, pending: new Set(), selectionOrigin: null,
     });
@@ -214,10 +220,11 @@ export function attachConservation({
         const opened = ui.study, revision = ui.readVersion;
         const retained = opened && (response.studies || []).find(row => row.id === opened.id);
         if (retained && retained.state !== opened.state) {
-          const updated = await read("study", { study_id: opened.id });
+          const updated = await catalogRead("study", { study_id: opened.id });
           if (updated && workspace() === key && ui.readVersion === revision && ui.study === opened)
             ui.study = updated;
         }
+        if (ui.study?.state === "complete") await refreshCatalog();
       }
     } catch (error) {
       if (workspace() === key) ui.notice = { kind: "error", message: error.message || String(error) };
@@ -226,36 +233,166 @@ export function attachConservation({
       if (workspace() === key) paint();
     }
   }
-  function candidates() {
-    const values = memory().study?.candidates;
-    return Array.isArray(values) ? values : Array.isArray(values?.rows) ? values.rows : [];
+  async function catalogRead(operation, value = {}, signal) {
+    const key = workspace();
+    const result = await api(endpoint("/api/conservation-catalog/" + operation),
+      { method: "POST", body: value, signal });
+    return workspace() === key ? result : null;
   }
-  function filtered() {
-    const ui = memory(), term = ui.search.trim().toLowerCase();
-    const rows = candidates().filter(candidate => {
-      if (ui.eligibility === "eligible" && !candidate.eligible) return false;
-      if (ui.eligibility === "excluded" && candidate.eligible) return false;
-      if (ui.eligibility === "selected" && !ui.selectedIds.has(String(candidate.id))) return false;
-      return !term || [candidate.id, candidate.label, ...(candidate.exclusion_reasons || [])]
-        .join(" ").toLowerCase().includes(term);
-    });
-    const rank = row => ui.sort === "area" ? row.reporting_area_ha :
-      POLLUTANTS.some(([name]) => name === ui.sort) ? row.pollutants?.[ui.sort]?.baseline : row.score;
-    rows.sort((a, b) => {
-      if (ui.sort !== "id") {
-        const av = rank(a), bv = rank(b);
-        if (finite(av) && finite(bv) && av !== bv) return bv - av;
-        if (finite(av) !== finite(bv)) return finite(av) ? -1 : 1;
+  function checkedCount(ui = memory()) {
+    return ui.retainedSelection ?
+      Math.max(0, ui.retainedSelection.count + ui.selectedIds.size - ui.excludedIds.size) :
+      ui.selectedIds.size;
+  }
+  function checked(candidate, ui = memory()) {
+    const id = String(candidate.id);
+    return ui.retainedSelection ? ui.selectedPage.has(id) : ui.selectedIds.has(id);
+  }
+  function setChecked(id, value, ui = memory()) {
+    id = String(id);
+    if (!ui.retainedSelection) {
+      if (value) ui.selectedIds.add(id); else ui.selectedIds.delete(id);
+      return;
+    }
+    const original = ui.excludedIds.has(id) ||
+      (!ui.selectedIds.has(id) && ui.selectedPage.has(id));
+    ui.selectedIds.delete(id); ui.excludedIds.delete(id);
+    if (value && !original) ui.selectedIds.add(id);
+    if (!value && original) ui.excludedIds.add(id);
+    if (value) ui.selectedPage.add(id); else ui.selectedPage.delete(id);
+  }
+  function clearChecked(ui = memory()) {
+    ui.retainedSelection = null; ui.selectedIds.clear();
+    ui.excludedIds.clear(); ui.selectedPage.clear(); ui.selectionOrigin = null;
+  }
+  function retainedRequest(selectedOnly = false, ui = memory()) {
+    return ui.retainedSelection ? {
+      selection_id: ui.retainedSelection.selection_id,
+      include_ids: [...ui.selectedIds].sort(), exclude_ids: [...ui.excludedIds].sort(),
+      selected_only: selectedOnly,
+    } : undefined;
+  }
+  function querySelection(ui = memory()) {
+    const filters = { search: ui.search.trim(),
+      eligible: ui.eligibility === "eligible" ? "yes" : ui.eligibility === "excluded" ? "no" : "all" };
+    if (ui.eligibility === "selected" && !ui.retainedSelection) filters.ids = [...ui.selectedIds].sort();
+    const range = (name, factor = 1) => {
+      const lower = ui.ranges[name + "_min"], upper = ui.ranges[name + "_max"];
+      if (lower === "" && upper === "") return;
+      const values = {};
+      if (lower !== "") values.min = numeric(lower, human(name) + " minimum", { min: -Infinity }) / factor;
+      if (upper !== "") values.max = numeric(upper, human(name) + " maximum", { min: -Infinity }) / factor;
+      if (values.min !== undefined && values.max !== undefined && values.min > values.max)
+        throw new Error(human(name) + " minimum must not exceed the maximum.");
+      filters[name] = values;
+    };
+    for (const name of ["score", "rank", "area_ha", "reporting_area_ha", "cost"]) range(name);
+    for (const name of ["protected_fraction", "source_water_fraction"]) range(name, 100);
+    if (ui.metricFilter.pollutant) {
+      const value = ui.metricFilter, rule = { pollutant: value.pollutant,
+        case: value.case || "baseline", field: value.field || "value" };
+      if (rule.case === "baseline" && ["delta", "reduction", "common_coverage_fraction"].includes(rule.field))
+        throw new Error("Choose a retained alternative for a paired metric filter.");
+      const fractional = ["coverage_fraction", "common_coverage_fraction"].includes(rule.field);
+      if (value.min !== "") rule.min = numeric(value.min, "Metric minimum", { min: -Infinity }) / (fractional ? 100 : 1);
+      if (value.max !== "") rule.max = numeric(value.max, "Metric maximum", { min: -Infinity }) / (fractional ? 100 : 1);
+      if (rule.min !== undefined && rule.max !== undefined && rule.min > rule.max)
+        throw new Error("Metric minimum must not exceed the maximum.");
+      if (value.availability) rule.availability = value.availability;
+      filters.metrics = [rule];
+    }
+    return { filters, sort: ui.sort === "area" ? "reporting_area_ha" : ui.sort,
+      direction: ui.direction, offset: (ui.page - 1) * ui.pageSize, limit: ui.pageSize };
+  }
+  function catalogRequest(ui = memory()) {
+    const result = { study_id: ui.study.id, selection: querySelection(ui) };
+    const retained = retainedRequest(ui.eligibility === "selected", ui);
+    if (retained) result.retained = retained;
+    return result;
+  }
+  async function loadCandidatePage(force = false) {
+    const key = workspace(), ui = memory(key);
+    if (!ui.study?.id || ui.catalogStatus?.state !== "complete") return;
+    let request;
+    try { request = catalogRequest(ui); }
+    catch (error) { ui.catalogLoading = false; ui.notice = { kind: "error", message: error.message }; paint(); return; }
+    const identity = JSON.stringify(request);
+    if (!force && ui.catalogQueryKey === identity && ui.catalogPage) return;
+    ui.catalogController?.abort();
+    const controller = new AbortController(), version = ++ui.catalogVersion;
+    ui.catalogController = controller; ui.catalogLoading = true; paint();
+    try {
+      const result = await catalogRead("query", request, controller.signal);
+      if (!result || workspace() !== key || version !== ui.catalogVersion || ui.study.id !== request.study_id) return;
+      if (result.study_id !== request.study_id) throw new Error("The candidate page belongs to another study.");
+      ui.catalogPage = result; ui.catalogQueryKey = identity;
+      ui.selectedPage = new Set((result.selected_ids_on_page || []).map(String));
+      if (!result.candidates.length && result.total > 0 && request.selection.offset >= result.total) {
+        ui.page = Math.ceil(result.total / ui.pageSize);
+        ui.catalogQueryKey = null;
+        await loadCandidatePage(true);
       }
-      return String(a.id).localeCompare(String(b.id));
-    });
-    return rows;
+    } catch (error) {
+      if (error.name !== "AbortError" && workspace() === key && version === ui.catalogVersion)
+        ui.notice = { kind: "error", message: error.message || String(error) };
+    } finally {
+      if (version === ui.catalogVersion) ui.catalogLoading = false;
+      if (workspace() === key) paint();
+    }
   }
-  function pageRows() {
-    const ui = memory(), rows = filtered();
-    ui.page = Math.min(Math.max(1, ui.page), Math.max(1, Math.ceil(rows.length / ui.pageSize)));
-    return rows.slice((ui.page - 1) * ui.pageSize, ui.page * ui.pageSize);
+  async function refreshCatalog(force = false) {
+    const key = workspace(), ui = memory(key), id = ui.study?.id, version = ui.readVersion;
+    if (!id || ui.study.state !== "complete") return;
+    const status = await catalogRead("status", { study_id: id });
+    if (!status || workspace() !== key || ui.readVersion !== version || ui.study?.id !== id) return;
+    const changed = ui.catalogStatus?.id !== status.id;
+    ui.catalogStatus = status;
+    if (status.state === "complete") await loadCandidatePage(force || changed);
+    else { ui.catalogPage = null; ui.catalogQueryKey = null; }
   }
+  async function openCandidate(id) {
+    const key = workspace(), ui = memory(key), studyId = ui.study?.id;
+    const version = ++ui.detailVersion;
+    ui.detailId = id; ui.detailRow = null; ui.detailLoading = true; paint();
+    try {
+      const candidate = await catalogRead("candidate", { study_id: studyId, candidate_id: id });
+      if (!candidate || workspace() !== key || ui.study?.id !== studyId || version !== ui.detailVersion) return;
+      ui.detailRow = candidate.candidate;
+    } catch (error) {
+      if (workspace() === key && version === ui.detailVersion)
+        ui.notice = { kind: "error", message: error.message || String(error) };
+    } finally {
+      if (version === ui.detailVersion) ui.detailLoading = false;
+      if (workspace() === key) paint();
+    }
+  }
+  async function useRetainedSelection(id) {
+    const key = workspace(), ui = memory(key), studyId = ui.study?.id;
+    const result = await catalogRead("selection", { study_id: studyId, selection_id: id });
+    if (!result || workspace() !== key || ui.study?.id !== studyId) return;
+    if (result.study_id !== studyId) throw new Error("The retained selection belongs to another study.");
+    clearChecked(ui);
+    ui.retainedSelection = result;
+    ui.page = 1; ui.notice = { kind: "status", message:
+      "Opened the complete retained cohort. Checked units can be adjusted on every page." };
+    await loadCandidatePage(true);
+  }
+  function resetCatalogFilters(ui = memory()) {
+    ui.search = ""; ui.eligibility = "all"; ui.page = 1;
+    for (const key of Object.keys(ui.ranges)) ui.ranges[key] = "";
+    ui.metricFilter = { pollutant: "", case: "baseline", field: "value", min: "", max: "", availability: "" };
+  }
+  function resetCatalog(ui = memory()) {
+    ui.catalogController?.abort(); clearTimeout(ui.catalogTimer);
+    ui.catalogVersion++; ui.detailVersion++; ui.catalogLoading = false;
+    ui.catalogPage = null; ui.catalogStatus = null; ui.catalogQueryKey = null;
+    ui.detailRow = null; ui.detailLoading = false;
+  }
+  function candidates() {
+    return memory().catalogPage?.candidates || [];
+  }
+  function filtered() { return candidates(); }
+  function pageRows() { return candidates(); }
   function buildSpec({ forCriteria = false } = {}) {
     const d = memory().draft;
     if (d.advanced_use) {
@@ -495,9 +632,9 @@ export function attachConservation({
     if (cost !== null && !ui.study.spec?.costs) {
       throw new Error("A cost limit needs a study with a retained cost table and currency.");
     }
-    if (p.mode === "manual" && !ui.selectedIds.size) throw new Error("Select at least one planning unit.");
+    if (p.mode === "manual" && !checkedCount(ui)) throw new Error("Select at least one planning unit.");
     if (p.mode === "manual" && !p.include_ineligible) {
-      const excluded = candidates().filter(item => ui.selectedIds.has(String(item.id)) && !item.eligible);
+      const excluded = candidates().filter(item => checked(item, ui) && !item.eligible);
       if (excluded.length) throw new Error("The checked selection contains " + excluded.length +
         " excluded units. Review their reasons or explicitly include units with eligibility exclusions.");
     }
@@ -513,22 +650,21 @@ export function attachConservation({
     ui.busy = true;
     paint();
     try {
-      const result = await read("study", { study_id: id });
+      const result = await catalogRead("study", { study_id: id });
       if (!result || version !== ui.readVersion || workspace() !== key) return;
       const same = String(ui.study?.id) === String(result.id);
+      if (!same) { resetCatalog(ui); resetCatalogFilters(ui); }
       ui.study = result;
       if (!preserveSelection && !same) {
-        ui.selectedIds = new Set(); ui.plan = null; ui.selectionOrigin = null;
+        clearChecked(ui); ui.plan = null; ui.selectionOrigin = null;
         ui.portfolio = freshPortfolio(); ui.form = null; ui.page = 1;
         ui.displayAlternative = result.spec?.score?.alternative_run_id || "";
       }
-      const present = new Set(candidates().map(candidate => String(candidate.id)));
-      ui.selectedIds = new Set([...ui.selectedIds].filter(item => present.has(item)));
-      if (result.mode === "source_context" && ui.portfolio.objective === "score" &&
-        !candidates().some(row => finite(row.score))) {
-        ui.portfolio.objective = "area";
-      }
-      ui.detailId = null;
+      ui.detailId = null; ui.detailRow = null;
+      if (result.state === "complete") await refreshCatalog(true);
+      if (result.mode === "source_context" && result.spec?.score?.basis === "context" &&
+          !Object.values(result.spec?.score?.context_weights || {}).some(value => finite(value) && value !== 0) &&
+          ui.portfolio.objective === "score") ui.portfolio.objective = "area";
     } catch (error) {
       if (workspace() === key) ui.notice = { kind: "error", message: error.message || String(error) };
     } finally {
@@ -542,13 +678,23 @@ export function attachConservation({
     try {
       const plan = await read("plan", { plan_id: id });
       if (!plan || version !== ui.readVersion || workspace() !== key) return;
-      const study = await read("study", { study_id: plan.study_id });
+      const study = await catalogRead("study", { study_id: plan.study_id });
       if (!study || version !== ui.readVersion || workspace() !== key) return;
+      resetCatalog(ui); resetCatalogFilters(ui); clearChecked(ui);
       ui.study = study; ui.plan = plan;
       ui.displayAlternative = study.spec?.score?.alternative_run_id || "";
       ui.selectedIds = new Set((plan.selected_ids || []).map(String));
       ui.selectionOrigin = plan.id; ui.page = 1; ui.detailId = null;
       ui.form = null; ui.notice = { kind: "status", message: "Opened " + (plan.title || plan.id) + "." };
+      const cohort = plan.selection?.catalog_selection;
+      if (cohort?.selection_id) {
+        const retained = await catalogRead("selection", { study_id: study.id, selection_id: cohort.selection_id });
+        if (workspace() !== key || version !== ui.readVersion) return;
+        ui.retainedSelection = retained;
+        ui.selectedIds = new Set((cohort.include_ids || []).map(String));
+        ui.excludedIds = new Set((cohort.exclude_ids || []).map(String));
+      }
+      if (study.state === "complete") await refreshCatalog(true);
     } catch (error) {
       if (workspace() === key) ui.notice = { kind: "error", message: error.message || String(error) };
     } finally {
@@ -815,10 +961,10 @@ export function attachConservation({
       input("plan.cost", "Maximum recorded cost, optional", p.cost, 'type="number" min="0" step="any"') +
       input("plan.count", "Maximum number of units, optional", p.count, 'type="number" min="0" step="1"') +
       "</div>" + check("plan.include_ineligible", "Include units with eligibility exclusions", p.include_ineligible) +
-      '<p class="cons-selection-count" aria-live="polite">' + ui.selectedIds.size +
+      '<p class="cons-selection-count" aria-live="polite">' + checkedCount(ui) +
       " units are checked for manual selection.</p>" +
       (p.mode === "ranked" ? '<p class="cons-help">Ranked greedy selection adds eligible units in priority order, ' +
-        "checks each new footprint against the limits and records skipped units and reasons.</p>" : "") +
+        "uses the complete study inventory, checks each new footprint against the limits and records skipped units and reasons.</p>" : "") +
       '<div class="cons-actions">' + button("save-plan", "Create saved portfolio", "", ui.busy) + "</div></form>";
   }
   function metricCell(metric, alternativeId = "", compact = true) {
@@ -925,15 +1071,56 @@ export function attachConservation({
         h(typeof value === "object" && value !== null ? JSON.stringify(value) : value) + "</td></tr>").join("") +
       "</tbody></table></div></details></section>";
   }
+  function catalogFilterFields() {
+    const ui = memory(), metric = ui.metricFilter;
+    const bounds = [
+      ["rank", "Retained rank"], ["score", "Saved score"],
+      ["area_ha", "Full unit area (ha)"], ["reporting_area_ha", "Reporting area (ha)"],
+      ["cost", "Recorded cost"], ["protected_fraction", "Protected share (%)"],
+      ["source_water_fraction", "Water-context share (%)"],
+    ];
+    const fields = bounds.map(([name, title]) => '<fieldset class="cons-filter-range"><legend>' + h(title) +
+      '</legend><div class="cons-grid">' + ["min", "max"].map(bound =>
+        '<label>' + (bound === "min" ? "Minimum" : "Maximum") +
+        '<input type="number" step="any" data-catalog-range="' + name + "_" + bound +
+        '" value="' + h(ui.ranges[name + "_" + bound]) + '"></label>').join("") + "</div></fieldset>").join("");
+    const control = (name, label, rows) => '<label>' + h(label) +
+      '<select data-catalog-metric="' + name + '">' +
+      rows.map(([value, title]) => option(value, title, metric[name])).join("") + "</select></label>";
+    const cases = [["baseline", "Original baseline"], ...(ui.study?.spec?.alternative_run_ids || [])
+      .map(id => [id, "Alternative " + id])];
+    return '<details class="cons-disclosure"><summary>Area, priority, context and quantity filters</summary>' +
+      '<p class="cons-help">Filters apply together to the full original inventory. Missing values remain missing. ' +
+      "Quantity bounds use the retained metric's stated units; coverage bounds use percentages.</p>" +
+      '<div class="cons-grid">' + fields + '</div><fieldset><legend>Native quantity</legend><div class="cons-grid">' +
+      control("pollutant", "Pollutant", [["", "No quantity filter"], ...POLLUTANTS]) +
+      control("case", "Native case", cases) +
+      control("field", "Quantity or support", [["value", "Annual quantity"], ["coverage_fraction", "Own valid support (%)"],
+        ["delta", "Alternative minus baseline"], ["reduction", "Baseline minus alternative"],
+        ["common_coverage_fraction", "Shared native support (%)"]]) +
+      control("availability", "Recorded availability", [["", "Any availability"], ["modeled", "Modeled"],
+        ["not_selected", "Model not selected"], ["unbound", "Native run unbound"]]) +
+      ["min", "max"].map(bound => '<label>' + (bound === "min" ? "Minimum" : "Maximum") +
+        '<input type="number" step="any" data-catalog-metric="' + bound + '" value="' +
+        h(metric[bound]) + '"></label>').join("") + '</div></fieldset><div class="cons-actions">' +
+      button("apply-filters", "Apply filters", "", ui.catalogLoading) +
+      button("clear-filters", "Clear numeric and quantity filters", "", ui.catalogLoading) + "</div></details>";
+  }
   function candidateTable() {
-    const ui = memory(), all = candidates(), rows = pageRows(), shown = filtered().length;
+    const ui = memory(), rows = pageRows(), shown = ui.catalogPage?.total || 0;
+    const total = ui.catalogPage?.original_count ?? ui.catalogStatus?.original_count;
+    if (ui.study?.state !== "complete") return "";
+    if (!ui.catalogStatus) return '<p role="status">Opening the original candidate catalog…</p>';
+    if (ui.catalogStatus.state !== "complete") return '<section class="cons-editor"><h3>Candidate search</h3>' +
+      '<p>Prepare the retained inventory for paging, source-bound selection and complete filtered exports.</p>' +
+      button("catalog-prepare", "Prepare candidate search", "", ui.busy) + "</section>";
     const pages = Math.max(1, Math.ceil(shown / ui.pageSize));
     const alternateIds = ui.study?.spec?.alternative_run_ids || [];
     const body = rows.map(candidate => {
-      const id = String(candidate.id), selected = ui.selectedIds.has(id);
+      const id = String(candidate.id), selected = checked(candidate, ui);
       return "<tr" + (selected ? ' class="cons-selected"' : "") + "><td>" +
         '<input type="checkbox" data-candidate-id="' + h(id) + '" aria-label="Select ' +
-        h(candidate.label || id) + '"' + (selected ? " checked" : "") + "></td>" +
+        h(candidate.label || id) + '"' + (selected ? " checked" : "") + (ui.catalogLoading ? " disabled" : "") + "></td>" +
         '<th scope="row">' + button("candidate", candidate.label || id, 'data-candidate="' + h(id) +
           '" class="cons-text-button"') +
         '<span class="cons-metric-note">' + h(id) + "</span></th>" +
@@ -951,21 +1138,28 @@ export function attachConservation({
           '<span class="cons-muted">Unmatched</span>') + "</td></tr>";
     }).join("");
     return '<div class="cons-toolbar"><label>Find units<input type="search" data-filter="search" value="' +
-      h(ui.search) + '" placeholder="ID, name or exclusion reason"></label>' +
+      h(ui.search) + '" placeholder="ID, name or original attribute"></label>' +
       '<label>Show<select data-filter="eligibility">' +
       [["all", "All units"], ["eligible", "Eligible"], ["excluded", "Excluded"], ["selected", "Checked"]]
         .map(([value, label]) => option(value, label, ui.eligibility)).join("") + "</select></label>" +
       '<label>Sort by<select data-filter="sort">' +
-      [["score", "Saved score"], ["area", "Reporting area"], ["id", "Identifier"], ...POLLUTANTS]
+      [["rank", "Retained rank"], ["score", "Saved score"], ["area", "Reporting area"], ["area_ha", "Full source unit area"], ["id", "Identifier"], ["label", "Name"], ["cost", "Recorded cost"], ["protected_fraction", "Protected share"], ["source_water_fraction", "Water-context share"], ...POLLUTANTS]
         .map(([value, label]) => option(value, label, ui.sort)).join("") + "</select></label>" +
+      '<label>Order<select data-filter="direction">' + [["desc", "Descending"], ["asc", "Ascending"]]
+        .map(([value, label]) => option(value, label, ui.direction)).join("") + "</select></label>" +
       (alternateIds.length ? '<label>Quantity comparison<select data-filter="displayAlternative">' +
         option("", "Baseline only", ui.displayAlternative) +
         alternateIds.map(id => option(id, "Alternative " + id, ui.displayAlternative)).join("") + "</select></label>" : "") +
-      "</div><div class=\"cons-toolbar\">" +
-      button("select-page", "Check eligible units on this page", "", ui.busy || !rows.length) +
-      button("clear-selection", "Clear checked units", "", !ui.selectedIds.size) +
-      '<span class="cons-selection-count" aria-live="polite">' + ui.selectedIds.size + " checked · " +
-      shown + " matching · " + all.length + " total units</span></div>" +
+      "</div>" + catalogFilterFields() + '<div class="cons-toolbar">' +
+      button("select-matching", "Retain all eligible matches", "", ui.busy || ui.catalogLoading || !shown || ui.eligibility === "excluded" || (ui.eligibility === "selected" && !!ui.retainedSelection)) +
+      button("export-matching", "Export all matching rows", "", ui.busy || ui.catalogLoading) +
+      button("select-page", "Check eligible units on this page", "", ui.busy || ui.catalogLoading || !rows.length) +
+      button("clear-selection", "Clear checked units", "", !checkedCount(ui)) +
+      '<span class="cons-selection-count" aria-live="polite">' + checkedCount(ui) + " checked · " +
+      shown + " matching · " + (total ?? "Opening") + " total units</span></div>" +
+      (ui.retainedSelection ? '<p class="cons-help">Complete retained cohort: ' + h(ui.retainedSelection.selection_id) +
+        ". Filtering or paging preserves your checked selection. Page changes can add or remove units from this cohort.</p>" : "") +
+      (ui.catalogLoading ? '<p role="status">Loading the selected candidate page…</p>' : "") +
       '<div class="cons-table-wrap" tabindex="0" role="region" aria-label="Candidate inventory">' +
       '<table class="cons-table cons-candidates"><caption>Retained candidate inventory · ' +
       h(ui.study?.spec?.planning_unit_label || "Planning unit") +
@@ -976,9 +1170,9 @@ export function attachConservation({
       '<th scope="col">Eligibility</th><th scope="col">Recorded cost</th></tr></thead><tbody>' +
       (body || '<tr><td colspan="12">No planning units match these filters.</td></tr>') +
       "</tbody></table></div><div class=\"cons-toolbar cons-pagination\">" +
-      button("previous-page", "Previous page", "", ui.page <= 1) +
+      button("previous-page", "Previous page", "", ui.catalogLoading || ui.page <= 1) +
       '<span>Page ' + ui.page + " of " + pages + "</span>" +
-      button("next-page", "Next page", "", ui.page >= pages) +
+      button("next-page", "Next page", "", ui.catalogLoading || ui.page >= pages) +
       '<label>Rows per page<select data-filter="pageSize">' +
       [25, 50, 100].map(size => option(size, size, ui.pageSize)).join("") +
       "</select></label></div>";
@@ -1101,7 +1295,7 @@ export function attachConservation({
   function content() {
     const ui = memory(), study = ui.study;
     const mode = study?.mode || study?.spec?.mode;
-    const selected = ui.detailId && candidates().find(candidate => String(candidate.id) === ui.detailId);
+    const selected = ui.detailId && ui.detailRow;
     return '<header class="cons-header"><div><h1>Conservation planning</h1><p>' +
       "Use retained planning units, source context and native model quantities to build a reproducible portfolio." +
       '</p></div><div class="cons-actions">' +
@@ -1115,7 +1309,7 @@ export function attachConservation({
       (study ? '<section class="cons-study"><div class="cons-section-title"><div><h2>' +
         h(study.title || study.spec?.title || study.id) + '</h2><p class="cons-metric-note">' +
         h(study.id) + " · " + h(human(study.state || "")) + "</p></div><div class=\"cons-actions\">" +
-        button("new-portfolio", "Create portfolio", "", ui.busy || !candidates().length) +
+        button("new-portfolio", "Create portfolio", "", ui.busy || study.state !== "complete") +
         button("export-study", "Export candidate inventory", 'data-study-id="' + h(study.id) + '"', ui.busy) +
         (study.state !== "complete" ? button("build-study", "Build this inventory",
           'data-study-id="' + h(study.id) + '"', ui.busy) : "") +
@@ -1129,6 +1323,7 @@ export function attachConservation({
         (ui.plan ? portfolioView(ui.plan) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
         (ui.form === "scenario" && !ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
+        (ui.detailLoading ? '<p role="status">Opening the complete original candidate…</p>' : "") +
         (selected ? candidateDetail(selected) : "") +
         candidateTable() + scenarioBridgesView(study.id) + "</section>" : overviewView());
   }
@@ -1326,7 +1521,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-catalog-range", "data-catalog-metric"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -1340,7 +1535,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-catalog-range],[data-catalog-metric]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -1359,17 +1554,17 @@ export function attachConservation({
     if (!mounted) return;
     const ui = memory();
     for (const node of mounted.querySelectorAll(".cons-selection-count")) {
-      node.textContent = node.textContent.replace(/^\d+/, String(ui.selectedIds.size));
+      node.textContent = node.textContent.replace(/^\d+/, String(checkedCount(ui)));
     }
     const clear = mounted.querySelector('[data-action="conservation-clear-selection"]');
-    if (clear) clear.disabled = !ui.selectedIds.size;
+    if (clear) clear.disabled = !checkedCount(ui);
   }
   function changed(event) {
     const target = event.target, ui = memory();
     if (!(target instanceof Element)) return;
     if (target.hasAttribute("data-candidate-id") && event.type === "change") {
       const id = target.getAttribute("data-candidate-id");
-      if (target.checked) ui.selectedIds.add(id); else ui.selectedIds.delete(id);
+      setChecked(id, target.checked, ui);
       target.closest("tr")?.classList.toggle("cons-selected", target.checked);
       ui.selectionOrigin = null;
       updateSelectionCount();
@@ -1399,10 +1594,20 @@ export function attachConservation({
       ui.draft.alternative_run_ids = [...values];
       return;
     }
+    const range = target.getAttribute("data-catalog-range");
+    if (range) { ui.ranges[range] = target.value; return; }
+    const metric = target.getAttribute("data-catalog-metric");
+    if (metric) { ui.metricFilter[metric] = target.value; return; }
     const filter = target.getAttribute("data-filter");
     if (filter) {
       ui[filter] = filter === "pageSize" ? Number(target.value) : target.value;
-      if (filter !== "displayAlternative") ui.page = 1;
+      if (filter !== "displayAlternative") {
+        ui.page = 1;
+        if (filter === "sort") ui.direction = ["id", "label", "rank"].includes(ui.sort) ? "asc" : "desc";
+        ui.catalogController?.abort(); ui.catalogVersion++; ui.catalogLoading = true;
+        clearTimeout(ui.catalogTimer);
+        ui.catalogTimer = setTimeout(() => void loadCandidatePage(true), filter === "search" ? 180 : 0);
+      }
       paint();
       return;
     }
@@ -1470,7 +1675,7 @@ export function attachConservation({
           if (!ui.overview) await refreshOverview(true);
           if (workspace() !== key) return true;
           if (node.dataset.studyId) {
-            const retained = await read("study", { study_id: node.dataset.studyId });
+            const retained = await catalogRead("study", { study_id: node.dataset.studyId });
             if (!retained || workspace() !== key) return true;
             ui.draft = draftFromStudy(retained.spec, ui.draft);
           }
@@ -1514,10 +1719,13 @@ export function attachConservation({
           if (ui.study?.id) await openStudy(ui.study.id, true);
           break;
         case "open-study":
-          await openStudy(node.dataset.studyId); break;
+          await openStudy(node.dataset.studyId);
+          if (node.dataset.selectionId) await useRetainedSelection(node.dataset.selectionId);
+          break;
         case "open-plan":
           await openPlan(node.dataset.planId); break;
         case "close-study":
+          resetCatalog(ui); ui.readVersion++; clearChecked(ui);
           ui.study = null; ui.plan = null; ui.detailId = null; ui.form = null; paint(); break;
         case "populate-json": {
           const original = ui.draft.advanced_use;
@@ -1538,33 +1746,70 @@ export function attachConservation({
           ui.form = "portfolio";
           if (!ui.portfolio.title) ui.portfolio.title = (ui.study?.title || ui.study?.spec?.title || "Study") + " portfolio";
           paint(); break;
-        case "save-plan":
-          await queue("conservation.plan.save", buildPlanSpec()); break;
+        case "save-plan": {
+          const spec = buildPlanSpec();
+          if (ui.retainedSelection && spec.mode === "manual") {
+            const { selected_ids, ...plan } = spec;
+            await queue("conservation.catalog.plan.save", { study_id: ui.study.id,
+              selection_id: ui.retainedSelection.selection_id, plan,
+              include_ids: [...ui.selectedIds].sort(), exclude_ids: [...ui.excludedIds].sort() });
+          } else await queue("conservation.plan.save", spec);
+          break;
+        }
+        case "catalog-prepare":
+          await queue("conservation.catalog.prepare", { study_id: ui.study.id }); break;
+        case "select-matching": {
+          if (ui.eligibility === "excluded") throw new Error("Show all or eligible units before retaining eligible matches.");
+          if (ui.eligibility === "selected" && ui.retainedSelection) throw new Error("This complete cohort is already retained. Use a different inventory filter to replace it.");
+          const selection = querySelection(ui);
+          selection.filters.eligible = "yes";
+          await queue("conservation.catalog.select", { study_id: ui.study.id, selection });
+          break;
+        }
+        case "export-matching":
+          await queue("conservation.catalog.export", catalogRequest(ui)); break;
+        case "apply-filters":
+          ui.page = 1; await loadCandidatePage(true); break;
+        case "clear-filters":
+          for (const key of Object.keys(ui.ranges)) ui.ranges[key] = "";
+          ui.metricFilter = { pollutant: "", case: "baseline", field: "value", min: "", max: "", availability: "" };
+          ui.page = 1; await loadCandidatePage(true); break;
         case "export-study":
           await queue("conservation.export", { study_id: node.dataset.studyId || ui.study?.id }); break;
         case "export-plan":
           await queue("conservation.export", { study_id: node.dataset.studyId || ui.plan?.study_id,
             plan_id: node.dataset.planId || ui.plan?.id }); break;
         case "select-page":
-          for (const candidate of pageRows()) if (candidate.eligible) ui.selectedIds.add(String(candidate.id));
+          for (const candidate of pageRows()) if (candidate.eligible) setChecked(candidate.id, true, ui);
           ui.selectionOrigin = null; paint(); break;
         case "clear-selection":
-          ui.selectedIds.clear(); ui.selectionOrigin = null; paint(); break;
+          clearChecked(ui); await loadCandidatePage(true); paint(); break;
         case "previous-page":
-          ui.page = Math.max(1, ui.page - 1); paint(); break;
+          ui.page = Math.max(1, ui.page - 1); await loadCandidatePage(true); break;
         case "next-page":
-          ui.page += 1; paint(); break;
+          ui.page += 1; await loadCandidatePage(true); break;
         case "candidate":
-          ui.detailId = node.dataset.candidate; paint(); break;
+          await openCandidate(node.dataset.candidate); break;
         case "close-detail":
-          ui.detailId = null; paint(); break;
-        case "edit-selection":
+          ui.detailVersion++; ui.detailId = null; ui.detailRow = null; ui.detailLoading = false; paint(); break;
+        case "edit-selection": {
           if (!ui.plan) throw new Error("Open a saved portfolio first.");
-          ui.selectedIds = new Set((ui.plan.selected_ids || []).map(String));
+          const cohort = ui.plan.selection?.catalog_selection;
+          if (cohort?.selection_id) {
+            await useRetainedSelection(cohort.selection_id);
+            ui.selectedIds = new Set((cohort.include_ids || []).map(String));
+            ui.excludedIds = new Set((cohort.exclude_ids || []).map(String));
+            await loadCandidatePage(true);
+          } else {
+            clearChecked(ui);
+            ui.selectedIds = new Set((ui.plan.selected_ids || []).map(String));
+          }
           ui.selectionOrigin = ui.plan.id;
           ui.portfolio = { ...freshPortfolio(), title: (ui.plan.title || "Portfolio") + " revision",
-            objective: candidates().some(row => finite(row.score)) ? "score" : "area" };
+            objective: ui.study?.spec?.score?.basis === "context" &&
+              !Object.values(ui.study?.spec?.score?.context_weights || {}).some(value => finite(value) && value !== 0) ? "area" : "score" };
           ui.form = "portfolio"; paint(); break;
+        }
         case "new-scenario":
           if (!ui.plan) throw new Error("Open a saved portfolio first.");
           ui.scenario = scenarioDraft(); ui.form = "scenario"; paint(); break;
@@ -1593,6 +1838,11 @@ export function attachConservation({
     if (!String(task?.action || "").startsWith("conservation.")) return "";
     const result = task.result || task.output || {};
     const meta = task._conservation || {};
+    if (task.action === "conservation.catalog.select" && task.state === "complete" && result.selection_id) {
+      return button("open-study", "Use complete retained selection", 'data-study-id="' + h(result.study_id) +
+        '" data-selection-id="' + h(result.selection_id) + '"') +
+        "<p>" + number(result.count) + " original units retained across all candidate pages.</p>";
+    }
     if (task.action === "conservation.criteria.prepare" && result.state === "complete" &&
         result.source_collection_id && result.source_id) {
       return '<div class="cons-actions">' + button("use-criteria", "Use prepared parcel criteria",
@@ -1602,8 +1852,8 @@ export function attachConservation({
     }
     const studyId = meta.study_id || result.study_id ||
       (["conservation.prepare", "conservation.build"].includes(task.action) ? result.id : null);
-    const planId = meta.plan_id ||
-      (task.action === "conservation.plan.save" ? result.id : result.plan_id);
+    const planId = meta.plan_id || result.plan_id ||
+      (task.action === "conservation.plan.save" ? result.id : null);
     const scenarioId = result.scenario_id || result.scenario?.id;
     const runId = result.run_id || result.run?.id || result.alternative_run_id;
     const experimentId = result.experiment_id || result.experiment?.id;

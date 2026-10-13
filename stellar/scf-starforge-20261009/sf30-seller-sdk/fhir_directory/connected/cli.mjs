@@ -24,6 +24,8 @@ const help=[
   'Conformance actions use the same call/value/download flow: directory_conformance_plan, assess, review, compare, findings, finding, rows and file.',
   'Declared relationships add directory_conformance_foreign_keys, foreign_key_candidates and foreign_key_matches with exact native pages.',
   'Use directory_conformance_file for complete foreignKeys, foreignKeyCandidates, foreignKeyMatches and foreignKeyCoverage files.',
+  'Returned procedures use directory_operating_return_prepare/revise/complete/apply/receive/export and exact review/comparison/input/rows/file reads.',
+  'Complete retains original review intent; apply uses the existing native plan receiver and retains its separately recoverable receipt.',
   'Operating Plans use directory_operating_plan_preview/create/save/receive/copy/compare/export plus directory_operating_document/draft/input/basis/catalog.',
   'Save the exact reviewed previewRecordId; full value responses and exported JSON/Markdown/HTML retain the original model history.',
   'Use the native Directory CLI for complete inputs above the connected inline limit. Existing input_apply retains its separately declared host-input limit.',

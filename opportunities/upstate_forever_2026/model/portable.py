@@ -37,6 +37,7 @@ APPLICATION_FILES = (
     "install_programmes.py",
     "requirements-paired-ensemble.txt",
     "PUBLISHED_STUDIES.md",
+    "eighteenmile_chlorophyll_reconciled.sources.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
