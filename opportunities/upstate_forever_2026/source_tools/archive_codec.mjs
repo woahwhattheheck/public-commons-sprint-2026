@@ -5,20 +5,33 @@ export function createArchiveCodec() {
   const fail = message => { throw new Error("archive_codec: " + message); };
   const bytes = value => value instanceof Uint8Array ? value : Uint8Array.from(value);
   function utf8Encode(text) {
-    const out = [];
+    // Determine the exact size before allocating; avoid a boxed-number array for the whole source.
+    let size = text.length;
     for (let i = 0; i < text.length; i++) {
-      let c = text.charCodeAt(i);
+      const c = text.charCodeAt(i);
       if (c >= 0xd800 && c <= 0xdbff) {
         const low = text.charCodeAt(++i);
         if (!(low >= 0xdc00 && low <= 0xdfff)) fail("unpaired UTF-16 surrogate");
-        c = 0x10000 + ((c - 0xd800) << 10) + low - 0xdc00;
+        size += 2;
       } else if (c >= 0xdc00 && c <= 0xdfff) fail("unpaired UTF-16 surrogate");
-      if (c < 0x80) out.push(c);
-      else if (c < 0x800) out.push(0xc0 | (c >>> 6), 0x80 | (c & 63));
-      else if (c < 0x10000) out.push(0xe0 | (c >>> 12), 0x80 | ((c >>> 6) & 63), 0x80 | (c & 63));
-      else out.push(0xf0 | (c >>> 18), 0x80 | ((c >>> 12) & 63), 0x80 | ((c >>> 6) & 63), 0x80 | (c & 63));
+      else if (c >= 0x800) size += 2;
+      else if (c >= 0x80) size++;
     }
-    return Uint8Array.from(out);
+    const out = new Uint8Array(size); let p = 0;
+    for (let i = 0; i < text.length; i++) {
+      let c = text.charCodeAt(i);
+      if (c >= 0xd800 && c <= 0xdbff)
+        c = 0x10000 + ((c - 0xd800) << 10) + text.charCodeAt(++i) - 0xdc00;
+      if (c < 0x80) out[p++] = c;
+      else if (c < 0x800) { out[p++] = 0xc0 | (c >>> 6); out[p++] = 0x80 | (c & 63); }
+      else if (c < 0x10000) {
+        out[p++] = 0xe0 | (c >>> 12); out[p++] = 0x80 | ((c >>> 6) & 63); out[p++] = 0x80 | (c & 63);
+      } else {
+        out[p++] = 0xf0 | (c >>> 18); out[p++] = 0x80 | ((c >>> 12) & 63);
+        out[p++] = 0x80 | ((c >>> 6) & 63); out[p++] = 0x80 | (c & 63);
+      }
+    }
+    return out;
   }
   function utf8Decode(input) {
     const a = bytes(input), chunks = [], part = [];
@@ -83,10 +96,11 @@ export function createArchiveCodec() {
   }
   function crc32(input) {
     let c = 0xffffffff;
-    for (const v of bytes(input)) c = crcTable[(c ^ v) & 255] ^ (c >>> 8);
+    const a = bytes(input);
+    for (let i = 0; i < a.length; i++) c = crcTable[(c ^ a[i]) & 255] ^ (c >>> 8);
     return (c ^ 0xffffffff) >>> 0;
   }
-  const shaK = Uint32Array.from([
+  const shaK = [
     0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
     0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
     0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
@@ -95,40 +109,45 @@ export function createArchiveCodec() {
     0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
     0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
     0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
-  ]);
-  const rotate = (x, n) => (x >>> n) | (x << (32 - n));
+  ];
   function sha256(input) {
     const a = typeof input === "string" ? utf8Encode(input) : bytes(input);
-    const n = a.length, padded = new Uint8Array(Math.ceil((n + 9) / 64) * 64);
-    padded.set(a); padded[n] = 128;
+    const n = a.length, whole = Math.floor(n / 64) * 64;
+    // Keep complete input blocks in place; only the final one or two blocks need padding.
+    const tail = new Uint8Array(n - whole < 56 ? 64 : 128);
+    tail.set(a.subarray(whole)); tail[n - whole] = 128;
     const high = Math.floor(n / 0x20000000), low = (n * 8) >>> 0;
     for (let i = 0; i < 4; i++) {
-      padded[padded.length - 8 + i] = (high >>> (24 - i * 8)) & 255;
-      padded[padded.length - 4 + i] = (low >>> (24 - i * 8)) & 255;
+      tail[tail.length - 8 + i] = (high >>> (24 - i * 8)) & 255;
+      tail[tail.length - 4 + i] = (low >>> (24 - i * 8)) & 255;
     }
-    const h = Uint32Array.from([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
-    const w = new Uint32Array(64);
-    for (let offset = 0; offset < padded.length; offset += 64) {
+    let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,
+        h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+    const w = new Array(64).fill(0);
+    for (let offset = 0; offset < whole + tail.length; offset += 64) {
+      const block = offset < whole ? a : tail, start = offset < whole ? offset : offset - whole;
       for (let i = 0; i < 16; i++) {
-        const p = offset + i * 4;
-        w[i] = ((padded[p] << 24) | (padded[p + 1] << 16) | (padded[p + 2] << 8) | padded[p + 3]) >>> 0;
+        const p = start + i * 4;
+        w[i] = ((block[p] << 24) | (block[p + 1] << 16) | (block[p + 2] << 8) | block[p + 3]) >>> 0;
       }
       for (let i = 16; i < 64; i++) {
         const x = w[i - 15], y = w[i - 2];
-        w[i] = ((rotate(x,7) ^ rotate(x,18) ^ (x >>> 3)) + w[i - 16] +
-                (rotate(y,17) ^ rotate(y,19) ^ (y >>> 10)) + w[i - 7]) >>> 0;
+        const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+        const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+        w[i] = (s0 + w[i - 16] + s1 + w[i - 7]) >>> 0;
       }
-      let [v0,v1,v2,v3,v4,v5,v6,v7] = h;
+      let v0=h0,v1=h1,v2=h2,v3=h3,v4=h4,v5=h5,v6=h6,v7=h7;
       for (let i = 0; i < 64; i++) {
-        const t1 = (v7 + (rotate(v4,6) ^ rotate(v4,11) ^ rotate(v4,25)) +
-                    ((v4 & v5) ^ (~v4 & v6)) + shaK[i] + w[i]) >>> 0;
-        const t2 = ((rotate(v0,2) ^ rotate(v0,13) ^ rotate(v0,22)) +
-                    ((v0 & v1) ^ (v0 & v2) ^ (v1 & v2))) >>> 0;
+        const s1 = ((v4 >>> 6) | (v4 << 26)) ^ ((v4 >>> 11) | (v4 << 21)) ^ ((v4 >>> 25) | (v4 << 7));
+        const s0 = ((v0 >>> 2) | (v0 << 30)) ^ ((v0 >>> 13) | (v0 << 19)) ^ ((v0 >>> 22) | (v0 << 10));
+        const t1 = (v7 + s1 + ((v4 & v5) ^ (~v4 & v6)) + shaK[i] + w[i]) >>> 0;
+        const t2 = (s0 + ((v0 & v1) ^ (v0 & v2) ^ (v1 & v2))) >>> 0;
         v7=v6;v6=v5;v5=v4;v4=(v3+t1)>>>0;v3=v2;v2=v1;v1=v0;v0=(t1+t2)>>>0;
       }
-      for (const [i,v] of [v0,v1,v2,v3,v4,v5,v6,v7].entries()) h[i] = (h[i] + v) >>> 0;
+      h0=(h0+v0)>>>0;h1=(h1+v1)>>>0;h2=(h2+v2)>>>0;h3=(h3+v3)>>>0;
+      h4=(h4+v4)>>>0;h5=(h5+v5)>>>0;h6=(h6+v6)>>>0;h7=(h7+v7)>>>0;
     }
-    return Array.from(h, v => v.toString(16).padStart(8,"0")).join("");
+    return [h0,h1,h2,h3,h4,h5,h6,h7].map(v => v.toString(16).padStart(8,"0")).join("");
   }
   const lengthBase = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
   const lengthExtra = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
@@ -194,7 +213,14 @@ export function createArchiveCodec() {
         if(ds>29)fail("invalid distance symbol");
         const back=distanceBase[ds]+read(distanceExtra[ds]);
         if(back>used)fail("distance precedes output");
-        for(let j=0;j<len;j++)emit(output[used-back]);
+        const end = used + len;
+        if (end > maxOutputBytes) fail("decompressed size exceeds maxOutputBytes");
+        if (end > output.length) {
+          const grown = new Uint8Array(Math.min(maxOutputBytes, Math.max(end, output.length * 2, 1)));
+          grown.set(output); output = grown;
+        }
+        // Copy sequentially: overlapping LZ77 matches must read bytes written by this same match.
+        while (used < end) { output[used] = output[used - back]; used++; }
       }
     } while(!final);
     return {bytes:output.slice(0,used),nextOffset:position};
@@ -221,7 +247,7 @@ export function createArchiveCodec() {
       members.push({start,end:p,bytes:decoded.bytes.length,crc32:actualCrc.toString(16).padStart(8,"0")});
     }
     if(!members.length)fail("empty gzip input");
-    const out=new Uint8Array(total);let offset=0;for(const chunk of chunks){out.set(chunk,offset);offset+=chunk.length;}
+    const out=chunks.length===1?chunks[0]:new Uint8Array(total);let offset=0;if(chunks.length>1)for(const chunk of chunks){out.set(chunk,offset);offset+=chunk.length;}
     return {bytes:out,members};
   }
   function deflateRaw(input) {
