@@ -562,12 +562,27 @@
         "operator/install_guided_journey.py",
         "operator/web/journey.css",
         "operator/web/journey.mjs",
-        "operator/web/regional_journey.mjs"
+        "operator/web/regional_journey.mjs",
+        "source_tools/receive_regional_progression.py",
+        "source_tools/REGIONAL_PROGRESSION.md",
+        "source_tools/open_regional_workflow.py",
+        "open_profile_desk.py",
+        "source/run_profile_workbench_browser.mjs",
+        "source/run_source_updates_browser.mjs",
+        "source/run_saved_regional_view_browser.mjs",
+        "source/run_chemistry_browser.mjs",
+        "operator/monitoring_receiving.py",
+        "model/native_worker.py",
+        "operator/native_jobs.py",
+        "operator/programme_jobs.py",
+        "operator/programmes.py",
+        "operator/web/jobs.mjs",
+        "operator/web/jobs.css"
       ],
       "requires": [
         "core"
       ],
-      "source_reference": "Current regional journey and saved project handoff from PR3100."
+      "source_reference": "Current regional journey and saved project handoff from PR3100. Complete regional progression and supervised native receiving from PR3152 and PR3205."
     },
     "investigations": {
       "title": "investigations",
