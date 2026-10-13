@@ -96,6 +96,7 @@ def _profiles():
 
 
 def _catalog(operator, workspace_key):
+    from model.model_selection import run_scope
     workspace = operator.ws(workspace_key)
     original = workspace.overview()
     scenarios = {row["id"]: row for row in original["scenarios"]}
@@ -121,7 +122,7 @@ def _catalog(operator, workspace_key):
             "scenario_title": scenarios.get(selected["scenario_id"], {}).get("title", selected["scenario_id"][:12]),
             "scenario_kind": scenarios.get(selected["scenario_id"], {}).get("kind"),
             "profile_title": profiles.get(selected["profile_id"], {}).get("title", selected["profile_id"][:12]),
-            "pollutants": [key for key in POLLUTANTS if key in row.get("artifacts", {})]})
+            "pollutants": [key for key in POLLUTANTS if key in run_scope(row)["available_artifacts"]]})
     network_sources = []
     for collection in original["sources"]:
         for entry in collection["entries"]:
@@ -405,6 +406,7 @@ def _decorate(operator, workspace_key, kind, original):
         view_links[path] = ticket
     folder = _folder(kind)
     report_path = folder + "/" + result["id"] + "/index.html"
+    result["_native_executions"] = _native_execution_rows(result.get("native_execution"))
     result["_kind"] = kind
     result["workspace_key"] = workspace_key
     result["_downloads"] = list(links.values())
@@ -413,27 +415,89 @@ def _decorate(operator, workspace_key, kind, original):
     return result
 
 
+def _native_plan_run(workspace, run_id, cache):
+    """Read producing-stage labels once per preview without altering native runs."""
+    if run_id not in cache:
+        from model import native_versions
+        from model.model_selection import run_scope
+        try:
+            run = workspace.inspect_run(run_id)
+            pollutants = [key for key in POLLUTANTS if key in run_scope(run)["available_artifacts"]]
+            versions = native_versions.model_versions(
+                run, native_versions.models_for_outputs(pollutants))
+            cache[run_id] = {
+                "id": run_id, "state": run["state"], "pollutants": pollutants,
+                "models": [{"model": model, **info, "label": native_versions.version_label(info)}
+                           for model, info in versions.items()],
+                "error": None,
+            }
+        except (ValueError, FileNotFoundError) as error:
+            cache[run_id] = {"id": run_id, "state": "unavailable",
+                            "pollutants": [], "models": [], "error": str(error)}
+    return cache[run_id]
+
+
 def _plan(workspace, payload):
     from model import receptor_experiments
-    proposed = receptor_experiments.plan(workspace, payload["selection"])
-    profiles, scenarios = {}, {}
+    compatibility_error = None
+    try:
+        proposed = receptor_experiments.plan(workspace, payload["selection"])
+    except ValueError as error:
+        # Recover choices only after revalidating the original selection and
+        # complete experiment snapshot. Malformed IDs/cases still raise here.
+        selected = receptor_experiments._selection(payload["selection"])
+        captured = receptor_experiments.snapshot(workspace, selected["experiment_id"])
+        chosen, groups, grid_id = receptor_experiments._group_cases(captured, selected)
+        compatibility_error = str(error)
+        proposed = {"id": None, "selection": selected, "snapshot": captured,
+                    "grid_id": grid_id, "chosen_cases": chosen, "groups": groups,
+                    "pending_cases": [row for row in chosen if row["state"] != "complete"]}
+    profiles, scenarios, run_cache = {}, {}, {}
     for row in proposed["snapshot"]["cases"]:
         if row["kind"] != "landcover":
             continue
         profile = profiles.setdefault(row["profile_id"], {
             "id": row["profile_id"], "title": row["profile_title"],
-            "baseline_run_id": row["baseline_run_id"], "complete_cases": 0, "total_cases": 0})
+            "baseline_run_id": row["baseline_run_id"], "complete_cases": 0,
+            "total_cases": 0, "completed_runs": {}})
         profile["total_cases"] += 1
         profile["complete_cases"] += row["state"] == "complete"
+        profile["baseline"] = _native_plan_run(workspace, profile["baseline_run_id"], run_cache)
+        if row["state"] == "complete":
+            profile["completed_runs"][row["run_id"]] = {
+                **_native_plan_run(workspace, row["run_id"], run_cache),
+                "scenario_id": row["scenario_id"], "scenario_title": row["scenario_title"]}
         scenarios.setdefault(row["scenario_id"], {"id": row["scenario_id"], "title": row["scenario_title"]})
+    choices = []
+    for profile in profiles.values():
+        choices.append({**profile, "completed_runs": list(profile["completed_runs"].values())})
+    groups = []
+    for group in proposed["groups"]:
+        groups.append({
+            **{key: group[key] for key in ("id", "profile_id", "profile_title", "baseline_run_id")},
+            "baseline": _native_plan_run(workspace, group["baseline_run_id"], run_cache),
+            "alternative_run_ids": [row["run_id"] for row in group["cases"]],
+            "alternatives": [{**_native_plan_run(workspace, row["run_id"], run_cache),
+                              "scenario_id": row["scenario_id"], "scenario_title": row["scenario_title"]}
+                             for row in group["cases"]],
+        })
     return {"id": proposed["id"], "grid_id": proposed["grid_id"],
+            "compatible": compatibility_error is None, "compatibility_error": compatibility_error,
             "experiment_id": proposed["selection"]["experiment_id"],
             "selected_cases": len(proposed["chosen_cases"]), "pending_cases": len(proposed["pending_cases"]),
-            "profiles": list(profiles.values()), "scenarios": list(scenarios.values()),
-            "groups": [{key: group[key] for key in ("id", "profile_id", "profile_title", "baseline_run_id")}
-                       | {"alternative_run_ids": [row["run_id"] for row in group["cases"]]}
-                       for group in proposed["groups"]]}
+            "profiles": choices, "scenarios": list(scenarios.values()), "groups": groups}
 
+
+def _native_execution_rows(binding):
+    if not binding:
+        return []
+    from model import native_versions
+    return [{"run_id": run_id, "model": model,
+             "label": native_versions.version_label(info),
+             "stage_completed_at": info.get("stage_completed_at"),
+             "reused_from": deepcopy(info.get("reused_from"))}
+            for run_id, models in binding.get("native_version_provenance", {}).get("runs", {}).items()
+            for model, info in models.items()]
 
 def read(operator, workspace_key, operation, payload):
     workspace = operator.ws(workspace_key)
