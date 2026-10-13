@@ -3,12 +3,12 @@
   "operation": "ECO-S1-GEOGRAPHIC-EDITABLE-STUDY-RECEIVING-20261013",
   "source_file": "geographic-study-receiving.source.json",
   "source_identity": {
-    "bytes": 446013,
-    "sha256": "2c52e6b7cd237657aec5c3e61e714fe04d9b0de8a8cd357c761872a08b2fdf1f",
-    "git_blob": "91acd80934fdf619bf2e88553593dd0ea7763e29"
+    "bytes": 517437,
+    "sha256": "252af26c4eaf5413ddc3e44779b8d09ac60352b89d2b63c5cb90dc2a1293f36c",
+    "git_blob": "9146bd43f67f94d66dd789b9d21db5b988bb3835"
   },
-  "source_files": 19,
-  "source_bytes": 410097,
+  "source_files": 21,
+  "source_bytes": 470500,
   "source_references": [
     {
       "pull_request": 4342,
@@ -20,6 +20,22 @@
       "pull_request": 4363,
       "merge_commit": "6085377dcb4a9b85227dece07e3da1eda70a1178",
       "scope": "All six current producer and maintained robust-installer files."
+    },
+    {
+      "pull_request": 4410,
+      "merge_commit": "3dbd2bf3",
+      "scope": "Current original ensemble source lineage."
+    },
+    {
+      "pull_request": 4412,
+      "merge_commit": "55f1a35f7b802e5813dc28db5ae0736d58aef83f",
+      "scope": "Current paired-operation report identity, explicit portable dependency and full guide."
+    },
+    {
+      "path": "source/install_robust_workbench.py",
+      "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
+      "predecessor_git_blob": "c007883c8971f299f8740bf8484046b762cb3eeb",
+      "scope": "Original installer publisher's seven optional receiving paths and complete conditional dependency check."
     }
   ],
   "files": [
@@ -101,23 +117,26 @@
     {
       "path": "integration/component_fragments/geographic-study-transfer.json",
       "encoding": "utf-8",
-      "bytes": 1235,
-      "sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506",
-      "git_blob": "257414eb424b87b0c9dd41499042b1b6ec965434"
+      "bytes": 1289,
+      "sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
+      "git_blob": "463acd73d416153949de3b8ac27b9645d23c254b",
+      "base_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506"
     },
     {
       "path": "model/GEOGRAPHIC_STUDY_TRANSFER.md",
       "encoding": "utf-8",
-      "bytes": 16621,
-      "sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9",
-      "git_blob": "46e7daf37b1203cdb50d352d276d11d62f18138e"
+      "bytes": 17162,
+      "sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
+      "git_blob": "e11987cbc599cd8d746cd254a96f1961f4860304",
+      "base_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9"
     },
     {
       "path": "model/geographic_study_transfer.py",
       "encoding": "utf-8",
-      "bytes": 45918,
-      "sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31",
-      "git_blob": "4ff21fa60b45ed18c26ecc414194ebc52f71f05a"
+      "bytes": 49304,
+      "sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
+      "git_blob": "41971bb595b93130dfa2212841892bdc50dbd832",
+      "base_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31"
     },
     {
       "path": "model/scientific_report_study_transfer.py",
@@ -159,10 +178,25 @@
     {
       "path": "source/install_robust_workbench.py",
       "encoding": "utf-8",
-      "bytes": 80953,
-      "sha256": "921fa6ea67db79db320b04753369afe93534385408b115e96fc19ab07900dddd",
-      "git_blob": "20e2b795da2d540a592b0d9b0eb854b2a84fecaf",
-      "base_sha256": "9ae2975c2d8036f9a42b4d831efa80752d04611cce2d8c585b782f9ebc5d644b"
+      "bytes": 92888,
+      "sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
+      "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
+      "base_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587"
+    },
+    {
+      "path": "model/paired_ensemble/ensemble_portable.py",
+      "encoding": "utf-8",
+      "bytes": 9673,
+      "sha256": "ff4c37f229f4df0855c0de6d2f737ff3bf9d294959d8480eb1bae1de690af4c8",
+      "git_blob": "3d607d51308726b917e008b87d59b6362906e392"
+    },
+    {
+      "path": "model/ensemble_study_transfer.py",
+      "encoding": "utf-8",
+      "bytes": 34814,
+      "sha256": "1695ba143d282d3a1ce7bd0757e270d1ab943327ae8cdfa216f3dce2dacc3376",
+      "git_blob": "183aaf612c5151ff2752cbada3ec6b8a62253577",
+      "base_sha256": "98de96c63ecbaca5f3057b8c3632c44c0deea99d96e272db46e1731e319bc75d"
     }
   ],
   "installation": {
@@ -179,8 +213,9 @@
     "publisher": "Existing WAT RegionalNativeInstaller V2 owner, coordinated in original Ecosystem Sales operation.",
     "robust_installer_join": {
       "source": "source/install_robust_workbench.py",
-      "retained_git_blob": "20e2b795da2d540a592b0d9b0eb854b2a84fecaf",
-      "required_additions": [
+      "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
+      "base_git_blob": "c007883c8971f299f8740bf8484046b762cb3eeb",
+      "included_paths": [
         "integration/component_fragments/geographic-study-receiving.json",
         "model/GEOGRAPHIC_STUDY_RECEIVING.md",
         "model/geographic_study_receiving.py",
@@ -189,18 +224,95 @@
         "source_tools/geographic_headwaters_handover.py",
         "source_tools/simulated_headwaters_handover.py"
       ],
-      "contract": "The retained producer installer predates the receiving component. Its current V2 owner composes the complete receiving entries and preserves all current paths before using that direct installer; alternatively use the complete selected-family route in the included receiving guide. Shared Study model/provider, descriptor and both existing browser bodies are complete postimages in this bank and require their published predecessor guards."
+      "contract": "The maintained installer now accepts and verifies the complete receiving integration. Invoke this source version against WAT's complete composed current application and explicit guarded layers; retain both geographic handover helpers. Existing identical postimages are reused. Any differing receiver body must match a declared predecessor, or be composed by its current owner before installation. Existing unrelated components remain required by their original validators."
     }
   },
+  "receiving_bindings": [
+    {
+      "path": "model/study_receiving.py",
+      "base_sha256": "85da248277b31f8b98234365668cee93d1856c83a8f0dde9276d066a74cb5ecb",
+      "post_sha256": "cce173589d6e34e985ff782af905e2839c66d66639e210636a94bcf55e13a021",
+      "post_git_blob": "8fec71d86a5d1f174a6f3767c61cf254edb36225"
+    },
+    {
+      "path": "operator/extensions/study-transfer.json",
+      "base_sha256": "c52f1dd1d14c769e46c253e9e7177ebedbb106d297c5437bb5750033b0f5777c",
+      "post_sha256": "0a9089f9ccbdacf24f468aa2686574f43d52e663384e8311b570c93c3db13576",
+      "post_git_blob": "5d9126a93cbc2e34907b9879604be93402a7cdbb"
+    },
+    {
+      "path": "operator/study_receiving.py",
+      "base_sha256": "84bccc03bede448a4469238f64b1acd764790c06679ba499af87a2600c40346c",
+      "post_sha256": "5bf5f07658a1151e6d3301ad9e2497bf9932c6f9b0e224d28c44b5b71a772f18",
+      "post_git_blob": "c3a16bcd049ccc81117254d2a77a0bed8cab42f8"
+    },
+    {
+      "path": "operator/web/geographic_workbench.mjs",
+      "base_sha256": "929bfe1c8b46c83b585b652ed4bec1f36d51d6ac9ee6f0b6b793da6fb59d8a63",
+      "post_sha256": "04ad03c94741ff2db4a18aaec9f04e01fbe9cbdf4895d166074fa8b6e28b27a7",
+      "post_git_blob": "f2acc263ff707ac684d192d40c9f96a7de2d5e99"
+    },
+    {
+      "path": "operator/web/received_studies.mjs",
+      "base_sha256": "0d21b234ce6c464446458c47cbe640f82fc1d17cfcbee93d1942e7068cf09769",
+      "post_sha256": "b023581ce44671f72c61e557cacc1e0eae73ddba4cc30cec62b5df4a027d112d",
+      "post_git_blob": "8012a69ce5a17af2bee6f17ab125a02f9951cbcc"
+    },
+    {
+      "path": "integration/component_fragments/geographic-study-transfer.json",
+      "base_sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506",
+      "post_sha256": "7bf033159d5337fce7b105b4ca2e2f8e2bf0f51176f758a6cd04826818a9768c",
+      "post_git_blob": "463acd73d416153949de3b8ac27b9645d23c254b"
+    },
+    {
+      "path": "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+      "base_sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9",
+      "post_sha256": "e8f35eeea55b90d86ea13630ced6319c2aad7a56a248244eb97620a945d18404",
+      "post_git_blob": "e11987cbc599cd8d746cd254a96f1961f4860304"
+    },
+    {
+      "path": "model/geographic_study_transfer.py",
+      "base_sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31",
+      "post_sha256": "3722b02c0cb2210cd7e11c7524006275f103f6f5cc3b79e126f5f588b4793999",
+      "post_git_blob": "41971bb595b93130dfa2212841892bdc50dbd832"
+    },
+    {
+      "path": "model/scientific_report_study_transfer.py",
+      "base_sha256": "d960e2bd403419bc7748047ba40cef25c996abff683072935f73f77aa9e5327f",
+      "post_sha256": "7a59392b8cde06c6596181845b9295aa163a603dda1fe08b1a9f112e915beb08",
+      "post_git_blob": "fa6975d9a7acb9d5471aac83fd9a28b5c1ed293f"
+    },
+    {
+      "path": "model/study_transfer.py",
+      "base_sha256": "7d3159fc0fd641ee5261f7f06ff5be3a1a3433ee0a0759f127fa9a05c4963279",
+      "post_sha256": "ab8486b9636447234512bd6f5cb22e1d8af4731f6534acd0a477476b4a065a6d",
+      "post_git_blob": "e996eb836104e7f9b45b24b14f694b644214f660"
+    },
+    {
+      "path": "source/install_robust_workbench.py",
+      "base_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587",
+      "post_sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
+      "post_git_blob": "5db35edad21387637d9472d243f50536d59e824a"
+    },
+    {
+      "path": "model/ensemble_study_transfer.py",
+      "base_sha256": "98de96c63ecbaca5f3057b8c3632c44c0deea99d96e272db46e1731e319bc75d",
+      "post_sha256": "1695ba143d282d3a1ce7bd0757e270d1ab943327ae8cdfa216f3dce2dacc3376",
+      "post_git_blob": "183aaf612c5151ff2752cbada3ec6b8a62253577"
+    }
+  ],
   "followup": {
-    "owner": "ES26",
-    "scope": "Current-operation paired report signature versus retained archive identity",
-    "current_producer": "4ff21fa60b45ed18c26ecc414194ebc52f71f05a",
-    "contract": "Retain this exact merged source as history; replace the producer only with its separately published reviewed successor for the affected paired-report case."
+    "state": "current-source-composed",
+    "paired_identity_correction": {
+      "pull_request": 4412,
+      "merge_commit": "55f1a35f7b802e5813dc28db5ae0736d58aef83f",
+      "producer": "41971bb595b93130dfa2212841892bdc50dbd832"
+    },
+    "installer": "5db35edad21387637d9472d243f50536d59e824a",
+    "publisher": "Existing WAT RegionalNativeInstaller V2 owner",
+    "native_boundary": "Original regional reference trio completed at 13:15:26 UTC; the actual installation/receiving owner governs its next quiet source boundary."
   },
-  "owner_direction": {
-    "path": "CURRENT_OWNER_DIRECTION.md",
-    "git_blob": "8cd1c1f3d371a2fb75471813844e31f489aa8272"
-  },
-  "application_prefix": "opportunities/upstate_forever_2026"
+  "predecessor_delivery_commit": "b937d37a7bf13f036f96e1cb4c8b60baa13768b1",
+  "superseded_unpublished_installer": "c4f95f9e4ccc2d21c12fdc0d4d29492789c14e20",
+  "validation": "All21 complete source bodies verified independently against exact UTF-8 bytes, SHA256 and native Git blob identities. Root and source peers reviewed the current paired/archive producer, native receiving API/browser handoff, complete maintained installer dependency checks and complete original source declarations. Actual outgoing browser/attachment acceptance belongs to the existing native receiving course."
 }

@@ -1,39 +1,40 @@
-# Geographic scientific Study receiving: complete authored source
+# Geographic scientific Study receiving: complete current source
 
-This delivery retains the complete merged Geographic producer and receiving feature: a saved scientific report can carry its original editable case through Study transfer, then open that exact case in the existing Geographic workbench. Original project identity, source order, native inputs, Programme and local allocation controls remain bound to the captured Study.
+This delivery contains the complete authored Geographic producer and receiving feature. A saved scientific report carries its original editable case through Study transfer and opens that exact case in the existing Geographic workbench. Project identity, source order, native inputs, Programme and allocation controls stay bound to the captured Study.
 
 ## Current source
 
-PR4342 merged at `82ae30acd0e950a6d015790d4dd6fd30dff0d0ec`; PR4363 merged at `6085377dcb4a9b85227dece07e3da1eda70a1178`. The complete source bank has **19 files / 410,097 original source bytes**, including both producer and receiving declarations, both handover helpers, the maintained producer installer and the full current owner direction.
+The source bank contains **21 files / 470,500 original source bytes**. It includes merged PR4342 receiving, PR4363 producer, PR4410 ensemble lineage, PR4412 current-operation/archive identity correction, both original handover helpers, the explicit paired portable dependency, the maintained installer's complete receiving integration, and the full current owner direction.
 
-- [Complete source bank](geographic-study-receiving.source.json): 446013 bytes, SHA256 `2c52e6b7cd237657aec5c3e61e714fe04d9b0de8a8cd357c761872a08b2fdf1f`.
-- [Exact source identities and predecessor guards](manifest.json).
-- [Complete receiving and native-family instructions](RECEIVING.md).
+- [Complete source bank](geographic-study-receiving.source.json): 517437 bytes; SHA256 `252af26c4eaf5413ddc3e44779b8d09ac60352b89d2b63c5cb90dc2a1293f36c`.
+- [Exact member identities and predecessor guards](manifest.json).
+- [Complete native-family receiving instructions and owner brief](RECEIVING.md).
 
-Each bank member includes its original UTF-8 body, byte count, SHA256 and Git blob identity. The eight modified shared files also retain their exact published predecessor hashes. New and unchanged helper paths preserve ordinary add-or-identical receiving. The earlier loose bank `fbd595be9a48ba6032325cac72f2901d891d9ed5` is the pre-merge source checkpoint; this directory is the maintained merged delivery.
+Every member carries its complete UTF-8 body, bytes, SHA256 and Git blob identity. Changed existing bodies retain verified predecessor hashes; incoming-identical bodies are reused. New and unchanged helpers use ordinary add-or-identical receiving. Preserve any unrecognized newer receiver body for composition by its existing owner.
+
+The predecessor delivery at `b937d37a7bf13f036f96e1cb4c8b60baa13768b1` remains in history. This successor includes the finished paired-report correction and the original installer's concurrent receiving integration. The parallel unpublished installer checkpoint `c4f95f9e4ccc2d21c12fdc0d4d29492789c14e20` is superseded by the maintained installer in this bank.
 
 ## One existing installer operation
 
-WAT's existing RegionalNativeInstaller V2 owner composes this bank into its complete current application. Keep that same publisher and the original native application boundary. The retained `source/install_robust_workbench.py` at `20e2b795da2d540a592b0d9b0eb854b2a84fecaf` contains the producer closure and predates the receiving extension.
+WAT's existing RegionalNativeInstaller V2 publisher composes this source into its complete current application at the existing native source boundary. The included `source/install_robust_workbench.py` is `5db35edad21387637d9472d243f50536d59e824a` (92,888 bytes). It accepts all seven receiving/helper paths, checks their actual dependency closure and registration before replacement, and preserves existing Programme, allocation, Study and Geographic validation.
 
-Its V2 successor needs these **seven explicit receiving/helper entries** in its allowed source set, together with composition validation for their actual dependencies:
+Both `source_tools/geographic_headwaters_handover.py` and `source_tools/simulated_headwaters_handover.py` are complete in this bank. The receiving provider uses their original editable-choices transport. The corrected producer is `41971bb595b93130dfa2212841892bdc50dbd832`; its paired archive helper is retained at `model/paired_ensemble/ensemble_portable.py`. Ensemble transfer is `183aaf612c5151ff2752cbada3ec6b8a62253577`, guarded against the independently retained original `9999c0287cf5b787ddedbb9f426eb9e3d3555457`.
 
-- `integration/component_fragments/geographic-study-receiving.json`
-- `model/GEOGRAPHIC_STUDY_RECEIVING.md`
-- `model/geographic_study_receiving.py`
-- `operator/geographic_receiving.py`
-- `operator/web/geographic_received_studies.mjs`
-- `source_tools/geographic_headwaters_handover.py`
-- `source_tools/simulated_headwaters_handover.py`
+From the owner's complete current source directory, use the maintained installer with the already verified current layers followed by this bank:
 
-The bank also carries the exact updated `model/study_receiving.py`, `operator/study_receiving.py`, `operator/extensions/study-transfer.json`, `operator/web/received_studies.mjs` and Programme-compatible `operator/web/geographic_workbench.mjs`. Preserve the existing installer owner's newer body and compose these guarded source entries; the retained installer is an original source reference for that composition.
+```sh
+"$UPSTATE_PYTHON" -B "$UPSTATE_CURRENT_SOURCE/source/install_robust_workbench.py" \
+  --application "$UPSTATE_RETAINED_APPLICATION" \
+  --packet "$UPSTATE_CURRENT_GUARDED_LAYER" \
+  --packet "$UPSTATE_HANDOFF/geographic-study-receiving.source.json"
+```
 
-The alternative maintained route is the complete selected-family assembler in RECEIVING.md: receive the current guarded declarations, export `geographic-study-receiving` from the complete authored application, compose that family against the actual receiver, and use `source_tools/install_cumulative_application.py` to create a new application/archive. The family includes `geographic-operator` and `study-transfer`; ordinary native imports, browser modules, extension assets and source-manifest dependencies must all resolve. This authored overlay is the changed feature and direct helpers; the family export supplies the complete existing runtime and data closure.
+Use the actual current installer above, not an older receiver-local copy. Each earlier layer must carry its real predecessor identities. When current bodies are already identical, the installer reuses them. A changed predecessor produces a concrete conflict before replacement. Keep active computation on its admitted source until the native owner closes that source boundary.
 
-## Retained paired-report follow-up
+For standalone application delivery, follow the complete selected-family route in RECEIVING.md. Export `geographic-study-receiving` from the complete application, retain its original declarations, compose the family against the actual receiver, and use `source_tools/install_cumulative_application.py` into a new destination. The family requires `geographic-operator` and `study-transfer`; source manifests, native modules, browser imports and extension assets travel through that existing dependency graph. This authored integration bank contains the feature and direct helpers; the full family export supplies the existing runtime and scientific input closure.
 
-The captured producer is `4ff21fa60b45ed18c26ecc414194ebc52f71f05a`. ES26 owns the separately observed current-operation paired report-signature versus original archive correction. Retain the current merge and the original completed archives as history, and compose the reviewed producer successor through the same installer operation when published. The affected paired-report receiving case must use that correction.
+## Actual receiving course
 
-## Native product acceptance
+The original regional reference trio completed at 13:15:26 UTC on October 13. Preserve its project, selected case, source/input bytes, run IDs and original completed results. The existing native owner installs, exports and receives the edited application at its quiet boundary.
 
-Use the existing native owner and original case. At its closed installation boundary, open the exact populated selected Study, export and receive it, verify the original project and case, use the received-case action to reopen its original editable Geographic workbench, then operate its controls and downloads and reopen the received application/Workspace. Inspect the actual outgoing pages and every attachment at screenshare width and 390px. Preserve the complete current owner brief in the bank, including native model priority, active progress and the 14:00 UTC cutoff. The retained source/readback checks describe source integrity; the existing native course supplies actual rendered product acceptance.
+Open the populated selected Study, export and receive it, use **Open saved geographic case**, inspect and edit the original choices, and exercise Programme/allocation controls, downloads and cold application/Workspace reopen. View the actual outgoing screens and every attachment at screenshare width and 390px. The complete owner brief remains in the bank and RECEIVING.md, including immediate native model priority, all-attachment inspection and the 14:00 UTC cutoff. Use the delivered source to continue the original selected Study through its saved Geographic case and complete editable application/Workspace handoff.
