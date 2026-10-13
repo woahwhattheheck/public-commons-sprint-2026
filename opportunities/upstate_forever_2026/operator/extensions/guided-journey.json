@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "guided-journey",
   "title": "Guided operating journey",
-  "version": "3",
+  "version": "4",
   "order": 10,
   "assets": [
     "journey.mjs",
@@ -11,6 +11,7 @@
     "regional_journey.css"
   ],
   "requires_actions": [
+    "source.import",
     "profile.save",
     "scenario.save",
     "grid.prepare",
@@ -40,6 +41,7 @@
       "openDesk",
       "openExperiment",
       "openMap",
+      "openJourneySource",
       "openScenario",
       "openProfile",
       "openGrid",

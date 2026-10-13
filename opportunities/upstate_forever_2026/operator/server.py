@@ -358,7 +358,8 @@ class Operator:
         selection = journey.get("selection")
         if not isinstance(selection, dict) or not isinstance(journey.get("notes", ""), str):
             raise Fault("JOURNEY_SELECTION", "Save the selected scientific records and text notes.")
-        fields = {"baseline_run_id": "runs", "grid_id": "grids", "profile_id": "profiles",
+        fields = {"source_collection_id": "sources",
+                  "baseline_run_id": "runs", "grid_id": "grids", "profile_id": "profiles",
                   "scenario_id": "scenarios", "run_id": "runs", "comparison_id": "comparisons",
                   "spatial_review_id": "spatial_reviews", "spatial_export_id": "spatial_exports",
                   "delivery_id": "deliveries"}
