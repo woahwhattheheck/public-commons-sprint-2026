@@ -153,3 +153,28 @@ and archive receiver remain authoritative. The Study transfer Receiving action
 uses the shared host's existing `openExtension` capability and existing
 Receiving `openPlan`/`openAnalysis` APIs; it introduces no reverse family
 dependency.
+
+
+## Choose original features before preparing or revising a study
+
+The source-plan form's **Choose original features and relationship** opens an inline reader of the original retained source. Choose its source collection and original vector layer, then read actual native IDs, typed attributes and geographic features. The published-water catalogue uses the same reader through **Choose original published features**. Existing direct JSON, source sample inspection and advanced retained selections remain available.
+
+The chooser calls the maintained Spatial catalogue, description and overlay APIs. Its Esri polygon reader is the same original reader used by Receiving preparation. Each response binds the original body SHA256 and selected layer. The map displays one paginated record page in the original coordinate reference system; its clipped display geometry never becomes scientific input. Saved plans continue to resolve the complete original source geometry through their native IDs. Exact attribute values appear alongside their original text so large integer identifiers are not rounded into new IDs.
+
+Choose either specific native IDs or all matching original IDs. Specific selections remain retained when navigating pages; Apply verifies every selected ID against the current original source/filter. **All matching original IDs** reads every page using the server's actual continuation and saves the complete matching native-ID list. It never treats the visible page as the whole source. The explicit IDs also preserve the exact native feature cohort when strict Spatial scalar matching differs from general Python equality. An absent ID or changed source/filter stops Apply without silently removing retained choices.
+
+Exact filters use actual original field names and JSON scalars: quoted strings, finite representable numbers, booleans or null. Pending filter edits must be read before Apply. Unsupported advanced filters remain in the original retained-selection editor. Selecting another source does not silently discard original filter or feature choices; the form explicitly retains other source metadata, intake references and evidence for review. The chooser can explicitly clear an attribute filter, remove selected IDs or select a different original layer. Values not supported by the original engine still require correction through its ordinary preparation diagnostics.
+
+For an upstream relationship, **Choose original network and routing fields** reads the real catchment layer and supplies its actual catchment-ID and downstream fields. It preserves the complete retained network scope; it does not clip the graph to the visible viewport or discard routing context nodes. Existing advanced network filters and native-ID restrictions remain unchanged in this chooser and can be revised explicitly in the complete retained-selection editor.
+
+### Contribution meaning
+
+A published source-area relationship uses original polygon geometry and zero context buffer. A point or line requires an explicitly justified geometric context or an evidenced relationship to the original HUC / ToHUC graph. The chooser asks for that method and rationale; it does not infer drainage from proximity. Original intake references, explicit HUC seeds, scientific classification, evidence and advanced relation metadata remain part of the form's retained selection. Several chosen features form one receiving-area selection; use separate areas for waters that need separate scientific identities.
+
+Applying a selection only edits the existing form. Saving uses the original plan/catalogue queue and immutable identities. The chooser guards the original form, workspace, source response and read generation; closing or replacing the form prevents late responses from applying a different selection. Existing saved-plan and completed-analysis revision, model calculations, C8FF accounting, Study transfer, Monitoring and report controls remain available.
+
+### Actual rendered-product acceptance
+
+Following Bryce's rendered-product instruction, publication and source-level checks alone do not establish that the operator is ready for a client demonstration. Open the exact outgoing installed application with a populated original Workspace, look at its actual rendered screens and operate the source/layer, filter, feature-page, map, Apply, save and reopen controls. Inspect desktop/screenshare and narrow/mobile widths, empty/loading/error states, original downloads and restored selections. Capturing screenshots without viewing them, DOM counts, HTTP200 or code review is insufficient. Repair clipped tables, unreadable identifiers, overflow, missing styles or broken controls in the same authorized workflow. Use the existing native/browser course; no replacement model calculation or new receiver is needed.
+
+The browser course can identify the inline root with data-water-source-picker, loading/error with data-water-source-loading/data-water-source-error, geographic display with data-water-source-map, rows with data-water-source-rows/data-water-source-row, and continuation/commit with data-water-source-next/data-water-source-apply. These attributes refer to the actual operator controls and do not create a separate verification interface.
