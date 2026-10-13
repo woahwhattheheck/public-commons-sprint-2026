@@ -44,6 +44,8 @@ The acquired physical-flow field is a severity choice list. It is not measured d
 
 ## Open, reproduce and continue
 
+Open measurement-explorer.html to filter the complete embedded observation table by station, parameter, exact comparison group, sampling window, month, censoring and original comments. Open a row to inspect all joined metadata, source-row links and original detection limits. The three analytical value-review records have a separate visible review label. MEASUREMENT_EXPLORER.md describes the controls, complete selected-row downloads and source links. Selection downloads contain all matching rows and all fields, including nested source and limit objects.
+
 Open report.html for the complete readable scientific report and its original-data figures. The report and its links are portable inside this source family. NATIVE_OPENING.md describes importing the collection into the existing Workspace, saving the native scientific report, exporting its selected study and opening the receiving archive.
 
 From the application directory, run:

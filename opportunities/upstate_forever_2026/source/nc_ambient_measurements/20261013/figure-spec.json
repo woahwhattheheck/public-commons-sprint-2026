@@ -883,7 +883,7 @@
               ]
             },
             {
-              "label": "USEPA170.1 method",
+              "label": "USEPA 170.1 method",
               "geometry": "scatter",
               "marker": "square",
               "points": [

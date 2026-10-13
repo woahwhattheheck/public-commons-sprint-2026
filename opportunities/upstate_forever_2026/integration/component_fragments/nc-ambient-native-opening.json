@@ -8,7 +8,10 @@
         "source/nc_ambient_measurements/20261013/open_saved_report.py",
         "source/nc_ambient_measurements/20261013/NATIVE_OPENING.md",
         "integration/component_fragments/nc-ambient-native-opening.json",
-        "model/scientific_report_editions.py"
+        "model/scientific_report_editions.py",
+        "source/nc_ambient_measurements/20261013/create_report_explorer.mjs",
+        "source/nc_ambient_measurements/20261013/MEASUREMENT_EXPLORER.md",
+        "source/nc_ambient_measurements/20261013/measurement-explorer.html"
       ],
       "source_manifests": [
         "nc_ambient_measurements.sources.json"

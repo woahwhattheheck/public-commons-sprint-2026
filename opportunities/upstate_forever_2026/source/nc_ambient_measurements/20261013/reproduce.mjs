@@ -7,6 +7,7 @@ import {derive,BASE} from "./derive.mjs";
 import {present} from "./present.mjs";
 import {reconcile} from "./reconcile_profiles.mjs";
 import {sourceManifest} from "./source_manifest.mjs";
+import {renderExplorer} from "./create_report_explorer.mjs";
 const root=fileURLToPath(new URL("../../../",import.meta.url));
 const args=process.argv.slice(2);
 if(args.some(arg=>!["--check","--write"].includes(arg))||args.includes("--check")&&args.includes("--write"))throw Error("Use --check or --write");
@@ -29,6 +30,7 @@ for(const source of [...provenance.captures,...provenance.cross_profile_captures
 const built=derive(files,provenance),presentation=present(built,provenance),profiles=reconcile(files,provenance);
 if(profiles.result.unmatched.length||profiles.result.legacy_only.length||profiles.result.differences.length||profiles.activity.unmatched.length||profiles.activity.legacy_only.length||profiles.activity.differences.length)throw Error("Current-profile reconciliation differs; review the explicit original field comparison");
 const generated={...built.files,...presentation.files,[BASE+"profile-reconciliation.json"]:JSON.stringify(profiles,null,2)+"\n"};
+generated[BASE+"measurement-explorer.html"]=renderExplorer(built);
 // The local explorer is generated from the same complete derived observation objects.
 Object.assign(files,generated);
 generated["nc_ambient_measurements.sources.json"]=JSON.stringify(sourceManifest(files,descriptor),null,2)+"\n";
