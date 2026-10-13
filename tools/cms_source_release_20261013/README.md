@@ -115,6 +115,22 @@ Added and removed fields are reported explicitly. Every changed facility can be 
 
 For data-only use, `node release.mjs compare BEFORE AFTER NEW_JSON` writes the same complete comparison model.
 
+### Compact complete comparison HTML
+
+The ordinary comparison HTML remains available. To produce a smaller standalone attachment from the same full source bundle:
+
+```sh
+node release.mjs render-comparison examples/may-2026-to-august-2026/comparison-complete.json /new/comparison-review-compact.html --compact
+```
+
+The compact file embeds the entire comparison bundle as gzip: both complete original transfers, every original national CSV row, all current API responses, all literal fields, exact date attribution and every review decision. It checks compressed and expanded SHA-256 identities, then independently reconstructs the same original editions and comparison before enabling controls. Original-file downloads, review JSON/CSV, complete source handover and receiving on another computer work through the same controls. The generated file needs no network, server or external script.
+
+Compact receiving uses the browser's built-in `DecompressionStream("gzip")`. An unsupported browser shows an explanation while controls remain unavailable; the ordinary uncompressed HTML remains usable. Compact source JSON is limited to128MiB expanded; larger packets can use ordinary rendering. The CLI uses Node's built-in gzip at level9 and verifies the complete decompressed bytes before writing the new HTML. `comparison_html.mjs` also exposes `renderComparisonHtml(template,packet,{compact,gzip,gunzip,sha256})` for existing integrations.
+
+The included complete actual May/August `comparison-review-compact.html` is714,976 UTF-8 bytes, versus3,286,534 bytes for the same ordinary template and source packet. Its gzip stream was produced with a verified fixed-Huffman encoder; Node's ordinary gzip implementation may produce a different valid size and identity. Both reconstruct the exact same3,236,837-byte compact JSON and the same18 change items. The complete national source makes this example larger than a256KiB embed limit. Share its ordinary complete-file link or attachment; the source records are retained in full.
+
+Append `--paired-review /actual/comparison-review-compact.html` to the existing recipient browser course. It opens that exact attachment in another fresh context, verifies actual source/comparison downloads, changes and re-imports a source-bound review, downloads all five original source files and captures desktop/390px light/dark views. The producer must open the returned screenshots and actual attachments.
+
 ## Meaningful receiving already exercised
 
 The full original 377-row/38-field current API-derived CSV was received through the CSV importer, reconstructed from its exact original input and reopened through the complete transfer. Its request is `current-csv-request.json`; origin is explicitly `derived-current-api-csv`, with the original API release ID and exact parent CSV SHA. The field comparison against the original API release yields 377 unchanged facilities and zero field changes.

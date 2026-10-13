@@ -379,3 +379,8 @@ native analysis stay with their original owner. Follow the full outgoing
 product/all-attachment rule above and in the recipient guide: producing peers
 must personally LOOK at actual renders and use the delivered attachments.
 Source publication is distinct from native and rendered completion.
+
+
+## Installed recipient acceptance
+
+The original author can now prepare the complete recipient editor, retain a whole returned manuscript, preview every native review request and accept the exact preview from Export and receive. See [AUDIT_RECIPIENT_INSTALLED.md](AUDIT_RECIPIENT_INSTALLED.md) for the original request recovery, complete custody export, native/CLI/MCP interfaces and same-case installed receiving command. The existing standalone recipient and colleague-correction workflows remain available. Complete rendered and attachment review is required before recipient-ready; source publication does not establish it.

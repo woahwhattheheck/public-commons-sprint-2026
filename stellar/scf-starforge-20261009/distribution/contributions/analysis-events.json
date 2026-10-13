@@ -1,0 +1,36 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "analysis-events",
+  "description": "Receive complete acquired event windows, continue original Analysis work, and hand the whole customer result into its existing Installation.",
+  "commands": {
+    "mcp-analysis-events": "stellar-forge/mcp-paid-agent/native-analysis-events-download.mjs",
+    "mcp-analysis-event-installation": "stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs"
+  },
+  "commandDescriptions": {
+    "mcp-analysis-events": "Receive original event files, inspect and resume the complete customer delivery, and reopen all files offline",
+    "mcp-analysis-event-installation": "Prepare and independently reopen a complete event customer Installation with every original file"
+  },
+  "exports": {
+    "./buyer/mcp/analysis-events": "./source/stellar-forge/mcp-paid-agent/native-analysis-events.mjs",
+    "./buyer/mcp/analysis-events-schema": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-schema.mjs",
+    "./buyer/mcp/analysis-events-contract": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-contract.mjs",
+    "./buyer/mcp/analysis-events-client": {
+      "types": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-client.d.mts",
+      "import": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-client.mjs"
+    },
+    "./buyer/mcp/analysis-events-download": {
+      "types": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-download.d.mts",
+      "import": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-download.mjs"
+    },
+    "./buyer/mcp/analysis-events-installation": {
+      "types": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation.d.mts",
+      "import": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs"
+    },
+    "./buyer/mcp/analysis-events-installation-core": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation-core.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-paid-agent/ANALYSIS_EVENTS.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/webhook-event-analysis.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/WEBHOOK_EVENT_ANALYSIS.md"
+  ]
+}

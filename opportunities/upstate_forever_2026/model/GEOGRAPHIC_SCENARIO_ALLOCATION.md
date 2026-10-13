@@ -72,6 +72,26 @@ The kernel retains each anchor's original Receiving upstream_huc_ids relationshi
 
 These union rows have original categorical allocation and three-run native-validity/support counts. They do not have pairwise mass totals unless an actual matching original Receiving union analysis supplies those results. No pairwise totals are copied or summed from the overlapping member anchors, and common support counts are not represented as a native load calculation.
 
+### Original Receiving utility quantities
+
+The maintained `geographic_utility_groups.augment` adds separate utility subjects to the original upstream Receiving plan. It preserves each selected individual HUC anchor and the existing family union, resolves the native feature IDs through the original source reader, and follows the retained ToHUC topology. The resulting plan must still cover exactly the geographic preparation's original model-domain HUC membership. Profile, source and implementation identities are retained in the original plan and context selection.
+
+Receiving evaluates each added utility subject on its own original union mask. Its available baseline/alternative masses and signed differences therefore come from an actual Receiving analysis, with the original pairwise valid-cell support and annual units. They are not sums of individual-anchor quantities. Each group records its selected anchors and complete profile membership; a partial geographic selection is explicitly labeled as a selected subset, never a complete utility catchment.
+
+| Retained utility view | Relationship and identity | Meaning of its numerical rows |
+| --- | --- | --- |
+| Original Receiving utility subject | `upstream_huc`; original analysis and subject IDs | Quantities evaluated directly on that subject's original Receiving mask, separately for each native pair and quantity scope |
+| Profile-mask allocation union | `profile_upstream_huc_union`; original profile and member-mask identities | Final categorical changes and three-run native-validity/support counts on the Boolean OR of retained anchor masks |
+
+Both views remain visible and distinguishable. Similar displayed polygons do not establish identical raster cells, pairwise support or quantities. The allocation companion does not attach, duplicate or infer the Receiving masses for its separate OR rows. Do not add overlapping utility, anchor or family rows. Full per-subject classification is retained in the context summary; original plan/source records retain the complete group provenance. Existing completed contexts remain readable, and the same completed-case report continuation creates the current context without rerunning a native model.
+
+
+## Physical setting of changed pixels
+
+Current allocation sources also retain the original aligned DEM, precipitation/runoff proxy, R and K input bindings and descriptive statistics at the actual changed pixels. These are shared native inputs sampled at each arm's changed locations, not scenario-induced physical changes or native pollutant effects. Original baseline classes 81/82/other, restoration/control overlap, valid/missing counts, stable population moments and shared whole-grid histogram edges remain explicit.
+
+The same bounded allocation pass produces complete `physical-contrasts.json`, `physical-contrasts.csv` and `physical-distributions.csv`. All are direct links in the original scientific report and members of its complete source archive. Whole-selection and utility summaries complement full local HUC/Receiving distributions. See [GEOGRAPHIC_PHYSICAL_CONTRASTS.md](GEOGRAPHIC_PHYSICAL_CONTRASTS.md) for exact units, source metadata, support and receiving. Historical completed sources without these optional fields remain readable.
+
 ## Reading the allocation report
 
 The report identifies the exact project, geographic preparation, allocation and three native runs before presenting numerical comparisons.

@@ -21,8 +21,8 @@ def _require(value, message):
         raise ValueError(message)
 
 
-def retained_prepared(workspace, output, selection_bytes, normalized_selection):
-    """Resume a completed preparation under the original admitted operation."""
+def _retained_preparation(workspace, output, selection_bytes, normalized_selection):
+    """Read the exact original admission without changing its native progress."""
     output = Path(output)
     original = read_json(output / "admission.json")
     state = read_json(output / "receiving.json")
@@ -48,11 +48,164 @@ def retained_prepared(workspace, output, selection_bytes, normalized_selection):
     relative = portable.member_name(prepared["directory"])
     original_prepared = read_json(workspace.root.joinpath(*relative.parts) / "prepared.json")
     _require(original_prepared == prepared, "Original Workspace geographic preparation changed")
+    return original, state, prepared
+
+
+def reference_snapshot(workspace, prepared, reference_basis):
+    """Verify the selected reference trio and the retained full-design snapshot."""
+    from source_tools.headwaters_parameter_course import _load, reference_report_basis
+    from model.model_selection import run_models, validate_completed_run
+    from model.native_versions import validate_run_comparison
+
+    _require(isinstance(reference_basis, dict), "Retain the exact reference report basis")
+    record, plan, directory = _load(workspace, prepared["ensemble_id"])
+    course = read_json(directory / "headwaters-results.json")
+    actual = reference_report_basis(workspace, plan["id"], course)
+    selected = [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+    expected = {"grid_id": prepared["grid_id"], "base_profile_id": prepared["profile_id"],
+                "baseline_scenario_id": prepared["baseline_scenario_id"],
+                "alternative_scenario_ids": prepared["alternative_scenario_ids"]}
+    _require(prepared["project_id"] == workspace.project["id"]
+             and record["selection"] == expected
+             and digest(record["selection"]) == record["selection_sha256"]
+             and plan["grid_id"] == expected["grid_id"]
+             and plan["baseline_scenario_id"] == expected["baseline_scenario_id"]
+             and plan["base_profile_ids"] == [expected["base_profile_id"]]
+             and plan["alternative_scenario_ids"] == expected["alternative_scenario_ids"]
+             and plan["members"][0]["profile_id"] == expected["base_profile_id"]
+             and record["input_source_collection_id"] == prepared["source_collection_id"]
+             and actual == reference_basis and actual["reference_ready"] is True
+             and actual["state"] == "reference_complete"
+             and actual["course_state"] in {"partial", "complete"}
+             and actual["reference_profile_id"] == prepared["profile_id"]
+             and len(selected) == 3 and len(set(selected)) == 3
+             and actual["reference_run_ids"] == selected
+             and actual["baseline_run_id"] == selected[0]
+             and actual["alternative_run_ids"] == selected[1:],
+             "Select the original completed reference trio and unchanged full-design progress")
+    for key in selected:
+        run = workspace.inspect_run(key)
+        validate_completed_run(run)
+        _require(tuple(run_models(run)) == ("ndr", "sdr"),
+                 "The original reference requires both completed NDR and SDR")
+    comparison = workspace.retained_item("comparisons", actual["comparison_id"])
+    _require(comparison["baseline_run_id"] == selected[0]
+             and [row["run_id"] for row in comparison["alternatives"]] == selected[1:],
+             "The reference comparison changed its original three-run order")
+    validate_run_comparison(workspace, comparison)
+    members = {}
+    root = workspace.root.resolve()
+    def keep(relative, expected=None):
+        relative = portable.member_name(relative).as_posix()
+        path = root / relative
+        _require(not path.is_symlink() and path.resolve(strict=True).is_relative_to(root)
+                 and stat.S_ISREG(path.stat().st_mode), "Retain an original reference record")
+        body = path.read_bytes()
+        value = json.loads(body)
+        _require(expected is None or value == expected,
+                 "Original reference record changed: " + relative)
+        members[relative] = {"path": relative, "bytes": len(body),
+                             "sha256": hashlib.sha256(body).hexdigest()}
+        return value
+    def artifacts(directory, values):
+        values = values.values() if isinstance(values, dict) else values
+        for item in values:
+            relative = (Path(directory) / portable.member_name(item["path"])).as_posix()
+            entry = {"path": relative, "bytes": item["bytes"], "sha256": identifier(item["sha256"])}
+            _require(relative not in members or members[relative] == entry,
+                     "Reference artifacts have conflicting original identities")
+            members[relative] = entry
+    ensemble_directory = "ensemble_results/" + plan["id"]
+    keep("ensembles/" + plan["id"] + ".json")
+    keep(ensemble_directory + "/headwaters-course.json", record)
+    keep(ensemble_directory + "/headwaters-results.json", course)
+    keep(ensemble_directory + "/state.json")
+    keep(ensemble_directory + "/operation.json", course["operation"])
+    keep("comparisons/" + comparison["id"] + "/comparison.json", comparison)
+    for alternative in comparison["alternatives"]:
+        artifacts("comparisons/" + comparison["id"], alternative["artifacts"])
+    scalar = course["operation"].get("report")
+    _require(scalar and scalar.get("state") == "complete",
+             "Retain the actual rendered scalar report for the reference edition")
+    artifacts("ensemble_reports/" + scalar["id"], scalar["files"])
+    joint = course["joint_decisions"]
+    for product in joint.get("support_group_reports") or [joint["report"]]:
+        report_id = identifier(product["report_id"])
+        directory = ensemble_directory + "/joint-decisions/" + report_id
+        manifest = keep(directory + "/manifest.json")
+        report = keep(directory + "/report.json")
+        _require(manifest["report_id"] == report_id and report["id"] == report_id,
+                 "Retain each original reference support-group decision report")
+        artifacts(directory, manifest["members"])
+        _require(product["archive_identity"]["path"] == directory + "/decision-package.zip",
+                 "Retain the original reference decision archive path")
+        artifacts("", [product["archive_identity"]])
+        keep(ensemble_directory + "/joint-decisions/" + report_id + "-selection.json")
+    paired = []
+    for product in course["operation"].get("raster_products", []):
+        if product.get("state") != "complete":
+            continue  # Original pending/failed product status remains in the captured course.
+        from model.paired_ensemble import EnsembleWorkspace
+        analysis_id = identifier(product["analysis_id"])
+        directory = "ensemble-products/" + analysis_id
+        keep(directory + "/analysis.json")
+        keep(directory + "/reports.json")
+        saved = EnsembleWorkspace(workspace).describe(analysis_id)
+        choice, reports = saved["selection"], saved["reports"]
+        scenario = product["scenario_id"]
+        expected_pairs = {}
+        for member in plan["members"]:
+            by_scenario = {item["scenario_id"]: item for item in member["runs"]}
+            left, right = by_scenario[plan["baseline_scenario_id"]], by_scenario[scenario]
+            if left["state"] == right["state"] == "complete":
+                expected_pairs[member["profile_id"]] = (left["run_id"], right["run_id"], scenario)
+        chosen = {member["profile_id"]: (member["baseline_run_id"], member["alternative_run_id"],
+                                        member["scenario_id"]) for member in choice["members"]}
+        refs = choice["source_references"]
+        _require(saved["state"] == "complete" and chosen == expected_pairs
+                 and len(chosen) == len(choice["members"])
+                 and choice["planned_member_count"] == len(plan["members"])
+                 and choice["selected_member_count"] == len(chosen)
+                 and prepared["profile_id"] in chosen
+                 and refs["project_id"] == workspace.project["id"]
+                 and refs["grid_id"] == plan["grid_id"]
+                 and refs["baseline_scenario"]["id"] == plan["baseline_scenario_id"]
+                 and refs["alternative_scenario"]["id"] == scenario
+                 and reports["ensemble_id"] == analysis_id
+                 and digest(reports) == product["report_signature"],
+                 "Retain the actual available-member paired product and full planned count")
+        artifacts(directory, saved["artifacts"])
+        artifacts(directory, reports["files"])
+        artifacts("", [product["archive"]])
+        paired.append({"id": analysis_id, "scenario_id": scenario,
+                       "selected_member_count": len(chosen),
+                       "planned_member_count": len(plan["members"]),
+                       "report_signature": product["report_signature"]})
+    return {"basis": actual, "record": record, "plan": plan, "course": course,
+            "comparison": comparison, "members": members, "paired_products": paired}
+
+
+def retained_prepared(workspace, output, selection_bytes, normalized_selection):
+    """Resume full handover only after every original native run completes."""
+    original, state, prepared = _retained_preparation(
+        workspace, output, selection_bytes, normalized_selection)
     plan = workspace._get("ensembles", prepared["ensemble_id"])
     run_ids = {item["run_id"] for member in plan["members"] for item in member["runs"]}
     _require(run_ids and all(workspace.inspect_run(key)["state"] == "complete" for key in run_ids),
              "Adopt report-only handover after all original native runs complete")
     return original, state, prepared
+
+
+def retained_reference_prepared(workspace, output, selection_bytes, normalized_selection):
+    """Read a completed reference edition without completing or dispatching sensitivities."""
+    from source_tools.headwaters_parameter_course import reference_report_basis
+    original, state, prepared = _retained_preparation(
+        workspace, output, selection_bytes, normalized_selection)
+    course = read_json(workspace.root / "ensemble_results" / prepared["ensemble_id"]
+                       / "headwaters-results.json")
+    basis = reference_report_basis(workspace, prepared["ensemble_id"], course)
+    reference_snapshot(workspace, prepared, basis)
+    return original, state, prepared, basis
 
 
 def _archive_selection(requested, handover):
@@ -67,12 +220,14 @@ def _archive_selection(requested, handover):
 
 
 def binding(workspace, prepared, scientific, delivery, review, response_id, *,
-            archive_selection=None, handover=None, utility_context=None):
-    """Describe the exact original selection required in a complete archive."""
+            archive_selection=None, handover=None, utility_context=None, reference_basis=None):
+    """Bind full-course completion, or an explicitly separate reference edition."""
     members = {}
     cache = {}
     source_ids = set()
     root = workspace.root.resolve()
+    reference = (reference_snapshot(workspace, prepared, reference_basis)
+                 if reference_basis is not None else None)
 
     def add(relative, expected):
         relative = portable.member_name(relative).as_posix()
@@ -157,10 +312,14 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
     grids = {}
     profiles = {}
     scenarios = {}
+    run_states = {}
     for run_id in run_ids:
         run = workspace.inspect_run(run_id)
-        _require(run["id"] == run_id and run["state"] == "complete",
+        _require(run["id"] == run_id
+                 and (run["state"] == "complete" or
+                      (reference is not None and run_id not in selected_runs)),
                  "Finish every selected original native run before complete handover")
+        run_states[run_id] = run["state"]
         record("runs/" + run_id + "/run.json", run)
         for item in run["artifacts"].values():
             descriptor("runs/" + run_id, item)
@@ -184,9 +343,26 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
     collection(prepared["source_collection_id"])
     collection(scientific["source"]["source_collection_id"])
 
+    if reference is not None:
+        for item in reference["members"].values():
+            descriptor("", item)
+
     scientific_id = identifier(scientific["id"])
     operation = record("ensemble-study-sources/" + scientific_id + "/operation.json",
                        {k: v for k, v in scientific.items() if k != "source_state"})
+    if reference is not None:
+        from model.ensembles import Ensembles
+        from model import ensemble_report
+        release = record("ensemble_reports/" + operation["selection"]["report_id"] + "/report.json")
+        report = release["report"]
+        actual_runs = {key: workspace.inspect_run(key) for key in run_ids}
+        _require(operation.get("native_state") == report["state"]
+                 and operation.get("progress") == report.get("progress", {})
+                 and report.get("progress") == reference["basis"]["native_progress"]
+                 and operation["selection"]["run_signature"] == Ensembles(workspace)._signature(actual_runs)
+                 and operation["selection"]["summary_signature"] == ensemble_report.summary_signature(report)
+                 and report["run_signature"] == operation["selection"]["run_signature"],
+                 "Reference scientific report must retain this exact full-design progress")
     for item in operation["files"].values():
         descriptor("", item)
     delivery_id = identifier(delivery["id"])
@@ -259,6 +435,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
         _require(handover_record.get("prepared") == prepared
                  and handover_record.get("scientific", {}).get("id") == scientific_id
                  and handover_record.get("delivery_id") == delivery_id
+                 and handover_record.get("reference_basis") == reference_basis
                  and handover_record.get("review", {}).get("review_id") == review["id"]
                  and handover_record.get("review", {}).get("latest_response_id") == response_id
                  and digest(handover_record) == handover["identity"]["content_sha256"]
@@ -310,12 +487,18 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
         "omitted_runtime_locks": sorted(omitted_runtime_members),
         "members": dict(sorted(members.items())),
     }
+    if reference is not None:
+        value.update(schema="upstate.geographic-reference-handover-binding/v1",
+                     completion_scope="reference", reference_basis=reference["basis"],
+                     completed_run_ids=sorted(key for key, state in run_states.items() if state == "complete"),
+                     pending_run_ids=sorted(key for key, state in run_states.items() if state != "complete"),
+                     run_states=run_states)
     return {"id": digest(value), **value}
 
 
 
 def retain_binding(workspace, output, prepared, scientific, delivery, review, response_id, *,
-                   archive_selection=None, handover=None, utility_context=None):
+                   archive_selection=None, handover=None, utility_context=None, reference_basis=None):
     """Retain the pre-backup selection before the archive's publication window.
 
     Its immutable generation survives a lost outer receiving checkpoint.
@@ -331,6 +514,9 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
         "handover_id": handover["id"] if handover is not None else None,
         "utility_context_id": utility_context["id"] if utility_context is not None else None,
     }
+    if reference_basis is not None:
+        reference_snapshot(workspace, prepared, reference_basis)
+        scope.update(completion_scope="reference", reference_basis=reference_basis)
     path = Path(output) / "archive-bindings" / (digest(scope) + ".json")
     if path.exists():
         selected = read_json(path)
@@ -342,7 +528,7 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
         return selected
     selected = binding(workspace, prepared, scientific, delivery, review, response_id,
                        archive_selection=archive_selection, handover=handover,
-                       utility_context=utility_context)
+                       utility_context=utility_context, reference_basis=reference_basis)
     atomic_json(path, selected, immutable=True)
     return selected
 

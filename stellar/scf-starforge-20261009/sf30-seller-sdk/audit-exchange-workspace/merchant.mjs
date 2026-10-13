@@ -24,7 +24,8 @@ export class MerchantAuditWorkspaces{
       const {input,bytes}=await readAuditHostInput(entry,args.input,args.expectedSha256);
       const inputs={name:input.name,contentBase64:bytes.toString("base64"),actor:args.actor,note:args.note};
       if(args.kind==="source"){inputs.selectedSchema=args.selectedSchema??"2.7.0";inputs.profileIds=args.profileIds??[];inputs.originUri=input.sourceReference;}
-      return client.action(args.kind==="source"?"source.import":"workspace.receive",inputs,args);
+      if(args.kind==="recipient")inputs.expectedSha256=args.expectedSha256;
+      return client.action(args.kind==="source"?"source.import":args.kind==="recipient"?"recipient.stage":"workspace.receive",inputs,args);
     }
     if(name==="merchant_audit_analyse_file"){
       const {input,bytes}=await readAuditHostInput(entry,args.weatherInput,args.expectedWeatherSha256);

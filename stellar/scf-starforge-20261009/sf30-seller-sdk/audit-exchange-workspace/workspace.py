@@ -25,6 +25,8 @@ READ_ACTIONS = {"workspace.get", "source.get", "edition.get", "source.compare", 
                 "return.preview", "return.plan"}
 WRITE_ACTIONS = {"source.import", "source.replace", "source.patch", "source.validate", "edition.save",
                  "review.save", "link.save", "projection.save", "analysis.run", "analysis.resume", "export.create", "workspace.receive", "return.apply"}
+from recipient_operator import SPECIAL_ACTIONS as RECIPIENT_ACTIONS, WRITE_ACTIONS as RECIPIENT_WRITES
+WRITE_ACTIONS |= RECIPIENT_WRITES
 APPLICATION_ID = 1096107080
 
 def identifier(prefix):
@@ -178,6 +180,9 @@ class Workspace:
         action = text(envelope.get("action"), "action", blank=False)
         inputs = envelope.get("inputs", {})
         require(isinstance(inputs, dict), "invalid_input", "Action inputs must be an object")
+        if action in RECIPIENT_ACTIONS:
+            from recipient_operator import perform as recipient_perform
+            return recipient_perform(self, envelope)
         require(action in READ_ACTIONS | WRITE_ACTIONS, "unknown_action", "The native action is unknown")
         with self.connect() as db:
             if action in READ_ACTIONS:
@@ -298,6 +303,9 @@ class Workspace:
         return record
 
     def _write(self, db, action, inputs):
+        if action in RECIPIENT_WRITES:
+            from recipient_operator import native_write as recipient_write
+            return recipient_write(self, db, action, inputs)
         if action == "return.apply":
             return self._apply_return(db, inputs)
         if action == "source.import":

@@ -492,6 +492,14 @@ export async function applicationOperation(root, { applicationId, operationId: i
   need(saved.applicationId === applicationId && saved.id === id, 'APPLICATION_OPERATION_CHANGED');
   return saved.request;
 }
+export async function applicationRunState(root, { applicationId, operationId: id } = {}, observations = null,
+  receiving = createWorkspaceReceivingReader(root)) {
+  const saved = await readJSON(join(directoryFor(root, applicationId), 'runs', operationId(id) + '.json'), true);
+  if (!saved) return null;
+  need(saved.schema === 'stellar-forge.application-run.v1' && saved.applicationId === applicationId && saved.id === id,
+    'APPLICATION_OPERATION_CHANGED');
+  return (await runViews(root, applicationId, [saved], observations, receiving))[0];
+}
 export async function applicationOutput(root, { applicationId, operationId: id } = {}, observations = null,
   receiving = createWorkspaceReceivingReader(root)) {
   await applicationOperation(root, { applicationId, operationId: id });
