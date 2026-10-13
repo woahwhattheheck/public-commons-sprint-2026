@@ -1,5 +1,6 @@
-/** Seven-family delivery planner and retained PDF atlas viewer. */
+/** Native-study and regional delivery planner with retained PDF atlas viewer. */
 import {createSpatialWorkspace} from './spatial.mjs';
+import {createAtlasReviewCollection} from './atlas_review_collection.mjs';
 const FAMILIES = [
  ['future_sediment_loss','Potential future sediment export'],
  ['future_nutrient_runoff','Potential future nitrogen and phosphorus export'],
@@ -14,6 +15,8 @@ const ROLES = [['PROTECTED_LANDS','Protected lands'],['PARCEL','Parcels'],
 const OVERLAYS = [['drinking_water','Drinking-water source areas',true],
  ['high_quality_waters','Designated high-quality waters',true],
  ['protected_lands','Protected-land map overlay',false],['parcels','Parcel priority inventory',false]];
+const isStudy = selection => selection?.delivery_mode==='native_study';
+const releaseFamilies = selection => FAMILIES.filter(([id])=>{const role=id==='critical_drinking_water'?'drinking_water':'high_quality_waters';return !isStudy(selection)||!['critical_drinking_water','high_quality_waters'].includes(id)||Boolean(selection.overlays?.[role])||(selection.receptor_spec?.receptors||[]).some(row=>row.role===role);});
 const MASS = ['nitrogen_export','phosphorus_export','sediment_export'];
 const STEPS = ['Native runs','Source context','Map settings','Review and build'];
 const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -104,7 +107,7 @@ const cohortLinked = selection => Boolean(selection.source_report_id || selectio
  selection.economic_edition_id || selection.economic_edition_sha256 ||
  selection.source_scenario_analysis_id || selection.source_scenario_analysis_sha256);
 function defaultSelection(data) {
- return {title:data?.project?.title||'',baseline_run_id:'',scenario_run_ids:[],source_roles:{},overlays:{},
+ return {delivery_mode:'regional_rfp',native_study:{title:'',purpose:'',reference:''},title:data?.project?.title||'',baseline_run_id:'',scenario_run_ids:[],source_roles:{},overlays:{},
   map_settings:{paper:'a4',dpi:220,display_percentile:98,weights:Object.fromEntries(MASS.map(k=>[k,1]))},
   contact:{name:'',organization:'',email:''},notes:[],observation_comparison_ids:[],spatial_review_ids:[],spatial_export_ids:[]};
 }
@@ -124,6 +127,12 @@ export function attachMapAtlas(host) {
   toast:message=>host.toast?.(message)
  });
 
+ const reviews=createAtlasReviewCollection({
+  getWorkspace:()=>host.getWorkspace?.()||host.getState()?.workspace_key||'',
+  getDelivery:()=>opened,getData:()=>data(),request:(...args)=>host.api(...args),
+  openReview:openSavedReview,prepareRelease:prepareReviewedRelease,
+  openItem:(...args)=>host.openItem?.(...args)
+ });
  const data=()=>state?.data||{};
  const key=()=>host.getWorkspace?.()||state?.workspace_key||'';
  const endpoint=(path,values={})=>path+'?'+new URLSearchParams({workspace,...values});
@@ -158,7 +167,7 @@ export function attachMapAtlas(host) {
   return rowBy(data(),'sources',choice?.source_collection_id)?.entries?.find(e=>e.id===choice?.source_id);
  }
  function sourceCard(group,key,label,required) {
-  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(draft[group]?.[key]);
+  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Object.prototype.hasOwnProperty.call(draft[group]||{},key);
   const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
   const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
@@ -182,11 +191,19 @@ export function attachMapAtlas(host) {
   if(step===0){
    next.title=value('title').trim();
    if(!cohortLinked(next)){next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
+   next.delivery_mode=value('delivery_mode')||'regional_rfp';
+   if(isStudy(next)){
+    const study={...(next.native_study||{})};
+    for(const [field,name] of [['title','study_title'],['purpose','study_purpose'],['reference','study_reference']]){
+     const control=f.elements.namedItem(name);if(control)study[field]=control.value.trim();
+    }
+    study.title=study.title||next.title;next.native_study=study;
+   }
   }
   if(step===1){
    for(const [group,items] of [['source_roles',ROLES.map(r=>[...r,true])],['overlays',OVERLAYS]]){
     next[group]??={};for(const [key,,required] of items){
-     const name=group+'__'+key,enabled=required||f.elements.namedItem(name+'__enabled')?.checked;
+     const name=group+'__'+key,enabled=(!isStudy(next)&&required)||f.elements.namedItem(name+'__enabled')?.checked;
      if(!enabled){delete next[group][key];continue;}
      const previous=next[group][key]||{};
      if(previous.selection_id||previous.native_source_sha256||previous.rule_reference)continue;
@@ -218,7 +235,7 @@ export function attachMapAtlas(host) {
    for(const name of MASS){m.weights[name]=numeric('weight_'+name);const cap=numeric('cap_'+name,{optional:true});
     if(cap!==undefined){if(cap<=0)throw Error('Priority caps must be positive.');m.caps[name]=cap;}}
    if(Object.values(m.weights).every(x=>x===0))throw Error('Choose at least one positive pollutant weight.');
-   for(const [id]of FAMILIES){const title=value('family_'+id).trim();if(title)m.family_titles[id]=title;}
+   for(const [id]of releaseFamilies(next)){const title=value('family_'+id).trim();if(title)m.family_titles[id]=title;}
    next.map_settings=m;
   }
   if(step===3){
@@ -231,13 +248,14 @@ export function attachMapAtlas(host) {
  function problems(selection=draft) {
   const out=[...deliveryEligibility(data(),selection).reasons];
   if(!selection.title?.trim())out.push('Enter the release title.');
-  for(const [group,items]of [['source_roles',ROLES],['overlays',OVERLAYS.filter(r=>r[2]||selection.overlays?.[r[0]])]]){
+  for(const [group,items]of [['source_roles',ROLES.filter(r=>!isStudy(selection)||selection.source_roles?.[r[0]])],['overlays',OVERLAYS.filter(r=>(!isStudy(selection)&&r[2])||selection.overlays?.[r[0]])]]){
    for(const [key,label]of items){const choice=selection[group]?.[key],entry=sourceEntry(choice);
     if(!choice?.source_collection_id||!choice?.source_id)out.push('Choose '+label.toLowerCase()+'.');
     else if(!entry)out.push(label+': the retained source is unavailable.');
     else if(group==='overlays'&&entry.kind!=='vector')out.push(label+': choose a vector source.');}
   }
-  for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
+  if(!isStudy(selection))for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
+  if(isStudy(selection)){if(!selection.native_study?.title?.trim())out.push('Enter the original study title.');if(!selection.native_study?.purpose?.trim())out.push('Describe the original study purpose.');}
   if(selection.receptor_spec){
    out.push(...receptorIssues(selection.receptor_spec));
    const baseline=rowBy(data(),'runs',selection.baseline_run_id),grid=rowBy(data(),'grids',baseline?.selection.grid_id);
@@ -313,7 +331,9 @@ export function attachMapAtlas(host) {
     (chosen.includes(run.id)?button('move','Move up','data-id="'+esc(run.id)+'" data-direction="-1" '+(linked||chosen.indexOf(run.id)===0?'disabled':''))+
      button('move','Move down','data-id="'+esc(run.id)+'" data-direction="1" '+(linked||chosen.indexOf(run.id)===chosen.length-1?'disabled':'')):'')+'</td></tr>';
   });
-  return '<div class="atlas-grid">'+field('Release title',input('title',draft.title,'required maxlength="140"'),'',true)+
+  return '<div class="atlas-grid">'+field('Delivery mode',select('delivery_mode',[['regional_rfp','Regional RFP · complete seven-family specification'],['native_study','Original native study · original grid and source domain']],draft.delivery_mode||'regional_rfp','required'),'The original study retains its actual grid and source coverage. Regional RFP requirements remain unchanged.',true)+
+   (isStudy(draft)?field('Original study title',input('study_title',draft.native_study?.title||draft.title,'required maxlength="140"'),'',true)+field('Study purpose',textarea('study_purpose',draft.native_study?.purpose||'','required rows="3"'),'State the intended scientific question and geographic scope.',true)+field('Study reference',input('study_reference',draft.native_study?.reference||''),'Original source, publication or release reference.',true):'')+
+   field('Release title',input('title',draft.title,'required maxlength="140"'),'',true)+
    field('Completed baseline',select('baseline',complete.map(r=>[r.id,runName(data(),r.id)]),draft.baseline_run_id,'required'+(linked?' disabled':'')),linked?'The saved report or economic edition supplies this ordered run selection.':'',true)+'</div>'+
    '<h3>Future land-cover alternatives</h3><p class="atlas-note">The first selected alternative supplies the principal future maps. Additional alternatives receive their own sheets. Each uses the baseline grid and parameter profile.</p>'+
    (rows.length?table(['Include','Scientific pairing',''],rows):'<p class="atlas-note">Complete a compatible land-cover alternative in the Native run desk to add it here.</p>')+
@@ -328,7 +348,7 @@ export function attachMapAtlas(host) {
    field('Landscape paper',select('paper',[['letter','US Letter · 11 × 8.5 in'],['a4','A4 · 297 × 210 mm'],['a3','A3 · 420 × 297 mm']],m.paper||'a4'))+
    field('Print DPI',input('dpi',m.dpi??220,'type="number" min="120" max="600" step="1" required'))+
    field('Shared display percentile',input('display_percentile',m.display_percentile??98,'type="number" min="0" max="100" step="any" required'),'The largest exact per-raster cap applies to every alternative for that pollutant.')+'</div>'+
-   '<h3>Family titles</h3><div class="atlas-grid">'+FAMILIES.map(([id,label])=>field(label,input('family_'+id,m.family_titles?.[id]||'','maxlength="110" placeholder="'+esc(label)+'"'),'',true)).join('')+'</div>'+
+   '<h3>Family titles</h3><div class="atlas-grid">'+releaseFamilies(draft).map(([id,label])=>field(label,input('family_'+id,m.family_titles?.[id]||'','maxlength="110" placeholder="'+esc(label)+'"'),'',true)).join('')+'</div>'+
    '<h3>Combined export priority</h3><p class="atlas-note">Weights and positive-cell caps define the saved dimensionless planning index. Blank caps use the existing positive-cell 95th percentile. The display percentile above controls the printed legends.</p>'+
    table(['Pollutant','Weight','Explicit priority cap'],MASS.map(id=>'<tr><td>'+esc(human(id))+'<small>'+esc(baseline?.artifacts?.[id]?.units||'Native export units')+'</small></td><td>'+
     input('weight_'+id,m.weights?.[id]??1,'type="number" min="0" step="any" required aria-label="'+esc(human(id)+' weight')+'"')+'</td><td>'+
@@ -453,16 +473,16 @@ export function attachMapAtlas(host) {
 
  function reviewStep(){
   const included=[draft.baseline_run_id,...(draft.scenario_run_ids||[])],c=draft.contact||{};
-  return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'','required'))+
-   field('Organization',input('contact_organization',c.organization||'','required'))+
-   field('Email',input('contact_email',c.email||'','type="email" required'),'',true)+
+  return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'',isStudy(draft)?'':'required'))+
+   field('Organization',input('contact_organization',c.organization||'',isStudy(draft)?'':'required'))+
+   field('Email',input('contact_email',c.email||'',isStudy(draft)?'type="email"':'type="email" required'),'',true)+
    field('Interpretation and delivery notes',textarea('notes',(draft.notes||[]).join('\n'),'rows="5"'),'One retained note per line.',true)+'</div>'+
    '<details class="atlas-inclusions"><summary>Original observations and editable spatial work</summary>'+
    '<h4>Observed annual-load comparisons</h4>'+choices('observations',(data().observation_comparisons||[]).filter(r=>included.includes(r.run_id)).map(r=>({...r,title:short(r.id)+' · '+runName(data(),r.run_id)})),draft.observation_comparison_ids||[])+
    '<h4>Saved map views</h4>'+choices('reviews',data().spatial_reviews||[],draft.spatial_review_ids||[])+
    '<h4>Completed map exports</h4>'+choices('exports',(data().spatial_exports||[]).filter(r=>r.state==='complete'),draft.spatial_export_ids||[])+'</details>'+
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
-   '<p>Seven map families, combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown client report and editable working archive.</p>'+
+   '<p>'+releaseFamilies(draft).length+' selected map families'+(draft.receiving_waters?' plus the selected receiving-water analysis families':'')+', combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown report and editable working archive.</p>'+
    '</div><section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
    sourceSummary(draft)+
    '<div data-atlas-problems></div>';
@@ -545,7 +565,7 @@ export function attachMapAtlas(host) {
    (atlas?' · '+atlas.page_count+' atlas pages':'')+'</p><div class="atlas-actions">'+
    (atlasFile?button('preview','Open complete atlas','data-url="'+esc(atlasFile.url)+'"')+downloadLink(atlasFile,'Download atlas PDF'):'')+
    downloadLink(archive,'Download complete GIS package')+
-   downloadLink(reportPDF,'Download client report PDF')+downloadLink(reportHTML,'Download report HTML')+
+   downloadLink(reportPDF,'Download report PDF')+downloadLink(reportHTML,'Download report HTML')+
    downloadLink(reportMarkdown,'Download report Markdown')+downloadLink(reportModel,'Download structured report data')+
    downloadLink(economicPackage,'Download economic decision package')+downloadLink(indexFile,'Download JSON index')+
    downloadLink(csvFile,'Download CSV index')+downloadLink(sourceContextFile,'Download source choices')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
@@ -553,14 +573,15 @@ export function attachMapAtlas(host) {
    '<p class="atlas-note">For offline map review, extract the complete GIS package and open <code>index.html</code>.</p>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
    sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
-   (opened.state==='complete'&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
+   (['complete','received_snapshot'].includes(opened.state)&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
+   (opened.atlas&&['complete','received_snapshot'].includes(opened.state)?'<section class="atlas-source" data-atlas-review-collection></section>':'')+
    '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('receptor_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^receptor_/,'')))).join('')+'</div>'+
    table(['Page / family','Map','Legend and units',''],rows.map(row=>{
     const file=retainedFile(row.file);
     return '<tr><td>'+esc(row.page??'—')+'<small>'+esc(human(row.family||''))+'</small></td><td>'+esc(row.title)+'<small>'+esc(row.subtitle||'')+'</small></td><td>'+
      (row.panels||[]).map((p,index)=>'<div>'+esc(p.title)+' · '+esc(p.units)+
       (p.display_scale?'<small>'+esc(p.display_scale.minimum)+' to '+esc(p.display_scale.maximum)+'</small>':'')+
-      (opened.state==='complete'?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
+      (['complete','received_snapshot'].includes(opened.state)?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
       (atlasFile&&row.page?button('preview','Atlas page','data-url="'+esc(atlasFile.url)+'" data-page="'+row.page+'"'):'')+
       (file?button('preview','Map PDF','data-url="'+esc(file.url)+'"')+downloadLink(file,'Download'):'')+'</td></tr>';
    }))+'<div class="atlas-pdf" data-atlas-pdf hidden></div><details><summary>All retained delivery files</summary>'+
@@ -574,20 +595,22 @@ export function attachMapAtlas(host) {
    (target.comparison?table(['Side','Alternative','Atlas page'],target.sides.map(side=>'<tr><td>'+esc(human(side.slot))+'</td><td>'+esc(side.label)+'<small>'+esc(side.scenario_run_id)+'</small></td><td>'+esc(side.atlas_page)+'</td></tr>')):'')+
    '<p class="atlas-note">Original raster: '+esc(target.units)+' · retained range '+esc(target.scale.minimum)+' to '+esc(target.scale.maximum)+
    ' · '+(target.comparison?'atlas pages '+target.sides.map(side=>esc(side.atlas_page)).join(' / '):'atlas page '+esc(lineage.atlas_page))+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
+   (target.review_id?'<p class="atlas-note">Saved revision '+esc(short(target.review_id))+' · '+esc(target.review_context?.status)+' · '+esc(target.review_context?.reviewer||'Reviewer not entered')+'. Saving changes retains a successor in this atlas collection.</p>':'')+
    (target.context_notes||[]).map(note=>'<p class="atlas-note">'+esc(note)+'</p>').join('')+
    '<div data-atlas-spatial></div></section>';
  }
  function render(){
   if(!root)return;
+  reviews.detach();
   inspector.suspend();
   root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">SCIENTIFIC WORKBENCH</p>'+
-   '<h1>Map atlas and delivery</h1><p>Prepare the seven-family release, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
+   '<h1>Map atlas and delivery</h1><p>Prepare regional or original-study releases, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
    '<div class="atlas-actions">'+button('prepare','Prepare release')+button('releases','Saved releases')+'</div></header>'+
    '<div class="atlas-error" role="alert" data-atlas-error '+(!error?'hidden':'')+'>'+esc(error)+'</div>'+
    (mode==='inspect'&&inspection?inspectionPanel():mode==='outputs'?outputPanel():
    '<nav class="atlas-steps" aria-label="Delivery preparation">'+STEPS.map((label,i)=>'<button type="button" data-atlas-action="step" data-step="'+i+'" '+(i===step?'aria-current="step"':'')+'>'+String(i+1)+'. '+esc(label)+'</button>').join('')+'</nav>'+
    '<form data-atlas-form data-atlas-workspace="'+esc(workspace)+'"><h2>'+STEPS[step]+'</h2>'+
-   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,true)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r)).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
+   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
    '<footer class="atlas-footer"><div class="atlas-actions">'+(step?button('previous','Back'):'')+
     (step<3?'<button type="submit">Continue</button>':'<button type="submit" class="atlas-primary" '+(busy?'disabled':'')+'>'+(busy?'Submitting…':'Build atlas and complete GIS delivery')+'</button>')+
     '</div><div class="atlas-actions">'+button('download-selection','Download selection')+
@@ -595,11 +618,12 @@ export function attachMapAtlas(host) {
     button('refresh','Refresh choices')+'</div></footer></form>')+'</section>';
   renderProblems();
   if(mode==='inspect'&&inspection)inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
+  const reviewRoot=root.querySelector('[data-atlas-review-collection]');if(reviewRoot)reviews.mount(reviewRoot);
  }
  function showError(e){error=e?.message||String(e);const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=false;node.textContent=error;node.scrollIntoView({block:'nearest'});}}
  function clearError(){error='';const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=true;node.textContent='';}}
  function edit(event){
-  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls]'))return;
+  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls], [data-atlas-review-collection]'))return;
   draftEdits++;operationId=null;
   try{collect();persist();renderProblems();}catch{/* Keep incomplete field text until the next explicit action. */}
  }
@@ -704,7 +728,7 @@ export function attachMapAtlas(host) {
   draft={...defaultSelection(data()),...clone(selection)};operationId=null;step=0;mode='prepare';opened=null;persist();render();
  }
  async function inspectPanel(mapKey,panelIndex){
-  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
   const existing=inspection?.target?.lineage;
   if(!inspection?.target?.comparison&&existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
@@ -719,7 +743,7 @@ export function attachMapAtlas(host) {
   mode='inspect';render();
  }
  async function inspectPair(){
-  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
   const {left,right,value}=pairDraft();
   if(!left||!right)throw Error('Choose the same panel from two retained alternatives.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
@@ -733,6 +757,26 @@ export function attachMapAtlas(host) {
   await inspector.openTarget({...result.target,workspace:atWorkspace});
   ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
   mode='inspect';render();
+ }
+ async function openSavedReview(id){
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open the original retained atlas first.');
+  const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
+  const result=await host.api('/api/map-atlas/review',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,review_id:id}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  if(result.workspace_key!==atWorkspace||result.target?.review_id!==id)throw Error('The saved review belongs to another project or selection.');
+  inspection={target:result.target,reviewId:id};inspector.suspend();
+  await inspector.openTarget({kind:'spatial_reviews',id,workspace:atWorkspace});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  mode='inspect';render();
+ }
+ async function prepareReviewedRelease(value){
+  ensure();requireWorkspace(value.workspace);
+  if(opened?.id!==value.delivery_id)throw Error('Reopen the original atlas before preparing its reviewed release.');
+  const selection=clone(opened.selection),reviewSet=new Set(value.all_review_ids),exportSet=new Set(value.all_export_ids);
+  selection.spatial_review_ids=[...new Set([...(selection.spatial_review_ids||[]).filter(id=>!reviewSet.has(id)),...value.review_ids])];
+  selection.spatial_export_ids=[...new Set([...(selection.spatial_export_ids||[]).filter(id=>!exportSet.has(id)),...value.export_ids])];
+  await create({workspace_key:value.workspace,selection});
+  ensure();requireWorkspace(value.workspace);step=3;persist();render();
  }
  async function click(event){
   const b=event.target.closest('[data-atlas-action]');if(!b||!root?.contains(b))return;
@@ -757,7 +801,7 @@ export function attachMapAtlas(host) {
    else if(action==='inspect-source')await inspectSource(b.dataset.sourceCardId);
    else if(action==='inspect-panel')await inspectPanel(b.dataset.mapKey,Number(b.dataset.panelIndex));
    else if(action==='compare-panels')await inspectPair();
-   else if(action==='return-release'){mode='outputs';render();}
+   else if(action==='return-release'){mode='outputs';render();await reviews.refresh();}
    else if(action==='show-print'){
     const mapKey=b.dataset.side?inspection?.target?.sides?.find(side=>side.slot===b.dataset.side)?.map_key:inspection?.target?.lineage?.map_key;
     const row=opened?.atlas?.pages?.find(item=>item.map_key===mapKey);
@@ -799,7 +843,7 @@ export function attachMapAtlas(host) {
    if(target.matches('[data-atlas-receptor-import]')){clearError();await importReceptors(target.files?.[0]);return;}
    if(target.name==='economic_report_choice'){clearError();await loadEconomicChoices(target.value);return;}
    if(target.name==='economic_edition_choice'){if(economicChoices?.key===economicKey()){economicChoices.chosen_id=target.value;renderEconomics();}return;}
-   if(target.name==='baseline'||/__collection$|__source$|__enabled$/.test(target.name||'')){
+   if(target.name==='baseline'||target.name==='delivery_mode'||/__collection$|__source$|__enabled$/.test(target.name||'')){
     collect();
     const match=target.name.match(/^(source_roles|overlays)__([^_].*?)__(collection|source|enabled)$/);
     if(match&&match[3]==='collection'){
@@ -827,12 +871,14 @@ export function attachMapAtlas(host) {
  }
  function update(next){
   const previous=workspace;ensure(next);
+  reviews.update();
   if(previous!==workspace){render();return;}
   const catalog=root?.querySelector('[data-atlas-catalogue]');if(catalog)catalog.innerHTML=catalogue();
   renderProblems();
   if(mode==='inspect'&&inspection&&root?.querySelector('[data-atlas-spatial]'))inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
  }
  function detach(){
+  reviews.detach();
   inspector.suspend();
   if(root){try{if(mode==='prepare'){collect();persist();}}catch{}
    root.removeEventListener('click',click);root.removeEventListener('change',change);

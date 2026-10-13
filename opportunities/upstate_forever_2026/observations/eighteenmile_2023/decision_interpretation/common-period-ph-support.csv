@@ -1,0 +1,3 @@
+site_id,continuous_period_start,continuous_period_end,days_daily_max_above_8_5,observed_days,observed_day_fraction,spot_ph_min_su,spot_ph_max_su,spot_period_start,spot_period_end,spot_depth_m,continuous_approximate_depth_m,continuous_interval_minutes,source_pdf_page,source_table,source_url
+SV-838,2023-04-06,2023-09-30,145,178,0.8146067415730337,7.02,8.81,2023-04-05,2023-10-17,0.3,0.5,30,19,6,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf
+SV-839,2023-04-06,2023-09-30,124,178,0.6966292134831461,7.08,8.48,2023-04-05,2023-10-17,0.3,0.5,30,19,6,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf

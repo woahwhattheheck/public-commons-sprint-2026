@@ -480,6 +480,12 @@ def _burn(rows, shape, transform):
                      out_shape=shape, transform=transform, fill=0,
                      dtype="uint8", all_touched=False)
 
+def _prepared_manifest(destination, entry):
+    """Publish or recover the ordinary Workspace intake for completed NWI output."""
+    atomic_json(destination/"sources.json", {"schema": "upstate.sources/v1",
+                "title": entry["title"], "entries": [entry]}, immutable=True)
+    return entry
+
 def prepare_nwi(capture_directory, reference, output, *, buffer_m=1000,
                 reporting=None, reporting_layer=None, reporting_where=None,
                 focus=None, focus_layer=None, focus_where=None):
@@ -575,7 +581,7 @@ def prepare_nwi(capture_directory, reference, output, *, buffer_m=1000,
             entry = read_json(final)
             for item in [entry, *entry["companions"]]:
                 verify_file(destination, item)
-            return entry
+            return _prepared_manifest(destination, entry)
         profile = rasters.output_profile(grid, categorical=True)
         profile.update(dtype="uint8", nodata=255)
         counts = {name: {"selected_cells": 0, "digital_mapping_cells": 0,
@@ -697,9 +703,7 @@ def prepare_nwi(capture_directory, reference, output, *, buffer_m=1000,
                  "native_lineage": selection["source_scale"],
                  "reference": STATUS_REFERENCE}
         atomic_json(final, entry, immutable=True)
-        atomic_json(destination/"sources.json", {"schema": "upstate.sources/v1",
-                    "title": entry["title"], "entries": [entry]}, immutable=True)
-        return entry
+        return _prepared_manifest(destination, entry)
 
 def _domain_arguments(parser):
     parser.add_argument("--domain", required=True)

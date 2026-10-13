@@ -103,7 +103,7 @@ export function attachDeliveryInspection(host){
   const value=current(),row=value.record,links=value.packet.links||{},files=value.files;
   const source=host.getState()?.data||{};
   const names=(kind,id)=>{const record=list(source[kind]).find(row=>row.id===id);return record?.title||record?.selection?.title||short(id);};
-  const report=match('report_html'),pdf=match('report'),atlas=match('map_atlas');
+  const report=match('report_html'),pdf=match('report'),atlas=match('map_atlas_browser')||match('map_atlas');
   const economic=files.find(row=>row.path==='economics/'+links.economic_edition_id+'/index.html');
   const mainArchive=match('delivery_archive'),working=match('working_archive'),original=files.find(row=>row.keys.includes('original_record'));
   return '<section data-delivery-inspection><div class="meta"><span>'+esc(human(row.state))+'</span><span>Original audit: '+esc(row.package?.auditStatus||'In progress')+'</span><span>'+(row.map_count??Object.keys(row.maps||{}).length)+' retained map PDFs</span></div>'+

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "annual-reference",
   "title": "Annual load observations",
-  "version": "1",
+  "version": "2",
   "order": 62,
   "assets": [
     "annual_reference.mjs",

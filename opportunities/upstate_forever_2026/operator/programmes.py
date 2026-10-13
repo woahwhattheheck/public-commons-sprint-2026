@@ -111,6 +111,9 @@ class Programmes:
             action = "compute.programme.run"
         if action == "compute.programme.run":
             result = manager.resume(key, only_runs=payload.get("only_runs"))
+            # Preserve completed and partial native results if later summary
+            # or report publication fails in this same queued task.
+            task["result"] = result
             if result.get("state") == "failed" or result.get("counts", {}).get("failed", 0):
                 counts = result.get("counts", {})
                 raise self.Fault(
@@ -130,7 +133,21 @@ class Programmes:
                     result = {**result, "experiment_sync": synchronized}
             return result
         if action == "compute.programme.report":
-            return self._decorate(workspace, manager.report(key))
+            result = manager.report(key)
+            task["result"] = result
+            status = manager.status(key, include_ensemble_candidates=False)
+            if status.get("state") == "complete":
+                from model.programme_experiments import sync_completed
+                try:
+                    synchronized = sync_completed(self.operator.ws(workspace), status)
+                except Exception as exc:
+                    raise self.Fault(
+                        "EXPERIMENT_REPORT_INCOMPLETE",
+                        "The native programme and result catalogue are retained; "
+                        "experiment reporting needs correction: " + str(exc)) from exc
+                if synchronized is not None:
+                    result = {**result, "experiment_sync": synchronized}
+            return self._decorate(workspace, result)
         if action == "compute.programme.delivery":
             selection = payload.get("selection")
             if not isinstance(selection, dict):
@@ -157,6 +174,7 @@ class Programmes:
                     pass
         if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
+        downloads = list(task.get("_downloads") or [])
         if key:
             try:
                 row = manager.status(key, include_ensemble_candidates=False)
@@ -165,11 +183,26 @@ class Programmes:
                     "state": row.get("state"), "phase": row.get("phase"),
                     "counts": row.get("counts", {}), "pause_requested": row.get("pause_requested", False),
                 }
-            except (FileNotFoundError, KeyError, ValueError):
-                pass
+                downloads.extend(self._decorate(task["workspace"], row)["_downloads"])
+                from model.programme_experiments import experiment_origin
+                origin = experiment_origin(self.operator.ws(task["workspace"]), row)
+                if origin is not None:
+                    task["experiment"] = origin
+                    provider = getattr(self.operator, "experiments", None)
+                    if provider is not None:
+                        retained = provider.retained_result(task["workspace"], origin["experiment_id"])
+                        if retained is not None:
+                            task["experiment"].update(
+                                {name: retained[name] for name in
+                                 ("title", "state", "progress", "study_report") if name in retained})
+                            if retained.get("_report_error"):
+                                task["experiment"]["report_error"] = retained["_report_error"]
+                            downloads.extend(retained["_downloads"])
+            except (OSError, KeyError, ValueError) as error:
+                task["programme_report_error"] = str(error)
         if task.get("state") == "complete" and isinstance(result, dict):
-            downloads = self.operator._files(task["workspace"], result,
-                                            self.operator.ws(task["workspace"]).root)
-            if downloads:
-                task["_downloads"] = downloads
+            downloads.extend(self.operator._files(task["workspace"], result,
+                                                  self.operator.ws(task["workspace"]).root))
+        if downloads:
+            task["_downloads"] = list({item["id"]: item for item in downloads}.values())
         return task

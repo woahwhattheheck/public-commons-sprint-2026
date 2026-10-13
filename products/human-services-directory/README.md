@@ -39,3 +39,10 @@ The product uses the original publisher files and the provider data selected by 
 ## Complete returned customer procedures
 
 Receive full OperatingPlan histories, review divergent choices in the existing Directory operator, retain completed review intent and reconcile the native plan save with a separate applied receipt. Original source basis, every decision and all historical files survive complete customer workspace receiving. [The full operating and receiving guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_RETURNS.md) covers native/API/CLI, typed SDK/MCP, browser drafts and the complete customer reopening course.
+
+
+## Reviewed source corrections
+
+The industrial operator now includes a complete original-row correction workflow. Exact original hashes bind ordered JSON-pointer or physical CSV changes; complete derived source files, an immutable candidate edition and full comparison are reviewed before explicit acceptance. Original files, lexical values and all historical editions remain available.
+
+The same feature is exposed through native CLI/HTTP, typed SDK and MCP, with full change/file receiving and complete editable customer restoration. See [SOURCE_CORRECTIONS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_CORRECTIONS.md) [CORRECTIONS_OPERATING.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTIONS_OPERATING.md), and [CORRECTION_CLIENTS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_CLIENTS.md). Published source and actual operated results remain separate evidence; no publisher write or live availability is inferred.

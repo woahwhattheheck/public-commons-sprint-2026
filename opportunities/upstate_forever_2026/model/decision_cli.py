@@ -22,6 +22,10 @@ def parser():
     selection.add_argument("--comparison-id", required=True)
     selection.add_argument("--title", default="Upper Savannah scenario decisions")
     selection.add_argument("--output", required=True)
+    selection.add_argument("--pollutant", action="append", choices=decisions.METRICS,
+                           help="Select an actual common output; repeat for more than one pollutant")
+    selection.add_argument("--sensitivity-comparison-id", action="append", default=[],
+                           help="Retain an existing same-grid/baseline comparison from another profile")
 
     build = commands.add_parser("build", help="Analyze existing native rasters and export the complete decision desk")
     build.add_argument("--workspace", required=True)
@@ -45,6 +49,8 @@ def parser():
     native_selection.add_argument("--zone-id", required=True)
     native_selection.add_argument("--title")
     native_selection.add_argument("--output", required=True)
+    native_selection.add_argument("--pollutant", action="append", choices=decisions.METRICS,
+                                  help="Narrow the original reporting zone to these actual outputs")
 
     native_report = commands.add_parser("scenario-report", help="Use actual native zone masses for the complete economic decision desk")
     native_report.add_argument("--report", required=True)
@@ -75,6 +81,9 @@ def main(argv=None):
                      "comparison_id": group["id"], "costs": [], "targets": {},
                      "sensitivity_comparison_ids": [], "notes": [],
                      "top_parcels_per_pollutant": 10}
+            if args.pollutant is not None:
+                value["pollutants"] = list(decisions._pollutants(args.pollutant))
+                decisions._scoped_packet(packet, value)
             path = Path(args.output).resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("x", encoding="utf-8") as stream:
@@ -96,8 +105,15 @@ def main(argv=None):
                 raise decisions.DecisionError("Select an existing comparison from inspect")
             value = {"schema": decisions.SELECTION_SCHEMA, "title": args.title,
                      "comparison_id": match["comparison_id"], "costs": [],
-                     "targets": {}, "sensitivity_comparison_ids": [],
+                     "targets": {}, "sensitivity_comparison_ids": args.sensitivity_comparison_id,
                      "top_parcels_per_pollutant": 10, "notes": []}
+            if args.pollutant is not None:
+                value["pollutants"] = list(decisions._pollutants(args.pollutant))
+            # The metadata/summary path resolves actual common scope before any
+            # exclusive selection file is published; no native runs are queued.
+            packet = decisions.workspace_packet(args.workspace, value, summary_only=True)
+            value["pollutants"] = packet["pollutant_selection"]["selected"]
+            decisions._validate_packet(packet, value)
             path = Path(args.output).resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("x", encoding="utf-8") as stream:

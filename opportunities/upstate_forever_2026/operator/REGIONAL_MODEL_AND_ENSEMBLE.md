@@ -543,3 +543,25 @@ Selecting a result now saves that analysis ID in `paired-ensemble-view.json` in 
 
 The result view checks which original run IDs are available in the receiving Workspace. Available runs open directly. Native continuation appears when the matching original Workspace run records are present; otherwise the view retains the original run references and directs the operator to the scientific Workspace backup for calculations. Report inspection, quantitative downloads and result export remain available for the received result.
 
+
+
+## 11. Use completed studies for decisions and annual-load evaluation
+
+The existing **Scenario sensitivity** view now keeps the scientific handoff beside its saved design. Open a study and choose **Physical decisions** or **Evaluate annual loads**. The form shows the actual completed baseline candidates and baseline/land-cover pairs, preserves unfinished members, and lets you choose the retained profiles and physical outputs. Physical decisions also retain the original land-cover selection and reference profile. The operation uses the application's existing task queue; its saved result offers a complete decision report, physical input, CSV tables and ZIP, or the original calibration and source-uncertainty records.
+
+For annual-load evaluation, select an existing observation/catchment definition or choose retained annual observations and their original upstream polygon source and identity field. The existing calibration model retains its original objectives, periods, spatial groups and validation selections. The published standard-error multiplier is optional. The result labels the objective outputs actually evaluated; the wider available native outputs remain separate. Nitrogen and phosphorus retain kg/year, and sediment retains metric tonnes/year.
+
+The complete operator, CLI, restart and interpretation guide is [model/ENSEMBLE_CONSUMERS.md](../model/ENSEMBLE_CONSUMERS.md). From the original application root, inspect the saved study and build its physical decision edition with:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" inspect --ensemble-id "$UPSTATE_ENSEMBLE_ID"
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" decision --ensemble-id "$UPSTATE_ENSEMBLE_ID"
+```
+
+The decision operation reuses each completed profile's original baseline and alternatives, creates the maintained comparison, and measures the cells shared by the chosen runs. The explicit pollutant option can narrow the common completed outputs. A saved consumer ID supports the original decision-resume or calibration-resume command after interruption.
+
+## 12. Original 2020–2025 discharge for the downstream domain
+
+The complete acquisition is retained in [source/hydrology-huc05-07-20261013/](../source/hydrology-huc05-07-20261013/). It contains eight unchanged USGS response bodies, all six annual daily series for 2020–2025, the original station inventory and series catalogue, request URLs and dates, all 26,242 source rows in a usable CSV, and 78 station/year coverage records with exact gaps. Original approved, provisional, estimated and nonnumeric values remain attached to their source rows. Thirteen daily-mean discharge series overlap the requested period; seven contain all 2,192 numeric days.
+
+The source HUC8 selection covers 03060105–03060107. Join the publisher's NAD83 station coordinates to the original retained 217-polygon domain to obtain the exact model and reporting membership. For modeled annual-load comparison, retain each monitoring location's original contributing catchment, measurement period, concentration observations and chosen annual-load method. A73C / OBS12 / AE11 maintain that observation pipeline. The package's [README](../source/hydrology-huc05-07-20261013/README.md) gives the original quantities, qualifiers, source provenance and an offline Node command that reproduces the derived tables from the eight retained responses.
