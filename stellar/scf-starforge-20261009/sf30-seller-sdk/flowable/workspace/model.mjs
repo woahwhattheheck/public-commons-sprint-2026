@@ -9,6 +9,7 @@ import {FLOWABLE_CMMN_COLLECTIONS as CASE_COLLECTIONS,FLOWABLE_CMMN_ACTION_GROUP
   readFlowableCmmnRequestState,reconcileFlowableCmmnRequest} from '../cmmn-native.mjs';
 import {FLOWABLE_OPERATION_KINDS,flowableCaseInstanceId} from './actions.mjs';
 import {buildFlowableReview} from './review.mjs';
+import {createFlowableProgrammeActions} from './programmes.mjs';
 import {openFlowableStore,SCHEMA,KINDS,textHash,field,recordId,requestId,idFor} from './store.mjs';
 import {need,digest,now} from '../../../distribution/runtime-workspace/storage.mjs';
 import {exportFlowableDelivery,inspectFlowableDelivery,adoptFlowableDelivery,
@@ -32,7 +33,7 @@ const portfolioMethods={portfolio:'capturePortfolio',decisionPortfolio:'captureD
 const portfolioLabels={portfolio:'Engine portfolio',decisionPortfolio:'Decision portfolio',casePortfolio:'Case portfolio'};
 const READABLE=new Set(['view','listRecords','getRecord','readPortfolio','readDefinition','readSource',
   'readReview','readDecisionPortfolio','readDecisionDefinition','readDecisionExecution',
-  'readCasePortfolio','readCaseDefinition','readCaseInstance','deliveryFile','sourceFile']);
+  'readCasePortfolio','readCaseDefinition','readCaseInstance','readProgramme','deliveryFile','sourceFile']);
 const EXPECTED_ACTIONS={release:['deploy'],process:['start'],task:['claim','complete','delegate','resolve'],migration:['migrate'],
   decisionRelease:['deploy'],decisionEvaluation:['evaluate'],...CASE_ACTIONS};
 const recordRef=record=>({kind:record.kind,id:record.id,revision:record.revision,sha256:record.sha256});
@@ -494,7 +495,18 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     return{path:store.blobPath(input.reference),bytes:input.reference.bytes,sha256:input.reference.sha256,
       mediaType:input.reference.mediaType??'application/octet-stream',filename:'flowable-source-'+input.reference.sha256+'.source'};
   }
-  const methods={view,listRecords,getRecord,readPortfolio,readDefinition,readDecisionPortfolio,readDecisionDefinition,
+  async function programmeDocument(record,document){
+    if(document==='response'){
+      need(record.value.response,'FLOWABLE_PROGRAMME_DOCUMENT_ABSENT');
+      return completeExchange(await store.getJSON(record.value.response));
+    }
+    need(['before','after','reconciliation','selection'].includes(document)&&record.value[document],
+      'FLOWABLE_PROGRAMME_DOCUMENT_ABSENT');
+    return store.getJSON(record.value[document]);
+  }
+  const programmeActions=createFlowableProgrammeActions({store,lookupConnection,sameConfiguration,
+    prepareOperation,readDocument:programmeDocument});
+  const methods={...programmeActions,view,listRecords,getRecord,readPortfolio,readDefinition,readDecisionPortfolio,readDecisionDefinition,
     readCasePortfolio,readCaseDefinition,readCaseInstance,
     readSource,readReview,readDecisionExecution,saveConnection,capturePortfolio,captureDecisionPortfolio,captureCasePortfolio,
     reconcileOperation,exportWorkspace,inspectDelivery,adoptDelivery,deliveryFile,sourceFile};

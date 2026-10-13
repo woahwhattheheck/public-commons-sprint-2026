@@ -154,3 +154,7 @@ and original-request recovery.
 See [Adaptive case operations](../../../../../products/flowable-merchant/CASES.md) for the complete case programme,
 all eleven native collections, the pinned engine's plan item semantics and
 customer receiving.
+
+## Complete commissioning programmes
+
+Open **Commissioning** to receive a source-complete programme, prepare dependent native steps, use the original operation reviews, record the completed commissioning decision and deliver the whole source/history workspace. The included reference case programme contains all three original families and both editions. See [Commissioning programmes](../../../../../products/flowable-merchant/PROGRAMMES.md) for the full source format, industrial browser workflow, typed SDK, case compiler, restart recovery and independent receiving.
