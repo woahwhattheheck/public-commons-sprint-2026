@@ -16,6 +16,47 @@ const bytes = value => {
 const when = value => value ? new Date(value).toLocaleString() : '—';
 const button = (action,label,id,disabled=false) => '<button type="button" data-action="native-job-'+action+'" data-id="'+esc(id)+'" '+(disabled?'disabled':'')+'>'+esc(label)+'</button>';
 
+const observedBytes = value => value === 'max' ? 'Unlimited' : bytes(value);
+const count = value => Number.isInteger(value) && value >= 0 ? value.toLocaleString() : '—';
+function resourceMarkup(native){
+  const saved=native.resource_observation;
+  if(!saved?.values)return '';
+  const value=saved.values,process=value.process||{},group=value.cgroup||{},cache=value.gdal_bytes||{};
+  const metric=(label,content)=>'<dl><dt>'+esc(label)+'</dt><dd>'+esc(content)+'</dd></dl>';
+  const limit=group['memory.max'],current=group['memory.current'];
+  const share=Number.isFinite(current)&&Number.isFinite(limit)&&limit>0
+    ?' ('+(100*current/limit).toLocaleString(undefined,{maximumFractionDigits:1})+'%)':'';
+  const events=group['memory.events.local']||group['memory.events'];
+  const metrics=[
+    metric('Worker peak memory',bytes(process.VmHWM_bytes)),
+    metric('Worker threads',count(process.threads)),
+    ...(group.version===2?[
+      metric('Group memory / limit',bytes(current)+' / '+observedBytes(limit)+share),
+      metric('Group shared memory',bytes(group['memory.stat']?.shmem)),
+      metric('Group peak memory',bytes(group['memory.peak']))
+    ]:[]),
+    ...(Object.keys(cache).length?[
+      metric('GDAL cache used / maximum',bytes(cache.GetCacheUsed)+' / '+observedBytes(cache.GetCacheMax))
+    ]:[])
+  ];
+  const settings=Object.entries(value.environment||{});
+  const errors=value.read_errors||[];
+  return '<h3>Memory and cache</h3><p class="note">'+
+    (native.alive?'Saved worker observation':'Last saved worker observation')+' · '+esc(when(saved.observed_at))+
+    (saved.source==='worker_start'?' · worker start':' · heartbeat')+'.</p>'+
+    '<div class="native-metrics">'+metrics.join('')+'</div>'+
+    (group.version===2?'<p class="note">Group values include other processes sharing this memory limit. Shared memory is part of file memory; these figures overlap.</p>':'')+
+    (events?'<p>Group memory events'+(group['memory.events.local']?' (local)':'')+': '+[
+      ['High threshold',events.high],['Limit reached',events.max],
+      ['Out of memory',events.oom],['Processes killed',events.oom_kill]
+    ].map(([label,total])=>esc(label)+' '+count(total)).join(' · ')+
+    '.</p><p class="note">Event totals cover the group lifetime and do not identify the cause of this calculation\'s outcome.</p>':'')+
+    (settings.length?'<details><summary>Inherited cache and thread settings</summary><div class="table-scroll"><table><thead><tr><th scope="col">Setting</th><th scope="col">Inherited value</th></tr></thead><tbody>'+
+      settings.map(([name,raw])=>'<tr><th scope="row">'+esc(name)+'</th><td>'+esc(raw??'Not set')+'</td></tr>').join('')+
+      '</tbody></table></div><p class="note">Values are shown as received by the worker. A cache maximum appears above after GDAL has initialized its cache.</p></details>':'')+
+    (errors.length?'<details><summary>Unavailable observations ('+errors.length+')</summary><ul>'+errors.map(row=>'<li>'+esc(row.source||'Resource')+': '+esc(row.type||'Read error')+'</li>').join('')+'</ul></details>':'');
+}
+
 function reuseMarkup(native){
   const row=native.native_execution?.stage_reuse;
   if(!row)return '';
@@ -86,7 +127,19 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     snapshot=value;const task=value.task,native=value.native_job;
     node.querySelector('[data-native-phase]').textContent=phase(native);
     node.querySelector('[data-native-elapsed]').textContent=duration(native.elapsed_seconds);
-    node.querySelector('[data-native-memory]').textContent=bytes(native.resources?.resident_bytes);
+    const retainedMemory=native.resource_observation?.values?.process?.VmRSS_bytes;
+    const liveMemory=Number.isFinite(native.resources?.resident_bytes);
+    node.querySelector('[data-native-memory]').textContent=bytes(liveMemory?native.resources.resident_bytes:retainedMemory);
+    node.querySelector('[data-native-memory-label]').textContent=liveMemory||!Number.isFinite(retainedMemory)?'Worker memory':'Last worker memory';
+    const resource=node.querySelector('[data-native-resources]');
+    const previousDetails=Array.from(resource.querySelectorAll('details'));
+    const resourceDetails=previousDetails.map(item=>item.open);
+    const focusedDetail=previousDetails.findIndex(item=>item.querySelector('summary')===document.activeElement);
+    resource.innerHTML=resourceMarkup(native);resource.hidden=!resource.innerHTML;
+    Array.from(resource.querySelectorAll('details')).forEach((item,index)=>{
+      item.open=Boolean(resourceDetails[index]);
+      if(index===focusedDetail)item.querySelector('summary')?.focus({preventScroll:true});
+    });
     node.querySelector('[data-native-storage]').textContent=bytes(native.storage_free_bytes);
     node.querySelector('[data-native-heartbeat]').textContent=when(native.heartbeat_at);
     node.querySelector('[data-native-controls]').innerHTML=controls(task,native);
@@ -146,12 +199,13 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       '<h2 data-native-phase aria-live="polite">Opening retained calculation…</h2>'+
       '<p class="note" data-native-continuation></p>'+
       '<div class="native-metrics"><dl><dt>Elapsed</dt><dd data-native-elapsed>—</dd></dl>'+
-      '<dl><dt>Worker memory</dt><dd data-native-memory>—</dd></dl>'+
+      '<dl><dt data-native-memory-label>Worker memory</dt><dd data-native-memory>—</dd></dl>'+
       '<dl><dt>Workspace disk available</dt><dd data-native-storage>—</dd></dl>'+
       '<dl><dt>Last worker update</dt><dd data-native-heartbeat>—</dd></dl></div>'+
       '<div class="page-actions" data-native-controls></div>'+
       '<div class="notice error" data-native-error hidden></div>'+
       '<section data-native-reuse aria-live="polite" hidden></section>'+
+      '<section data-native-resources hidden></section>'+
       '<div class="table-scroll"><table><thead><tr><th>Native stage</th><th>Status</th><th>Saved at</th><th>Retained files</th></tr></thead><tbody data-native-stages></tbody></table></div>'+
       '<h3>Original worker output</h3><div class="native-log-controls">'+
       '<label>Log stream<select data-native-stream><option value="native">Native model log</option><option value="process">Worker process output</option></select></label>'+
