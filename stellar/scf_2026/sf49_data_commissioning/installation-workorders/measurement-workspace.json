@@ -1,0 +1,105 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "measurement-workspace",
+  "title": "Measurements and observed benchmark customer commissioning",
+  "task": {
+    "name": "Commission and independently receive an original measured-data study",
+    "purpose": "Give a data owner and independent receiver complete custody of original observations, explicit source mappings, reviewed measurement and flow studies, observed benchmark findings, editable decisions and whole project history.",
+    "request": "Select the actual customer source population, intended use, accountable reviewer and receiving host. Retain full original station, laboratory, WQP and discharge source files, provenance and relevant reference identifiers. Inspect source columns and explicitly review their mappings before native import. Preserve source qualifiers, censoring bounds, unknown timing, method, fraction, units, analyte basis and conflicting source versions. Select any station/reach mapping deliberately; no name-only geographic or time conversion. Prepare a complete measurement, discharge or observed benchmark study with explicit cohort, interval, variant decisions and analyst-supplied thresholds. Review support, excluded and ambiguous samples, complete findings and original references. Retain report editions and attributed decisions. Export the full native project and source files, not only the displayed page. Receive an independent copy, reopen originals and edited decisions, create a later local edit, then compare any returned archive against both the exact sent baseline and current local project before explicit incorporation into a new project. Record actual completed outcomes in the original Installation.",
+    "completeOutput": "A complete selected measured-data study with original source bytes, mapping and study editions, variant decisions, complete reports, editable native project, complete installed software and a recorded independent receiving and cold reopen outcome.",
+    "repeatTrigger": "A genuine later source interval, corrected publisher edition or new agreed analytical task creates a linked customer task. Retrying an uncertain request, another page or another report format continues its original task.",
+    "pricedUnit": "One agreed complete source-to-study-and-receiving task. Select actual scope, price, currency/atomic units and spending authority through the existing merchant Installation; this profile supplies no price, fee or budget default."
+  },
+  "source": {
+    "reference": "Record actual source locators, acquisition time, filenames, byte counts and SHA-256, source schema/profile and selected native record identifiers. Preserve the installed original-source.json manifest with the customer handover.",
+    "mode": "Original Node Measurements workspace on the selected POSIX host, Node22.16 or later with node:sqlite and Python3 for complete native archive operations. Original CSV/JSON imports and explicit guided intake remain authoritative. Live provider acquisition requires the original authorized route.",
+    "population": "The full agreed source population and explicit study cohort, interval and station selection, including excluded, unresolved and contradictory records. Paginated display does not reduce archive membership or claim complete scientific support.",
+    "meaning": "Preserve detection conditions and bounds, qualifier and rejected-row explanations, units, concentration basis, fraction and method. Keep native source date/time and time precision. Distinct source variants remain visible; date-conflicting unresolved samples are unallocated and do not satisfy minimum support. Observed benchmarks use attributed analyst criteria, not inferred regulatory thresholds. Concentration-discharge pairing is explicit and is not annualization, unobserved flow reconstruction or a calibrated model claim.",
+    "changePolicy": "Corrections create original source, mapping, study or review editions. Keep prior reports and request identities. Source changes do not silently inherit prior source-selection decisions. Explicit returned-review comparison retains sender, reviewer and current project; accepting changes creates a current-derived separate project."
+  },
+  "receiving": {
+    "application": "Installed Measurements product at products/measurement-workspace with the original engine and browser at opportunities/upstate_forever_2026/measurement_workspace. The scientific store and all calculations remain original. The current Runtime Applications provider selects the private launch configuration, source manifest, data directory, environment and connection location.",
+    "acceptanceRule": "Actually open the exact installed app, inspect full raw sources and mapped/qualified values, operate a useful study/review/report course, download and open every selected complete report and project archive, independently receive and cold reopen the editable original project. Observe actual source/history identities and later-edit preservation. Source compilation, HTTP200, controlled adapters or captured-but-unviewed screenshots do not establish customer readiness.",
+    "changeAndWithdraw": "Use original scientific review/edition controls and original Installation change/withdrawal records. Keep historical studies and received editions. Stop a running application through its existing Runtime operation; never delete a data directory or rewrite a sender archive to withdraw a selection.",
+    "recovery": "Retain exact request UUID, body, hashes and selected connection identity after unknown return. Read the original native receipt before reissuing the same request. Legacy mapping/review calls without a native idempotency receipt are not automatically replayed. A replaced child has a new instanceId; a changed native workspace ID requires deliberate Stop, Review and Start with a new pinned connection. Full archive receiving remains the original engine writer.",
+    "maintenance": "Name data owner, scientific reviewer, managed runtime owner and independent receiver in the original case. Deliver complete source, manifests, licences, actual configuration guidance, all original scientific inputs and editable reports/history. Keep agent tokens, private environment files and ephemeral browser credentials outside shared project exports."
+  },
+  "steps": [
+    {
+      "title": "Select the original work and full sources",
+      "result": "Retain actual customer purpose, population, source authority, reviewer and receiving owner; record complete original file identities and scientific field meaning."
+    },
+    {
+      "title": "Install the complete selected product",
+      "result": "Use the measurement-workspace source selection and current original runtime installer. Retain source manifest and complete archive. Verify selected Node and Python resources through the existing Runtime."
+    },
+    {
+      "title": "Review and start one original application",
+      "result": "Choose private source/data/connection/environment paths. Use Applications Review, Save, Start and Open. The managed connection binds the exact source, original native workspace and current child lifetime; no token appears in a URL."
+    },
+    {
+      "title": "Inspect and review source intake",
+      "result": "Open originals, save explicit column mappings, review diagnostics and import only the exact selected preview through the native writer. Keep original row ordinals, qualifiers, invalid rows and source editions."
+    },
+    {
+      "title": "Review scientific scope and variants",
+      "result": "Select station/cohort/interval and any reach or discharge pairing. Explain missing timing, units/basis/method, support gaps and source conflicts. Resolve variants only with attributed choices."
+    },
+    {
+      "title": "Save a useful study and complete reports",
+      "result": "Save exact measurement/flow/benchmark input with the original UUID. Preserve frozen cohort metadata even for an empty interval. Open full report and CSV outputs; distinguish analyst thresholds and observed classifications from regulatory determinations."
+    },
+    {
+      "title": "Operate configured agent calls and uncertain return",
+      "result": "Bind Merchant tools to the complete pinned current connection and private token environment. Inspect approved input files, issue original operations, retain full request/response and read exact native status after uncertainty. Do not start a second scientific service."
+    },
+    {
+      "title": "Export and independently receive the entire project",
+      "result": "Use original portable or full large-file archive export according to source size, including raw sources, mapping/history, saved studies, reviews, reports and drafts. Extract the actual archive, open every outgoing deliverable and receive into a distinct owned workspace."
+    },
+    {
+      "title": "Cold reopen and preserve later work",
+      "result": "Reopen the independent native project and confirm source/history. Make an attributed local edit, retain the old archive and replay its original receiving only through existing rules. Compare returned baseline/returned/current archives before incorporating explicit decisions into a new project."
+    },
+    {
+      "title": "Record actual Installation outcomes",
+      "result": "Save original customer task, source/workspace/request/report identifiers and actual receiving observations in the same Operations Installation. Preserve custody, support and meaningful next-task ownership; unperformed native or rendered steps remain unclaimed."
+    }
+  ],
+  "inputs": [
+    "Actual source-use authority, complete scope and scientific purpose; owner, reviewer and receiver.",
+    "Complete raw files and provenance, source profiles, exact field mappings and all original date/unit/fraction/method/basis/qualifier meanings.",
+    "Explicit station or reach references, requested interval/cohort, selected source variants and declared analyst thresholds or other reviewed scientific assumptions.",
+    "Complete installed source manifest and archive; Node22.16+ and Python3 selected through the original Runtime.",
+    "Private launch JSON selecting scientific data directory, connection file and token environment name; a private environment JSON when needed.",
+    "Original request UUIDs and expected revisions; full native response/receipt after uncertain outcomes.",
+    "Full reports, raw-source downloads, portable/native archives, unfinished work and all sent/returned/current baselines.",
+    "Actual independent receiver, complete cold-reopen observations and original Installation task/payment identifiers only when actually present."
+  ],
+  "sourceFiles": [
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/cli.mjs",
+      "blob": "15f454ee1a137f0492388b1fc812a516c77e6bf0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/workspace.mjs",
+      "blob": "3040b092019fa5cbb29fa0293027eb85ecc81b39"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/benchmark_workspace.mjs",
+      "blob": "07ff0ac272ae01094ac68c7987e4f35defb5d629"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_delivery.mjs",
+      "blob": "b3e80c2eacc4ec37c893d8e1d9a781abe237ef75"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/returned_reviews.mjs",
+      "blob": "efaba678441308686b8a67f0ea52f886f69e219a"
+    },
+    {
+      "path": "products/measurement-workspace/application-provider.mjs",
+      "blob": "85aff5c83886e1b68825f257bdf398ab2e3fafac"
+    }
+  ]
+}
