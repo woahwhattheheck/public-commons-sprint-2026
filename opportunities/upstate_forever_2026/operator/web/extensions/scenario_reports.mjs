@@ -165,7 +165,7 @@ export function attachScenarioReports(context) {
     const target=$('[data-report-builder]');
     target.hidden=false;
     target.innerHTML='<form data-report-form><fieldset><legend>Build a watershed comparison</legend>'+
-      '<div class="sr-grid"><label>Report title<input name="report_title" required maxlength="240" value="Upper Savannah watershed comparison"></label>'+
+      '<div class="sr-grid"><label>Report title<input name="report_title" required maxlength="240" value="'+esc((catalog.project?.title||'Watershed')+' native export report')+'"></label>'+
       '<label>Reference run<select name="baseline_run_id">'+runs.map(run=>option(run.id,run.scenario_title+' · '+run.profile_title+' · '+(run.pollutants||[]).map(p=>labels[p]||p).join('/'),run.id===chosen.id)).join('')+'</select></label></div>'+
       '<label class="sr-check"><input type="checkbox" name="include_parameter_changes"> Include alternatives with different parameter profiles</label>'+
       '<div data-report-alternatives></div><div data-report-pollutants></div>'+

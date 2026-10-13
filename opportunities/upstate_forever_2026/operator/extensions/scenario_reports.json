@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scenario-reports",
   "title": "Watershed reports",
-  "version": "3",
+  "version": "4",
   "order": 55,
   "assets": [
     "extensions/scenario_reports.mjs",
@@ -106,7 +106,20 @@
       "args": [
         "workspace"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/scenario-report/{workspace_key}/{report_id}",
+        "handler": "preview",
+        "args": [
+          "operator",
+          "route.workspace_key",
+          "route.report_id",
+          "fault"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   },
   "client": {
     "module": "/web/extensions/scenario_reports.mjs",

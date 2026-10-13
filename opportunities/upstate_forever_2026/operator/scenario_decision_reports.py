@@ -105,7 +105,7 @@ def overview(operator, workspace_key):
     for path in sorted((workspace.root / "scenario-decisions").glob("*/decision.json")):
         value = read_json(path)
         rows.append({name: value[name] for name in ("id", "title", "created_at", "baseline_run_id",
-                     "selection", "zones", "runs", "pollutants") if name in value})
+                     "selection", "zones", "runs", "pollutants", "report_kind") if name in value})
     return rows
 
 def verify_all(workspace):

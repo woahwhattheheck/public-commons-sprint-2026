@@ -37,9 +37,9 @@ def selection(value):
     if not isinstance(value.get("title"), str) or not value["title"].strip():
         raise ValueError("Name the watershed scenario report")
     ids = value.get("run_ids")
-    if (not isinstance(ids, list) or len(ids) < 2
+    if (not isinstance(ids, list) or len(ids) < 1
             or any(not isinstance(k, str) for k in ids) or len(set(ids)) != len(ids)):
-        raise ValueError("Select the completed baseline followed by distinct alternative run IDs")
+        raise ValueError("Select a completed reference run followed by any distinct alternative run IDs")
     if "pollutants" in value:
         pollutants = value["pollutants"]
         if (not isinstance(pollutants, list) or not pollutants
@@ -131,7 +131,7 @@ def catalog(workspace):
     for path in sorted((workspace.root / "scenario-decisions").glob("*/decision.json")):
         row = read_json(path)
         saved.append({k: row[k] for k in ("id", "title", "created_at", "baseline_run_id",
-                                        "selection", "zones", "runs", "pollutants") if k in row})
+                                        "selection", "zones", "runs", "pollutants", "report_kind") if k in row})
     return {"schema": "upstate.scenario-decision-catalog/v1", "project": workspace.project,
             "runs": runs, "cohorts": list(groups.values()), "zone_sources": vectors,
             "reports": saved, "issues": issues, "outputs": OUTPUTS,
@@ -154,8 +154,8 @@ def select_cohort(workspace, baseline_run_id, *, alternative_run_ids=None,
             and run["selection"]["profile_id"] == baseline["selection"]["profile_id"]
             and run["scenario_kind"] == "landcover"
             and run["pollutants"] == baseline["pollutants"]]
-    if not isinstance(alternative_run_ids, list) or not alternative_run_ids:
-        raise ValueError("Complete at least one alternative on the selected baseline grid")
+    if not isinstance(alternative_run_ids, list):
+        raise ValueError("Alternative run IDs must be a list; an empty list reports reference totals")
     for key in alternative_run_ids:
         if key not in eligible:
             raise ValueError("The selected alternative is not a completed native run: " + str(key))
@@ -195,7 +195,7 @@ def _geometry_zones(workspace, grid, requests):
     crs = CRS.from_user_input(grid["grid"]["crs"])
     grid_root = workspace.root / "grids" / grid["id"]
     zones = []
-    study_title = str(workspace.project.get("title") or "Scientific workspace")
+    study_title = str(workspace.project.get("title") or grid.get("spec", {}).get("title") or "Study").strip() or "Study"
     for key, title in (("reporting_area", study_title + " reporting area"),
                        ("model_domain", "Complete retained hydrologic model domain")):
         item = grid["files"][key]
@@ -479,6 +479,35 @@ def _csv(report):
     return out.getvalue().encode("utf-8")
 
 
+
+def _totals_csv(report):
+    """One native annual export and coverage row per selected run, zone and pollutant."""
+    out = io.StringIO(newline="")
+    columns = ["zone_id", "zone_title", "scope", "pollutant", "units", "run_id",
+               "scenario_id", "profile_id", "comparison_kind", "all_valid_mass",
+               "common_mass", "common_yield_per_ha_year", "valid_area_ha", "valid_cells",
+               "structural_stream_cells", "unexpected_missing_cells", "unknown_stream_cells",
+               "complete_native_support", "common_valid_area_ha", "common_valid_fraction",
+               "outside_native_extent_ha", "selected_cells"]
+    writer = csv.DictWriter(out, fieldnames=columns)
+    writer.writeheader()
+    for zone in report["zones"]:
+        for parameter, result in zone["pollutants"].items():
+            for detail in report["runs"]:
+                values = {**result["coverage"], **result["runs"][detail["id"]]}
+                row = {"zone_id": zone["id"], "zone_title": zone["title"], "scope": zone["scope"],
+                       "pollutant": parameter, "units": report["outputs"][parameter]["units"],
+                       "run_id": detail["id"], "scenario_id": detail["selection"]["scenario_id"],
+                       "profile_id": detail["selection"]["profile_id"],
+                       "comparison_kind": detail["comparison_kind"]}
+                row.update({name: values[name] for name in columns if name in values})
+                for name, value in list(row.items()):
+                    if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\t", "\r")):
+                        row[name] = "'" + value
+                writer.writerow(row)
+    return out.getvalue().encode("utf-8")
+
+
 def build(workspace, requested, *, progress=None):
     requested = selection(requested)
     runs = [workspace.inspect_run(key) for key in requested["run_ids"]]
@@ -539,6 +568,7 @@ def build(workspace, requested, *, progress=None):
                   "implementation": implementation,
                   "baseline_run_id": runs[0]["id"], "runs": details, "outputs": outputs,
                   "pollutants": list(outputs),
+                  "report_kind": "scenario_comparison" if len(runs) > 1 else "reference_totals",
                   "available_pollutants_by_run": {r["id"]: available_pollutants(r) for r in runs},
                   "scope_note": "Zones are evaluated independently. Overlapping utility catchments and reporting/native domains must not be added together.",
                   "mass_note": "Native InVEST 3.20.0 annual per-hectare exports are multiplied once by native projected pixel area.",
@@ -587,6 +617,8 @@ def build(workspace, requested, *, progress=None):
         report_path, csv_path, html_path = directory / "report.json", directory / "comparisons.csv", directory / "index.html"
         atomic_json(report_path, report)
         atomic_bytes(csv_path, _csv(report))
+        totals_path = directory / "annual-totals.csv"
+        atomic_bytes(totals_path, _totals_csv(report))
         from pyproj import Transformer
         from shapely.geometry import mapping
         from shapely.ops import transform
@@ -607,8 +639,10 @@ def build(workspace, requested, *, progress=None):
         summary = {"schema": SCHEMA, "id": key, "title": report["title"], "created_at": report["created_at"],
                    "selection": requested, "baseline_run_id": report["baseline_run_id"],
                    "zones": len(zones), "runs": len(runs), "pollutants": list(outputs),
+                   "report_kind": report["report_kind"],
                    "files": {"json": describe_file(directory, report_path),
                              "csv": describe_file(directory, csv_path),
+                             "totals_csv": describe_file(directory, totals_path),
                              "geography": describe_file(directory, geography_path),
                              "html": describe_file(directory, html_path)}}
         atomic_json(summary_path, summary)
@@ -624,11 +658,14 @@ def main(argv=None):
     mode.add_argument("--baseline-run", help="Build a report from an existing baseline and actual alternatives")
     mode.add_argument("--report-id", help="Reopen a saved report and verify its native products")
     parser.add_argument("--alternative-run", action="append", dest="alternative_runs")
+    parser.add_argument("--reference-only", action="store_true", help="Report the selected baseline alone, even when alternatives have completed")
     parser.add_argument("--pollutant", action="append", choices=list(OUTPUTS), dest="pollutants")
     parser.add_argument("--title")
     parser.add_argument("--zones", help="JSON array of retained watershed selections")
     args = parser.parse_args(argv)
     try:
+        if args.reference_only and (not args.baseline_run or args.alternative_runs):
+            raise ValueError("Use --reference-only with --baseline-run and without --alternative-run")
         workspace = Workspace(args.workspace)
         if args.catalog:
             result = catalog(workspace)
@@ -637,7 +674,7 @@ def main(argv=None):
         else:
             requested = (read_json(args.selection) if args.selection else
                          select_cohort(workspace, args.baseline_run,
-                                       alternative_run_ids=args.alternative_runs,
+                                       alternative_run_ids=[] if args.reference_only else args.alternative_runs,
                                        title=args.title, pollutants=args.pollutants,
                                        zones=read_json(args.zones) if args.zones else None))
             result = build(workspace, requested,
