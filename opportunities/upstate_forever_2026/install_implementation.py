@@ -21,6 +21,7 @@ import tempfile
 FILES = (
     "operator/web/economic_received_comparisons.mjs",
     "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "docs/ECONOMIC_COMPARISON_PROGRAMME_CONTEXT.md",
     "operator/ECONOMIC_COMPARISON_REPORT.md",
     "model/economic_comparison_source.py",
     "model/economic_comparison_study_transfer.py",
