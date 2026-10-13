@@ -20,6 +20,19 @@ revise the stored response data, save the answers in the application and export
 again. Text edits made in Word stay in that downloaded file. PDF documents use
 embedded licensed fonts for English and French text and retain selectable text.
 
+## Read and navigate a document
+
+The current **Language / Langue** preference selects the reader labels for
+operator and respondent Word/PDF downloads. Original question wording, answers
+and numerical values retain their exact language and values. Linked contents,
+Word navigation headings and PDF outlines open each selected section. The
+closing references preserve the selected edition and its permitted source
+identities, including protected summary reports.
+
+See [Reading retained documents](DOCUMENT_READING.md) for source references,
+current draft versus submitted response behavior, English/French selection,
+and the complete retained-document workflow.
+
 ## Install the delivered offline document runtime
 
 The complete customer package includes six pinned wheels for Linux x86_64 with

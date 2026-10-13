@@ -930,20 +930,28 @@ class Workspace:
         validation = validate_answers(definition,answers) if current is None else current["validation"]
         projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
         public = edition == "public"
-        questions = [{k:q[k] for k in (*DISPLAY_QUESTION_FIELDS,"columns") if k in q} for q in definition["questions"]]
+        question_fields = (*DISPLAY_QUESTION_FIELDS,"columns") if public else (*DISPLAY_QUESTION_FIELDS,"columns","source","source_workbook_name")
+        questions = [{k:q[k] for k in question_fields if k in q} for q in definition["questions"]]
         if public:
             for q in questions:
                 if "columns" in q: q["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
         values = projection["public_values"] if public else {**answers,**validation["values"]}
         response = {"values":values,"public_alternatives":projection["public_alternatives"],"disclosures":projection["disclosures"],"revision_number":record["respondent"]["version"]}
-        if not public: response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"],"formula_issues":validation.get("formula_issues",[]),"native_calculation":validation.get("native_calculation")})
+        if not public:
+            response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"],"formula_issues":validation.get("formula_issues",[]),"native_calculation":validation.get("native_calculation")})
+            # A current draft has its own edition; do not attach a preceding
+            # submitted revision or that revision\'s uploaded workbook to it.
+            if current is not None and not record["draft"]:
+                response.update({"revision_id":current["id"],"workbook_sha256":current.get("workbook_sha")})
         stamp = record["respondent"]["created"] if current is None else current.get("updated",current.get("created"))
-        return {"schema":"atssc.response-document."+edition+".v1","edition":edition,"questionnaire_title":definition.get("title","Questionnaire"),"created":now(),"updated":stamp,"questions":questions,"accepted_responses":[response],"state":"Saved draft" if record["draft"] else "Submitted revision" if current else "Empty questionnaire","document_state":"draft" if record["draft"] else "submitted" if current else "empty","sealed_revision":record["respondent"]["version"],"draft_version":None if not record["draft"] else record["draft"]["version"],"public_confirmed":projection["public_confirmed"],"validation_issues":validation["issues"] if not public else [],"numeric_totals":{}}
+        result = {"schema":"atssc.response-document."+edition+".v1","edition":edition,"questionnaire_title":definition.get("title","Questionnaire"),"created":now(),"updated":stamp,"questions":questions,"accepted_responses":[response],"state":"Saved draft" if record["draft"] else "Submitted revision" if current else "Empty questionnaire","document_state":"draft" if record["draft"] else "submitted" if current else "empty","sealed_revision":record["respondent"]["version"],"draft_version":None if not record["draft"] else record["draft"]["version"],"public_confirmed":projection["public_confirmed"],"validation_issues":validation["issues"] if not public else [],"numeric_totals":{}}
+        if not public: result["publication"] = record["publication"]
+        return result
 
-    def response_bytes(self,respondent_id,edition,format_name):
+    def response_bytes(self,respondent_id,edition,format_name,*,language=None):
         if format_name not in {"pdf","docx"}: raise OperationError("FORMAT","Respondent downloads use PDF or Word")
         from document_exports import render_document
-        return render_document(self.response_edition(respondent_id,edition),format_name)
+        return render_document(self.response_edition(respondent_id,edition),format_name,language=language)
 
     def op_export_response(self,p):
         directory = Path(p["directory"]).expanduser().resolve()
@@ -952,18 +960,18 @@ class Workspace:
         for edition in ("public","protected"):
             for fmt in ("pdf","docx"):
                 name = edition+"."+fmt
-                data = self.response_bytes(p["respondent_id"],edition,fmt)
+                data = self.response_bytes(p["respondent_id"],edition,fmt,language=p.get("language"))
                 (directory/name).write_bytes(data)
                 manifest["files"].append({"path":name,"bytes":len(data),"sha256":digest(data),"edition":edition})
         (directory/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
         return {"directory":str(directory),"manifest":manifest}
 
-    def report_bytes(self,report_id,edition,format_name,public=False):
+    def report_bytes(self,report_id,edition,format_name,public=False,*,language=None):
         if edition not in {"public","protected"}: raise OperationError("EDITION","Choose public or protected report edition")
         report = self.public_report(report_id) if public else self.op_get_report({"report_id":report_id})["edition"][edition]
         if format_name in {"pdf","docx"}:
             from document_exports import render_document
-            return render_document({**report,"edition":edition},format_name)
+            return render_document({**report,"edition":edition},format_name,language=language)
         if format_name in {"xlsx","pptx"}:
             from office_reports import render_office_report
             return render_office_report({**report,"edition":edition},format_name)
@@ -1020,7 +1028,7 @@ class Workspace:
         for edition in ("public","protected"):
             for fmt in ("json","csv","html","pdf","docx","xlsx","pptx"):
                 name = edition+"."+fmt
-                data = self.report_bytes(report["id"],edition,fmt)
+                data = self.report_bytes(report["id"],edition,fmt,language=p.get("language"))
                 (directory/name).write_bytes(data)
                 manifest["files"].append({"path":name,"bytes":len(data),"sha256":digest(data),"edition":edition})
         (directory/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
