@@ -1,0 +1,38 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "economic-cost-ranges",
+  "components": {
+    "economic-cost-ranges": {
+      "title": "Sourced cost ranges over complete original Economic editions",
+      "paths": [
+        "model/economic_cost_ranges.py",
+        "operator/economic_cost_ranges.py",
+        "operator/economic_cost_ranges_cli.py",
+        "operator/web/economic_cost_ranges.mjs",
+        "operator/web/economic_cost_ranges.css",
+        "operator/extensions/economic-cost-ranges.json",
+        "operator/ECONOMIC_COST_RANGES.md",
+        "source_tools/economic_cost_ranges_original_course.py",
+        "source_tools/economic_cost_ranges_browser.mjs",
+        "operator/ECONOMIC_COST_RANGES_RECEIVING.md",
+        "integration/component_fragments/economic-cost-ranges.json",
+        "install_economic_cost_ranges.py"
+      ],
+      "requires": [
+        "economic-comparison"
+      ]
+    }
+  },
+  "extend_components": {
+    "economic-desk": {
+      "paths": [
+        "operator/web/economic_request_store.mjs",
+        "operator/web/economic_quantity_estimate.mjs",
+        "model/decision_analysis.py"
+      ]
+    }
+  },
+  "required_components": [
+    "economic-cost-ranges"
+  ]
+}
