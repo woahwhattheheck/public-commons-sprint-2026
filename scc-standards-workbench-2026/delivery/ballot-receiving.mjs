@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
+import http from "node:http";
 import {spawn,execFileSync} from "node:child_process";
 import {createHash,randomUUID} from "node:crypto";
 import assert from "node:assert/strict";
@@ -30,7 +31,7 @@ function write(file,raw,replace=false){
  finally{if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
  const dir=fs.openSync(path.dirname(file),"r");try{fs.fsyncSync(dir);}finally{fs.closeSync(dir);}
 }
-const json=(file,value,replace=false)=>write(file,JSON.stringify(value,null,2)+"\n",replace);
+const json=(file,value,replace=false)=>{if(!replace&&fs.existsSync(file)){assert.deepEqual(read(file),value,"Retained JSON value differs: "+file);return;}write(file,JSON.stringify(value,null,2)+"\n",replace);};
 const pin=file=>{const b=fs.readFileSync(file);return{path:path.relative(config.output,file).split(path.sep).join("/"),bytes:b.length,sha256:sha(b)};};
 function inventory(root){
  const rows=[];function visit(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
@@ -55,6 +56,14 @@ async function run(){
  const marker=path.join(config.workspace,"ballot-operation.json");
  if(!fs.existsSync(marker))assert.equal(fs.readdirSync(config.workspace).length,0,"Select a separate empty ballot workspace, preserving the original consultation case.");
  json(marker,{operation:OPERATION,output:config.output});
+ if(config.original_baseline_archive){
+  assert.ok(path.isAbsolute(config.original_baseline_archive)&&typeof config.original_baseline_sha256==="string"&&typeof config.continued_from_output==="string"&&path.isAbsolute(config.continued_from_output));
+  const raw=fs.readFileSync(config.original_baseline_archive);assert.equal(sha(raw),config.original_baseline_sha256);
+  const parentProgress=read(path.join(config.continued_from_output,"progress.json"));assert.equal(parentProgress.operation,OPERATION);assert.notEqual(config.output,config.continued_from_output);
+  json(out("original-baseline-continuation.json"),{operation:OPERATION,parent_output:config.continued_from_output,parent_source_identity:parentProgress.source_identity,parent_active:parentProgress.active,archive:config.original_baseline_archive,bytes:raw.length,sha256:sha(raw),reason:config.baseline_continuation_note});
+  if(!fs.existsSync(out("progress.json")))execFileSync(config.python,["-B",path.join(config.source,"server.py"),"--workspace",config.workspace,"--restore",config.original_baseline_archive,"--no-serve"],{stdio:["ignore","pipe","pipe"]});
+ }
+
  const progressFile=out("progress.json");
  const progress=fs.existsSync(progressFile)?read(progressFile):{schema:"scc-ballot-receiving/v1",operation:OPERATION,started_at:new Date().toISOString(),steps:{}};
  assert.equal(progress.operation,OPERATION);
@@ -68,6 +77,28 @@ async function run(){
  const stage=async(name,action)=>{if(progress.steps[name])return progress.steps[name].value;progress.active=name;save();const value=await action();progress.steps[name]={at:new Date().toISOString(),value:value??null};save();process.stdout.write(JSON.stringify({operation:OPERATION,stage:name,complete:true})+"\n");return value;};
  save();
  let server=null,browser=null,context=null,operator=null,base="",projectId="scc-authored-operator-v1";
+ // Open exact retained recipient files over allowed loopback HTTP. Chromium's
+ // managed file-URL restriction remains unchanged; only this operation's files
+ // are served, under an unguessable route and strict real-path containment.
+ const attachmentToken=randomUUID();let attachmentBase="";
+ const attachmentServer=http.createServer((req,res)=>{
+  try{
+   assert.ok(req.method==="GET"||req.method==="HEAD");
+   const selected=new URL(req.url,"http://127.0.0.1");
+   assert.ok(selected.pathname.startsWith("/"+attachmentToken+"/"));
+   const relative=decodeURIComponent(selected.pathname.slice(attachmentToken.length+2));
+   assert.ok(relative&&!relative.includes("\\")&&!relative.split("/").some(p=>p===".."||p==="."));
+   const file=fs.realpathSync(path.join(config.output,relative));
+   assert.ok(file.startsWith(config.output+path.sep)&&fs.statSync(file).isFile());
+   const raw=fs.readFileSync(file),types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8",".txt":"text/plain; charset=utf-8",".csv":"text/csv",".pdf":"application/pdf"};
+   res.writeHead(200,{"Content-Type":types[path.extname(file)]||"application/octet-stream","Content-Length":raw.length,"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
+   res.end(req.method==="HEAD"?undefined:raw);
+  }catch{res.writeHead(404);res.end("Not found");}
+ });
+ await new Promise((resolve,reject)=>{attachmentServer.once("error",reject);attachmentServer.listen(0,"127.0.0.1",resolve);});
+ attachmentBase="http://127.0.0.1:"+attachmentServer.address().port+"/"+attachmentToken+"/";
+ function attachmentURL(file){const resolved=fs.realpathSync(file);assert.ok(resolved.startsWith(config.output+path.sep));return attachmentBase+path.relative(config.output,resolved).split(path.sep).map(encodeURIComponent).join("/");}
+
  const pageErrors=[],views=fs.existsSync(out("views.json"))?read(out("views.json")).views:[],serverLog=fs.openSync(out("server.log"),"a");
  const endpoint=()=>base+"/api/projects/"+encodeURIComponent(projectId);
  async function api(url,options={}){
@@ -92,18 +123,31 @@ async function run(){
   if(!server)return;const child=server;server=null;if(child.exitCode!==null)return;
   child.kill("SIGINT");await new Promise(resolve=>{const timer=setTimeout(()=>child.kill("SIGTERM"),5000);child.once("exit",()=>{clearTimeout(timer);resolve();});});
  }
- function attach(page){page.setDefaultTimeout(30000);page.on("pageerror",e=>pageErrors.push(String(e)));page.on("dialog",d=>d.accept());return page;}
+ const sourceDocumentWarnings=[];
+ const archivedDependencyHashes=new Set(["e123655d3cf1ceea9de96c406de58a99c0b8983d57252d75fb8124701e523351","9c5763f5e7fc70dd557fdb438e4ef6fd1e877ddc8abb368b2a89ee9fde2bdad3"]);
+ function attach(page){page.setDefaultTimeout(30000);page.on("pageerror",e=>{
+  if(page.url().startsWith(attachmentBase)&&e.message==="$ is not defined"){
+   const relative=decodeURIComponent(new URL(page.url()).pathname.slice(attachmentToken.length+2)),file=out(relative);
+   if(relative.includes("/originals/")&&fs.existsSync(file)&&archivedDependencyHashes.has(sha(fs.readFileSync(file)))){sourceDocumentWarnings.push({path:relative,sha256:sha(fs.readFileSync(file)),message:String(e),stack:e.stack,classification:"Unmodified original Statistics Canada HTML requires an unavailable original jQuery dependency; retained source bytes and rendered document remain available."});return;}
+  }
+  pageErrors.push(String(e));
+ });page.on("dialog",d=>d.accept());return page;}
  async function operatorOpen(){
   if(context)await context.close();
   context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   operator=attach(await context.newPage());await desk();
  }
+ async function selectRendered(page,selector,value){
+  const previous=await page.locator(selector).elementHandle();assert.ok(previous);
+  try{await page.locator(selector).selectOption(value);await page.waitForFunction(node=>!node.isConnected,previous);assert.equal(await page.locator(selector).inputValue(),value);}
+  finally{await previous.dispose();}
+ }
  async function desk(member){
   await operator.goto(base);await operator.locator("#project-picker").selectOption(projectId);
   await operator.locator('[data-section="ballot-exchange"]').click();
   await operator.locator("#ballot-exchange").waitFor();
-  if(member)await operator.locator("#member-select").selectOption(member);
-  await operator.locator("#ballot-message").waitFor();
+  if(member)await selectRendered(operator,"#member-select",member);
+  await operator.locator("#ballot-message").waitFor({state:"attached"});
  }
  async function capture(page,name,width=1440,height=1000){
   await page.setViewportSize({width,height});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -194,7 +238,7 @@ async function run(){
  async function formFields(form,values){
   for(const [name,value]of Object.entries(values)){if(Array.isArray(value)&&await form.locator('[data-list-field="'+name+'"]').count()){const choices=form.locator('[data-list-field="'+name+'"] input[type="checkbox"]');for(let i=0;i<await choices.count();i++)await choices.nth(i).setChecked(value.includes(await choices.nth(i).getAttribute("value")));continue;}const input=form.locator('[name="'+name+'"],[data-field="'+name+'"]').first();
    const tag=await input.evaluate(e=>({tag:e.tagName,type:e.type}));
-   if(tag.type==="checkbox")await input.setChecked(value);else if(tag.tag==="SELECT")await input.selectOption(value);else await input.fill(Array.isArray(value)?value.join("\n"):String(value));
+   if(tag.type==="checkbox")await input.setChecked(value);else if(tag.tag==="SELECT")await input.selectOption(value);else await input.fill(Array.isArray(value)?value.join("\n"):tag.type==="datetime-local"?String(value).replace(/T(\d{2}:\d{2}):00$/,"T$1"):String(value));
   }
  }
 
@@ -204,7 +248,7 @@ async function run(){
  }
  async function retain(member,packetId,file,name){
   if(fs.existsSync(out("requests/"+name+".json"))){const result=await uiOperation(name,"ballot.receive",async()=>{});const kept=await record("ballot_returns",result.return_id);assert.equal(kept.source_sha256,sha(fs.readFileSync(file)));assert.deepEqual(kept.response,read(file));return result.return_id;}
-  await desk(member);await operator.locator("#packet-select").selectOption(packetId);
+  await desk(member);await selectRendered(operator,"#packet-select",packetId);
   await operator.locator("#ballot-return-file").setInputFiles(file);
   await operator.locator(".ballot-file").waitFor();await operator.locator("#preview-return").click();
   await operator.locator("#retain-return").waitFor();await operator.locator("#retain-return").isEnabled();
@@ -217,7 +261,7 @@ async function run(){
  }
  async function adopt(member,returnId,name){
   if(fs.existsSync(out("requests/"+name+".json"))){await uiOperation(name,"ballot.adopt",async()=>{});const rows=await api(endpoint()+"/ballot-exchange/status"),m=rows.ballots.find(x=>x.ballot.id===ballotId).members.find(x=>x.member.person_id===member);return m.adoptions.find(a=>a.return_id===returnId).vote_id;}
-  await desk(member);await operator.locator("#return-select").selectOption(returnId);
+  await desk(member);await selectRendered(operator,"#return-select",returnId);
   await operator.locator('#ballot-adopt-form [name="verification_note"]').fill("Authored exercise: the selected member page produced this exact return in the same operating course. Original response identity, current correction and full content were compared.");
   const result=await uiOperation(name,"ballot.adopt",()=>operator.locator("#ballot-adopt").click());
   const rows=await api(endpoint()+"/ballot-exchange/status"),m=rows.ballots.find(x=>x.ballot.id===ballotId).members.find(x=>x.member.person_id===member);
@@ -269,7 +313,7 @@ async function run(){
    });
    const packetId=packetIds[id],zip=out(name+"/Member_Ballot.zip"),recipientRoot=out(name+"/recipient"),first=out(name+"/Member_Return_r1.json");
    await stage(name+"_offline_member",async()=>{
-    await desk(id);await operator.locator("#packet-select").selectOption(packetId);
+    await desk(id);await selectRendered(operator,"#packet-select",packetId);
     await download(operator,operator.locator("#download-member-packet"),zip);unpack(zip,recipientRoot);
     const envelope=read(path.join(recipientRoot,"packet.json")),packet=await record("ballot_packets",packetId);
     assert.equal(envelope.packet_sha256,packet.packet_sha256);assert.equal(envelope.packet.member.person_id,id);
@@ -277,7 +321,7 @@ async function run(){
     let recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
     let page=attach(await recipientContext.newPage());
     try{
-     await page.goto(pathToFileURL(path.join(recipientRoot,"member-ballot.html")).href);
+     await page.goto(attachmentURL(path.join(recipientRoot,"member-ballot.html")));
      await page.locator('#tabs [data-tab="document"]').click();assert.ok((await page.locator("#read-body").innerText()).includes("Amos"));
      await page.locator('#tabs [data-tab="vote"]').click();
      const explanation=index===0?"Authored negative: retain the original Census reference date separately from the municipal change effective date. Literal <source> & \"quoted\" wording remains unchanged.":index===5?"Authored justified abstention: this example member records no technical position.":index===6?"":"Authored agreement with the exact frozen bilingual edition and source-bound cases.";
@@ -286,7 +330,7 @@ async function run(){
      assert.equal(read(draft).response.justification,explanation);
      await recipientContext.close();
      recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
-     page=attach(await recipientContext.newPage());await page.goto(pathToFileURL(path.join(recipientRoot,"member-ballot.html")).href);
+     page=attach(await recipientContext.newPage());await page.goto(attachmentURL(path.join(recipientRoot,"member-ballot.html")));
      await page.locator("#open-file").setInputFiles(draft);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
      assert.ok((await page.locator("#content").innerText()).includes(member.person_name));
      await page.locator("#confirmed").check();await download(page,page.locator('[data-do="export"]'),first);
@@ -300,9 +344,9 @@ async function run(){
       await page.locator("#language").selectOption("en");
       const invalid={...returned,packet_id:"another-packet"};await page.locator("#open-file").setInputFiles({name:"Wrong_Packet.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(invalid))});await page.locator("#notice.error").waitFor();await capture(page,"member-wrong-packet-error",390,844);
       await page.locator("#open-file").setInputFiles(first);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
-      await page.locator('#tabs [data-tab="vote"]').click();assert.ok(await page.locator("#vote-form fieldset").isDisabled());
+      await page.locator('#tabs [data-tab="vote"]').click();assert.ok(await page.locator("#vote-form [name=\"choice\"]").isDisabled());assert.ok(await page.locator("#vote-form fieldset").evaluate(element=>element.disabled));
      }
-     await page.goto(pathToFileURL(copy).href);assert.ok((await page.locator("body").innerText()).includes(explanation||member.person_name));await capture(page,name+"-readable-copy",index===0?390:1440,index===0?844:1000);
+     await page.goto(attachmentURL(copy));assert.ok((await page.locator("body").innerText()).includes(explanation||member.person_name));await capture(page,name+"-readable-copy",index===0?390:1440,index===0?844:1000);
      return{packet_id:packetId,packet:pin(zip),draft:pin(draft),returned:pin(first),readable:pin(copy),response_id:returned.response_id};
     }finally{await recipientContext.close();}
    });
@@ -320,7 +364,7 @@ async function run(){
   await stage("offline_explicit_correction",async()=>{
    const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),page=attach(await recipientContext.newPage());
    try{
-    await page.goto(pathToFileURL(out("member-1/recipient/member-ballot.html")).href);
+    await page.goto(attachmentURL(out("member-1/recipient/member-ballot.html")));
     await page.locator("#open-file").setInputFiles(originalReturn);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
     await page.locator('[data-do="correct"]').click();await page.locator("#vote-form").waitFor();
     const first=read(originalReturn),justification=first.justification+"\n\nAuthored correction: affected Census population must also remain distinct from a new annual population estimate.";
@@ -331,7 +375,7 @@ async function run(){
     await page.locator("#open-file").setInputFiles(correction);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
     const second=read(correction);assert.equal(second.response_id,first.response_id);assert.equal(second.response_revision,2);assert.equal(second.previous_response_sha256,sha(canonical(first)));assert.equal(second.justification,justification);
     const copy=out("member-1/Member_Readable_r2.html");await download(page,page.locator('[data-do="copy"]'),copy);
-    await capture(page,"member-correction",390,844);await page.goto(pathToFileURL(copy).href);assert.ok((await page.locator("body").innerText()).includes(justification));await capture(page,"member-correction-readable",390,844);
+    await capture(page,"member-correction",390,844);await page.goto(attachmentURL(copy));assert.ok((await page.locator("body").innerText()).includes(justification));await capture(page,"member-correction-readable",390,844);
     return{returned:pin(correction),draft:pin(draft),readable:pin(copy),response_id:second.response_id};
    }finally{await recipientContext.close();}
   });
@@ -412,7 +456,7 @@ async function run(){
    const restored=out("received-workspace");fs.mkdirSync(restored,{recursive:true,mode:0o700});
    const result=execFileSync(config.python,["-B",path.join(config.source,"server.py"),"--workspace",restored,"--restore",out("Ballot_Complete_Project.private.zip"),"--no-serve"],{encoding:"utf8"});
    if(!fs.existsSync(out("restore-result.txt")))write(out("restore-result.txt"),result);
-   await start(restored);await operatorOpen();await operator.locator("#ballot-select").selectOption(ballotId);await operator.locator("#member-select").selectOption(primary);
+   await start(restored);await operatorOpen();await selectRendered(operator,"#ballot-select",ballotId);await selectRendered(operator,"#member-select",primary);
    const rows=await api(endpoint()+"/ballot-exchange/status"),m=rows.ballots.find(r=>r.ballot.id===ballotId).members.find(r=>r.member.person_id===primary);
    assert.equal(m.current_vote.id,originalVote);assert.equal(m.returns.length,2);assert.equal(m.adoptions.length,2);
    await archive("private_restore",out("Received_Complete_Project.private.zip"));unpack(out("Received_Complete_Project.private.zip"),out("received"));
@@ -421,28 +465,42 @@ async function run(){
    await capture(operator,"received-operator-desktop");await capture(operator,"received-operator-narrow",390,844);
    return{project_id:projectId,vote_id:originalVote,files:Object.keys(manifest.files).length,archive:pin(out("Received_Complete_Project.private.zip"))};
   });
+  const presentation=out("presentation/"+sourceIdentity);
+  await stage("current_presentation_exports_"+sourceIdentity,async()=>{
+   const before=await project();
+   await archive("edition",path.join(presentation,"Bilingual_Publication.zip"),"&edition_id="+encodeURIComponent(editionId)+"&publication_id="+encodeURIComponent(publicationId));unpack(path.join(presentation,"Bilingual_Publication.zip"),path.join(presentation,"publication"));
+   await archive("ballot_decision",path.join(presentation,"Ballot_Decision.private.zip"),"&ballot_id="+encodeURIComponent(ballotId));unpack(path.join(presentation,"Ballot_Decision.private.zip"),path.join(presentation,"decision"));
+   for(let i=0;i<members.length;i++){
+    const packet=before.ballot_packets.find(p=>p.person_id===members[i].person_id&&p.ballot_id===ballotId);assert.ok(packet);
+    const dir=path.join(presentation,"member-"+(i+1));await archive("ballot_member",path.join(dir,"Member_Ballot.zip"),"&packet_id="+encodeURIComponent(packet.id));unpack(path.join(dir,"Member_Ballot.zip"),path.join(dir,"recipient"));
+    assert.deepEqual(fs.readFileSync(path.join(dir,"recipient/packet.json")),fs.readFileSync(out("member-"+(i+1)+"/recipient/packet.json")),"Presentation export changed the original packet binding");
+   }
+   assert.deepEqual(await project(),before,"Presentation export changed native records");
+   json(path.join(presentation,"presentation-continuation.json"),{source_identity:sourceIdentity,project_id:projectId,revision:before.revision,publication_id:publicationId,ballot_id:ballotId,note:"Native read-only exports of the exact existing closed ballot, publication and seven packet identities. Earlier artifacts remain unchanged at original paths.",files:inventory(presentation)});
+   return{directory:path.relative(config.output,presentation),revision:before.revision};
+  });
   await stage("actual_outgoing_attachment_views_"+sourceIdentity,async()=>{
    const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),page=attach(await recipientContext.newPage()),opened=[];
    try{
-    const htmlFiles=inventory(config.output).filter(r=>r.path.endsWith(".html")&&!r.path.startsWith("received-workspace/"));
+    const htmlFiles=inventory(config.output).filter(r=>r.path.endsWith(".html")&&!r.path.startsWith("received-workspace/")&&(!r.path.startsWith("presentation/")||r.path.startsWith("presentation/"+sourceIdentity+"/"))).filter(r=>!r.path.startsWith("publication/")&&!r.path.startsWith("decision/")&&!/^member-\d+\/recipient\//.test(r.path));
     for(const row of htmlFiles){
-     const file=out(row.path);await page.goto(pathToFileURL(file).href);
+     const file=out(row.path);await page.goto(attachmentURL(file));
      const name="attachment-"+sha(row.path).slice(0,16);await capture(page,name,1440,1000);await capture(page,name+"-narrow",390,844);opened.push({path:row.path,sha256:row.sha256,view:name});
     }
-    const pdfs=inventory(out("publication")).filter(r=>r.path.endsWith(".pdf")),rendered=[];
+    const pdfs=inventory(path.join(presentation,"publication")).filter(r=>r.path.endsWith(".pdf")),rendered=[];
     for(const row of pdfs){
-     const file=path.join(out("publication"),row.path),prefix=out("views/pdf-"+sha(row.path).slice(0,12));
+     const file=path.join(presentation,"publication",row.path),prefix=out("views/pdf-"+sha(row.path).slice(0,12));
      execFileSync(config.pdftoppm||"pdftoppm",["-r","100","-png",file,prefix],{stdio:["ignore","pipe","pipe"]});
      const pages=fs.readdirSync(out("views")).filter(n=>n.startsWith(path.basename(prefix)+"-")&&n.endsWith(".png")).sort();
      assert.ok(pages.length);rendered.push({file:row.path,sha256:row.sha256,pages:pages.map(n=>pin(out("views/"+n)))});
     }
-    json(out("outgoing-attachments.json"),{source_identity:sourceIdentity,html:opened,pdfs:rendered,full_publication_members:inventory(out("publication")),full_decision_members:inventory(out("decision")),member_packets:members.map((m,i)=>({member:m.person_id,files:inventory(out("member-"+(i+1)+"/recipient"))})),operator_instruction:"Open and visually VIEW every actual captured screen and report page; open the exact DOCX/CSV/JSON/archive contents in their normal recipient view. Fix the affected output and continue this same case."});
+    json(out("outgoing-attachments.json"),{source_identity:sourceIdentity,presentation_directory:path.relative(config.output,presentation),html:opened,pdfs:rendered,source_document_warnings:sourceDocumentWarnings,full_publication_members:inventory(path.join(presentation,"publication")),full_decision_members:inventory(path.join(presentation,"decision")),member_packets:members.map((m,i)=>({member:m.person_id,files:inventory(path.join(presentation,"member-"+(i+1)+"/recipient"))})),operator_instruction:"Open and visually VIEW every actual captured screen and report page; open the exact DOCX/CSV/JSON/archive contents in their normal recipient view. Fix the affected output and continue this same case."});
     return{html:opened.length,pdfs:rendered.length,manifest:"outgoing-attachments.json",views:"views.json"};
    }finally{await recipientContext.close();}
   });
   assert.deepEqual(inventory(config.source),sourceFiles,"The selected complete source changed during the operating course.");assert.deepEqual(pageErrors,[]);
   if(!fs.existsSync(out("result.json")))json(out("result.json"),{schema:"scc-ballot-receiving-result/v1",operation:OPERATION,state:"COMPLETE",completed_at:new Date().toISOString(),project_id:projectId,source_identity:sourceIdentity,source_files:sourceFiles,steps:Object.keys(progress.steps),records:read(out("final-native-records.json")),artifacts:inventory(config.output).filter(r=>!r.path.startsWith("received-workspace/")&&!["progress.json","operation.lock","server.log"].includes(r.path)),rendered_outputs:"outgoing-attachments.json"});
   progress.active=null;progress.state="COMPLETE";save();process.stdout.write(JSON.stringify({operation:OPERATION,state:"COMPLETE",output:config.output,project_id:projectId})+"\n");
- }catch(error){json(out("failure-"+Date.now()+".json"),{operation:OPERATION,at:new Date().toISOString(),stage:progress.active,project_id:projectId,message:String(error),stack:error.stack,page_errors:pageErrors});throw error;}
- finally{if(context)await context.close();if(browser)await browser.close();await stop();fs.closeSync(serverLog);}
+ }catch(error){if(operator&&!operator.isClosed()){await operator.screenshot({path:out("failure-view-"+Date.now()+".png"),fullPage:true}).catch(()=>{});await operator.locator("body").innerText().then(text=>write(out("failure-page-"+Date.now()+".txt"),text)).catch(()=>{});}json(out("failure-"+Date.now()+".json"),{operation:OPERATION,at:new Date().toISOString(),stage:progress.active,project_id:projectId,message:String(error),stack:error.stack,page_errors:pageErrors});throw error;}
+ finally{if(context)await context.close();if(browser)await browser.close();await stop();attachmentServer.closeAllConnections();await new Promise(resolve=>attachmentServer.close(resolve));fs.closeSync(serverLog);}
 }

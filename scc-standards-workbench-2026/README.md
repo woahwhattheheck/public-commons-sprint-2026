@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.3.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package declares `python-docx 1.2.0`, `reportlab 4.4.9`, `pypdf 6.20.1` and `pdfplumber 0.11.10` for editable Word documents, PDF generation and original-form reading. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc-standards-workbench-0.4.1-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.3.0-source.zip
+python -m pip install ./scc-standards-workbench-0.4.1-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -18,6 +18,14 @@ Open the localhost address printed by the command, normally `http://127.0.0.1:87
 The command installs the package and its declared document dependencies; it does not require an account, API key or database server. The source package is an application, not a self-contained Python runtime. A controlled offline installation can supply the same dependency wheels through the ordinary pip `--no-index --find-links` options.
 
 For an empty working project, omit `--demo` and choose **New project**. The public and authored examples have stable, distinct IDs; selecting an example again opens the retained project without overwriting its edits. A later example source edition requires a fresh workspace or an explicit archive of the existing one.
+
+## Version 0.4.1: native ballot receiving corrections
+
+This complete source edition includes the original consultation, individual-member ballot and prime-application desks. It incorporates six corrections from the original equipped ballot course: readable decision export, multiline vote and notification fields, narrow-width wrapping, stable replay comparisons, a linked continuation from the retained original baseline, and safe loopback viewing of the course's own attachments.
+
+The corrected ballot course completed its original return/adoption, closure, procedural review, publication and independent private restoration under source identity `cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39`. The original closed ballot and earlier output are preserved. This packaged edition adds release metadata to those exact six native postimages; its source manifest is the authority for the installed files. Final inspection of every outgoing attachment and the separate prime-application receiving remain with their original producing operation; completion of the ballot course does not claim those separate outcomes.
+
+See the [0.4.1 receiving and source record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/RECEIVING-0.4.1.md) for the exact correction identity and continuation behavior. Keep the complete private project export when upgrading; the immutable earlier source releases remain available.
 
 ## Exchange a bilingual review packet
 

@@ -419,5 +419,5 @@ def decision_files(state, ballot_id, originals):
         [r["version"], r["status"], r["issued"], r["authority"]] for r in publications])
     body += "<p>decision.json retains every frozen packet, corrected return, adoption before/after and exact closure input. "
     body += "sources.json indexes the complete retained original files. Restore the separately selected full private project archive for editable continuation.</p>"
-    files["decision.html"] = consultation._document(ballot["title"], body).encode()
+    files["decision.html"] = consultation._document(ballot["title"], body)
     return files
