@@ -495,7 +495,7 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     state.result={installedVersion:config.installedVersion,sourceRevision:config.sourceRevision,
       processFamilies:3,releaseVersions:6,completedProcesses:browserResult.completedProcessIds,
       nativeMutations:state.nativeRequests.filter(item=>['POST','PUT','DELETE'].includes(item.method)&&
-        !item.path.endsWith('/validate-migration')).length,workspace:installedWorkspace,
+        !item.path.endsWith('/validate-migration')).length,workspace:installed.completeWorkspace.file,
       commissionedWorkspace:complete.laterDownload,browser:browserResult,decisions,cases,installed};await persist();
     return{schema:SCHEMA,state:state.state,scope:SCOPE,operation:config.operation,
       sourceRevision:config.sourceRevision,result:state.result,stateFile:await hashFile(statePath)};
