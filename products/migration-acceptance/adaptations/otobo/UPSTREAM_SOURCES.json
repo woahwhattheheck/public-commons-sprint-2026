@@ -1,0 +1,63 @@
+{
+  "schema": "tjlabs.source-register.v1",
+  "preparedBy": "TokenJunkieLabs",
+  "description": "Primary technical sources for the generic native configuration adaptation.",
+  "sources": [
+    {
+      "url": "https://otobo.io/en/otobo-11-1-beta/",
+      "title": "Current OTOBO 11.1 beta",
+      "supports": [
+        "Release remains beta; current versions must be captured from actual installed source"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://doc.otobo.org/manual/installation/11.1/en/content/updating/updating-docker.html",
+      "title": "Official Docker update guide",
+      "supports": [
+        "Original operator upgrade route, full backup/configuration and independent image/compose versions"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://doc.otobo.org/manual/installation/11.1/en/content/updating/updating-rhel.html",
+      "title": "Official RHEL update guide",
+      "supports": [
+        "Native upgrade/package behavior; illustrative version text does not prove installed or stable version"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://doc.otobo.org/manual/installation/11.1/en/content/updating/updating-ubuntu.html",
+      "title": "Official Ubuntu update guide",
+      "supports": [
+        "Original native upgrade sequence and customizations; no helper upgrade action"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://metacpan.org/pod/YAML::XS",
+      "title": "YAML::XS primary module documentation",
+      "supports": [
+        "Functional parser behavior, globals, versions and strict admission distinction"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://github.com/RotherOSS/otobo/tree/ed3cdf2b9b633fe3941ce15be16c5720006b1b38",
+      "title": "Exact OTOBO upstream source pin",
+      "supports": [
+        "All complete native source leaves, original GPL notice/license, export/import behaviors"
+      ],
+      "retrievedAt": "2026-10-13"
+    },
+    {
+      "url": "https://github.com/ingydotnet/yaml-libyaml-pm/tree/0adfa4772940033db4377df12ee7524cfbc310e5",
+      "title": "Exact YAML::XS upstream source",
+      "supports": [
+        "Classic functional scalar load/dump implementation; no claim that this is the installed parser version"
+      ],
+      "retrievedAt": "2026-10-13"
+    }
+  ]
+}
