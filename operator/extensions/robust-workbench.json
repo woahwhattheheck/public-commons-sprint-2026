@@ -1,0 +1,192 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "robust-workbench",
+  "title": "Decision studies",
+  "version": "1.2.0",
+  "order": 68,
+  "assets": [
+    "robust_workbench.mjs",
+    "robust_workbench.css"
+  ],
+  "backend": {
+    "module": "robust_workbench",
+    "factory": {
+      "name": "RobustWorkbench",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "robust.study.list",
+      "robust.study.read",
+      "robust.study.create",
+      "robust.study.revise",
+      "robust.experiment.prepare",
+      "robust.summary.prepare",
+      "robust.diagnostic.prepare",
+      "robust.solve",
+      "robust.frontier",
+      "robust.project.export",
+      "robust.project.receive",
+      "robust.selection.export",
+      "robust.report.export"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "path": "/api/robust-workbench/catalog",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/study",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "study",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/run",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "run",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/methods",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "methods",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/experiment",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "experiment",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/diagnostic",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "diagnostic",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/delivery-options",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "delivery-options",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/delivery-release",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "delivery-release",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/robust_workbench.mjs",
+    "factory": "createRobustWorkbench",
+    "styles": [
+      "/web/robust_workbench.css"
+    ],
+    "view": {
+      "id": "robust-workbench",
+      "title": "Decision studies",
+      "after": "experiments"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "requires": [
+      "getState",
+      "api",
+      "refreshState",
+      "showTask",
+      "openExtension"
+    ]
+  }
+}

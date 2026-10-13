@@ -1,0 +1,162 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "published-studies",
+  "title": "Published studies",
+  "version": "2.3.2",
+  "order": 46,
+  "assets": [
+    "published_studies.mjs",
+    "published_studies.css"
+  ],
+  "backend": {
+    "module": "published_study_operator",
+    "factory": {
+      "handler": "PublishedStudyProvider",
+      "args": [
+        "operator",
+        "fault",
+        "source_roots"
+      ]
+    },
+    "actions": [
+      "published-study.import",
+      "published-study.export",
+      "published-study.report",
+      "published-study.review.save",
+      "published-study.review.export",
+      "published-study.review.import"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/published-studies/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/study",
+        "operation": "study",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/context",
+        "operation": "context",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/geographic-preview",
+        "operation": "geographic-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/geographic-selection",
+        "operation": "geographic-selection",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/published-study/{workspace_key}/{collection_id}/{member_path...}",
+        "handler": "member",
+        "args": [
+          "route.workspace_key",
+          "route.collection_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/published_studies.mjs",
+    "factory": "createPublishedStudiesDesk",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "toast",
+      "navigate",
+      "openItem",
+      "showTask"
+    ],
+    "styles": [
+      "/web/published_studies.css"
+    ],
+    "view": {
+      "id": "published-studies",
+      "title": "Published studies",
+      "after": "sources"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

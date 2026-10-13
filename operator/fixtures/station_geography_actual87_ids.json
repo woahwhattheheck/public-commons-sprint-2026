@@ -1,0 +1,287 @@
+{
+  "schema": "upstate.station-study-inventory/v1",
+  "title": "Upper Savannah assessment study: 87 original station IDs",
+  "source_ref": {
+    "path": "assessment/listed_causes_2026_draft.csv",
+    "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f",
+    "rows": 101,
+    "station_id_field": "site",
+    "uri": "https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/PDF/302110",
+    "public_notice_uri": "https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/Display/38165",
+    "source_id": "scdes-draft-ir-2026",
+    "source_edition": "draft",
+    "source_pdf_pages": [
+      67,
+      68,
+      69,
+      70,
+      71
+    ],
+    "sha256_scope": "Retained extracted assessment CSV",
+    "derivation": "Each listed source row was expanded by cause. Original source_row_uses, source_row_causes and source_row_priority are retained; ECOLI maps to REC, HGF/PCB to FISH, and the other extracted causes to AL."
+  },
+  "station_count": 87,
+  "stations": [
+    {
+      "station_id": "CL-015"
+    },
+    {
+      "station_id": "CL-017"
+    },
+    {
+      "station_id": "CL-018"
+    },
+    {
+      "station_id": "CL-019"
+    },
+    {
+      "station_id": "CL-040"
+    },
+    {
+      "station_id": "CL-041"
+    },
+    {
+      "station_id": "CL-096"
+    },
+    {
+      "station_id": "CL-097"
+    },
+    {
+      "station_id": "MC-03"
+    },
+    {
+      "station_id": "RL-01020"
+    },
+    {
+      "station_id": "RL-13080"
+    },
+    {
+      "station_id": "RL-15105"
+    },
+    {
+      "station_id": "RL-16044"
+    },
+    {
+      "station_id": "RL-16112"
+    },
+    {
+      "station_id": "RL-16120"
+    },
+    {
+      "station_id": "RL-17076"
+    },
+    {
+      "station_id": "RL-17129"
+    },
+    {
+      "station_id": "RL-17133"
+    },
+    {
+      "station_id": "RL-18100"
+    },
+    {
+      "station_id": "RL-19165"
+    },
+    {
+      "station_id": "RL-21209"
+    },
+    {
+      "station_id": "RL-21217"
+    },
+    {
+      "station_id": "RL-21225"
+    },
+    {
+      "station_id": "RL-24073"
+    },
+    {
+      "station_id": "RS-01049"
+    },
+    {
+      "station_id": "RS-02490"
+    },
+    {
+      "station_id": "RS-03506"
+    },
+    {
+      "station_id": "RS-04380"
+    },
+    {
+      "station_id": "RS-05412"
+    },
+    {
+      "station_id": "RS-05414"
+    },
+    {
+      "station_id": "RS-06170"
+    },
+    {
+      "station_id": "RS-06190"
+    },
+    {
+      "station_id": "RS-09286"
+    },
+    {
+      "station_id": "RS-12089"
+    },
+    {
+      "station_id": "RS-13137"
+    },
+    {
+      "station_id": "RS-14201"
+    },
+    {
+      "station_id": "RS-15281"
+    },
+    {
+      "station_id": "RS-18426"
+    },
+    {
+      "station_id": "RS-18429"
+    },
+    {
+      "station_id": "RS-19458"
+    },
+    {
+      "station_id": "RS-21014"
+    },
+    {
+      "station_id": "RS-22078"
+    },
+    {
+      "station_id": "RS-24163"
+    },
+    {
+      "station_id": "SV-004"
+    },
+    {
+      "station_id": "SV-031"
+    },
+    {
+      "station_id": "SV-037"
+    },
+    {
+      "station_id": "SV-054"
+    },
+    {
+      "station_id": "SV-057"
+    },
+    {
+      "station_id": "SV-066"
+    },
+    {
+      "station_id": "SV-098"
+    },
+    {
+      "station_id": "SV-100"
+    },
+    {
+      "station_id": "SV-101"
+    },
+    {
+      "station_id": "SV-106"
+    },
+    {
+      "station_id": "SV-107"
+    },
+    {
+      "station_id": "SV-109"
+    },
+    {
+      "station_id": "SV-111"
+    },
+    {
+      "station_id": "SV-139"
+    },
+    {
+      "station_id": "SV-141"
+    },
+    {
+      "station_id": "SV-192"
+    },
+    {
+      "station_id": "SV-203"
+    },
+    {
+      "station_id": "SV-205"
+    },
+    {
+      "station_id": "SV-206"
+    },
+    {
+      "station_id": "SV-229A"
+    },
+    {
+      "station_id": "SV-233"
+    },
+    {
+      "station_id": "SV-234"
+    },
+    {
+      "station_id": "SV-236"
+    },
+    {
+      "station_id": "SV-241"
+    },
+    {
+      "station_id": "SV-268"
+    },
+    {
+      "station_id": "SV-311"
+    },
+    {
+      "station_id": "SV-313"
+    },
+    {
+      "station_id": "SV-331"
+    },
+    {
+      "station_id": "SV-335"
+    },
+    {
+      "station_id": "SV-336"
+    },
+    {
+      "station_id": "SV-344"
+    },
+    {
+      "station_id": "SV-345"
+    },
+    {
+      "station_id": "SV-357"
+    },
+    {
+      "station_id": "SV-364"
+    },
+    {
+      "station_id": "SV-376"
+    },
+    {
+      "station_id": "SV-599"
+    },
+    {
+      "station_id": "SV-642"
+    },
+    {
+      "station_id": "SV-699"
+    },
+    {
+      "station_id": "SV-734"
+    },
+    {
+      "station_id": "SV-790"
+    },
+    {
+      "station_id": "SV-799"
+    },
+    {
+      "station_id": "SV-818"
+    },
+    {
+      "station_id": "SV-822"
+    },
+    {
+      "station_id": "SV-823"
+    }
+  ]
+}

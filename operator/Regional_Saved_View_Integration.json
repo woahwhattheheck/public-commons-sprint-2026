@@ -1,0 +1,426 @@
+{
+  "schema": "upstate.regional-saved-view-integration/v1",
+  "title": "Current native regional saved-view continuation",
+  "source_editions": {
+    "registered_journey": "F0C8QBS37TL",
+    "regional_predecessor": "F0C8QRG6K26",
+    "current_watershed": "F0C8JLUBR19",
+    "decision_browser": "F0C8QM4TW5Q",
+    "task_poll_authentication": "R3: original Bearer capability for queued native backup/restore task reads; same-origin polling without redirects",
+    "current_host_reinstall": "Preserve exact known current Decision studies diagnostic opener and native Save view / Project continuity handoff variants."
+  },
+  "owned_files": {
+    "operator/web/regional_journey.mjs": {
+      "bytes": 26519,
+      "sha256": "92a92d7dcd69d91017e9301da41b93cff6f6f209aa1d91ed9b748cd3f9477e38",
+      "previous_sha256": [
+        "8c5a1fa78f1015a914f93b8e349f38d3846904213e80a299b149a93bbf890aca",
+        "71fe65a8c49c1787ac219e9ba21ed98cb71c8877d37570d34851a391bb424e63",
+        "b100e4d344101774f2a59ae4d92b44f1a68f9ce488151b63de0133f19e21379b"
+      ]
+    },
+    "operator/web/regional_journey.css": {
+      "bytes": 1174,
+      "sha256": "5cbf0f7d35f94f4918a43247e79e5b78a727124db47d035337b127d97c03e668",
+      "previous_sha256": [
+        "5cbf0f7d35f94f4918a43247e79e5b78a727124db47d035337b127d97c03e668",
+        "5cbf0f7d35f94f4918a43247e79e5b78a727124db47d035337b127d97c03e668"
+      ]
+    },
+    "operator/REGIONAL_SAVED_VIEW.md": {
+      "bytes": 10513,
+      "sha256": "e3dafa8346614b01a210d5121c13f324fa8b2801771fa0da126ae88300d90851",
+      "previous_sha256": [
+        "8429cba1e60172b8b2eb52a6761eb940e0627f2a8dd45135b3537d4025b5af37"
+      ]
+    },
+    "source/run_saved_regional_view_browser.mjs": {
+      "bytes": 28572,
+      "sha256": "5219575547ecf6b33d420327018efa74f20b98a61772379d81a45b9dd2cfb74e",
+      "previous_sha256": [
+        "981211e61884200e30001b746b24771a96385761b040f6871a7515b0ec01f9c5"
+      ]
+    }
+  },
+  "component_members": [
+    "operator/Guided_Journey_Integration.json",
+    "operator/extensions/guided-journey.json",
+    "operator/web/journey.mjs"
+  ],
+  "reference_files": {
+    "operator/web/journey.mjs": {
+      "before": {
+        "bytes": 58640,
+        "sha256": "47a076a401b34788eb124d6add362032bd648d44a2b356c9ba69e31d423d88d5"
+      },
+      "after": {
+        "bytes": 64184,
+        "sha256": "78a2f2a5aed7e3fa7e3b621761eaf568b4d0c70fb865302894d9c15c33a4c05e"
+      }
+    },
+    "operator/web/extension_host.mjs": {
+      "before": {
+        "bytes": 18516,
+        "sha256": "7a7e0be92b7ec2d44113a0e31febedd3ec39705a5493f951e9ed6dc982bad90c"
+      },
+      "after": {
+        "bytes": 19921,
+        "sha256": "b439739ad37d5530852421216793947ddff76f04604424e642f05b83cc8af5a4"
+      }
+    },
+    "operator/web/watershed_context.mjs": {
+      "before": {
+        "bytes": 40008,
+        "sha256": "b55c4d1dc48b463eb29a161d186253b63cea60cfa6f7c9e8677e0167b88cf49c"
+      },
+      "after": {
+        "bytes": 40289,
+        "sha256": "dd87e23f4f0e77e99a454a9b214800302e26dab5316dc48ff62bd9d357869229"
+      }
+    },
+    "operator/web/robust_workbench.mjs": {
+      "before": {
+        "bytes": 43585,
+        "sha256": "a02ca33c9b154616fad3429429eede52c83d5ecd18fe9d7fdacedb4eec252ea6"
+      },
+      "after": {
+        "bytes": 43859,
+        "sha256": "45d7f30ba425d12f903a161c058c55fb9125296938b726a097fc38724bb98400"
+      }
+    },
+    "operator/web/app.mjs": {
+      "before": {
+        "bytes": 135453,
+        "sha256": "5c01de04677207922fefa367b52c055df2eb36676f75b1a7542cde838ce2591e"
+      },
+      "after": {
+        "bytes": 135536,
+        "sha256": "fd0ddc2f7a3e88f8e4ff2bfb8e1badfc5e5ea36bb24e10329cdd7080b6ea839a"
+      }
+    },
+    "operator/extensions/guided-journey.json": {
+      "before": {
+        "bytes": 1284,
+        "sha256": "301e7f2672c63d6f709a5d86e43dba83a8bf9f2735831a7ee12fcf23f6ebaba9"
+      },
+      "after": {
+        "bytes": 1382,
+        "sha256": "081005d323f5c521227f030fbaa5795d2b965591b3c0a071e7ac361df939644d"
+      }
+    },
+    "operator/Guided_Journey_Integration.json": {
+      "before": {
+        "bytes": 11628,
+        "sha256": "ad5c2674dee229d3e2f6e88231ef70f147f5e1f0e06de44cf546ece39af2dfe3"
+      },
+      "after": {
+        "bytes": 11712,
+        "sha256": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b"
+      }
+    },
+    "operator/Guided_Journey_Source.json": {
+      "before": {
+        "bytes": 1959,
+        "sha256": "76d4c4bb804fa9385c121f87e33a6e0da4f7eb6d7c45755c9808fe1a04aaa54b"
+      },
+      "after": {
+        "bytes": 2068,
+        "sha256": "b0d1b5357fb0c50af8710d0c940bcab936528436eabb3bbf12f84c54f27c4819"
+      }
+    }
+  },
+  "edits": [
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_import",
+      "before": "/** Guided operation of the existing Upper Savannah scientific workspace. */",
+      "after": "/** Guided operation of the existing Upper Savannah scientific workspace. */\nimport {attachRegionalJourney} from './regional_journey.mjs';",
+      "marker": "import {attachRegionalJourney}"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_validation",
+      "before": " const selection={};\n for(const [key,collection]of Object.entries(fields)){",
+      "after": " if(value.regional!==undefined&&value.regional!==null&&(typeof value.regional!=='object'||Array.isArray(value.regional)||value.regional.schema!=='upstate.regional-journey/v1'))throw Error('Choose the original regional journey selection format.');\n const selection={};\n for(const [key,collection]of Object.entries(fields)){",
+      "marker": "value.regional.schema!=='upstate.regional-journey/v1'"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_import_value",
+      "before": "return {selection,step:journeySteps.some",
+      "after": "return {selection,regional:value.regional?JSON.parse(JSON.stringify(value.regional)):null,step:journeySteps.some",
+      "marker": "regional:value.regional?JSON.parse"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_controller",
+      "before": " const runTitle=item=>item?title('scenarios',item.selection?.scenario_id)+' · '+title('profiles',item.selection?.profile_id)+' · '+modelLabel(item.selection):'Choose a native run';",
+      "after": " const runTitle=item=>item?title('scenarios',item.selection?.scenario_id)+' · '+title('profiles',item.selection?.profile_id)+' · '+modelLabel(item.selection):'Choose a native run';\n const regional=attachRegionalJourney({...host,getState:state,getSelection:()=>preferences?.selection||{},getContext:()=>preferences?.regional??null,setContext:value=>{if(preferences){preferences.regional=value;save();}}});",
+      "marker": "const regional=attachRegionalJourney("
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_default",
+      "before": "notes:'',pending:{},requests:{},note_versions:[]};",
+      "after": "notes:'',regional:null,pending:{},requests:{},note_versions:[]};",
+      "marker": "notes:'',regional:null,pending:"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_slot",
+      "before": "'<blockquote class=\"journey-speaking\">'+esc(step.say)+'</blockquote><div class=\"journey-work\">'+renderers[step.id]()+'</div>'+",
+      "after": "'<blockquote class=\"journey-speaking\">'+esc(step.say)+'</blockquote><div class=\"journey-work\">'+(['study','inputs','compare'].includes(step.id)?'<div data-journey-regional-slot></div>':'')+renderers[step.id]()+'</div>'+",
+      "marker": "data-journey-regional-slot"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_mount",
+      "before": "  container.innerHTML=render();\n  const input=event=>{",
+      "after": "  container.innerHTML=render();\n  regional.mount(container.querySelector('[data-journey-regional-slot]'),preferences.step);\n  const input=event=>{",
+      "marker": "regional.mount(container.querySelector"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_detach",
+      "before": " function detach(){if(removeListeners)removeListeners();removeListeners=null;mounted=null;}",
+      "after": " function detach(){regional.detach();if(removeListeners)removeListeners();removeListeners=null;mounted=null;}",
+      "marker": "function detach(){regional.detach();"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_capture",
+      "before": "selection:{...preferences.selection},notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:",
+      "after": "selection:{...preferences.selection},regional:regional.capture(),notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:",
+      "marker": "regional:regional.capture()"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_notes",
+      "before": "  lines.push('','## Operating journey','');",
+      "after": "  const regionalNotes=regional.notes();if(regionalNotes)lines.push('',regionalNotes);\n  lines.push('','## Operating journey','');",
+      "marker": "const regionalNotes=regional.notes()"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_opening_api",
+      "before": " async function importFile(file){",
+      "after": " async function selectOpening(value,{locked=false}={}){\n  if(busy&&!locked)throw Error('Wait for the current operation response before importing a regional opening.');\n  const originalWorkspace=workspace();if(!locked)busy=true;\n  try{\n   const opened=await regional.opening(value,state());\n   if(workspace()!==originalWorkspace)throw Error('Open the intended regional workspace and import the opening again.');\n   const validated=validateJourneyImport({schema:SCHEMA,project_id:state().data.project.id,selection:opened.selection,regional:opened.regional,step:'inputs',notes:preferences.notes,note_versions:preferences.note_versions,started_at:preferences.started_at},state());\n   Object.assign(preferences,validated,{active:true,generation:crypto.randomUUID()});\n   save();host.toast('Regional watershed selection and scientific profile opened in the original journey.');return host.navigate('journey');\n  }finally{if(!locked)busy=false;}\n }\n async function openRetainedView(value,{projectRevision=null}={}){\n  if(busy)throw Error('Wait for the current operation response before opening another view.');\n  const originalWorkspace=workspace(),generation=preferences.generation,originalSelection=selectionRevision(preferences);\n  busy=true;\n  try{\n   const imported=validateJourneyImport(value,state());\n   imported.regional=await regional.validateImport(imported.regional,originalWorkspace);\n   if(workspace()!==originalWorkspace||preferences.generation!==generation||selectionRevision(preferences)!==originalSelection)throw Error('The selected workspace or view changed. Open the retained view again.');\n   const leaving=exportValue();\n   const versions=[...list(preferences.note_versions),...list(imported.note_versions)];\n   if(preferences.notes&&preferences.notes!==imported.notes)versions.push({text:preferences.notes,recorded_at:new Date().toISOString()});\n   imported.note_versions=versions.filter((item,index,all)=>typeof item?.text==='string'&&all.findIndex(other=>other?.text===item.text)===index);\n   Object.assign(preferences,imported,{active:true,generation:crypto.randomUUID(),browser_view_draft:leaving});\n   if(projectRevision)preferences.opened_project_revision=projectRevision;\n   save();if(mounted)mount(mounted);updateRail(currentView);\n   host.toast(projectRevision?'Saved project view opened. The prior browser view is retained.':'Retained browser view opened.');\n  }finally{busy=false;}\n }\n async function importFile(file){",
+      "marker": "async function selectOpening(value,"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_opening_import",
+      "before": "   const imported=validateJourneyImport(value,state());\n   Object.assign(preferences,imported,",
+      "after": "   if(value.schema==='upstate.regional-workflow-opening/v1')return await selectOpening(value,{locked:true});\n   const imported=validateJourneyImport(value,state());\n   imported.regional=await regional.validateImport(imported.regional,originalWorkspace);\n   if(workspace()!==originalWorkspace)throw Error('Open the intended workspace and import the journey again.');\n   Object.assign(preferences,imported,",
+      "marker": "value.schema==='upstate.regional-workflow-opening/v1'"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_dispatch",
+      "before": "  const name=button.dataset.action?.replace(/^journey-/,'');",
+      "after": "  const name=button.dataset.action?.replace(/^journey-/,'');\n  if(name?.startsWith('regional-'))return regional.dispatch(button);",
+      "marker": "return regional.dispatch(button)"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_profile_button",
+      "before": "action('profile','Revise parameter profile')+action('grid','Revise model grid')",
+      "after": "action('profile','Revise parameter profile')+action('regional-profile','Open profile workbench')+action('grid','Revise model grid')",
+      "marker": "action('regional-profile','Open profile workbench')"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_import_label",
+      "before": "<span>Resume a saved journey in this project</span>",
+      "after": "<span>Open regional workflow or resume a saved journey</span>",
+      "marker": "Open regional workflow or resume a saved journey"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_import_help",
+      "before": "Use the journey selections file after opening the original project or its restored copy.",
+      "after": "Use the regional-workflow-opening.json receipt or journey selections file in the original project or its restored copy.",
+      "marker": "Use the regional-workflow-opening.json receipt"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_public_api",
+      "before": "const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,isBusy:",
+      "after": "const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,selectOpening,isBusy:",
+      "marker": "updateRail,selectOpening,isBusy:"
+    },
+    {
+      "path": "operator/web/extension_host.mjs",
+      "id": "desk_capability",
+      "before": "      openExtension: (id, method, ...args) => openExtension(id, method, ...args)",
+      "after": "      openExtension: (id, method, ...args) => openExtension(id, method, ...args),\n      openDesk: (id, method, ...args) => openDesk(id, method, ...args)",
+      "marker": "openDesk: (id, method, ...args)"
+    },
+    {
+      "path": "operator/web/extension_host.mjs",
+      "id": "desk_mount_promise",
+      "before": "    call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]);",
+      "after": "    selection.ready = Promise.resolve(call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]));\n    return selection.ready;",
+      "marker": "selection.ready = Promise.resolve"
+    },
+    {
+      "path": "operator/web/extension_host.mjs",
+      "id": "desk_open_method",
+      "before": "  function detach() {\n    const previous = deactivate();",
+      "after": "  /** Open a visible desk only after its original asynchronous mount has finished. */\n  async function openDesk(id, method, ...args) {\n    const entry = entries.get(id);\n    if (!entry || !member.test(method || '')) throw new Error('Choose a registered scientific desk and opening method.');\n    const selectedWorkspace = workspaceKey(host.getState());\n    await host.navigate(entry.client.view.id);\n    const selectedView = active;\n    const instance = await controller(entry);\n    if (destroyed || !selectedView || active !== selectedView || selectedView.entry !== entry ||\n        selectedView.workspace !== selectedWorkspace || workspaceKey(host.getState()) !== selectedWorkspace) {\n      throw new Error('The selected workspace or desk changed while opening this scientific record.');\n    }\n    await selectedView.ready;\n    if (destroyed || active !== selectedView || !entry.mounted || workspaceKey(host.getState()) !== selectedWorkspace) {\n      throw new Error('Reopen the selected scientific desk in its original workspace.');\n    }\n    if (typeof instance[method] !== 'function') throw new Error('The selected desk cannot open this retained record.');\n    return instance[method](...args);\n  }\n\n  function detach() {\n    const previous = deactivate();",
+      "marker": "async function openDesk(id, method, ...args)"
+    },
+    {
+      "path": "operator/web/extension_host.mjs",
+      "id": "desk_return",
+      "before": "    load, render, update, dispatch, detach, destroy, openExtension,",
+      "after": "    load, render, update, dispatch, detach, destroy, openExtension, openDesk,",
+      "marker": "destroy, openExtension, openDesk,"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "id": "watershed_open_selection",
+      "before": "  return {mount, update, detach, refresh, openWatershed};",
+      "after": "  async function openSelection(exportId) {\n    if (!root) throw new Error('Open Regional watersheds before selecting its retained export.');\n    await loadExport(exportId);\n    if (root) root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest'});\n  }\n  return {mount, update, detach, refresh, openWatershed, openSelection};",
+      "marker": "async function openSelection(exportId)"
+    },
+    {
+      "path": "operator/web/robust_workbench.mjs",
+      "id": "decision_prepare_argument",
+      "before": " async function configureExperiment(){\n   const id=$('#experiments').value;",
+      "after": " async function configureExperiment(selectedExperiment){\n   const id=typeof selectedExperiment==='string'?selectedExperiment:$('#experiments').value;",
+      "marker": "async function configureExperiment(selectedExperiment)"
+    },
+    {
+      "path": "operator/web/robust_workbench.mjs",
+      "id": "decision_prepare_public",
+      "before": " return {mount,update,detach,open:openStudy};",
+      "after": " return {mount,update,detach,open:openStudy,prepare:configureExperiment};",
+      "marker": "open:openStudy,prepare:configureExperiment",
+      "present": [
+        " return {mount,update,detach,open:openStudy,prepare:configureExperiment,openForDiagnostic};"
+      ]
+    },
+    {
+      "path": "operator/web/extension_host.mjs",
+      "id": "desk_loading_promise",
+      "before": "    controller(entry).then(\n      () => mountEntry(entry, selection),\n      error => showFailure(entry, selection, error)\n    );",
+      "after": "    selection.ready = controller(entry).then(\n      () => mountEntry(entry, selection),\n      error => showFailure(entry, selection, error)\n    );\n    selection.ready.catch(() => {});",
+      "marker": "selection.ready = controller(entry).then(",
+      "previous": [
+        "    selection.ready = controller(entry).then(\n      () => mountEntry(entry, selection),\n      error => showFailure(entry, selection, error)\n    );"
+      ]
+    },
+    {
+      "path": "operator/web/robust_workbench.mjs",
+      "id": "decision_prepare_retained_draft",
+      "before": "   persist();const value=await read('experiment',{experiment_id:id});",
+      "after": "   persist();\n   if(memory.drafts['experiment:'+id]?.pending_experiment===id){restoreDraft('experiment:'+id);return;}\n   const version=++loadVersion;const value=await read('experiment',{experiment_id:id});\n   if(version!==loadVersion)return;",
+      "marker": "memory.drafts['experiment:'+id]?.pending_experiment===id"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_selected_native_inputs",
+      "before": "  const base=selected('baseline_run_id'),grid=row('grids',base?.selection?.grid_id),profile=row('profiles',base?.selection?.profile_id),collection=row('sources',grid?.spec?.source_collection_id);\n  if(!base)return notice('Choose the starting study first.');",
+      "after": "  const base=selected('baseline_run_id'),grid=selected('grid_id')||row('grids',base?.selection?.grid_id),profile=selected('profile_id')||row('profiles',base?.selection?.profile_id),collection=row('sources',grid?.spec?.source_collection_id||profile?.source_collection_id);\n  if(!grid&&!profile)return notice('Select a saved scientific profile and model grid to inspect their original inputs.');",
+      "marker": "grid=selected('grid_id')||row('grids',base?.selection?.grid_id)"
+    },
+    {
+      "path": "operator/web/app.mjs",
+      "id": "registered_experiment_opener",
+      "before": " setJourneyController:controller=>{operatingJourney=controller;},",
+      "after": " setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),",
+      "marker": "openExperiment:id=>experiments.dispatch"
+    },
+    {
+      "path": "operator/extensions/guided-journey.json",
+      "id": "registered_regional_assets",
+      "before": "    \"journey.mjs\",\n    \"journey.css\"",
+      "after": "    \"journey.mjs\",\n    \"journey.css\",\n    \"regional_journey.mjs\",\n    \"regional_journey.css\"",
+      "marker": "\"regional_journey.mjs\""
+    },
+    {
+      "path": "operator/extensions/guided-journey.json",
+      "id": "registered_regional_capabilities",
+      "before": "      \"setJourneyController\",\n      \"openMap\",",
+      "after": "      \"setJourneyController\",\n      \"openDesk\",\n      \"openExperiment\",\n      \"openMap\",",
+      "marker": "\"openDesk\""
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_selection_revision",
+      "before": " const runTitle=",
+      "after": " const selectionRevision=value=>canonical({selection:value?.selection||{},regional:value?.regional??null});\n const runTitle=",
+      "marker": "const selectionRevision="
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_tab_adoption",
+      "before": "    if(canonical(latest.selection)!==savedSelection&&canonical(preferences.selection)===savedSelection){\n     const incoming=validateJourneyImport(latest,state());preferences.selection=incoming.selection;preferences.generation=latest.generation||crypto.randomUUID();\n    }",
+      "after": "    if(selectionRevision(latest)!==savedSelection&&selectionRevision(preferences)===savedSelection){\n     const incoming=validateJourneyImport(latest,state());preferences.selection=incoming.selection;preferences.regional=incoming.regional;preferences.generation=latest.generation||crypto.randomUUID();\n    }",
+      "marker": "if(selectionRevision(latest)"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_saved_selection_checkpoint",
+      "before": "storageRevision=preferences.revision;savedNotes=preferences.notes;savedSelection=canonical(preferences.selection);storageMessage='';",
+      "after": "storageRevision=preferences.revision;savedNotes=preferences.notes;savedSelection=selectionRevision(preferences);storageMessage='';",
+      "marker": "savedSelection=selectionRevision(preferences);storageMessage"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_loaded_selection_checkpoint",
+      "before": "storageRevision=saved?.revision||null;savedNotes=preferences.notes;savedSelection=canonical(preferences.selection);",
+      "after": "storageRevision=saved?.revision||null;savedNotes=preferences.notes;savedSelection=selectionRevision(preferences);\n   preferences.browser_view_draft=saved?.browser_view_draft&&saved.browser_view_draft.project_id===next.data.project.id?saved.browser_view_draft:null;",
+      "marker": "preferences.browser_view_draft=saved?.browser_view_draft"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "native_saved_view_controls",
+      "before": "  if(saved)html+=facts([['View saved with project',when(saved.saved_at)],['Saved project',saved.project_id]]);",
+      "after": "  if(saved)html+=facts([['View saved with project',when(saved.saved_at)],['Saved profile',title('profiles',saved.journey?.selection?.profile_id)],['Saved native models',modelLabel(saved.journey?.selection)]])+'<div class=\"page-actions\">'+action('open-saved-view','Open saved project view')+'</div>'+notice('Opening the project view keeps the current browser view available below.');\n  if(preferences.browser_view_draft)html+='<div class=\"page-actions\">'+action('swap-browser-view','Switch to retained browser view')+'</div>'+notice('The retained browser view includes its selected records, watershed context and notes. Switching keeps the view you are leaving available for another switch.');",
+      "marker": "action('open-saved-view'"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "native_saved_view_dispatch",
+      "before": "  if(name==='save-view'){",
+      "after": "  if(name==='open-saved-view'){\n   const saved=state()?.data?.operator_session;\n   if(!saved?.journey)throw Error('Save a project view before opening it.');\n   return openRetainedView(saved.journey,{projectRevision:saved.revision});\n  }\n  if(name==='swap-browser-view'){\n   if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');\n   return openRetainedView(preferences.browser_view_draft);\n  }\n  if(name==='save-view'){",
+      "marker": "if(name==='open-saved-view')",
+      "present": [
+        "  if(name==='open-saved-view'){\n   const saved=state()?.data?.operator_session;\n   if(!saved?.journey)throw Error('Save a project view before opening it.');\n   return openRetainedView(saved.journey,{projectRevision:saved.revision});\n  }\n  if(name==='swap-browser-view'){\n   if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');\n   return openRetainedView(preferences.browser_view_draft);\n  }\n  if(name==='save-view'||name==='handoff'){"
+      ]
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "regional_profile_model_selection",
+      "before": " function clearDownstream(field){\n  if(['grid_id','profile_id','scenario_id'].includes(field))preferences.selection.run_id='';",
+      "after": " function clearDownstream(field){\n  if(['grid_id','profile_id'].includes(field)){\n   const profile=selected('profile_id'),grid=selected('grid_id');\n   const available=profile?nativeModels(profile):['ndr','sdr'];\n   preferences.selection.models=grid?available.filter(name=>nativeModels(grid.spec).includes(name)):available;\n  }\n  if(['grid_id','profile_id','scenario_id'].includes(field))preferences.selection.run_id='';",
+      "marker": "const available=profile?nativeModels(profile)"
+    },
+    {
+      "path": "operator/Guided_Journey_Integration.json",
+      "id": "registered_opener_installation_metadata",
+      "before": "\" getView:()=>view,reportError:globalError,selectWorkspace,\\n setJourneyController:controller=>{operatingJourney=controller;},\\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\\n openProfile:id=>journeyForm(()=>profileForm(id)),\\n openGrid:id=>journeyForm(()=>gridForm(id)),\\n openRun:selection=>journeyForm(()=>runForm(selection)),\\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\\n openBackup:()=>journeyForm(()=>backupForm()),\\n openRestore:()=>journeyForm(()=>restoreForm()),\\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});\"",
+      "after": "\" getView:()=>view,reportError:globalError,selectWorkspace,\\n setJourneyController:controller=>{operatingJourney=controller;},\\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\\n openProfile:id=>journeyForm(()=>profileForm(id)),\\n openGrid:id=>journeyForm(()=>gridForm(id)),\\n openRun:selection=>journeyForm(()=>runForm(selection)),\\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\\n openBackup:()=>journeyForm(()=>backupForm()),\\n openRestore:()=>journeyForm(()=>restoreForm()),\\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});\"",
+      "marker": "openExperiment:id=>experiments.dispatch"
+    },
+    {
+      "path": "operator/web/journey.mjs",
+      "id": "saved_notes_history_label",
+      "before": "<summary>Notes retained from another tab · ",
+      "after": "<summary>Retained notes · ",
+      "marker": "<summary>Retained notes · "
+    }
+  ],
+  "previous_integration_sha256": {
+    "operator/Regional_Saved_View_Integration.json": [
+      "b7869f1d5d02b284a88c5cd33989edc8f182c6866c77db099907687f666c03f3",
+      "af1a99bfff90171aaad3068b0d47700985ec7a370d9b2b27484230df80068079",
+      "e8448255cdfb00d71bcb4c764a9ab7362a559d9971d997e8188a47a9d1ebc87c"
+    ],
+    "operator/install_regional_saved_view.py": [
+      "af026482f78424aa37d26f9cfb8acbffd34a7ce46e53057ad1c09e89a52cc8e2"
+    ]
+  }
+}

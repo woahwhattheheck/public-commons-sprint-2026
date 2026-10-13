@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "robust-decisions",
+  "title": "Robust decision studies",
+  "version": "0.1.0",
+  "order": 85,
+  "assets": [],
+  "backend": {
+    "module": "model.robust_decisions.eco_robust.integration",
+    "actions": [
+      "robust.study.list",
+      "robust.study.read",
+      "robust.study.create",
+      "robust.study.revise",
+      "robust.experiment.prepare",
+      "robust.summary.prepare",
+      "robust.solve",
+      "robust.frontier",
+      "robust.project.export",
+      "robust.project.receive",
+      "robust.selection.export",
+      "robust.report.export"
+    ],
+    "invoke": {
+      "handler": "dispatch",
+      "args": [
+        "workspace",
+        "action",
+        "payload"
+      ]
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "monitoring",
+  "title": "Monitoring design",
+  "version": "1.7.0",
+  "order": 85,
+  "assets": [
+    "monitoring.mjs",
+    "monitoring-component.mjs",
+    "monitoring.css",
+    "monitoring-observed.mjs",
+    "monitoring_fieldwork.mjs",
+    "monitoring-study-transfer.mjs",
+    "monitoring_field_return.mjs",
+    "monitoring-frontiers.mjs",
+    "monitoring-frontiers.css"
+  ],
+  "backend": {
+    "module": "monitoring_native",
+    "actions": [
+      "monitoring.network.import",
+      "monitoring.design",
+      "monitoring.frontier",
+      "monitoring.campaign.create",
+      "monitoring.campaign.revise",
+      "monitoring.campaign.event",
+      "monitoring.export",
+      "monitoring.context.prepare",
+      "monitoring.context.export",
+      "monitoring.campaign.fieldwork",
+      "monitoring.campaign.fieldwork.return",
+      "monitoring.comparison.prepare",
+      "monitoring.comparison.export"
+    ],
+    "invoke": {
+      "handler": "perform",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/monitoring",
+        "handler": "read_registered",
+        "args": [
+          "operator",
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/monitoring.mjs",
+    "factory": "attachMonitoring",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "showTask",
+      "toast",
+      "openDesk"
+    ],
+    "styles": [],
+    "view": {
+      "id": "monitoring",
+      "title": "Monitoring design",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

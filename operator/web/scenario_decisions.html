@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Watershed scenario comparison</title>
+<style>
+:root{color-scheme:light;--ink:#20242a;--muted:#60656d;--line:#d5d8dd;--paper:#fff;--wash:#f4f5f6}
+*{box-sizing:border-box}body{margin:0;background:var(--wash);color:var(--ink);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--paper);border-bottom:1px solid var(--line);padding:22px 28px}header .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}h1{font-size:25px;font-weight:650;margin:5px 0 7px}h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:0 0 10px}p{margin:7px 0}.subtle{color:var(--muted)}
+main{max-width:1440px;margin:0 auto;padding:24px}section,.card{background:var(--paper);border:1px solid var(--line);padding:20px;margin-bottom:20px;border-radius:3px}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:end}.controls label{flex:1 1 200px;display:block}.controls .buttons{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:8px}.field-label{display:block;font-size:12px;font-weight:650;margin-bottom:5px}
+select,input,button{font:inherit;border:1px solid #aab0b8;border-radius:3px;padding:8px 10px;background:white;color:var(--ink);min-height:38px;max-width:100%}
+select{width:100%}button{cursor:pointer}button:hover{background:#eef0f2}button:disabled{opacity:.5;cursor:default}
+button.primary{background:#272d35;color:white;border-color:#272d35}button.primary:hover{background:#12171d}
+:focus-visible{outline:2px solid #333;outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.metric{padding:14px;border:1px solid var(--line);background:#fafafa}.metric .value{font-size:23px;font-variant-numeric:tabular-nums;margin:5px 0}.metric .label{font-size:12px;color:var(--muted)}
+.table-wrap{overflow:auto;border:1px solid var(--line);max-height:610px}table{border-collapse:collapse;width:100%;background:white}caption{text-align:left;padding:10px;font-weight:600}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{background:#f2f3f5;font-size:12px;font-weight:650;position:sticky;top:0;z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}tbody tr:last-child td{border-bottom:0}.tag{display:inline-block;padding:2px 6px;border:1px solid #bbc0c7;border-radius:2px;font-size:11px;white-space:nowrap}.note{border-left:3px solid #747b84;padding:10px 13px;background:#f4f5f6;margin:14px 0}.message{padding:12px;border:1px solid #b0b5bd;margin:12px 0}.error{font-weight:600}
+details{margin:10px 0}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f6f7;padding:12px;border:1px solid var(--line);font:12px/1.5 ui-monospace,monospace}
+.hidden{display:none!important}.tiny{font-size:12px}.break{overflow-wrap:anywhere}.no-print{}.print-only{display:none}
+.bar-track{height:7px;width:100px;background:#e4e6e9;margin:4px 0}.bar-fill{height:7px;background:#505762}
+footer{color:var(--muted);font-size:12px;padding:0 24px 25px;max-width:1440px;margin:auto}
+@media(max-width:760px){main{padding:12px}header{padding:18px 14px}.grid{grid-template-columns:1fr}section{padding:14px}th,td{padding:8px}.controls label{flex-basis:100%}}
+@media print{body{background:white;font-size:10pt}header{padding:0 0 12px}main{padding:12px 0}.no-print{display:none!important}.print-only{display:block}.table-wrap{overflow:visible;max-height:none;border:0}section,.card{break-inside:avoid;border:0;padding:0;margin-bottom:18px}th{position:static}footer{padding:0}details>div,details>pre{display:block!important}.grid{gap:8px}h1{font-size:19pt}h2{font-size:14pt}}
+</style>
+</head>
+<body>
+<header>
+<div class="brand" id="brand">Scientific workspace</div>
+<h1 id="title">Watershed scenario comparison</h1>
+<p id="subtitle" class="subtle">Open a completed native scenario report to compare annual pollutant exports by watershed.</p>
+</header>
+<main>
+<section class="no-print">
+<div class="controls">
+<label><span class="field-label">Open retained report JSON</span><input id="file" type="file" accept=".json,application/json"></label>
+<div class="buttons"><button id="download" disabled>Download report JSON</button><button id="totals" disabled>Download annual totals CSV</button><button id="csv" disabled>Download comparison CSV</button><button id="print" disabled>Print or save PDF</button></div>
+</div>
+<div id="message" role="status" aria-live="polite"></div>
+</section>
+<div id="workspace" class="hidden">
+<section>
+<div class="controls no-print">
+<label><span class="field-label">Watershed or reporting zone</span><select id="zone"></select></label>
+<label><span class="field-label">Pollutant</span><select id="pollutant"></select></label>
+<label><span class="field-label">Comparison footprint</span><select id="support"><option value="common">Same footprint across every selected scenario</option><option value="paired">Baseline and each alternative individually</option></select></label>
+<label><span class="field-label">Sort alternatives</span><select id="sort"><option value="selection">Original selection order</option><option value="avoided">Largest avoided export first</option><option value="title">Scenario name</option></select></label>
+</div>
+<h2 id="zone-title" style="margin-top:18px"></h2>
+<p id="scope" class="subtle"></p>
+<div id="metrics" class="grid" style="margin-top:14px"></div>
+<p id="footprint-note" class="note"></p>
+</section>
+<section id="scenario-changes">
+<h2 id="comparison-title">Scenario changes</h2>
+<p class="subtle">Change is alternative minus baseline. Avoided export is baseline minus alternative; a positive value means less pollutant delivered to the modeled stream network.</p>
+<div class="table-wrap" style="margin-top:14px"><table><thead><tr>
+<th>Alternative</th><th>Change represented</th><th class="num">Baseline</th><th class="num">Alternative</th><th class="num">Avoided export</th><th class="num">Change</th><th class="num">Matched area</th>
+</tr></thead><tbody id="comparisons"></tbody></table></div>
+</section>
+<section>
+<h2>Native export totals and coverage</h2>
+<p class="subtle" id="coverage-note">The full-valid totals below use each run's own available cells. Scenario changes use a matched footprint.</p>
+<div class="table-wrap" style="margin-top:14px"><table><thead><tr>
+<th>Run</th><th class="num">Full-valid annual export</th><th class="num">Valid area</th><th class="num">Stream omissions</th><th class="num">Other missing cells</th><th>Native support</th>
+</tr></thead><tbody id="coverage"></tbody></table></div>
+<details><summary>Footprint detail</summary><pre id="coverage-detail"></pre></details>
+</section>
+<section id="scenario-tradeoffs">
+<h2 id="tradeoff-title">Tradeoffs across selected pollutants</h2>
+<p class="subtle">These comparisons keep the available physical quantities separate. An alternative dominates another only when it reduces at least as much of every selected pollutant and more of at least one on the common modeled footprint.</p>
+<div id="tradeoffs" style="margin-top:14px"></div>
+<p class="note">Combined interventions need a combined model run. Benefits from separate scenarios cannot be added because their source, routing and retention effects interact.</p>
+</section>
+<section>
+<h2>Scenario choices and source context</h2>
+<div id="choices"></div>
+<details><summary>Selected watershed source</summary><pre id="zone-source"></pre></details>
+<details><summary>Interpretation and model units</summary><div id="interpretation"></div></details>
+</section>
+</div>
+</main>
+<footer>Native InVEST 3.20.0 • Annual nutrient and sediment contributions to streams • Retained scientific workspace</footer>
+<script type="application/json" id="embedded-report"></script>
+<script>
+"use strict";
+(function(){
+const $=id=>document.getElementById(id);
+let report=null;
+const fmt=new Intl.NumberFormat(undefined,{maximumFractionDigits:3});
+const integer=new Intl.NumberFormat(undefined,{maximumFractionDigits:0});
+const numeric=v=>typeof v==="number"&&Number.isFinite(v);
+const n=v=>numeric(v)?(v!==0&&Math.abs(v)<0.001?v.toExponential(3):fmt.format(v)):"—";
+const pct=v=>numeric(v)?n(v)+"%":"—";
+const ele=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
+function note(text){const p=ele("p",text,"note");return p;}
+function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+function safeName(){return "watershed-scenarios-"+String(report.id||"report").slice(0,12);}
+function validate(r){
+if(!r||r.schema!=="upstate.scenario-decisions/v1")throw Error("Select a native upstate.scenario-decisions/v1 report.");
+if(!Array.isArray(r.runs)||r.runs.length<1||!Array.isArray(r.zones)||!r.zones.length)throw Error("The report needs completed runs and watershed results.");
+const pollutants=Object.keys(r.outputs||{});if(!pollutants.length||pollutants.some(p=>!["nitrogen","phosphorus","sediment"].includes(p)))throw Error("The report needs at least one completed native pollutant output.");
+const ids=new Set(r.runs.map(x=>x.id));if(ids.size!==r.runs.length||r.runs[0].id!==r.baseline_run_id)throw Error("The baseline and run identities differ.");
+for(const z of r.zones){if(typeof z.id!=="string"||!z.pollutants)throw Error("A watershed result lacks its source identity.");
+for(const p of pollutants){const value=z.pollutants[p];if(!value||!value.coverage||!Array.isArray(value.alternatives)||!value.runs)throw Error("A watershed is missing "+p+" results.");
+if(value.alternatives.length!==r.runs.length-1)throw Error("An alternative result is missing for "+p+".");
+const alternativeIds=new Set(value.alternatives.map(x=>x.run_id));if(alternativeIds.size!==r.runs.length-1||r.runs.slice(1).some(x=>!alternativeIds.has(x.id)))throw Error("The alternative identities differ for "+p+".");
+for(const run of r.runs)if(!Object.hasOwn(value.runs,run.id))throw Error("Run coverage is missing for "+p+".");
+}}
+return r;
+}
+function load(r){report=validate(r);$("brand").textContent=(report.project?.title?report.project.title+" • ":"")+"Scientific workspace";$("title").textContent=report.title;$("subtitle").textContent=(report.project&&report.project.title?report.project.title+" • ":"")+report.runs.length+" completed runs • "+report.zones.length+" independently reported zones";
+$("zone").replaceChildren(...report.zones.map(z=>{const e=ele("option",z.title);e.value=z.id;return e;}));
+$("pollutant").replaceChildren(...Object.entries(report.outputs).map(([p,spec])=>{const e=ele("option",spec.title);e.value=p;return e;}));
+$("tradeoff-title").textContent="Tradeoffs across "+Object.keys(report.outputs).join(", ");
+$("workspace").classList.remove("hidden");for(const id of ["download","totals","print"])$(id).disabled=false;
+const comparing=report.runs.length>1;$("csv").disabled=!comparing;
+for(const id of ["scenario-changes","scenario-tradeoffs"])$(id).classList.toggle("hidden",!comparing);
+for(const id of ["support","sort"]){$(id).disabled=!comparing;$(id).closest("label").classList.toggle("hidden",!comparing);}
+$("support").value="common";$("message").replaceChildren();render();
+}
+function runDetail(id){return report.runs.find(x=>x.id===id);}
+function runName(id){const r=runDetail(id);return r?r.scenario_title+" ("+id.slice(0,8)+")":id;}
+const kindName={baseline:"Selected baseline",landcover_under_common_profile:"Land cover; common profile",parameter_and_landcover_change:"Parameters and land cover",parameter_change:"Parameter sensitivity",same_profile_baseline:"Same-profile baseline"};
+function values(a,result){if($("support").value==="paired"){const p=a.pairwise||{};return {base:p.baseline_mass,future:p.alternative_mass,benefit:p.avoided_export_mass,change:p.change_percent,area:p.valid_area_ha,zero:p.baseline_mass===0};}
+return {base:a.baseline_common_mass,future:a.alternative_common_mass,benefit:a.avoided_export_mass,change:a.change_percent,area:result.coverage.common_valid_area_ha,zero:a.baseline_common_mass===0};
+}
+function rowsCsv(){
+const columns=["zone_id","zone_title","pollutant","units","baseline_run_id","alternative_run_id","comparison_kind","baseline_common_mass","alternative_common_mass","change_mass","avoided_export_mass","change_percent","percent_status","common_valid_area_ha","outside_native_extent_ha","valid_support_changed_cells","unresolved_common_cells"];
+const rows=[columns];
+for(const z of report.zones)for(const p of Object.keys(report.outputs)){const result=z.pollutants[p];for(const a of result.alternatives){const o={zone_id:z.id,zone_title:z.title,pollutant:p,units:report.outputs[p].units,baseline_run_id:report.baseline_run_id,alternative_run_id:a.run_id,comparison_kind:runDetail(a.run_id).comparison_kind,...a,...result.coverage};rows.push(columns.map(k=>o[k]??""));}}
+const quote=x=>{let s=String(x);if(typeof x==="string"&&/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
+return rows.map(row=>row.map(quote).join(",")).join("\r\n")+"\r\n";
+}
+function totalsCsv(){
+const columns=["zone_id","zone_title","scope","pollutant","units","run_id","scenario_id","profile_id","comparison_kind","all_valid_mass","common_mass","common_yield_per_ha_year","valid_area_ha","valid_cells","structural_stream_cells","unexpected_missing_cells","unknown_stream_cells","complete_native_support","common_valid_area_ha","common_valid_fraction","outside_native_extent_ha","selected_cells"];
+const rows=[columns];
+for(const zone of report.zones)for(const [pollutant,result] of Object.entries(zone.pollutants))for(const run of report.runs){
+const value={zone_id:zone.id,zone_title:zone.title,scope:zone.scope,pollutant,units:report.outputs[pollutant].units,run_id:run.id,scenario_id:run.selection.scenario_id,profile_id:run.selection.profile_id,comparison_kind:run.comparison_kind,...result.coverage,...result.runs[run.id]};
+rows.push(columns.map(name=>value[name]??""));}
+const quote=value=>{let s=typeof value==="boolean"?(value?"True":"False"):String(value);if(typeof value==="string"&&/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
+return rows.map(row=>row.map(quote).join(",")).join("\r\n")+"\r\n";
+}
+function render(){
+if(!report)return;
+const zone=report.zones.find(z=>z.id===$("zone").value),parameter=$("pollutant").value;
+const result=zone.pollutants[parameter],coverage=result.coverage,spec=report.outputs[parameter];
+$("zone-title").textContent=zone.title;
+$("scope").textContent=(zone.scope==="reporting_intersection"?"Source polygon clipped to the reporting boundary":"Whole selected source polygon")+" • "+n(zone.area_ha)+" ha";
+$("comparison-title").textContent=spec.title+" • "+spec.units;
+const base=result.runs[report.baseline_run_id];
+const comparing=report.runs.length>1;
+const metrics=[[comparing?"Baseline on common footprint":"Native annual export",n(base.common_mass),spec.units],[comparing?"Common valid footprint":"Native valid footprint",n(coverage.common_valid_area_ha),"ha • "+pct(numeric(coverage.common_valid_fraction)?coverage.common_valid_fraction*100:null)+" of selected cells"],["Outside native raster extent",n(coverage.outside_native_extent_ha),"ha of source polygon"]];
+$("metrics").replaceChildren(...metrics.map(([label,value,unit])=>{const e=ele("div",undefined,"metric");e.append(ele("div",label,"label"),ele("div",value,"value"),ele("div",unit,"subtle tiny"));return e;}));
+$("coverage-note").textContent=comparing?"The full-valid totals use each run's own available cells. Changes use the matched footprint so missing cells cannot become an apparent improvement.":"This reference report shows the original completed run's annual export and native cell coverage for each selected watershed. Download annual totals for the complete zone and pollutant table.";
+let footprint=!comparing?"These annual totals use the original reference run's valid cells for this pollutant.":$("support").value==="common"?"Every alternative uses the same valid cells across all selected runs for this pollutant.":"Each alternative uses its own intersection with the baseline. Matched areas can differ across rows; use the all-scenario footprint for direct tradeoff ranking.";
+footprint+=" "+integer.format(coverage.common_structural_stream_cells||0)+" cells are original stream omissions in every selected run. "+integer.format(coverage.unresolved_common_cells||0)+" selected cells lie outside the common valid or shared-stream support.";
+$("footprint-note").textContent=footprint;
+let alternatives=result.alternatives.slice();
+if($("sort").value==="title")alternatives.sort((a,b)=>runName(a.run_id).localeCompare(runName(b.run_id)));
+if($("sort").value==="avoided")alternatives.sort((a,b)=>{const x=values(a,result).benefit,y=values(b,result).benefit;return (numeric(y)?y:-Infinity)-(numeric(x)?x:-Infinity);});
+$("comparisons").replaceChildren(...alternatives.map(a=>{
+const v=values(a,result),tr=document.createElement("tr"),name=ele("td",runName(a.run_id));name.className="break";
+const kind=ele("td",kindName[runDetail(a.run_id).comparison_kind]||runDetail(a.run_id).comparison_kind);
+const change=v.zero?(v.future===0?"0 → 0; percent undefined":"New export from zero; percent undefined"):pct(v.change);
+tr.append(name,kind,ele("td",n(v.base),"num"),ele("td",n(v.future),"num"),ele("td",n(v.benefit),"num"),ele("td",change,"num"),ele("td",n(v.area)+" ha","num"));return tr;
+}));
+$("coverage").replaceChildren(...report.runs.map(r=>{const v=result.runs[r.id],tr=document.createElement("tr");tr.append(ele("td",runName(r.id),"break"),ele("td",n(v.all_valid_mass)+" "+spec.units,"num"),ele("td",n(v.valid_area_ha)+" ha","num"),ele("td",integer.format(v.structural_stream_cells),"num"),ele("td",integer.format(v.unexpected_missing_cells),"num"),ele("td",v.complete_native_support?"Whole-zone native support":"Displayed modeled footprint"));return tr;}));
+$("coverage-detail").textContent=JSON.stringify(coverage,null,2);
+const trade=zone.scenario_tradeoffs||{},container=$("tradeoffs");container.replaceChildren();
+if(!trade.eligible_run_ids||!trade.eligible_run_ids.length){container.append(note("Tradeoff ranking uses land-cover alternatives under the baseline profile with numeric results for every selected pollutant. The selected comparisons remain available above."));}
+else{const table=document.createElement("table"),head=document.createElement("thead"),hr=document.createElement("tr");for(const title of ["Alternative",...Object.values(report.outputs).map(s=>s.title+" avoided ("+s.units+")"),"Tradeoff"])hr.append(ele("th",title));head.append(hr);table.append(head);const body=document.createElement("tbody");
+for(const id of trade.eligible_run_ids){const tr=document.createElement("tr");tr.append(ele("td",runName(id),"break"));
+for(const p of Object.keys(report.outputs)){const a=zone.pollutants[p].alternatives.find(x=>x.run_id===id);tr.append(ele("td",n(a.avoided_export_mass),"num"));}
+const dominant=trade.dominated_by&&trade.dominated_by[id];tr.append(ele("td",dominant?"Dominated by "+dominant.map(runName).join("; "):"Nondominated on modeled footprint"));body.append(tr);}table.append(body);const wrap=ele("div",undefined,"table-wrap");wrap.append(table);container.append(wrap);}
+$("choices").replaceChildren(...report.runs.map(r=>{const d=document.createElement("details"),s=ele("summary",runName(r.id)+" — "+(kindName[r.comparison_kind]||r.comparison_kind));d.append(s);
+const box=document.createElement("div");box.append(ele("p","Profile: "+r.profile_title,"subtle"));const edits=r.landcover_edits||[];
+if(edits.length){const p=ele("p","Applied native land-cover edits:");box.append(p);const ul=document.createElement("ul");for(const e of edits){ul.append(ele("li",integer.format(e.changed_cells||0)+" changed cells / "+n(e.changed_hectares)+" ha — "+JSON.stringify(e.patch||{})));}box.append(ul);}
+if(r.model_versions){const table=document.createElement("table"),head=document.createElement("tr");for(const label of ["Model","Retained InVEST","Requested InVEST","Execution source"])head.append(ele("th",label));const thead=document.createElement("thead");thead.append(head);table.append(thead);const body=document.createElement("tbody");for(const [model,version] of Object.entries(r.model_versions)){const row=document.createElement("tr");for(const value of [model.toUpperCase(),version.comparison_version||"Not retained",version.requested_version||"Not retained",version.basis==="completed_stage_runtime"?"Completed model stage":version.basis==="observed_run_fallback"?"Observed run fallback":version.basis==="requested_legacy"?"Legacy requested version":"Unavailable"])row.append(ele("td",value));body.append(row);}table.append(body);box.append(table);}
+box.append(ele("pre",JSON.stringify({selection:r.selection,scenario:r.scenario,completed_at:r.completed_at,runtime:r.runtime,stage_runtimes:r.stage_runtimes,model_versions:r.model_versions},null,2)));d.append(box);return d;}));
+$("zone-source").textContent=JSON.stringify(zone.source,null,2);
+$("interpretation").replaceChildren(...[report.mass_note,report.interpretation,report.scope_note,"Native original NoData is retained. Non-stream missing or hydrologically disconnected cells remain separately visible in the coverage record.","This report includes "+Object.keys(report.outputs).join(", ")+". Available native nitrogen combines surface and subsurface export; phosphorus is surface export; sediment uses metric tonnes.","Existing conservation services and baseline-minus-alternative intervention benefits answer different questions. A successful source reduction can also reduce downstream deposition or retention."].map(x=>ele("p",x)));
+}
+$("file").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{load(JSON.parse(await file.text()));}catch(err){$("message").replaceChildren(ele("p",err.message,"message error"));}});
+for(const id of ["zone","pollutant","support","sort"])$(id).addEventListener("change",render);
+$("download").addEventListener("click",()=>download(safeName()+".json",JSON.stringify(report,null,2)+"\n","application/json"));
+$("csv").addEventListener("click",()=>download(safeName()+".csv",rowsCsv(),"text/csv;charset=utf-8"));
+$("totals").addEventListener("click",()=>download(safeName()+"-annual-totals.csv",totalsCsv(),"text/csv;charset=utf-8"));
+$("print").addEventListener("click",()=>window.print());
+const embedded=$("embedded-report").textContent.trim();if(embedded){try{load(JSON.parse(embedded));}catch(err){$("message").replaceChildren(ele("p",err.message,"message error"));}}
+})();
+</script>
+</body></html>

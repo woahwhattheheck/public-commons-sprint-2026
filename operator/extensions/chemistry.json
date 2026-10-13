@@ -1,0 +1,181 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "chemistry",
+  "title": "Reach chemistry",
+  "version": "0.3.0",
+  "order": 84,
+  "assets": [
+    "chemistry.mjs",
+    "chemistry-native.mjs",
+    "chemistry.css"
+  ],
+  "backend": {
+    "module": "chemistry",
+    "factory": {
+      "name": "ChemistryOperations",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "chemistry.case.save",
+      "chemistry.case.get",
+      "chemistry.catalog",
+      "chemistry.run",
+      "chemistry.run.get",
+      "chemistry.result.page",
+      "chemistry.case.from-source",
+      "chemistry.export",
+      "chemistry.receive",
+      "chemistry.report.prepare",
+      "chemistry.report.get",
+      "chemistry.report.list",
+      "chemistry.report.source.prepare",
+      "chemistry.report.source.get",
+      "chemistry.report.source.list"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/case",
+        "operation": "case",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/run",
+        "operation": "run",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/page",
+        "operation": "page",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/chemistry/cancel",
+        "handler": "cancel",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.chemistry_receiving",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/chemistry-native.mjs",
+    "factory": "attachNativeChemistry",
+    "requires": [
+      "getState",
+      "api",
+      "showTask",
+      "toast",
+      "fileList",
+      "navigate",
+      "getWorkspace",
+      "openScientificReport"
+    ],
+    "styles": [
+      "/web/chemistry.css"
+    ],
+    "view": {
+      "id": "chemistry",
+      "title": "Reach chemistry",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "chemistry-"
+    ]
+  }
+}

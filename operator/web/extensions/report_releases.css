@@ -1,0 +1,5 @@
+.scenario-report-workbench .sr-release {margin:18px 0;padding:16px;border:1px solid #ccc;background:#f7f7f7}
+.scenario-report-workbench .sr-release h4 {margin:0 0 8px;font-size:1rem}
+.scenario-report-workbench .sr-release h5 {margin:16px 0 8px;font-size:.92rem}
+.scenario-report-workbench .sr-release p,.scenario-report-workbench .sr-release ul {margin:8px 0;line-height:1.5}
+@media print {.scenario-report-workbench .sr-release .sr-actions{display:none}}

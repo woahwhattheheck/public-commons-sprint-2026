@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Upper Savannah Scientific Workbench</title>
+<link rel="stylesheet" href="/web/style.css">
+<link rel="stylesheet" href="/web/delivery_review.css">
+<link rel="stylesheet" href="/web/community.css">
+<link rel="stylesheet" href="/web/reviews.css">
+<link rel="stylesheet" href="/web/programmes.css">
+<script type="module" src="/web/app.mjs"></script>
+<link rel="stylesheet" href="/web/experiments.css">
+<link rel="stylesheet" href="/web/parameter_studies.css">
+<link rel="stylesheet" href="/web/portfolio.css">
+<link rel="stylesheet" href="/web/receiving_waters.css">
+<link rel="stylesheet" href="/web/rehearsal.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to workspace</a>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>
+  <label class="workspace-control"><span>Workspace</span><select id="workspace-select" aria-label="Selected workspace"></select></label>
+  <div class="top-actions"><button type="button" data-action="journey-save-view" title="Save the selected analysis and notes in this workspace">Save view and notes</button><button type="button" data-action="refresh" title="Refresh retained state">Refresh</button><button type="button" data-action="tasks" aria-controls="task-panel" aria-expanded="false">Operations <span id="task-count">0</span></button></div>
+</header>
+<div class="shell">
+  <nav class="sidebar" aria-label="Scientific workflow">
+    <div class="nav-section">WORKSPACE</div>
+    <button data-view="overview">Overview</button>
+    <button data-view="sources">Original sources</button>
+    <button data-view="profiles">Parameter profiles</button>
+    <button data-view="grids">Model grids</button>
+    <button data-view="scenarios">Land-cover scenarios</button>
+    <div class="nav-section">ANALYSIS</div>
+    <button data-view="runs">Native model runs</button>
+    <button data-view="programmes">Run programmes</button>
+    <button data-view="experiments">Scenario experiments</button>
+    <button data-view="parameter-studies">Parameter studies</button>
+    <button data-view="portfolios">Conservation portfolios</button>
+    <button data-view="comparisons">Run comparisons</button>
+    <button type="button" data-view="conservation">Conservation plans</button>
+    <button type="button" data-view="rehearsal">Operator rehearsal</button>
+    
+    <button data-view="spatial">Spatial review</button>
+    <button data-view="communities">Communities</button>
+    <button data-view="observations">Observed water quality</button>
+    <button data-view="receiving-waters">Receiving waters</button>
+    <button data-view="deliveries">Maps and delivery</button>
+    <button data-view="customer-reviews">Customer reviews</button>
+    <div class="sidebar-footer"><p id="team-person">Connecting…</p><a id="team-manage" href="/web/team.html" hidden>Manage team access</a><button id="team-sign-out" type="button" hidden>Sign out</button><button data-action="backup">Back up workspace</button><button data-action="restore">Restore an archive</button><button data-action="runtime">Runtime versions</button></div>
+  </nav>
+  <main id="main" tabindex="-1">
+    <div id="connection-state" role="status" aria-live="polite"></div>
+    <div id="global-error" class="notice error" role="alert" hidden></div>
+    <div id="task-banner" class="notice" role="status" hidden></div>
+    <div id="content"><div class="empty"><h1>Open the retained workspace</h1><p>Use the operator URL printed by the original local server.</p></div></div>
+  </main>
+</div>
+<aside id="task-panel" class="task-panel" aria-label="Retained operations" hidden><header><h2>Operations</h2><button data-action="tasks-close" aria-label="Close operations">Close</button></header><div id="task-list"></div></aside>
+<dialog id="form-dialog" aria-labelledby="form-title">
+  <form id="operation-form">
+    <header class="dialog-header"><div><p id="form-eyebrow">WORKSPACE OPERATION</p><h2 id="form-title"></h2><p id="form-description"></p></div><button type="button" data-action="form-close" aria-label="Close form">Close</button></header>
+    <div id="form-body" class="dialog-body"></div>
+    <div id="form-error" class="notice error" role="alert" hidden></div>
+    <footer class="dialog-footer"><span id="form-progress" role="status"></span><button type="button" data-action="form-close">Cancel</button><button id="form-submit" class="primary" type="submit">Save</button></footer>
+  </form>
+</dialog>
+<dialog id="detail-dialog" aria-labelledby="detail-title">
+  <header class="dialog-header"><div><p id="detail-eyebrow">RETAINED ITEM</p><h2 id="detail-title"></h2></div><button type="button" data-action="detail-close" aria-label="Close details">Close</button></header>
+  <div id="detail-body" class="dialog-body"></div>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,170 @@
+{
+  "schema": "upstate.guided-journey-integration/v1",
+  "edition": 2,
+  "application": "Current complete Upper Savannah application with its original extension registry installed",
+  "required_extension_installer": {
+    "source_blob": "1890ae3e0f2287a5661205fd149fa6cbbb1a4bf6",
+    "path": "install_extensions.py",
+    "bytes": 18413,
+    "sha256": "4eccf03de1a2445c6d91fd4df4ef43fdd12e01124f5420746ba4760e6947f261"
+  },
+  "patches": [
+    {
+      "id": "journey-controller-slot",
+      "before": "const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+      "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+      "marker": "let operatingJourney=null;",
+      "compatible_after": [
+        {
+          "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({\n openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),\n openNativeProgramme:options=>experiments.openForInvestigation(options),\ngetState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+          "marker": "let operatingJourney=null;"
+        }
+      ]
+    },
+    {
+      "id": "journey-original-capabilities",
+      "before": " getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
+      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n captureCommunityView:()=>community.capture(),\n validateCommunityView:value=>community.validateView(value),\n restoreCommunityView:value=>community.restoreView(value),\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
+      "marker": "captureCommunityView:()=>community.capture(),",
+      "compatible_before": [
+        {
+          "before": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});"
+        }
+      ]
+    },
+    {
+      "id": "journey-original-request",
+      "before": "  const result=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:formContext?.operation_id||crypto.randomUUID()}});",
+      "after": "  const submittedOperation=formContext?.operation_id||crypto.randomUUID();\n  const originalRequest={workspace,action,payload,operation_id:submittedOperation};\n  const request=operatingJourney?operatingJourney.beforeSubmission(originalRequest):originalRequest;\n  const result=await api('/api/actions',{method:'POST',body:request});\n  operatingJourney?.acceptTask(result,submittedOperation);",
+      "marker": "operatingJourney.beforeSubmission(originalRequest)"
+    },
+    {
+      "id": "journey-overview",
+      "before": "    html+='<div class=\"cards\">'+[",
+      "after": "    html+='<div class=\"page-actions\">'+button('journey-home','Open guided journey','','primary')+'</div>';\n    html+='<div class=\"cards\">'+[",
+      "marker": "button('journey-home','Open guided journey'"
+    },
+    {
+      "id": "journey-navigation",
+      "before": " view=next;history.replaceState(null,'','#'+next);",
+      "after": " view=next;operatingJourney?.updateRail(next);history.replaceState(null,'','#'+next);",
+      "marker": "operatingJourney?.updateRail(next)"
+    },
+    {
+      "id": "journey-workspace-request",
+      "before": " if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');",
+      "after": " if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');\n if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');",
+      "marker": "if(operatingJourney?.isBusy())"
+    },
+    {
+      "id": "run-selection",
+      "before": "function runForm(){",
+      "after": "function runForm(selection={}){",
+      "marker": "function runForm(selection={}){"
+    },
+    {
+      "id": "run-grid-selection",
+      "before": "field('Prepared model grid',select('grid',grids))",
+      "after": "field('Prepared model grid',select('grid',grids,selection.grid_id))",
+      "marker": "field('Prepared model grid',select('grid',grids,selection.grid_id))"
+    },
+    {
+      "id": "run-profile-scenario-selection",
+      "before": "field('Parameter profile',select('profile',profiles))+field('Land-cover scenario',select('scenario',scenarios))",
+      "after": "field('Parameter profile',select('profile',profiles,selection.profile_id))+field('Land-cover scenario',select('scenario',scenarios,selection.scenario_id))",
+      "marker": "field('Parameter profile',select('profile',profiles,selection.profile_id))+field('Land-cover scenario',select('scenario',scenarios,selection.scenario_id))"
+    },
+    {
+      "id": "run-model-selection",
+      "before": "   const node=form.elements.namedItem('models'),previous=node.value.split(',');\n   const selected=previous.length&&previous.every(x=>available.includes(x))?node.value:available.join(',');",
+      "after": "   const node=form.elements.namedItem('models'),previous=node.value?node.value.split(','):(Array.isArray(selection.models)&&selection.models.length?selection.models:available);\n   const selected=previous.length&&previous.every(x=>available.includes(x))?previous.join(','):available.join(',');",
+      "marker": "previous=node.value?node.value.split(','):"
+    },
+    {
+      "id": "comparison-selection",
+      "before": "function compareForm(){",
+      "after": "function compareForm(selection={}){",
+      "marker": "function compareForm(selection={}){"
+    },
+    {
+      "id": "comparison-baseline",
+      "before": "select('baseline',complete.map(x=>[x.id,runTitle(x.id)]))",
+      "after": "select('baseline',complete.map(x=>[x.id,runTitle(x.id)]),selection.baseline_run_id)",
+      "marker": "select('baseline',complete.map(x=>[x.id,runTitle(x.id)]),selection.baseline_run_id)"
+    },
+    {
+      "id": "comparison-alternatives",
+      "before": "checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id&&nativeModels(x.selection).some(model=>nativeModels(baseline.selection).includes(model))).map(x=>({id:x.id,title:runTitle(x.id)})))",
+      "after": "checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id&&nativeModels(x.selection).some(model=>nativeModels(baseline.selection).includes(model))).map(x=>({id:x.id,title:runTitle(x.id)})),selection.run_ids||[])",
+      "marker": "checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id&&nativeModels(x.selection).some(model=>nativeModels(baseline.selection).includes(model))).map(x=>({id:x.id,title:runTitle(x.id)})),selection.run_ids||[])"
+    },
+    {
+      "id": "native-model-field-groups",
+      "before": "  for(const node of $('[data-native-models]',form)){",
+      "after": "  for(const node of $$('[data-native-models]',form)){",
+      "marker": "  for(const node of $$('[data-native-models]',form)){"
+    },
+    {
+      "id": "native-model-field-inputs",
+      "before": "   for(const input of $('input,select,textarea,button',node))input.disabled=!active;",
+      "after": "   for(const input of $$('input,select,textarea,button',node))input.disabled=!active;",
+      "marker": "   for(const input of $$('input,select,textarea,button',node))input.disabled=!active;"
+    },
+    {
+      "id": "complete-native-state-projection",
+      "before": "  ['ndr','sdr'].every(name=>row.stages?.[name])&&",
+      "after": "  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&",
+      "marker": "  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&",
+      "compatible_after": [
+        {
+          "after": "  ['ndr','sdr'].every(name=>completedModelStage(row,name))&&",
+          "marker": "  ['ndr','sdr'].every(name=>completedModelStage(row,name))&&"
+        }
+      ]
+    },
+    {
+      "id": "rehearsal-navigation-elements",
+      "before": "    for(const node of $('[data-view]'))node.setAttribute",
+      "after": "    for(const node of $$('[data-view]'))node.setAttribute",
+      "marker": "    for(const node of $$('[data-view]'))node.setAttribute",
+      "compatible_after": [
+        {
+          "after": "    for(const node of document.querySelectorAll('[data-view]'))node.setAttribute",
+          "marker": "    for(const node of document.querySelectorAll('[data-view]'))node.setAttribute"
+        }
+      ]
+    }
+  ],
+  "server_patches": [
+    {
+      "id": "original-stage-reuse-projection",
+      "before": "if x in {\"started_at\", \"completed_at\"}",
+      "after": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\"}",
+      "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\"}",
+      "compatible_after": [
+        {
+          "after": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\", \"runtime\"}",
+          "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\", \"runtime\"}"
+        }
+      ]
+    }
+  ],
+  "optional_file_patches": {
+    "install_extensions.py": [
+      {
+        "id": "preserve-installed-host-capabilities",
+        "before": "    source = add(source, \"function toast(message){\", registration, \"extension browser instance\", before=True)\n",
+        "after": "    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]\n    if first not in source:\n        source = add(source, \"function toast(message){\", registration, \"extension browser instance\", before=True)\n    else:\n        if source.count(first) != 1 or source.count(last) != 1:\n            raise ValueError(\"Expected one complete current extension browser instance\")\n        start, end = source.index(first), source.index(last, source.index(first)) + len(last)\n        current, cursor = source[start:end], 0\n        for original_line in registration.splitlines(keepends=True):\n            found = current.find(original_line, cursor)\n            if found < 0:\n                raise ValueError(\"Preserve and compose the current extension host capability: \" + original_line.strip())\n            cursor = found + len(original_line)\n",
+        "marker": "first, last = registration.splitlines(keepends=True)[0]"
+      }
+    ],
+    "operator/web/index.html": [
+      {
+        "id": "journey-save-header",
+        "before": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "after": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"journey-save-view\" title=\"Save the selected analysis and notes in this workspace\">Save view and notes</button><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "marker": "data-action=\"journey-save-view\""
+      }
+    ]
+  }
+}

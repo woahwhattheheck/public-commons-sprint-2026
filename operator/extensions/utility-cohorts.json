@@ -1,0 +1,171 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "utility-cohorts",
+  "title": "Utility scenario cohorts",
+  "version": "4",
+  "order": 67,
+  "assets": [
+    "utility_cohort.mjs",
+    "native_versions.mjs",
+    "utility_cohort.css"
+  ],
+  "backend": {
+    "module": "utility_cohort_operator",
+    "actions": [
+      "utility.cohort.build"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload",
+        "fault"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/utility-cohorts/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/utility-cohorts/cohort",
+        "operation": "cohort",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/utility-cohorts/status",
+        "operation": "status",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/utility-cohorts/rows",
+        "operation": "rows",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/utility-cohorts/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "utility-cohorts",
+        "operation": "cohort",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      }
+    ],
+    "state": {
+      "key": "utility_cohorts",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task",
+        "fault"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/utility_cohort.mjs",
+    "factory": "attachUtilityCohorts",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "showTask",
+      "refreshState",
+      "navigate"
+    ],
+    "styles": [
+      "/web/utility_cohort.css"
+    ],
+    "view": {
+      "id": "utility-cohorts",
+      "title": "Utility cohorts",
+      "after": "scenario-reports"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "action_prefixes": [
+      "utility-cohort-"
+    ],
+    "dispatch": "dispatch"
+  }
+}

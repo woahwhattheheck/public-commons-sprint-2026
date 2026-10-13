@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario footprint · Upper Savannah</title>
+<link rel="stylesheet" href="/web/scenario-footprint.css">
+<script type="module" src="/web/scenario-footprint.mjs"></script></head>
+<body data-scenario-footprint-standalone><header class="top"><a href="/">Scientific workbench</a><span>Scenario input footprint</span>
+<label>Workspace <select id="workspace"></select></label></header>
+<main><div class="heading"><div><p class="eyebrow">NATIVE MODEL INPUTS</p>
+<h1>Review the land-cover scenario</h1><p>See the actual area and coefficient rows entering the selected native run.</p></div>
+<a class="button" href="/#runs">Prepare or open a run</a></div>
+<p id="error" class="error" role="alert" hidden></p><p id="status" role="status"></p>
+<section id="connect" hidden><h2>Open the workbench connection</h2><p>Open the scientific workbench using its original operator link, then return to this page.</p><a href="/">Open workbench</a></section>
+<section><h2>Native run selection</h2><form id="preview-form">
+<div class="fields"><label>Retained runs <select id="runs"><option value="">Loading retained runs…</option></select></label>
+<label>Run ID <input id="run-id" required autocomplete="off" spellcheck="false" pattern="[a-f0-9]{64}" title="The complete 64-character native run ID"></label></div>
+<div class="pager"><button type="button" id="previous">Previous runs</button><span id="run-page"></span><button type="button" id="next">Next runs</button></div>
+<p id="selection" class="muted"></p><button id="preview" class="primary">Build footprint preview</button>
+<span class="muted">Uses the original grid, ordered patches and selected profile.</span>
+</form></section>
+<section id="task" hidden><h2>Current operation</h2><p id="task-status"></p><button type="button" id="resume" hidden>Resume this operation</button></section>
+<section id="saved-section"><div class="section-head"><h2>Retained previews</h2><button type="button" id="refresh">Refresh</button></div><div id="saved"></div></section>
+<div id="report" hidden></div>
+</main><footer>Upper Savannah scientific workbench · Original sources and explicit model choices</footer></body></html>

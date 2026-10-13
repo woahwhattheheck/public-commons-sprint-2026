@@ -1,0 +1,54 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "native-run-assembly",
+  "title": "Reuse completed native models",
+  "version": "2",
+  "order": 41,
+  "assets": [
+    "run_assembly_workbench.mjs"
+  ],
+  "requires_actions": [
+    "run.prepare",
+    "run.start"
+  ],
+  "backend": {
+    "module": "run_assembly_operations",
+    "factory": {
+      "handler": "RunAssemblyOperations",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/run-assembly/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "actions": [
+      "run.assembly.compose"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  }
+}

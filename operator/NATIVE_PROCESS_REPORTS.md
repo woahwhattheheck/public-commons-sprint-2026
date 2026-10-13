@@ -1,0 +1,141 @@
+# Native process reports in the scientific operator
+
+Open **Native process reports** beside **Native run desk**. This is the browser workflow for the maintained original-stage producer in `model/native_process_report.py`. It reads the original completed NDR and SDR outputs, preserves their actual producing versions and file identities, builds the original watershed process report, and imports its scientific recipe into the existing Sources catalogue.
+
+A completed NDR stage can be selected even when its parent run is still running or its SDR stage failed. The parent status remains visible. Each selected model must be complete in every selected run and meet the producer's original source, geometry, version and units contract.
+
+## Receive the complete maintained application
+
+The registered extension is `operator/extensions/native-process-reports.json`. Its backend, browser module, stylesheet and this guide travel with the existing application component catalogue. The component requires the existing core application and observed-context/report producer. Receive the complete selected application with the maintained source assembler and installer, then restart the existing operator using its normal startup procedure.
+
+The browser uses the original authenticated API, queued operation service and verified file tickets. Its source files are:
+
+- `operator/native_process_operator.py`
+- `operator/extensions/native-process-reports.json`
+- `operator/web/native_processes.mjs`
+- `operator/web/native_processes.css`
+- `operator/NATIVE_PROCESS_REPORTS.md`
+
+The maintained producer remains `model/native_process_report.py`, `model/process_quantities.py` and `model/NATIVE_PROCESS_QUANTITIES.md`. It requires the same GIS Python environment as the original native outputs, plus the installed scientific PDF formatter. The desk uses that producer directly.
+
+## Select the original stage cohort
+
+1. Open the actual scientific Workspace containing the retained native runs.
+2. Choose **Native process reports** and enter a useful report title.
+3. Choose the baseline native run. This is always the first ID in the producer's ordered `run_ids` selection.
+4. Optionally select alternatives on that baseline's original grid. Move alternatives up or down to set their retained report order.
+5. Select the completed NDR and/or SDR models shared by all chosen runs.
+6. Inspect the original run table: parent status, completed model, actual execution version and fallback basis, and whether the original watershed registry output exists. **Open run** uses the ordinary native-run detail.
+7. Choose **Preview original stage selection**. The producer verifies the original cohort, geometry prerequisites, observed producing source version and registry bindings. It returns the deterministic report identity.
+8. Choose the presentation: render PDF/HTML now, or retain the complete scientific source and tables for later rendering. When the installed producer advertises original process figures, the optional figure control retains that explicit choice in its scientific selection; selected SVG figures still use the scientific renderer.
+9. Choose **Build process report**. The original queue retains that exact selection and preview identity before work begins.
+
+A single baseline is a complete report. It contains quantities and per-quantity support; the alternative-change tables have zero data rows. The preview's **Selected native stage files** count covers the chosen stage registry files, companions and arguments. It is not the size of the final package: the report also retains original grid geometry/mask, parameter profiles, scenarios, biophysical tables and implementation sources.
+
+Preview and build compare normalized selection values with object keys in canonical order, preserving ordered run/model arrays. The actual server's sorted JSON and the producer's explicit `include_figures: false` default therefore retain the same selected identity. The queued request uses the complete normalized `preview.selection`.
+
+The client does not infer producing versions from the requested run declaration. Preview delegates to the maintained producer, which verifies the original completed stage or observed runtime module. Requested legacy metadata alone cannot satisfy its original 3.20 process-unit contract.
+
+## Read the original result
+
+The completed task exposes **Open original process report**. Saved CLI reports appear in the same desk's report list. The result keeps:
+
+- The exact baseline and alternative order, original grid, profiles and scenarios.
+- Producing model versions and their source basis.
+- Each selected stage's completion time, retained reuse provenance and registry file/companion count.
+- Actual operation state and phase, completed stage-analysis count and any original error.
+- The imported scientific source collection and source ID.
+- The original rendered PDF, HTML, Markdown and structured report data.
+- Original quantities, support, change and paired-support CSVs.
+- The complete source recipe, process data and scientific identity.
+
+The PDF opens through its ordinary verified file ticket. All other files remain available as original downloads. Use the complete ZIP when opening the HTML report with its relative source links.
+
+### Original table inspection
+
+The desk provides four tables without changing their scientific values:
+
+| Table | Original contents |
+| --- | --- |
+| Watershed quantities | Native watershed masses and explicitly derived quantities |
+| Original finite-cell support | Original and reconstructed totals, valid cells, area and per-quantity coverage |
+| Native watershed changes | Alternative-minus-baseline changes in native watershed quantities |
+| Same-cell changes and coverage | Baseline/alternative intersection, paired masses and coverage differences |
+
+Each page shows up to 100 original rows. Model, run and watershed filters apply only where that original CSV has the corresponding column. The full CSV download remains unchanged by these view filters. Table headers and values are displayed as recorded; blank unavailable values remain blank.
+
+Native watershed masses and reconstructed pixel-centre masses have different support and remain separately labeled. NDR nutrient values use kg/year; SDR values use metric tonnes/year. Per-hectare raster values are converted once by the producer's observed pixel area. No additional calculation or aggregation occurs in the desk.
+
+## Continue or reopen
+
+The producer keeps verified checkpoints for original file transfers, each model analysis and each baseline/alternative support analysis. Use the existing task's **Resume original selection** to retry that same queued request after interruption. Its preview identity remains a guard against silently changing the executed native source.
+
+A report that imported its scientific source before a rendering failure can still show that original source, its exact CSV tables and original source companions. Failed or interrupted build tasks expose **Open retained process state** only when that report was actually created and its original identity/source validate. A preview rejection that created no report has no fabricated result link. **Preview and continue original report** returns its exact scientific selection to the form. Preview again and build to continue the original producer or create a distinct current edition when its native execution or implementation has changed.
+
+Draft selections, selected result/table and the queued operation identity are retained per Workspace in the browser. The original queue and report directory remain authoritative across browser restart. Navigating to another saved result does not let an older task completion replace that deliberate selection. Switching Workspace or detaching the desk invalidates outstanding UI reads. A submission that completes after detachment is recorded under its original Workspace.
+
+## Add to a retained scientific delivery
+
+The process report is already a typed original source, with `metadata.report_schema = "upstate.observed-report/v1"`. It appears in the ordinary ordered scientific-report selector.
+
+For an existing delivery:
+
+1. Open the saved process report.
+2. Select the desired saved delivery under **Continue with this scientific source**.
+3. Choose **Open delivery with this report**.
+4. Review the ordinary delivery form and submit through its existing workflow.
+
+The backend reads that delivery's actual retained selection and calls the producer's `attach` function. Earlier scientific reports keep their original order; this exact new source is appended once. The compatibility primary selector remains the first source. The old aggregate report binding is removed so the original delivery engine binds the complete new source set.
+
+The UI waits for the actual imported collection and source entry to be visible in the selected Workspace before opening the form. A Workspace change cancels that handoff. Full map-delivery prerequisites remain enforced by the existing form. The standalone process PDF and source package are available for a single model or baseline without requiring a full map-delivery cohort.
+
+## Export the complete source-linked report
+
+Choose **Export complete report and original sources**. The existing queue produces a retained ZIP and supplies its normal verified download. It contains the complete original process-report file inventory, with the producer's directory hierarchy unchanged:
+
+- `report.html`, PDF and other formatter outputs;
+- Original report recipe and source manifest;
+- All four CSVs and structured process result;
+- Original grid, native vector/raster/sidecar, argument, profile, scenario and parameter-table companions;
+- Calculation implementation and verified analysis checkpoints;
+- The original operation record and `NATIVE_PROCESS_PACKAGE.json` with each member's byte length and SHA-256.
+
+Large originals are streamed into the ZIP and verified during copying. The package identity binds the report, exact member inventory, source selector and operation record. Repeated export reopens the verified completed package. The same Workspace retains both report and package for its ordinary full archive/independent receiving workflow.
+
+The operator's build and package actions hold the original Workspace archive lock during writes, preventing an ordinary backup from capturing a partially written operator product. The producer's own original operation lock still protects its analysis checkpoints.
+
+## Registered API
+
+| Method or queue action | Purpose |
+| --- | --- |
+| GET `/api/native-processes/catalog` | Original completed-stage catalogue and retained report summaries |
+| POST `/api/native-processes/preview` | Producer preview for `{selection}` |
+| GET `/api/native-processes/report?id=...` | Saved original report, execution details and ordinary file tickets |
+| GET `/api/native-processes/table?id=...&table=...` | Original CSV page; optional model/run_id/watershed/offset/limit |
+| POST `/api/native-processes/delivery` | Read saved delivery and append the exact report source |
+| `native.process.build` | Queued `{selection, expected_preview_id, render}` through the original producer |
+| `native.process.package` | Queued `{id}` complete linked package |
+
+All routes are registered in the existing extension registry. Read-only preview does not enqueue calculations. Build and package use normal write authorization, existing task attempts/resume and original request identity. Source and output paths resolve only within their retained scientific scope.
+
+The controller additionally exposes `createForRun({run_id})` and `openSaved(id)` through the existing `openDesk` bridge, so another maintained native workflow can open this desk with its actual original run or saved report. Completed task navigation already uses that bridge.
+
+## Actual receiving continuation
+
+Use the same native Workspace and producer operation that already owns the completed original stage. Receive these operator sources alongside the producer's merged source and restart the operator in its existing GIS environment.
+
+Open the completed stage through the desk, preview its one-run NDR or SDR selection, build the original report, inspect the original PDF and quantity/support CSVs, export the complete source-linked ZIP, and reopen the saved result. When the existing native course has a compatible saved delivery, append the report through its ordinary form. Preserve the actual Workspace, native run, stage and task IDs when returning the result or first exception.
+
+For a complete source/engine description, see [Native process quantities](../model/NATIVE_PROCESS_QUANTITIES.md).
+
+## Complete application component
+
+The owned `integration/component_fragments/native-process-reports.json` declaration selects all five operator files and the original three producer files, with the maintained `core` and `observed-context` dependencies. Receive this fragment with those actual source bodies. The merged component-fragment loader composes it with the current shared application catalogue and validates the complete local dependency and resource closure. The shared baseline catalogue remains owned by its current maintainers.
+
+## Continue in the saved scientific-report composer
+
+A saved process report with its verified original source can open the existing standalone scientific-report composer directly. Choose **Open scientific report** in the saved result. This is available for source-only, completed, or imported-source products retained before a rendering failure. It uses the exact saved `source_collection_id` and `source_id`; it does not infer an internal entry key.
+
+The desk waits for that original source to be visible in the captured Workspace, then calls the maintained `openScientificReport({workspace_key, sources, title})` host entry point. The composer preserves existing ordered source choices and draft fields, appends the original choice once, and requires its normal current preview before queueing. Use that original workflow to arrange this process report alongside other retained scientific studies, prepare a saved report edition, inspect its output, export and reopen it. The mapped-delivery action remains available beside this direct scientific-report action.
+
+The action appears when the installed host exposes the maintained composer capability. Earlier application hosts retain all existing process-report build, source inspection, table, download and mapped-delivery controls while their current shared host is being received. Receive the host and composer together through their existing owned application component; this desk creates no separate renderer or report queue.

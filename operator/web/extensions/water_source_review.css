@@ -1,0 +1,36 @@
+.water-source-review{color:#1b1b1b;line-height:1.45}
+.water-source-review .section{margin-block:1.25rem;padding:1.15rem;border:1px solid #bcbcbc;background:#fff}
+.water-source-review h1,.water-source-review h2,.water-source-review h3{line-height:1.2}
+.water-source-review h2{font-size:1.2rem;margin:0 0 .8rem}
+.water-source-review h3{font-size:1.05rem;margin:1rem 0 .6rem}
+.water-source-grid,.water-source-filters,.water-source-editions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.water-source-review label{display:flex;flex-direction:column;gap:.4rem;font-size:.88rem;font-weight:600}
+.water-source-review input,.water-source-review select{box-sizing:border-box;min-height:2.5rem;width:100%;font:inherit;border:1px solid #8a8a8a;border-radius:2px;background:#fff;color:inherit;padding:.5rem}
+.water-source-review .water-source-search{grid-column:1/-1}
+.water-source-review .water-source-check{flex-direction:row;align-items:center;align-self:end;min-height:2.5rem}
+.water-source-review .water-source-check input{width:1rem;min-height:1rem;height:1rem}
+.water-source-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem;margin-block:1rem}
+.water-source-review button{font:inherit;cursor:pointer;border-radius:2px}
+.water-source-toolbar button{border:1px solid #737373;background:#f4f4f4;color:inherit;min-height:2.4rem;padding:.45rem .8rem}
+.water-source-review button:disabled{cursor:default;opacity:.5}
+.water-source-review :is(button,a,input,select):focus-visible{outline:2px solid #111;outline-offset:3px}
+.water-source-table-wrap{overflow:auto;max-width:100%;margin-block:.8rem}
+.water-source-review table{width:100%;border-collapse:collapse;text-align:left;font-size:.87rem}
+.water-source-review th,.water-source-review td{padding:.65rem .7rem;border-bottom:1px solid #c6c6c6;vertical-align:top;overflow-wrap:anywhere}
+.water-source-review th{font-weight:650;background:#f0f0f0;white-space:normal}
+.water-source-review tr.water-source-selected td{background:#f3f3f3;border-top:1px solid #737373;border-bottom:1px solid #737373}
+.water-source-review .water-source-row-button{padding:0;border:0;background:transparent;color:inherit;text-decoration:underline;text-underline-offset:3px;text-align:left;overflow-wrap:anywhere}
+.water-source-reach-preview{font-size:.83rem;line-height:1.45;min-width:15rem;max-width:48rem;margin:.5rem 0 0}
+.water-source-legal-description{font-size:1.05rem;max-width:80ch}
+.water-source-definition{display:grid;grid-template-columns:minmax(9rem,12rem) minmax(0,1fr);gap:.55rem 1rem}
+.water-source-definition dt{font-weight:600}
+.water-source-definition dd{margin:0;overflow-wrap:anywhere}
+.water-source-review code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.83em;overflow-wrap:anywhere}
+.water-source-review pre{max-height:30rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:.8rem;background:#f4f4f4;border:1px solid #d0d0d0;font: .8rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.water-source-review details{margin-block:.75rem}
+.water-source-review summary{cursor:pointer;font-weight:600}
+.water-source-review [role="alert"]{font-weight:650;border-left:3px solid #333;padding-left:.65rem}
+.water-source-review [data-water-native-inspector]:not(:empty){margin-top:1.5rem;padding-top:.7rem;border-top:2px solid #aaa}
+.water-source-review a{color:inherit;text-underline-offset:3px}
+@media(max-width:680px){.water-source-review .section{padding:.8rem}.water-source-definition{grid-template-columns:1fr}.water-source-definition dd{margin-bottom:.55rem}.water-source-grid,.water-source-filters{grid-template-columns:1fr}.water-source-reach-preview{min-width:13rem}.water-source-toolbar button{flex:1 1 10rem}}
+@media print{.water-source-controls,.water-source-filters,.water-source-toolbar{display:none!important}.water-source-review .section{break-inside:avoid}.water-source-table-wrap{overflow:visible}.water-source-review pre{max-height:none}}

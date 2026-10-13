@@ -1,0 +1,156 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "landcover-ledger",
+  "title": "Land-cover changes",
+  "version": "1.3.0",
+  "order": 57,
+  "assets": [
+    "landcover_ledger.mjs",
+    "landcover_ledger.css"
+  ],
+  "backend": {
+    "module": "landcover_operator",
+    "actions": [
+      "landcover.ledger.build",
+      "landcover_report_source"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/landcover-ledger/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/landcover-ledger/edition",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/landcover-ledger/inputs",
+        "operation": "inputs",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/landcover-ledger/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "landcover-ledgers",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "landcover_ledgers",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.landcover_workspace",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/landcover-ledger/{workspace_key}/{edition_id}",
+        "handler": "preview",
+        "args": [
+          "operator",
+          "route.workspace_key",
+          "route.edition_id"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/landcover_ledger.mjs",
+    "factory": "attachLandcoverLedger",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "openScientificReport"
+    ],
+    "styles": [
+      "/web/landcover_ledger.css"
+    ],
+    "view": {
+      "id": "landcover-ledger",
+      "title": "Land-cover changes",
+      "after": "comparisons"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

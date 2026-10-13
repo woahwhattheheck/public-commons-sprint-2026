@@ -1,0 +1,160 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "watershed-context",
+  "title": "Regional watershed context",
+  "version": "1.6.0",
+  "order": 55,
+  "assets": [
+    "watershed_context.mjs",
+    "watershed_context.css"
+  ],
+  "backend": {
+    "module": "watershed_context",
+    "factory": {
+      "handler": "WatershedContextActions",
+      "args": [
+        "operator",
+        "fault",
+        "source_roots"
+      ]
+    },
+    "actions": [
+      "watershed.context.analyze",
+      "watershed.context.export",
+      "watershed.context.receive",
+      "watershed.context.monitoring"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/huc",
+        "operation": "huc",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/export",
+        "operation": "export",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/watershed-context/monitoring",
+        "operation": "monitoring",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "watershed-context",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "watershed_context_reports",
+      "handler": "snapshot",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/watershed_context.mjs",
+    "factory": "createWatershedContextDesk",
+    "requires": [
+      "getState",
+      "api",
+      "submitAction",
+      "refresh",
+      "toast",
+      "navigate",
+      "showTask",
+      "fileList",
+      "uploadFile",
+      "openDesk"
+    ],
+    "styles": [
+      "/web/watershed_context.css"
+    ],
+    "view": {
+      "id": "watershed-context",
+      "title": "Regional watersheds",
+      "after": "receiving-waters"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

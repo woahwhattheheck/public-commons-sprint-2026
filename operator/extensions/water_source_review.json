@@ -1,0 +1,96 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "water-source-review",
+  "title": "Water source review",
+  "version": "1.5.0",
+  "order": 35,
+  "assets": [
+    "extensions/water_source_review.mjs",
+    "extensions/water_source_review.css",
+    "extensions/water_source_brief.mjs"
+  ],
+  "backend": {
+    "module": "water_source_review",
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-source-review/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-source-review/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-source-review/feature",
+        "operation": "feature",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-source-review/features",
+        "operation": "features",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/extensions/water_source_review.mjs",
+    "factory": "attachWaterSourceReview",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast"
+    ],
+    "styles": [
+      "/web/extensions/water_source_review.css"
+    ],
+    "view": {
+      "id": "water-source-review",
+      "title": "Water source review",
+      "after": "sources"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

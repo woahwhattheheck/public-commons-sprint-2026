@@ -1,0 +1,134 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "conservation-design",
+  "title": "Scenario design",
+  "version": "2",
+  "order": 88,
+  "assets": [
+    "conservation_design.mjs",
+    "conservation_design.css",
+    "conservation_design_editor.mjs"
+  ],
+  "backend": {
+    "module": "conservation_design",
+    "factory": {
+      "handler": "ConservationDesign",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "conservation.design.prepare",
+      "conservation.design.receive",
+      "conservation.design.editor.open",
+      "conservation.design.editor.write"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/conservation-design/overview",
+        "operation": "overview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/conservation-design/preparation",
+        "operation": "preparation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/conservation-design/receiving",
+        "operation": "receiving",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/conservation-design/editor",
+        "operation": "editor",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/conservation-design/{workspace_key}/editor/{member_path...}",
+        "response": "ticket_policy_pair",
+        "handler": "editor_file",
+        "args": [
+          "workspace_key",
+          "route.member_path"
+        ]
+      }
+    ],
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/conservation_design.mjs",
+    "factory": "attachConservationDesign",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh"
+    ],
+    "styles": [
+      "/web/conservation_design.css"
+    ],
+    "view": {
+      "id": "conservation-design",
+      "title": "Scenario design",
+      "after": "conservation"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

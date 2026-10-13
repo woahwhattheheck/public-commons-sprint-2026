@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "water-quality",
+  "title": "Water-quality context",
+  "version": "1",
+  "order": 65,
+  "assets": [
+    "water_quality.mjs",
+    "water_quality.css"
+  ],
+  "backend": {
+    "module": "extension_modules.water_quality",
+    "factory": {
+      "handler": "create",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "water.quality.context.build",
+      "water.quality.sources.acquire"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/extensions/water-quality/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/extensions/water-quality/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "water_quality",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "items": [
+      {
+        "kind": "water_quality_contexts",
+        "handler": "item_context",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      },
+      {
+        "kind": "water_quality_acquisitions",
+        "handler": "item_acquisition",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/water_quality.mjs",
+    "factory": "attachWaterQuality",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "openForm",
+      "submitAction",
+      "detail",
+      "fileList",
+      "showTask",
+      "toast",
+      "openItem",
+      "sourceForm"
+    ],
+    "styles": [
+      "/web/water_quality.css"
+    ],
+    "view": {
+      "id": "water-quality",
+      "title": "Water-quality context",
+      "after": "decisions"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "waterquality-"
+    ]
+  }
+}

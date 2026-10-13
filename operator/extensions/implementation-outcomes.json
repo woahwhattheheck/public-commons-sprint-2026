@@ -1,0 +1,93 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "implementation-outcomes",
+  "title": "Implementation outcomes",
+  "version": "2",
+  "order": 71,
+  "assets": [
+    "implementation_outcomes.mjs"
+  ],
+  "backend": {
+    "module": "implementation_outcomes",
+    "factory": {
+      "handler": "ImplementationOutcomesOperator",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "implementation.outcomes.build",
+      "implementation.outcomes.report-import"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-outcomes/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-outcomes/list",
+        "operation": "list",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-outcomes/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-outcomes/report-preview",
+        "operation": "report-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "requires_actions": [
+    "implementation.plan.report"
+  ]
+}

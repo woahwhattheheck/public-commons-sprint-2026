@@ -1,0 +1,50 @@
+.operating-journey{color:#24282c;max-width:1440px;margin:0 auto}
+.operating-journey .journey-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 24px}
+.operating-journey .journey-steps button{min-height:56px;text-align:left;line-height:1.35;border:1px solid #c9cdd0;background:#f6f7f7;color:#30363b;padding:12px 14px;white-space:normal;border-radius:3px}
+.operating-journey .journey-steps button[aria-current="step"]{background:#30363b;border-color:#30363b;color:#fff;font-weight:650}
+.operating-journey .journey-main,.operating-journey .journey-notes,.operating-journey .journey-reference,.operating-journey .journey-operations{border:1px solid #d4d7d9;border-radius:3px;background:#fff;padding:24px;margin-bottom:24px}
+.operating-journey .journey-main>h2{font-size:25px;line-height:1.25;margin:8px 0 22px}
+.operating-journey .journey-instructions{display:grid;gap:14px;margin:0 0 20px}
+.operating-journey .journey-instructions>div{display:grid;grid-template-columns:72px minmax(0,1fr);gap:14px}
+.operating-journey .journey-instructions dt{font-weight:650}
+.operating-journey .journey-instructions dd{margin:0;line-height:1.6;max-width:1040px}
+.operating-journey .journey-speaking{margin:0 0 24px;border-left:3px solid #686e73;padding:14px 18px;background:#f4f5f5;color:#343a3f;font-size:16px;line-height:1.6}
+.operating-journey .journey-work{border-top:1px solid #dde0e2;padding-top:24px}
+.operating-journey .journey-fields,.operating-journey .journey-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 28px}
+.operating-journey label{display:flex;flex-direction:column;gap:8px;line-height:1.45}
+.operating-journey label>span{font-weight:600}
+.operating-journey select,.operating-journey textarea,.operating-journey input{max-width:100%;color:#24282c;background:#fff;border:1px solid #afb5b9;border-radius:3px;padding:10px 12px;font:inherit}
+.operating-journey textarea{resize:vertical;width:100%;box-sizing:border-box;line-height:1.6}
+.operating-journey select{width:100%;min-height:44px}
+.operating-journey .journey-facts{margin:22px 0}
+.operating-journey .journey-facts dt{font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:#656d74;margin-bottom:6px}
+.operating-journey .journey-facts dd{margin:0;overflow-wrap:anywhere;line-height:1.5}
+.operating-journey .page-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.operating-journey button{min-height:40px}
+.operating-journey button.primary{background:#30363b;border:1px solid #30363b;color:#fff}
+.operating-journey button:disabled{opacity:.65;cursor:wait}
+.operating-journey button:focus-visible,.operating-journey select:focus-visible,.operating-journey textarea:focus-visible,.operating-journey input:focus-visible,.journey-rail button:focus-visible{outline:3px solid #68747e;outline-offset:3px}
+.operating-journey .journey-note{background:#f5f6f6;border:1px solid #dde0e2;padding:14px 16px;margin:18px 0;line-height:1.6}
+.operating-journey .journey-state{font-weight:650;padding:12px 14px;border:1px solid #c9cdd0;background:#f1f3f3;margin-top:20px}
+.operating-journey .journey-error{border-left:3px solid #4d5358;padding:12px 16px;background:#f2f3f3;white-space:pre-wrap}
+.operating-journey table{width:100%;border-collapse:collapse}
+.operating-journey th{text-align:left;white-space:nowrap;background:#f4f5f5}
+.operating-journey th,.operating-journey td{padding:12px 14px;border-bottom:1px solid #dde0e2;vertical-align:top}
+.operating-journey .number-cell{text-align:right;font-variant-numeric:tabular-nums}
+.operating-journey .table-scroll{overflow:auto;border:1px solid #dde0e2;border-radius:3px;margin:18px 0}
+.operating-journey .journey-step-actions{display:flex;justify-content:space-between;align-items:center;gap:14px;border-top:1px solid #dde0e2;margin-top:26px;padding-top:22px}
+.operating-journey summary{cursor:pointer;font-weight:650;line-height:1.6}
+.operating-journey .journey-reference dl{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px 20px;line-height:1.6;margin:22px 0}
+.operating-journey .journey-reference dt{font-weight:600}
+.operating-journey .journey-reference dd{margin:0}
+.operating-journey .journey-reference li{margin-bottom:10px;line-height:1.6}
+.operating-journey .journey-import{max-width:680px;padding:16px;border:1px solid #d4d7d9}
+.operating-journey .journey-import small{color:#656d74;font-weight:400}
+.operating-journey .journey-note-version{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.6;padding:14px;background:#f4f5f5}
+.journey-rail{display:flex;align-items:center;justify-content:space-between;gap:22px;background:#f0f2f2;border:1px solid #c9cdd0;border-left:3px solid #505a62;border-radius:3px;padding:16px 20px;margin:0 0 22px;color:#30363b}
+.journey-rail[hidden]{display:none}
+.journey-rail p{margin:6px 0 0;max-width:960px;line-height:1.5}
+.journey-rail .page-actions{flex-shrink:0;margin:0}
+@media(max-width:1050px){.operating-journey .journey-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.operating-journey .journey-fields,.operating-journey .journey-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.operating-journey .journey-main,.operating-journey .journey-notes,.operating-journey .journey-reference,.operating-journey .journey-operations{padding:16px}.operating-journey .journey-fields,.operating-journey .journey-facts{grid-template-columns:minmax(0,1fr)}.operating-journey .journey-steps{gap:6px}.operating-journey .journey-steps button{font-size:12px;padding:10px}.operating-journey .journey-instructions>div{grid-template-columns:minmax(0,1fr);gap:4px}.operating-journey .journey-reference dl{grid-template-columns:minmax(0,1fr);gap:6px}.operating-journey .journey-reference dd{margin-bottom:12px}.operating-journey .journey-step-actions,.journey-rail{align-items:stretch;flex-direction:column}.operating-journey .journey-step-actions button{width:100%}}
+@media print{.operating-journey .journey-steps,.operating-journey .page-actions,.operating-journey .journey-step-actions,.journey-rail{display:none}.operating-journey .journey-main{border:0;padding:0}.operating-journey .table-scroll{overflow:visible}.operating-journey .journey-reference{break-before:page}}

@@ -1,0 +1,276 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "calibration",
+  "title": "Calibration and validation",
+  "version": "9+source-design1",
+  "order": 65,
+  "assets": [
+    "calibration.mjs",
+    "calibration.css",
+    "calibration_maps.mjs",
+    "calibration_review.mjs",
+    "calibration_design.mjs"
+  ],
+  "backend": {
+    "module": "calibration",
+    "factory": {
+      "handler": "CalibrationOperations",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "calibration.prepare",
+      "calibration.analyze",
+      "calibration.export",
+      "calibration.uncertainty",
+      "calibration.uncertainty.export",
+      "calibration.maps.prepare",
+      "calibration.maps.review",
+      "calibration.review.prepare",
+      "calibration.review.source"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/plan",
+        "operation": "plan",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/calibration/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/uncertainty",
+        "operation": "uncertainty",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/maps",
+        "operation": "maps",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "calibration",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "items": [
+      {
+        "kind": "calibration-plans",
+        "operation": "plan",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibrations",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibration-uncertainties",
+        "operation": "uncertainty",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibration-maps",
+        "operation": "maps",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibration-reviews",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibration-report-sources",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/calibration-review/{workspace_key}/{review_id}/{member_path...}",
+        "handler": "review_member",
+        "args": [
+          "route.workspace_key",
+          "route.review_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/calibration.mjs",
+    "factory": "createCalibrationDesk",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "openForm",
+      "submitAction",
+      "detail",
+      "fileList",
+      "openItem",
+      "showTask",
+      "toast",
+      "openDelivery",
+      "openScientificReport"
+    ],
+    "styles": [
+      "/web/calibration.css"
+    ],
+    "view": {
+      "id": "calibration",
+      "title": "Calibration and validation",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "calibration-"
+    ],
+    "task_actions": "taskActions"
+  }
+}

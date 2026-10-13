@@ -1,0 +1,143 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "station-geography",
+  "title": "Station geography",
+  "version": "1.5.0",
+  "order": 44,
+  "assets": [
+    "station_geography.mjs",
+    "station_geography.css",
+    "native_assessment_review.mjs"
+  ],
+  "backend": {
+    "module": "station_geography",
+    "factory": {
+      "handler": "StationGeography",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "station.geography.build",
+      "station.geography.receive",
+      "station.geography.utility-microbial",
+      "station.geography.review-selection"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/station-geography/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/station-geography/edition",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/station-geography/verify",
+        "operation": "verify",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "station-geographies",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "station_geographies",
+      "handler": "overview",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.station_geography",
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/station_geography.mjs",
+    "factory": "attachStationGeography",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "toast",
+      "navigate",
+      "openItem",
+      "showTask",
+      "closeDetail"
+    ],
+    "styles": [
+      "/web/station_geography.css"
+    ],
+    "view": {
+      "id": "station-geography",
+      "title": "Station geography",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "station-geography-result-"
+    ]
+  }
+}

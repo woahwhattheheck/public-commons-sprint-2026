@@ -1,0 +1,18 @@
+.profile-comparison-desk{color:#242424;background:#fff;font:14px/1.5 system-ui,sans-serif;max-width:1600px;margin:0 auto;padding:20px}
+.profile-comparison-desk header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid #ccc;padding-bottom:16px}
+.profile-comparison-desk h1{font-size:25px;margin:0 0 6px}.profile-comparison-desk h2{font-size:19px;margin:0 0 12px}.profile-comparison-desk h3{font-size:16px;margin:22px 0 10px}
+.profile-comparison-desk section{margin:20px 0}.profile-comparison-desk label{display:flex;flex-direction:column;gap:5px;font-weight:550}
+.profile-comparison-desk input,.profile-comparison-desk select,.profile-comparison-desk button{font:inherit;color:inherit;background:#fff;border:1px solid #999;border-radius:3px;padding:8px}
+.profile-comparison-desk button{cursor:pointer}.profile-comparison-desk button:hover{background:#eee}.profile-comparison-desk button:disabled{opacity:.5;cursor:default}
+.profile-comparison-desk :focus-visible{outline:2px solid #333;outline-offset:2px}.profile-comparison-desk input[type=checkbox]{width:17px;height:17px;accent-color:#333}
+.pc-fields{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}.profile-comparison-desk fieldset{border:1px solid #bbb;margin:16px 0;padding:14px}
+.pc-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}.profile-comparison-desk .pc-choice{flex-direction:row;align-items:flex-start;font-weight:400}
+.profile-comparison-desk small{display:block;color:#666;font-weight:400}.pc-actions,.pc-downloads{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}
+.profile-comparison-desk a{color:#333;text-underline-offset:3px}.pc-downloads a{padding:5px 0}.pc-muted{color:#666}.pc-context,[data-pc-notice]{background:#f3f3f3;border-left:3px solid #777;padding:12px}
+[data-pc-notice][role=alert]{border:1px solid #555;border-left:4px solid #222}.pc-scroll{overflow:auto;max-height:650px;border:1px solid #bbb}
+.profile-comparison-desk table{width:100%;border-collapse:collapse;font-size:12px}.profile-comparison-desk th,.profile-comparison-desk td{text-align:left;vertical-align:top;border-bottom:1px solid #ddd;padding:8px;overflow-wrap:anywhere}
+.profile-comparison-desk thead th{position:sticky;top:0;background:#eee;z-index:1;white-space:nowrap}.profile-comparison-desk tbody tr:nth-child(even){background:#fafafa}
+.profile-comparison-desk details{border:1px solid #ccc;padding:12px;margin:16px 0}.profile-comparison-desk summary{cursor:pointer;font-weight:600}
+.profile-comparison-desk pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#f4f4f4;padding:12px;max-height:500px;overflow:auto}.profile-comparison-desk code{overflow-wrap:anywhere}
+.pc-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.pc-filters label{max-width:300px}.profile-comparison-desk .pc-check{flex-direction:row;align-items:center;font-weight:400;padding:8px 0}.pc-source{border-top:1px solid #ddd}
+@media(max-width:760px){.profile-comparison-desk{padding:12px}.pc-fields{grid-template-columns:1fr}.profile-comparison-desk header{display:block}.pc-candidates{grid-template-columns:1fr}.pc-filters label{max-width:100%;flex:1 1 170px}}

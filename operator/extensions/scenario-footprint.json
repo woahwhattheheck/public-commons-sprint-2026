@@ -1,0 +1,97 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "scenario-footprint",
+  "title": "Scenario footprint",
+  "version": "1.1.0",
+  "order": 45,
+  "assets": [
+    "scenario-footprint.html",
+    "scenario-footprint.css",
+    "scenario-footprint.mjs",
+    "scenario-footprint-nav.mjs",
+    "scenario_input_review.mjs"
+  ],
+  "backend": {
+    "module": "scenario_footprint",
+    "actions": [
+      "scenario.footprint.preview"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/scenario-footprints/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/scenario-footprints/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    },
+    "state": {
+      "key": "scenario_footprints",
+      "handler": "state_snapshot",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/scenario-footprint.mjs",
+    "factory": "createScenarioFootprint",
+    "requires": [
+      "api",
+      "getState",
+      "getWorkspace"
+    ],
+    "view": {
+      "id": "scenario-footprint",
+      "title": "Scenario footprint",
+      "after": "runs"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

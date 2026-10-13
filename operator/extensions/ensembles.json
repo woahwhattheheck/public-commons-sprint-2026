@@ -1,0 +1,200 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "ensembles",
+  "title": "Scenario sensitivity",
+  "version": "4.6",
+  "order": 50,
+  "assets": [
+    "ensembles.mjs"
+  ],
+  "backend": {
+    "module": "ensemble_service",
+    "factory": {
+      "handler": "EnsembleService",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "ensemble.create",
+      "ensemble.run",
+      "ensemble.report",
+      "ensemble.decision",
+      "ensemble.calibration",
+      "ensemble.consumer.resume",
+      "ensemble.flow-support",
+      "ensemble.scientific-source",
+      "ensemble.study-source"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/ensembles/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/consumers",
+        "operation": "consumers",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/consumer",
+        "operation": "consumer",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/annual-references",
+        "operation": "annual-references",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/scientific-source",
+        "operation": "scientific-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/study-source",
+        "operation": "study-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "ensembles",
+      "handler": "overview",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/ensembles.mjs",
+    "factory": "attachEnsembles",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "openForm",
+      "submitAction",
+      "detail",
+      "toast",
+      "openItem",
+      "refresh",
+      "openDelivery",
+      "openScientificReport"
+    ],
+    "view": {
+      "id": "ensembles",
+      "title": "Scenario sensitivity",
+      "after": "comparisons"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "action_prefixes": [
+      "ensemble-design-"
+    ],
+    "dispatch": "dispatch"
+  }
+}

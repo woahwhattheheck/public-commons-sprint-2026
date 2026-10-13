@@ -1,0 +1,119 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "scientific-setup",
+  "title": "Scientific setup",
+  "version": "1",
+  "order": 74,
+  "assets": [
+    "scientific-setup.mjs",
+    "scientific-setup.css"
+  ],
+  "requires_actions": [
+    "customer.review.create",
+    "customer.review.export"
+  ],
+  "backend": {
+    "module": "scientific_setup",
+    "factory": {
+      "handler": "ScientificSetup",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "scientific.setup.create"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/scientific-setup/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/scientific-setup/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/scientific-setup/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "scientific_setup",
+      "handler": "overview",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.setup_review",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/scientific-setup.mjs",
+    "factory": "attachScientificSetup",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "showTask"
+    ],
+    "styles": [
+      "/web/scientific-setup.css"
+    ],
+    "view": {
+      "id": "scientific-setup",
+      "title": "Scientific setup",
+      "after": "grids"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

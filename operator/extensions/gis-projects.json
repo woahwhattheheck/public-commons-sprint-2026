@@ -1,0 +1,105 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "gis-projects",
+  "title": "Editable GIS projects",
+  "version": "1.4.0",
+  "order": 75,
+  "assets": [
+    "gis-projects.mjs",
+    "gis-projects.css"
+  ],
+  "backend": {
+    "module": "gis_projects",
+    "actions": [
+      "gis.project.export",
+      "gis.project.receive",
+      "gis.project.adopt-sources"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis/projects",
+        "operation": "catalogue",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [],
+    "state": {
+      "key": "gis_projects",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "gis_projects",
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/gis-project/{workspace_key}/{kind}/{project_id}/{member_path...}",
+        "handler": "member",
+        "args": [
+          "operator",
+          "route.workspace_key",
+          "route.kind",
+          "route.project_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/gis-projects.mjs",
+    "factory": "attachGISProjects",
+    "requires": [
+      "getState",
+      "api",
+      "refreshState",
+      "showTask",
+      "toast"
+    ],
+    "styles": [
+      "/web/gis-projects.css"
+    ],
+    "view": {
+      "id": "gis-projects",
+      "title": "Editable GIS projects",
+      "after": "runs"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

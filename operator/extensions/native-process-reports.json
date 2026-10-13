@@ -1,0 +1,161 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "native-process-reports",
+  "title": "Native process reports",
+  "version": "2",
+  "order": 42,
+  "assets": [
+    "native_processes.mjs",
+    "native_processes.css"
+  ],
+  "backend": {
+    "module": "native_process_operator",
+    "actions": [
+      "native.process.build",
+      "native.process.package"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/native-processes/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/native-processes/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/native-processes/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/native-processes/table",
+        "operation": "table",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/native-processes/delivery",
+        "operation": "delivery",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "native-process-reports",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/native_processes.mjs",
+    "factory": "attachNativeProcesses",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "endpoint",
+      "toast",
+      "refreshState",
+      "openItem",
+      "openDelivery",
+      "navigate",
+      "closeDetail",
+      "showTask",
+      "openDesk"
+    ],
+    "styles": [
+      "/web/native_processes.css"
+    ],
+    "view": {
+      "id": "native-process-reports",
+      "title": "Native process reports",
+      "after": "run-desk"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "nativeprocess-"
+    ]
+  }
+}

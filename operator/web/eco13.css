@@ -1,0 +1,95 @@
+.eco13-desk{--eco13-bg:#f3f3f3;--eco13-panel:#fff;--eco13-line:#b9b9b9;--eco13-text:#1b1b1b;--eco13-muted:#555;box-sizing:border-box;width:100%;min-width:0;color:var(--eco13-text);background:var(--eco13-bg);padding:20px;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.eco13-desk *{box-sizing:border-box}
+.eco13-desk h1,.eco13-desk h2,.eco13-desk h3{font-weight:650;line-height:1.25;letter-spacing:0;color:var(--eco13-text)}
+.eco13-desk h1{font-size:27px;margin:0 0 9px}
+.eco13-desk h2{font-size:19px;margin:0 0 14px}
+.eco13-desk h3{font-size:15px;margin:18px 0 10px}
+.eco13-desk p{margin:9px 0;max-width:110ch}
+.eco13-desk .eco13-eyebrow{font-size:12px;font-weight:650;letter-spacing:.025em;margin:0 0 6px}
+.eco13-desk .eco13-head,.eco13-desk .eco13-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.eco13-desk .eco13-head{margin-bottom:18px;padding-bottom:15px;border-bottom:1px solid var(--eco13-line)}
+.eco13-desk .eco13-layout{display:grid;grid-template-columns:19rem minmax(0,1fr);align-items:start;gap:18px}
+.eco13-desk .eco13-main,.eco13-desk .eco13-sidebar{min-width:0}
+.eco13-desk .eco13-panel{padding:20px;margin:0 0 18px;background:var(--eco13-panel);border:1px solid var(--eco13-line);border-radius:2px}
+.eco13-desk .eco13-muted,.eco13-desk small{font-size:12px;color:var(--eco13-muted)}
+.eco13-desk small{display:block;margin-top:4px}
+.eco13-desk .eco13-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.eco13-desk button,.eco13-desk input,.eco13-desk select,.eco13-desk textarea{font:inherit;color:inherit;background:#fff;border:1px solid #858585;border-radius:2px;min-height:36px}
+.eco13-desk button{padding:7px 11px;cursor:pointer;line-height:1.35}
+.eco13-desk button:hover:enabled{background:#e9e9e9}
+.eco13-desk button:disabled{color:#686868;border-color:#c6c6c6;background:#f5f5f5;cursor:default}
+.eco13-desk button[type=submit]{background:#242424;color:#fff;border-color:#242424}
+.eco13-desk button[type=submit]:hover:enabled{background:#000}
+.eco13-desk button[type=submit]:disabled{background:#e0e0e0;color:#686868;border-color:#c6c6c6}
+.eco13-desk input,.eco13-desk select,.eco13-desk textarea{padding:7px 9px;max-width:100%;width:100%}
+.eco13-desk input:disabled{background:#f2f2f2;color:#6d6d6d}
+.eco13-desk input::placeholder{color:#666}
+.eco13-desk :focus-visible{outline:3px solid #333;outline-offset:2px}
+.eco13-desk label{display:block;font-size:13px;font-weight:550;margin:12px 0}
+.eco13-desk label>input,.eco13-desk label>select,.eco13-desk label>textarea{display:block;margin-top:5px;font-weight:400}
+.eco13-desk input[type=checkbox]{display:inline-block;width:17px;min-height:17px;height:17px;accent-color:#222;flex:0 0 auto;margin:3px 0 0}
+.eco13-desk .eco13-check{display:flex;align-items:flex-start;gap:9px;font-weight:400;margin:10px 0}
+.eco13-desk .eco13-check strong{font-weight:550}
+.eco13-desk .eco13-objectives{border:1px solid #ccc;padding:6px 12px;max-height:20rem;overflow:auto}
+.eco13-desk .eco13-file-input{position:absolute;width:1px;height:1px;min-height:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;padding:0;border:0}
+.eco13-desk .eco13-error{border:1px solid #333;border-left:4px solid #333;background:#fafafa;padding:12px;white-space:pre-wrap}
+.eco13-desk .eco13-error[hidden]{display:none}
+.eco13-desk .eco13-notice:empty{display:none}
+.eco13-desk .eco13-notice{padding:8px 0;font-size:13px}
+.eco13-desk .eco13-record-list,.eco13-desk .eco13-job-list{list-style:none;padding:0;margin:0}
+.eco13-desk .eco13-record-list{max-height:36rem;overflow:auto}
+.eco13-desk .eco13-record-list li+li,.eco13-desk .eco13-job-list li+li{margin-top:8px}
+.eco13-desk .eco13-record-list button,.eco13-desk .eco13-job-list button{display:block;width:100%;text-align:left;overflow-wrap:anywhere}
+.eco13-desk .eco13-record-list button[aria-current=true]{border-left:4px solid #222;background:#eee;padding-left:8px}
+.eco13-desk .eco13-record-list strong,.eco13-desk .eco13-job-list strong{display:block;font-weight:600}
+.eco13-desk .eco13-record-list span,.eco13-desk .eco13-record-list time,.eco13-desk .eco13-job-list span{display:block;font-size:12px;color:#505050;margin-top:3px}
+.eco13-desk .eco13-job-list li>button+button{margin-top:4px;border-style:dashed}
+.eco13-desk .eco13-counts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:15px 0;border-top:1px solid #d0d0d0;border-bottom:1px solid #d0d0d0;margin:12px 0}
+.eco13-desk .eco13-counts dt{font-size:12px;color:#555}
+.eco13-desk .eco13-counts dd{font-size:23px;font-weight:600;font-variant-numeric:tabular-nums;margin:5px 0 0}
+.eco13-desk .eco13-downloads{display:flex;flex-wrap:wrap;gap:8px 15px;margin:12px 0}
+.eco13-desk a{color:#222;text-decoration:underline;text-underline-offset:3px}
+.eco13-desk details{margin:12px 0}
+.eco13-desk summary{cursor:pointer;font-size:13px}
+.eco13-desk .eco13-source{padding-top:10px;border-top:1px solid #d0d0d0}
+.eco13-desk .eco13-source dl,.eco13-desk .eco13-row-source dl{display:grid;grid-template-columns:minmax(8rem,.5fr) minmax(0,1.5fr);gap:6px 12px;font-size:12px}
+.eco13-desk .eco13-source dt,.eco13-desk .eco13-row-source dt{font-weight:600}
+.eco13-desk .eco13-source dd,.eco13-desk .eco13-row-source dd{margin:0;overflow-wrap:anywhere}
+.eco13-desk code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}
+.eco13-desk .eco13-tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid #a0a0a0;margin:0 0 14px}
+.eco13-desk .eco13-tabs button{border:0;border-radius:0;border-bottom:3px solid transparent;padding:10px 12px;background:#fff}
+.eco13-desk .eco13-tabs button[aria-selected=true]{border-bottom-color:#222;background:#eee;font-weight:600}
+.eco13-desk .eco13-tabs span{font-size:12px;font-variant-numeric:tabular-nums;margin-left:5px}
+.eco13-desk .eco13-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.eco13-desk .eco13-filters label{margin:0;min-width:9rem;max-width:23rem;flex:1 1 9rem}
+.eco13-desk .eco13-filters .eco13-search{flex:2 1 15rem}
+.eco13-desk .eco13-filters label:has([data-page-size]){flex:0 0 5rem;min-width:5rem}
+.eco13-desk .eco13-status{font-size:12px;color:#555;min-height:1.5em}
+.eco13-desk .eco13-scroll{overflow:auto;max-height:42rem;scrollbar-gutter:stable;border:1px solid #c4c4c4}
+.eco13-desk table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;background:#fff}
+.eco13-desk th,.eco13-desk td{padding:9px 10px;border-bottom:1px solid #d3d3d3;text-align:left;vertical-align:top;min-width:7ch;max-width:32ch;overflow-wrap:anywhere}
+.eco13-desk thead th{background:#eee;font-weight:600;position:sticky;top:0;z-index:1;white-space:nowrap}
+.eco13-desk tbody th{font-weight:550}
+.eco13-desk .eco13-number{text-align:right;white-space:nowrap}
+.eco13-desk .eco13-row-source{margin:0;min-width:12rem;max-width:30rem}
+.eco13-desk .eco13-row-source summary{font-size:12px}
+.eco13-desk .eco13-row-source dl{grid-template-columns:minmax(6rem,.65fr) minmax(10rem,1.35fr)}
+.eco13-desk .eco13-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.eco13-desk .eco13-pager span{font-size:12px;min-width:7rem;text-align:center}
+.eco13-desk .eco13-planning-grid{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:22px}
+.eco13-desk .eco13-cost-inputs th{width:65%;vertical-align:middle}
+.eco13-desk .eco13-cost-inputs label{font-size:13px;margin:0}
+.eco13-desk .eco13-cost-inputs input{min-width:8rem;max-width:14rem;text-align:right;font-variant-numeric:tabular-nums}
+.eco13-desk form>.eco13-actions{margin-top:18px}
+.eco13-desk [aria-busy=true]{opacity:.65}
+@media(max-width:1100px){.eco13-desk .eco13-layout{grid-template-columns:16rem minmax(0,1fr)}.eco13-desk .eco13-title-row{display:block}.eco13-desk .eco13-title-row>.eco13-actions{margin:12px 0}.eco13-desk .eco13-counts{grid-template-columns:repeat(3,minmax(0,1fr))}.eco13-desk .eco13-planning-grid{grid-template-columns:1fr}}
+@media(max-width:800px){.eco13-desk{padding:12px}.eco13-desk .eco13-head{display:block}.eco13-desk .eco13-head>.eco13-actions{margin-top:12px}.eco13-desk .eco13-layout{grid-template-columns:1fr}.eco13-desk .eco13-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px}.eco13-desk .eco13-sidebar .eco13-panel{margin:0}.eco13-desk .eco13-sidebar .eco13-panel:last-child{grid-column:1/-1}.eco13-desk .eco13-panel{padding:15px}.eco13-desk .eco13-record-list{max-height:24rem}}
+@media(max-width:520px){.eco13-desk .eco13-sidebar{grid-template-columns:1fr}.eco13-desk .eco13-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.eco13-desk .eco13-pager{justify-content:flex-start}.eco13-desk .eco13-tabs button{padding:9px 7px;font-size:12px}.eco13-desk .eco13-source dl{grid-template-columns:1fr}.eco13-desk .eco13-source dd{margin-bottom:7px}}
+@media print{.eco13-desk{padding:0;background:#fff;font-size:11px}.eco13-desk .eco13-sidebar,.eco13-desk .eco13-head>.eco13-actions,.eco13-desk .eco13-filters,.eco13-desk .eco13-pager,.eco13-desk .eco13-tabs,.eco13-desk form,.eco13-desk .eco13-notice,.eco13-desk .eco13-error,.eco13-desk .eco13-title-row>.eco13-actions{display:none}.eco13-desk .eco13-layout{display:block}.eco13-desk .eco13-panel{border:0;padding:0;break-inside:auto}.eco13-desk .eco13-scroll{overflow:visible;max-height:none;border:0}.eco13-desk table{font-size:9px}.eco13-desk th,.eco13-desk td{padding:4px}.eco13-desk th{position:static}.eco13-desk thead{display:table-header-group}.eco13-desk tr{break-inside:avoid}.eco13-desk .eco13-row-source dl{display:none}.eco13-desk .eco13-row-source{min-width:0}.eco13-desk .eco13-counts{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+.eco13-desk .eco13-economic-report{padding-block:1.1rem;border-top:1px solid #bcbcbc;}
+.eco13-desk .eco13-economic-report h3{margin-top:0;}
+.eco13-desk .eco13-economic-report th small{display:block;font-weight:400;color:#555;margin-top:.3rem;}
+.eco13-desk .eco13-economic-report td div+div{margin-top:.3rem;}
+
+.eco13-desk textarea{resize:vertical;min-height:5rem;line-height:1.5}

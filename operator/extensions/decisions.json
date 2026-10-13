@@ -1,0 +1,134 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "decisions",
+  "title": "Scenario decisions",
+  "version": "5",
+  "order": 60,
+  "assets": [
+    "decision_bridge.mjs",
+    "scenario_decisions.mjs",
+    "scenario_decisions.css",
+    "decision_transfer.mjs",
+    "scenario_handoff.mjs",
+    "decision_submission.mjs",
+    "native_versions.mjs"
+  ],
+  "backend": {
+    "module": "decision_workbench",
+    "actions": [
+      "decision.view.save"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/decisions/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/decisions/view",
+        "operation": "view",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/decisions/assessment/upload",
+        "operation": "assessment.upload",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "decision-views",
+        "operation": "view",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "decision_views",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.decisions",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/decision_bridge.mjs",
+    "factory": "attachDecisionWorkbench",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "openExtension"
+    ],
+    "styles": [
+      "/web/scenario_decisions.css"
+    ],
+    "view": {
+      "id": "decisions",
+      "title": "Scenario decisions",
+      "after": "comparisons"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

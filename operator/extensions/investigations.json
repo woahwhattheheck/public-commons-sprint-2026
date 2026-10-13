@@ -1,0 +1,212 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "investigations",
+  "title": "Investigations",
+  "version": "1",
+  "order": 65,
+  "assets": [
+    "investigations.mjs",
+    "investigations.css"
+  ],
+  "requires_actions": [
+    "run.start"
+  ],
+  "backend": {
+    "module": "intelligence",
+    "factory": {
+      "handler": "IntelligenceFeature",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "intelligence.session.create",
+      "intelligence.diagnostic.open",
+      "intelligence.inspect",
+      "intelligence.prepare",
+      "intelligence.execute",
+      "intelligence.continue",
+      "intelligence.ask",
+      "intelligence.export",
+      "intelligence.collection.export"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "path": "/api/intelligence/catalog",
+        "methods": [
+          "GET"
+        ],
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/session",
+        "methods": [
+          "GET"
+        ],
+        "operation": "session",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/evidence",
+        "methods": [
+          "GET"
+        ],
+        "operation": "evidence",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/plan",
+        "methods": [
+          "GET"
+        ],
+        "operation": "plan",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/export",
+        "methods": [
+          "GET"
+        ],
+        "operation": "export",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/native-task",
+        "methods": [
+          "GET"
+        ],
+        "operation": "native-task",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/diagnostic",
+        "methods": [
+          "GET"
+        ],
+        "operation": "diagnostic",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/experiment",
+        "methods": [
+          "GET"
+        ],
+        "operation": "experiment",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/collection_sources",
+        "methods": [
+          "GET"
+        ],
+        "operation": "collection_sources",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/collection",
+        "methods": [
+          "GET"
+        ],
+        "operation": "collection",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "investigations",
+      "handler": "summaries",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/investigations.mjs",
+    "factory": "attachInvestigations",
+    "requires": [
+      "getState",
+      "api",
+      "openItem",
+      "showTask",
+      "toast",
+      "navigate",
+      "openExtension"
+    ],
+    "styles": [
+      "/web/investigations.css"
+    ],
+    "view": {
+      "id": "investigations",
+      "title": "Investigations",
+      "after": "experiment-diagnostics"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

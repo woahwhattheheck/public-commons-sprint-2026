@@ -1,9 +1,0 @@
-# Add to the original product's existing GIS environment; do not reinstall InVEST.
-# These APIs were exercised with versions listed in GIS_PROJECTS.md.
-numpy>=2.0
-rasterio>=1.4,<2
-fiona>=1.10,<2
-pyproj>=3.7,<4
-shapely>=2.0,<3
-Pillow>=10
-# Native QGIS receiving uses the Python shipped with QGIS, not a pip qgis package.
