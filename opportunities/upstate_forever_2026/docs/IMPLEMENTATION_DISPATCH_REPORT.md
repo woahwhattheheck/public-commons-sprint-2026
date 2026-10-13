@@ -110,3 +110,22 @@ relevant empty, loading and error states. Fix clipped or unreadable content in
 the same workflow. Keep plain industrial presentation with readable tables,
 clear hierarchy, consistent spacing and useful labels. Source/API review and an
 empty-Workspace screen do not replace this actual rendered-product inspection.
+
+
+## Recover a saved laboratory report after transfer or browser restart
+
+Open the native saved plan, choose **Prepare or reopen laboratory request**, and open the original request package. In **Saved laboratory report selections**, choose **Load saved selections**. The native catalogue lists only committed original report-source operations for that request, with their results revision, original source count and operation identity. **Refresh saved selections** discovers an operation completed in another browser. An empty list means that request has no retained completed scientific-source registration; preparing a request alone does not create one.
+
+Choose **Open retained selection** for the intended results revision. The existing source downloads, **Prepare standalone scientific report** and **Prepare client report** now use that exact receipt and its complete ordered report selection. The editable plan, laboratory instructions and any new report draft remain unchanged. Request revision, saved results revision and current editable plan revision are distinct labels, not inferred completion dates.
+
+The catalogue and detail read the original native operation under `implementation/laboratory-reports/<operation_id>`. The maintained getter verifies the original project, saved plan revision, request package, receipt files, imported source binding and saved selection before returning it. It does not reconcile results again, register a replacement source, or change a native revision. Interrupted folders without a committed import are excluded. Full Workspace capture retains these original operations; the selected Study lineage carries the laboratory operation when that source was selected. Older scientific-only Study archives retain their original dependency set.
+
+Late catalogue replies, changed requests, workspace changes and newer receipt selections cannot replace the current view. Opening a saved report does not overwrite a plan or laboratory request draft. Existing native revision save/review rules still apply when preparing a genuinely new report.
+
+### Receiving this exact continuation
+
+Use the current cumulative application or maintained `install_implementation.py`; its existing file list already contains the updated model, provider, descriptor and laboratory controller. No additional optional dependency or offline bundle is required because these catalogue controls are part of the existing native laboratory capability.
+
+At the same original receiving boundary, open a real retained request in a fresh browser, load its completed selections, select an explicit results revision and operate the original source download and both report handoffs. Export and reopen the complete Workspace or selected Study using its actual saved identity. At desktop/screenshare width and 390 px, personally LOOK at the outgoing populated, empty, loading and relevant error screens and actual screenshots. Open and use every delivered attachment, original report, CSV/JSON and archive in its normal viewer. Fix observed readability or control failures in this same workflow. This focused normal-use inspection follows the standing owner instruction; source review and merge alone do not claim native/rendered acceptance.
+
+Current work order: read the complete application-level **CURRENT_OWNER_DIRECTION.md**, version **2026-10-13.3**, together with the standing rendered-product instruction. Immediate execution priority remains the prepared native simulated Upper Savannah model: original 30 m upstream domain, separate South Carolina reporting mask and four utility anchors; baseline, riparian alternative and matched control; editable inputs and actual progress; stream-delivered NDR nitrogen/phosphorus in kg/year and SDR sediment in tonnes/year; maps, tables, reports and complete editable cold reopening. Keep source identities and simulated labels explicit. This laboratory continuation uses its existing owner/course and does not displace active model execution or introduce another queue. Preserve the October 13, 2026 14:00 UTC cutoff. The complete current owner brief must accompany the receiving work order and onward delegation.
