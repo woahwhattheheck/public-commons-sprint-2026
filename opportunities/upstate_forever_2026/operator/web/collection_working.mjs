@@ -114,3 +114,14 @@ export function reviewedCollectionRequest(state){
 export function exportCollectionWorking(state){
  return JSON.stringify(validateCollectionWorking(state,state.scope),null,2)+'\n';
 }
+
+/** Complete in-memory host custody; downloaded working files keep their original format. */
+export function captureCollectionSession({state,knownRevision=null,storageBlocked=false,storageMessage='',dirty=false}){
+ return restoreCollectionSession({format:'upper-savannah-collection-session/v1',state,knownRevision,storageBlocked,storageMessage,dirty},state.scope);
+}
+export function restoreCollectionSession(value,scope){
+ if(!object(value)||value.format!=='upper-savannah-collection-session/v1')throw new Error('The retained collection session is incomplete.');
+ if(value.knownRevision!==null&&(typeof value.knownRevision!=='string'||!value.knownRevision))throw new Error('The retained collection persistence lease is invalid.');
+ if(typeof value.storageBlocked!=='boolean'||typeof value.dirty!=='boolean'||typeof value.storageMessage!=='string')throw new Error('The retained collection persistence state is invalid.');
+ return {format:value.format,state:validateCollectionWorking(value.state,scope),knownRevision:value.knownRevision,storageBlocked:value.storageBlocked,storageMessage:value.storageMessage,dirty:value.dirty};
+}
