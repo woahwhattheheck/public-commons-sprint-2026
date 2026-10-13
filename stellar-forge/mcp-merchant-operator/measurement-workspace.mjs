@@ -2,6 +2,7 @@
 import {constants} from 'node:fs';
 import {open} from 'node:fs/promises';
 import {MeasurementClient,readMeasurementConfiguration,need,MAX_RESPONSE} from '../../products/measurement-workspace/client.mjs';
+import {measurementArtifact} from '../../products/measurement-workspace/scientific-files.mjs';
 import {MeasurementTransfers} from '../../products/measurement-workspace/transfers.mjs';
 import {RetainedFileReads} from './retained-file-reads.mjs';
 import {validateArguments} from './catalog/measurement-workspace.mjs';
@@ -27,6 +28,13 @@ export class MerchantMeasurementWorkspaces {
     case 'merchant_measurement_file_read':{
      const descriptor=await this.#client.file(args.workspace,args);need(descriptor.sha256===args.expectedSha256,'Original selected file hash differs.');
      return await this.#reads.read({scope,key:args.requestId+':'+args.part+':'+(args.attempt||''),kind:'measurement-native-response',
+      expectedSha256:args.expectedSha256,readId:args.readId,offset:args.offset??0,limit:args.limit??65536,
+      load:async()=>({readonlyFileHandle:await open(descriptor.path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK),bytes:descriptor.bytes,sha256:descriptor.sha256,name:descriptor.name,type:descriptor.type})});
+    }
+    case 'merchant_measurement_artifact_info':{const {path,directory,...info}=await measurementArtifact(this.#client,args.workspace,args);return info;}
+    case 'merchant_measurement_artifact_read':{
+     const descriptor=await measurementArtifact(this.#client,args.workspace,args);need(descriptor.sha256===args.expectedSha256,'Original native artifact hash differs.');
+     return await this.#reads.read({scope,key:'artifact:'+args.requestId,kind:'measurement-native-artifact',
       expectedSha256:args.expectedSha256,readId:args.readId,offset:args.offset??0,limit:args.limit??65536,
       load:async()=>({readonlyFileHandle:await open(descriptor.path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK),bytes:descriptor.bytes,sha256:descriptor.sha256,name:descriptor.name,type:descriptor.type})});
     }
