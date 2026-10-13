@@ -133,8 +133,32 @@ def comparison_issues(row, metadata=None):
     basis = row.get("quantity_basis") or metadata.get("value_basis", "context")
     if basis != "annual_mass_rate":
         issues.append("The original quantity is not an explicitly derived annual mass rate")
-    if row.get("coverage_complete") is False and basis == "annual_mass_rate":
-        issues.append("Source declares incomplete coverage; retain its quantified-period quantity")
+    if basis == "annual_mass_rate":
+        complete = row.get("coverage_complete", metadata.get("coverage_complete"))
+        if complete in (False, "false", "False", "0", 0):
+            issues.append("Source declares incomplete coverage; retain its quantified-period quantity")
+        counts = {}
+        for key in ("coverage_days", "expected_days"):
+            value = row.get(key)
+            if value in (None, ""):
+                value = metadata.get(key)
+            if value in (None, ""):
+                continue
+            try:
+                count = Decimal(str(value))
+                if (not count.is_finite() or count < 0
+                        or count != count.to_integral_value()):
+                    raise ValueError()
+                counts[key] = int(count)
+            except (ArithmeticError, ValueError, TypeError):
+                issues.append("Original " + key + " is not a nonnegative integer day count")
+        if any(value == 0 for value in counts.values()):
+            issues.append("Source declares zero coverage or expected days; annual catchment comparison needs nonempty coverage")
+        if ("coverage_days" in counts and "expected_days" in counts
+                and counts["coverage_days"] != counts["expected_days"]):
+            issues.append(
+                f"Source coverage is {counts['coverage_days']} of {counts['expected_days']} expected days; "
+                "annual catchment comparison requires complete declared coverage")
     return issues
 
 
