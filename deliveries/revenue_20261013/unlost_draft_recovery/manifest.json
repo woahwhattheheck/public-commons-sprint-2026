@@ -1,0 +1,50 @@
+{
+  "schema": "unlost.complete-recovery-delivery-manifest.v1",
+  "source_commit": "d4163ac787a68423768ae609237a891ab1ff37fe",
+  "pull_request": 4550,
+  "source_files": 66,
+  "public_source": {
+    "json": {
+      "bytes": 5249805,
+      "sha256": "c2b3542b7ebcecc71170ac4f105bd6914d8175dba327eabdcef4f025c7713a34"
+    },
+    "gzip": {
+      "bytes": 1644984,
+      "sha256": "558b097bcfddd1156cdc4ccf95fc3cc8e7aebc4660f4726e723147118e5eea94"
+    },
+    "base64": {
+      "bytes": 2193312,
+      "sha256": "58c1be0f6153c4c0cece2de35e62b2f4673e476d892e9002339583915d957a7d"
+    },
+    "files": 66
+  },
+  "complete_private_packet": {
+    "bytes": 5269890,
+    "sha256": "8db87c6d21bbc9a11f1c2acd7ab381d2662642f56265d44b158cb8d6dd8f3b00"
+  },
+  "files": {
+    "gzip": {
+      "path": "unlost-source.json.gz",
+      "blob": "eb1f6de7624e3edebc4b5b800e1aff95d6bde73e",
+      "bytes": 1644984,
+      "sha256": "558b097bcfddd1156cdc4ccf95fc3cc8e7aebc4660f4726e723147118e5eea94"
+    },
+    "base64": {
+      "path": "Unlost_Source_Gzip_Base64.txt",
+      "blob": "a337358f746c654782199cf6fd0d1a34ad827ff1",
+      "bytes": 2193312,
+      "sha256": "58c1be0f6153c4c0cece2de35e62b2f4673e476d892e9002339583915d957a7d"
+    },
+    "materializer": {
+      "path": "materialize_unlost_recovery.py",
+      "blob": "846359c18c98b5c29659095d10cbb484598538ab"
+    }
+  },
+  "private_complement": {
+    "delivery": "Existing original private receiving case",
+    "schema": "unlost.complete-private-source-complement.v1",
+    "bytes": 21954,
+    "sha256": "d415be07a636375940662eedbb6a90ee274b968b986f4235aa430cbf3ae91db8"
+  },
+  "actual_browser_result": "Not executed by source publication or materialization"
+}
