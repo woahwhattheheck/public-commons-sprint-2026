@@ -23,6 +23,26 @@ const modelNames = r => r?.selection?.models || ['ndr','sdr'];
 const safeFileURL = u => typeof u==='string' && /^\/api\/file\/[^?#]+$/.test(u) ? u : null;
 const human = v => String(v).replaceAll('_',' ');
 const pretty = v => JSON.stringify(v,null,2);
+const referenceText = value => typeof value==='string'?value:
+ [value?.title,value?.edition,value?.section].filter(Boolean).join(' · ')||value?.uri||'';
+const sourceLabel = role => OVERLAYS.find(row=>row[0]===role)?.[1]||human(role);
+function receptorIssues(spec){
+ const issues=[];
+ if(!spec||typeof spec!=='object'||Array.isArray(spec)||!Array.isArray(spec.receptors)||!spec.receptors.length)return ['Choose an original contributing-area profile containing receptors.'];
+ const seen=new Set();
+ for(const row of spec.receptors){
+  if(!row||typeof row!=='object'){issues.push('Each contributing area must contain its named source choices.');continue;}
+  const title=row.title||row.id||'Contributing area';
+  if(typeof row.id!=='string'||!row.id.trim()||seen.has(row.id))issues.push(title+': use a unique area ID.');
+  seen.add(row.id);
+  if(typeof row.title!=='string'||!row.title.trim())issues.push(title+': enter the original area name.');
+  if(!['drinking_water','high_quality_waters'].includes(row.role))issues.push(title+': choose its native receiving-water role.');
+  if(!Array.isArray(row.anchor_huc12s)||!row.anchor_huc12s.length||row.anchor_huc12s.some(v=>typeof v!=='string'||!/^\d{12}$/.test(v)))issues.push(title+': retain complete 12-character HUC12 strings.');
+  else if(new Set(row.anchor_huc12s).size!==row.anchor_huc12s.length)issues.push(title+': an anchor HUC12 is repeated.');
+  if(typeof row.reference?.uri!=='string'||!row.reference.uri.trim()||typeof row.reference?.basis!=='string'||!row.reference.basis.trim())issues.push(title+': retain its original source URI and geographic basis.');
+ }
+ return issues;
+}
 const rowBy = (data,kind,id) => (data?.[kind]||[]).find(x=>x.id===id);
 const runName = (data,id) => {const r=rowBy(data,'runs',id);return r ?
  titleOf(rowBy(data,'scenarios',r.selection.scenario_id))+' · '+titleOf(rowBy(data,'profiles',r.selection.profile_id))+' · '+short(id) : short(id)+' (unavailable)';};
@@ -77,13 +97,14 @@ export function attachMapAtlas(host) {
  let root=null, state=host.getState(), workspace='', draft=null, step=0, mode='prepare';
  let opened=null, error='', busy=false, operationId=null, generation=0, storageWarned=false, handoff=0;
  const drafts=new Map(), sourcePreview=new Map();
+ let sourceContext=null, contextLoading=false, contextError='';
  const data=()=>state?.data||{};
  const key=()=>host.getWorkspace?.()||state?.workspace_key||'';
  const endpoint=(path,values={})=>path+'?'+new URLSearchParams({workspace,...values});
  const form=()=>{const node=root?.querySelector('[data-atlas-form]');return node?.dataset.atlasWorkspace===workspace?node:null;};
  function ensure(next=host.getState()) {
   state=next||state;const current=key();if(current===workspace&&draft)return;
-  workspace=current;generation++;handoff++;opened=null;operationId=null;error='';busy=false;sourcePreview.clear();
+  workspace=current;generation++;handoff++;opened=null;operationId=null;error='';busy=false;sourcePreview.clear();sourceContext=null;contextLoading=false;contextError='';
   let saved=drafts.get(workspace);
   if(!saved){try{saved=JSON.parse(sessionStorage.getItem('upstate-atlas-draft:'+workspace)||'null');}catch{}}
   draft=clone(saved?.selection||defaultSelection(data()));step=saved?.step||0;operationId=saved?.operation_id||null;mode='prepare';
@@ -111,10 +132,11 @@ export function attachMapAtlas(host) {
   const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(choice.source_id);
   const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
-  const previews=sourcePreview.get(name);
+  const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
   return '<fieldset class="atlas-source" data-source-card="'+name+'"><legend>'+esc(label)+'</legend>'+
    (required?'':check(name+'__enabled','yes','Include this source',enabled))+
-   (bound?'<p class="atlas-note">Saved water selection '+esc(short(choice.selection_id))+' · '+esc(choice.rule_reference||'')+'</p>':'')+
+   (group==='overlays'&&saved.length?'<div class="atlas-grid">'+field('Retained water selection',select(name+'__designation',saved.map(row=>[row.id,row.title+' · '+(row.summary?.selected_features??row.summary?.feature_count??'saved')+' features']),choice.selection_id||'',disabled))+'<div class="atlas-actions">'+button('apply-designation','Use saved selection','data-role="'+key+'" '+disabled)+'</div></div>':'')+
+   (bound?'<p class="atlas-note">Saved water selection '+esc(short(choice.selection_id))+' · '+esc(referenceText(choice.rule_reference))+' '+(choice.selection_id?button('item','Open saved designation','data-kind="water-designations" data-id="'+esc(choice.selection_id)+'"'):'')+'</p>':'')+
    '<div class="atlas-grid">'+field('Source edition',select(name+'__collection',sources.map(s=>[s.id,titleOf(s)]),choice.source_collection_id||'',disabled+(bound?' disabled':'')))+
    field('Original source',select(name+'__source',rows.map(e=>[e.id,e.title+' · '+e.kind]),choice.source_id||'',disabled+(bound?' disabled':'')))+
    (group==='overlays'?field('Native layer',input(name+'__layer',choice.layer||'',disabled+(bound?' disabled':'')),'Leave blank to use the retained source layer.')+
@@ -125,7 +147,7 @@ export function attachMapAtlas(host) {
     '<p class="atlas-note">'+esc(previews.selected_layer||'')+' · '+esc(previews.crs||'')+'</p>'+
     '<pre>'+esc(pretty({layers:previews.layers,fields:previews.fields,sample:previews.sample,bounds:previews.bounds}))+'</pre></details>':'')+'</fieldset>';
  }
- function collect() {
+ function collect(options={}) {
   const f=form();if(!f)return clone(draft);
   const next=clone(draft);
   if(step===0){next.title=value('title').trim();next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
@@ -147,6 +169,12 @@ export function attachMapAtlas(host) {
      }
      next[group][key]=choice;
     }
+   }
+   const receptorField=f.elements.namedItem('receptor_json');
+   if(receptorField&&!options.replaceReceptors){
+    let spec;try{spec=JSON.parse(receptorField.value);}catch{throw Error('Enter valid JSON for the original contributing-area profile.');}
+    const issues=receptorIssues(spec);if(issues.length)throw Error(issues.join('\n'));
+    next.receptor_spec=spec;
    }
   }
   if(step===2){
@@ -178,11 +206,66 @@ export function attachMapAtlas(host) {
     else if(group==='overlays'&&entry.kind!=='vector')out.push(label+': choose a vector source.');}
   }
   for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
+  if(selection.receptor_spec){
+   out.push(...receptorIssues(selection.receptor_spec));
+   const baseline=rowBy(data(),'runs',selection.baseline_run_id),grid=rowBy(data(),'grids',baseline?.selection.grid_id);
+   const collection=selection.receptor_spec.source_collection_id||grid?.spec?.source_collection_id;
+   const source=selection.receptor_spec.network_source_id||grid?.spec?.model_domain?.source_id;
+   if(grid&&!sourceEntry({source_collection_id:collection,source_id:source}))out.push('The contributing-area network must belong to this workspace and baseline grid selection.');
+  }
   const runs=[selection.baseline_run_id,...(selection.scenario_run_ids||[])];
   for(const id of selection.observation_comparison_ids||[]){const row=rowBy(data(),'observation_comparisons',id);
    if(!row||!runs.includes(row.run_id))out.push('Observed comparison '+short(id)+' must belong to a selected run.');}
   return out;
  }
+
+ function receptorProfiles(){
+  const rows=(sourceContext?.receptor_profiles||[]).map(row=>({...row,key:'profile:'+row.id}));
+  for(const delivery of data().deliveries||[])if(delivery.selection?.receptor_spec){
+   rows.push({key:'delivery:'+delivery.id,id:delivery.id,title:titleOf(delivery)+' · retained release',
+    spec:delivery.selection.receptor_spec,source:delivery.selection.receptor_profile_source||{kind:'retained_delivery',delivery_id:delivery.id}});
+  }
+  return rows;
+ }
+ function receptorSummary(spec){
+  const rows=Array.isArray(spec?.receptors)?spec.receptors:[];
+  return rows.length?table(['Contributing area','Role / anchors','Original selection basis'],rows.map(row=>
+   '<tr><td>'+esc(row.title)+'<small>'+esc(row.id)+'</small></td><td>'+esc(sourceLabel(row.role))+'<small>'+esc((row.anchor_huc12s||[]).join(', '))+'</small></td><td>'+esc(row.reference?.basis||'')+'<small>'+esc(row.reference?.uri||'')+'</small></td></tr>')):'';
+ }
+ function receptorPanel(){
+  const spec=draft.receptor_spec,profiles=receptorProfiles(),baseline=rowBy(data(),'runs',draft.baseline_run_id);
+  const grid=rowBy(data(),'grids',baseline?.selection.grid_id),collection=spec?.source_collection_id||grid?.spec?.source_collection_id;
+  const network=spec?.network_source_id||grid?.spec?.model_domain?.source_id,entry=sourceEntry({source_collection_id:collection,source_id:network}),preview=sourcePreview.get('receptor-network');
+  return '<fieldset class="atlas-source"><legend>Upstream contributing areas</legend>'+
+   '<p class="atlas-note">Choose the retained receiving-water profile to add upstream HUC12 footprints, native annual exports and scenario changes. Published protection polygons remain separate source overlays.</p>'+
+   '<div class="atlas-grid">'+field('Original receptor profile',select('receptor_profile_choice',profiles.map(row=>[row.key,row.title]),''))+
+   '<div class="atlas-actions">'+button('load-receptor','Use profile',profiles.length?'':'disabled')+
+   button('load-context',contextLoading?'Loading profiles…':'Load installed profiles',contextLoading?'disabled':'')+
+   '<label class="atlas-file-button">Load profile JSON<input type="file" data-atlas-receptor-import accept=".json,application/json"></label></div></div>'+
+   (contextError?'<p class="atlas-note">'+esc(contextError)+'</p>':'')+
+   (spec?'<h3>'+esc(spec.title||'Selected contributing areas')+'</h3>'+receptorSummary(spec)+
+    '<p class="atlas-note">Original network: '+esc(entry?.title||network||'the baseline grid’s model-domain source')+
+    (entry?.vintage?' · '+esc(entry.vintage):'')+'<br>Collection '+esc(collection||'baseline grid')+' · source '+esc(network||'baseline model domain')+'</p>'+
+    '<div class="atlas-actions">'+button('inspect-network','Inspect original network fields',entry?'':'disabled')+'</div>'+
+    (preview?'<details open><summary>Original network fields and sample</summary><pre>'+esc(pretty(preview))+'</pre></details>':'')+
+    '<details><summary>Edit the original receptor profile</summary>'+field('Full native profile',textarea('receptor_json',pretty(spec),'rows="14"'),'Retain full HUC12 strings, source references and any original network-field selections.',true)+
+    (draft.receptor_profile_source?'<p class="atlas-note">Starting profile: '+esc(referenceText(draft.receptor_profile_source)||draft.receptor_profile_source.path||draft.receptor_profile_source.delivery_id||'retained selection')+'</p>':'')+'</details>'+
+    '<div class="atlas-actions">'+button('remove-receptors','Remove contributing-area selection')+'</div>':'<p class="atlas-note">Choose a profile here to include the regional contributing-area products.</p>')+'</fieldset>';
+ }
+ function sourceSummary(selection,bindings={}){
+  const rows=Object.entries(selection.overlays||{}).map(([role,choice])=>{
+   const saved=bindings[role]||(data().water_designations||[]).find(row=>row.id===choice.selection_id);
+   return '<tr><td>'+esc(sourceLabel(role))+'</td><td>'+esc(saved?.title||choice.source_id||'')+
+    '<small>'+esc(choice.selection_id?'Saved selection '+choice.selection_id:'Original source '+(choice.source_collection_id||''))+'</small></td><td>'+
+    esc(referenceText(choice.rule_reference||saved?.rule_reference))+
+    (choice.native_source_sha256?'<small>Native source SHA256 '+esc(choice.native_source_sha256)+'</small>':'')+'</td></tr>';
+  });
+  return '<details class="atlas-inclusions"><summary>Source-water and contributing-area choices</summary>'+
+   table(['Overlay','Retained selection','Rule / original source identity'],rows)+
+   (selection.receptor_spec?'<h4>'+esc(selection.receptor_spec.title||'Upstream contributing areas')+'</h4>'+receptorSummary(selection.receptor_spec):'')+
+   '</details>';
+ }
+
  function runStep(){
   const baseline=rowBy(data(),'runs',draft.baseline_run_id),all=data().runs||[],chosen=draft.scenario_run_ids||[];
   const complete=all.filter(hasNativeOutputs);
@@ -228,7 +311,7 @@ export function attachMapAtlas(host) {
    '<h4>Completed map exports</h4>'+choices('exports',(data().spatial_exports||[]).filter(r=>r.state==='complete'),draft.spatial_export_ids||[])+'</details>'+
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
    '<p>Seven map families, combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, interpretation report and editable working archive.</p></div>'+
-   (draft.receptor_spec?'<details><summary>Saved upstream contributing-area specification</summary><pre>'+esc(pretty(draft.receptor_spec))+'</pre></details>':'')+
+   sourceSummary(draft)+
    '<div data-atlas-problems></div>';
  }
 
@@ -255,6 +338,7 @@ export function attachMapAtlas(host) {
   const atlas=opened.atlas,all=opened._downloads||[],atlasFile=retainedFile(opened.files?.map_atlas);
   const sourceReportId=opened.selection?.source_report_id;
   const indexFile=retainedFile(opened.files?.map_atlas_index),csvFile=retainedFile(opened.files?.map_atlas_csv);
+  const sourceContextFile=retainedFile(opened.files?.map_atlas_sources);
   const archive=retainedFile(opened.files?.delivery_archive),rows=atlas?.pages||Object.entries(opened.maps||{}).map(([k,file])=>{
    const family=FAMILIES.find(([id])=>k===id||k.startsWith(id+'-'));
    return {map_key:k,family:family?.[0],title:family?.[1]||k,file,page:null,panels:[]};
@@ -263,9 +347,11 @@ export function attachMapAtlas(host) {
    (atlas?' · '+atlas.page_count+' atlas pages':'')+'</p><div class="atlas-actions">'+
    (atlasFile?button('preview','Open complete atlas','data-url="'+esc(atlasFile.url)+'"')+downloadLink(atlasFile,'Download atlas PDF'):'')+
    downloadLink(archive,'Download complete GIS package')+downloadLink(indexFile,'Download JSON index')+
-   downloadLink(csvFile,'Download CSV index')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
+   downloadLink(csvFile,'Download CSV index')+downloadLink(sourceContextFile,'Download source choices')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
    button('clone','Revise this selection')+button('item','Open complete record','data-kind="deliveries" data-id="'+esc(opened.id)+'"')+'</div>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
+   sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
+   '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('receptor_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^receptor_/,'')))).join('')+'</div>'+
    table(['Page / family','Map','Legend and units',''],rows.map(row=>{
     const file=retainedFile(row.file);
     return '<tr><td>'+esc(row.page??'—')+'<small>'+esc(human(row.family||''))+'</small></td><td>'+esc(row.title)+'<small>'+esc(row.subtitle||'')+'</small></td><td>'+
@@ -286,7 +372,7 @@ export function attachMapAtlas(host) {
    (mode==='outputs'?outputPanel():
    '<nav class="atlas-steps" aria-label="Delivery preparation">'+STEPS.map((label,i)=>'<button type="button" data-atlas-action="step" data-step="'+i+'" '+(i===step?'aria-current="step"':'')+'>'+String(i+1)+'. '+esc(label)+'</button>').join('')+'</nav>'+
    '<form data-atlas-form data-atlas-workspace="'+esc(workspace)+'"><h2>'+STEPS[step]+'</h2>'+
-   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,true)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r)).join(''):step===2?settingsStep():reviewStep())+
+   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,true)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r)).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
    '<footer class="atlas-footer"><div class="atlas-actions">'+(step?button('previous','Back'):'')+
     (step<3?'<button type="submit">Continue</button>':'<button type="submit" class="atlas-primary" '+(busy?'disabled':'')+'>'+(busy?'Submitting…':'Build atlas and complete GIS delivery')+'</button>')+
     '</div><div class="atlas-actions">'+button('download-selection','Download selection')+
@@ -300,12 +386,67 @@ export function attachMapAtlas(host) {
   operationId=null;
   try{collect();persist();renderProblems();}catch{/* Keep incomplete field text until the next explicit action. */}
  }
+
+ async function loadSourceContext(){
+  collect();persist();ensure();const atWorkspace=workspace,epoch=generation;
+  contextLoading=true;contextError='';render();
+  try{
+   const result=await host.api(endpoint('/api/map-atlas/source-context'));
+   ensure();if(workspace!==atWorkspace||generation!==epoch)return;
+   if(result.workspace_key!==atWorkspace)throw Error('The source profiles belong to another workspace.');
+   sourceContext=result;
+  }catch(error){if(workspace===atWorkspace&&generation===epoch)contextError=error.message||String(error);}
+  finally{if(workspace===atWorkspace&&generation===epoch){contextLoading=false;render();}}
+ }
+ async function applyDesignation(role){
+  collect();persist();const selectionId=value('overlays__'+role+'__designation');
+  if(!selectionId)throw Error('Choose a retained water designation first.');
+  const atWorkspace=workspace,epoch=generation,original=pretty(draft),request=clone(draft);
+  const result=await host.api('/api/water-designations/apply',{method:'POST',body:{workspace:atWorkspace,selection_id:selectionId,delivery_selection:request}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch)return;
+  collect();if(pretty(draft)!==original)throw Error('The draft changed while the saved designation loaded. Apply it again to the current draft.');
+  if(result?.overlays?.[role]?.selection_id!==selectionId)throw Error('The saved designation has another overlay purpose.');
+  draft=result;operationId=null;sourcePreview.delete('overlays__'+role);persist();render();
+ }
+ function useReceptorProfile(){
+  collect({replaceReceptors:true});const profile=receptorProfiles().find(row=>row.key===value('receptor_profile_choice'));
+  if(!profile)throw Error('Choose an original receptor profile.');
+  const issues=receptorIssues(profile.spec);if(issues.length)throw Error(issues.join('\n'));
+  draft.receptor_spec=clone(profile.spec);sourcePreview.delete('receptor-network');draft.receptor_profile_source=clone(profile.source||{kind:'retained_selection',id:profile.id});
+  operationId=null;persist();render();
+ }
+ async function importReceptors(file){
+  if(!file)return;if(file.size>4*1024*1024)throw Error('The receptor profile exceeds the operator’s 4 MiB JSON request size.');
+  const atWorkspace=workspace,epoch=generation,body=JSON.parse(await file.text());
+  ensure();if(workspace!==atWorkspace||generation!==epoch)return;
+  const spec=body.receptor_spec||body.selection?.receptor_spec||body.spec||body;
+  const issues=receptorIssues(spec);if(issues.length)throw Error(issues.join('\n'));
+  collect({replaceReceptors:true});draft.receptor_spec=clone(spec);sourcePreview.delete('receptor-network');
+  const profileSource=(body.selection||body).receptor_profile_source;
+  if(profileSource)draft.receptor_profile_source=clone(profileSource);
+  else delete draft.receptor_profile_source;
+  operationId=null;persist();render();
+ }
+
+
+ async function inspectReceptorNetwork(){
+  collect();persist();const spec=draft.receptor_spec;
+  const baseline=rowBy(data(),'runs',draft.baseline_run_id),grid=rowBy(data(),'grids',baseline?.selection.grid_id);
+  const collection=spec?.source_collection_id||grid?.spec?.source_collection_id,source=spec?.network_source_id||grid?.spec?.model_domain?.source_id;
+  if(!collection||!source)throw Error('Choose a baseline grid and its original network source.');
+  const atWorkspace=workspace,epoch=generation,selection=pretty(spec);
+  const info=await host.api(endpoint('/api/source-info',{collection,source,...(spec?.layer?{layer:spec.layer}:{})}));
+  ensure();if(workspace!==atWorkspace||generation!==epoch||pretty(draft.receptor_spec)!==selection)return;
+  sourcePreview.set('receptor-network',{layer:info.selected_layer,crs:info.crs,fields:info.fields,sample:info.sample});
+  render();
+ }
+
  async function inspectSource(name){
   collect();persist();const [group,id]=name.split('__'),choice=clone(draft[group]?.[id]||{});
   if(!choice.source_collection_id||!choice.source_id)throw Error('Choose an original source first.');
   const epoch=generation,atWorkspace=workspace;
   const info=await host.api(endpoint('/api/source-info',{collection:choice.source_collection_id,source:choice.source_id,...(choice.layer?{layer:choice.layer}:{})}));
-  if(epoch!==generation||atWorkspace!==workspace)return;
+  ensure();if(epoch!==generation||atWorkspace!==workspace)return;
   if(JSON.stringify(draft[group]?.[id])!==JSON.stringify(choice))return;
   sourcePreview.set(name,info);render();
  }
@@ -316,10 +457,10 @@ export function attachMapAtlas(host) {
   operationId??=crypto.randomUUID();persist();busy=true;render();
   try{
    const result=await host.api('/api/actions',{method:'POST',body:{workspace:atWorkspace,action:'delivery.build',payload:request,operation_id:operationId}});
-   if(epoch!==generation||workspace!==atWorkspace)return;
+   ensure();if(epoch!==generation||workspace!==atWorkspace)return;
    host.toast?.('The atlas and complete GIS delivery are queued.');
    await host.refreshState?.({force:true});
-   if(workspace===atWorkspace)await host.showTask?.(result.id);
+   ensure();if(epoch===generation&&workspace===atWorkspace)await host.showTask?.(result.id);
   }catch(e){if(epoch===generation&&workspace===atWorkspace)throw e;}
   finally{if(epoch===generation&&workspace===atWorkspace){busy=false;render();}}
  }
@@ -331,7 +472,7 @@ export function attachMapAtlas(host) {
  async function importSelection(file){
   if(!file)return;if(file.size>4*1024*1024)throw Error('The selection JSON exceeds the operator’s 4 MiB JSON request size.');
   const epoch=generation,atWorkspace=workspace,body=JSON.parse(await file.text());
-  if(epoch!==generation||workspace!==atWorkspace)return;
+  ensure();if(epoch!==generation||workspace!==atWorkspace)return;
   const selection=body.selection||body;
   if(!selection||typeof selection!=='object'||Array.isArray(selection)||!Array.isArray(selection.scenario_run_ids))throw Error('Choose a delivery selection with an ordered scenario_run_ids array.');
   draft={...defaultSelection(data()),...clone(selection)};operationId=null;step=0;mode='prepare';opened=null;persist();render();
@@ -350,6 +491,11 @@ export function attachMapAtlas(host) {
    else if(action==='source-report')await host.openExtension('scenario-reports','open',b.dataset.id,{workspace_key:atWorkspace});
    else if(action==='item')await host.openItem?.(b.dataset.kind,b.dataset.id);
    else if(action==='inspect-source')await inspectSource(b.dataset.sourceCardId);
+   else if(action==='apply-designation')await applyDesignation(b.dataset.role);
+   else if(action==='load-context')await loadSourceContext();
+   else if(action==='load-receptor')useReceptorProfile();
+   else if(action==='remove-receptors'){collect({replaceReceptors:true});delete draft.receptor_spec;delete draft.receptor_profile_source;sourcePreview.delete('receptor-network');operationId=null;persist();render();}
+   else if(action==='inspect-network')await inspectReceptorNetwork();
    else if(action==='release-source'){
     collect();const [group,id]=b.dataset.sourceCardId.split('__');
     draft[group][id]={source_collection_id:draft[group][id]?.source_collection_id||'',source_id:''};
@@ -371,6 +517,7 @@ export function attachMapAtlas(host) {
   const target=event.target,atWorkspace=workspace,epoch=generation;
   try{
    if(target.matches('[data-atlas-import]')){clearError();await importSelection(target.files?.[0]);return;}
+   if(target.matches('[data-atlas-receptor-import]')){clearError();await importReceptors(target.files?.[0]);return;}
    if(target.name==='baseline'||/__collection$|__source$|__enabled$/.test(target.name||'')){
     collect();
     const match=target.name.match(/^(source_roles|overlays)__([^_].*?)__(collection|source|enabled)$/);
