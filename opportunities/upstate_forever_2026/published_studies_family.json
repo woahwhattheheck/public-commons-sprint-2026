@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "bc3f465556801b5254dea6d3c8696f06e1e27e4a",
@@ -33,8 +33,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 10402,
-      "sha256": "e4af5501351f4dd7f587fa3665b75822c1aeea3c20dd237dfec39ffad58b746a"
+      "bytes": 10886,
+      "sha256": "b3eee03fd2304a7448b33754b41e7f56e77bb2f081765289428134c7c856e53a"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -48,18 +48,28 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 93160,
-      "sha256": "2417eeb5628190ebe1f9f2159ad78bd1ca52b6c8742d1d9ebc85ee3c1ef5cce5"
+      "bytes": 93423,
+      "sha256": "5d0f2f6c829edd99b76a280bafcdf39f64cd8c4e75f188e3c7b5d1cc73ddabe2"
     },
     {
       "path": "measurement_workspace/source_observations.py",
-      "bytes": 6873,
-      "sha256": "4e8b92eb84526c71b1fbb7106d0386801747c85d7705f2c6879eb264f6072a84"
+      "bytes": 8107,
+      "sha256": "18db765a74e75c2ae12798b3c21ba219661bb0e90baea5e84dc3dfb52f418bfa"
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
       "bytes": 6282,
       "sha256": "fc3fbea819cb5a7eb31177ad127303908f2a4559b836dde893d82bd801dc55e0"
+    },
+    {
+      "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
+      "bytes": 5400,
+      "sha256": "5e41e31fea10f6b4458fb39e066f725ed89798dfd0706560109dc2969986f7bd"
+    },
+    {
+      "path": "measurement_workspace/utility_microbiology.py",
+      "bytes": 20691,
+      "sha256": "6cfa1c09c303e0ab44e3c8aa89706df3cdbb2c611b509d6e0f375882b74335fd"
     },
     {
       "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
@@ -553,8 +563,8 @@
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 20059,
-      "sha256": "f15e7b300ff7d144f6924424fc419f5634c15de8f693a7f56914dcab4c35c44d"
+      "bytes": 20666,
+      "sha256": "51e336325d254baf3c3be8b9952a2a840496e89d8d90efbabf438edf0d1f0b64"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -582,9 +592,126 @@
       "sha256": "098e226ef567c51336454a107359115eb228f0aff154dc31d878d507ab62a4e2"
     },
     {
+      "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+      "bytes": 45810,
+      "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/index.html",
+      "bytes": 568315,
+      "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+      "bytes": 183656,
+      "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+      "bytes": 59535,
+      "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+      "bytes": 21317,
+      "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+      "bytes": 46598,
+      "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+      "bytes": 8731,
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/README.md",
+      "bytes": 7374,
+      "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/selected-stations.geojson",
+      "bytes": 106741,
+      "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-inputs.json",
+      "bytes": 8181,
+      "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-manifest.json",
+      "bytes": 23194,
+      "sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "bytes": 6909,
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-year-method-summary.csv",
+      "bytes": 9986,
+      "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/summary.json",
+      "bytes": 3448,
+      "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+    },
+    {
       "path": "tools/attach_published_report.py",
       "bytes": 2849,
       "sha256": "563ff9332e781d066c2c74cfb012d9a994a76b4e80f1b3bf2876cc4c2f3c7444"
     }
-  ]
+  ],
+  "microbial_source_edition": {
+    "study_id": "utility-ecoli-2021-2025",
+    "source_manifest_sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23",
+    "original_files": 22,
+    "original_result_rows": 730,
+    "original_stations": 36
+  }
 }
