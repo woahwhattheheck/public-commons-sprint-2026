@@ -2,6 +2,8 @@
 
 A completed scenario preview already contains the exact land-cover raster needed by the original NDR/SDR run. Native execution now adopts that retained raster and its original ordered-patch accounting, using an independently owned reflink or a verified streaming copy. This avoids compiling the same regional land-cover grid twice.
 
+Parameter-course runs can also adopt a completed footprint from another saved profile when every categorical input agrees. Native model parameters remain those of the target profile; routing or coefficient changes are still evaluated by the existing native stage matcher and engine.
+
 The current geographic preparation course already calls `model.scenario_footprint.preview_run` for its saved runs. Continue those same runs through the ordinary queue or CLI. The run, profile, scenario, source editions and native model arguments retain their existing identities.
 
 ## Ordinary preparation and execution
@@ -18,7 +20,8 @@ Use the saved alternative run ID selected by the existing project. If its geogra
 
 The native land-cover stage records `prepared_footprint` when it adopted an exact completed preview. That record retains:
 
-- the original footprint request ID, run ID, compiler version and compiler source SHA;
+- the original footprint request ID, donor run ID, target run ID, reuse kind, compiler version and compiler source SHA;
+- a run-relative `prepared-landcover-reuse.json` descriptor containing both complete saved profiles, requests and scenarios plus the common categorical-input binding;
 - the independently retained report and land-cover descriptors, with paths relative to the current native run;
 - the transfer method, file count and bytes;
 - the original patch rows in `stages.landcover.edits`;
@@ -32,7 +35,17 @@ Preview and native execution resolve one shared request from the current retaine
 
 The candidate must have its completed manifest at that exact request ID. Every declared output is verified, and the original report must agree with the request, run, selection, compiler version and declared destination classes. The verified raster is adopted through the maintained `model.reuse.copy_verified` path. No old host's absolute path is used.
 
-A missing, incomplete or superseded preview uses the existing scenario compiler. A present exact preview with changed bytes or inconsistent identity raises the original-source error; it is not silently accepted. A preview from another profile/run is not substituted. Restored Workspaces resolve the same relative source files locally. Both the small original footprint report and its raster become independently owned run files. Their nested descriptors use the existing native run's relative paths, so ordinary Study export/reimport retains them through its current source visitor. The prior Workspace directory is a plain provenance string, not a descriptor that could be resolved beneath another run.
+A missing, incomplete or superseded preview uses the existing scenario compiler. A present exact preview with changed bytes or inconsistent identity raises the original-source error; it is not silently accepted. The exact same-run preview is preferred. When it is absent, the receiver inspects only completed footprint metadata, in deterministic request-ID order, for a parameter-variant donor. The donor's saved run/profile/scenario must verify; a donor whose records were not included in a selected Study is skipped. Existing records with changed identities still raise their source error. Its complete request must equal the target request except for the run and profile IDs; grid, scenario, selected models/version, baseline, coefficient body and every mask body/companion remain equal. The ordered patches, coefficient collection/source selection and allowed class set are checked separately. Changed categorical inputs use the existing compiler. Restored Workspaces resolve the same relative source files locally. Both the small original footprint report and its raster become independently owned run files. Their nested descriptors use the existing native run's relative paths, so ordinary Study export/reimport retains them through its current source visitor. The prior Workspace directory is a plain provenance string, not a descriptor that could be resolved beneath another run.
+
+## Parameter variants and native stage reuse
+
+The original headwaters parameter course places the working profile first, then explores retained MFD/D8 and SDR maximum-L choices on the same scenarios. Each variant has its own run/profile identity. A categorical footprint depends on its grid, baseline, ordered changes, masks, allowed classes and compiler; those native routing/erosion parameter values are evaluated later.
+
+For this course, a completed working-profile footprint can therefore supply the byte-identical land-cover input of an eligible variant. The saved `prepared_footprint.reuse_kind` is `parameter-variant`; `run_id` identifies the original donor and `target_run_id` identifies the receiving native run. The independently retained original report keeps its donor selection unchanged. The accompanying reuse JSON records both complete profiles/scenarios/requests and the shared categorical-input identity, making the distinction portable and inspectable.
+
+Native execution still builds arguments from the target profile and actual receiving raster. Its existing `NativeInputMatcher`, runtime checks, stage signatures and recovery logic independently determine whether any completed **model outputs** qualify for reuse. A shared land-cover input alone does not establish equal native parameters or model outputs.
+
+The normal Study source visitor follows the target's grid/profile/scenario and retains all original physical input sources. Equivalent donors must use that same grid/scenario and coefficient collection/source. The three new run files—land cover, original footprint report and complete reuse identity—are carried by the normal run tree, with no dependency on the donor's old absolute directory.
 
 ## Bounded categorical accounting
 
