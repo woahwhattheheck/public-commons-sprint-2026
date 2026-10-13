@@ -173,6 +173,7 @@ export function createApplicationInputsView({root,api,getToken,getWorkspaceId,on
   upload.disabled=true;recover.hidden=true;
   return {
     choose(value){if(workspace!==getWorkspaceId())reset();chooser=value;panel.open=true;sets.show();renderTarget();panel.scrollIntoView({block:'nearest'});void refresh();},
+    async openSet(setId){if(workspace!==getWorkspaceId())reset();await sets.openSet(setId);},
     update(){if(workspace!==getWorkspaceId())reset();},
     reset,
   };

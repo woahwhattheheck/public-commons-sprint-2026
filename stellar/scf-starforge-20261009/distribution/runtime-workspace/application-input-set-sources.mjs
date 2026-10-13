@@ -29,7 +29,7 @@ export async function readApplicationInputSetDirectory({directory,name}={}) {
   }
   await walk(root);const files=[];
   for(const path of paths) {
-    const handle=await open(join(root,path),constants.O_RDONLY|(constants.O_NOFOLLOW??0));
+    const handle=await open(join(root,path),constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
     try {
       const before=await handle.stat();need(before.isFile()&&before.size<=LIMITS.fileBytes,'APPLICATION_INPUT_SET_SIZE_INVALID');
       total+=before.size;need(total<=LIMITS.bytes,'APPLICATION_INPUT_SET_SIZE_INVALID');
@@ -56,7 +56,7 @@ export async function retainApplicationInputSetDirectory(model,options) {
   let retained=await model.applicationInputSetBegin({manifest:source.manifest});
   for(const file of retained.files) {
     if(file.phase==='READY')continue;
-    const handle=await open(join(source.directory,file.path),constants.O_RDONLY|(constants.O_NOFOLLOW??0));
+    const handle=await open(join(source.directory,file.path),constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
     try {
       const before=await handle.stat();need(before.isFile()&&before.size===file.bytes,'APPLICATION_INPUT_SET_SOURCE_CHANGED');
       const buffer=Buffer.alloc(LIMITS.chunkBytes),received=new Set(file.receivedChunks);

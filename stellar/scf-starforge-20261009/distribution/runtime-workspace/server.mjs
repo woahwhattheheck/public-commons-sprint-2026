@@ -58,6 +58,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/application-inputs.mjs', 'application-inputs.mjs', 'text/javascript; charset=utf-8'],
     ['/application-input-sets.mjs', 'application-input-sets.mjs', 'text/javascript; charset=utf-8'],
     ['/application-input-set-editions.mjs', 'application-input-set-editions.mjs', 'text/javascript; charset=utf-8'],
+    ['/application-result-sets.mjs', 'application-result-sets.mjs', 'text/javascript; charset=utf-8'],
     ['/application-input-sets.css', 'application-input-sets.css', 'text/css; charset=utf-8'],
     ['/application-input-set-format.mjs', 'application-input-set-format.mjs', 'text/javascript; charset=utf-8'],
     ['/application-groups.mjs', 'application-groups.mjs', 'text/javascript; charset=utf-8'],
@@ -352,6 +353,14 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         }
         return send(200,await model.applicationInputSetsState(value));
       }
+      if (req.method === 'GET' && url.pathname === '/api/application-result-sets') {
+        const value=params(url,['applicationId','offset','limit']);
+        for(const key of ['offset','limit'])if(value[key]!==undefined) {
+          need(/^(0|[1-9][0-9]*)$/.test(value[key])&&Number.isSafeInteger(Number(value[key])),'APPLICATION_RESULT_PAGE_INVALID');
+          value[key]=Number(value[key]);
+        }
+        return send(200,await model.applicationResultSetsState(value));
+      }
       if (req.method === 'GET' && url.pathname === '/api/application-input-set-editions') {
         const value=params(url,['selectionRequestId','offset','limit']);
         for(const key of ['offset','limit'])if(value[key]!==undefined) {
@@ -630,6 +639,18 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         workbookDownloads.set(key, { input, expires: Date.now() + 60000 });
         return send(200, { url: origin + '/workbook-download/' + key, file: file.file, bytes: file.bytes, sha256: file.sha256 });
       }
+      if (url.pathname === '/api/application-result-sets/review')
+        return send(200,await model.applicationResultSetReview(await body(req,['applicationId','operationId','directory','name','actor','note'],128*1024)));
+      if (url.pathname === '/api/application-result-sets/capture')
+        return send(200,await model.applicationResultSetCapture(await body(req,['requestId','review'],4*1024*1024)));
+      if (url.pathname === '/api/application-result-sets/read')
+        return send(200,await model.applicationResultSetRead(await body(req,['requestId'],4096)));
+      if (url.pathname === '/api/application-result-sets/received')
+        return send(200,await model.applicationResultSetReceived(await body(req,['requestId'],4096)));
+      if (url.pathname === '/api/application-result-sets/export')
+        return send(200,await model.applicationResultSetExport(await body(req,['requestId','directory','origin'],8192)));
+      if (url.pathname === '/api/application-result-sets/receive')
+        return send(200,await model.applicationResultSetReceive(await body(req,['requestId','directory'],8192)));
       if (url.pathname === '/api/application-input-set-editions/review')
         return send(200,await model.applicationInputSetEditionReview(await body(req,['selectionRequestId','name'],8192)));
       if (url.pathname === '/api/application-input-set-editions/capture')
