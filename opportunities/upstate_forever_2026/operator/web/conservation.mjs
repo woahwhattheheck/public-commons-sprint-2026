@@ -1058,7 +1058,7 @@ export function attachConservation({
       ...(study?.mode === "native_model" ? [
         ["current-export", "Current modeled export"],
         ["restoration", "Restoration reduction"],
-        ["avoided-conversion", "Development increase avoided"]] : []),
+        ["avoided-conversion", "Increase under the development case"]] : []),
       ...(study?.spec?.score?.basis === "published_method" && study?.selection?.bindings?.published_method
         ? [["published-method", "Original published practice points"]] : []),
       ["source-attribute", "Original planning-unit numeric attribute"]];
@@ -1093,9 +1093,7 @@ export function attachConservation({
           select(prefix + "kind", "Value source", row.kind, criterionChoices(study)) +
           (attribute ? input(prefix + "field", "Exact original attribute field", row.field) +
             input(prefix + "unit", "Original measurement unit", row.unit) +
-            input(prefix + "reference", "Source meaning and reference", row.reference) +
-            select(prefix + "direction", "Preferred direction", row.direction,
-              [["maximize", "Larger values preferred"], ["minimize", "Smaller values preferred"]]) :
+            input(prefix + "reference", "Source meaning and reference", row.reference) :
             select(prefix + "axis", "Original quantity", row.axis,
               axes.length ? axes.map(([id, label, unit]) => [id, label + " · " + unit]) : [["", "No shared original quantity"]])) +
           (paired ? select(prefix + "scenario_run_id", "Original alternative case", row.scenario_run_id,
@@ -1105,6 +1103,8 @@ export function attachConservation({
           (!attribute && row.kind !== "source-context" ?
             select(prefix + "basis", "Quantity basis", row.basis,
               [["total", "Total in the reporting footprint"], ["per-reporting-hectare", "Per reporting hectare"]]) : "") +
+          select(prefix + "direction", "Preferred direction", row.direction || "maximize",
+            [["maximize", "Larger values preferred"], ["minimize", "Smaller values preferred"]]) +
           input(prefix + "weight", "Decision weight", row.weight, 'type="number" min="0" step="any"') +
           '</div><p class="cons-help">Preference profile key: <code>' + h(row.id) + '</code>' +
           (attribute ? '. The exact original attribute and source identity remain in the result; absent values stay unavailable.' :
@@ -1119,7 +1119,8 @@ export function attachConservation({
     if (!paired.length) return '<p class="cons-help">Add a restoration or development criterion to compare original native cases.</p>';
     const alternatives = memory().study?.spec?.alternative_run_ids || [];
     return '<fieldset><legend>Native case comparisons</legend><p>Hold weights and resource limits fixed while replacing the explicitly selected native alternatives. ' +
-      'Choose cases representing the scientific assumptions you want to compare; each row retains its own modeled quantities and coverage.</p>' +
+      'Choose cases representing the scientific assumptions you want to compare; each row retains its own modeled quantities and coverage. ' +
+      'Normalization uses one fixed scale per criterion across all selected cases; adding a case can change that scale and the ranking.</p>' +
       (draft.scenario_cases || []).map((item, index) => '<fieldset><legend>Case comparison ' + (index + 1) +
         '</legend><div class="cons-grid">' +
         input("optimization.case." + index + ".name", "Comparison name", item.name) +
@@ -1137,18 +1138,18 @@ export function attachConservation({
     if (!criteria.length) throw new Error("Add a source-bound decision criterion.");
     const choices = new Set(criterionChoices().map(([id]) => id));
     return criteria.map(row => {
-      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(row.id) || ids.has(row.id)) throw new Error("Each criterion needs a distinct stable key.");
+      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(row.id) || ids.has(row.id)) throw new Error("Each criterion needs a distinct stable key.");
       ids.add(row.id);
       if (!row.label?.trim()) throw new Error("Give each decision criterion a label.");
       if (!choices.has(row.kind)) throw new Error("Choose an available original criterion source.");
-      const result = { id: row.id, label: row.label.trim(), kind: row.kind };
+      const direction = row.direction || "maximize";
+      if (!["maximize", "minimize"].includes(direction)) throw new Error("Choose the preferred criterion direction.");
+      const result = { id: row.id, label: row.label.trim(), kind: row.kind, direction };
       if (row.kind === "source-attribute") {
         for (const key of ["field", "unit", "reference"]) {
           if (!row[key]?.trim()) throw new Error(row.label + " needs its original " + key + ".");
           result[key] = row[key].trim();
         }
-        if (!["maximize", "minimize"].includes(row.direction)) throw new Error("Choose the preferred attribute direction.");
-        result.direction = row.direction;
         result.basis = "total";
       } else {
         if (!criterionAxes(row).some(([axis]) => axis === row.axis)) throw new Error(row.label + " needs an available original quantity.");
@@ -1195,6 +1196,36 @@ export function attachConservation({
         '</td><td>' + number(row.eligible_count) + '</td><td>' + number(row.selected_ids?.length) + '</td><td>' +
         h(human(row.optimization?.status)) + '</td><td>' + h(percent(row.optimization?.relative_gap)) + '</td></tr>').join("") +
       '</tbody></table></div></details>';
+  }
+
+
+  function nativeUnitComparison(analysis, id) {
+    if (!id || !analysis.scenario_stability?.enabled) return "";
+    const original = (analysis.candidates || []).find(row => row.feature_id === id);
+    if (!original) return "";
+    const axes = analysis.request.axes || [];
+    const label = axis => analysis.request.objective.criteria?.find(row => row.id === axis)?.label || human(axis);
+    return '<section class="cons-detail" aria-label="Original unit across native cases"><div class="cons-section-title"><div><h3>' +
+      h(original.label || id) + '</h3><p>Original unit <code>' + h(id) +
+      '</code>. Fixed decision weights and resource limits across the selected native cases.</p></div>' +
+      button("optimization-close-unit-cases", "Close unit comparison") + '</div><div class="cons-table-wrap"><table class="cons-table">' +
+      '<thead><tr><th>Case</th><th>Selection</th><th>Rank</th><th>Score</th>' +
+      axes.map(axis => '<th>' + h(label(axis)) + '</th>').join("") + '<th>Reasons</th></tr></thead><tbody>' +
+      (analysis.scenario_stability.cases || []).map(item => {
+        const row = (item.candidates || []).find(candidate => candidate.feature_id === id);
+        if (!row) return '<tr><th scope="row">' + h(item.name) + '</th><td colspan="' + (axes.length + 4) + '">Original unit absent from this case result.</td></tr>';
+        return '<tr><th scope="row">' + h(item.name) + '</th><td>' + (row.selected ? "Selected" : row.rank !== null ? "Eligible" : "Excluded") +
+          '</td><td>' + number(row.rank) + '</td><td>' + number(row.score) + '</td>' +
+          axes.map(axis => {
+            const support = row.axis_support?.[axis] || {};
+            return '<td>' + number(row.objective_values?.[axis]) + ' ' + h(row.objective_units?.[axis] || "") +
+              '<span class="cons-metric-note">' + h(human(support.availability || "Unavailable")) +
+              (finite(support.coverage_fraction) ? " · " + h(percent(support.coverage_fraction)) + " coverage" : "") +
+              (finite(row.score_contributions?.[axis]) ? " · contribution " + number(row.score_contributions[axis]) : "") +
+              (support.criterion?.scenario_run_id ? " · case " + h(support.criterion.scenario_run_id) : "") +
+              (support.availability_reason ? " · " + h(support.availability_reason) : "") + '</span></td>';
+          }).join("") + '<td>' + h((row.exclusions || []).join("; ")) + '</td></tr>';
+      }).join("") + '</tbody></table></div></section>';
   }
 
   function optimizationAxes(draft = memory().optimization) {
@@ -1457,7 +1488,8 @@ export function attachConservation({
         h(row.objective_units?.[axis] || "") +
         (finite(support.coverage_fraction) ? " · " + h(percent(support.coverage_fraction)) + " coverage" : "") +
         (!support.eligible_support ? " · " + h(support.availability_reason || human(support.availability || "Unavailable")) : "") +
-        (support.source_value !== undefined ? " · original value " + h(support.source_value) : "") +
+        (support.original_value !== undefined ? " · original value " + h(support.original_value ?? "Unavailable") : "") +
+        (finite(row.score_contributions?.[axis]) ? " · score contribution " + number(row.score_contributions[axis]) : "") +
         (support.reference ? " · " + h(support.reference) : "") +
         '</span></td>';
     };
@@ -1504,13 +1536,14 @@ export function attachConservation({
         '</td>' + (a.scenario_stability?.enabled ? '<td>' +
           number(row.scenario_stability?.selected_cases) + " / " + number(row.scenario_stability?.case_count) +
           '<span class="cons-metric-note">Rank ' + number(row.scenario_stability?.minimum_rank) + "–" +
-          number(row.scenario_stability?.maximum_rank) + "</span></td>" : "") +
+          number(row.scenario_stability?.maximum_rank) + "</span>" +
+          button("optimization-unit-cases", "Inspect cases", 'data-nativecase-unit="' + h(row.feature_id) + '"') + "</td>" : "") +
         '<td>' + h((row.exclusions || []).join("; ")) + '</td></tr>').join("") +
       '</tbody></table></div><div class="cons-actions">' +
       button("optimization-previous", "Previous", "", ui.optimizationPage <= 1) +
       '<span>' + number(filteredRows.length) + ' units · page ' + ui.optimizationPage + ' of ' + pageCount + '</span>' +
       button("optimization-next", "Next", "", ui.optimizationPage >= pageCount) +
-      '</div><details class="cons-disclosure"><summary>Original decision and normalization</summary><pre>' +
+      '</div>' + nativeUnitComparison(a, ui.optimizationUnitCases) + '<details class="cons-disclosure"><summary>Original decision and normalization</summary><pre>' +
       h(JSON.stringify({ request:a.request, normalization:a.normalization, methods:a.methods }, null, 2)) +
       '</pre></details></section>';
   }
@@ -2639,6 +2672,10 @@ export function attachConservation({
           await transferStudy(node); break;
         case "optimization-new":
           ui.optimization = optimizationDraft(ui.study); ui.form = "optimization"; ui.notice = null; paint(); break;
+        case "optimization-unit-cases":
+          ui.optimizationUnitCases = node.dataset.nativecaseUnit; paint(); break;
+        case "optimization-close-unit-cases":
+          ui.optimizationUnitCases = null; paint(); break;
         case "optimization-add-criterion":
           ui.optimization.criteria ||= [];
           ui.optimization.criteria.push(newCriterion(ui.optimization)); paint(); break;

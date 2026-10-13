@@ -402,3 +402,10 @@ IDs. The same actual native programme executes the cases.
 ## Save the reviewed selection
 
 The existing save API also accepts the completed original preview through the operator's `preview_task_id` payload. The operator reopens that retained task, requires the same workspace, completed state and original preview action, and supplies its full analysis to `save(..., retained_analysis=...)`. The model validates the original content identity, exact study selection, candidate and geometry descriptors, current retained file bodies, decision request and selected original IDs. It then persists that exact analysis and saves the selected IDs through the ordinary conservation plan. Saving a reviewed selection does not rerun the optimizer; the authoritative plan still recomputes quantities and geometry across the selected union. A new spec retains the original optimize-and-save behavior.
+
+
+## Combined criteria and original-case sensitivity
+
+Select **Combined physical and source-context criteria** in the same Conservation optimizer. The typed editor combines original physical, geographic, published-point and numeric source-attribute criteria, preserves their units and support, and compares explicitly retained native alternatives at fixed decision weights. The saved analysis retains per-unit weighted contributions, case-specific quantities and selection/rank changes; the existing portfolio, GeoPackage and full project exports remain the receiving path.
+
+See [Conservation decision methods](../CONSERVATION_DECISION_METHODS.md) for the request contract, exact score and normalization, source/coverage rules, interpretation of case sensitivity, and the complete operate/export/reopen workflow.
