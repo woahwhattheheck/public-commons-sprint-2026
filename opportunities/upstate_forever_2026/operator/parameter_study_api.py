@@ -8,7 +8,7 @@ from model import parameter_calibration
 from model.common import identifier
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
-READS = {"catalog", "results", "calibration", "execution"}
+READS = {"catalog", "results", "calibration", "execution", "view"}
 
 
 class ParameterStudyAPI:
@@ -41,6 +41,14 @@ class ParameterStudyAPI:
 
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "view":
+            from model.parameter_views import DEFAULT_VIEWS
+            value = DEFAULT_VIEWS.read(workspace, identifier(payload.get("id")), **{
+                name: payload[name] for name in ("offset", "limit", "case_filter", "query", "run_id")
+                if payload.get(name) not in (None, "")})
+            value["_downloads"] = self.operator._files(
+                workspace_id, value, workspace.root / "experiments" / value["id"])
+            return value
         if operation == "execution":
             from model.parameter_case_status import read
             return read(workspace, identifier(payload.get("id")),

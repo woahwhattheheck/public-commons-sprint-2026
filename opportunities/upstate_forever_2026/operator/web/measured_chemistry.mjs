@@ -14,7 +14,7 @@ const operator=x=>x.species||((x.components||[]).map(c=>c.weight+' × '+c.specie
 const interval=x=>x.qualifier==='interval'?(x.lower_closed?'[':'(')+x.lower_mg_l+', '+x.upper_mg_l+(x.upper_closed?']':')'):(x.qualifier==='below'?'≤ ':'')+(x.mg_l??x.value??'');
 export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  const workspace=host.getWorkspace(),controller=new AbortController(),storageKey='upstate-measured-chemistry:'+workspace;
- let dead=false,busy=false,epoch=0,catalog={cases:[],bindings:[],measurement_choices:[]},inspected=null,prepared=null,selectedRow=0;
+ let dead=false,busy=false,epoch=0,catalog={cases:[],bindings:[],measurement_choices:[]},inspected=null,prepared=null,carried=null,selectedRow=0;
  let saved=memory.get(workspace);
  if(!saved){try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{}}
  let rawDraft=saved?.rawDraft||{},draft=saved?.draft||null,caseChoice=saved?.caseChoice||'',filters=saved?.filters||{},preparedId=saved?.preparedId||'';
@@ -24,7 +24,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   return host.api('/api/measurements/chemistry',{method:'POST',body:{workspace,action,...payload}});
  };
  root.classList.add('mb');
- root.innerHTML='<style>.mb{margin:18px 0;padding:20px;border:1px solid #c8c8c8;background:#fff;color:#222;font:14px system-ui}.mb h2,.mb h3{margin:0 0 12px}.mb p{line-height:1.5}.mb label{display:grid;gap:5px;margin:8px 0}.mb input,.mb select,.mb textarea,.mb button{font:inherit;color:inherit;border:1px solid #999;background:#fff;padding:8px;max-width:100%;box-sizing:border-box}.mb button{cursor:pointer}.mb button:disabled{cursor:default;opacity:.6}.mb textarea{width:100%;font-family:ui-monospace,monospace}.mb fieldset{border:1px solid #ccc;margin:16px 0;padding:14px}.mb legend{font-weight:600}.mb .mb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.mb .mb-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.mb details{margin:12px 0;padding:12px;border:1px solid #ddd}.mb summary{cursor:pointer;font-weight:600}.mb .mb-scroll{overflow:auto;max-height:450px}.mb table{border-collapse:collapse;width:100%}.mb th,.mb td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}.mb th{background:#f3f3f3}.mb .mb-check{display:flex;align-items:center;gap:8px}.mb .mb-check input{width:auto}.mb [role=status]{padding:10px;background:#f3f3f3;white-space:pre-wrap}.mb [data-error=true]{border-left:4px solid #555}.mb pre{max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word}.mb small{display:block;color:#555}</style><details data-mb-panel><summary>Bind reviewed measurements to Reach chemistry</summary><p>Use the original measured records and an existing physical model. Choose the station, time, measurement operator and error scale explicitly; saved bindings retain accepted records, exclusions and original source history.</p><div role="status" aria-live="polite">Open this panel to read saved cases and bindings.</div><div data-mb-library></div><div data-mb-editor></div><div data-mb-result></div><div data-mb-task></div></details>';
+ root.innerHTML='<style>.mb{margin:18px 0;padding:20px;border:1px solid #c8c8c8;background:#fff;color:#222;font:14px system-ui}.mb h2,.mb h3{margin:0 0 12px}.mb p{line-height:1.5}.mb label{min-width:0;overflow-wrap:anywhere;display:grid;gap:5px;margin:8px 0}.mb input,.mb select,.mb textarea,.mb button{font:inherit;color:inherit;border:1px solid #999;background:#fff;padding:8px;max-width:100%;box-sizing:border-box}.mb button{cursor:pointer}.mb button:disabled{cursor:default;opacity:.6}.mb textarea{width:100%;font-family:ui-monospace,monospace}.mb fieldset{min-width:0;border:1px solid #ccc;margin:16px 0;padding:14px}.mb legend{font-weight:600}.mb .mb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.mb .mb-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.mb details{margin:12px 0;padding:12px;border:1px solid #ddd}.mb summary{cursor:pointer;font-weight:600}.mb .mb-scroll{overflow:auto;max-height:450px}.mb table{border-collapse:collapse;width:100%}.mb th,.mb td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}.mb th{background:#f3f3f3}.mb .mb-check{display:flex;align-items:center;gap:8px}.mb .mb-check input{width:auto}.mb [role=status]{padding:10px;background:#f3f3f3;white-space:pre-wrap}.mb [data-error=true]{border-left:4px solid #555}.mb pre{max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word}.mb small{display:block;color:#555}</style><details data-mb-panel><summary>Bind reviewed measurements to Reach chemistry</summary><p>Use the original measured records and an existing physical model. Choose the station, time, measurement operator and error scale explicitly; saved bindings retain accepted records, exclusions and original source history.</p><div role="status" aria-live="polite">Open this panel to read saved cases and bindings.</div><div data-mb-library></div><div data-mb-editor></div><div data-mb-result></div><div data-mb-task></div></details>';
  const panel=root.querySelector('[data-mb-panel]'),status=root.querySelector('[role=status]'),library=root.querySelector('[data-mb-library]'),editor=root.querySelector('[data-mb-editor]'),result=root.querySelector('[data-mb-result]');
  function message(value,error=false){if(!active())return;status.textContent=value;status.dataset.error=String(error);}
  function persist(){
@@ -46,6 +46,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    text('stationId','Original station ID (optional)',filters.stationId)+text('from','From source date',filters.from,'type="date"')+
    text('to','Through source date',filters.to,'type="date"')+text('parameter','Normalized parameter (optional)',filters.parameter)+
    '</div><div class="mb-actions"><button>Inspect original records</button><button type="button" data-mb-action="catalog">Refresh saved library</button></div></form>'+
+   '<details><summary>Reopen a binding carried by a received Chemistry case</summary><p>Select the received case above, then inspect its retained source before adopting the original binding.</p><button type="button" data-mb-action="carried-case">Read selected case sources</button><div data-mb-carried></div></details>'+
    '<label>Saved source-bound binding<select data-mb-saved>'+option('','Choose a saved binding','')+catalog.bindings.map(b=>option(b.id,titleOf(b),preparedId)).join('')+'</select></label>'+
    '<div class="mb-actions"><button type="button" data-mb-action="open-binding">Reopen selected binding</button></div>';
  }
@@ -93,7 +94,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
      text('basis_reference','Source supporting this mass basis and fraction',m.basis_reference)+note('basis_reason','Why this operator represents the reported measurement',m.basis_reason)+
      text('sigma_mg_l','Observation error scale (mg of declared basis/L)',m.sigma_mg_l??'','type="number" min="0" step="any"')+note('uncertainty_reason','Error scale rationale',m.uncertainty_reason)+'</details>';
    }).join('')+'</fieldset>'+
-   '<fieldset><legend>Time and fit / holdout</legend><div class="mb-grid">'+text('time_origin','Model day zero (ISO timestamp with timezone)',value.time_origin,'placeholder="2023-01-01T00:00:00-05:00" required')+
+   '<fieldset><legend>Time and fit / holdout</legend><div class="mb-grid">'+text('time_origin','Model day zero (optional with reviewed per-record days)',value.time_origin,'placeholder="ISO timestamp with timezone"')+
     select('default_role','Default role',[['fit','Fit'],['holdout','Holdout']],value.roles.default)+text('holdout_from','Hold out on or after source date',value.roles.holdout_from,'type="date"')+'</div>'+
     '<label class="mb-check"><input name="allow_censored" type="checkbox" '+(value.allow_censored?'checked':'')+'>Retain supported finite censored bounds</label>'+
     '<details><summary>Individual records, original rows and time overrides</summary><div data-mb-records></div></details>'+
@@ -155,7 +156,8 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   if(derived)v.derived_total_nitrogen=derived;else delete v.derived_total_nitrogen;
   if(strict){
    if(!v.title||!v.reviewer||!v.reason)throw Error('Complete the binding title, reviewer and scientific rationale.');
-   if(!/T.*(?:Z|[+-]\d\d:\d\d)$/.test(v.time_origin)||!Number.isFinite(Date.parse(v.time_origin)))throw Error('Model day zero needs an ISO timestamp with an explicit timezone.');
+   if(v.time_origin&&(!/T.*(?:Z|[+-]\d\d:\d\d)$/.test(v.time_origin)||!Number.isFinite(Date.parse(v.time_origin))))throw Error('A supplied model day zero needs an ISO timestamp with an explicit timezone.');
+   if(!v.time_origin&&!inspected.records.some(row=>Object.hasOwn(v.day_overrides||{},row.id)))throw Error('Enter model day zero, or retain a reviewed explicit model day for at least one original record. Records without a usable time binding remain excluded by the native producer.');
    if(!v.station_bindings.length||!v.measurement_mappings.length)throw Error('Select at least one station assignment and one explicit measurement mapping.');
    if(!v.request||typeof v.request!=='object'||Array.isArray(v.request))throw Error('The native request must be an object.');
    if(Object.hasOwn(v.request,'observations'))throw Error('Remove observations from the request; the reviewed measured binding supplies them.');
@@ -199,6 +201,48 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    '<details><summary>Excluded original records and reasons</summary><pre>'+esc(pretty(value.excluded||[]))+'</pre></details>'+
    '<details><summary>Original source and complete retained binding</summary><pre>'+esc(pretty(value))+'</pre></details>';
  }
+ async function readCarriedCase(){
+  const id=library.querySelector('[name=case_id]').value;
+  if(!id)throw Error('Choose the received Chemistry case in the case selector.');
+  const version=epoch,value=await host.api('/api/chemistry/case?'+new URLSearchParams({workspace,case_id:id}));
+  if(!active()||version!==epoch)return;
+  const refs=value.source_refs||[];
+  carried={case:value,refs,preview:null};
+  library.querySelector('[data-mb-carried]').innerHTML='<p>'+esc(titleOf(value))+' · '+refs.length+' retained original sources.</p>'+
+   '<label>Original source<select data-mb-carried-source>'+option('','Choose the original measured binding','')+
+    refs.map((ref,i)=>option(String(i),ref.title||ref.source_id,'')).join('')+'</select></label>'+
+   '<button type="button" data-mb-action="carried-preview">Inspect original binding and review</button><div data-mb-carried-preview></div>';
+  message('The selected case and its exact retained sources are open. Inspect the measured binding source before adopting it.');
+ }
+ async function previewCarriedSource(){
+  if(!carried)throw Error('Read the selected received case first.');
+  const raw=library.querySelector('[data-mb-carried-source]').value;
+  if(raw==='')throw Error('Choose a retained source.');
+  const selected=carried,ref=selected.refs[Number(raw)];
+  const info=await host.api('/api/source-info?'+new URLSearchParams({workspace,collection:ref.source_collection_id,source:ref.source_id}));
+  if(!active()||carried!==selected)return;
+  if(!info.download?.url?.startsWith('/api/file/')||info.download.sha256!==ref.sha256||info.source.body.sha256!==ref.sha256)throw Error('The retained source ticket differs from the selected case source.');
+  const document=await host.api(info.download.url);
+  if(!active()||carried!==selected)return;
+  if(document.format!=='upstate.measurement-chemistry-binding/v1'||document.project_sha256!==selected.case.project_sha256)throw Error('This source is not a measured binding for the selected received physical case.');
+  selected.preview={ref,info,document};
+  const review=document.selection||{};
+  library.querySelector('[data-mb-carried-preview]').innerHTML='<h3>'+esc(info.source.title)+'</h3>'+
+   '<p>Reviewed by '+esc(review.reviewer)+' · '+esc(review.reason)+'</p><p>Original measured revision '+esc(document.source_revision)+' · '+esc(JSON.stringify(document.counts||{}))+'</p>'+
+   '<h4>Original station assignments</h4>'+table(review.station_bindings||[],[['station_id','Source station'],['reach_id','Native reach'],['reason','Rationale'],['reference','Reference']])+
+   '<h4>Original measurement definitions</h4>'+table((review.measurement_mappings||[]).map(m=>({...m,operator:operator(m)})),[['characteristic','Characteristic'],['method','Method'],['fraction','Fraction'],['measurement','Measured quantity'],['basis','Basis'],['operator','Modeled pools'],['sigma_mg_l','Error scale'],['basis_reference','Source evidence']])+
+   '<details><summary>Complete original review, timing and source population</summary><pre>'+esc(pretty(document))+'</pre></details>'+
+   '<details><summary>Retained source identity</summary><pre>'+esc(pretty(ref))+'</pre></details>'+
+   '<button type="button" data-mb-action="carried-adopt">Adopt this original binding in the received workspace</button>';
+  message('Review the original station, measurement, timing and source choices, then adopt this exact retained binding.');
+ }
+ async function adoptCarriedSource(){
+  const selected=carried,preview=selected?.preview;
+  if(!preview)throw Error('Inspect the retained binding and its original review first.');
+  const value=await call('adopt-source',{case_id:selected.case.id,source_collection_id:preview.ref.source_collection_id,source_id:preview.ref.source_id});
+  if(!active()||carried!==selected)return;
+  paintPrepared(value);await loadCatalog();message('Original measured binding adopted for this received case. Its retained native request is ready to reopen or run.');
+ }
  function download(name,value,type='application/json'){
   const url=URL.createObjectURL(new Blob([typeof value==='string'?value:pretty(value)],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
  }
@@ -241,11 +285,18 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   });
  },{signal:controller.signal});
  root.addEventListener('input',event=>{if(event.target.closest('[data-mb-prepare]'))captured();},{signal:controller.signal});
- root.addEventListener('change',event=>{if(event.target.closest('[data-mb-prepare]'))captured();},{signal:controller.signal});
+ root.addEventListener('change',event=>{
+  if(event.target.closest('[data-mb-prepare]'))captured();
+  if(event.target.matches('[data-mb-carried-source]')&&carried){carried.preview=null;library.querySelector('[data-mb-carried-preview]')?.replaceChildren();}
+  if(event.target.matches('[data-mb-inspect] [name=case_id]')){carried=null;library.querySelector('[data-mb-carried]')?.replaceChildren();}
+ },{signal:controller.signal});
  root.addEventListener('click',event=>{
   const button=event.target.closest('[data-mb-action]');if(!button||!root.contains(button))return;
   event.preventDefault();task(async()=>{
    const action=button.dataset.mbAction;
+   if(action==='carried-case')return readCarriedCase();
+   if(action==='carried-preview')return previewCarriedSource();
+   if(action==='carried-adopt')return adoptCarriedSource();
    if(action==='catalog'){captured();await loadCatalog();}
    if(action==='open-binding'){
     captured();const id=library.querySelector('[data-mb-saved]').value;if(!id)throw Error('Choose a saved binding.');

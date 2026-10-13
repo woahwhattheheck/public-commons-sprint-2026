@@ -208,6 +208,8 @@ After both reports complete, the original Study exporter selects both `scientifi
 
 The continuation then restores that archive and starts the **restored application's own** `source_tools/continue_study_report.py --cold-inspect` with the same native interpreter, from the restored application directory and without inherited `PYTHONPATH`. It verifies the original selected Study receipt, both study/source/review identities, both captured review sources and all retained report files. It renders no new report during this cold read.
 
+When the receiving directory already exists, the continuation uses the maintained `model.portable.resume_restore` API with the original archive SHA-256. That producer verifies the archive, project and receiving destination and recognizes its own completed registration, including delivery roles and derived navigation. Earlier successful receives are reconciled through its legacy compatibility path. The subsequent cold application read still checks the selected original study/review/source/report identities and complete retained report files. This preserves a valid existing receive after native delivery registration without overwriting the receiving directory. New destinations continue through the original `restore` API.
+
 All additional phases are under `operation.json → continuations.scientific_report`. Original intake phases, original archives and the `saved_review` continuation remain separately retained. The new files live below an owned `scientific-review-<request digest>` directory:
 
 - `request.json` and `report-course.json`: immutable explicit source choices.

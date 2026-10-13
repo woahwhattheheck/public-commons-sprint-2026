@@ -116,7 +116,7 @@ function render(){
  document.querySelectorAll("nav [data-tab]").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab?"page":"false"));
  $("save-file").disabled=$("package").disabled=!workspace;
  $("save-state").textContent=workspace?"Saved edition "+workspace.revision+" · "+readable(workspace.updatedAt):"No workspace open";
- $("content").innerHTML=workspace?({overview,intake,mapping,comparison,receiving,history,guide}[tab]||overview)():'<section class="empty"><h2>Open a complete operating workspace</h2><p>Create a workspace for authorized customer exports, receive an existing handover, or open the included worked example.</p><div class="actions"><button data-action="new">New workspace</button><button data-action="example">Open worked example</button></div></section>';
+ $("content").innerHTML=tab==="guide"?guide():workspace?({overview,intake,mapping,comparison,receiving,history,guide}[tab]||overview)():'<section class="empty"><h2>Open a complete operating workspace</h2><p>Create a workspace for authorized customer exports, receive an existing handover, or open the included worked example.</p><div class="actions"><button data-action="new">New workspace</button><button data-action="example">Open worked example</button></div></section>';
 }
 function download(name,body,type="application/json"){
  const blob=new Blob([body],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);

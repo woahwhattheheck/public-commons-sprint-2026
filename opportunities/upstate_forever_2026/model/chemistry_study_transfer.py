@@ -14,6 +14,7 @@ from pathlib import PurePosixPath
 from .common import digest, identifier
 
 EDITION = "native-chemistry-scientific-source-v1"
+READABLE_EDITIONS = (EDITION, "native-chemistry-scientific-source-v2")
 REPORT_SCHEMA = "upstate.chemistry-scientific-report/v1"
 SOURCE_KIND = "chemistry-report-sources"
 SOURCE_DIRECTORY = "chemistry-report-source-exports"
@@ -261,14 +262,14 @@ def _selection(native):
 
 
 def _producer(closure, value, reason):
-    if (value.get("version") != 1 or value.get("edition") != EDITION
+    if (value.get("version") != 1 or value.get("edition") not in READABLE_EDITIONS
             or value.get("state") != "complete"
             or value.get("workspace_id") != closure.workspace.project["id"]
             or digest(value["selection"]) != identifier(value.get("selection_id"))):
         raise ValueError("Choose the original completed Chemistry scientific source")
     report = record(closure, "chemistry-reports", value["report_id"], reason)
     expected = {
-        "edition": EDITION, "workspace_id": closure.workspace.project["id"],
+        "edition": value["edition"], "workspace_id": closure.workspace.project["id"],
         "report_id": report["id"], "report_record_sha256": report["record_sha256"],
         "source_stamp": report["selection"]["source_stamp"],
         "producer_sha256": identifier(value["selection"]["producer_sha256"]),
@@ -339,8 +340,10 @@ def _captured(closure, entry, recipe):
     if not isinstance(native, dict):
         raise ValueError("Chemistry report recipe lost its original native identity")
     selection = _selection(native)
-    if selection["edition"] != EDITION or not isinstance(selection["workspace_id"], str) or not selection["workspace_id"]:
-        raise ValueError("Chemistry report source lost its producing project")
+    if (selection["edition"] not in READABLE_EDITIONS
+            or not isinstance(selection["workspace_id"], str) or not selection["workspace_id"]):
+        raise ValueError("Chemistry report source lost its producing project or readable edition")
+    _same(selection["edition"], recipe.get("edition"), "captured producer edition")
     for field in ("report_id", "run_id", "case_id", "report_record_sha256", "producer_sha256"):
         identifier(native.get(field))
     members = _members(entry)
@@ -409,14 +412,18 @@ def _captured(closure, entry, recipe):
 def include_source(closure, collection_id, entry):
     """Follow Chemistry only when a saved scientific report selects this source."""
     metadata = entry.get("metadata") or {}
-    if metadata.get("producer") != EDITION:
+    producer_edition = metadata.get("producer")
+    if producer_edition not in READABLE_EDITIONS:
+        if (entry.get("id") == SOURCE_ID or (isinstance(producer_edition, str)
+                and producer_edition.startswith("native-chemistry-scientific-source-"))):
+            raise ValueError("Receive the Chemistry study resolver for this source producer edition")
         return
     if (entry.get("kind") != "document" or entry.get("id") != SOURCE_ID
             or metadata.get("report_schema") != "upstate.observed-report/v1"):
         raise ValueError("Original Chemistry report source has another document identity")
     closure.add_file(entry["body"]["object"], entry["body"])
     recipe = closure.read(entry["body"]["object"])
-    if recipe.get("schema") != "upstate.observed-report/v1" or recipe.get("edition") != EDITION:
+    if recipe.get("schema") != "upstate.observed-report/v1" or recipe.get("edition") != producer_edition:
         raise ValueError("Original Chemistry report source has another recipe edition")
     native, selection, report, run, case = _captured(closure, entry, recipe)
     for field, expected in (
@@ -461,7 +468,7 @@ def include_source(closure, collection_id, entry):
         "source_collection_id": collection_id, "source_id": entry["id"],
         "source_body_sha256": entry["body"]["sha256"],
         "source_project_id": native["workspace_id"],
-        "report_context_kind": "chemistry_report", "producer": EDITION,
+        "report_context_kind": "chemistry_report", "producer": producer_edition,
         "report_id": report["id"], "report_record_sha256": report["record_sha256"],
         "run_id": run["id"], "case_id": case["id"], "mode": native["mode"],
         "source_stamp": deepcopy(native["source_stamp"]),

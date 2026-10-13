@@ -64,3 +64,17 @@ Repeated --entry ORIGINAL_ENTRY_ID selects explicit entries; --apply receives th
 The read operations are scientific-briefing-preview and scientific-briefing on the original SourceReports provider. The mutation is source-reports.briefing through the ordinary action queue. Complete task downloads include the discussion ZIP and original briefing/model/index. The authenticated scientific-briefings file route keeps every original relative source path available.
 
 **For the review:** open the original saved scientific report, present its exact tables and figures, record the discussion, and carry selected actions directly into the working project.
+
+## Embedded meeting controls and retained notes
+
+The saved discussion opens inside the existing Source reports desk. Removing an entry and replacing an imported meeting use an in-document confirmation with explicit keep/replace controls, keyboard focus and Escape cancellation. They work in the original opaque-origin report sandbox without depending on browser confirm dialogs. Print, original report links and the briefing's optional fullscreen control use the same retained-file permissions as the Sources viewer.
+
+The desk keeps each opened briefing frame mounted while refreshing saved reports and while closing and reopening that same briefing in the same Workspace. This preserves its current in-memory meeting entries when browser local storage is unavailable. Each report/briefing identity has a separate frame. Changing Workspace or reloading the application ends that in-memory session; export the editable meeting JSON first. Downloaded briefing HTML and ZIPs keep their ordinary standalone behavior.
+
+The original scientific report, briefing model, meeting binding and data remain unchanged. A newly generated scientific discussion gets its normal renderer-bound edition. Newly generated modeled client reports advance their existing companion edition; previously retained reports and notes keep their original identity and files.
+
+### Operate the actual outgoing edition
+
+Use the existing populated original Workspace and running operator. Prepare a new discussion edition with this installed renderer; old saved HTML remains its original edition. Open the exact saved briefing at screenshare and narrow width and LOOK at the rendered pixels. Add a meeting entry, cancel then confirm its removal, export JSON, import it over an entered meeting, cancel then accept replacement, and check that source-page links and the selected print scope operate. Refresh the saved report, close/reopen the same briefing, and verify its entered note is still visible. Export/reopen the complete discussion ZIP and editable meeting file. Readable controls, labels, focus and tables must be checked on the actual outgoing screen, not inferred from source checks. Use the current scientific report/fieldwork receiving course for those operations and repair its first concrete failure without starting a parallel viewer or broad test suite.
+
+Inspect every actual outgoing attachment as well: open the generated PDF and HTML, read the exported meeting JSON and Markdown, inspect the CSV/table data and source selections present in the chosen report, then extract and reopen its complete ZIP. Confirm the recipient's actual filenames, contents and source-qualified quantities. A working parent screen does not establish the quality or completeness of its attachments.

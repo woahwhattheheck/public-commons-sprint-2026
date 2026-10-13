@@ -262,15 +262,24 @@ def _restore(operation, archive, project):
     elif receipt_path.is_file():
         result = read_json(receipt_path)
     else:
-        # Published restore is atomic; recover only after verifying every
-        # original archived member against the directory left by that process.
-        manifest = portable.inspect_archive(archive["path"], verify=False)
-        for name, descriptor in manifest["members"].items():
-            verify_file(target, {"path": name, **descriptor})
-        result = {"workspace": str(target / "workspace"),
-                  "application": str(target / "application"),
-                  "archive_sha256": archive["sha256"],
-                  "project": project, "recovered_published_restore": True}
+        # The original restore may have published its complete receiving result
+        # before this course retained the acknowledgement. Reconcile that same
+        # archive and destination, including native registration and any later
+        # receiver-only work; never restore over the existing directory.
+        resume = getattr(portable, "resume_restore", None)
+        if callable(resume):
+            result = resume(archive["path"], target,
+                            expected_archive_sha256=archive["sha256"])
+        else:
+            # Earlier applications have no receiving-completion protocol.
+            # Admit their original output only after exact archived-byte checks.
+            manifest = portable.inspect_archive(archive["path"], verify=False)
+            for name, descriptor in manifest["members"].items():
+                verify_file(target, {"path": name, **descriptor})
+            result = {"workspace": str(target / "workspace"),
+                      "application": str(target / "application"),
+                      "archive_sha256": archive["sha256"],
+                      "project": project, "recovered_published_restore": True}
         atomic_json(receipt_path, result, immutable=True)
     if (result["archive_sha256"] != archive["sha256"]
             or Path(result["workspace"]).resolve() != (target / "workspace").resolve()

@@ -9,8 +9,8 @@
 <p id="notice" role="status" aria-live="polite">Original sources, complete populations and retained decisions.</p>
 <section id="pending" hidden><h2>Original request needs reconciliation</h2><pre id="pending-detail"></pre>
 <button id="inspect-pending">Inspect original result</button><button id="retry-pending" hidden>Retry the same unadmitted request</button>
-<button id="resume-pending" hidden>Continue the original local operation</button></section>
-<nav aria-label="Reporting stages">
+<button id="return-draft" hidden>Return request to draft</button><button id="resume-pending" hidden>Continue the original local operation</button></section>
+<div id="work-area"><nav aria-label="Reporting stages">
 <button data-tab="intake">1. Original files</button><button data-tab="definitions">2. Definitions</button>
 <button data-tab="runs">3. Periods</button><button data-tab="comparisons">4. Reconciliation</button>
 <button data-tab="controls">5. Controls</button><button data-tab="receiving">6. Release and receiving</button>
@@ -50,7 +50,7 @@
 <button>Create immutable source edition</button></form><pre id="source-preview"></pre></section>
 <section id="definitions" class="tab" hidden><h2>Preserve the native definition and approved interpretation</h2>
 <p>Select the original native definition files above before saving. This records the interpretation used for reconciliation; the native tool remains the report author and renderer.</p>
-<form id="definition-form"><div class="fields"><label>Title<input name="title" required></label>
+<div class="fields"><label>Existing definition to edit<select id="definition-copy" data-kind="finance.definition"></select></label><button id="copy-definition">Copy retained definition into draft</button></div><form id="definition-form"><div class="fields"><label>Title<input name="title" required></label>
 <label>Report family<input name="family" required></label><label>Company<input name="company" required></label>
 <label>Native tool/version<input name="tool" required placeholder="Actual Business Central, Jet, Power BI or other tool"></label>
 <label>Financial basis<select name="basis_role"><option>actual</option><option>budget</option><option>commitment</option><option>forecast</option></select></label>
@@ -86,7 +86,7 @@
 <button id="load-review">Open complete discrepancy population</button><label>Reviewer role<input id="review-role"></label>
 <label>Previous review<select id="previous-review" data-kind="finance.review" data-blank="true"></select></label></div>
 <label>Review title<input id="review-title"></label><label>Review note<textarea id="review-note"></textarea></label>
-<div id="review-count"></div><div id="review-items" class="table-scroll"></div>
+<p class="hint">Choose a previous review to load its complete decisions and retained evidence. Drafts remain tied to that exact review. Editing a note keeps its existing evidence; use Attach current selected evidence to replace that decision’s selection.</p><div id="review-count"></div><div id="review-items"></div>
 <button id="review-prev">Previous 25</button><button id="review-next">Next 25</button>
 <button id="save-review">Save complete reviewed population</button></section>
 <section id="controls" class="tab" hidden><h2>Audit, change and operating evidence</h2>
@@ -96,7 +96,7 @@
 <label>Status<select name="status"><option>proposed</option><option>approved</option><option>executed</option><option>rejected</option><option>withdrawn</option></select></label>
 <label>Owner<input name="owner" required></label><label>Existing change/service/reference<input name="external_reference" required></label>
 <label>Previous control entry<select name="parent_id" data-kind="finance.control" data-blank="true"></select></label>
-<label>Actual authority actor<input name="authority_actor"></label><label>Actual authority role<input name="authority_role"></label>
+<button type="button" id="copy-control">Copy selected previous control</button><label>Actual authority actor<input name="authority_actor"></label><label>Actual authority role<input name="authority_role"></label>
 <label>Actual decision reference<input name="decision_reference"></label></div>
 <label>Related original records<select name="related_ids" id="control-records" multiple required></select></label>
 <label>Complete finding, workplan, impact or outcome<textarea name="note" required rows="5"></textarea></label>
@@ -117,7 +117,7 @@
 <section id="records" class="tab" hidden><h2>Original records and complete exports</h2>
 <div class="fields"><label>Record kind<select id="record-kind"></select></label><button id="load-records">List records</button></div>
 <div id="record-list"></div><button id="records-prev">Previous 50</button><button id="records-next">Next 50</button>
-<div id="selected-record"></div><div class="fields"><label>Result section<select id="row-section"><option>rows</option><option>population</option><option>exclusions</option><option>issues</option><option>items</option></select></label>
+<div id="selected-record"></div><div id="row-controls" hidden><div class="fields"><label>Result section<select id="row-section"><option>rows</option><option>population</option><option>exclusions</option><option>issues</option><option>items</option><option>decisions</option></select></label>
 <label>Find in complete row content<input id="row-query"></label><button id="load-rows">Read rows</button></div>
-<div id="rows"></div><button id="rows-prev">Previous 50</button><button id="rows-next">Next 50</button><pre id="record-json"></pre></section>
-</main><footer>Source and calculation evidence · Existing workspace and operation journal · No tenant writes</footer></body></html>
+<div id="rows"></div><button id="rows-prev">Previous 50</button><button id="rows-next">Next 50</button></div><pre id="record-json"></pre></section>
+</main></div><footer>Source and calculation evidence · Existing workspace and operation journal · No tenant writes</footer></body></html>

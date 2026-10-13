@@ -8,9 +8,10 @@
     "native-chemistry-scientific-source-v2"
   ],
   "source_reference": {
-    "native_commit": "798e99fa0d7d56cd3fe84a890251af210c03af77",
+    "native_commit": "730fe92139fa31d86cac5e75a64545f5d236906a",
     "composed_current_main": "9b1aa2c7d06ce321a04bde372afb5edf0a84a59e",
-    "pull_request": 3724
+    "pull_request": 3724,
+    "native_merge": "71f0c79e10f13d420d753e5b4df17cc126140e83"
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -22,13 +23,13 @@
   "files": [
     {
       "path": "model/chemistry_study_transfer.py",
-      "bytes": 23808,
-      "sha256": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c"
+      "bytes": 24377,
+      "sha256": "2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca"
     },
     {
       "path": "model/CHEMISTRY_STUDY_TRANSFER.md",
-      "bytes": 7956,
-      "sha256": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923"
+      "bytes": 10077,
+      "sha256": "8bc2ff5f3ba72f1e25ee2f94f2b9f7c10d5898da4c57d60312f7f380eabd0a61"
     },
     {
       "path": "source_tools/chemistry_study_composition.py",
@@ -57,8 +58,8 @@
     },
     {
       "path": "model/CHEMISTRY_REPORT_SOURCE.md",
-      "bytes": 12283,
-      "sha256": "cf3f23b24fa0c68735ecc10caf028b2f6e4101888df65b0ba358c9e671fe651d"
+      "bytes": 13283,
+      "sha256": "b5a3f78a03fd469a7d084a07ad63f1c514219b240c8866c84faba4ff11a3db81"
     },
     {
       "path": "integration/component_fragments/chemistry_report_sources.json",
@@ -142,8 +143,8 @@
     },
     {
       "path": "operator/web/chemistry.mjs",
-      "bytes": 29979,
-      "sha256": "e0f8d00d07bace633eb81a22830961276b1840dbd0814743059ee91e3e4b64ae"
+      "bytes": 30779,
+      "sha256": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3"
     },
     {
       "path": "operator/web/chemistry-native.mjs",
@@ -157,8 +158,8 @@
     },
     {
       "path": "operator/CHEMISTRY_OPERATOR.md",
-      "bytes": 12458,
-      "sha256": "8a5de6422c30600f34ec83d8c27aa385dd1e27add258b1d0e30ef6a724f50938"
+      "bytes": 19277,
+      "sha256": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c"
     },
     {
       "path": "CHEMISTRY.md",
@@ -177,8 +178,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 15605,
-      "sha256": "916af699e3271bf452d95d958e92cbe92d829dc6e774c5947e82506f783cf631"
+      "bytes": 24097,
+      "sha256": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -192,8 +193,8 @@
     },
     {
       "path": "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
-      "bytes": 7983,
-      "sha256": "ba82be927a9fac599a8cf93bb2db57e4efe331228fdbb77ea908d633df766c2d"
+      "bytes": 8197,
+      "sha256": "725ea69d04761b07a42c9743773f17beaf7eb401eecdfe1e21afb517e53b3ee5"
     },
     {
       "path": "integration/component_fragments/chemistry-compound-observations.json",
@@ -222,7 +223,14 @@
   "receiving": {
     "check": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE --dry-run",
     "install": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE",
-    "model": "Original native saved-case/run, scientific report/source and whole Workspace receiving APIs"
+    "model": "Original native saved-case/run, scientific report/source and whole Workspace receiving APIs",
+    "source_bank": "python operator/install_chemistry.py --application APPLICATION --source-bank SOURCE_BANK.json",
+    "source_bank_rule": "Use the exact matching installer retained in the verified packet; omitted required source stays bound to the actual installed application under the original lock.",
+    "prepared_source_selection": "Open this report only uses replace-v1; Add to current report preserves the original append behavior.",
+    "selected_study_editions": [
+      "native-chemistry-scientific-source-v1",
+      "native-chemistry-scientific-source-v2"
+    ]
   },
   "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard."
 }

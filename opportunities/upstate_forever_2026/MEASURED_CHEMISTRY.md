@@ -77,7 +77,7 @@ Native modes are calibrate, sensitivity, uncertainty and monitoring. The request
 
 ## Original native operation and recovery
 
-Preparation snapshots the original measured revision and every selected full record. If a concurrent edit changes the revision, it returns that conflict before source publication. A content-addressed identity, native file lock and immutable receiving receipt preserve the same selected operation across interruption. The first complete original portable snapshot is retained when a retry changes only its descriptive creation clock.
+Preparation reads the original measured revision, every selected full record and the complete portable source in one SQLite read transaction through the existing Measurements process. An explicitly expected stale revision returns a conflict before source publication. A content-addressed identity, native file lock and immutable receiving receipt preserve the same selected operation across interruption. The first complete original portable snapshot is retained when a retry changes only its descriptive creation clock.
 
 The source document and complete editable measurement snapshot enter the existing Workspace.import_sources intake. The new native Chemistry case is a child of the actual selected case, with the same physical project and both original and measured source references. Existing source cases remain available.
 

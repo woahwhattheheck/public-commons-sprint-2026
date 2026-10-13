@@ -28,13 +28,13 @@ Repeat --visit-id for an ordered subset of actual visits. Without it, the packet
 ## What completes
 
 1. The original native plan report is retained and registered as an observed scientific source through implementation_report_source.
-2. The maintained scientific_report_editions lifecycle renders the ordered original report sources; the real Operator prepares its complete companion ZIP. The original full preview is saved before rendering, so a lost completion reply reconnects to that exact edition.
+2. The maintained scientific_report_editions lifecycle renders the ordered original report sources; the shared native report model prepares its complete companion ZIP through the same archive producer used by the web operator. The original full preview is saved before rendering, so a lost completion reply reconnects to that exact edition.
 3. scientific_briefing prepares the original report model, linked figures, slide/meeting-note index and complete briefing ZIP.
 4. field_deployment prepares the selected revision's printable crew packet, offline field workbench, native editable plan, original selected records, calendar, sites and attachments.
 5. The selected scientific report Study includes the native report's complete editable Implementation lineage and crew packets through the existing dependency resolver.
 6. NativeProjectTransfer indexes and restores that exact Study archive. It also captures and restores the complete original Workspace, including its saved scientific briefing.
 7. Each received application starts a fresh Python process. The child reopens the original plan/revision, report source, saved scientific edition and crew packet. The Study child additionally exercises study_receiving.detail and requires the captured crew packet to be available from its original Study. The Workspace child reopens the complete saved briefing.
-8. START_HERE.html links to the actual received scientific report, complete offline briefing, crew packet and ZIP, offline workbench, original editable plan and both complete archives. The complete original briefing ZIP is streamed into briefing-view/ with every retained member checked, so its relative report and figure links resolve. The page tells the field user to import the linked original plan into the offline workbench.
+8. START_HERE.html links to the actual received scientific report, complete offline briefing, crew packet and ZIP, offline workbench, original editable plan and both complete archives. The complete original briefing ZIP is streamed into briefing-view/ with every retained member checked, so its relative report and figure links resolve. For a packet with the saved plan embedded, the page opens directly into the original plan and selected-visit workflow. Older completed packets retain their original plan-import guidance. The completed plan-and-files ZIP returns through the maintained native field workflow.
 
 The selected Study and whole Workspace have different scopes: the Study contains the selected scientific report and its native editable fieldwork; the whole Workspace also retains the full scientific briefing bank. The output names those scopes explicitly.
 

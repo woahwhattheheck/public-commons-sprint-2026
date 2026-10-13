@@ -20,6 +20,7 @@ class ReportChangesDesk {
     this.plan={row_keys:{},include_positions:false};this.preview=null;this.opened=null;this.page=null;
     this.filter={category:'',table_id:'',status:''};this.history=[];this.after=0;
     this.pending=null;this.busy=false;this.error='';this.notice='';this.archive=null;
+    this.transferGeneration=0;
     try{
       const saved=JSON.parse(sessionStorage.getItem(this.storage)||'null');
       if(saved?.workspace===this.workspace){
@@ -133,11 +134,39 @@ class ReportChangesDesk {
     }finally{if(this.resolving===pending.id)this.resolving=null;if(this.valid())this.render();}
   }
   async open(id){
+    ++this.transferGeneration;
     const turn=++this.readGeneration;const result=await this.read('/api/report-changes/detail',{id});
     if(!this.valid()||turn!==this.readGeneration)return;
     if(result.workspace_key!==this.workspace||result.comparison?.id!==id)throw Error('The selected comparison changed.');
     this.opened=result;this.archive=null;this.filter={category:'',table_id:'',status:''};this.history=[];this.after=0;
     this.page=null;this.error='';this.render();await this.readRows(0);
+  }
+  async transfer(id){
+    if(!this.valid())return;
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose a saved report comparison.');
+    const turn=++this.transferGeneration,workspace=this.workspace;
+    try{
+      const result=await this.read('/api/report-changes/detail',{id});
+      if(!this.valid()||turn!==this.transferGeneration)return;
+      const value=result.comparison;
+      if(result.workspace_key!==workspace||value?.id!==id||value.schema!=='upstate.scientific-report-comparison/v1'||value.state!=='complete')
+        throw Error('The transfer returned a different completed comparison.');
+      if(typeof this.host.openDesk!=='function')throw Error('Open this comparison in the current original operator to transfer its editable history.');
+      return await this.host.openDesk('study-transfer','openForStudies',{
+        workspace_key:workspace,roots:[{kind:'scientific-report-comparisons',id,title:value.title,state:'complete'}]
+      });
+    }catch(error){
+      if(!this.valid()||turn!==this.transferGeneration)return;
+      throw error;
+    }
+  }
+  async openForStudy(selection={}){
+    if(!this.valid()||selection.workspace_key!==this.workspace)
+      throw Error('Choose the comparison in its registered Workspace.');
+    if(!/^[0-9a-f]{64}$/.test(selection.id||''))throw Error('Choose the original saved comparison identifier.');
+    await this.open(selection.id);
+    if(!this.valid()||this.opened?.comparison.id!==selection.id)return;
+    return {view:'report-changes',workspace_key:this.workspace,id:selection.id};
   }
   async readRows(after){
     if(!this.opened||!this.valid())return;
@@ -171,6 +200,7 @@ class ReportChangesDesk {
       const {action:taskAction,payload}=this.pending;this.pending=null;this.save();await this.queue(taskAction,payload);return;
     }
     if(action==='open'){await this.open(button.dataset.id);return;}
+    if(action==='transfer'){await this.transfer(button.dataset.id||this.opened?.comparison.id);return;}
     if(action==='export'){await this.queue('report-changes.export',{id:this.opened.comparison.id});return;}
     if(action==='next'&&this.page?.next_after!=null){this.history.push(this.after);await this.readRows(this.page.next_after);return;}
     if(action==='previous'&&this.history.length){await this.readRows(this.history.pop());return;}
@@ -187,7 +217,7 @@ class ReportChangesDesk {
       <div class="rc-actions"><button data-report-change-action="review"${locked||!this.left||!this.right?' disabled':''}>Review reports and matching</button><button data-report-change-action="prepare"${locked||!this.preview?.id?' disabled':''}>${this.preview?.existing?'Reopen exact comparison':'Prepare complete comparison'}</button></div>
       ${this.previewHTML(disabled)}
       ${this.catalog.issues.length?`<section class="rc-panel"><h3>Saved comparisons needing attention</h3>${this.catalog.issues.map(row=>`<p>${esc(row.id)}: ${esc(row.message)}</p>`).join('')}</section>`:''}
-      <h3>Saved comparisons</h3>${this.catalog.comparisons.length?`<div class="rc-scroll"><table><thead><tr><th>Earlier → later</th><th>Contents</th><th>Open</th></tr></thead><tbody>${this.catalog.comparisons.map(row=>`<tr><td>${esc(row.left.title)} → ${esc(row.right.title)}<small class="rc-mono">${esc(row.id)}</small></td><td>${row.change_count.toLocaleString()} recorded changes</td><td><button data-report-change-action="open" data-id="${esc(row.id)}">Open comparison</button></td></tr>`).join('')}</tbody></table></div>`:'<p>Saved comparisons appear here after preparation.</p>'}
+      <h3>Saved comparisons</h3>${this.catalog.comparisons.length?`<div class="rc-scroll"><table><thead><tr><th>Earlier → later</th><th>Contents</th><th>Open</th></tr></thead><tbody>${this.catalog.comparisons.map(row=>`<tr><td>${esc(row.left.title)} → ${esc(row.right.title)}<small class="rc-mono">${esc(row.id)}</small></td><td>${row.change_count.toLocaleString()} recorded changes</td><td><button data-report-change-action="open" data-id="${esc(row.id)}">Open comparison</button><button data-report-change-action="transfer" data-id="${esc(row.id)}">Transfer editable comparison</button></td></tr>`).join('')}</tbody></table></div>`:'<p>Saved comparisons appear here after preparation.</p>'}
       ${this.detailHTML()}`;
   }
   previewHTML(disabled){
@@ -202,7 +232,7 @@ class ReportChangesDesk {
     const categories=[...new Set(record.statistics.map(row=>row.category))];
     return `<section class="rc-detail"><h3>${esc(record.title)}</h3><p>${record.change_count.toLocaleString()} recorded changes across ${record.tables.length} original tables. Both complete editions are retained in this comparison.</p>
       <div class="rc-pair">${originals.map(row=>`<section class="rc-panel"><strong>${row.side==='left'?'Earlier':'Later'}: ${esc(row.title)}</strong><small class="rc-mono">${esc(row.id)}</small>${row.viewer_url?`<p><a href="${esc(row.viewer_url)}" target="_blank" rel="noopener noreferrer">Open complete original report</a></p>`:''}</section>`).join('')}</div>
-      <div class="rc-actions"><button data-report-change-action="export"${this.pending||this.busy?' disabled':''}>Prepare full comparison ZIP</button>${this.archive?download(this.archive.url,'Download both originals and comparison'):''}${files.map(row=>download(row.url,row.label)).join('')}</div>
+      <div class="rc-actions"><button data-report-change-action="transfer" data-id="${esc(record.id)}">Transfer editable comparison</button><button data-report-change-action="export"${this.pending||this.busy?' disabled':''}>Prepare full comparison ZIP</button>${this.archive?download(this.archive.url,'Download both originals and comparison'):''}${files.map(row=>download(row.url,row.label)).join('')}</div>
       <p class="rc-note">The ZIP can be reopened and re-compared offline without the GIS runtime. Original units, support, methods, headings and source bytes remain unchanged.</p>
       <div class="rc-filters"><label>Change type<select data-report-change-field="filter_category">${option('','All types',this.filter.category)}${categories.map(c=>option(c,c,this.filter.category)).join('')}</select></label>
       <label>Original table<select data-report-change-field="filter_table_id">${option('','All tables and metadata',this.filter.table_id)}${record.tables.map(t=>option(t.id,t.heading+' · table '+t.identity.table_occurrence,this.filter.table_id)).join('')}</select></label>
@@ -221,12 +251,13 @@ class ReportChangesDesk {
     };
     return `<div class="rc-scroll"><table><thead><tr><th>Change / original position</th><th>Earlier</th><th>Later</th></tr></thead><tbody>${this.page.rows.map(row=>`<tr><td><strong>${esc(row.status.replaceAll('_',' '))}</strong><small>#${row.seq} · ${esc(row.category)}</small>${row.table_id?`<small>${esc(tables.get(row.table_id)?.heading)}</small>`:''}<pre>${esc(show(row.locator))}</pre><small>Position ${row.left_position==null?'—':row.left_position+1} → ${row.right_position==null?'—':row.right_position+1}</small></td><td>${cells(row,'left')}</td><td>${cells(row,'right')}</td></tr>`).join('')}</tbody></table></div>`;
   }
-  detach(){this.gone=true;this.generation++;this.readGeneration++;this.controller.abort();}
+  detach(){this.transferGeneration++;this.gone=true;this.generation++;this.readGeneration++;this.controller.abort();}
 }
 
 export function attachReportChanges(host){
   let active=null;
   return {mount(root){active?.detach();active=new ReportChangesDesk(root,host);const instance=active;void instance.start().catch(error=>instance.fail(error));},
     update(state){const instance=active;if(instance)void instance.update(state).catch(error=>instance.fail(error));},
+    async openForStudy(selection){if(!active)throw Error('Open the original Report changes desk first.');return active.openForStudy(selection);},
     detach(){active?.detach();active=null;}};
 }

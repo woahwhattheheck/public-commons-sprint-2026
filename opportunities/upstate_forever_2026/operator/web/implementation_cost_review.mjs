@@ -1,3 +1,4 @@
+import {createEconomicRecoveryStore} from './economic_request_store.mjs';
 import {clone,esc,parseMoney,money} from './implementation_core.mjs';
 const SHA=/^[a-f0-9]{64}$/;
 const ACTION='implementation.cost-review.apply';
@@ -46,7 +47,7 @@ export class ImplementationCostReview{
   this.w=w;this.host=w.host;this.workspace=w.workspace;this.planId=w.plan.id;this.savedPlan=clone(w.nativePlan);this.generation=w.generation;this.planStamp=stable(w.plan);this.digest=null;this.closed=false;this.busy=false;this.controllers=new Set();this.timer=null;this.turn=0;
   this.catalog=null;this.context=null;this.candidateId='';this.drafts={};this.draft=null;this.preview=null;this.previewStamp=null;this.receipt=null;this.pending=null;this.error='';this.notice='';this.storageIssue='';this.query='';this.filter='required';this.page=0;this.selectedRow=null;
   this.storageKey='upstate.implementation-cost-review/v1/'+this.workspace+'/'+this.planId;
-  try{const value=JSON.parse(localStorage.getItem(this.storageKey)||'null');if(value){if(value.workspace_key!==this.workspace||value.plan_id!==this.planId)throw Error('The retained cost review belongs to another original plan.');this.drafts=value.drafts||{};this.candidateId=value.candidate_id||'';this.receipt=value.receipt||null;if(value.pending){if(!validPending(value.pending,this.planId))throw Error('Recover the original cost request before starting another review.');this.pending=value.pending;}}}catch(e){this.restoreBlocked=true;this.error=e.message||String(e);}
+  this.recoveryStore=createEconomicRecoveryStore(this.workspace,'implementation-cost-review/'+this.planId,this.storageKey);
   this.node=document.createElement('dialog');this.node.className='iw-cost-review';this.node.setAttribute('aria-label','Review implementation costs in the original Economic scenario');
   this.node.addEventListener('click',e=>{const b=e.target.closest('[data-cr-action]');if(!b||!this.node.contains(b))return;e.preventDefault();e.stopPropagation();this.action(b).catch(error=>this.fail(error));});
   this.node.addEventListener('input',e=>this.input(e.target));
@@ -58,14 +59,33 @@ export class ImplementationCostReview{
  current(){if(!this.alive())throw new DOMException('The original implementation plan changed while its cost review was open.','AbortError');}
  locked(){return this.busy||!!this.pending||this.restoreBlocked;}
  draftKey(){return this.digest+'/'+this.candidateId;}
- persist(){if(this.closed||this.restoreBlocked)return false;if(this.draft&&this.digest&&this.candidateId)this.drafts[this.draftKey()]=clone(this.draft);try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-cost-review-draft/v1',workspace_key:this.workspace,plan_id:this.planId,candidate_id:this.candidateId,drafts:this.drafts,pending:this.pending,receipt:this.receipt?{...this.receipt,draft:{id:this.receipt.draft?.id,title:this.receipt.draft?.title},edition:{id:this.receipt.edition?.id,title:this.receipt.edition?.title,open_url:this.receipt.edition?.open_url},files:[],_downloads:[]}:null}));this.storageIssue='';return true;}catch{this.storageIssue='Browser storage is unavailable. Download the original review or request before closing; a new request cannot be sent until it is retained.';return false;}}
+ state(){
+  if(this.draft&&this.digest&&this.candidateId)this.drafts[this.draftKey()]=clone(this.draft);
+  return {schema:'upstate.implementation-cost-review-draft/v1',workspace_key:this.workspace,plan_id:this.planId,candidate_id:this.candidateId,drafts:this.drafts,pending:this.pending,receipt:this.receipt?{...this.receipt,draft:{id:this.receipt.draft?.id,title:this.receipt.draft?.title},edition:{id:this.receipt.edition?.id,title:this.receipt.edition?.title,open_url:this.receipt.edition?.open_url},files:[],_downloads:[]}:null};
+ }
+ restore(value){
+  if(!value)return;
+  if(value.workspace_key!==this.workspace||value.plan_id!==this.planId)throw Error('The retained cost review belongs to another original plan.');
+  if(value.pending&&!validPending(value.pending,this.planId))throw Error('The retained cost request is incomplete. Open the exact original recovery file.');
+  this.context=null;this.draft=null;this.preview=null;this.previewStamp=null;this.selectedRow=null;this.page=0;
+  this.drafts=value.drafts||{};this.candidateId=value.candidate_id||'';this.receipt=value.receipt||null;this.pending=value.pending||null;
+ }
+ async persist({required=false}={}){
+  if(this.closed||this.restoreBlocked){if(required)throw Error('Recover the original retained cost state first.');return false;}
+  try{const result=await this.recoveryStore.save(this.state());this.storageIssue=result.warning||'';return true;}
+  catch(error){this.storageIssue=error.message||String(error);if(required)throw error;return false;}
+ }
  fail(error){if(error?.name==='AbortError'||!this.alive())return;this.error=error?.message||String(error);this.busy=false;this.render();}
  close(){if(this.closed)return;this.persist();this.closed=true;this.turn++;clearTimeout(this.timer);for(const c of this.controllers)c.abort();this.controllers.clear();this.node.close();this.node.remove();if(this.w.costReviewEditor===this)this.w.costReviewEditor=null;}
  async request(path,values={},body){this.current();const c=new AbortController();this.controllers.add(c);try{const r=await this.host.api(this.host.endpoint(path,{workspace:this.workspace,...values}),{...(body===undefined?{}:{method:'POST',body}),signal:c.signal});this.current();return r;}finally{this.controllers.delete(c);}}
  base(){return {plan_id:this.planId,revision:this.savedPlan.revision,document_digest:this.digest};}
  checkBinding(value){const b=value.binding||{},p=value.plan||value.context?.plan;if(value.workspace_key!==this.workspace||b.plan_id!==this.planId||b.revision!==this.savedPlan.revision||b.document_digest!==this.digest||b.candidate_id!==this.candidateId||(p&&p.id!==this.planId))throw Error('The cost source differs from the selected saved plan and scenario.');}
  async start(){
+  try{const loaded=await this.recoveryStore.load();this.current();this.restore(loaded.state);this.storageIssue=loaded.warning||'';}catch(error){this.restoreBlocked=true;this.error=error.message||String(error);this.render();return;}
   if(this.restoreBlocked)return;
+  await this.startNative();
+ }
+ async startNative(){
   this.busy=true;this.render();
   try{
    const detail=await this.request('/api/implementation/detail',{id:this.planId,revision:this.savedPlan.revision});
@@ -75,7 +95,7 @@ export class ImplementationCostReview{
    if(catalog.workspace_key!==this.workspace||catalog.plan?.id!==this.planId||catalog.plan?.revision!==this.savedPlan.revision||(catalog.plan.sha256||catalog.plan.document_digest)!==this.digest||!Array.isArray(catalog.candidates))throw Error('The cost catalogue differs from the original saved plan.');
    this.catalog=catalog;
    if(this.pending?.id)await this.poll();
-   if(this.candidateId&&catalog.candidates.some(row=>row.id===this.candidateId)&&!this.pending)await this.loadContext(this.candidateId);
+   if(!this.context&&this.candidateId&&catalog.candidates.some(row=>row.id===this.candidateId)&&!this.pending)await this.loadContext(this.candidateId);
    if(this.receipt&&!this.pending)await this.refreshReceipt();
   }finally{if(this.alive()){this.busy=false;this.render();}}
  }
@@ -97,6 +117,10 @@ export class ImplementationCostReview{
   object[parts.at(-1)]=target.type==='checkbox'?target.checked:target.value;this.invalidate();
  }
  async change(target){
+  if(target.dataset.cr==='recovery-file'){
+   const file=target.files?.[0];target.value='';if(!file)return;if(this.busy)throw Error('Wait for the original request before opening a recovery file.');if(file.size>128*1024*1024)throw Error('Choose a recovery file within 128 MiB.');const value=JSON.parse(await file.text());this.current();const state=await this.recoveryStore.importFile(value,this.pending);this.current();this.restore(state);this.restoreBlocked=false;this.storageIssue=this.recoveryStore.warning;this.preview=null;this.previewStamp=null;this.error='';
+   if(!this.digest||!this.catalog)await this.startNative();else{if(this.pending?.id)await this.poll();if(!this.pending&&!this.context&&this.candidateId&&this.catalog.candidates.some(x=>x.id===this.candidateId))await this.loadContext(this.candidateId);}this.render();return;
+  }
   if(target.dataset.cr==='candidate'){if(this.locked())throw Error('Recover the original request first.');await this.loadContext(target.value);return;}
   if(target.dataset.cr==='filter'){this.filter=target.value;this.page=0;this.renderRows();return;}
   if(target.dataset.cr==='review-file'){
@@ -118,11 +142,11 @@ export class ImplementationCostReview{
   if(this.locked()||this.w.pending)throw Error('Finish or recover the original request first.');
   const preview=this.preview;if(!preview?.can_apply||!SHA.test(preview.operation_id||'')||stable(toReview(this.draft,this.context))!==this.previewStamp)throw Error('Preview the current complete cost review before saving.');
   this.current();this.w.cache();this.pending={action:ACTION,operation_id:id(),payload:{...this.base(),candidate_id:this.candidateId,review:clone(preview.review),expected_operation_id:preview.operation_id},state:'submitting'};
-  if(!this.persist()){this.pending=null;throw Error(this.storageIssue);}await this.submit();
+  try{await this.persist({required:true});}catch(error){this.pending.state='storage_unavailable';this.render();throw error;}await this.submit();
  }
  async submit(){
   const p=this.pending;if(!p||this.busy)return;this.busy=true;this.error='';
-  if(!this.persist()){this.busy=false;throw Error(this.storageIssue);}this.render();
+  try{await this.persist({required:true});await this.recoveryStore.verifyRequest(p);}catch(error){this.busy=false;throw error;}this.render();
   try{if(p.id){await this.poll();return;}const response=await this.request('/api/actions',{}, {workspace:this.workspace,action:p.action,payload:p.payload,operation_id:p.operation_id});if(this.pending!==p)return;const task=response.task||response;if(task.workspace&&task.workspace!==this.workspace)throw Error('The original task belongs to another Workspace.');if(!task.id)throw Error('No native task ID was returned. Recover the same original request.');p.id=task.id;p.state=task.state||'queued';this.persist();await this.poll();}
   catch(error){if(this.alive()&&this.pending===p&&!p.id){p.state='response_unconfirmed';this.persist();}throw error;}
   finally{if(this.alive()){this.busy=false;this.render();}}
@@ -133,13 +157,14 @@ export class ImplementationCostReview{
  }
  async poll(){
   clearTimeout(this.timer);const p=this.pending;if(!p?.id||!this.alive())return;
+  await this.persist({required:true});await this.recoveryStore.verifyRequest(p);
   const value=await this.request('/api/task',{id:p.id}),task=value.task||value;if(this.pending!==p)return;
-  if(task.workspace!==this.workspace||task.action!==p.action||task.operation_id!==p.operation_id||stable(task.payload)!==stable(p.payload))throw Error('The native task differs from the original cost review request.');
+  if(task.id!==p.id||task.workspace!==this.workspace||task.action!==p.action||task.operation_id!==p.operation_id||stable(task.payload)!==stable(p.payload))throw Error('The native task differs from the original cost review request.');
   p.state=task.state;this.persist();
   if(task.state==='complete'){
    this.checkReceipt(task.result,p.payload);this.receipt={...clone(task.result),task_id:task.id,request:clone(p),_downloads:clone(task._downloads||task.result._downloads||[])};
    this.pending=null;this.preview=null;this.previewStamp=null;this.notice='Reviewed inputs and the complete Economic edition are saved. The original plan revision, ledger, physical outputs and open browser draft remain unchanged.';this.persist();
-   await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive())this.render();return;
+   await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive()&&!this.context&&this.candidateId&&this.catalog?.candidates.some(row=>row.id===this.candidateId))await this.loadContext(this.candidateId);if(this.alive())this.render();return;
   }
   if(['failed','cancelled','interrupted'].includes(task.state)){this.error=task.error?.message||'The original cost task '+task.state+'.';this.render();return;}
   this.render();this.timer=setTimeout(()=>this.poll().catch(error=>this.fail(error)),2000);
@@ -190,7 +215,7 @@ export class ImplementationCostReview{
  render(){
   if(this.closed)return;const c=this.context,d=this.draft,locked=this.locked(),original=c?.original_cost;
   this.node.innerHTML='<style>'+styles+'</style><header><div><h2>Review economic costs</h2><p>Saved plan '+esc(this.savedPlan.title)+' · revision '+esc(this.savedPlan.revision)+'. The open browser draft stays separate.</p></div>'+btn('close','Close')+'</header><main>'+
-   (this.error?'<div class="cr-error" role="alert">'+esc(this.error)+'</div>':'')+(this.storageIssue?'<p class="cr-error">'+esc(this.storageIssue)+'</p>':'')+(this.notice?'<p class="cr-note" role="status">'+esc(this.notice)+'</p>':'')+this.pendingHtml()+this.receiptHtml()+
+   (this.error?'<div class="cr-error" role="alert">'+esc(this.error)+'</div>':'')+(this.storageIssue?'<p class="cr-error">'+esc(this.storageIssue)+'</p>':'')+(this.notice?'<p class="cr-note" role="status">'+esc(this.notice)+'</p>':'')+this.pendingHtml()+this.receiptHtml()+'<div class="cr-actions">'+btn('recovery-download','Download exact recovery file')+btn('recovery-open','Open original recovery file',this.busy)+'</div><input type="file" data-cr="recovery-file" accept=".json,application/json" hidden>'+
    '<section class="cr-box"><h3>Original Economic scenario</h3>'+field('Saved implementation candidate','<select data-cr="candidate"'+(locked||!this.catalog?' disabled':'')+'>'+opt('','Choose a source-bound candidate',this.candidateId)+(this.catalog?.candidates||[]).map(x=>opt(x.id,x.label||x.id,this.candidateId)).join('')+'</select>')+(this.catalog&&!this.catalog.candidates.length?'<p>No candidate in this saved revision has an original Economic source. Use the Economic desk’s Plan implementation flow to retain the original scenario before reviewing its ledger.</p>':'')+'</section>'+
    (c&&d?'<section class="cr-box"><h3>Original source and cost basis</h3><p>Scenario '+esc(c.binding.run_id)+' · report '+esc(c.binding.report_id)+' · zone '+esc(c.binding.zone_id)+'.</p><p>'+(original?'Original cost: '+esc(original.capital)+' '+esc(original.currency)+' capital; '+esc(original.annual_operating)+' '+esc(original.currency)+'/year; '+esc(original.horizon_years)+' years; real rate '+esc(original.discount_rate)+'.':'The original scenario has no cost estimate. Enter an explicit horizon and real discount rate.')+'</p><details><summary>Complete frozen scenario, cost and modeled source context</summary>'+json(c)+'</details>'+btn('context-download','Download original source context')+'</section>'+
    '<section class="cr-box"><h3>Original ledger and explicit allocations</h3><p>Only actual expense rows can supply observed capital or operating context. Budgets and commitments are retained separately. Each directly attributed actual row needs a deliberate choice.</p><div class="cr-three">'+[['Budget','budget'],['Commitment','commitment'],['Actual','actual']].map(([l,k])=>'<div><strong>'+l+'</strong><p>'+esc(money(c.candidate_ledger_totals_minor?.[k]||0))+' directly attributed · '+esc(money(c.ledger_totals_minor?.[k]||0))+' whole plan</p></div>').join('')+'</div><div class="cr-grid">'+field('Search original rows','<input data-cr="query" value="'+esc(this.query)+'" placeholder="Label, invoice, task, candidate or exact ID">')+field('Show','<select data-cr="filter">'+[['required','Required decisions'],['candidate','Candidate actuals'],['shared','Shared / other actuals'],['actual','All actuals'],['capital','Selected capital'],['operating','Selected operating'],['exclude','Excluded actuals'],['context','Budgets and commitments'],['all','All original rows']].map(([v,l])=>opt(v,l,this.filter)).join('')+'</select>')+'</div><div data-cr-rows>'+this.rowsHtml()+'</div>'+this.rowHtml()+'</section>'+
@@ -201,6 +226,8 @@ export class ImplementationCostReview{
  async action(b){
   const action=b.dataset.crAction;
   if(action==='close'){this.close();return;}
+  if(action==='recovery-download'){download(this.planId+'-economic-original-recovery.json',await this.recoveryStore.exportFile(this.state()));return;}
+  if(action==='recovery-open'){if(this.busy)throw Error('Wait for the original task lookup.');this.node.querySelector('[data-cr="recovery-file"]').click();return;}
   if(action==='previous'||action==='next'){this.page+=action==='previous'?-1:1;this.renderRows();return;}
   if(action==='row'){this.selectedRow=b.dataset.id;this.render();return;}
   if(action==='rows-download'){download(this.planId+'-matching-cost-rows.json',{binding:this.context.binding,filter:this.filter,query:this.query,rows:this.rows().map(row=>({...clone(row),reviewed_choice:clone(this.draft.row_decisions[row.id]||null)}))});return;}

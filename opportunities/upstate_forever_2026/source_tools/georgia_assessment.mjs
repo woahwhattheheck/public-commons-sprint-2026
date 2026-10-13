@@ -374,8 +374,58 @@ export function georgiaReportSection(bank, {basin='Savannah', requireGeography=f
       r.geography.huc12s.join(', ')||r.geography.status||'Not yet joined',r.notes]),
     widths:[.12,.18,.10,.07,.12,.12,.29]
   });
+  const documentRows=rows.filter(row=>row.published_document_context?.length);
+  if(documentRows.length) {
+    blocks.push('The publisher GIS text fields have a declared capacity. The following separately cited published-document summaries supply context beyond those captured fields; original GIS values and listing categories remain intact.');
+    blocks.push({kind:'table',columns:['Original reach','Published document context','Original PDF page'],
+      rows:documentRows.map(row=>[row.native_reach_id+' — '+row.reach_name,
+        row.published_document_context.map(item=>item.summary).join(' '),
+        row.published_document_context.map(item=>String(item.pdf_page_index+1)).join(', ')]),
+      widths:[.24,.64,.12]});
+  }
   blocks.push({kind:'links',items:[{title:'Complete original normalized assessment rows and notes',path:'assessments.json'}]});
   return ['Georgia approved 2024 assessed reaches',blocks];
+}
+
+/** Attach separately cited publisher document context without replacing GIS fields. */
+export function attachGeorgiaDocumentContext(bank, context) {
+  if(context.schema!=='upstate.georgia-document-context/v1' || !Array.isArray(context.records))
+    throw new Error('Select the original published-document context');
+  const result=clone(bank), byReach=new Map();
+  for(const item of context.records) {
+    if(!item.native_reach_id || !item.source_uri || !item.summary ||
+       !Number.isInteger(item.pdf_page_index) || item.pdf_page_index<0 ||
+       !/^[0-9a-f]{64}$/i.test(item.gis_capture_sha256))
+      throw new Error('Document context requires source-specific reach and page identity');
+    const records=byReach.get(item.native_reach_id)||[];
+    records.push(clone(item));byReach.set(item.native_reach_id,records);
+  }
+  const matched=new Set();
+  for(const row of result.records) {
+    const contexts=(byReach.get(row.native_reach_id)||[]).filter(item=>
+      item.gis_capture_sha256===row.source_locator.source_sha256);
+    if(contexts.length){row.published_document_context=contexts;matched.add(row.native_reach_id);}
+  }
+  result.published_document_context=clone(context);
+  result.document_context_unmatched_reach_ids=[...byReach.keys()].filter(id=>!matched.has(id));
+  return result;
+}
+
+/** Recipe consumed by the existing Scientific Reports composer. */
+export function georgiaObservedReport(bank, inputs, {requireGeography=false}={}) {
+  const seen=new Set();
+  for(const input of inputs) {
+    if(typeof input.path!=='string' || !input.path || seen.has(input.path) ||
+       !Number.isSafeInteger(input.bytes) || input.bytes<0 || !/^[0-9a-f]{64}$/i.test(input.sha256))
+      throw new Error('Report inputs require unique retained file identities');
+    seen.add(input.path);
+  }
+  return {schema:'upstate.observed-report/v1',
+    title:'Georgia approved 2024 assessment context',
+    edition:'ga-final-2024-'+(bank.source.source_format==='arcgis_feature_response'?'publisher-gis':'workbook')+'-20261013',
+    vintage:'2024',interpretation_kind:'published_assessment_context',
+    inputs:clone(inputs),sections:[georgiaReportSection(bank,{requireGeography})],
+    source_links:inputs.map(input=>input.path)};
 }
 
 /** Normalize original ArcGIS feature responses as their own publisher edition. */
@@ -388,7 +438,7 @@ export function normalizeGeorgiaFeatureSources(selection, captureBodies, identit
     throw new Error('Retain source identity and original capture selection');
   if(edition?.assessment_cycle!==2024 || edition?.publication_status!=='EPA-approved' ||
      edition?.approval_date!=='2024-09-03')
-    throw new Error('Select the approved Georgia2024 publisher edition');
+    throw new Error('Select the approved Georgia 2024 publisher edition');
   const columns={reach_id:'ReachID',reach_name:'Name',reach_location:'Location',
     county:'County',basin:'Basin',uses:'Uses',assessment:'Assessment',category:'Category',
     causes:'Cause',sources:'Source',data_provider:'DataSource',size:'Size',unit:'SizeUnit',
@@ -446,6 +496,12 @@ export function normalizeGeorgiaFeatureSources(selection, captureBodies, identit
       record.native_feature_id=featureId;record.native_feature_id_field=oid;
       record.source_format='arcgis_feature_response';
       record.water_type_raw=feature.attributes.WaterType??null;
+      record.gis_fields_at_declared_capacity=original.fields.filter(field=>
+        field.type==='esriFieldTypeString' && Number.isInteger(field.length) &&
+        typeof feature.attributes[field.name]==='string' &&
+        [...feature.attributes[field.name]].length>=field.length
+      ).map(field=>({field:field.name,declared_length:field.length,
+        observed_length:[...feature.attributes[field.name]].length}));
       bank.records.push(record);
     }
     for(const row of normalized.nonAssessmentRows) bank.non_assessment_rows.push({
@@ -506,26 +562,42 @@ async function emitGeorgiaFeatureSources(args,inputDocument,input) {
     retained.push({path:relative,bytes:body.length,sha256:sha(body)});
   }
   let bank=normalizeGeorgiaFeatureSources(inputDocument,bodies,sha);
+  if(args['document-context']) {
+    const body=await readFile(args['document-context']);
+    bank=attachGeorgiaDocumentContext(bank,JSON.parse(body.toString('utf8')));
+    await writeFile(join(output,'published-document-context.json'),body);
+    retained.push({path:'published-document-context.json',bytes:body.length,sha256:sha(body)});
+  }
+  bank.retained_source_root='originals';
   if(Boolean(args.relations)!==Boolean(args['domain-hucs']))
     throw new Error('Supply both original relations and domain HUCs');
   if(args.relations) bank=attachGeorgiaGeography(bank,
     JSON.parse(await readFile(args.relations,'utf8')),JSON.parse(await readFile(args['domain-hucs'],'utf8')));
-  await writeFile(join(output,'original-feature-selection.json'),input);
-  retained.push({path:'original-feature-selection.json',bytes:input.length,sha256:sha(input)});
+  await writeFile(join(output,'originals','selection.json'),input);
+  retained.push({path:'originals/selection.json',bytes:input.length,sha256:sha(input)});
   const entries=[];
   for(const [path,value,kind,role,title] of [
-    ['assessments.json',bank,'table','GEORGIA_ASSESSMENT_REACHES','Georgia2024 original GIS reach assessments'],
+    ['assessments.json',bank,'table','GEORGIA_ASSESSMENT_REACHES','Georgia 2024 original GIS reach assessments'],
     ['report-section.json',georgiaReportSection(bank,{requireGeography:Boolean(args.relations)}),
-      'document','REPORT_SECTION','Georgia2024 original GIS assessment context']]) {
+      'document','REPORT_SECTION','Georgia 2024 original GIS assessment context']]) {
     const body=JSON.stringify(value,null,2)+'\n';await writeFile(join(output,path),body);
     entries.push({id:'ga2024-gis-'+path.replace(/[^a-z0-9]+/gi,'-'),title,uri:bank.source.uri,
-      vintage:'Georgia2024 approved list; captured GIS publisher edition',kind,role,path,
+      vintage:'Georgia 2024 approved list; captured GIS publisher edition',kind,role,path,
       bytes:Buffer.byteLength(body),sha256:sha(body),jurisdiction:'GA',assessment_cycle:2024,
       publication_status:'EPA-approved',source_format:'arcgis_feature_response',
       companions:retained});
   }
+  const reportInputs=[...entries.map(({path,bytes,sha256})=>({path,bytes,sha256})),...retained];
+  const recipe=georgiaObservedReport(bank,reportInputs,{requireGeography:Boolean(args.relations)});
+  const recipeBody=JSON.stringify(recipe,null,2)+'\n';
+  await writeFile(join(output,'observed-report.json'),recipeBody);
+  entries.push({id:'ga2024-gis-observed-report',title:recipe.title,uri:bank.source.uri,
+    vintage:'2024',kind:'document',role:'OBSERVED_CONTEXT',path:'observed-report.json',
+    bytes:Buffer.byteLength(recipeBody),sha256:sha(recipeBody),companions:reportInputs,
+    metadata:{related_source_ids:[entries[0].id]},
+    source_relationships:[{id:entries[0].id,relationship:'original_jurisdiction_assessment'}]});
   await writeFile(join(output,'sources.json'),JSON.stringify({schema:'upstate.sources/v1',
-    title:'Georgia2024 original GIS assessment context',captured_at:bank.source.captured_at,
+    title:'Georgia 2024 original GIS assessment context',captured_at:bank.source.captured_at,
     scope:inputDocument.scope||'Original publisher-selected feature responses',
     notes:'Original publisher GIS captures remain separate from the original workbook edition.',
     entries},null,2)+'\n');
@@ -622,6 +694,12 @@ async function main(argv) {
     {path:exportName,bytes:input.length,sha256:sha(input)},
     ...retainedExportCompanions
   ];
+  const reportInputs=[...files.map(({path,bytes,sha256})=>({path,bytes,sha256})),...files[0].companions];
+  const recipe=georgiaObservedReport(bank,reportInputs,{requireGeography:Boolean(args.relations)});
+  await emit('observed-report.json',JSON.stringify(recipe,null,2)+'\n','document','OBSERVED_CONTEXT',recipe.title);
+  Object.assign(files[files.length-1],{companions:reportInputs,
+    metadata:{related_source_ids:[files[0].id]},
+    source_relationships:[{id:files[0].id,relationship:'original_jurisdiction_assessment'}]});
   const manifest={schema:'upstate.sources/v1',title:'Georgia approved 2024 reach assessment context',
     captured_at:configuration.source.captured_at,scope:'Georgia statewide selected worksheets; report selects publisher Savannah River Basin and original study-domain geometry where joined',
     notes:'Native assessed ReachID is separate from HUC and monitoring station identity.',entries:files};

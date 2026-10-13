@@ -14,6 +14,10 @@ from datetime import datetime, timezone
 FILES = (
     "model/watershed_context.py",
     "model/watershed_brief.py",
+    "model/watershed_source_review.py",
+    "source_tools/watershed_source_review.mjs",
+    "docs/WATERSHED_SOURCE_REVIEW.md",
+    "source/utility-source-context/20261013/source-explorer.html",
     "model/watershed_briefing.py",
     "model/utility_monitoring.py",
     "model/utility_monitoring_report.py",

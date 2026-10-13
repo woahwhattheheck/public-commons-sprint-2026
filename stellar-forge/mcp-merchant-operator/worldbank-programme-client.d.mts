@@ -1,0 +1,24 @@
+export type OriginalSource={name:string;revision:number};
+export type NativeOperation={name:string;operation_id:string;workspace_id:string;status:string;accepted_edition?:Record<string,unknown>|null;can_reopen?:boolean;result?:Record<string,unknown>;[key:string]:unknown};
+export type FileDescriptor={name:string;bytes:number;sha256:string;contentType?:string};
+export declare class WorldBankProgrammeClient{
+ constructor(options:{launch:unknown;workspaceId:string;signal?:AbortSignal});
+ readonly workspaceId:string;
+ state():Promise<Record<string,unknown>>;
+ list(page?:{before?:string;limit?:number}):Promise<Record<string,unknown>>;
+ sources(page?:{before?:number;limit?:number}):Promise<Record<string,unknown>>;
+ definition(name:string):Promise<Record<string,unknown>>;
+ history(name:string,page?:{before?:number;limit?:number}):Promise<Record<string,unknown>>;
+ save(name:string,request:Record<string,unknown>):Promise<Record<string,unknown>>;
+ prepare(name:string,request:{id:string;expected_revision:number;source:OriginalSource;resume?:boolean}):Promise<NativeOperation>;
+ status(name:string,id:string):Promise<NativeOperation>;
+ review(name:string,id:string):Promise<Record<string,unknown>>;
+ publish(name:string,request:{id:string;review_sha256:string;note:string;columns?:Record<string,unknown>|null;resume?:boolean}):Promise<NativeOperation>;
+ reopen(name:string,request:{id:string;operation_id:string;resume?:boolean}):Promise<NativeOperation>;
+ comparison(id:string,options?:Record<string,unknown>):Promise<Record<string,unknown>>;
+ wait(name:string,id:string,options?:{timeoutMs?:number;pollMs?:number}):Promise<NativeOperation>;
+ download(name:string,id:string,file:FileDescriptor,output:string):Promise<unknown>;
+ close():void;
+}
+export declare function createWorldBankProgrammeDownload(connect:()=>Promise<unknown>):unknown;
+export declare function downloadWorldBankProgramme(options:{url?:string;tokenEnv?:string;workspace:string;exportId:string;expectedManifestSha256:string;directory:string;[key:string]:unknown}):Promise<unknown>;

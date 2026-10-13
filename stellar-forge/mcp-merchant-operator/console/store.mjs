@@ -10,6 +10,7 @@ import { canonical, digest, fail,
 export { canonical, digest, fail } from './records.mjs';
 import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative, settleWorkflowNative } from './workflow-records.mjs';
 import { installWorkflowRecipeTables, archiveWorkflowRecipeRows, validateWorkflowRecipeRows, importWorkflowRecipeRows } from './workflow-recipes.mjs';
+import { installSeriesTables, archiveSeriesRows, validateSeriesRows, importSeriesRows } from './workflow-series-records.mjs';
 import { ARCHIVE_SCHEMA, HOST_BINDING_SCHEMA, validateConsoleArchive } from './archive-contract.mjs';
 export { ARCHIVE_SCHEMA, HOST_BINDING_SCHEMA, validateConsoleArchive } from './archive-contract.mjs';
 const json = value => JSON.stringify(value);
@@ -41,6 +42,7 @@ export class MerchantConsoleStore {
     ].join(';'));
     installWorkflowTables(this.db);
     installWorkflowRecipeTables(this.db);
+    installSeriesTables(this.db);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema', CONSOLE_SCHEMA);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('id', randomUUID());
     if (this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema').value !== CONSOLE_SCHEMA)
@@ -51,7 +53,20 @@ export class MerchantConsoleStore {
     const depth=this.transactionDepth??0,savepoint='console_nested_'+depth;
     this.db.exec(depth?'SAVEPOINT '+savepoint:'BEGIN IMMEDIATE');this.transactionDepth=depth+1;
     try { const value=fn();this.db.exec(depth?'RELEASE SAVEPOINT '+savepoint:'COMMIT');return value; }
-    catch(error){this.db.exec(depth?'ROLLBACK TO SAVEPOINT '+savepoint:'ROLLBACK');if(depth)this.db.exec('RELEASE SAVEPOINT '+savepoint);throw error;}
+    catch (error) {
+      try {
+        this.db.exec(depth ? 'ROLLBACK TO SAVEPOINT ' + savepoint : 'ROLLBACK');
+        if (depth) this.db.exec('RELEASE SAVEPOINT ' + savepoint);
+      } catch (rollbackError) {
+        // SQLite may already have rolled back after a full disk or an I/O error.
+        // Preserve the operation failure and retain cleanup details for callers.
+        if (error && (typeof error === 'object' || typeof error === 'function')) {
+          try { Object.defineProperty(error, 'rollbackError', { value: rollbackError, configurable: true }); }
+          catch { /* A frozen thrown value must retain its original identity. */ }
+        }
+      }
+      throw error;
+    }
     finally{this.transactionDepth=depth;}
   }
   profiles() {
@@ -261,14 +276,15 @@ export class MerchantConsoleStore {
     const bindings=this.hostBindings(profileId);
     const workflowData=archiveWorkflowRows(this.db,profileId);
     const workflowRecipeData=archiveWorkflowRecipeRows(this.db,profileId);
+    const workflowSeriesData=archiveSeriesRows(this.db,profileId);
     const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries,
-      ...(bindings.length?{bindings}:{}),...(workflowData===undefined?{}:{workflowData}),...(workflowRecipeData===undefined?{}:{workflowRecipeData}) };
+      ...(bindings.length?{bindings}:{}),...(workflowData===undefined?{}:{workflowData}),...(workflowRecipeData===undefined?{}:{workflowRecipeData}),...(workflowSeriesData===undefined?{}:{workflowSeriesData}) };
     const contentSha256 = digest(canonical(packet));
     return { ...packet, contentSha256 };
     });
   }
   import(packet, { isActiveCall = () => false } = {}) {
-    const {profile,contentSha256,workflowData,workflowRecipeData,bindings}=validateConsoleArchive(packet);
+    const {profile,contentSha256,workflowData,workflowRecipeData,workflowSeriesData,bindings}=validateConsoleArchive(packet);
     return this.transaction(() => {
       const imported = this.db.prepare('SELECT profile_id FROM imports WHERE sha=?').get(contentSha256);
       if (imported) return { profile: this.profile(imported.profile_id), reused: true, contentSha256 };
@@ -312,9 +328,11 @@ export class MerchantConsoleStore {
         }
         importWorkflowRows(this.db,workflowData);
         importWorkflowRecipeRows(this.db,workflowRecipeData);
+        importSeriesRows(this.db,workflowSeriesData);
         const merged=this.archive(profile.id);
         validateWorkflowRows(merged.workflowData,{profile:merged.profile,drafts:merged.drafts,calls:merged.calls});
         validateWorkflowRecipeRows(merged.workflowRecipeData,{profile:merged.profile,drafts:merged.drafts,workflowData:merged.workflowData});
+        validateSeriesRows(merged.workflowSeriesData,{profile:merged.profile,workflowData:merged.workflowData});
         this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256,profile.id,now());
         return{profile:localProfile,receivedProfile:profile,reused:false,merged:true,contentSha256};
       }
@@ -329,6 +347,7 @@ export class MerchantConsoleStore {
       for(const value of packet.deliveries)this.db.prepare('INSERT INTO deliveries VALUES (?,?,?)').run(value.id,profile.id,json(value));
       importWorkflowRows(this.db,workflowData);
       importWorkflowRecipeRows(this.db,workflowRecipeData);
+        importSeriesRows(this.db,workflowSeriesData);
       this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256, profile.id, now());
       return { profile, reused: false, contentSha256 };
     });
