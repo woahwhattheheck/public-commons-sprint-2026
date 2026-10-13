@@ -28,15 +28,20 @@ def install(application, source, *, preview=False):
     if not (application / "operator/extension_registry.py").is_file():
         raise ValueError("Use the original application with its shared extension registry")
     manifest_path = source / "integration/monitoring_observed_sources.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_body = manifest_path.read_bytes()
+    manifest = json.loads(manifest_body.decode("utf-8"))
     if manifest.get("schema") != "upstate.monitoring-observed-source-install/v1":
         raise ValueError("Select the current complete monitoring source manifest")
+    destination = inside(application, "integration/monitoring_observed_sources.json")
+    previous_manifest = digest(destination) if destination.exists() else None
     changes = []
     for item in manifest["files"]:
         original = inside(source, item["path"])
         target = inside(application, item["path"])
-        if (not original.is_file() or original.stat().st_size != item["bytes"]
-                or digest(original) != item["sha256"]):
+        if not original.is_file():
+            raise ValueError("Current source file is absent: " + item["path"])
+        body = original.read_bytes()
+        if len(body) != item["bytes"] or hashlib.sha256(body).hexdigest() != item["sha256"]:
             raise ValueError("Current source file differs: " + item["path"])
         previous = digest(target) if target.exists() else None
         if previous == item["sha256"]:
@@ -44,10 +49,10 @@ def install(application, source, *, preview=False):
         if previous is not None and previous not in item.get("predecessor_sha256", []):
             raise ValueError("Current target contains a different owner edition: " + item["path"])
         if original.suffix == ".py":
-            compile(original.read_text(encoding="utf-8"), str(original), "exec")
-        changes.append((item, original, target, previous))
+            compile(body.decode("utf-8"), str(original), "exec")
+        changes.append((item, body, target, previous))
     if not preview:
-        for item, original, target, previous in changes:
+        for item, body, target, previous in changes:
             observed = digest(target) if target.exists() else None
             if observed != previous:
                 raise ValueError("Target changed during source adoption: " + item["path"])
@@ -55,17 +60,28 @@ def install(application, source, *, preview=False):
             fd, temporary = tempfile.mkstemp(prefix="."+target.name+".", dir=target.parent)
             try:
                 with os.fdopen(fd, "wb") as output:
-                    output.write(original.read_bytes())
+                    output.write(body)
                     output.flush()
                     os.fsync(output.fileno())
                 os.replace(temporary, target)
             finally:
                 if os.path.exists(temporary):
                     os.unlink(temporary)
-        destination = application / "integration/monitoring_observed_sources.json"
         if manifest_path.resolve() != destination.resolve():
+            observed_manifest = digest(destination) if destination.exists() else None
+            if observed_manifest != previous_manifest:
+                raise ValueError("Target source manifest changed during adoption")
             destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(manifest_path.read_bytes())
+            fd, temporary = tempfile.mkstemp(prefix="."+destination.name+".", dir=destination.parent)
+            try:
+                with os.fdopen(fd, "wb") as output:
+                    output.write(manifest_body)
+                    output.flush()
+                    os.fsync(output.fileno())
+                os.replace(temporary, destination)
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
     return {"schema": "upstate.monitoring-observed-install-result/v1",
             "application": str(application), "source": str(source), "preview": preview,
             "changed_paths": [item["path"] for item, _, _, _ in changes],
