@@ -3,15 +3,15 @@
   "title": "Priority watershed land-cover interpretation, 2023–2025",
   "entries": [
     {
-      "id": "original-focal-landcover-16ae91aeef629f7104ea",
+      "id": "original-focal-landcover-eaa53b9f304f55e442a4",
       "title": "Priority watershed land-cover interpretation, 2023–2025",
       "kind": "document",
       "role": "OBSERVED_CONTEXT",
       "vintage": "Original Annual NLCD product years 2023 and 2025; captured 2026-10-13",
       "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
       "path": "observed-report.json",
-      "bytes": 22391,
-      "sha256": "16ae91aeef629f7104eac5a39fdfc8b686153a7e2db5162ceac1ef5c643f4279",
+      "bytes": 22392,
+      "sha256": "eaa53b9f304f55e442a4a9a0d614d76b674f488e148011c1a6cf84404254ba30",
       "companions": [
         {
           "path": "selected-annual-inputs.json",
@@ -81,7 +81,7 @@
         {
           "path": "reconciliation.json",
           "bytes": 6093,
-          "sha256": "2e5d1a65f18dd6e65d9d370adde2baad7904febd921ac58df50761c0897bd5d5"
+          "sha256": "9c1cfcad14d20983b01313311cf84f0a60ced86301e8eb8b7af77e6d0aa5e787"
         },
         {
           "path": "focal-figures.json",
@@ -95,8 +95,8 @@
         },
         {
           "path": "focal-report.html",
-          "bytes": 37323,
-          "sha256": "00791906d2043f5993bfb017ec7587a4dec13c2c6ff5af79846d96e636cf02e8"
+          "bytes": 131805,
+          "sha256": "a9921b38603edad701afe9e11307c8da56af37ebbbaaacf20ce0a5b31441a8ec"
         }
       ],
       "metadata": {
