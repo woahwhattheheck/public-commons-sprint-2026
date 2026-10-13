@@ -56,7 +56,7 @@ export function planApplicationFiles(working,originalFiles,options,hashText){
   batch.push(file);size+=estimated;
  }
  if(batch.length)batches.push(batch);
- return {files,batches,previous_package:previous?{id:previous.id,sha256:previous.sha256}:null,edition_sha256:edition.sha256};
+ return {files,batches,previous_package:previous?{id:previous.id,sha256:previous.sha256,files:clone(previous.files)}:null,edition_sha256:edition.sha256};
 }
 export function packageSelection(working,plan,options){
  const current=new Map((working.customer_files||[]).map(row=>[row.id,row]));
@@ -66,6 +66,13 @@ export function packageSelection(working,plan,options){
   if(expected.unchanged)need(row.revision===expected.previous.revision&&row.sha256===expected.previous.sha256,'An unchanged file revision advanced unexpectedly: '+expected.name);
   return {id:row.id,revision:row.revision,sha256:row.sha256};
  });
+ const selectedIds=new Set(files.map(row=>row.id));
+ for(const reference of plan.previous_package?.files||[]){
+  if(selectedIds.has(reference.id))continue;
+  const row=current.get(reference.id),saved=row&&[...row.history,row].find(version=>version.revision===reference.revision&&version.sha256===reference.sha256);
+  need(saved,'A member of the earlier package lost its exact saved revision: '+reference.id);
+  files.push(clone(reference));selectedIds.add(reference.id);
+ }
  return {id:options.packageId,pack_id:options.pack,edition_id:options.edition,title:options.title,instructions:options.instructions,files,supersedes:plan.previous_package?.id||'',reason:plan.previous_package?options.reason:''};
 }
 export function assertFilePredecessors(current,files){
@@ -94,7 +101,7 @@ export function validateFinalJoin(before,after,selection,plan){
  }
  for(const old of before.customer_packages||[])need(JSON.stringify(after.customer_packages.find(p=>p.id===old.id))===JSON.stringify(old),'An earlier package changed.');
  packageSelection(after,plan,{...selection,pack:selection.pack_id,edition:selection.edition_id,packageId:selection.id});
- return {package_id:packet.id,package_sha256:packet.sha256,files:packet.files.length,unchanged_files:plan.files.filter(f=>f.unchanged).length,changed_files:plan.files.filter(f=>!f.unchanged).length};
+ return {package_id:packet.id,package_sha256:packet.sha256,files:packet.files.length,inherited_files:packet.files.length-plan.files.length,unchanged_files:plan.files.filter(f=>f.unchanged).length,changed_files:plan.files.filter(f=>!f.unchanged).length};
 }
 function hashBytes(bytes){return createHash('sha256').update(bytes).digest('hex');}
 function writeOriginal(filename,bytes){
@@ -160,7 +167,7 @@ export function runLocalApplicationJoin(argv=process.argv.slice(2)){
  if(!fs.existsSync(stateDirectory))fs.mkdirSync(stateDirectory);
  ordinaryDirectory(stateDirectory);need(!fs.existsSync(path.join(stateDirectory,'Concurrent_Change.json')),'This local join recorded a concurrent change. Preserve its requests and reconcile with the original owner before preparing a new operation.');writeOriginal(path.join(stateDirectory,'Input.json'),json({...inputs,fingerprint}));
  const completed=path.join(stateDirectory,'Completed.json');
- if(fs.existsSync(completed)){const saved=readJSON(completed);need(saved.input_sha256===fingerprint&&fs.existsSync(out),'Retain the completed original output.');need(hashBytes(fs.readFileSync(out))===saved.working_record.sha256,'Completed working record bytes changed.');return saved;}
+ if(fs.existsSync(completed)){const saved=readJSON(completed);need(saved.input_sha256===fingerprint&&fs.existsSync(out),'Retain the completed original output.');need(hashBytes(fs.readFileSync(out))===saved.working_record.sha256,'Completed working record bytes changed.');need(fs.existsSync(saved.customer_package.path)&&hashBytes(fs.readFileSync(saved.customer_package.path))===saved.customer_package.sha256,'Completed customer package bytes changed.');return saved;}
  const call=(args,label)=>{
   const result=invokeCLI(cli,args),content=json(result);
   let target=path.join(stateDirectory,label+'.json'),attempt=1;
