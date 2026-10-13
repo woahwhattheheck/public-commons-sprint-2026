@@ -19,8 +19,9 @@ counted as unrelated.
 **Inspect** opens the selected study's exact source bindings and saved change
 reasons. **Open original plan** or **Open original analysis** returns to the
 existing Receiving desk, where the original revision forms preserve complete
-requested selections. No source, feature ID, analysis selection or native run
-is changed by this impact desk.
+requested selections. Inspection retains all original records. The explicit revision workflow below
+opens an editable draft; only the existing Receiving editor's Save action
+prepares a new immutable study.
 
 A source edit may deserve review without changing geography or model values.
 Body hashes, companion hashes, native reader layout, computational metadata
@@ -81,9 +82,9 @@ engine's authority. A missing mapping, unfinished target, unavailable original
 or incompatible cohort is explicit. Unaffected original runs can remain
 unchanged.
 
-Even when the record check passes, this desk does not seed a successor
-selection or queue a run. The original analysis remains bound to its original
-plan and cohort until the operator explicitly chooses a revision.
+Even when this check passes, the original analysis remains bound to its
+original plan and cohort. Successor adoption is an explicit choice in the
+revision workflow, and the existing Receiving editor owns the eventual save.
 
 ## Downloads, reopen and changing workspaces
 
@@ -108,6 +109,126 @@ Requests are guarded by the original workspace and mounted-view generation.
 Changing workspace, selecting another refresh or closing the desk invalidates
 pending results and downloads. Polling the host state does not repeatedly
 scan the saved study folders; reload and navigation drive bounded reads.
+
+## Explicit source replacements and successor analyses
+
+### Revise a saved source plan
+
+From an inspected plan choose **Review source replacements**. From an inspected
+analysis the same control opens its original source plan. Every binding begins
+as **original retained**. A saved mapping identifies a possible replacement;
+it is not permission to substitute geometry or evidence.
+
+Each binding shows the exact original and replacement collection/source IDs,
+the saved change reason, its consumed-geometry or retained-context role, and
+the original selector/relationship. **Choose mapped original features** opens
+the maintained Spatial source chooser against the actual imported vector.
+A replacement starts without inherited native IDs, layer or attribute filters.
+Read its real layers and attributes, choose explicit original feature membership
+(or deliberately all matching original IDs), and confirm the contribution
+relationship. The map is a display of original geometry; its clipped/simplified
+display features never become saved scientific geometry.
+
+For a replacement catchment network, choose the actual ID and downstream fields.
+The draft service reads the original native source and verifies distinct
+catchment IDs and both fields across the selected network. The original
+Receiving engine still validates complete HUC routing and contribution topology
+when saved. Existing advanced source fields, upstream evidence and seed choices
+are retained for review in the original complete editor.
+
+Selections persist across this review's binding pages/filter. **Keep original
+binding** explicitly removes a proposed replacement. Changing refresh/study or
+closing the view discards this unsaved review; it changes no stored study.
+
+**Review complete draft** checks the current refresh fingerprint and original
+record SHA, reads each chosen mapped source through the original Receiving
+reader, verifies its actual native IDs and exact typed filters, and shows the
+complete preserved selection. Classification, intake references and other
+metadata are never automatically rebound merely because a new source contains
+the same native ID. Context/provenance selectors are displayed separately and
+may be explicitly revised if they reference a retained vector. Non-vector or
+nested overlapping edits remain available in the complete original editor.
+
+**Open existing Receiving editor** revalidates the exact draft ID and opens the
+existing plan form with all untouched fields preserved. The form visibly lists
+the source-revision changes and evidence boundary; advanced selection JSON
+remains available. Its normal Save action uses the original preparation queue.
+The old plan and its original sources remain available. After saving, compare
+the actual returned plan with the original through the existing plan comparison.
+
+### Revise an analysis after choosing its source plan
+
+From an inspected complete analysis choose **Review successor analysis**.
+Choose an actual complete saved plan; to change source geometry, first finish
+and save the plan workflow above. **Use the currently complete mapped native
+cohort** is unchecked by default and is available only when fresh saved mapping,
+completion and original grid/profile/land-cover checks pass.
+
+The draft preserves the original selection and changes only the explicitly
+chosen plan ID and/or recorded baseline/alternative IDs. Quantity scope,
+pollutant selection, weights, normalization/caps, accounting and unknown retained
+fields remain original. Missing parent/upstream/reservoir accounting references
+are displayed for correction or explicit removal in the existing analysis form.
+The original analysis engine remains responsible for physical artifacts, masks,
+pollutant coverage, executed cohort and complete geographic/accounting admission.
+Opening the draft does not run a model or compute an analysis.
+
+### Exact download and browser numeric limits
+
+**Download exact revision draft** asks the server to serialize
+`upstate.receiving-source-revision/v1` as
+`receiving-source-revision-<plans|analyses>-<draft-id-prefix>.json`. It contains
+the original selection, explicit choices, validated source identities, refresh
+fingerprint, changed fields and resulting selection. It is a review artifact;
+the native original editor can use its `selection` member deliberately.
+
+If any retained integral value is outside exact JavaScript integer support,
+the browser refuses to mutate or hand off that selection. The server download
+retains the original numbers. No unsafe value is silently rounded into a saved
+revision. The advanced editor's ordinary validation still applies to any later
+explicit user edit.
+
+### Additive interfaces and original editor ownership
+
+The same authenticated read endpoint accepts POST with a JSON object
+`{workspace, action, payload}`. The actual host `api` serializes that object.
+Actions `revision-options`, `revision-draft` and `revision-download` delegate to
+`model/receiving_source_revision.py`; they register no queued write action.
+
+`options(workspace, refresh_plan_id, kind, id, snapshot=...)` returns original
+bindings and current choices. `draft(workspace, values)` requires the exact
+refresh snapshot and original record SHA. Plan choices contain explicit
+binding IDs and source selectors; analysis choices contain an optional saved
+plan and an explicit `use_successors` boolean. Source validation may resolve
+the original immutable source's named view through `Workspace.source_file`;
+it saves no source collection, plan, analysis or run.
+
+The registered original Receiving wrapper delegates:
+
+```js
+host.openExtension('receiving-waters', 'openSourceRevision', {
+  workspace_key: CURRENT_WORKSPACE,
+  request: EXACT_REVIEWED_REVISION_REQUEST,
+  draft_id: REVIEWED_DRAFT_ID
+});
+```
+
+The Receiving controller calls the service again and requires the same returned
+draft before passing the full selection to its existing plan/analysis form.
+Workspace, view, request generation and original record checks protect late
+responses. The component closure includes the maintained original controller
+and wrapper as well as the two new revision modules; no second study writer,
+global source catalog rewrite or automatic source/run migration is introduced.
+
+Native UI continuation uses `[data-receiving-source-revision]`,
+`[data-rwr-binding]`, `[data-rwr-picker]`, `[data-rwr-ready]`,
+`data-rwr-action="review|download|open-editor|keep|close"`,
+`[data-rwr-plan]`, and `[data-rwr-successors]`. The original form exposes
+`[data-water-source-revision][data-draft]`. Exercise actual mapped/removed
+sources, a deliberate native feature choice, unchanged evidence, unavailable
+cohorts, missing accounting, stale refresh/workspace rejection, server download
+and normal saved-study reopen in the existing accepting native course. Source
+review alone is not rendered or client-ready acceptance.
 
 ## Maintained interfaces
 

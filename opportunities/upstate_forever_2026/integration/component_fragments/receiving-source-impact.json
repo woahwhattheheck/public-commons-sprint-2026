@@ -4,7 +4,7 @@
   "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
   "components": {
     "receiving-source-impact": {
-      "title": "Saved Source Updates impact on original Receiving studies",
+      "title": "Source Updates impact and explicit Receiving study revisions",
       "paths": [
         "model/receiving_source_impact.py",
         "operator/receiving_source_impact.py",
@@ -12,7 +12,11 @@
         "operator/web/receiving_source_impact.mjs",
         "operator/web/receiving_source_impact.css",
         "operator/RECEIVING_SOURCE_IMPACT.md",
-        "integration/component_fragments/receiving-source-impact.json"
+        "integration/component_fragments/receiving-source-impact.json",
+        "model/receiving_source_revision.py",
+        "operator/web/receiving_source_revision.mjs",
+        "operator/web/receiving_waters.mjs",
+        "operator/web/receiving_waters_extension.mjs"
       ],
       "requires": [
         "source-updates",

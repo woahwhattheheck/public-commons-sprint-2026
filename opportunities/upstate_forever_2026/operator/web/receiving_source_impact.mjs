@@ -1,3 +1,4 @@
+import {attachReceivingSourceRevision} from './receiving_source_revision.mjs';
 /** Read-only impact of original Source Updates on retained Receiving studies. */
 const VIEW='receiving-source-impact',API='/api/receiving-source-impact';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,6 +11,7 @@ const count=value=>Number.isSafeInteger(value)?value:0;
 
 export function attachReceivingSourceImpact(context){
   const {getState,api,endpoint,openExtension,navigate}=context;
+  const revision=attachReceivingSourceRevision(context);
   let root=null,workspace=null,epoch=0,pageRequest=0,detailRequest=0,catalogRequest=0,openRequest=0;
   let refreshId=null,kind='plans',catalog=[],catalogNext=null,catalogTotal=0,catalogBusy=false;
   let page=null,pageBusy=false,pageHistory=[0],detail=null,detailId=null,detailBusy=false;
@@ -30,6 +32,7 @@ export function attachReceivingSourceImpact(context){
     }catch{}
   }
   function reset(){
+    revision.detach();
     epoch++;pageRequest++;detailRequest++;catalogRequest++;
     catalog=[];catalogNext=null;catalogTotal=0;page=null;detail=null;
     error='';catalogError='';detailError='';pageHistory=[0];visibleBindings=50;
@@ -135,7 +138,9 @@ export function attachReceivingSourceImpact(context){
       button('download','Download this impact record')+button('close-detail','Close details')+'</div>'+code(record.id)+
       note('Original '+(kind==='plans'?'plan':'analysis')+' · '+label(record.state)+' · record '+record.record_sha256)+
       '<div class="rw-impact-toolbar">'+button('open-original',kind==='plans'?'Open original plan':'Open original analysis',record.state==='complete'?'':'disabled')+
-      (kind==='analyses'?button('open-plan','Open original source plan',plan.state==='complete'?'':'disabled'):'')+'</div>'+
+      (kind==='analyses'?button('open-plan','Open original source plan',plan.state==='complete'?'':'disabled'):'')+
+      button('revision-plan','Review source replacements',plan.state==='complete'?'':'disabled')+
+      (kind==='analyses'?button('revision-analysis','Review successor analysis',record.state==='complete'?'':'disabled'):'')+'</div>'+
       '<h4>Consumed Receiving geometry sources</h4>'+
       note('Receptor geometry and a HUC network actually used by an upstream relationship. Source changes are review prompts; feature IDs and geographic effects are not inferred across editions.')+
       bindingTable(consumed)+
@@ -162,7 +167,8 @@ export function attachReceivingSourceImpact(context){
       button('analyses','Saved analyses','aria-pressed="'+(kind==='analyses')+'"')+'</div>'+
       (error?'<div role="alert">'+note(error,'rw-impact-error')+button('retry-page','Reload impact page')+'</div>':'')+
       (pageBusy?'<p data-rwi-loading role="status">Reading this bounded page of original studies…</p>':'')+
-      sourceHeader()+listRows()+detailPanel())+'</section>';
+      sourceHeader()+listRows()+detailPanel()+'<div data-rwi-revision-slot></div>')+'</section>';
+    revision.renderInto(root.querySelector('[data-rwi-revision-slot]'));
   }
   async function loadCatalog(append=false){
     if(!workspace||!root)return;
@@ -179,6 +185,7 @@ export function attachReceivingSourceImpact(context){
     finally{if(live(token,ws)&&serial===catalogRequest){catalogBusy=false;render();}}
   }
   async function loadPage(offset=0,{fresh=false,keepDetail=false}={}){
+    revision.detach();
     if(!root||!workspace||!refreshId)return;
     const token=epoch,ws=workspace,serial=++pageRequest,selected=refreshId,selectedKind=kind;
     const retained=keepDetail?detailId:null;
@@ -198,6 +205,7 @@ export function attachReceivingSourceImpact(context){
     }finally{if(live(token,ws)&&serial===pageRequest){pageBusy=false;render();}}
   }
   async function loadDetail(key){
+    revision.detach();
     if(!id(key)||!page||pageBusy)return;
     const token=epoch,ws=workspace,serial=++detailRequest,selected=refreshId,selectedKind=kind,snapshot=page.refresh.snapshot;
     detailId=key;detail=null;detailError='';detailBusy=true;visibleBindings=50;visibleRuns=8;remember();render();
@@ -230,10 +238,16 @@ export function attachReceivingSourceImpact(context){
     else if(action==='previous'&&pageHistory.length>1&&!pageBusy){pageHistory.pop();await loadPage(pageHistory.at(-1));}
     else if(action==='detail')await loadDetail(node.dataset.id);
     else if(action==='retry-detail')await loadDetail(detailId);
-    else if(action==='close-detail'){detailRequest++;detail=null;detailId=null;detailError='';detailBusy=false;remember();render();}
+    else if(action==='close-detail'){revision.detach();detailRequest++;detail=null;detailId=null;detailError='';detailBusy=false;remember();render();}
     else if(action==='more-bindings'){visibleBindings+=50;render();}
     else if(action==='more-runs'){visibleRuns+=8;render();}
     else if(action==='download')await download();
+    else if((action==='revision-plan'||action==='revision-analysis')&&detail){
+      const selected=action==='revision-plan'?(kind==='plans'?detail.record:detail.record.plan):detail.record;
+      await revision.open({container:root.querySelector('[data-rwi-revision-slot]'),
+        refresh_plan_id:refreshId,kind:action==='revision-plan'?'plans':'analyses',
+        id:selected.id,snapshot:detail.refresh_snapshot});
+    }
     else if((action==='open-original'||action==='open-plan')&&detail){
       const record=detail.record,plan=kind==='plans'?record:record.plan;
       const method=action==='open-plan'||kind==='plans'?'openPlan':'openAnalysis';
@@ -253,7 +267,7 @@ export function attachReceivingSourceImpact(context){
   }
   function change(event){
     if(!event.target.matches('[data-rwi-refresh]'))return;
-    openRequest++;pendingOpen=null;
+    revision.detach();openRequest++;pendingOpen=null;
     refreshId=id(event.target.value)?event.target.value:null;
     pageRequest++;detailRequest++;page=null;detail=null;detailId=null;pageHistory=[0];error='';detailError='';pageBusy=false;detailBusy=false;
     remember();render();if(refreshId)void loadPage(0,{fresh:true});
