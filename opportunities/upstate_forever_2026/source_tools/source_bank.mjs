@@ -105,10 +105,14 @@ export function createSourceBankToolkit(options = {}) {
     if (!bank || typeof bank !== "object" || Array.isArray(bank)) fail("expected a source-bank object");
     const schema = bank.schema ?? bank.format;
     if (![1, "commons.source-bank/v1", "commons.source-map/1",
-          "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
+          "upstate.source-files/v1", "eco-source-text-v1",
+          "upstate.scientific-context-receiving-source/v1"].includes(schema))
       fail("unsupported source-bank schema");
     let entries;
-    if (schema === "commons.source-map/1" && Array.isArray(bank.files)) {
+    const scientificContext = schema === "upstate.scientific-context-receiving-source/v1";
+    if (scientificContext && (!Array.isArray(bank.files) || bank.file_metadata !== undefined))
+      fail("scientific-context source needs original file descriptors");
+    if ((schema === "commons.source-map/1" || scientificContext) && Array.isArray(bank.files)) {
       if (bank.file_metadata !== undefined)
         fail("source-map array descriptors must contain their own metadata");
       if (bank.files.length > limits.maxMembers) fail("source bank member limit exceeded");
@@ -117,7 +121,11 @@ export function createSourceBankToolkit(options = {}) {
             !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 ||
             typeof entry.sha256 !== "string" || !shaPattern.test(entry.sha256) ||
             (entry.mode !== undefined && !["100644", "100755"].includes(entry.mode)))
-          fail("source-map array descriptors need original bytes, SHA-256 and an optional regular-file mode");
+          fail("source descriptors need original bytes, SHA-256 and an optional regular-file mode");
+        if (scientificContext && (typeof entry.content !== "string" ||
+            entry.content_base64 !== undefined ||
+            (entry.encoding !== undefined && !["utf-8", "utf8", "text"].includes(entry.encoding))))
+          fail("scientific-context members need their original UTF-8 source text");
         const { content, content_base64, ...metadata } = entry;
         return { ...entry, declaredMetadata: metadata };
       });
@@ -174,6 +182,10 @@ export function createSourceBankToolkit(options = {}) {
     }
     return summarize("source-bank", files, {
       schema, sourceRoot: bank.source_root ?? bank.base_path ?? (schema === "commons.source-map/1" ? bank.prefix ?? null : null),
+      ...(scientificContext ? { sourceContext: {
+        title: bank.title ?? null, projectId: bank.project_id ?? null,
+        sourceCommits: bank.source_commits ?? null, pathBase: bank.path_base ?? null
+      } } : {}),
       ...(schema === "commons.source-map/1" ? {
         edition: bank.edition ?? null, repository: bank.repository ?? null, sourceRef: bank.source_ref ?? null
       } : {})
@@ -349,6 +361,19 @@ export function createSourceBankToolkit(options = {}) {
     if (Array.isArray(value) && value.length && value.every(part =>
         part?.schema === "upstate.application-source-part/v1")) return packets(value);
     if (value?.schema === "commons.gzip-source-bank/v1") return gzipEnvelope(value, depth);
+    if (value?.schema === "upstate.scientific-context-source-carrier/v1") {
+      if (value.encoding !== "gzip+base64" || value.chunks !== undefined ||
+          !Number.isSafeInteger(value.gzip_bytes) || value.gzip_bytes < 0 ||
+          typeof value.gzip_sha256 !== "string" || !shaPattern.test(value.gzip_sha256) ||
+          !Array.isArray(value.parts) || !value.parts.length ||
+          value.parts.length > limits.maxMembers ||
+          value.parts.some(part => typeof part !== "string"))
+        fail("scientific-context carrier needs its ordered original base64 parts");
+      const result = gzipEnvelope({ ...value, chunks: value.parts }, depth);
+      if (result.schema !== "upstate.scientific-context-receiving-source/v1")
+        fail("scientific-context carrier must contain its original receiving-source bank");
+      return result;
+    }
     if (value?.schema === "commons.artifact-base64/v1") {
       const data = decodeBase64(value.content_base64, limits.maxInputBytes, "artifact envelope");
       count(data.length, value.bytes, "artifact envelope");

@@ -1,0 +1,228 @@
+{
+  "schema": "upstate.chemistry-maintained-source/v1",
+  "engine_version": "0.3.0",
+  "scientific_report_edition": "reach-chemistry-scientific-report/3",
+  "scientific_source_edition": "native-chemistry-scientific-source-v2",
+  "readable_scientific_source_editions": [
+    "native-chemistry-scientific-source-v1",
+    "native-chemistry-scientific-source-v2"
+  ],
+  "source_reference": {
+    "native_commit": "798e99fa0d7d56cd3fe84a890251af210c03af77",
+    "composed_current_main": "9b1aa2c7d06ce321a04bde372afb5edf0a84a59e",
+    "pull_request": 3724
+  },
+  "original_source_manifest": {
+    "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
+    "sha256": "0085740aa371b70f1ae5e9c9635aa6a2ea02701e1cad36009521d08b30f21e6d",
+    "bytes": 7099,
+    "version": "0.1.0"
+  },
+  "installer": "operator/install_chemistry.py",
+  "files": [
+    {
+      "path": "model/chemistry_study_transfer.py",
+      "bytes": 23808,
+      "sha256": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c"
+    },
+    {
+      "path": "model/CHEMISTRY_STUDY_TRANSFER.md",
+      "bytes": 7956,
+      "sha256": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923"
+    },
+    {
+      "path": "source_tools/chemistry_study_composition.py",
+      "bytes": 5703,
+      "sha256": "511d363a41a9ac474047c41ea8da4d89a53aad243441261727832dd27fdfaf5a"
+    },
+    {
+      "path": "integration/component_fragments/chemistry_study_transfer.json",
+      "bytes": 798,
+      "sha256": "197f33e4e57abc99bdeb3c6ffd4300cfa09b5f816ff6c16b5e65268b51b2bed8"
+    },
+    {
+      "path": "model/chemistry.py",
+      "bytes": 23564,
+      "sha256": "898f118238f90be7723b448821aba8ca6ba95c26f86642c75f0d05ec79c6d2d2"
+    },
+    {
+      "path": "model/chemistry_reports.py",
+      "bytes": 13321,
+      "sha256": "afdab18e74e78b2a7b7c4690067c91c7c7b6fdb66b9e94465b9dd0b976b288f0"
+    },
+    {
+      "path": "model/chemistry_report_source.py",
+      "bytes": 43650,
+      "sha256": "5b5940571a3667e4a09fcd1c4459d82316295a8286f6f30a4050409531989bba"
+    },
+    {
+      "path": "model/CHEMISTRY_REPORT_SOURCE.md",
+      "bytes": 12283,
+      "sha256": "cf3f23b24fa0c68735ecc10caf028b2f6e4101888df65b0ba358c9e671fe651d"
+    },
+    {
+      "path": "integration/component_fragments/chemistry_report_sources.json",
+      "bytes": 511,
+      "sha256": "896a7fc8b19492b8f65a3656ec1c31aeabfb2cbf637a6786835dc4b74ccf4644"
+    },
+    {
+      "path": "model/CHEMISTRY_REPORTS.md",
+      "bytes": 10681,
+      "sha256": "d0026878dc6e6f32f9f46a95e9fcbb7189e52d6e3277dd9dd722538f4427d8d7"
+    },
+    {
+      "path": "model/reach_chemistry/reporting.py",
+      "bytes": 38121,
+      "sha256": "8622c6bbb7c7ff5198f39c78a7710008d920899b02abf9dbafec5d5549cc4c71"
+    },
+    {
+      "path": "integration/component_fragments/chemistry_reports.json",
+      "bytes": 516,
+      "sha256": "67d80aac82ffbc09c150e7714801110f4cc4b75890c824ace39db64783dafca2"
+    },
+    {
+      "path": "model/chemistry_cli.py",
+      "bytes": 1161,
+      "sha256": "4cf3e90a83474842cc4da0773c8d7c22fe1ecca2dc189da7347e52d4cc173cf2"
+    },
+    {
+      "path": "model/chemistry_receiving.py",
+      "bytes": 1713,
+      "sha256": "1922cd3e239d750ccfb00217395eac4e3fd8e732bc2f26e5963dcb95099051e1"
+    },
+    {
+      "path": "model/reach_chemistry/__init__.py",
+      "bytes": 452,
+      "sha256": "e28dd88601593d8d8b017df42500509d985fd685068162f15ab8b04fcb8fc97d"
+    },
+    {
+      "path": "model/reach_chemistry/__main__.py",
+      "bytes": 47,
+      "sha256": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4"
+    },
+    {
+      "path": "model/reach_chemistry/cli.py",
+      "bytes": 5266,
+      "sha256": "eb528efb01e30ed01fd166f6b6c271adc9dd5b573efced3f7aaa402f0b00d08c"
+    },
+    {
+      "path": "model/reach_chemistry/inference.py",
+      "bytes": 28892,
+      "sha256": "a211132510f037d9ea4eacfeb034d6cc6447044c691618fb30818d3f03103210"
+    },
+    {
+      "path": "model/reach_chemistry/io.py",
+      "bytes": 7889,
+      "sha256": "5089e364db63b90057fbc00685626c747999bedbe9d3fc5978a22411b5019407"
+    },
+    {
+      "path": "model/reach_chemistry/model.py",
+      "bytes": 16372,
+      "sha256": "d8266d41953cc5a0c9469422c4b6baab083b1dae0abfbbf2b6b67bad32a4e14c"
+    },
+    {
+      "path": "model/reach_chemistry/service.py",
+      "bytes": 2263,
+      "sha256": "b3980996de0de86680fa8477367868feb7f7bf8641f044bf671fa371a780c58e"
+    },
+    {
+      "path": "model/reach_chemistry/solver.py",
+      "bytes": 12398,
+      "sha256": "0523bdf585a92cd727b8c6db3089b35224bdb8adc39b45411526c5874ca5eb37"
+    },
+    {
+      "path": "operator/chemistry.py",
+      "bytes": 6549,
+      "sha256": "f4cff632b8f328a35f650c5644674cd4e9844ba0a283fc1acfef0c23de80577a"
+    },
+    {
+      "path": "operator/extensions/chemistry.json",
+      "bytes": 3683,
+      "sha256": "a184f18b3d84e5986e6c8592afb04253908e8a6cbc4fd5f4eb66af2f6a2ca570"
+    },
+    {
+      "path": "operator/web/chemistry.mjs",
+      "bytes": 29979,
+      "sha256": "e0f8d00d07bace633eb81a22830961276b1840dbd0814743059ee91e3e4b64ae"
+    },
+    {
+      "path": "operator/web/chemistry-native.mjs",
+      "bytes": 4213,
+      "sha256": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a"
+    },
+    {
+      "path": "operator/web/chemistry.css",
+      "bytes": 2393,
+      "sha256": "4276c4dca88f4987abc2062cf60ec00121ef97d18d7f9a2a4e247dcc2211aff7"
+    },
+    {
+      "path": "operator/CHEMISTRY_OPERATOR.md",
+      "bytes": 12458,
+      "sha256": "8a5de6422c30600f34ec83d8c27aa385dd1e27add258b1d0e30ef6a724f50938"
+    },
+    {
+      "path": "CHEMISTRY.md",
+      "bytes": 12010,
+      "sha256": "81ec1c41e221af64148661e0be0f69eb39526920376ba6d010da1b8e2b50f82f"
+    },
+    {
+      "path": "requirements-chemistry.txt",
+      "bytes": 24,
+      "sha256": "794e78e97975a317667c64e1975884140754ff26feb267649b3d4e0249549522"
+    },
+    {
+      "path": "install_chemistry.py",
+      "bytes": 293,
+      "sha256": "3a6e006a1340dcdebe557b20b34228035a16c5667b9c1e19803bf2336f05a2c9"
+    },
+    {
+      "path": "operator/install_chemistry.py",
+      "bytes": 15162,
+      "sha256": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18"
+    },
+    {
+      "path": "integration/reach_chemistry/install_chemistry_legacy.py",
+      "bytes": 7239,
+      "sha256": "0229658125241edcc07b54bcd3a199c2e1f8ad06a85806044e404706052495ba"
+    },
+    {
+      "path": "model/reach_chemistry/OBSERVATIONS.md",
+      "bytes": 5198,
+      "sha256": "c0a2f30d9c4393d1592dfbb31cb8ded014096a064faecb156ae36120332e5465"
+    },
+    {
+      "path": "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
+      "bytes": 7983,
+      "sha256": "ba82be927a9fac599a8cf93bb2db57e4efe331228fdbb77ea908d633df766c2d"
+    },
+    {
+      "path": "integration/component_fragments/chemistry-compound-observations.json",
+      "bytes": 674,
+      "sha256": "db30385a9f63e4526e08d5737965d1336f91a9936f36f06f3ae471b9cb07ef31"
+    },
+    {
+      "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
+      "bytes": 7099,
+      "sha256": "0085740aa371b70f1ae5e9c9635aa6a2ea02701e1cad36009521d08b30f21e6d"
+    }
+  ],
+  "preserved_shared_dependencies": [
+    "model/observed_context.py",
+    "model/scientific_figures.py",
+    "model/observed_report_render.py",
+    "operator/source_reports.py",
+    "operator/source_report_editions.py",
+    "operator/web/source_reports.mjs",
+    "operator/web/source_report_editions.mjs",
+    "operator/extensions/source-reports.json",
+    "operator/web/extension_host.mjs",
+    "model/study_transfer.py",
+    "model/scientific_report_study_transfer.py"
+  ],
+  "receiving": {
+    "check": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE --dry-run",
+    "install": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE",
+    "model": "Original native saved-case/run, scientific report/source and whole Workspace receiving APIs"
+  },
+  "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard."
+}

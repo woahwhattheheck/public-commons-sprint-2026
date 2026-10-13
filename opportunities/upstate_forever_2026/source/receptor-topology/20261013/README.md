@@ -84,3 +84,9 @@ The retained calculation used reverse breadth-first traversal and independently 
 Application source: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2657
 Complete current regional execution: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2708
 Source-water operator: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2669
+
+## Interactive source explorer
+
+Open [explorer.html](explorer.html) locally for the complete utility-focus source study, or use the [existing source-study Page](https://chatgpt.com/space/page_e620a8f6b9b48191a6be00b524713167). The self-contained HTML includes the unchanged original twelve-file source bank, watershed search and path navigation, original downloads, and the editable setup discussion sheet. Notes retain the existing browser storage identity.
+
+On screens up to 600 px wide, the filters use a single column with 44 px native controls and 16 px control text. The full selected-utility heading wraps and is associated with the selector for assistive technology. Desktop navigation, print output and the independently published designation companion keep their existing behavior. The maintained HTML matches the existing Page's published mobile correction exactly (224,545 bytes / SHA256 `10e15c19a88e64925e3c420a6b38e64f38229256d23fff8358ccef5bd6cc653e`). This is the maintained source for the explorer originally delivered as 224,163 bytes / SHA256 `d551f67d68a82888e4d4e3a7ebbabeb10cb3656a45e277184ced8a2566debda0`.

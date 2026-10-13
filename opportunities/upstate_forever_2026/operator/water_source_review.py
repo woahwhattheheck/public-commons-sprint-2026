@@ -13,7 +13,9 @@ import json
 import math
 from pathlib import Path
 
-VERSION = "1.3.0"
+from source_tools.water_classifications import (REGISTRY_SCHEMAS, display_fields, validate_registry)
+
+VERSION = "1.4.0"
 REGISTRY_SCHEMA = "upstate.classified-water-registry/v1"
 CROSSWALK_SCHEMA = "upstate.classified-water-crosswalk/v1"
 ASSOCIATION_SCHEMA = "upstate.classified-water-legal-associations/v1"
@@ -47,7 +49,7 @@ def _kind(entry):
         return "crosswalk"
     if (entry["id"] == "sc-r61-69-current-reach-registry"
             or name.endswith(".selected-reaches.json")
-            or entry.get("source_schema") == REGISTRY_SCHEMA):
+            or entry.get("source_schema") in REGISTRY_SCHEMAS):
         return "registry"
     return None
 
@@ -61,6 +63,7 @@ def _descriptor(collection, entry):
         "vintage": entry.get("vintage"), "uri": entry.get("uri"),
         "sha256": body["sha256"], "bytes": body["bytes"],
         "filename": _name(body),
+        "jurisdiction": entry.get("jurisdiction"), "classification_system": entry.get("classification_system"),
         "designation_status": entry.get("designation_status", entry.get("legal_edition_status")),
         "data_status": entry.get("data_status", entry.get("classification_status")),
         "scope": collection.get("scope", {}),
@@ -135,7 +138,8 @@ def _legal_source(operator, workspace_key, payload):
     path, entry, descriptor = _source(
         workspace, _arg(payload, "registry_collection", True), _arg(payload, "registry_source", True))
     value = _json(str(path), entry["body"]["sha256"])
-    if value.get("schema") == REGISTRY_SCHEMA:
+    if value.get("schema") in REGISTRY_SCHEMAS:
+        validate_registry(value)
         editions = [(value["edition"], record) for record in value["records"]]
         body = entry["body"]
     elif value.get("schema") == CROSSWALK_SCHEMA:
@@ -156,8 +160,6 @@ def _legal_source(operator, workspace_key, payload):
         if key in seen:
             raise ValueError("The chosen legal source repeats the same edition and record identity.")
         seen.add(key)
-        if edition.get("status") not in ("current", "proposed"):
-            raise ValueError("The legal edition must state its current or proposed status.")
         records.append({**record, "edition": edition})
     return records, descriptor, [_ticket(operator, workspace_key, path, body, "Complete legal reach source")]
 
@@ -478,6 +480,7 @@ def features(operator, workspace_key, payload):
         hydro_field = config.get("hydro_type_field") or ("HYDTYPE" if "HYDTYPE" in fields else None)
         huc_field = config.get("publisher_huc_field") or catalogue.get("publisher_huc12")
         sources.append({**descriptor, "layer_id": layer["id"], "oid_field": layer["oid_field"],
+                        **display_fields(config),
                         "class_field": config["class_field"], "hydro_type_field": hydro_field,
                         "id_field": layer["oid_field"], "native_oid_field": layer["oid_field"],
                         "layer": entry.get("layer"), "expected_source_sha256": entry["body"]["sha256"],
@@ -508,6 +511,7 @@ def features(operator, workspace_key, payload):
                 "county_blank": county is None or not str(county).strip(),
                 "hydro_type_raw": attributes.get(hydro_field) if hydro_field else None,
                 "publisher_huc12": attributes.get(huc_field) if huc_field in fields else None,
+                **display_fields(properties),
                 "class_raw": properties.get("class_raw"), "class_code": properties.get("class_code"),
                 "previous_class": properties.get("previous_class"),
                 "site_specific": properties.get("site_specific"),
@@ -583,6 +587,8 @@ def feature(operator, workspace_key, payload):
     record_ids = {link["registry_record_id"] for link in associations}
     legal_records = [item for item in crosswalk["legal"]["records"] if item["record"]["id"] in record_ids]
     native_class = {key: properties.get(key) for key in (
+        "jurisdiction", "classification_system", "class_components", "primary_class", "supplemental_classes",
+        "special_markers", "original_index", "native_effective_date", "classification_role",
         "class_raw", "class_label", "class_code", "previous_class", "site_specific",
         "rfp_high_quality_candidate", "class_resolution", "previous_class_raw",
         "previous_class_label", "previous_class_from_label", "no_discharge_zone",
