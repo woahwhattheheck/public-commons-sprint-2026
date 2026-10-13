@@ -24,7 +24,14 @@ class ChemistryOperations:
         return result
     def read(self, workspace, operation, payload):
         m = self.manager(workspace)
-        if operation == 'catalog': value = m.catalog()
+        if operation == 'catalog':
+            value = m.catalog()
+            # Compact operator state intentionally omits full source entries.
+            value['sources'] = [
+                {'id': collection['id'], 'title': collection['title'],
+                 'entries': [{'id': entry['id'], 'title': entry.get('title', entry['id']),
+                              'kind': entry.get('kind')} for entry in collection['entries']]}
+                for collection in m.ws._list('sources')]
         elif operation == 'case': value = m.get_case(payload['case_id'])
         elif operation == 'run': value = m.get_run(payload['run_id'])
         elif operation == 'page':

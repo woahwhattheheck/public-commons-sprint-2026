@@ -31,7 +31,7 @@ export function csvObservations(text, reference){
 }
 export function attachChemistry(host){
  const {getState,api,endpoint,submitAction,showTask,toast,fileList}=host;
- let root=null,generation=0,selectedCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
+ let root=null,generation=0,editorGeneration=0,runGeneration=0,selectedCase='',editorCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
  const workspace=()=>{const s=getState();return s.workspace_key??s.workspace??s.workspaceKey??s.data?.workspace_key;};
  const read=(kind,payload={})=>api(endpoint(`/api/chemistry/${kind}`,payload));
  async function perform(action,payload){
@@ -45,7 +45,7 @@ export function attachChemistry(host){
   delete retained[signature];sessionStorage.setItem(storageKey,JSON.stringify(retained));
   await showTask(task.id);return task;
  };
- function report(error){if(root){const n=root.querySelector('[data-chemistry-status]');if(n){n.textContent=error.message||String(error);n.setAttribute('role','alert')}}else toast(error.message||String(error));}
+ function report(error){if(root){let n=root.querySelector('[data-chemistry-status]');if(!n){n=document.createElement('p');n.dataset.chemistryStatus='';root.append(n);const retry=document.createElement('button');retry.type='button';retry.dataset.action='chemistry-refresh';retry.textContent='Retry opening chemistry';root.append(retry)}n.textContent=error.message||String(error);n.setAttribute('role','alert')}else toast(error.message||String(error));}
  async function reload(){
   const current=++generation;const result=await read('catalog');if(current!==generation||!root)return;
   catalog=result;if(selectedCase&&!catalog.cases.some(c=>c.id===selectedCase))selectedCase='';
@@ -57,16 +57,17 @@ export function attachChemistry(host){
    <p data-chemistry-status role="status" aria-live="polite"></p>
    <div class="chemistry-columns"><section><h2>Saved chemical scenarios</h2><label>Scenario<select data-case><option value="">Choose a scenario</option>${catalog.cases.map(c=>`<option value="${esc(c.id)}" ${c.id===selectedCase?'selected':''}>${esc(c.title)} — ${esc(c.id.slice(0,10))}</option>`).join('')}</select></label>
    <div class="chemistry-actions">${button('open','Open scenario')}${button('new','New from project file')}${button('export','Export editable project')}</div>
-   <h3>Retained source intake</h3><label>Source edition / file<select data-source><option value="">Choose an original retained source</option>${(getState().sources||getState().data?.sources||[]).flatMap(c=>(c.entries||[]).map(e=>`<option value="${esc(JSON.stringify({source_collection_id:c.id,source_id:e.id}))}">${esc(c.title)} / ${esc(e.title||e.id)}</option>`)).join('')}</select></label>
+   <h3>Retained source intake</h3><label>Source edition / file<select data-source><option value="">Choose an original retained source</option>${(catalog.sources||getState().sources||getState().data?.sources||[]).flatMap(c=>(c.entries||[]).map(e=>`<option value="${esc(JSON.stringify({source_collection_id:c.id,source_id:e.id}))}">${esc(c.title)} / ${esc(e.title||e.id)}</option>`)).join('')}</select></label>
    <div class="chemistry-actions">${button('from-source','Import chemical project')}${button('receive','Receive editable ZIP')}</div>
    <p class="chemistry-muted">Use the original Sources intake for project JSON, observation files and editable ZIPs. Original file identities remain attached to the scenario.</p></section>
-   <section><h2>Retained analyses</h2>${catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>'}</section></div>
+   <section><h2>Retained analyses</h2><div data-chemistry-runs>${catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>'}</div></section></div>
    <section data-chemistry-editor hidden></section><section data-chemistry-result hidden></section></section>`;
   root.querySelector('[data-case]').addEventListener('change',e=>{selectedCase=e.target.value});
  }
  async function editor(project=null,caseId=null){
-  let original=null;if(!caseId)selectedCase='';if(caseId){original=await read('case',{case_id:caseId});project=original.project;selectedCase=caseId;}
-  if(!root)return;const area=root.querySelector('[data-chemistry-editor]');area.hidden=false;
+  const current=++editorGeneration;
+  let original=null;if(!caseId)selectedCase='';if(caseId){original=await read('case',{case_id:caseId});if(current!==editorGeneration||!root)return;project=original.project;selectedCase=caseId;}
+  if(!root||current!==editorGeneration)return;editorCase=caseId||'';const area=root.querySelector('[data-chemistry-editor]');area.hidden=false;
   area.innerHTML=`<h2>Scenario & analysis</h2><p>Concentrations are mg of the declared conserved basis per litre. Loads are kg of that basis per day; reach volumes are m³ and flow rates are m³/day.</p>
   <label>Project JSON<input data-project-file type="file" accept=".json,application/json"></label>
   <section data-physical></section><details><summary>Complete project JSON and provenance</summary><label>Complete chemical project<textarea data-project rows="16" spellcheck="false">${esc(project?pretty(project):'')}</textarea></label></details>
@@ -96,13 +97,14 @@ export function attachChemistry(host){
   area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');q.observations=csvObservations(await f.text(),area.querySelector('[data-observation-reference]').value);area.querySelector('[data-request]').value=pretty(q);}catch(e){report(e)}});
  }
  async function openRun(id,field='final',offset=0){
-  selectedRun=id;page=offset;const run=await read('run',{run_id:id});if(!root)return;
+  const current=++runGeneration;
+  selectedRun=id;page=offset;const run=await read('run',{run_id:id});if(!root||current!==runGeneration)return;
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
   target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}</div>${fileList(run._downloads||[])}
   <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
   target.querySelector('[data-result-field]').addEventListener('change',e=>openRun(id,e.target.value,0).catch(report));
   if(run.state==='complete'){
-   const result=await read('page',{run_id:id,field,offset,limit:100});if(selectedRun!==id||!root)return;
+   const result=await read('page',{run_id:id,field,offset,limit:100});if(selectedRun!==id||!root||current!==runGeneration)return;
    const columns=[...new Set(result.rows.flatMap(row=>Object.keys(row)))];
    target.querySelector('[data-result-table]').innerHTML=`<p>${result.total?result.offset+1:0}–${result.offset+result.rows.length} of ${result.total} records</p>${table(result.rows,columns)}`;
    target.querySelector('[data-action="chemistry-next"]').disabled=result.next_offset===null;
@@ -119,16 +121,35 @@ export function attachChemistry(host){
    if(action==='from-source'||action==='receive'){const v=root.querySelector('[data-source]').value;if(!v)throw new Error('Choose an original retained source.');return await perform(action==='from-source'?'case.from-source':'receive',JSON.parse(v));}
    if(action==='save'){
     const area=root.querySelector('[data-chemistry-editor]');const project=parse(area.querySelector('[data-project]'),'Chemical project');
-    let refs=[];if(selectedCase){const current=await read('case',{case_id:selectedCase});refs=current.source_refs;}
-    return await perform('case.save',{project,reason:area.querySelector('[data-reason]').value,source_refs:refs,...(selectedCase?{parent_id:selectedCase}:{})});
+    let refs=[];if(editorCase){const current=await read('case',{case_id:editorCase});refs=current.source_refs;}
+    return await perform('case.save',{project,reason:area.querySelector('[data-reason]').value,source_refs:refs,...(editorCase?{parent_id:editorCase}:{})});
    }
-   if(action==='execute'){if(!selectedCase)throw new Error('Save and select the scenario before calculating.');const request=parse(root.querySelector('[data-request]'),'Analysis request');const saved=await read('case',{case_id:selectedCase});const draft=parse(root.querySelector('[data-project]'),'Chemical project');if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw new Error('Save the edited scenario before calculating.');return await perform('run',{case_id:selectedCase,request});}
+   if(action==='execute'){if(!editorCase)throw new Error('Save and open the scenario before calculating.');const request=parse(root.querySelector('[data-request]'),'Analysis request');const saved=await read('case',{case_id:editorCase});const draft=parse(root.querySelector('[data-project]'),'Chemical project');if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw new Error('Save the edited scenario before calculating.');return await perform('run',{case_id:editorCase,request});}
    if(action==='resume'){const run=await read('run',{run_id:id});return await perform('run',{case_id:run.case_id,request:run.selection.request});}
    if(action==='cancel'){await api('/api/chemistry/cancel',{method:'POST',body:{workspace:workspace(),run_id:id}});return await openRun(id);}
    if(action==='export'){if(!selectedCase)throw new Error('Choose a saved scenario.');return await perform('export',{case_id:selectedCase,run_ids:catalog.runs.filter(r=>r.case_id===selectedCase&&r.state==='complete').map(r=>r.id)});}
    if(action==='previous'||action==='next'){const field=root.querySelector('[data-result-field]').value;return await openRun(selectedRun,field,Math.max(0,page+(action==='next'?100:-100)));}
   }catch(error){report(error)}
  }
- return {mount(element){if(root===element)return;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';reload().catch(report)},detach(){generation++;root=null},dispatch,
+ async function update(){
+  if(!root)return;
+  const current=++generation,result=await read('catalog');
+  if(current!==generation||!root)return;
+  catalog=result;
+  const selection=root.querySelector('[data-case]');
+  if(selection){
+   selection.innerHTML='<option value="">Choose a scenario</option>'+catalog.cases.map(c=>`<option value="${esc(c.id)}">${esc(c.title)} — ${esc(c.id.slice(0,10))}</option>`).join('');
+   selection.value=selectedCase;
+  }
+  const sources=root.querySelector('[data-source]');
+  if(sources){
+   const chosen=sources.value;
+   sources.innerHTML='<option value="">Choose an original retained source</option>'+(catalog.sources||[]).flatMap(c=>(c.entries||[]).map(e=>`<option value="${esc(JSON.stringify({source_collection_id:c.id,source_id:e.id}))}">${esc(c.title)} / ${esc(e.title||e.id)}</option>`)).join('');
+   if([...sources.options].some(option=>option.value===chosen))sources.value=chosen;
+  }
+  const runs=root.querySelector('[data-chemistry-runs]');
+  if(runs)runs.innerHTML=catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>';
+ }
+ return {update,mount(element){if(root===element)return;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){generation++;editorGeneration++;runGeneration++;root=null},dispatch,
  taskActions(task){const r=task.result||{};if(task.state!=='complete'||!task.action?.startsWith('chemistry.'))return '';return r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):''}};
 }
