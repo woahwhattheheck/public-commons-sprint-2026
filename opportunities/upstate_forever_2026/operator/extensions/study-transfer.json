@@ -8,6 +8,7 @@
     "extensions/study_transfer.mjs",
     "extensions/study_transfer.css",
     "received_studies.mjs",
+    "geographic_received_studies.mjs",
     "gauge_received_studies.mjs",
     "ensemble_received_studies.mjs",
     "observed_landcover_received.mjs",

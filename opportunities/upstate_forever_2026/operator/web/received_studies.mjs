@@ -7,6 +7,7 @@ import {receivedParameterStudiesHTML,openReceivedParameterStudy} from './paramet
 import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 import {receivedEconomicComparisonsHTML,openReceivedEconomicComparison} from './economic_received_comparisons.mjs';
 import {receivedAssessmentHTML,openReceivedAssessment} from './assessment_received_studies.mjs';
+import {receivedGeographicHTML,openReceivedGeographic} from './geographic_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -121,6 +122,7 @@ export function attachReceivedStudies(host) {
       }
       html+='</section>';
     }
+    html+=receivedGeographicHTML(value,!!disabled);
     html+=receivedAssessmentHTML(value,!!disabled);
     html+=receivedReviewHTML(host,value,!!disabled);
     html+=receivedGaugeHTML(value,!!disabled);
@@ -156,6 +158,15 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
+    if(action?.startsWith('geographic-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value.id;
+      try{
+        return await openReceivedGeographic(host,value,target,{workspace_key:ws,current:stillCurrent});
+      }catch(reason){if(!stillCurrent())return;throw reason;}
+    }
     if(action?.startsWith('assessment-')){
       const ws=workspace,e=epoch,value=opened;
       if(!value||value.id!==selected||value.workspace_key!==ws)
