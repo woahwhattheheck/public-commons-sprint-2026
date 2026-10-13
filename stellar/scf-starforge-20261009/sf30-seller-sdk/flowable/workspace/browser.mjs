@@ -1,6 +1,7 @@
 // MIT. Original Flowable operator workspace; all native mutations use saved reviewed requests.
 import {FLOWABLE_WORKSPACE_ACTIONS,FLOWABLE_RECORD_KINDS,FLOWABLE_OPERATION_KINDS,validateFlowableAction,
   flowableCaseInstanceId as nativeCaseId} from './actions.mjs';
+import {installFlowableHistory} from './history-browser.mjs';
 import {installFlowableEventIntake} from './event-intake-browser.mjs';
 import {installProgrammeBrowser} from './programme-browser.mjs';
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
@@ -240,11 +241,17 @@ async function eventAPI(method,args){
   body:JSON.stringify({method,args}),credentials:'same-origin',signal:state.controller?.signal});
  const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.message??'Event intake failed'),{code:result.error,status:response.status});return result;
 }
+async function historyAPI(method,args={}){
+ const response=await fetch('/api/history-analysis',{method:'POST',headers:{'content-type':'application/json','x-workspace-token':token,'x-workspace-id':state.view?.workspaceId??''},
+ body:JSON.stringify({method,args}),credentials:'same-origin',signal:state.controller?.signal});
+ const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.message??'History analysis failed'),{code:result.error,status:response.status});return result;
+}
+const historyAnalysis=installFlowableHistory({api,historyAPI,write,busy,button,node,keyValues,notice,reload,openRecord,records,requireEngine,workspaceId:()=>state.view?.workspaceId,portfolio:()=>state.portfolio});
 const eventIntake=installFlowableEventIntake({api,eventAPI,write,busy,button,node,pre,keyValues,notice,reload,openRecord,records,forEngine,requireEngine,workspaceId:()=>state.view?.workspaceId,casePortfolio:()=>state.casePortfolio});
 const programmeBrowser=installProgrammeBrowser({api,write,busy,button,node,pre,keyValues,table,originalLink,notice,reload,openRecord,requireEngine,records,forEngine,detail,workspaceId:()=>state.view?.workspaceId});
 async function renderAll(){
   await programmeBrowser.render();
-  if(state.engine)await eventIntake.render();
+  if(state.engine){await eventIntake.render();await historyAnalysis.render();}
   retainSelectedCollections();
   const metrics=$('#metrics');metrics.replaceChildren();
   const portfolioKind=state.casePortfolio?'casePortfolio':state.decisionPortfolio?'decisionPortfolio':'portfolio',
