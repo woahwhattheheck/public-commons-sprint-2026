@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.measurement-workspace-source.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "sourceCommit": "4400b5883e653ddbbbc91e4d55273b89baf80b99",
+  "sourceCommit": "ffa1ace3923d4b22eb593aa22e9b00c0a0ef0e47",
   "description": "Exact original Node scientific service, complete browser source, native archive helpers, original observed-load kernel, public station receiving input and selected operating guides. No private customer workspace, credentials or commercial documents.",
   "files": [
     {
@@ -672,21 +672,21 @@
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/collection_working.mjs",
-      "gitBlob": "7b5c7ae7372635f2af9ab2383e73467401986ce3",
-      "bytes": 9213,
-      "sha256": "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
+      "gitBlob": "b0bb49606da0a435d32a409edd42bd58ecda860d",
+      "bytes": 10343,
+      "sha256": "e1e04cc67cf29f6a0567015c18cec58e0cdf82a1fd9b4bdb69e6d11eac877ad8"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/collections.mjs",
-      "gitBlob": "021810381e5316b67c757409e8398f68157c7e43",
-      "bytes": 32497,
-      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
+      "gitBlob": "ca8dea94d78e7959d35e647bd0bfa561aa6a5deb",
+      "bytes": 33724,
+      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/extension.mjs",
-      "gitBlob": "c4dde1e395b4759213fb9b5dcc3ca89ad2937854",
-      "bytes": 11569,
-      "sha256": "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306"
+      "gitBlob": "9887c59ce6ffb5d41aa6a774fe401c5052979908",
+      "bytes": 12138,
+      "sha256": "e3d4b8ae2741300c6780b522ffc8bd6bb57912543c8662b519b5e51f79c7302c"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/flow_editions.css",

@@ -6,7 +6,7 @@ import {mountCollectionPanel} from './measured_collections.mjs';
 import {mountMeasurements} from './measured_observations.mjs';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),sedimentMemory=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map(),chiquesMemory=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),collectionMemory=new Map(),sedimentMemory=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map(),chiquesMemory=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
   let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,nativeObservations=null,root=null,key=null,generation=0;
@@ -14,7 +14,8 @@ export function createMeasuredObservations(capabilities){
   const benchmarkKey=(workspace,owner)=>JSON.stringify([workspace,owner]);
   const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;for(const [identity,state] of sedimentMemory)if(identity!==current&&(state?.dirty||state?.pending||state?.auxPending))return true;for(const [identity,state] of chiquesMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;return !!instance?.hasUnsavedBenchmarks?.()||!!instance?.hasUnsavedSediment?.()||!!instance?.hasUnsavedChiques?.();};
   const unsavedObservationEditions=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of observationEditionMemory)if(identity!==current&&(state?.dirty||state?.pending_save||state?.retained_saves?.length))return true;return !!instance?.hasUnsavedObservationEditions?.();};
-  const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()){event.preventDefault();event.returnValue='';}};
+  const unsavedCollections=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,session] of collectionMemory)if(identity!==current&&(session.dirty||session.storageBlocked||session.state.pending))return true;return !!collections?.hasUnsaved?.();};
+  const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()||unsavedCollections()){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',beforeUnload);
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
   const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/large/collections/preview','/chiques/preview','/provider-query','/handbacks/preview'].includes(path);
@@ -86,7 +87,7 @@ export function createMeasuredObservations(capabilities){
       const {value,guard}=await send('/api/measurements/native-observations','/native-observations/'+action,action==='prepare'?'POST':'GET',{action,...payload});guard();return value;
     }});
     const collectionHost=document.createElement('section');outer.append(collectionHost);
-    collections=mountCollectionPanel(collectionHost,{request,refresh,workspaceKey:benchmarkKey(boundWorkspace,boundPerson)});
+    collections=mountCollectionPanel(collectionHost,{request,refresh,workspaceKey:benchmarkKey(boundWorkspace,boundPerson),initialSession:collectionMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null});
     const returnedHost=document.createElement('section');outer.append(returnedHost);
     returnedReviews=mountReturnedReviews(returnedHost,capabilities,{memory:returnedReviewMemory,openLargeFiles(){
       if(!active())return;largeHost.scrollIntoView({behavior:'smooth',block:'start'});largeHost.querySelector('[data-file]')?.focus({preventScroll:true});
@@ -103,6 +104,7 @@ export function createMeasuredObservations(capabilities){
     paintCurrentNotice();
   }
   function suspend(){
+    if(collections&&key!==null&&displayedPerson!==null)collectionMemory.set(benchmarkKey(key,displayedPerson),collections.snapshot());
     // The original host detaches after selection changes. Retain the exact old
     // editor locally; never send an old-identity write through the new selection.
     if(instance&&displayedPerson!==null){const observation=personIdentity()===displayedPerson?instance.snapshotObservationEditions?.():null;if(observation)observationEditionMemory.set(benchmarkKey(key,displayedPerson),JSON.parse(JSON.stringify(observation)));const nutrient=instance.snapshotChiques?.();if(nutrient)chiquesMemory.set(benchmarkKey(key,displayedPerson),nutrient);const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);const sediment=instance.snapshotSediment?.();if(sediment)sedimentMemory.set(benchmarkKey(key,displayedPerson),sediment);}
