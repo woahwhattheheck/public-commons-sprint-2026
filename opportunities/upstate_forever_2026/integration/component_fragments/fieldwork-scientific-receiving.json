@@ -16,6 +16,7 @@
         "docs/IMPLEMENTATION_PLAN_REPORT_SOURCE.md",
         "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
         "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
+        "docs/SCIENTIFIC_REPORT_BRIEFING.md",
         "docs/implementation-native-guide.md",
         "docs/implementation-operator-guide.md",
         "install_implementation.py",
@@ -41,6 +42,7 @@
         "model/implementation_schema.py",
         "model/implementation_sources.py",
         "model/portable_implementation.py",
+        "model/scientific_briefing.py",
         "model/scientific_report.py",
         "observations/eighteenmile_2023/wqp_20261013/field-intake/LABORATORY_CYCLE.md",
         "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
@@ -76,6 +78,7 @@
         "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
         "source/keowee-native-receiving-20261013/source-interval-journey.json",
         "source_tools/build_wqp_field_intake.mjs",
+        "source_tools/prepare_scientific_briefing.py",
         "source_tools/receive_briefing_followup.py",
         "source_tools/receive_implementation.py",
         "source_tools/receive_wqp_field_results.py",
@@ -159,6 +162,14 @@
         "model/watershed_briefing.py",
         "docs/UTILITY_SOURCE_BRIEFING.md"
       ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "docs/SCIENTIFIC_REPORT_BRIEFING.md",
+        "model/client_briefing.py",
+        "model/scientific_briefing.py",
+        "source_tools/prepare_scientific_briefing.py"
+      ]
     }
   },
   "source_reference": {
@@ -171,6 +182,8 @@
     "parameter_native_receiving": "707c8de0d38f684781c4256a17101c94e414e8ad",
     "field_return": "1c008cb2785175dfd654ec60b9874b758fcb557a",
     "streaming_monitoring_export": "4a1f317a98218baca9df009fd3454dd69af91a48",
-    "utility_source_briefing": "45287114e35e80af5df222484bb60713cddc816e"
+    "utility_source_briefing": "45287114e35e80af5df222484bb60713cddc816e",
+    "scientific_report_briefing": "3ed9093dcf110015719170e5133aa4dcbabd81b7",
+    "whole_plan_report_source": "146c1c61114d484d46d6c334a906d401961fe0c7"
   }
 }
