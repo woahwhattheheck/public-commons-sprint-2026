@@ -1,0 +1,820 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Georgia legal reach and assessment geography source review",
+  "entries": [
+    {
+      "id": "ga-savannah-designation-assessment-report",
+      "title": "Georgia designated uses and original assessed-water geography",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+      "bytes": 14145,
+      "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae",
+      "source_schema": "upstate.observed-report/v1",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection",
+        "report_schema": "upstate.observed-report/v1"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+          "bytes": 400442,
+          "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+          "bytes": 50841,
+          "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+          "bytes": 10399,
+          "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+          "bytes": 73341,
+          "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+          "bytes": 841597,
+          "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    },
+    {
+      "id": "ga-savannah-designation-assessment-relationships",
+      "title": "Georgia thirty-reach source relationship register",
+      "kind": "document",
+      "role": "DESIGNATION_ASSESSMENT_SOURCE_REVIEW",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+      "bytes": 400442,
+      "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d",
+      "source_schema": "upstate.ga-designation-assessment-relationships/v1",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+          "bytes": 50841,
+          "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+          "bytes": 10399,
+          "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+          "bytes": 73341,
+          "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+          "bytes": 14145,
+          "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+          "bytes": 841597,
+          "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    },
+    {
+      "id": "ga-savannah-designation-assessment-legal-review",
+      "title": "Georgia thirty legal reach review rows",
+      "kind": "table",
+      "role": "DESIGNATION_REACH_REVIEW",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+      "bytes": 10399,
+      "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+          "bytes": 400442,
+          "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+          "bytes": 50841,
+          "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+          "bytes": 73341,
+          "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+          "bytes": 14145,
+          "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+          "bytes": 841597,
+          "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    },
+    {
+      "id": "ga-savannah-designation-assessment-pairs",
+      "title": "Georgia complete original source relationship pairs",
+      "kind": "table",
+      "role": "DESIGNATION_ASSESSMENT_RELATIONSHIPS",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+      "bytes": 73341,
+      "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+          "bytes": 400442,
+          "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+          "bytes": 50841,
+          "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+          "bytes": 10399,
+          "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+          "bytes": 14145,
+          "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+          "bytes": 841597,
+          "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    },
+    {
+      "id": "ga-savannah-designation-assessment-geometry-selection",
+      "title": "Georgia reviewed original geometry selection",
+      "kind": "document",
+      "role": "ASSESSMENT_GEOGRAPHY_REVIEW_SELECTION",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+      "bytes": 50841,
+      "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b",
+      "source_schema": "upstate.ga-assessment-geography-review-selection/v1",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+          "bytes": 400442,
+          "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+          "bytes": 10399,
+          "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+          "bytes": 73341,
+          "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+          "bytes": 14145,
+          "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+          "bytes": 841597,
+          "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    },
+    {
+      "id": "ga-savannah-designation-assessment-briefing",
+      "title": "Georgia complete printable source relationship briefing",
+      "kind": "document",
+      "role": "SOURCE_REVIEW_BRIEFING",
+      "uri": "https://epd.georgia.gov/water-quality-georgia",
+      "vintage": "2022 legal / 2024 assessment; captured 2026-10-13",
+      "path": "source/ga_designation_assessment_relationships/20261013/briefing.html",
+      "bytes": 841597,
+      "sha256": "dd4dfb04dabac3c6acd427fca6e96b5ad29d06fb7a14af89eef1c2ef513987c4",
+      "jurisdiction": "GA",
+      "metadata": {
+        "legal_classification_system": "GA-391-3-6-.03",
+        "assessment_cycle": 2024,
+        "legal_geometry_assignment": false,
+        "study_domain_membership": "separate_original217_intersection"
+      },
+      "companions": [
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/ga.selected-reaches.json",
+          "bytes": 348663,
+          "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-indexed-source.json",
+          "bytes": 59280,
+          "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-legal/rule-selection.json",
+          "bytes": 52201,
+          "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+          "bytes": 69093,
+          "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+          "bytes": 67382,
+          "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-official-stream-layers-original.json",
+          "bytes": 11402,
+          "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-stream-ids-original.json",
+          "bytes": 1415,
+          "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+          "bytes": 10265,
+          "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/georgia-2024-savannah-lake-ids-original.json",
+          "bytes": 85,
+          "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/acquisition.public.json",
+          "bytes": 8206,
+          "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/selection.json",
+          "bytes": 8977,
+          "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/published-document-context.json",
+          "bytes": 4607,
+          "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/review-definitions.json",
+          "bytes": 20573,
+          "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/original-assessment/geometry-source-index.json",
+          "bytes": 15064,
+          "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/input-manifest.json",
+          "bytes": 2854,
+          "sha256": "e2d6c66950d06d2bb5b989d6213a7dddef0c0ff017ea561f9619f130b2af97ab"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationships.json",
+          "bytes": 400442,
+          "sha256": "5f531f27c1e131587ea3183597f9adccd11c242dca39e68c34450391cac9f35d"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/geometry-selection.json",
+          "bytes": 50841,
+          "sha256": "023056023c247f6c9fae42bd70f078f996550dad522ac0a97d8cee904c14055b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/legal-reach-review.csv",
+          "bytes": 10399,
+          "sha256": "3f3796b830d0f4e5e1e228392c408cededb7125e64d9aaf22889d40dc4bc51ae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/relationship-pairs.csv",
+          "bytes": 73341,
+          "sha256": "174ee5c3303fe1b660c4854165842698a6ffcaa0395656c2aa3751dad7555d69"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/observed-report.json",
+          "bytes": 14145,
+          "sha256": "1215565533bf967dbd8d9a3864bb6f8f7175ad06e284f6e9fdf3f5b1b5833eae"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
+          "bytes": 20362,
+          "sha256": "d30d93aba014608960d6088f298645238510cffaebf79862e298b70aa8c0720b"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
+          "bytes": 3238,
+          "sha256": "24885e8ada6a7a8d0f2dd6e9647b83aca79e6bb2e52f46ec6a37910b2bc8d553"
+        },
+        {
+          "path": "source/ga_designation_assessment_relationships/20261013/README.md",
+          "bytes": 9307,
+          "sha256": "9b563acc7d8921daace39bfdb64d95a22662dc1b8de7ebab9848bd2ac5bb477b"
+        }
+      ]
+    }
+  ]
+}
