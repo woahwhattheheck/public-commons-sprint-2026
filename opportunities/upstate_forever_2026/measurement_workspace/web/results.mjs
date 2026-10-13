@@ -102,7 +102,7 @@ export function renderResult(report,{id=report.exportId||'',currentRevision,offs
     '</dd><dt>Workspace revision used</dt><dd>'+esc(cell(report.workspaceRevision))+'</dd></dl>'+
     (stale?'<p class="mwr-notice">This is a saved historical result. The open workspace is at revision '+esc(currentRevision)+
       '; later source or review changes have not been applied to this result.</p>':'')+
-    (interactive?'<div class="mw-buttons"><button data-result-download="html">Download readable report</button><button data-result-download="json">Download complete original JSON</button></div>':'')+
+    (interactive?'<div class="mw-buttons"><button data-result-download="html">Download readable report</button><button data-result-download="json">Download complete original JSON</button><button data-result-return="inspect">Inspect source-return selection</button></div>':'')+
     d.groups.map(group=>{
       const offset=interactive?Math.min(Math.max(0,Number(offsets[group.key])||0),Math.max(0,Math.floor((group.rows.length-1)/limit)*limit)):0;
       return '<section><h3>'+esc(group.title)+' ('+group.rows.length+')</h3>'+
