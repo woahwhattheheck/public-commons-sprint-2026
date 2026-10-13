@@ -17,6 +17,7 @@ from .model_selection import (normalize_selection, selected, grid_models, run_mo
                               required_roles, validate_completed_run)
 from .grid_reuse import retain_grid_definition, reuse_grid_inputs
 from .record_catalog import ProjectedFileCache, delivery_summary
+from .operator_catalog import OperatorCatalogue
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -29,6 +30,7 @@ class Workspace:
                     atomic_json(manifest, {"schema": SCHEMA, "id": str(uuid.uuid4()),
                                            "title": title, "created_at": now()}, immutable=True)
         self._delivery_catalog_cache = ProjectedFileCache()
+        self._operator_catalog = OperatorCatalogue(self.root)
         self.project = read_json(self.root / "workspace.json")
         if self.project.get("schema") != SCHEMA:
             raise ValueError("Select an original Upper Savannah scientific workspace")
@@ -60,29 +62,42 @@ class Workspace:
         paths = sorted((self.root / "deliveries").glob("*/delivery-state.json"))
         self._delivery_catalog_cache.retain_paths(paths)
         rows = [self._delivery_catalog_cache.read(path, delivery_summary) for path in paths]
-        return self._overview(delivery_rows=rows)
+        return self._overview(delivery_rows=rows, catalogue=self._operator_catalog)
 
-    def _overview(self, *, delivery_rows=None):
-        return {"project": self.project, "sources": self.sources(),
-                "profiles": self._list("profiles"), "scenarios": self._list("scenarios"),
-                "grids": [read_json(p) for p in sorted((self.root / "grids").glob("*/grid.json"))],
-                "runs": [read_json(p) for p in sorted((self.root / "runs").glob("*/run.json"))],
-                "observations": self._list("observations"),
-                "scenario_analyses": [read_json(p) for p in sorted((self.root / "analyses").glob("*/summary.json"))],
-                "community_tables": self._list("community-tables"),
-                "community_plans": self._list("community-plans"),
-                "community_reports": self._list("community-reports"),
-                "planning_inventories": self._list("planning-inventories"),
-                "portfolios": self._list("portfolios"),
-                "portfolio_reports": self._list("portfolio-reports"),
-                "spatial_reviews": self._list("spatial-reviews"),
-                "customer_reviews": self._list("reviews"),
-                "customer_review_responses": self._list("review-responses"),
-                "spatial_exports": [read_json(p) for p in sorted((self.root / "spatial-exports").glob("*/export.json"))],
-                "observation_comparisons": self._list("observation-comparisons"),
-                "comparisons": [read_json(p) for p in sorted((self.root / "comparisons").glob("*/comparison.json"))],
+    def _overview(self, *, delivery_rows=None, catalogue=None):
+        visited = []
+
+        def immutable(kind):
+            return catalogue.immutable(kind, visited) if catalogue else self._list(kind)
+
+        def mutable(kind, filename):
+            if catalogue:
+                return catalogue.mutable(kind, filename, visited)
+            return [read_json(path) for path in sorted((self.root / kind).glob("*/" + filename))]
+
+        result = {"project": self.project, "sources": immutable("sources"),
+                "profiles": immutable("profiles"), "scenarios": immutable("scenarios"),
+                "grids": mutable("grids", "grid.json"),
+                "runs": mutable("runs", "run.json"),
+                "observations": immutable("observations"),
+                "scenario_analyses": mutable("analyses", "summary.json"),
+                "community_tables": immutable("community-tables"),
+                "community_plans": immutable("community-plans"),
+                "community_reports": immutable("community-reports"),
+                "planning_inventories": immutable("planning-inventories"),
+                "portfolios": immutable("portfolios"),
+                "portfolio_reports": immutable("portfolio-reports"),
+                "spatial_reviews": immutable("spatial-reviews"),
+                "customer_reviews": immutable("reviews"),
+                "customer_review_responses": immutable("review-responses"),
+                "spatial_exports": mutable("spatial-exports", "export.json"),
+                "observation_comparisons": immutable("observation-comparisons"),
+                "comparisons": mutable("comparisons", "comparison.json"),
                 "deliveries": delivery_rows if delivery_rows is not None else
-                    [read_json(p) for p in sorted((self.root / "deliveries").glob("*/delivery-state.json"))]}
+                    mutable("deliveries", "delivery-state.json")}
+        if catalogue:
+            catalogue.finish(visited)
+        return result
 
     def retained_item(self, kind, key):
         """Open one original record without enumerating unrelated workspace data."""

@@ -7,7 +7,7 @@ from .common import atomic_json, describe_file, file_digest, read_json
 
 SCHEMA = "upstate.observed-report/v1"
 ROLE = "OBSERVED_CONTEXT"
-EDITION = "observed-context-20261013-v2"
+EDITION = "observed-context-20261013-v4"
 
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -72,6 +72,45 @@ def bind(workspace, selection):
     return source["binding"] if source else None
 
 
+def _retained_member(members, name, prefix):
+    """Resolve a producer-relative name inside its selected original study."""
+    relative = _relative(name).as_posix()
+    candidate = relative if not prefix or relative.startswith(prefix) else prefix + relative
+    if candidate not in members:
+        raise ValueError("Original concentration response is absent: " + candidate)
+    return candidate
+
+
+def _bind_rows(source, rows, filename=None, *, member_prefix=""):
+    """Attach the actual retained recipe selector and its verified member."""
+    binding, members = source["binding"], source["members"]
+    for row in rows:
+        name = _retained_member(members, filename or row["source_file"], member_prefix)
+        member = members[name]
+        row["source_selector"] = {
+            "source_collection_id": binding["source_collection_id"],
+            "source_id": binding["source_id"],
+            "member_path": name, "member_sha256": member["sha256"],
+        }
+        row["source_member"] = {
+            "path": name, "bytes": member["bytes"], "sha256": member["sha256"],
+        }
+        original_name = row.get("original_source_path")
+        if original_name:
+            original_name = _retained_member(members, original_name, member_prefix)
+            original = members.get(original_name)
+            if original is None:
+                raise ValueError("Original concentration response is absent: " + original_name)
+            if row.get("original_source_sha256") != original["sha256"]:
+                raise ValueError("Original concentration response identity differs: " + original_name)
+            row["original_source_selector"] = {
+                "source_collection_id": binding["source_collection_id"],
+                "source_id": binding["source_id"],
+                "member_path": original_name, "member_sha256": original["sha256"],
+            }
+    return rows
+
+
 def _concentration_support(source):
     """Use the maintained original-study row and series producers."""
     from measurement_workspace import published_studies
@@ -82,19 +121,34 @@ def _concentration_support(source):
     members = source["members"]
     measured = published_studies.WQP_FILE
     cohort = published_studies.WQP_COHORT
-    if measured not in members and cohort not in members:
+    # Recipes may retain a standalone study or canonical application-root paths.
+    # Select one exact study prefix; another study must never supply missing members.
+    prefixes = {
+        name[:-len(logical)]
+        for logical in (measured, cohort)
+        for name in members
+        if name == logical or name.endswith("/" + logical)
+    }
+    if not prefixes:
         return None
+    if len(prefixes) != 1:
+        raise ValueError("Observed concentration context selects multiple original study roots")
+    prefix = next(iter(prefixes))
     required = (measured, cohort, "study.json", "stations.csv", "seasonal_summaries.csv")
-    missing = [name for name in required if name not in members]
+    missing = [prefix + name for name in required if prefix + name not in members]
     if missing:
         raise ValueError("Observed concentration context is missing original inputs: " + ", ".join(missing))
-    originals = {name: members[name]["path"].read_bytes() for name in required}
+    actual = {name: _retained_member(members, name, prefix) for name in required}
+    originals = {name: members[actual[name]]["path"].read_bytes() for name in required}
     study = published_studies._json(originals["study.json"])
     if study.get("schema") != published_studies.STUDY_SCHEMA:
         raise ValueError("Observed concentration study has another original schema")
-    stations = published_studies._csv_rows(originals["stations.csv"], "stations")
-    seasonal = published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal")
-    rows = published_studies._combined_observations(originals)
+    stations = _bind_rows(source, published_studies._csv_rows(originals["stations.csv"], "stations"),
+                          "stations.csv", member_prefix=prefix)
+    seasonal = _bind_rows(source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"),
+                          "seasonal_summaries.csv", member_prefix=prefix)
+    rows = _bind_rows(source, published_studies._combined_observations(originals),
+                      member_prefix=prefix)
     sites = {row["site_id"] for row in stations}
     observations = published_studies._observation_context(
         rows, seasonal, study, sites, set(CONCENTRATIONS), {"surface"},
@@ -108,7 +162,8 @@ def _concentration_support(source):
             "strata": ["surface"], "sampling_period": study.get("grab_sampling", {}),
         },
         "input_members": {
-            name: {"bytes": members[name]["bytes"], "sha256": members[name]["sha256"]}
+            actual[name]: {"bytes": members[actual[name]]["bytes"],
+                           "sha256": members[actual[name]]["sha256"]}
             for name in required
         },
         "observations": enrich_observation_context(observations),

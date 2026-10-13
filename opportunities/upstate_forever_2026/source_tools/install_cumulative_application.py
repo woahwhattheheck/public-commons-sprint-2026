@@ -53,10 +53,21 @@ def owned_inventory(root):
         if path.is_symlink():
             raise ValueError("Application source contains a file alias: " + str(relative))
         if path.is_file():
-            body = path.read_bytes()
+            digest = hashlib.sha256()
+            size = 0
+            with path.open("rb") as stream:
+                first = os.fstat(stream.fileno())
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+                    size += len(block)
+                last = os.fstat(stream.fileno())
+            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            if (any(getattr(first, field) != getattr(last, field) for field in fields)
+                    or size != first.st_size):
+                raise ValueError("Application source changed while being inventoried: " + str(relative))
             entries[relative.as_posix()] = {
-                "bytes": len(body), "sha256": sha(body),
-                "mode": "100755" if path.stat().st_mode & 0o111 else "100644",
+                "bytes": size, "sha256": digest.hexdigest(),
+                "mode": "100755" if first.st_mode & 0o111 else "100644",
             }
     return entries
 
@@ -362,6 +373,41 @@ def check_sources(root):
     return {"python_modules": python, "javascript": javascript}
 
 
+def archive_record(path):
+    """Describe a completed ZIP without loading the compressed payload in RAM."""
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as stream:
+        before = os.fstat(stream.fileno())
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+            size += len(block)
+        after = os.fstat(stream.fileno())
+    identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                             info.st_mtime_ns, info.st_ctime_ns)
+    if identity(before) != identity(after) or size != before.st_size:
+        raise ValueError("Application archive changed while its identity was recorded")
+    return {"path": str(path), "bytes": size, "sha256": digest.hexdigest()}
+
+
+def same_archive_members(current, proposed):
+    """Compare original uncompressed members with bounded working memory."""
+    names = current.namelist()
+    if names != proposed.namelist():
+        return False
+    for name in names:
+        if current.getinfo(name).file_size != proposed.getinfo(name).file_size:
+            return False
+        with current.open(name) as left, proposed.open(name) as right:
+            while True:
+                first, second = left.read(1024 * 1024), right.read(1024 * 1024)
+                if first != second:
+                    return False
+                if not first:
+                    break
+    return True
+
+
 def archive_application(root, destination):
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -376,18 +422,18 @@ def archive_application(root, destination):
                         part.startswith(".") or part == "__pycache__"
                         for part in path.relative_to(root).parts):
                     archive.write(path, "upper-savannah-application/" + path.relative_to(root).as_posix())
-        data = temporary.read_bytes()
         if destination.exists():
             # Compressed transport can differ across zlib versions. Existing
             # output is compared by its complete retained uncompressed members.
             with zipfile.ZipFile(destination) as current, zipfile.ZipFile(temporary) as proposed:
-                if current.namelist() != proposed.namelist() or any(
-                        current.read(name) != proposed.read(name) for name in current.namelist()):
+                if not same_archive_members(current, proposed):
                     raise ValueError("Another complete application owns " + str(destination))
-            data = destination.read_bytes()
-        else:
-            os.link(temporary, destination)
-        return {"path": str(destination), "bytes": len(data), "sha256": sha(data)}
+            return archive_record(destination)
+        record = archive_record(temporary)
+        with temporary.open("rb") as stream:
+            os.fsync(stream.fileno())
+        os.link(temporary, destination)
+        return {**record, "path": str(destination)}
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
@@ -418,6 +464,9 @@ def install(source, output, archive):
     try:
         shutil.copytree(source, root, ignore=shutil.ignore_patterns(
             "__pycache__", ".git", ".venv", "venv", "node_modules", "*.pyc", "*.pyo", "*.lock"))
+        phase = "verify_copied_source"
+        if owned_inventory(root) != original:
+            raise ValueError("Copied application source differs from its retained inventory")
         sys.path[:0] = [str(root / "operator"), str(root)]
         phase = "compose_application"
         compose(root, steps)

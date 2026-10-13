@@ -916,6 +916,12 @@ class ComputeProgrammes:
         for name in ("native_arguments.py", "raster_stats.py", "native_execution.py", "native_equivalence.py"):
             if name in actual and name not in expected and "model/" + name in archived:
                 expected[name] = {**archived["model/" + name], "path": name}
+        # Older applications can add the execution journal for live status.
+        # Its absence from both original inventories is not a scientific source
+        # change; originally retained journal bytes remain checked above.
+        if ("native_execution.py" not in expected
+                and "model/native_execution.py" not in archived):
+            actual.pop("native_execution.py", None)
         if actual != expected:
             raise ValueError("Programme scientific engine source changed; reopen its retained application or create a new programme")
         grid = self.workspace.get_grid(record["selection"]["grid_id"])
@@ -1001,17 +1007,9 @@ class ComputeProgrammes:
                 self._check_execution(record, execution_sources)
                 orchestrator_source = next(item for item in execution_sources
                                            if item["path"] == "compute_programme.py")
-                # Resolve a missing or different native runtime once before a series.
-                unfinished = [name for name in selected
-                    if self.workspace.inspect_run(by_name[name]["run_id"])["state"] != "complete"]
-                if unfinished:
-                    from .native import runtime
-                    needed_models = [model for model in ("ndr", "sdr") if any(
-                        model in _models(by_name[name]["native_selection"].get("models")) for name in unfinished)]
-                    if callable(getattr(scientific_common, "selected_models", None)):
-                        runtime(needed_models)
-                    else:
-                        runtime()
+                # The native runner resolves the engines needed by missing
+                # stages after verifying retained stages and any donor assembly.
+                # Export-only recovery does not require loading InVEST.
                 verified_runs = set()
                 for name in selected:
                     if self._pause_boundary(key, state):

@@ -83,9 +83,26 @@ node source_tools/source_bank_cli.mjs extract cumulative-application.md received
 
 This original cohort contains 586 files and 9,132,400 source bytes. Its `commons.source-map/1` payload is 10,018,711 bytes, SHA-256 `4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8`; the 3,090,920-byte gzip has SHA-256 `ecbcf5601f579f9df775259b146ec75167fc4f0c44fe2025907118e8b239e548`.
 
-A source map stores UTF-8 bodies in `files` and their original descriptors in `file_metadata`. The decoder requires a one-to-one path match, checks every descriptor's required byte length and SHA-256, and accepts only regular source modes `100644` and `100755`. The inventory retains each complete descriptor as `declaredMetadata`, including original Git references and source origins. SHA-256 and byte counts are verified against the recovered body; additional provenance fields preserve the publisher's declarations. The cohort's edition, repository, source reference and application prefix remain in the inventory.
+A source map stores UTF-8 bodies in `files` and their original descriptors in `file_metadata`. The decoder requires a one-to-one path match, checks every descriptor's required byte length and SHA-256, and accepts only regular source modes `100644` and `100755` when a mode is supplied. Older banks may omit mode; those members have no declared executable flag. The inventory retains each complete descriptor as `declaredMetadata`, including original Git references and source origins. SHA-256 and byte counts are verified against the recovered body; additional provenance fields preserve the publisher's declarations. The cohort's edition, repository, source reference and application prefix remain in the inventory.
 
 The current source edition has 11 executable-marked members. As with other inputs, the extractor writes all recovered files privately with mode 0600; apply the maintained installer after source inspection to perform the normal application installation.
+
+## Receive the published station assessment source
+
+The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks` and mandatory `compressed_bytes`, `compressed_sha256`, `decoded_bytes` and `decoded_sha256`. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
+
+For [the complete maintained revision 2 station assessment edition](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JP4654K):
+
+```sh
+node source_tools/source_bank_cli.mjs inspect station-assessment-source.md
+node source_tools/source_bank_cli.mjs extract station-assessment-source.md received-station-assessment
+```
+
+This original carrier recovers 302,938 source bytes in ten files. Its gzip is 77,923 bytes, SHA-256 `f9d1b3499477a7a16e18bd494c69d1bf17ce1fe56023b07c0e34e124ef19abdc`; its decoded source-map JSON is 323,022 bytes, SHA-256 `9573f57e9fdafeb7044c518cf3cf7605bca7689e749c38c0c43d026bdae2612f`. It includes the exact 111,624-byte published assessment inventory: 192 records at 159 station IDs, with separate 2024 and July 2026 source editions.
+
+The current maintained station application and original receiving operation remain the installation route. This example demonstrates receipt of that retained source edition. Select the newest source cohort from its original owner when composing with an existing application.
+
+Slack's exported JSON indentation can contain non-breaking spaces. Parsing normalizes these only outside quoted strings; source bodies, quoted paths, encoded data and literal source characters remain unchanged. Original carrier bytes and their hash are retained. The optional `--sha256` argument checks those outer Markdown bytes; the envelope's declared inner hashes are checked automatically.
 
 ## Pure JavaScript use
 
@@ -134,10 +151,10 @@ Passing an object to `encodeSourceBank` creates a new JSON serialization; passin
 | DEFLATE | Stored, fixed-Huffman and dynamic-Huffman blocks; emitted bytes are capped during decompression |
 | gzip | Header extras, names, comments, header CRC, concatenated members, CRC32 and ISIZE verification; output and member-count limits |
 | Source banks | `commons.source-bank/v1`, `upstate.source-files/v1`, `eco-source-text-v1` and legacy `schema: 1`; arrays of descriptors or plain path-to-text mappings |
-| Cumulative source maps | `commons.source-map/1`; UTF-8 `files` mapping plus a matching `file_metadata` mapping with mandatory byte length, SHA-256 and regular-file mode; complete original descriptors retained |
+| Cumulative source maps | `commons.source-map/1`; UTF-8 `files` mapping plus a matching `file_metadata` mapping with mandatory byte length and SHA-256, optional regular-file mode; complete original descriptors retained |
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
 | Carriers | One supported JSON bank/envelope fence, or one complete cohort of `upstate.application-source-part/v1` gzip+base64 packets |
-| Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities |
+| Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities; `commons.gzip-source-bank/v1` with ordered base64 chunks and both original byte/hash pairs |
 | Native Canvas results | Original `canvas_id`/`markdown_content` JSON, optionally in one text MCP result; Canvas transport escaping and original carrier identity retained |
 
 Unsupported ZIP variants fail explicitly: encryption, ZIP64, multiple disks, alternate compression methods, symlinks/special files, executable archive preambles and unaccounted local data. Empty directory records are checked and counted; extraction creates the directories needed by files. The complete original archive retains every directory record.
@@ -175,6 +192,9 @@ The pure decoder was exercised on the actual retained originals:
 | Six-part ECO-SOURCE12 carrier | All 19 files; 573,918 source bytes; decoded JSON SHA-256 `0e79fb406d92a517f294e8be89f8ea143c23ac91096b952779bb06e63662622f` |
 | ECD1 edition 3, 148 packets, 10,018,711-byte JSON | All 586 files and 9,132,400 source bytes matched; every original descriptor retained; 11 executable-marked members recorded |
 | Actual six-file Canvas, its native MCP response, unescaped Markdown and original source JSON | All four input forms recovered the same six paths and hashes, totaling 114,891 bytes |
+| Published station revision 2, original MCP/Canvas response with NBSP indentation | All 10 files and 302,938 source bytes matched; exact 111,624-byte assessment inventory recovered |
+| Original 87-station supplement | All eight files and 122,947 source bytes matched their declared hashes |
+| Quoted NBSP characters and source-map modes | Quoted source bytes preserved; an explicitly supplied symlink mode rejected |
 | Changed source-envelope gzip identity or excessive provider wrapper nesting | Rejected before source recovery |
 | Changed source-map byte count/hash, missing or orphan metadata, unsupported file mode | Rejected at the source-map descriptor check |
 | Actual ZIP/gzip with lower output limits, altered local ZIP name, mixed packet editions and traversal path | Rejected at the corresponding size, identity or path check |

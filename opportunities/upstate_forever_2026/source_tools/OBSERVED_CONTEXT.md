@@ -99,3 +99,38 @@ The receiver imports the application-root observed_hydrology_context.sources.jso
 The flow explorer opens through the receiver's original-source index and the scientific report's observed source links. It contains every retained 2020–2025 daily row at all 16 gauges, the annual completeness matrix, original qualifiers, 2023 sampling and antecedent conditions, and monthly reported-source quantities with their actual parameter cohorts. Its gauge/year, unit and scale controls work offline; selected daily records download with original response identifiers and record positions.
 
 Rebuild the explorer from the application root with `node source_tools/build_observed_flow_report.mjs`. The existing original hydrology and monthly-flow reproduction commands retain their own complete agency inputs. Use eighteenmile_scientific_figures.sources.json for direct native figure import: it preserves all original seven entries while routing the original sibling inputs through canonical application paths.
+
+## Routine nutrient and flow continuation
+
+When the application-root eighteenmile_routine_nutrient_flow.sources.json is installed, this same command also imports its six original nutrient and flow tables. The canonical manifest retains the original thirteen-file nutrient analysis and all 88 original hydrology source files as companions, including the actual calculation inputs and agency responses. The original nested model-sources.json remains unchanged. It executes the edition's own retained import_into_workspace.py companion with the current application, current Python and selected Workspace. The original importer is verified against its retained companion hash before execution; it remains byte-for-byte part of the original source.
+
+The importer creates two context views of the same 120 dated rows: 96 routine nutrient results and 24 same-activity TKN plus NOx sums. Lower and upper endpoints retain the original censor conditions and conservative concentration interval. Quantified values have equal endpoints. The two views retain the same source records and do not increase the number of independent measurements.
+
+receiving.json records both observation IDs, their collection, row counts and additional receipt nutrient-flow-observations.json. The existing Observed water quality desk opens those views, and source-inventory.json exposes the sampling calendar, station/flow summaries, station contrasts, sole shared-date comparison and June 12 contrast. Resuming the receiver reuses identical native observation editions.
+
+## Expanded calibration gauge context
+
+When source/hydrology-huc05-07-20261013/model-sources.json is installed, the same receiver imports its eight source entries as a separate calibration collection. This edition retains the original thirteen gauges' 2020–2025 daily source responses, calendar-year and calendar-month statistics, 2023 study-period coverage, reference-flow comparisons and original station geometry. Its source IDs keep the huc05-07-calibration- prefix. The earlier sixteen-gauge dated source collection retains its own identity and dates. Source-inventory.json and the existing Sources desk expose the completed tables and all original companions; the existing geographic continuation can use the station layer alongside the retained basin and assessment layers.
+
+## Matched lake observation report
+
+When eighteenmile_lake_paired_analysis.sources.json is installed, the same receiver imports its seven original native source entries. The retained paired-observations-report.html opens alongside the lake report from the original-source index. The scientific report links to the matched-pair report, cross-analyte links and paired microcystin/chlorophyll summaries with their original retained companions. Earlier complete reports retain their own source bindings.
+
+## Complete intake with ordinary Python
+
+Use the same receiver on an ordinary Python host to finish the entire original-source and observation phase before geographic processing:
+
+```sh
+"$PYTHON" -B -m source_tools.receive_observed_context \
+  --workspace "$WORKSPACE" \
+  --domain-manifest "$ORIGINAL_DOMAIN_MANIFEST" \
+  --sources-only
+```
+
+This imports every selected native source collection and its original companions, registers the published study, creates the fourteen dated context views and the two nutrient endpoint views when that source is present, and writes the source inventory plus a browsable original-source index. No raster or vector calculation is needed for this intake. An existing retained domain collection can be used later; omit --domain-manifest when the selected Workspace already owns that source.
+
+The same receiving.json records state sources_complete, the actual published-study and observation IDs, and the source_phase file hashes. A completed observation/source phase stays recorded if later geographic processing returns an exception. The index links only to files already produced.
+
+On the equipped geographic host, resume the same command with --sources-only removed and the same source selections, map settings and Workspace. The execution flag is excluded from operation identity, so it continues the same output directory. Native source and observation imports reuse their identical IDs before the original public-water and station/map workflow proceeds. If a later command adds or changes a source manifest or scientific selection, that choice retains its own receiving identity.
+
+Running --sources-only against an already complete geographic operation verifies its completed file hashes and returns that complete record unchanged. The existing native backup carries the same source phase, original objects, source views, observation records and receiving directory.

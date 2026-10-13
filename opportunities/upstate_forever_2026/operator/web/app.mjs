@@ -3,7 +3,7 @@ import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {mountObservedSeries} from './observed_series.mjs';
 import {observedValueMarkup} from './observed_series.mjs';
-import {createDeliveryReview} from './delivery_review.mjs';
+import {createDeliveryReview,deliveryRevision,deliveryChanged} from './delivery_review.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
 import {attachReceivingWaters} from './receiving_waters.mjs';
@@ -90,6 +90,7 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  openReceivingPlan:id=>receivingWaters.openPlan(id),
  getView:()=>view,reportError:globalError,selectWorkspace,
  setJourneyController:controller=>{operatingJourney=controller;},
+ openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),
  openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},
  openScenario:id=>journeyForm(()=>scenarioForm(id)),
  openProfile:id=>journeyForm(()=>profileForm(id)),
@@ -102,7 +103,8 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
- setDetailFiles:files=>{if(detailContext)detailContext.files=files;}});
+ setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
+ beginDetailRequest:()=>++itemRequest,isDetailRequest:request=>request===itemRequest&&detailDialog.open});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -134,7 +136,7 @@ async function refresh({force=false}={}){
     const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
-    if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(row.state!==detailContext.state||(kind==='deliveries'&&JSON.stringify({files:row.files,maps:row.maps})!==detailContext.deliveryRevision)))await openItem(kind,row.id,false);}
+    if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(kind==='deliveries'?deliveryChanged(row,detailContext):row.state!==detailContext.state))await openItem(kind,row.id,false);}
   }catch(error){
     if(workspace===requestedWorkspace){$('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);}
   }finally{
@@ -321,14 +323,14 @@ async function openItem(kind,id,focus=true){
     if(row.summary)content+=defs({map_mode:row.summary.mode,coordinate_system:row.summary.view?.crs,extent:row.summary.view?.bounds,annotations:row.summary.marker_count});
     content+=customerReviews.mapActions(row);
    }else if(kind==='deliveries'){
-    content=deliveryReview.continuation(row)+inspected.html;
+    content=deliveryReview.continuation(row,inspected.files)+inspected.html;
   }
   if(kind==='comparisons')content+='<div class="page-actions">'+button('comparison-delivery','Build delivery from this comparison','data-id="'+id+'"')+'</div>';
   if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+'</div>';
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   if(kind!=='deliveries')content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
-  if(kind==='deliveries'){detailContext.deliveryRevision=JSON.stringify({files:row.files,maps:row.maps});deliveryInspection.mount($('#detail-body'));}
+  if(kind==='deliveries'){detailContext.deliveryRevision=deliveryRevision(row);deliveryInspection.mount($('#detail-body'));}
   if(kind==='portfolios'||kind==='portfolio_reports'){detailContext.portfolio=row;mountPortfolioDetail();}
   if(kind==='observations'){detailContext.observation=row;mountObservedSeries($('#observed-series'),row);renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
   if(kind==='observation_comparisons'){
