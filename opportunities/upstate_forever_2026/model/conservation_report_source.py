@@ -19,7 +19,7 @@ from .common import (
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.conservation-report-source/v1"
-EDITION = "conservation-saved-plan-report/5"
+EDITION = "conservation-saved-plan-report/6"
 DIRECTORY = "conservation-report-sources"
 
 
@@ -61,6 +61,78 @@ def _text(value):
     if isinstance(value, float):
         return format(value, ".10g")
     return str(value)
+
+
+# These names are presentation labels only. Original keys, choices and full
+# precision remain in the unchanged records attached to every report.
+_LABELS = {
+    "area_basis": "Area-budget footprint",
+    "maximum_area_ha": "Maximum area (ha)",
+    "minimum_area_ha": "Minimum reporting area (ha)",
+    "maximum_cost": "Maximum supplied cost",
+    "maximum_parcels": "Maximum planning-unit count",
+    "minimum_coverage_fraction": "Minimum valid coverage fraction",
+    "maximum_protected_fraction": "Maximum protected-source fraction",
+    "minimum_source_water_fraction": "Minimum source-water overlap fraction",
+    "require_high_quality_context": "Require high-quality-water context",
+    "context_weights": "Geographic-context weight",
+    "source_water_fraction": "Source-water overlap fraction",
+    "unprotected_fraction": "Fraction outside selected protected-source footprint",
+    "high_quality_context": "High-quality-water context indicator",
+    "protected_lands": "Protected lands",
+    "drinking_water": "Drinking-water source context",
+    "high_quality_waters": "High-quality waters",
+    "nitrogen_export": "Nitrogen export",
+    "phosphorus_export": "Phosphorus export",
+    "sediment_export": "Sediment export",
+    "source_uri": "Source URI",
+    "huc12": "HUC12",
+    "HUC12": "HUC12",
+}
+_CHOICES = {
+    "whole_units": "Complete original planning units",
+    "reporting": "Intersection with the reporting boundary",
+    "source_context": "Original geographic source context",
+    "native_model": "Native model quantities",
+    "manual": "Saved selection of original unit IDs",
+    "source-context": "Original geographic source context",
+    "current-export": "Baseline modeled export",
+    "avoided-conversion": "Avoided conversion",
+    "matched-restoration": "Restoration within matched model families",
+    "matched-disturbance": "Disturbance within matched model families",
+    "published-method": "Published method",
+    "source-attribute": "Original source attribute",
+    "source_water": "Source-water overlap",
+    "score_per_ha": "Score per reporting hectare",
+}
+
+
+def _label(value):
+    """Name schema fields without changing arbitrary user text or identifiers."""
+    if not isinstance(value, str):
+        return _text(value)
+    return _LABELS.get(value, value.replace("_", " ").replace(".", " / ").capitalize())
+
+
+def _choice(value):
+    return _CHOICES.get(value, value) if isinstance(value, str) else value
+
+
+def _area(value):
+    """Display hectares to six decimals, keeping nonzero subprecision values visible."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return _text(value)
+    if 0 < value < 0.000001:
+        return "Less than 0.000001"
+    if -0.000001 < value < 0:
+        return "Between -0.000001 and 0"
+    return format(value, ",.6f").rstrip("0").rstrip(".") if value else "0"
+
+
+def _rule_value(name, value):
+    if name.endswith("_area_ha"):
+        return _area(value)
+    return _choice(value) if name in {"basis", "area_basis", "kind"} else value
 
 
 def _table(columns, rows):
@@ -231,8 +303,8 @@ def _optimization_section(retained):
 
     rows = [
         ["Original analysis ID", analysis["id"]],
-        ["Objective kind", objective.get("kind")],
-        ["Objective basis", objective.get("basis")],
+        ["Objective kind", _choice(objective.get("kind"))],
+        ["Objective basis", _choice(objective.get("basis"))],
         ["Objective scope", analysis["methods"].get("objective_scope")],
         ["Original candidate count", analysis["counts"].get("inventory")],
         ["Eligible candidate count", analysis["counts"].get("eligible")],
@@ -243,7 +315,7 @@ def _optimization_section(retained):
     ]
     for group, values in (("Constraint", request.get("constraints", {})),
                           ("Solver result", analysis.get("optimization", {}))):
-        rows.extend([group + ": " + name, value] for name, value in values.items()
+        rows.extend([group + ": " + _label(name), _rule_value(name, value)] for name, value in values.items()
                     if not isinstance(value, (dict, list)))
     blocks = [
         "This portfolio was selected by its retained optimization analysis and then stored "
@@ -387,7 +459,7 @@ def _optimization_section(retained):
             if support.get("coverage_fraction") is not None:
                 detail += "; coverage " + _text(support["coverage_fraction"])
             if support.get("valid_area_ha") is not None:
-                detail += "; valid area " + _text(support["valid_area_ha"]) + " ha"
+                detail += "; valid area " + _area(support["valid_area_ha"]) + " ha"
             if support.get("availability_reason"):
                 detail += "; " + support["availability_reason"]
             if support.get("profile_changed"):
@@ -437,9 +509,9 @@ def _matched_family_sections(state, plan):
     coverage = []
     for name, item in support.get("metrics", {}).items():
         mask = item.get("mask") or {}
-        coverage.append([name, item.get("state"), item.get("unit"),
-                         item.get("grid_valid_area_ha"), item.get("grid_structural_area_ha"),
-                         item.get("grid_covered_area_ha"), item.get("reason"),
+        coverage.append([_label(name), item.get("state"), item.get("unit"),
+                         _area(item.get("grid_valid_area_ha")), _area(item.get("grid_structural_area_ha")),
+                         _area(item.get("grid_covered_area_ha")), item.get("reason"),
                          ", ".join(item.get("missing_run_ids", [])), mask.get("sha256")])
     sections.append(["Common coverage across declared model families", [
         "The following areas describe the complete common grid, before clipping to planning units. "
@@ -459,10 +531,10 @@ def _matched_family_sections(state, plan):
             item = metric.get("matched_families", {}).get(family["id"])
             if item is None:
                 continue
-            values.append([name, item.get("unit"), item.get("common_baseline"),
+            values.append([_label(name), item.get("unit"), item.get("common_baseline"),
                            item.get("common_alternative"), item.get("reduction"), item.get("delta"),
-                           item.get("common_coverage_fraction"), item.get("common_valid_area_ha"),
-                           item.get("common_structural_stream_area_ha"), item.get("missing_area_ha"),
+                           item.get("common_coverage_fraction"), _area(item.get("common_valid_area_ha")),
+                           _area(item.get("common_structural_stream_area_ha")), _area(item.get("missing_area_ha")),
                            item.get("comparison_availability"), item.get("comparison_availability_reason")])
         sections.append(["Selected-union matched quantities: " + family["label"], [
             "These values are recomputed on the saved portfolio's original reporting union, "
@@ -483,8 +555,8 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
     analysis_crs = CRS.from_user_input(plan["analysis_crs"]).to_string()
     normalization = state.get("normalization", {})
     decision_rows = [
-        ["Saved-plan selection mode", plan.get("algorithm")],
-        ["Ordering objective", plan["selection"].get("objective")],
+        ["Saved-plan selection mode", _choice(plan.get("algorithm"))],
+        ["Ordering objective", _choice(plan["selection"].get("objective"))],
         ["Include ineligible units", plan["selection"].get("include_ineligible")],
     ]
     for group, values in (("Limit", plan["selection"].get("limits", {})),
@@ -492,15 +564,16 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
                           ("Score", spec.get("score", {}))):
         for name, value in values.items():
             if isinstance(value, dict):
-                decision_rows.extend([group + ": " + name + "." + key, item]
+                decision_rows.extend([group + ": " + _label(name) + " / " + _label(key),
+                                      _rule_value(key, item)]
                                      for key, item in value.items()
                                      if not isinstance(item, (dict, list)))
             elif not isinstance(value, list):
-                decision_rows.append([group + ": " + name, value])
+                decision_rows.append([group + ": " + _label(name), _rule_value(name, value)])
     for name in ("basis", "scale", "title", "unit", "maximum", "formula",
                  "normalization_population", "source_uri"):
         if name in normalization:
-            decision_rows.append(["Normalization: " + name, normalization[name]])
+            decision_rows.append(["Normalization: " + _label(name), _rule_value(name, normalization[name])])
     sections = [["Saved conservation portfolio", [
         "This report presents the original completed Conservation study and selected portfolio. "
         "All tables use retained results; the attached decision packet contains the full candidate "
@@ -509,7 +582,7 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
             ["Portfolio", plan["title"]], ["Original portfolio ID", plan["id"]],
             ["Original study", state["title"]], ["Original study ID", state["id"]],
             ["Purpose", state["purpose"]], ["Planning units", state["planning_unit_label"]],
-            ["Unit type", state["unit_type"]], ["Study mode", state["mode"]],
+            ["Unit type", _label(state["unit_type"])], ["Study mode", _choice(state["mode"])],
             ["Analysis CRS", analysis_crs],
             ["Selected original units", len(plan["selected_ids"])],
             ["Decision packet ID", packet["id"]],
@@ -532,7 +605,7 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
         ["Selected high-quality-water area intersection", summary.get("high_quality_overlap_area_ha"), "ha"],
         ["Selected high-quality-water line contact", summary.get("high_quality_contact_length_m"), "m"],
         ["Budget footprint", summary.get("budget_area_ha"), "ha"],
-        ["Budget footprint basis", summary.get("area_budget_basis"), "declared choice"],
+        ["Budget footprint basis", _choice(summary.get("area_budget_basis")), "declared choice"],
         ["Supplied whole-unit cost", summary.get("cost_total"), summary.get("currency")],
         ["Known supplied-cost subtotal", summary.get("known_cost_subtotal"), summary.get("currency")],
         ["Units without supplied costs", summary.get("units_without_cost"), "units"],
@@ -541,14 +614,20 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
         "Area totals use the original selected union in its saved analysis CRS. Overlapping planning "
         "units and overlapping context polygons are counted once in the union. Whole original units "
         "and their intersection with the reporting boundary remain separate quantities.",
-        _table(["Retained quantity", "Value", "Unit or basis"], areas),
+        _table(["Retained quantity", "Value", "Unit or basis"],
+               [[name, _area(value) if unit == "ha" else value, unit]
+                for name, value, unit in areas]),
+        "Area displays use up to six decimal places in hectares. A nonzero value smaller than "
+        "0.000001 ha is shown as an inequality; zero and unavailable values remain distinct. "
+        "This is display precision, not a statement of measurement accuracy. The attached original "
+        "portfolio and analysis retain every full-precision quantity.",
         "The source-water and designated-water relations below retain their actual declared selection. "
         "Geographic overlap, published protection footprints and an upstream connectivity analysis have "
         "different meanings. A blank source quantity remains unavailable.",
     ]])
     relations = []
     for name, choice in spec.get("contexts", {}).items():
-        relations.append([name, choice.get("source_id"), choice.get("relation"),
+        relations.append([_label(name), choice.get("source_id"), _choice(choice.get("relation")),
                           choice.get("meaning"), choice.get("reference")])
     if relations:
         sections.append(["Declared geographic relations", [
@@ -568,8 +647,8 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
     sections.append(["Complete selected planning-unit inventory", [
         _table(["Original unit ID", "Label", "Whole area (ha)", "Reporting area (ha)",
                 "Source-water area (ha)"], [
-            [row["id"], row.get("label"), row.get("area_ha"), row.get("reporting_area_ha"),
-             row.get("source_water_area_ha")] for row in rows]),
+            [row["id"], row.get("label"), _area(row.get("area_ha")), _area(row.get("reporting_area_ha")),
+             _area(row.get("source_water_area_ha"))] for row in rows]),
         _table(["Original unit ID", "Eligible", "Retained score", "Score units",
                 "Supplied cost", "Currency"], [
             [row["id"], row.get("eligible"), row.get("score"), row.get("score_unit") or (
@@ -582,8 +661,8 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
     if pollutants:
         baseline = []
         for name, metric in pollutants.items():
-            baseline.append([name, metric.get("baseline"), metric.get("unit"),
-                             metric.get("coverage_fraction"), metric.get("valid_area_ha"),
+            baseline.append([_label(name), metric.get("baseline"), metric.get("unit"),
+                             metric.get("coverage_fraction"), _area(metric.get("valid_area_ha")),
                              metric.get("availability_reason") or metric.get("availability")])
         sections.append(["Original baseline quantities and support", [
             _table(["Quantity", "Value", "Physical unit", "Coverage fraction",
@@ -598,17 +677,17 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
                 alternative = metric.get("alternatives", {}).get(run_id)
                 if alternative is None:
                     continue
-                blocks.append(_table(["Quantity or support", name + " / " + str(metric.get("unit", ""))], [
+                blocks.append(_table(["Quantity or support", _label(name) + " / " + str(metric.get("unit", ""))], [
                     ["Alternative value on its own support", alternative.get("value")],
                     ["Alternative coverage fraction", alternative.get("coverage_fraction")],
-                    ["Alternative valid area (ha)", alternative.get("valid_area_ha")],
+                    ["Alternative valid area (ha)", _area(alternative.get("valid_area_ha"))],
                     ["Alternative availability", alternative.get("availability_reason") or alternative.get("availability")],
                     ["Baseline on common support", alternative.get("common_baseline")],
                     ["Alternative on common support", alternative.get("common_alternative")],
                     ["Alternative minus baseline on common support", alternative.get("delta")],
                     ["Common coverage fraction", alternative.get("common_coverage_fraction")],
-                    ["Common valid area (ha)", alternative.get("common_valid_area_ha")],
-                    ["Common structural stream area (ha)", alternative.get("common_structural_stream_area_ha")],
+                    ["Common valid area (ha)", _area(alternative.get("common_valid_area_ha"))],
+                    ["Common structural stream area (ha)", _area(alternative.get("common_structural_stream_area_ha"))],
                     ["Comparison availability", alternative.get("comparison_availability_reason") or alternative.get("comparison_availability")],
                     ["Parameter profile changed", alternative.get("profile_changed")],
                 ]))
@@ -635,7 +714,7 @@ def _sections(state, plan, rows, packet, sources, optimization=None):
     source_rows = []
     for original in sources:
         entry = original["entry"]
-        source_rows.append([", ".join(sorted({ref["role"] for ref in original["references"]})),
+        source_rows.append([", ".join(_label(role) for role in sorted({ref["role"] for ref in original["references"]})),
                             entry["title"], entry["vintage"], entry["uri"],
                             entry["body"]["sha256"]])
     sections.append(["Original planning and criterion sources", [
@@ -882,7 +961,8 @@ def prepare(workspace, spec):
                     "Cartographic map labels identify these features; they are not monitoring or intake sites.",
                     {"kind": "table", "columns": ["Context", "Source ID", "Native feature ID",
                                                    "NAME", "FACILITY", "INTAKE", "BUFFER_FT"],
-                     "rows": [[row[name] for name in ("context", "source_id", "native_feature_id",
+                     "rows": [[_label(row[name]) if name == "context" else row[name]
+                               for name in ("context", "source_id", "native_feature_id",
                                                        "NAME", "FACILITY", "INTAKE", "BUFFER_FT")]
                               for row in maps["context_register"]]},
                 ]])
