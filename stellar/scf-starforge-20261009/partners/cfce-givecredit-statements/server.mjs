@@ -66,7 +66,7 @@ function choices(state,query){
 export async function createGiveCreditServer({directory,port=0,expectedWorkspaceId}={}){
   port=Number(port);need(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a local port from 0 to 65535.');
   const workspace=await GiveCreditWorkspace.open(directory,{expectedWorkspaceId});
-  const captures={registry:{status:'IDLE'},ledger:{status:'IDLE'}},tasks={},controllers={},receivedServices=[];
+  const captures={registry:{status:'IDLE'},ledger:{status:'IDLE'}},tasks={},controllers={},receivedServices=[],checkpointImports=new Set();
   try{for(const kind of ['registry','ledger']){const checkpoint=await workspace.captureStatus(kind);if(checkpoint)captures[kind]={status:'SAVED',checkpoint};}}
   catch(error){await workspace.close();throw error;}
   let closed=false;
@@ -86,7 +86,8 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
       const parts=url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
       need(parts[0]==='api','NOT_FOUND','Choose a GiveCredit workspace page.',404);
       if(request.method==='GET'){
-        if(parts[1]==='health'){send(response,200,{schema:STARTUP_SCHEMA,workspaceId:workspace.state.workspaceId,directory:workspace.directory});return;}
+        if(parts[1]==='health'){send(response,200,{schema:STARTUP_SCHEMA,workspaceId:workspace.state.workspaceId,directory:workspace.directory,capabilities:{customerAgent:'v1'}});return;}
+        if(parts[1]==='operations'&&parts[2]){let value=await workspace.serial(()=>workspace.state.operations.find(row=>row.requestId===parts[2])||null);if(!value)for(const kind of ['registry','ledger']){value=await (await workspace.captureStore(kind)).operation(parts[2]);if(value)break;}send(response,200,{found:Boolean(value),operation:value,workspaceId:workspace.state.workspaceId,revision:workspace.state.revision});return;}
         if(parts[1]==='state'){send(response,200,{...await workspace.overview(),captures:copy(captures)});return;}
         if(parts[1]==='capture'){
           if(parts[2]){
@@ -159,18 +160,30 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
         const kind=parts[2];need(['registry','ledger'].includes(kind),'CAPTURE_KIND','Choose registry or ledger acquisition.');
         if(parts[3]==='stop'){controllers[kind]?.abort();send(response,202,captures[kind]);return;}
         if(parts[3]==='checkpoint'){
-          need(!tasks[kind],'CAPTURE_RUNNING','Pause the original acquisition before receiving a checkpoint.',409);
-          need(options.revision===workspace.state.revision,'STALE_WORKSPACE','Refresh the current workspace before receiving.',409);
           need(value.source?.kind===kind,'CAPTURE_KIND','Receive a checkpoint of the selected source kind.');
-          const checkpoint=await workspace.saveCapture(kind,value.source,{phase:'operator-import'});
-          captures[kind]={status:'SAVED',checkpoint};send(response,200,captures[kind]);return;
+          const store=await workspace.captureStore(kind),prior=options.requestId?await store.operation(options.requestId):null;
+          if(!prior){
+            need(!tasks[kind]&&!checkpointImports.has(kind),'CAPTURE_RUNNING','Pause the original acquisition before receiving a checkpoint.',409);
+            need(options.revision===workspace.state.revision,'STALE_WORKSPACE','Refresh the current workspace before receiving.',409);
+          }
+          if(options.requestId){
+            need(!workspace.state.operations.some(row=>row.requestId===options.requestId)&&
+              !await(await workspace.captureStore(kind==='registry'?'ledger':'registry')).operation(options.requestId),
+              'REQUEST_REUSED','This request ID belongs to another original operation.',409);
+          }
+          if(!prior)checkpointImports.add(kind);
+          try{const checkpoint=await store.save(value.source,{phase:'operator-import',
+            request:options.requestId?{requestId:options.requestId,actor:options.actor||'Local operator'}:null});
+            if(!checkpoint.replayed)captures[kind]={status:'SAVED',checkpoint};
+            send(response,200,{status:checkpoint.replayed?'REPLAYED':'SAVED',checkpoint});return;
+          }finally{if(!prior)checkpointImports.delete(kind);}
         }
-        need(!tasks[kind],'CAPTURE_RUNNING','This source acquisition is already running.',409);
+        need(!tasks[kind]&&!checkpointImports.has(kind),'CAPTURE_RUNNING','This source acquisition or checkpoint import is already running.',409);
         need(options.revision===workspace.state.revision,'STALE_WORKSPACE','Refresh the current workspace before acquisition.',409);
         const input={...(value.value||{})};
         if(kind==='ledger'&&input.registryEditionId){input.registrySource=editionFor(await workspace.readonlySnapshot(),input.registryEditionId,'registry');delete input.registryEditionId;}
-        const checkpoint=input.resume?await workspace.captureCheckpoint(kind):undefined,requestId=options.requestId||randomUUID();
-        controllers[kind]=new AbortController();captures[kind]={status:'RUNNING',startedAt:new Date().toISOString(),records:0};
+        const checkpoint=(value.resume||input.resume)?await workspace.captureCheckpoint(kind):undefined,requestId=options.requestId||randomUUID();
+        controllers[kind]=new AbortController();captures[kind]={status:'RUNNING',requestId,startedAt:new Date().toISOString(),records:0};
         const task=(async()=>{
           try{
             const onProgress=async progress=>{const checkpoint=progress.checkpoint?await workspace.saveCapture(kind,progress.checkpoint,{phase:progress.phase}):captures[kind].checkpoint;
