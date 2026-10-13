@@ -66,7 +66,10 @@
     "profile-workbench",
     "scenario-inputs",
     "source-updates",
-    "keowee-regional-review-setup"
+    "keowee-regional-review-setup",
+    "observed-station-studies",
+    "gauge-support",
+    "observed-context"
   ],
   "components": {
     "core": {
@@ -75,14 +78,15 @@
         "audit.py",
         "delivery_snapshot.py",
         "install_extensions.py",
+        "integration/a74f-component-inventory-20261013.json",
         "integration/application_components.json",
+        "model/OBSERVATION_DIAGNOSTICS.md",
         "model/client_report.py",
         "model/delivery.py",
         "model/ensemble_consumers.py",
         "model/ensemble_consumers_cli.py",
         "model/native_study.py",
         "model/observation_diagnostics.py",
-        "model/OBSERVATION_DIAGNOSTICS.md",
         "model/parameter_studies.py",
         "model/portable.py",
         "model/raster_block_cache.py",
@@ -96,6 +100,8 @@
         "operator/extension_registry.py",
         "operator/parameter_study_api.py",
         "operator/server.py",
+        "operator/study_catalogues.py",
+        "operator/task_requests.py",
         "operator/web/app.mjs",
         "operator/web/extension_host.mjs",
         "operator/web/index.html",
@@ -106,10 +112,9 @@
         "package_delivery.py",
         "source_tools/application_assembly.py",
         "source_tools/application_components.py",
-        "source_tools/install_cumulative_application.py",
-        "operator/task_requests.py",
-        "operator/study_catalogues.py"
-      ]
+        "source_tools/install_cumulative_application.py"
+      ],
+      "requires": []
     },
     "maintained-installers": {
       "title": "Original component installation transforms",
@@ -153,10 +158,93 @@
     "calibration": {
       "title": "calibration",
       "paths": [
-        "operator/extensions/calibration.json"
+        "operator/extensions/calibration.json",
+        "source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md",
+        "source/hydrology-huc05-07-20261013/README.md",
+        "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+        "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+        "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+        "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+        "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+        "source/hydrology-huc05-07-20261013/flow-support/reference-period-support.csv",
+        "source/hydrology-huc05-07-20261013/flow-support/reference-period-support.json",
+        "source/hydrology-huc05-07-20261013/flow-support/selected-reference-binding.json",
+        "source/hydrology-huc05-07-20261013/flow-support/source-period-selection.json",
+        "source/hydrology-huc05-07-20261013/flow-support/station-date-support.json",
+        "source/hydrology-huc05-07-20261013/nldi/README.md",
+        "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+        "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+        "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+        "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+        "source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs",
+        "source/hydrology-huc05-07-20261013/reference-support-inputs.json",
+        "source/hydrology-huc05-07-20261013/reference-support.sources.json",
+        "source/hydrology-huc05-07-20261013/source-manifest.json"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "original_discharge_sources",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "original_gauge_catchments",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "original_reference_flow_support",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "conservation-catalog": {
@@ -274,6 +362,7 @@
     "eco13": {
       "title": "Experiment comparisons",
       "paths": [
+        "README.md",
         "integrations/eco13_scenario_lab/EXPERIMENT_INTAKE.md",
         "integrations/eco13_scenario_lab/INSTALL_RECEIVING.py",
         "integrations/eco13_scenario_lab/README.md",
@@ -299,12 +388,23 @@
         "integrations/eco13_scenario_lab/examples/workspace-runs.template.json",
         "integrations/eco13_scenario_lab/examples/workspace-selection.template.json",
         "integrations/eco13_scenario_lab/pyproject.toml",
+        "model/REVIEW_HANDBACK.md",
+        "model/comparison_review.py",
+        "model/review_cli.py",
+        "model/review_handback.py",
+        "model/reviews.py",
+        "operator/COMPARISON_REVIEW.md",
+        "operator/CUSTOMER_REVIEW_HANDBACK.md",
         "operator/ECO13.md",
+        "operator/customer_reviews.py",
         "operator/eco13_economics.py",
         "operator/eco13_operator.py",
         "operator/extensions/eco13.json",
+        "operator/server.py",
         "operator/web/eco13.css",
         "operator/web/eco13.mjs",
+        "operator/web/reviews.css",
+        "operator/web/reviews.mjs",
         "receiving/check_retention.py"
       ],
       "requires": [
@@ -515,6 +615,14 @@
       },
       "import_roots": [
         "integrations/eco13_scenario_lab"
+      ],
+      "family_source_references": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "bank_blob": "d9ef39e5a49c7fc05a1997ab158bed5ea6664efc",
+          "revision": "e76c4dd26f0d4b8241a57e1e2b513a06ec48abcb",
+          "members": 44
+        }
       ]
     },
     "economic-desk": {
@@ -529,10 +637,47 @@
     "ensembles": {
       "title": "ensembles",
       "paths": [
-        "operator/extensions/ensembles.json"
+        "model/ENSEMBLES.md",
+        "model/ENSEMBLE_CONSUMERS.md",
+        "model/ENSEMBLE_OPERATIONS.md",
+        "model/decision_analysis.py",
+        "model/decision_cli.py",
+        "model/ensemble-design.schema.json",
+        "model/ensemble_cli.py",
+        "model/ensemble_consumers.py",
+        "model/ensemble_consumers_cli.py",
+        "model/ensemble_flow_support.py",
+        "model/ensemble_operations.py",
+        "model/ensemble_references.py",
+        "model/ensemble_report.py",
+        "model/ensembles.py",
+        "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
+        "operator/ensemble_service.py",
+        "operator/extensions/ensembles.json",
+        "operator/integrate_ensembles.py",
+        "operator/web/annual_reference.mjs",
+        "operator/web/ensembles.mjs",
+        "requirements-ensemble.txt"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "saved_parameter_studies",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "saved_study_consumers",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "complete_operating_guide",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "experiment-diagnostics": {
@@ -562,12 +707,27 @@
         "operator/install_guided_journey.py",
         "operator/web/journey.css",
         "operator/web/journey.mjs",
-        "operator/web/regional_journey.mjs"
+        "operator/web/regional_journey.mjs",
+        "source_tools/receive_regional_progression.py",
+        "source_tools/REGIONAL_PROGRESSION.md",
+        "source_tools/open_regional_workflow.py",
+        "open_profile_desk.py",
+        "source/run_profile_workbench_browser.mjs",
+        "source/run_source_updates_browser.mjs",
+        "source/run_saved_regional_view_browser.mjs",
+        "source/run_chemistry_browser.mjs",
+        "operator/monitoring_receiving.py",
+        "model/native_worker.py",
+        "operator/native_jobs.py",
+        "operator/programme_jobs.py",
+        "operator/programmes.py",
+        "operator/web/jobs.mjs",
+        "operator/web/jobs.css"
       ],
       "requires": [
         "core"
       ],
-      "source_reference": "Current regional journey and saved project handoff from PR3100."
+      "source_reference": "Current regional journey and saved project handoff from PR3100. Complete regional progression and supervised native receiving from PR3152 and PR3205."
     },
     "investigations": {
       "title": "investigations",
@@ -626,10 +786,40 @@
     "paired-ensemble": {
       "title": "paired ensemble",
       "paths": [
-        "operator/extensions/paired-ensemble.json"
+        "PAIRED_ENSEMBLES.md",
+        "checks/paired_ensemble_journey.py",
+        "model/paired_ensemble/__init__.py",
+        "model/paired_ensemble/designs.py",
+        "model/paired_ensemble/ensemble_cli.py",
+        "model/paired_ensemble/ensemble_portable.py",
+        "model/paired_ensemble/ensemble_rasters.py",
+        "model/paired_ensemble/ensemble_report.py",
+        "model/paired_ensemble/ensemble_store.py",
+        "model/paired_ensemble/ensemble_workspace.py",
+        "operator/extensions/paired-ensemble.json",
+        "operator/install_paired_ensemble.py",
+        "operator/integrate_paired_ensemble.py",
+        "operator/paired_ensemble.py",
+        "operator/paired_ensemble_provider.py",
+        "operator/paired_ensemble_service.py",
+        "operator/web/paired_ensemble.css",
+        "operator/web/paired_ensemble.html",
+        "operator/web/paired_ensemble.mjs",
+        "operator/web/paired_ensemble_desk.css",
+        "operator/web/paired_ensemble_desk.mjs",
+        "operator/web/paired_ensemble_host.css",
+        "operator/web/paired_ensemble_host.mjs",
+        "requirements-paired-ensemble.txt"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "paired_raster_studies",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "parcel-sources": {
@@ -644,10 +834,28 @@
     "profile-comparison": {
       "title": "profile comparison",
       "paths": [
-        "operator/extensions/profile-comparison.json"
+        "model/PROFILE_COMPARISON.md",
+        "model/experiment_profiles.py",
+        "model/profile_comparison.py",
+        "model/profile_comparison_cli.py",
+        "operator/extensions/profile-comparison.json",
+        "operator/profile_comparison_service.py",
+        "operator/web/ensembles.mjs",
+        "operator/web/profile_comparison.css",
+        "operator/web/profile_comparison.mjs",
+        "source/biophysical-regional-20261012/working-profile-intake.json",
+        "source_tools/RECEIVE_PROFILE_COMPARISON.md",
+        "source_tools/receive_profile_comparison.py"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "source_profile_intake",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "programme-activity": {
@@ -829,15 +1037,18 @@
         "model/receiving_water_cli.py",
         "model/receiving_water_delivery.py",
         "model/receiving_water_journey.py",
+        "model/receiving_water_monitoring.py",
         "model/receiving_water_spatial.py",
         "model/receiving_waters.py",
         "operator/RECEIVING_WATERS_OPERATOR.md",
+        "operator/RECEIVING_WATER_MONITORING.md",
         "operator/extensions/receiving-waters.json",
         "operator/install_receiving_waters.py",
         "operator/receiving_water_actions.py",
         "operator/receiving_water_browser.mjs",
         "operator/receiving_water_operate.py",
         "operator/receiving_waters.extension.json",
+        "operator/web/receiving_water_monitoring.mjs",
         "operator/web/receiving_water_spatial.mjs",
         "operator/web/receiving_waters.css",
         "operator/web/receiving_waters.mjs",
@@ -855,7 +1066,8 @@
         "source_tools/receiving_water_selection.schema.json"
       ],
       "requires": [
-        "core"
+        "core",
+        "monitoring"
       ]
     },
     "receptors": {
@@ -870,10 +1082,29 @@
     "regional-soil": {
       "title": "regional soil",
       "paths": [
-        "operator/extensions/regional-soil.json"
+        "operator/REGIONAL_SOIL_DESK.md",
+        "operator/extensions/regional-soil.json",
+        "operator/regional_soil.py",
+        "operator/web/regional_soil.mjs",
+        "operator/web/source_workbench.mjs",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.body",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.capture.json",
+        "source_tools/SOIL_COVERAGE.md",
+        "source_tools/SOIL_REGION.md",
+        "source_tools/SOIL_SOURCE.md",
+        "source_tools/soil_coverage.py",
+        "source_tools/soil_region.py",
+        "source_tools/soil_sources.py"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "regional_soil_preparation",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "review-reconciliation": {
@@ -942,7 +1173,13 @@
     "source-preparation": {
       "title": "source preparation",
       "paths": [
-        "operator/extensions/source-preparation.json"
+        "operator/extensions/source-preparation.json",
+        "source_tools/original_huc12_bounds.py",
+        "source_tools/ORIGINAL_HUC12_BOUNDS.md",
+        "source_tools/resume_nhd_originals.py",
+        "source_tools/RESUME_NHD_ORIGINALS.md",
+        "source_tools/capture_water_sources.py",
+        "source_tools/water_context_geometry.py"
       ],
       "requires": [
         "core"
@@ -1042,10 +1279,60 @@
     "watershed-context": {
       "title": "watershed context",
       "paths": [
-        "operator/extensions/watershed-context.json"
+        "integration/WATERSHED_CONTEXT_RECEIVING.md",
+        "integration/run_watershed_context_operator.py",
+        "integration/watershed_completed_receiving.json",
+        "model/WATERSHED_BRIEF.md",
+        "model/WATERSHED_CONTEXT.md",
+        "model/utility_watershed_context.py",
+        "model/watershed_brief.py",
+        "model/watershed_context.py",
+        "model/watershed_context_cli.py",
+        "operator/WATERSHED_CONTEXT.md",
+        "operator/extensions/watershed-context.json",
+        "operator/install_watershed_context.py",
+        "operator/receive_watershed_context.py",
+        "operator/watershed_context.py",
+        "operator/web/watershed_context.css",
+        "operator/web/watershed_context.mjs",
+        "outputs/watershed-connectivity-20261013/WATERSHED_CONNECTIVITY.md",
+        "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
+        "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
+        "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+        "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/water_context/20261013/classified-full-domain-query.json",
+        "source/water_context/20261013/classified-reaches.csv",
+        "source/water_context/20261013/complete-native-sources.json",
+        "source/water_context/20261013/complete-sources.json",
+        "source/water_context/20261013/completed-run.package.json",
+        "source/water_context/20261013/domain-huc12s.json",
+        "source/water_context/20261013/full-domain-water-context.json",
+        "source/water_context/20261013/native-network-source.json",
+        "source/water_context/20261013/native-network.json",
+        "source/water_context/20261013/nrcs-domain-fy26.csv",
+        "source/water_context/20261013/scdes-domain217-source-coverage.json",
+        "source/water_context/20261013/scdes-huc8-03060104-to-07-target-class-count.json",
+        "source/water_context/20261013/scdes-original-domain217-classified-objectids.json",
+        "source/water_context/20261013/source-context-run.json",
+        "source_tools/NATIVE_NETWORK_SOURCE.md",
+        "source_tools/WATERSHED_SOURCE_IMPORT.md",
+        "source_tools/prepare_watershed_context.py",
+        "source_tools/prepare_watershed_manifest.py",
+        "source_tools/prepare_watershed_network.py",
+        "source_tools/receive_watershed_context.py",
+        "source_tools/receive_watershed_edition.py",
+        "source_tools/watershed_source_entry.py",
+        "source_tools/watershed_source_validation.py"
       ],
       "requires": [
         "core"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "watershed_source_reporting",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
       ]
     },
     "utility-microbial-study": {
@@ -1591,9 +1878,11 @@
         "integrations/monitoring/MANIFEST.json",
         "integrations/monitoring/PREDECESSORS.json",
         "integrations/monitoring/README.md",
+        "integrations/monitoring/RECEIVING.md",
         "integrations/monitoring/install_monitoring.py",
         "integrations/monitoring/install_native_monitoring.py",
         "integrations/monitoring/requirements-monitoring.txt",
+        "integrations/monitoring/source_adoption.json",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/MONITORING.md",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
@@ -1637,7 +1926,64 @@
         "operator/static/monitoring.js",
         "operator/web/monitoring-component.mjs",
         "operator/web/monitoring.css",
-        "operator/web/monitoring.mjs"
+        "operator/web/monitoring.mjs",
+        "eighteenmile_monitoring_context.sources.json",
+        "integration/monitoring_observed_sources.json",
+        "integrations/monitoring/install_observed_context.py",
+        "model/MONITORING_OBSERVED_CONTEXT.md",
+        "model/monitoring_observed_context.py",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2024_2024.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2025_2025.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_nldi_reference.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
+        "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+        "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+        "operator/web/monitoring-observed.mjs",
+        "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analyze-stream-flow.mjs",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/component-consistency.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-duration.svg",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-stratum-concentrations.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/import_into_workspace.py",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nitrogen-components.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/report.html",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/context-summary.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/derive-monitoring-context.mjs",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/input-manifest.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/monitoring-context.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original-station-points.geojson",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/paired-contrasts-network.csv",
+        "source/eighteenmile-stream-nutrients-20261013/monitoring-context/station-topology.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv"
       ],
       "requires": [
         "core"
@@ -1845,6 +2191,1010 @@
         "files": 104,
         "source_bytes": 8071724,
         "revision": "2c1cffc67376ae1ddb09fdec9546e8316c52ebf8"
+      }
+    },
+    "observed-station-studies": {
+      "title": "Seven original observation station studies and calibration gauge continuation",
+      "paths": [
+        "calibration_station_geography.sources.json",
+        "model/observed_station_studies.json",
+        "model/observed_station_studies.py",
+        "model/portable.py",
+        "model/station_geography.py",
+        "observations/eighteenmile_2023/continuous_monthly_do.csv",
+        "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+        "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv",
+        "observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+        "observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+        "observations/eighteenmile_2023/seasonal_summaries.csv",
+        "observations/eighteenmile_2023/study_sites_nad83.geojson",
+        "observations/eighteenmile_2023/study_sites_wgs84.geojson",
+        "observations/eighteenmile_2023/surface_ranges.csv",
+        "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+        "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv",
+        "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv",
+        "observations/observed_hydrology_20261013/derived/calendar_year_stage.csv",
+        "observations/observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson",
+        "observations/observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson",
+        "observations/observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv",
+        "observations/observed_hydrology_20261013/derived/nutrient_results_with_flow.csv",
+        "observations/observed_hydrology_20261013/derived/study_period_flow.csv",
+        "observations/station_context.sources.json",
+        "operator/OBSERVED_STATION_STUDIES.md",
+        "operator/install_observed_station_studies.py",
+        "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+        "source/hydrology-huc05-07-20261013/README.md",
+        "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+        "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+        "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+        "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+        "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+        "source/hydrology-huc05-07-20261013/model-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/README.md",
+        "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+        "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+        "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+        "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+        "source/hydrology-huc05-07-20261013/source-manifest.json",
+        "source_tools/receive_observed_context.py"
+      ],
+      "requires": [
+        "core",
+        "station-assessment",
+        "station-geography"
+      ],
+      "source_reference": {
+        "operation_id": "UPSTATE-OBSERVED-GAUGE-GEOGRAPHY-A73C-20261013",
+        "original_family": {
+          "page": "https://chatgpt.com/space/page_02799370457c819191f0304fd297837e",
+          "decoded_bytes": 1297173,
+          "decoded_sha256": "fceab94c0b266318a484f051a7a22c65c3030444de5c0ca3eef4ee54f64c1a77",
+          "members": 27
+        },
+        "reviewed_join": {
+          "blob": "e64b685ef3f84168813d41156a4f8c78baab9d9f",
+          "decoded_bytes": 253503,
+          "decoded_sha256": "85007111782ae1df7a1769897f6a4fd3fd09106917720897ad5c78f66575dfe2",
+          "continuation": "Current recipe and manifest include the original USGS inventory vintage required by native source import."
+        },
+        "study_ids": [
+          "upper-savannah-usgs-inventory-67",
+          "upper-savannah-usgs-observed-17",
+          "eighteenmile-lake-study-5",
+          "eighteenmile-observed-context-agency-10",
+          "eighteenmile-observed-context-network-10",
+          "huc05-07-calibration-gauges-13-nwis",
+          "huc05-07-calibration-gauges-13-nldi"
+        ],
+        "member_inventory": {
+          "calibration_station_geography.sources.json": {
+            "bytes": 53391,
+            "sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+          },
+          "model/observed_station_studies.json": {
+            "bytes": 56974,
+            "sha256": "36e8b673b0c7d14e2b5b9cbfb8c648e3d02591794c6f261f1fdd3ca2715493ab"
+          },
+          "model/observed_station_studies.py": {
+            "bytes": 13161,
+            "sha256": "e582b746e3cb268d63562e6ace52700b22935582eb95c93f532ccdbecfcde3a6"
+          },
+          "model/portable.py": {
+            "bytes": 47993,
+            "sha256": "b0268e3895cdf1c3ad42758d053f196045b28407cc2e8ac6e1c941376768b40d"
+          },
+          "model/station_geography.py": {
+            "bytes": 61948,
+            "sha256": "1df39ad1f45cc31a362ff0c95240e600ac69bc812d55bacd4eb5223219e22276"
+          },
+          "observations/eighteenmile_2023/continuous_monthly_do.csv": {
+            "bytes": 2338,
+            "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b"
+          },
+          "observations/eighteenmile_2023/continuous_monthly_ph.csv": {
+            "bytes": 2166,
+            "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+          },
+          "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson": {
+            "bytes": 11329,
+            "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+          },
+          "observations/eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv": {
+            "bytes": 232814,
+            "sha256": "167f05866888f290d19385a6eb06a9c33e7c071ca5a7d523c0d7db7b8cef1252"
+          },
+          "observations/eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv": {
+            "bytes": 1502,
+            "sha256": "2839d45b09f54c3525fcf370aa60d17d97263eae51c8ec251772852356869bee"
+          },
+          "observations/eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv": {
+            "bytes": 3398,
+            "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2"
+          },
+          "observations/eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv": {
+            "bytes": 141817,
+            "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+          },
+          "observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson": {
+            "bytes": 8502,
+            "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e"
+          },
+          "observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson": {
+            "bytes": 8562,
+            "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4"
+          },
+          "observations/eighteenmile_2023/seasonal_summaries.csv": {
+            "bytes": 8170,
+            "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a"
+          },
+          "observations/eighteenmile_2023/study_sites_nad83.geojson": {
+            "bytes": 6449,
+            "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9"
+          },
+          "observations/eighteenmile_2023/study_sites_wgs84.geojson": {
+            "bytes": 4456,
+            "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95"
+          },
+          "observations/eighteenmile_2023/surface_ranges.csv": {
+            "bytes": 1234,
+            "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+          },
+          "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv": {
+            "bytes": 98672,
+            "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+          },
+          "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv": {
+            "bytes": 334352,
+            "sha256": "0ea7464700941ae5ff747629cde13f1ac003710e3ee7225b55ad0fa1f439995f"
+          },
+          "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv": {
+            "bytes": 29200,
+            "sha256": "79dd0fbc02203ec2994b971613376147fd02fd6905e3cf8f77a0559923d5b9bf"
+          },
+          "observations/observed_hydrology_20261013/derived/calendar_year_stage.csv": {
+            "bytes": 650,
+            "sha256": "6035eacca48b465688d4edf1a39c236456a695c83b754b8687706cc8e7f8db64"
+          },
+          "observations/observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson": {
+            "bytes": 41692,
+            "sha256": "8f19b120756c1a2822f8f0a2b977279cd0caa8f76c9002f3921cf176b8da3691"
+          },
+          "observations/observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson": {
+            "bytes": 155365,
+            "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e"
+          },
+          "observations/observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv": {
+            "bytes": 6639,
+            "sha256": "abdd1ddee9852679dd2c6c174f4aed3e8602885f371a18ab765e65c720dfde04"
+          },
+          "observations/observed_hydrology_20261013/derived/nutrient_results_with_flow.csv": {
+            "bytes": 36518,
+            "sha256": "67b8349bf110ff2ca012bb92a20a67894213d7a65d1f0bb62c6da6fdf87c7831"
+          },
+          "observations/observed_hydrology_20261013/derived/study_period_flow.csv": {
+            "bytes": 5385,
+            "sha256": "df954baa0926a635bccb727f119cef8869328913ec2d7e892a25ae4b440e53d0"
+          },
+          "observations/station_context.sources.json": {
+            "bytes": 18273,
+            "sha256": "9cc5f12c881bbe35728905ebcce579be60518ed7d33e74ea607aaf94de1dc8a3"
+          },
+          "operator/OBSERVED_STATION_STUDIES.md": {
+            "bytes": 10960,
+            "sha256": "9d9404be578495de4f3df049da9aceb5f74beafb5e6a1574bbea2b02f2cfa0e1"
+          },
+          "operator/install_observed_station_studies.py": {
+            "bytes": 5207,
+            "sha256": "e867bbead40b4d62eb14ca5c0f6f3c459834c212478fa633eeb3940b2cdc40eb"
+          },
+          "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md": {
+            "bytes": 8144,
+            "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1",
+            "git_blob": "7dc1bb01b4ec853faa3975856f427a1de87e72ad"
+          },
+          "source/hydrology-huc05-07-20261013/README.md": {
+            "bytes": 5941,
+            "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115",
+            "git_blob": "efba6c1eb60b9ec69400c9dd5a4072c05f5812cd"
+          },
+          "source/hydrology-huc05-07-20261013/calibration-inputs.json": {
+            "bytes": 1786,
+            "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34",
+            "git_blob": "8b852ebcc379fec7081799f8b06d621445e8c936"
+          },
+          "source/hydrology-huc05-07-20261013/calibration_context.mjs": {
+            "bytes": 11158,
+            "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143",
+            "git_blob": "692ae9b6f58b580cbd3727ca63b09eafe248c5ee"
+          },
+          "source/hydrology-huc05-07-20261013/derive-discharge.mjs": {
+            "bytes": 8245,
+            "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05",
+            "git_blob": "db2771b2837b4edef6e71ea4a07fd8a71f5f3b64"
+          },
+          "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv": {
+            "bytes": 4027,
+            "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690",
+            "git_blob": "5c7975f8b1176fb02d1a5d8263b6781089443108"
+          },
+          "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv": {
+            "bytes": 348121,
+            "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+            "git_blob": "d8ec0a07ff2b74e35015ff3b2eaddeb120f199fc"
+          },
+          "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv": {
+            "bytes": 33415,
+            "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+            "git_blob": "f7257651d457d581cad9ff91237a34d1bfd488a3"
+          },
+          "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json": {
+            "bytes": 3824,
+            "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c",
+            "git_blob": "ecc76625666471de23d36ef32ec7f74921372259"
+          },
+          "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson": {
+            "bytes": 30153,
+            "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
+            "git_blob": "0b2f093f9aa0b16e50d34d80df924d9d06db514f"
+          },
+          "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv": {
+            "bytes": 2399079,
+            "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964",
+            "git_blob": "08a9abe201a3a3cf23a024bf8bbcb6854b0289c6"
+          },
+          "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv": {
+            "bytes": 9682,
+            "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7",
+            "git_blob": "a2798f2938207a31fb0bd982e83fe985bbe2db7d"
+          },
+          "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json": {
+            "bytes": 65562,
+            "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247",
+            "git_blob": "418954ac76adbecc2dca910310e39b48b3a6f47f"
+          },
+          "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv": {
+            "bytes": 5904,
+            "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+            "git_blob": "1c3e51baa7cbaea7109f49bff3694c55477f4174"
+          },
+          "source/hydrology-huc05-07-20261013/model-sources.json": {
+            "bytes": 14486,
+            "sha256": "06bc4f929212cf3179a0c936f8eb166d2a75f6f88efc18464b014eb9790870a7"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/README.md": {
+            "bytes": 6637,
+            "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826",
+            "git_blob": "c250cb9fae34c2d8063387ca7f0a7eeeae9c235e"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json": {
+            "bytes": 45027,
+            "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a",
+            "git_blob": "402fd34b2de59674dd0bdfa54b243ebc49568bb4"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs": {
+            "bytes": 8749,
+            "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238",
+            "git_blob": "c3b2fa471f8f3f248ef54e135c36e4a938cf6629"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv": {
+            "bytes": 10633,
+            "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284",
+            "git_blob": "03e35b59ec4bbfaec417a940b463b2c538c2a234"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json": {
+            "bytes": 24197,
+            "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4",
+            "git_blob": "948b5c203daebfb187fc2159bb5d4658a475ddd4"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson": {
+            "bytes": 21927,
+            "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63",
+            "git_blob": "5f13a0b1de36abda4e8d5583d2c0e00586e60608"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson": {
+            "bytes": 838639,
+            "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b",
+            "git_blob": "7002eb420d3be68f1b00831c89a40f16dd28a406"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/model-sources.json": {
+            "bytes": 19991,
+            "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687",
+            "git_blob": "dc7349b32c36cf19fdc8b440f25a48438ad5bf6f"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json": {
+            "bytes": 596,
+            "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6",
+            "git_blob": "50ed998268a644b0f7ace9f6096f085837b75c85"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson": {
+            "bytes": 9132,
+            "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9",
+            "git_blob": "6a324f657f61180fcdf80a0d52233b58e3e4ba69"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json": {
+            "bytes": 595,
+            "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086",
+            "git_blob": "0725791b9de86ca00f47f9e700a72c7f51aaf41d"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson": {
+            "bytes": 25562,
+            "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3",
+            "git_blob": "d79e1792deb1138a57dce3f81dd8122438439546"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json": {
+            "bytes": 604,
+            "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c",
+            "git_blob": "95aa5814cdb7ceff494bff02a0e842e4ce7c00d3"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson": {
+            "bytes": 15832,
+            "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697",
+            "git_blob": "d5de1b72959bc775a33a03de13f351707cf7cf66"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json": {
+            "bytes": 605,
+            "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083",
+            "git_blob": "1ff7cde11b47c22c572aa9c3b4190707898ed5e6"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson": {
+            "bytes": 13947,
+            "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8",
+            "git_blob": "b1eab8cdf52bac2987acb7459ded828551b43bfa"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json": {
+            "bytes": 595,
+            "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be",
+            "git_blob": "01f66e343540ec22b44cc67e43efb307b6ba2ac0"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson": {
+            "bytes": 36821,
+            "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd",
+            "git_blob": "f5efbee8d8ec91665dafb815788fd194105dab56"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json": {
+            "bytes": 563,
+            "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98",
+            "git_blob": "765467622922676df513fc2b3b2861861206e81d"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson": {
+            "bytes": 154777,
+            "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a",
+            "git_blob": "a9b7ce05d1139bcbcfbd6e54da58581dbda7bdf5"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json": {
+            "bytes": 593,
+            "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86",
+            "git_blob": "bfe29a1f62707876f445c36c75348bdf722d9917"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson": {
+            "bytes": 18675,
+            "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad",
+            "git_blob": "3126188bf99f4a34bf35a4a5ce10f1115f15f152"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json": {
+            "bytes": 615,
+            "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707",
+            "git_blob": "1576cb8e559780d4c2ba1bb8358c84bc6968f0a2"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson": {
+            "bytes": 4530,
+            "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9",
+            "git_blob": "3610677818fe49eaca258d87d8a8504dcd49e650"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json": {
+            "bytes": 618,
+            "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2",
+            "git_blob": "cc75f2134dc3065c686c396a29e9d5a8cece2576"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson": {
+            "bytes": 5534,
+            "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec",
+            "git_blob": "6b183f33e65b4cf91d496f5ed1dab818cb1450cd"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json": {
+            "bytes": 596,
+            "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389",
+            "git_blob": "36bc79fcb8ad1eb994c510d0afd691baad51a40d"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson": {
+            "bytes": 163278,
+            "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc",
+            "git_blob": "d0f55a6859443ad4476d208978f36c2d65157b4a"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json": {
+            "bytes": 606,
+            "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381",
+            "git_blob": "5863320bbb72bc76930179e57ee07adaac19c182"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson": {
+            "bytes": 7565,
+            "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5",
+            "git_blob": "8c6ea954c8201d73d520069fba1bfcaa0ffeda57"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json": {
+            "bytes": 605,
+            "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea",
+            "git_blob": "27c2c89023b1bdc1087be7d6bbc04549f64dfb5e"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson": {
+            "bytes": 177165,
+            "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3",
+            "git_blob": "2f34aeea0e0af50b4ba91c1e0b8c0ada37bbadb4"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json": {
+            "bytes": 615,
+            "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e",
+            "git_blob": "582f23830d9084d2f4166079ba4942ac8858e6f8"
+          },
+          "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson": {
+            "bytes": 191118,
+            "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668",
+            "git_blob": "4a9f5ae3c26031bf527a71510bbedd10b386dd8b"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv": {
+            "bytes": 17523,
+            "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba",
+            "git_blob": "64ad2cc7d9b57f03faac810aeff8c7a8e4b1b5ab"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv": {
+            "bytes": 133043,
+            "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f",
+            "git_blob": "8ca5a28cf99bd5dfc49e18370fc605b89d7cfb54"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv": {
+            "bytes": 140830,
+            "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea",
+            "git_blob": "76f63d68ad918b41ce0781c94c020c6a7147c86d"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv": {
+            "bytes": 150441,
+            "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c",
+            "git_blob": "4925b5eece632edf8279615e6e9c8de44d2244c8"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv": {
+            "bytes": 158068,
+            "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d",
+            "git_blob": "1b0aa72a43de8a2d19e6558e4a5c5fa6a00a7837"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv": {
+            "bytes": 156274,
+            "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0",
+            "git_blob": "2b68702557f0fbeac4dd4f1217cf7f3a202ffdb4"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv": {
+            "bytes": 147925,
+            "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c",
+            "git_blob": "7de3f0aba6b1a66a4a53abd6880ba948a6cb823b"
+          },
+          "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv": {
+            "bytes": 22544,
+            "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60",
+            "git_blob": "53d91d3aff951ea82c1d5bc317cfc94b51e99774"
+          },
+          "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs": {
+            "bytes": 2975,
+            "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd",
+            "git_blob": "5df5ed614cf4d96df42590e68415da5a68eb82df"
+          },
+          "source/hydrology-huc05-07-20261013/source-manifest.json": {
+            "bytes": 19443,
+            "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797",
+            "git_blob": "8400738c2a70ac3d078b08f99de5a75034239225"
+          },
+          "source_tools/receive_observed_context.py": {
+            "bytes": 43071,
+            "sha256": "e045b54001b61fe32c6e605521a25cf3d0974d7cc438980b178f2e758c89a8eb"
+          }
+        }
+      }
+    },
+    "gauge-support": {
+      "title": "Gauge support",
+      "paths": [
+        "model/gauge_support.py",
+        "operator/GAUGE_SUPPORT.md",
+        "operator/extensions/gauge-support.json",
+        "operator/gauge_support.py",
+        "operator/install_gauge_support.py",
+        "operator/web/gauge_support.css",
+        "operator/web/gauge_support.mjs",
+        "source_tools/receive_gauge_support.py"
+      ],
+      "requires": [
+        "core",
+        "station-geography",
+        "watershed-context"
+      ],
+      "family_source_references": [
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "regional_gauge_support",
+          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+        }
+      ]
+    },
+    "observed-context": {
+      "title": "Original observed measurements, flow context and complete scientific sources",
+      "paths": [
+        "assessment/GEOGRAPHY_README.md",
+        "assessment/GEOGRAPHY_SOURCES.json",
+        "assessment/README.md",
+        "assessment/SOURCES.json",
+        "assessment/assessment-model-context.json",
+        "assessment/delistings_2026_draft.csv",
+        "assessment/geography-model-sources.json",
+        "assessment/geography_coverage.json",
+        "assessment/hartwell_nutrient_priority_2026_draft.csv",
+        "assessment/listed_causes_2026_draft.csv",
+        "assessment/observed_monitoring_sites.geojson",
+        "assessment/observed_station_coordinates.csv",
+        "assessment/operate_assessment_maps.py",
+        "assessment/scdes_monitoring_14_original_features.json",
+        "assessment/scdes_monitoring_layer9_metadata.json",
+        "assessment/source_field_differences.csv",
+        "assessment/station_inventory_2026.csv",
+        "assessment/station_metadata_20261013.json",
+        "assessment/stations_nad83_2026.geojson",
+        "assessment/stations_scdes_utm17n_2026.geojson",
+        "assessment/stations_wgs84_2026.geojson",
+        "assessment/tmdl_coverage_2026_draft.csv",
+        "assessment/tmdl_use_support_20260728.csv",
+        "assessment/waters_of_concern_2026_draft.csv",
+        "eighteenmile_lake_observation_report.sources.json",
+        "eighteenmile_lake_paired_analysis.sources.json",
+        "eighteenmile_routine_nutrient_flow.sources.json",
+        "eighteenmile_scientific_figures.sources.json",
+        "model/observations.py",
+        "model/observed_context.py",
+        "model/scientific_figures.py",
+        "model/scientific_report.py",
+        "observations/calibration_context_20261013/README.md",
+        "observations/calibration_context_20261013/assessment.json",
+        "observations/calibration_context_20261013/combined-flow-context.json",
+        "observations/calibration_context_20261013/combined-flow-quality.csv",
+        "observations/calibration_context_20261013/observed-flow-report.html",
+        "observations/calibration_context_20261013/station_year_context.csv",
+        "observations/eighteenmile_2023/NATIVE_IMPORT.md",
+        "observations/eighteenmile_2023/README.md",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+        "observations/eighteenmile_2023/continuous_monthly_do.csv",
+        "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+        "observations/eighteenmile_2023/figures/README.md",
+        "observations/eighteenmile_2023/figures/chlorophyll_antecedent_context.svg",
+        "observations/eighteenmile_2023/figures/chlorophyll_distributions.svg",
+        "observations/eighteenmile_2023/figures/chlorophyll_time_series.svg",
+        "observations/eighteenmile_2023/figures/distribution-statistics.csv",
+        "observations/eighteenmile_2023/figures/figure-sources.json",
+        "observations/eighteenmile_2023/figures/figure-spec.json",
+        "observations/eighteenmile_2023/figures/figure_core.mjs",
+        "observations/eighteenmile_2023/figures/model-sources.json",
+        "observations/eighteenmile_2023/figures/plot-data.csv",
+        "observations/eighteenmile_2023/figures/rebuild_figures.mjs",
+        "observations/eighteenmile_2023/figures/sampling_flow_context.svg",
+        "observations/eighteenmile_2023/figures/vendor/d3-array.LICENSE.txt",
+        "observations/eighteenmile_2023/figures/vendor/d3-array.cjs",
+        "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+        "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
+        "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
+        "observations/eighteenmile_2023/figures/vendor/d3-shape.cjs",
+        "observations/eighteenmile_2023/map-layer-capture.json",
+        "observations/eighteenmile_2023/model-sources.json",
+        "observations/eighteenmile_2023/npdes/DMR_LOADS.md",
+        "observations/eighteenmile_2023/npdes/NATIVE_IMPORT.md",
+        "observations/eighteenmile_2023/npdes/capture.json",
+        "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+        "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+        "observations/eighteenmile_2023/npdes/derived/summary.json",
+        "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+        "observations/eighteenmile_2023/npdes/dmr_records.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/README.md",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/summary.json",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/upstream_annual.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/derived/upstream_monthly.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs.json",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv",
+        "observations/eighteenmile_2023/npdes/flow_context/inputs/usgs_02186702_2023_original.json",
+        "observations/eighteenmile_2023/npdes/flow_context/model-sources.json",
+        "observations/eighteenmile_2023/npdes/flow_context/monthly_flow_core.mjs",
+        "observations/eighteenmile_2023/npdes/flow_context/rebuild_monthly_flow.mjs",
+        "observations/eighteenmile_2023/npdes/map-layer-capture.json",
+        "observations/eighteenmile_2023/npdes/model-sources.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_00530_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_00610_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_00620_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_00665_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_2023_inventory.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0000477_50050_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_00530_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_00600_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_00610_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_00665_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_2023_inventory.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0035700_50050_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_00530_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_00600_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_00610_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_00665_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_inventory.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_january_all_parameters.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0042994_50050_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_00530_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_00600_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_00610_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_00665_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_inventory.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_january_all_parameters.json",
+        "observations/eighteenmile_2023/npdes/originals/SC0047856_50050_2023.json",
+        "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+        "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+        "observations/eighteenmile_2023/npdes/routing-model-sources.json",
+        "observations/eighteenmile_2023/npdes/routing/ROUTING.md",
+        "observations/eighteenmile_2023/npdes/routing/capture.json",
+        "observations/eighteenmile_2023/npdes/routing/derived/annual_quantities_with_routing.csv",
+        "observations/eighteenmile_2023/npdes/routing/derived/outfall_gauge_relations.csv",
+        "observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+        "observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+        "observations/eighteenmile_2023/npdes/routing/derived/reported_quantities_by_gauge_relation.csv",
+        "observations/eighteenmile_2023/npdes/routing/derived/routing_summary.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/SC0000477_hydrolocation.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/SC0035700_hydrolocation.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/SC0042994_hydrolocation.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/SC0047856_hydrolocation.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/gauge_reference.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/gauge_upstream_flowlines.json",
+        "observations/eighteenmile_2023/npdes/routing/originals/gauge_whole_basin.geojson",
+        "observations/eighteenmile_2023/npdes/routing/originals/state_outfalls_wgs84.json",
+        "observations/eighteenmile_2023/npdes/routing/rebuild_routing.mjs",
+        "observations/eighteenmile_2023/npdes/routing/routing_core.mjs",
+        "observations/eighteenmile_2023/npdes/summarize_dmr.mjs",
+        "observations/eighteenmile_2023/paired_analysis/README.md",
+        "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-pair-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-pairs.csv",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-station-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/cross-analyte-links.csv",
+        "observations/eighteenmile_2023/paired_analysis/input-manifest.json",
+        "observations/eighteenmile_2023/paired_analysis/methods.json",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-campaign-support.csv",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-pair-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-pairs.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+        "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
+        "observations/eighteenmile_2023/paired_analysis/paired-observations.json",
+        "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+        "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+        "observations/eighteenmile_2023/paired_analysis/source-records.csv",
+        "observations/eighteenmile_2023/paired_station_observations.csv",
+        "observations/eighteenmile_2023/reported_npdes_permits.csv",
+        "observations/eighteenmile_2023/seasonal_summaries.csv",
+        "observations/eighteenmile_2023/source_notes.json",
+        "observations/eighteenmile_2023/stations.csv",
+        "observations/eighteenmile_2023/stations.json",
+        "observations/eighteenmile_2023/study.json",
+        "observations/eighteenmile_2023/study_sites_nad83.geojson",
+        "observations/eighteenmile_2023/study_sites_wgs84.geojson",
+        "observations/eighteenmile_2023/surface_ranges.csv",
+        "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_README.md",
+        "observations/eighteenmile_2023/wqp/README.md",
+        "observations/eighteenmile_2023/wqp/build_flow_context.mjs",
+        "observations/eighteenmile_2023/wqp/capture.json",
+        "observations/eighteenmile_2023/wqp/derived/activities.csv",
+        "observations/eighteenmile_2023/wqp/derived/calendar.csv",
+        "observations/eighteenmile_2023/wqp/derived/chlorophyll_summary.csv",
+        "observations/eighteenmile_2023/wqp/derived/coverage.csv",
+        "observations/eighteenmile_2023/wqp/derived/measurements.csv",
+        "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+        "observations/eighteenmile_2023/wqp/derived/summary.json",
+        "observations/eighteenmile_2023/wqp/flow-context-sources.json",
+        "observations/eighteenmile_2023/wqp/flow_context.mjs",
+        "observations/eighteenmile_2023/wqp/flow_context_methods.json",
+        "observations/eighteenmile_2023/wqp/normalize.mjs",
+        "observations/eighteenmile_2023/wqp/normalize_core.mjs",
+        "observations/eighteenmile_2023/wqp/observed_chlorophyll_nad83.geojson",
+        "observations/eighteenmile_2023/wqp/observed_chlorophyll_wgs84.geojson",
+        "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-591-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-591-legacy-org-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
+        "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+        "observations/eighteenmile_2023/wqp_20261013/README.md",
+        "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+        "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+        "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+        "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+        "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
+        "observations/observed_hydrology_20261013/README.md",
+        "observations/observed_hydrology_20261013/calibration-context.json",
+        "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv",
+        "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv",
+        "observations/observed_hydrology_20261013/derived/calendar_year_stage.csv",
+        "observations/observed_hydrology_20261013/derived/coverage.json",
+        "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+        "observations/observed_hydrology_20261013/derived/daily_stage.csv",
+        "observations/observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson",
+        "observations/observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson",
+        "observations/observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv",
+        "observations/observed_hydrology_20261013/derived/nutrient_concentration_summary.csv",
+        "observations/observed_hydrology_20261013/derived/nutrient_results_with_flow.csv",
+        "observations/observed_hydrology_20261013/derived/nutrient_source_coverage.csv",
+        "observations/observed_hydrology_20261013/derived/original_series_metadata.json",
+        "observations/observed_hydrology_20261013/derived/study_period_flow.csv",
+        "observations/observed_hydrology_20261013/hydrology_core.mjs",
+        "observations/observed_hydrology_20261013/inputs.json",
+        "observations/observed_hydrology_20261013/model-sources.json",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/README.md",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/compute.mjs",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/dated_values.csv",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/import_into_workspace.py",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/inputs.json",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/june12_contrast.csv",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/methods.json",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/model-sources.json",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/replay.mjs",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/report-sections.json",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/same_date.csv",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/sampling_calendar.csv",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_contrasts.csv",
+        "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_flow_summary.csv",
+        "observations/observed_hydrology_20261013/original/chauga_series_metadata.json",
+        "observations/observed_hydrology_20261013/original/daily/chauga_stage_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/chauga_stage_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2020_2020.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2021_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2022_2022.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2023_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2024_2024.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2025_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2020_2021.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2022_2023.json",
+        "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2024_2025.json",
+        "observations/observed_hydrology_20261013/original/eighteenmile_nldi_reference.json",
+        "observations/observed_hydrology_20261013/original/eighteenmile_nldi_whole_basin.geojson",
+        "observations/observed_hydrology_20261013/original/eighteenmile_station_metadata.json",
+        "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-268_2023.csv",
+        "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-374_2023.csv",
+        "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-838_2023.csv",
+        "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-839_2023.csv",
+        "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-840_2023.csv",
+        "observations/observed_hydrology_20261013/original/series_seneca_tugaloo.rdb",
+        "observations/observed_hydrology_20261013/original/series_upper_savannah_broad.rdb",
+        "observations/observed_hydrology_20261013/original/sites_seneca_tugaloo.rdb",
+        "observations/observed_hydrology_20261013/original/sites_upper_savannah_broad.rdb",
+        "observations/observed_hydrology_20261013/original/usgs_daily_queryables.json",
+        "observations/observed_hydrology_20261013/original/usgs_nldi_basin_method.html",
+        "observations/observed_hydrology_20261013/original/usgs_series_queryables.json",
+        "observations/observed_hydrology_20261013/rebuild_hydrology.mjs",
+        "observed_hydrology_context.report.json",
+        "observed_hydrology_context.sources.json",
+        "operator/web/observed_reports.mjs",
+        "operator/web/observed_series.mjs",
+        "source/OBSERVED_CONTEXT.md",
+        "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+        "source/hydrology-huc05-07-20261013/README.md",
+        "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+        "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+        "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+        "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+        "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+        "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+        "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+        "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+        "source/hydrology-huc05-07-20261013/model-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/GEOGRAPHIC_SUPPORT.md",
+        "source/hydrology-huc05-07-20261013/nldi/README.md",
+        "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+        "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+        "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-applicability.csv",
+        "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-applicability.json",
+        "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-membership.csv",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+        "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+        "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/geographic_support.mjs",
+        "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+        "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+        "source/hydrology-huc05-07-20261013/nldi/rebuild_geographic_support.mjs",
+        "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+        "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+        "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+        "source/hydrology-huc05-07-20261013/source-manifest.json",
+        "source/import_observation_support.py",
+        "source/import_observed_context.py",
+        "source/install_observed_context.py",
+        "source/observed-report-20261013/README.md",
+        "source/observed-report-20261013/install.py",
+        "source/observed-report-20261013/operator-edits.json",
+        "source/observed-report-20261013/render.py",
+        "source/observed_context_patch.json",
+        "source/water_context/20261012/public-water/metadata/public-water-0.json",
+        "source/water_context/20261012/public-water/metadata/public-water-2.json",
+        "source/water_context/20261012/public-water/raw/public-intakes.esri.json",
+        "source/water_context/20261012/public-water/raw/scdes-arjws-prwd-source-water-protection-original.json",
+        "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+        "source/water_context/20261012/public-water/sources.public-native.json",
+        "source_tools/OBSERVED_CONTEXT.md",
+        "source_tools/assess_observed_context.mjs",
+        "source_tools/build_observed_flow_report.mjs",
+        "source_tools/observed_context.mjs",
+        "source_tools/observed_flow_inputs.mjs",
+        "source_tools/observed_flow_map.mjs",
+        "source_tools/observed_flow_report.mjs",
+        "source_tools/operate_assessment_context.py",
+        "source_tools/receive_observed_context.py"
+      ],
+      "requires": [
+        "core",
+        "assessment-context",
+        "receiving-waters",
+        "published-studies"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "revision": "f9ec09ac5bde2fc4ddc392838bb22a2b9ef263e6",
+        "source_manifest_count": 15,
+        "source_member_count": 395,
+        "member_inventory": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8PJ2UMAA",
+        "member_inventory_sha256": "4f18e2c443fcf3e5fcf17183b2d85fbf9a5d178617e2cc527f9bcdd1a5b068f7",
+        "report_manifest": "observed_hydrology_context.sources.json",
+        "report_manifest_sha256": "ebb5f63c95b77d7c5bfa32786871f70a93893d19b4fac7e4c96a74a38ba0c2d4"
       }
     }
   }

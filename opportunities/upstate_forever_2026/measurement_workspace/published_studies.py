@@ -25,9 +25,11 @@ from typing import Any
 import zipfile
 
 if __package__:
+    from . import study_context as application_context
     from .observation_support import enrich_observation_context, report_html as support_report_html
     from .source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 else:
+    import study_context as application_context
     from observation_support import enrich_observation_context, report_html as support_report_html
     from source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 
@@ -561,40 +563,13 @@ def _manifest_path(manifest_name, value):
 
 
 def installed_context_paths(study_id: str) -> tuple[str, ...]:
-    if study_id == "scdes-eighteenmile-lake-2023":
-        return INSTALLED_CONTEXT_PATHS
-    if study_id == STREAM_STUDY_ID:
-        return (STREAM_CONTEXT_MANIFEST,)
-    return ()
+    legacy = INSTALLED_CONTEXT_PATHS if study_id == application_context.LAKE_STUDY else ()
+    return tuple(dict.fromkeys((*legacy, *application_context.manifest_names(study_id))))
 
 
 def _stream_context(application: Path, manifest_path: Path) -> dict[str, bytes]:
-    """Keep the complete original application layout beneath one retained root."""
-    application = application.resolve(strict=True)
-    manifest_path = manifest_path.resolve(strict=True)
-    if manifest_path != application / STREAM_CONTEXT_MANIFEST or not manifest_path.is_file():
-        raise ValueError("Choose the original application-root stream analysis manifest.")
-    native_bytes = manifest_path.read_bytes()
-    native = _json(native_bytes)
-    if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
-        raise ValueError("The stream analysis manifest must use upstate.sources/v1.")
-    retained = {STREAM_RETAINED_MANIFEST: native_bytes}
-    for entry in native["entries"]:
-        for item in [entry, *entry.get("companions", [])]:
-            relative = _name(item["path"])
-            if not any(relative.startswith(prefix) for prefix in STREAM_SOURCE_PREFIXES):
-                raise ValueError("A stream analysis source is outside its declared original source families.")
-            target = (application / relative).resolve(strict=True)
-            if not target.is_relative_to(application) or not target.is_file():
-                raise ValueError("A stream analysis source is outside the application.")
-            raw = target.read_bytes()
-            if item.get("sha256") != _hash(raw) or item.get("bytes") != len(raw):
-                raise ValueError("An original stream analysis source changed: " + relative)
-            name = STREAM_CONTEXT_ROOT + "/" + relative
-            if name in retained and retained[name] != raw:
-                raise ValueError("The stream analysis assigns conflicting source bodies.")
-            retained[name] = raw
-    return retained
+    """Preserve the original application layout for registered scientific context."""
+    return application_context.retained_files(application, manifest_path)
 
 
 def add_installed_context(files: dict[str, bytes], manifests: list[Path]) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
@@ -613,8 +588,8 @@ def add_installed_context(files: dict[str, bytes], manifests: list[Path]) -> tup
         application = path.parents[len(PurePosixPath(relative).parts) - 1]
         native_bytes = path.read_bytes()
         native = _json(native_bytes)
-        if study_id == STREAM_STUDY_ID:
-            retained = _stream_context(application, path)
+        if relative in application_context.FAMILIES:
+            retained = application_context.retained_files(application, path)
         else:
             root = (application / "observations" / "eighteenmile_2023").resolve(strict=True)
             manifest_name = relative.removeprefix("observations/eighteenmile_2023/")
@@ -752,7 +727,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS, STREAM_RETAINED_MANIFEST) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS, *application_context.retained_manifest_names()) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -816,7 +791,7 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
         if name in source_entries:
             continue
         suffix = PurePosixPath(name).suffix.lower()
-        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".txt", ".html", ".svg"):
+        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".py", ".txt", ".html", ".svg"):
             continue
         source_id = "study-" + _hash(name.encode("utf-8"))[:16]
         if source_id in seen_ids:
@@ -1010,7 +985,7 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v9":
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v10":
             source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
@@ -1022,7 +997,7 @@ class PublishedStudyStore:
             }
             record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
-            record["source_registration_schema"] = "upstate.published-study-sources/v9"
+            record["source_registration_schema"] = "upstate.published-study-sources/v10"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -1090,6 +1065,12 @@ class PublishedStudyStore:
                 value = _json(original(entry["path"]))
                 if isinstance(value, dict) and value.get("schema") == "upstate.published-study-visual-context/v1":
                     visual.append(value)
+        native_catalog_bytes = (self._version_root(study_id, record["version_id"]) / "sources.json").read_bytes()
+        expected_catalog = record["source_manifest"]
+        if len(native_catalog_bytes) != expected_catalog["bytes"] or _hash(native_catalog_bytes) != expected_catalog["sha256"]:
+            raise ValueError("The retained study source manifest changed.")
+        native_catalog = _json(native_catalog_bytes)
+        native_entries = {entry["id"]: entry for entry in native_catalog["entries"]}
         return {
             "record": record, "study": study, "tables": tables,
             "source_notes": notes, "visual_context": visual,
@@ -1100,7 +1081,11 @@ class PublishedStudyStore:
             "wqp_summary": summary, "flow_rows": flow, "flow_methods": flow_methods,
             "available_stations": list(available_stations.values()),
             "source_artifacts": [
-                {**entry, "source_selector": {
+                {**entry,
+                 "title": native_entries[record["source_entries"][entry["path"]]].get("title"),
+                 "role": native_entries[record["source_entries"][entry["path"]]].get("role"),
+                 "source_metadata": native_entries[record["source_entries"][entry["path"]]].get("metadata", {}),
+                 "source_selector": {
                     "source_collection_id": record["source_collection_id"],
                     "source_id": record["source_entries"][entry["path"]],
                 }} for entry in record["source_files"]

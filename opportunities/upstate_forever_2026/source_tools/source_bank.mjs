@@ -288,10 +288,15 @@ export function createSourceBankToolkit(options = {}) {
     return JSON.parse(spans.length ? spans.join("") + text.slice(start) : text);
   }
   function gzipEnvelope(value, depth) {
-    if (!["base64+gzip", "gzip+base64"].includes(value.encoding) || !Array.isArray(value.chunks) ||
-        !value.chunks.length || value.chunks.length > limits.maxMembers ||
-        value.chunks.some(part => typeof part !== "string"))
+    if (!["base64+gzip", "gzip+base64", "base64+gzip+utf8-json"].includes(value.encoding) || !Array.isArray(value.chunks) ||
+        !value.chunks.length || value.chunks.length > limits.maxMembers)
       fail("gzip source envelope needs ordered base64 chunks");
+    let chunks;
+    if (value.chunks.every(part => typeof part === "string")) chunks = value.chunks;
+    else if (value.chunks.every((part, index) => part && typeof part === "object" &&
+        !Array.isArray(part) && part.index === index && typeof part.content_base64 === "string"))
+      chunks = value.chunks.map(part => part.content_base64);
+    else fail("gzip source chunks must be strings or a complete zero-based indexed sequence");
     const pairs = [["compressed_bytes", "compressed_sha256"], ["gzip_bytes", "gzip_sha256"]];
     const identities = pairs.filter(([bytes, sha]) => value[bytes] !== undefined || value[sha] !== undefined)
       .map(([bytes, sha]) => {
@@ -307,11 +312,11 @@ export function createSourceBankToolkit(options = {}) {
     if (!Number.isSafeInteger(value.decoded_bytes) || value.decoded_bytes < 0 ||
         typeof value.decoded_sha256 !== "string" || !shaPattern.test(value.decoded_sha256))
       fail("gzip source envelope needs decoded bytes and SHA-256");
-    const encodedLength = value.chunks.reduce((n, part) => n + part.length, 0);
+    const encodedLength = chunks.reduce((n, part) => n + part.length, 0);
     if (encodedLength > Math.ceil(limits.maxInputBytes / 3) * 4 + 4 ||
         compressed.bytes > limits.maxInputBytes || value.decoded_bytes > limits.maxOutputBytes)
       fail("gzip source envelope exceeds byte limits");
-    const packed = decodeBase64(value.chunks.join(""), limits.maxInputBytes, "gzip source envelope");
+    const packed = decodeBase64(chunks.join(""), limits.maxInputBytes, "gzip source envelope");
     count(packed.length, compressed.bytes, "compressed source envelope");
     const compressedSha256 = hash(packed, compressed.sha256, "compressed source envelope");
     const raw = codec.gunzip(packed, { maxOutputBytes: value.decoded_bytes, maxMembers: limits.maxGzipMembers });

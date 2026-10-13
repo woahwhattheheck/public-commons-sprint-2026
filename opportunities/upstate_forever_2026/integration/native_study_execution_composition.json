@@ -1,0 +1,130 @@
+{
+  "schema": "upstate.native-study-execution-composition/v1",
+  "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-E7A1",
+  "edition": "native-study-release/3",
+  "predecessor": {
+    "pull_request": 3182,
+    "merge": "b4d5211baf6380e0c904513f9d5990b4b9acd9be"
+  },
+  "ownership": "ECSA handed off this complete producer/context and standalone auditor continuation. Existing readable report, hashed native-execution companion and shared native_versions helper remain with their original owners.",
+  "dependencies": {
+    "model/native_versions.py": {
+      "source_git_blob": "faa7eaae967fe3b0ab63d7d7213a9ebff173d100",
+      "apis": [
+        "POLICY",
+        "model_versions",
+        "comparison_versions"
+      ],
+      "preserve_current": true
+    },
+    "model/delivery.py": {
+      "source_git_blob": "5ed8de7dc7c29c2ece46024b1e3404a70f2a64db",
+      "contract": "Full NDR/SDR baseline and alternatives; existing manifest model.native_version_provenance and native-study context retention."
+    }
+  },
+  "files": [
+    {
+      "path": "model/native_study.py",
+      "before": {
+        "bytes": 9640,
+        "sha256": "bde94af777d17ba5a9f9e76f9b9d5c857c34f32608585308986a97fcaf2d33c6"
+      },
+      "after": {
+        "bytes": 10782,
+        "sha256": "66a2a7f13ee1c818c506226d01fa6a129a18a0e10db1b7a14439926a6fbbccf7"
+      },
+      "ordered_unique_replacements": [
+        {
+          "before": "import math\nfrom pathlib import Path\n",
+          "after": "import math\nfrom copy import deepcopy\nfrom pathlib import Path\n"
+        },
+        {
+          "before": "from .reuse import copy_verified\n",
+          "after": "from .reuse import copy_verified\nfrom . import native_versions\n"
+        },
+        {
+          "before": "EDITION = \"native-study-release/2\"",
+          "after": "EDITION = \"native-study-release/3\""
+        },
+        {
+          "before": "def retained_runtimes(run):\n    \"\"\"Keep each executed model's original runtime, including adopted stages.\"\"\"\n    stages = run.get(\"stages\", {})\n    if not isinstance(stages, dict):\n        raise ValueError(\"Retain the original native model stages\")\n    result = {}\n    for model in (\"ndr\", \"sdr\"):\n        stage = stages.get(model, {})\n        if not isinstance(stage, dict):\n            raise ValueError(\"Retain the original \" + model.upper() + \" stage\")\n        original = stage.get(\"runtime\")\n        if original is None:\n            original = run.get(\"runtime\")\n        modules = original.get(\"modules\") if isinstance(original, dict) else None\n        module = modules.get(model) if isinstance(modules, dict) else None\n        if (not isinstance(original, dict)\n                or original.get(\"version\") != INVEST_VERSION\n                or original.get(\"declared_source\") != INVEST_SOURCE\n                or not isinstance(module, dict)\n                or module.get(\"git_blob\") != INVEST_SOURCE[model + \"_blob\"]):\n            raise ValueError(\"Retain the original InVEST \" + INVEST_VERSION\n                             + \" runtime for the completed \" + model.upper() + \" stage\")\n        result[model] = original\n    return result\n",
+          "after": "def retained_runtimes(run, *, versions=None):\n    \"\"\"Keep the original runtime selected by the shared completed-stage policy.\"\"\"\n    stages = run.get(\"stages\", {})\n    if not isinstance(stages, dict):\n        raise ValueError(\"Retain the original native model stages\")\n    versions = native_versions.model_versions(run) if versions is None else versions\n    if set(versions) != {\"ndr\", \"sdr\"}:\n        raise ValueError(\"A full native study retains both original NDR and SDR models\")\n    result = {}\n    for model in (\"ndr\", \"sdr\"):\n        stage = stages.get(model, {})\n        if not isinstance(stage, dict):\n            raise ValueError(\"Retain the original \" + model.upper() + \" stage\")\n        info = versions[model]\n        original = (stage.get(\"runtime\") if info[\"basis\"] == \"completed_stage_runtime\"\n                    else run.get(\"runtime\"))\n        modules = original.get(\"modules\") if isinstance(original, dict) else None\n        module = modules.get(model) if isinstance(modules, dict) else None\n        if (info[\"comparison_version\"] != INVEST_VERSION\n                or not isinstance(original, dict)\n                or original.get(\"version\") != INVEST_VERSION\n                or original.get(\"declared_source\") != INVEST_SOURCE\n                or not isinstance(module, dict)\n                or module.get(\"git_blob\") != INVEST_SOURCE[model + \"_blob\"]):\n            raise ValueError(\"Retain the original InVEST \" + INVEST_VERSION\n                             + \" runtime for the completed \" + model.upper() + \" stage\")\n        result[model] = deepcopy(original)\n    return result"
+        },
+        {
+          "before": "    runtimes = {run[\"id\"]: retained_runtimes(run) for run in runs}\n",
+          "after": "    executed = native_versions.comparison_versions(runs, (\"ndr\", \"sdr\"))\n    runtimes = {run[\"id\"]: retained_runtimes(run, versions=executed[\"runs\"][run[\"id\"]])\n                for run in runs}\n"
+        },
+        {
+          "before": "        \"scenario_run_ids\": [run[\"id\"] for run in alternatives],\n",
+          "after": "        \"scenario_run_ids\": [run[\"id\"] for run in alternatives],\n        \"execution\": {name: deepcopy(executed[name]) for name in (\"policy\", \"models\", \"versions\")},\n"
+        },
+        {
+          "before": "            \"stage_runtimes\": runtimes[run[\"id\"]],\n",
+          "after": "            \"stage_runtimes\": runtimes[run[\"id\"]],\n            \"model_versions\": deepcopy(executed[\"runs\"][run[\"id\"]]),\n            \"stage_execution_sources\": {\n                model: {name: deepcopy(((run.get(\"stages\") or {}).get(model) or {}).get(name))\n                        for name in (\"completed_at\", \"runtime\", \"reused_from\")}\n                for model in (\"ndr\", \"sdr\")},\n"
+        },
+        {
+          "before": "            \"Each completed model retains its original runtime, including independently adopted NDR and SDR stages.\",\n",
+          "after": "            \"Each completed model retains its original runtime, including independently adopted NDR and SDR stages.\",\n            \"Execution versions follow the shared completed-stage policy; original stage completion, runtime and reuse records are retained for independent receiving.\",\n"
+        }
+      ]
+    },
+    {
+      "path": "native_study_audit.py",
+      "before": {
+        "bytes": 14537,
+        "sha256": "61e2bcc524d3597319b96b31a72d09e4467c7d82f7af41552270a5304ae5dba7"
+      },
+      "after": {
+        "bytes": 19637,
+        "sha256": "d91c1d88c3dd205bd5e187a218cc4f19b449131eb40881430f4c80174a082f31"
+      },
+      "ordered_unique_replacements": [
+        {
+          "before": "CONTEXT_SCHEMA = \"commons.native-study-context/v1\"\n",
+          "after": "CONTEXT_SCHEMA = \"commons.native-study-context/v1\"\nEXECUTION_EDITION = \"native-study-release/3\"\nEXECUTION_POLICY = \"completed_stage_runtime_else_observed_run_else_labeled_requested_legacy\"\n"
+        },
+        {
+          "before": "def inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):\n",
+          "after": "def _execution_metadata(context, model, require):\n    \"\"\"Check immutable declared execution sources without importing the app.\"\"\"\n    runs = context[\"runs\"]\n    supplied = (\"execution\" in context or any(\n        \"model_versions\" in run or \"stage_execution_sources\" in run for run in runs))\n    if context.get(\"edition\") != EXECUTION_EDITION and not supplied:\n        return\n    execution = context.get(\"execution\")\n    if not require(isinstance(execution, dict), \"execution.context\",\n                   \"This study edition requires its declared execution policy and cohort versions\"):\n        return\n    expected_models = [\"ndr\", \"sdr\"]\n    if not require(execution.get(\"policy\") == EXECUTION_POLICY\n                   and execution.get(\"models\") == expected_models\n                   and execution.get(\"versions\") == {name: INVEST_VERSION for name in expected_models},\n                   \"execution.cohort\", \"Retain the shared policy and full original-model version cohort\"):\n        return\n    manifest = model.get(\"native_version_provenance\")\n    if not require(isinstance(manifest, dict), \"execution.manifest\",\n                   \"The manifest must retain the same original execution cohort\"):\n        return\n    require(all(manifest.get(name) == execution.get(name) for name in (\"policy\", \"models\", \"versions\")),\n            \"execution.manifest\", \"Manifest and study execution policy or versions differ\")\n    declared_runs = manifest.get(\"runs\")\n    if not require(isinstance(declared_runs, dict), \"execution.runs\",\n                   \"Retain the original run/model execution records in the manifest\"):\n        return\n    require(set(declared_runs) == {run[\"id\"] for run in runs},\n            \"execution.runs\", \"Execution provenance must cover the same original native cohort\")\n\n    def text(value):\n        return value.strip() if isinstance(value, str) and value.strip() else None\n\n    for run in runs:\n        versions = run.get(\"model_versions\")\n        sources = run.get(\"stage_execution_sources\")\n        if not require(isinstance(versions, dict) and set(versions) == set(expected_models)\n                       and isinstance(sources, dict) and set(sources) == set(expected_models),\n                       \"execution.sources\", \"Retain both selected-model records and original stage sources\"):\n            continue\n        require(declared_runs.get(run[\"id\"]) == versions,\n                \"execution.run.\" + run[\"id\"], \"Manifest and study per-model execution records differ\")\n        requested = text(run[\"selection\"].get(\"invest_version\"))\n        runtime = run.get(\"runtime\")\n        observed = text(runtime.get(\"version\")) if isinstance(runtime, dict) else None\n        for name in expected_models:\n            key = \"execution.\" + run[\"id\"] + \".\" + name\n            info, stage = versions[name], sources[name]\n            if not require(isinstance(info, dict) and isinstance(stage, dict)\n                           and {\"completed_at\", \"runtime\", \"reused_from\"} <= set(stage),\n                           key, \"Retain the complete original stage execution fields\"):\n                continue\n            stage_runtime = stage.get(\"runtime\")\n            stage_version = (text(stage_runtime.get(\"version\"))\n                             if stage.get(\"completed_at\") and isinstance(stage_runtime, dict) else None)\n            effective = stage_version or observed or requested\n            basis = (\"completed_stage_runtime\" if stage_version else\n                     \"observed_run_fallback\" if observed else\n                     \"requested_legacy\" if requested else \"unavailable\")\n            expected = {\n                \"model\": name, \"comparison_version\": effective, \"basis\": basis,\n                \"observed_stage_version\": stage_version, \"observed_run_version\": observed,\n                \"requested_version\": requested,\n                \"differs_from_requested\": bool(effective and requested and effective != requested),\n                \"stage_completed_at\": stage.get(\"completed_at\"),\n                \"reused_from\": stage.get(\"reused_from\"),\n            }\n            require(type(info.get(\"differs_from_requested\")) is bool\n                    and all(field in info and info[field] == value for field, value in expected.items()),\n                    key + \".metadata\", \"Declared model provenance differs from its original stage/run sources\")\n            require(effective == execution.get(\"versions\", {}).get(name),\n                    key + \".cohort\", \"The original producing model differs from the retained cohort version\")\n            chosen = stage_runtime if stage_version else runtime\n            require((run.get(\"stage_runtimes\") or {}).get(name) == chosen,\n                    key + \".runtime\", \"The retained official runtime does not follow completed-stage priority\")\n\n\ndef inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):\n"
+        },
+        {
+          "before": "        maps = data[\"maps\"]\n",
+          "after": "        _execution_metadata(context, data[\"model\"], require)\n        if context.get(\"execution\") is not None:\n            summary[\"execution\"] = context[\"execution\"]\n\n        maps = data[\"maps\"]\n"
+        }
+      ]
+    },
+    {
+      "path": "NATIVE_STUDY_EXECUTION.md",
+      "after": {
+        "bytes": 4900,
+        "sha256": "d997cbb7438dd20664ec021be8a9a4ec266402fd8288e9c994fa6bb5745ce786"
+      },
+      "new_file": true
+    }
+  ],
+  "preserved": [
+    "original delivery/context schemas",
+    "all five native map families",
+    "complete NDR and SDR model scope",
+    "original requested selection and native run IDs",
+    "original official InVEST declaration and module Git hashes",
+    "raw runtime/stage_runtimes/artifacts/source dictionaries",
+    "actual projected grid and mass-per-pixel physical units",
+    "legacy editions without new execution metadata",
+    "existing configurable manifest byte budget",
+    "standalone audit without importing the application model package"
+  ],
+  "validation": {
+    "guards": "Every ordered original-source anchor is unique, and applying all guards reproduces the complete stored afterimage.",
+    "native": "Use the existing equipped full-study delivery receiving operation and its original standalone audit against the generated manifest."
+  },
+  "integration": {
+    "base_commit": "d807b7b25e8d0a2fbcff92233666799066f51cde",
+    "status": "composed-on-current-source",
+    "source_carrier": "F0C8A6F7T4P",
+    "source_payload_sha256": "9a17e9953af00a47b963d7b01e3f61672fa1d843f48736bd1ac31785d47236df",
+    "original_owner_handoff": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791868873676269",
+    "current_delivery_blob": "c7a90389312f47605a7cb1de2ad7b9739763eb68",
+    "review": "All eleven ordered source guards replay uniquely against the current producer/auditor and reproduce their complete source bytes. Current full-model delivery and shared helper contracts reviewed independently."
+  }
+}

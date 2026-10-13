@@ -143,3 +143,49 @@ Daily gauge flow is shared basin context. Whole-catchment membership does not es
 Selected original-observation exports retain every source column in a separate CSV for each original response. The accompanying index binds every selected row to its original response hash, physical CSV row, activity identifier and source record ID. The complete agency responses remain unchanged in the complete study export.
 
 The concentration-support CSV preserves each series key, sample fraction, method authority and identifier, result value type, original weight/time/temperature/particle-size basis, and support-unit spelling alongside its station, project, activity type and interval statistics. These fields keep different analytical series distinct outside the application.
+
+## Sampling coverage and original network context
+
+The same stream builtin also adopts the installed original
+`eighteenmile_stream_flow_coverage.sources.json` from the source author's
+PR3167. Open the sampling and flow-coverage report by its original source title
+beside the nutrient/gauge-flow study. This companion retains all 589 original
+nutrient records, 153 activities, 106 distinct sampling dates and the 2,192-day
+reference-gauge period. Its original outputs describe 65 annual-P95 episodes,
+58 without a sampling date, station/year/month sampling coverage, flow-stratum
+concentrations and original nitrogen component consistency.
+
+The two authored reports retain their own methods and cohorts. The nutrient
+study uses midrank reference-flow percentiles; the coverage companion uses
+its documented empirical nearest-rank thresholds with ties included. Their
+original results are displayed and exported unchanged. Neither report's
+full-study outputs are recalculated by a station/month filter in this desk.
+
+The original source station table retains two separate spatial fields.
+All four points lie in the original unsplit basin. Original USGS NLDI
+hydrolocations and upstream-index identities classify SV-233 as downstream
+on the same reach (measure 17.172927977358476 versus gauge 53.4049), and SV-245,
+SV-375 and SV-376 as indexed upstream reaches. These classifications keep
+their original station/reach identifiers, indexed coordinates and response
+filenames. The sampling station's original WQP coordinates remain unchanged.
+
+Both complete root manifests and every declared member share the retained
+`application-context/stream-nutrients/` application layout. Their shared
+original bodies must agree byte for byte. This preserves relative HTML/SVG,
+CSV, source and rebuild links without flattening duplicate filenames.
+The native source registry retains each original entry ID and both original
+manifest bodies. Selected-report ZIPs and complete-study archives carry
+the same full dependency tree; the portable application contains both root
+manifests and all original source directories.
+
+To receive this edition, run the existing Published studies installer from
+the complete family checkout against the existing application. Import the
+same stream builtin in its original Workspace, then open both retained reports,
+export the selected study and complete study, and reopen the complete-study
+archive. An older immutable study version remains its original edition;
+importing the installed complete source creates or reuses the new source-bound
+version. Saved source-cohort records retain original qualifiers and comments.
+
+Queued source imports and exports retain their original task and operation
+identities when the desk is left. Late task responses cannot open a task,
+show an error or update controls in a remounted or different Workspace.

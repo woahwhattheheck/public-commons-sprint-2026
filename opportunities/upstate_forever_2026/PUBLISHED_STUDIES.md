@@ -1,6 +1,6 @@
 # Published field-study workspace
 
-The ECSA extension turns the existing Eighteenmile 2023 companion into a retained, filterable study. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
+The ECSA extension retains the original lake, stream-nutrient and utility-microbial source cohorts as separate filterable studies. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
 
 ## Included study
 
@@ -311,3 +311,37 @@ The receiving ECSA host must provide its current Workspace, extension registry, 
 ## Stream observations and scientific analysis (1.5.1)
 
 The independent stream builtin `scdes-eighteenmile-streams-2020-2025` retains all 589 original results and their 153 activity identities. It joins the installed six-entry stream nutrient/flow analysis with its unchanged original files. See [STREAM_OBSERVATIONS.md](measurement_workspace/STREAM_OBSERVATIONS.md) for the native import, full report, selection behavior, source conventions, and complete offline rebuild. The lake study continues to use its own original source edition and context manifests.
+
+## Physical observations and sampling-flow reports (1.7.0)
+
+The installed source context now includes the complete physical water-quality study and the six-year sampling-calendar/flow-coverage report. Native intake and the installer use the same `measurement_workspace/study_context.py` registry and exact source-byte validation. Each original application-root manifest remains unchanged inside the retained edition. Repeated declarations of the same original path must agree on both its byte count and SHA256.
+
+| Native source family | Included with | Retained application root |
+| --- | --- | --- |
+| Nutrient and gauge-flow analysis, 2020–2025 | Stream cohort | `application-context/stream-nutrients/` |
+| Sampling calendar and flow coverage, 2020–2025 | Stream cohort | `application-context/stream-nutrients/` |
+| Physical water quality and sampling context, 2023 | Lake or stream cohort | `application-context/physical-water-quality/` |
+
+The original source manifests supply the report titles shown in the desk. Each report keeps its stated full source scope when the observations table is filtered. Adding the physical report does not replace the selected cohort's original activities or observation index. Its 51 activities, including 49 routine activities and two separately identified PFAS activities, remain the scope of that report.
+
+Both the physical study and sampling-flow report require original sources outside their report directory. The physical report uses the retained 2023 daily gauge response from the stream analysis; sampling-flow coverage uses the original hydrology daily-flow table and the original network-location responses. The registry retains those files at their original application-relative locations beneath the roots above. Original relative report links, SVG resources, source-row references, and rebuild paths therefore survive report export and complete-study reopening.
+
+The maintained stream builtin automatically includes its installed context. A received lake source edition can add the physical study with `--with-installed-context` or the native import checkbox, alongside its existing lake reports. An explicit subset may use the following argument on the same import command:
+
+```sh
+--context-manifest "$ACTUAL_APP/eighteenmile_physical_context.sources.json"
+```
+
+Original report HTML and every declared companion travel together in `selected-study-report.zip`. Extract the package, then open `study-report.html` or the original report within `original-sources/`. The original application-root source manifest is included beside the retained application tree. For example, the physical reconstruction entry point is:
+
+```sh
+node original-sources/application-context/physical-water-quality/observations/eighteenmile_2023/physical_context/build_study.mjs --output NEW_PHYSICAL_STUDY
+```
+
+The complete study ZIP preserves the same immutable source edition for native re-import. The current Workspace source registration and portable project archive retain these additional source families with the original collection/source identifiers and declared bytes.
+
+## Study task continuity (1.7.1)
+
+Queued imports and exports keep their task and operation identities when the desk closes. The visible task response belongs to the Workspace and mounted view that submitted it: late responses, refreshes and errors leave a remounted or different Workspace unchanged. Reopen the accepted task from the existing task list to inspect its retained result.
+
+The [stream observations guide](measurement_workspace/STREAM_OBSERVATIONS.md#sampling-coverage-and-original-network-context) describes the original nutrient and sampling-coverage reports, their separate percentile methods, upstream/downstream source identities and complete export/reopen path. Original report titles, the physical study, all current source registrations and the complete scientific companion tree remain part of this edition.

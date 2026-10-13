@@ -36,7 +36,7 @@ The workshare supplies one cumulative project, containing:
 - The complete original source inventory and receipts; preserved raster/vector/table/document bodies, native sidecars and declared analysis derivatives.
 - The full Upper Savannah reporting selection, actual contributing hydrologic domain and explicit four-HUC utility-focus context.
 - A reviewed parameter profile with complete coefficient lineage and its current InVEST interpretation.
-- One observed baseline and two explicit alternatives, including model selections, logs, quantitative outputs, interrupted-run continuation and scenario comparisons.
+- One current-condition modeled baseline and two explicit alternatives, including model selections, logs, quantitative outputs, interrupted-run continuation and scenario comparisons.
 - The seven map roles in the existing release contract: future sediment loss, future nutrient runoff, critical drinking-water protection, high-quality waters, current nutrient export, current sediment export and combined pollutant priority.
 - Physical N/P/sediment raster outputs, source and method metadata, parcel GIS/CSV review where source coverage is available, and a technical report suitable for the prime's final editing.
 - The complete operator/CLI application, source preparation commands, working project, backup, receiving guide and a reopened independent copy.

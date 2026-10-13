@@ -1,0 +1,134 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original microbial temporal, calendar-support and same-station flow report",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "microbial-temporal-calendar-observed-report",
+      "title": "Utility-focus microbial observations: temporal, calendar-support and same-station flow context",
+      "kind": "document",
+      "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
+      "sha256": "1eb83346c82d755bec698cd7259a076b97eba9406c1952aa9d0d99235a0c5f9a",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "source_operation": "ECO-MICROBIAL-EXPLORER-20261013",
+        "original_records": 730,
+        "original_stations": 36
+      },
+      "companions": [
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/station-summary.csv",
+          "sha256": "306f93bda04c2d8727f6c0fef782deff5f599a3818beb30c09e1f3aaed9c94ba"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
+          "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/station-season-summary.csv",
+          "sha256": "9ce54e608a226b26200092b15225bb63d033a3982a03ee897060d88f349fce08"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/station-month-summary.csv",
+          "sha256": "2d3090b1f3e63f42abb2e2950cd71c839ce5fb039667a2e0555ace8cc5f23390"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
+          "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/field-replicates.csv",
+          "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/comment-sensitivity.csv",
+          "sha256": "74d9853ac07b5339a3cdbe2577948cc9393537bb7da0519980610744c5d8ce15"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
+          "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/annual-sampling-coverage.csv",
+          "sha256": "8e2d8aa914bb20a28e2403af83ce31c0e7eaea8c3eabd8e48f46ce33b0560d63"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/flow-daily-2022.csv",
+          "sha256": "8fbd91d565fe517080ff8edd45cd309bfdaa31fbd1a745bf001bac48f12d14ad"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv",
+          "sha256": "d71fee49d8363898397f7039d6ee1beb0100f4fea9373d4f7cb682e96f88e44b"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
+          "sha256": "e492f216935e85cef11ba789cca65f39aaa330f7c8e2b40d6c6825588b1591fd"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+          "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/reproduce.mjs",
+          "sha256": "a6f5101449c038a5a3563b644372f8cad5035d2d5dd6efa3583ee85b06de8a76"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/source-manifest.json",
+          "sha256": "e044c8bad2693b34c3f5912ff1f360d7a2da594b92504fc2ec6ac2f69573f391"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/README.md",
+          "sha256": "0e986818ee59d1cb6db66e947b5bb53bd9ddcc35d3fdc335be1df6affc547d4e"
+        },
+        {
+          "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+          "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/compare-calendar-support.mjs",
+          "sha256": "3aeb39798609ccce35a85e87cb46d8f9da6f744fbbd983d9dcbff6031cdd2742"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/calendar-support-comparisons.csv",
+          "sha256": "11e7a36b5eeca7a7aee55e654c30446effb473c8b2da795b239eb8b6576cd878"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/calendar-support-source-rows.csv",
+          "sha256": "fe5265cac8f80ef6a2f1a654526e86f536b94819f2bbd1bebf669ad32a99cc15"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/calendar-support-summary.json",
+          "sha256": "bf51236ce577930f1f557e41eb5f7195c858b6ffbcdd11c07aa26c8863f13779"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
+          "sha256": "75c3234c22751e414251703de2095ebf7c6ecd07598b80cbb52aa5a476f354c3"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/explorer.mjs",
+          "sha256": "04ca0c78d2ba74c3ac4653e87602b338f2412d284e144deb30ea45e313d33e72"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/build-explorer.mjs",
+          "sha256": "f2e8657a2b91c538faafc438158f2045e7b3f0fd12ae7c11e4a1748892cdccba"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/index.html",
+          "sha256": "0726905a81183bc2a67eeb49f69c3bb5f84cfc73cc5d83446dc95945dd0343e6"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
+          "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
+        }
+      ]
+    }
+  ]
+}

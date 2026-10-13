@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original WQP station supplement completing the 87-site assessment geography",
+  "captured_at": "2026-10-13 01:46:46 UTC",
+  "entries": [
+    {
+      "id": "scdes-wqp-additional-eight-20261013",
+      "title": "SCDES WQP original locations for eight additional assessment stations",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-376%3B21SC60WQ_WQX-RS-24163%3B21SC60WQ_WQX-RS-21014%3B21SC60WQ_WQX-RL-21217%3B21SC60WQ_WQX-RL-24073%3B21SC60WQ_WQX-RL-21209%3B21SC60WQ_WQX-RS-22078%3B21SC60WQ_WQX-RL-21225&mimeType=csv",
+      "vintage": "Retrieved 2026-10-13",
+      "kind": "vector",
+      "path": "wqp_eight_monitoring_sites.geojson",
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6",
+      "format": "GeoJSON",
+      "role": "MONITORING_STATIONS",
+      "station_id_field": "MonitoringLocationName",
+      "native_id_field": "MonitoringLocationIdentifier",
+      "source_crs": "EPSG:4326",
+      "companions": [
+        {
+          "path": "wqp_eight_native.csv",
+          "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+        },
+        {
+          "path": "wqp_eight_source_metadata.json",
+          "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+        },
+        {
+          "path": "wqp_eight_station_page_extractions.json",
+          "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+        }
+      ]
+    }
+  ]
+}

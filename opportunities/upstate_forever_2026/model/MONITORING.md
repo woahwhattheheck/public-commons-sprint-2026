@@ -1,6 +1,6 @@
 # Ecosystem Sciences — monitoring design and field operations
 
-**ASTRA-MONITOR12 · original source 1.2.0 · current integration 1.2.1**
+**ASTRA-MONITOR12 · original source 1.2.0 · current integration 1.3.0**
 
 A complete additive workstream for the original Upper Savannah scientific
 Workspace: source-bound hydrologic coverage, constrained monitoring design,
@@ -13,6 +13,15 @@ models, or rewrite another owner's operator server, source collections, metadata
 ensemble, allocation, experiment or report modules.
 
 ## Install into the existing source composition
+
+For the maintained current application, receive the complete source and use
+`python -B operator/install_receiving_waters.py --root . --check`, then the same
+command without `--check`. This composes the registered receiving-water →
+Monitoring workflow while preserving current host joins. Its complete source,
+weight-method, candidate-scope and transfer instructions are in
+[`operator/RECEIVING_WATER_MONITORING.md`](../operator/RECEIVING_WATER_MONITORING.md).
+The archived installer instructions below describe the retained original package;
+do not copy its historical runtime over the maintained current application.
 
 Python 3.10+ and the geospatial/scientific dependencies in
 `requirements-monitoring.txt` are required. Reuse the original application's
@@ -104,6 +113,15 @@ local presence. Both modes require an explicit `existing_station_ids` selection.
 Target weights are geodesic source area by default. A nonnegative finite
 `priority_field` can instead use a field from a retained model/ensemble-derived
 GeoJSON. Retain that complete joined source in the original Sources workflow.
+The Receiving waters desk can now prepare this source directly from a saved
+plan's contribution-area union or an actual completed analysis priority raster.
+It retains the full original HUC graph, including zero-weight context catchments,
+and visibly prefills candidate exclusions in the existing design form. The method
+records exact vector overlap separately from raster centre support, original
+normalization and missing/unassigned coverage. Open the saved planning source's
+network, review its exclusions and enter the actual costs and calendar. See the
+[complete water-study workflow](../operator/RECEIVING_WATER_MONITORING.md).
+
 Changing priorities creates a new network edition; earlier designs remain pinned
 to their original source. Coverage is a planning objective, not an inference of
 measured contaminant concentration, measurement sensitivity or pollutant removal.

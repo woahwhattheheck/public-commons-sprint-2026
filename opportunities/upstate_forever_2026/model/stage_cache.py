@@ -6,9 +6,11 @@ import logging
 import platform
 from pathlib import Path
 import sys
+import time
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, verify_file)
 from .model_selection import run_models
+from .native_execution import storage_exhausted
 from .reuse import (copy_verified, dataset_companions, destination_file,
                     native_companions, verify_stage)
 
@@ -190,8 +192,57 @@ def _candidate_indexes(workspace, model, selected, requested_arguments):
             yield key, path
 
 
+class _ReuseProgress:
+    """Publish small current-run observations without changing candidate identities."""
+
+    def __init__(self, model, selected, callback):
+        self.callback = callback
+        self.started = time.monotonic()
+        self.last_published = None
+        self.value = {
+            "schema": "upstate.native-stage-reuse-progress/v1",
+            "model": model, "input_signature": selected["id"],
+            "started_at": now(), "phase": "searching",
+            "index_candidates_checked": 0, "explicit_candidates_checked": 0,
+            "rejected_candidates": 0, "source_run_id": None,
+            "candidate_kind": None, "files_completed": 0,
+            "logical_bytes_completed": 0, "files_total": None,
+            "logical_bytes_total": None, "current_file": None,
+        }
+        self.emit(force=True)
+
+    def emit(self, *, force=False, **changes):
+        self.value.update(changes)
+        instant = time.monotonic()
+        self.value.update(updated_at=now(), elapsed_seconds=max(0.0, instant - self.started))
+        if self.callback and (force or self.last_published is None
+                              or instant - self.last_published >= 1.0):
+            # A progress-record write failure is an operation failure, not a
+            # scientific donor mismatch to suppress while trying another donor.
+            try:
+                self.callback(copy.deepcopy(self.value))
+            except Exception as error:
+                raise RuntimeError("Could not retain native-stage reuse progress") from error
+            self.last_published = instant
+        return copy.deepcopy(self.value)
+
+    def candidate(self, run_id, indexed):
+        name = "index_candidates_checked" if indexed else "explicit_candidates_checked"
+        self.value[name] += 1
+        self.emit(phase="checking", source_run_id=run_id,
+                  candidate_kind="exact_index" if indexed else "explicit_source",
+                  files_completed=0, logical_bytes_completed=0,
+                  files_total=None, logical_bytes_total=None, current_file=None)
+
+    def transfer(self, transfer, *, current_file=None, phase="transferring", force=False):
+        return self.emit(force=force, phase=phase, current_file=current_file,
+                         files_completed=transfer["files"],
+                         logical_bytes_completed=transfer["bytes"],
+                         transfer_methods=dict(transfer["methods"]))
+
+
 def recover(workspace, run_id, model, selected, directory, requested_arguments,
-            *, source_run_ids=(), matcher=None):
+            *, source_run_ids=(), matcher=None, progress=None):
     """Copy a complete matching stage, retaining its original source provenance.
 
     Every output body is verified during its independent transfer. Interrupted
@@ -207,13 +258,17 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
     if not isinstance(source_run_ids, (list, tuple)):
         raise ValueError("Select original source run IDs as a list or tuple")
     explicit = tuple(dict.fromkeys(identifier(value) for value in source_run_ids))
-    candidates = [(None, workspace.root / "runs" / value / "run.json", value)
-                  for value in explicit]
-    candidates.extend((index_key, path, None) for index_key, path in
-                      _candidate_indexes(workspace, model, selected, requested_arguments))
+    # Resolve exact content signatures before potentially reading raster values
+    # for explicit cross-edition donors. The index is advisory: original stage
+    # signatures and every copied output remain authoritative.
+    candidates = [(index_key, path, None) for index_key, path in
+                  _candidate_indexes(workspace, model, selected, requested_arguments)]
+    candidates.extend((None, workspace.root / "runs" / value / "run.json", value)
+                      for value in explicit)
+    journal = _ReuseProgress(model, selected, progress)
     observations, seen = [], set()
     for index_key, path, explicit_id in candidates:
-        adopted, phase = {}, "validation"
+        adopted, phase, original_id = {}, "validation", None
         try:
             if explicit_id is None:
                 record = read_json(path)
@@ -225,7 +280,7 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                 original_id = explicit_id
             if original_id == run_id or original_id in seen:
                 continue
-            seen.add(original_id)
+            journal.candidate(original_id, explicit_id is None)
             original = workspace.inspect_run(original_id)
             if model not in run_models(original):
                 raise ValueError("Original run did not select this native model")
@@ -255,10 +310,14 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                                    if key not in ("workspace_dir", "n_workers") + INPUT_PATHS[model]}
                 if original_values != requested["arguments"]:
                     raise ValueError("Original native arguments differ")
+                journal.emit(phase="comparing_original_inputs")
                 equivalence = matcher.compare(original_id, model)
                 if not equivalence["matches"]:
                     raise ValueError("Original stage inputs differ: " +
                                      "; ".join(equivalence["differences"]))
+            # An invalid or stale index may still have an explicitly selected
+            # scientific donor. Mark it seen only after its inputs matched.
+            seen.add(original_id)
             # Descriptor arguments are small; large outputs are hashed exactly
             # as they are copied or cloned below, rather than in a second pass.
             verify_stage(old_directory, stage, outputs=False)
@@ -281,15 +340,22 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                 "path": model + "-source-arguments-" + stage["arguments"]["sha256"] + ".json"}
             _check_destinations(directory, output_files + [original_arguments])
             transfer = {"files": 0, "bytes": 0, "methods": {}}
+            unique_outputs = {item["path"]: item for item in output_files}
+            journal.emit(force=True, phase="transferring",
+                         files_total=len(unique_outputs) + 1,
+                         logical_bytes_total=sum(item["bytes"] for item in unique_outputs.values())
+                                             + stage["arguments"]["bytes"])
             reuse_started = now()
             phase = "copy"
             copied = {}
             for item in output_files:
                 if item["path"] not in copied:
+                    journal.transfer(transfer, current_file=item["path"], force=not copied)
                     copied[item["path"]] = _adopt_candidate_file(
                         old_directory, item, directory, adopted, transfer=transfer)
             files = {name: dict(item) for name, item in stage["files"].items()}
             copied_companions = [dict(item) for item in companions]
+            journal.transfer(transfer, current_file=original_arguments["path"])
             source_arguments = _adopt_candidate_file(
                 old_directory, stage["arguments"], directory, adopted,
                 path=original_arguments["path"], transfer=transfer)
@@ -308,6 +374,7 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                 "input_signature": selected,
                 "reuse_started_at": reuse_started,
                 "reused_at": completed, "transfer": transfer,
+                "reuse_lookup": journal.transfer(transfer, phase="complete", force=True),
                 "reused_from": {
                     "run_id": original_id, "model": model,
                     "stage_started_at": stage.get("started_at"),
@@ -322,8 +389,18 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
             }
             return result, observations
         except (OSError, ValueError, KeyError, TypeError) as exc:
+            if storage_exhausted(exc):
+                # Completed independent files remain usable by the same run's
+                # next attempt. Its existing recovery reserve records ENOSPC/
+                # EDQUOT; another donor or calculation cannot repair capacity.
+                raise
             _discard_candidate(adopted)
             observations.append({"index": path.relative_to(workspace.root).as_posix(),
                                  "phase": phase, "reason": str(exc)})
+            journal.value["rejected_candidates"] += 1
+            journal.emit(phase="searching", current_file=None,
+                         last_rejection={"source_run_id": original_id,
+                                         "phase": phase, "reason": str(exc)})
             continue
+    journal.emit(force=True, phase="no_matching_stage", current_file=None)
     return None, observations

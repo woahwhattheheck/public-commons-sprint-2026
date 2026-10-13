@@ -13,7 +13,6 @@ from pathlib import Path
 import shutil
 import sys
 import traceback
-import zipfile
 
 EDITION = "gura-original-parameter-suite/1"
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
@@ -89,6 +88,8 @@ def parser():
 
 def _copy_exports(workspace, directory, state):
     from model.common import atomic_bytes, atomic_json, describe_file, verify_file
+    from model.parameter_exports import write_archive
+    from model.reuse import copy_verified
     results, outputs, studies = [], {}, []
     for item in state["studies"]:
         key = item.get("study_id")
@@ -102,14 +103,12 @@ def _copy_exports(workspace, directory, state):
                            for case in current["cases"]])
         exported = {}
         for name, descriptor in current.get("artifacts", {}).items():
-            original = verify_file(workspace.root / "experiments" / key, descriptor)
-            relative = Path("studies") / key / original.name
-            target = directory / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            temporary = target.with_name("." + target.name + ".partial")
-            shutil.copyfile(original, temporary)
-            os.replace(temporary, target)
-            exported[name] = describe_file(directory, target)
+            # Preserve each report's own relative paths, including comparison
+            # records and GIS files below difference-maps/<comparison-id>/.
+            relative = (Path("studies") / key / descriptor["path"]).as_posix()
+            exported[name] = copy_verified(
+                workspace.root / "experiments" / key, descriptor, directory,
+                path=relative, replace_mismatch=True)
         item["artifacts"] = exported
         outputs.update({key + "/" + name: value for name, value in exported.items()})
         artifact = current.get("artifacts", {}).get("results")
@@ -196,13 +195,9 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
                 "suite_id": state["id"], "workspace_id": workspace.project["id"],
                 "state": state["state"], "files": outputs}
     atomic_json(directory / "manifest.json", manifest)
-    pending = directory / ".gura-parameter-suite.zip.partial"
-    with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.write(directory / "manifest.json", "manifest.json")
-        for descriptor in outputs.values():
-            path = verify_file(directory, descriptor)
-            archive.write(path, descriptor["path"])
-    os.replace(pending, directory / "gura-parameter-suite.zip")
+    write_archive(
+        directory, directory / "gura-parameter-suite.zip",
+        [describe_file(directory, directory / "manifest.json"), *outputs.values()])
     return {"report": describe_file(directory, directory / "index.html"),
             "csv": describe_file(directory, directory / "results.csv"),
             "results": describe_file(directory, directory / "results.json"),
@@ -225,6 +220,7 @@ def main(argv=None):
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
+    from model.native_execution import storage_exhausted
 
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
@@ -393,6 +389,8 @@ def main(argv=None):
                         item.pop("error", None)
                         if current["state"] != "complete":
                             failures.append(item_key)
+                        if storage_exhausted(error):
+                            raise
                     except Exception as error:
                         item.update(state="failed", error={
                             "type": type(error).__name__, "message": str(error),
@@ -419,9 +417,14 @@ def main(argv=None):
                        failed_study_keys=failures, completed_at=now() if complete else None)
             return 0 if complete else 1
         except Exception as error:
-            checkpoint("error", state="error", error={
-                "type": type(error).__name__, "message": str(error),
-                "traceback": traceback.format_exc()})
+            try:
+                checkpoint("error", state="error", error={
+                    **(getattr(error, "native_failure", None) or {}),
+                    "type": type(error).__name__, "message": str(error),
+                    "traceback": traceback.format_exc()})
+            except OSError:
+                if not storage_exhausted(error):
+                    raise
             logging.exception("Gura parameter suite stopped at its actual operation")
             return 1
 
