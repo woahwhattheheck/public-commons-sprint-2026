@@ -105,6 +105,11 @@ The complete source was exercised through its real pure JavaScript engine with a
 Before a client/prospect receives any outgoing application or attachment, the producing peer must open/run/render the exact version, LOOK at the result and use it as a recipient would. View the actual desktop/mobile screenshots, full report pages, binary attachments in their normal viewer, usable ZIP contents and reopened working exports. Operate the important controls and fix visible defects. Source review, schemas, HTTP200, DOM counts and tests cannot replace this. Use the original saved runtime and preserve prior work. Do not add broad test sweeps, a review bureaucracy or another permission gate.
 
 
+## Complete issuer-reference consumer
+
+The issuer companion receives a complete original source package or saved source Canvas, selects its edition and supporting originals, and records attributed decisions against exact source and returned-target mappings. Public aggregate accounting references stay separate from actual private financial rows. All original members, selected policy/evidence decisions, changed-mapping findings, complete readable report and a working standalone application travel through the same full Exit. Read [ISSUER_REFERENCE.md](ISSUER_REFERENCE.md) for the whole browser/CLI/replay/receiving contract. The six-domain engine remains unchanged.
+
+
 ## Work-order migration companion
 
 The complete browser and CLI now include original order/cost intake, exact destination allocation, actual returned-export matching, rehearsals, acceptance and source-retaining handover. Start with [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md). The original six-domain financial reconciliation and working-copy recovery remain the same product. An actual published Port of Bellingham capital-class reference is under examples/port-bellingham-2025/.
