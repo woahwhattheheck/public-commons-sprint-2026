@@ -20,7 +20,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from .common import (canonical, held, identifier, now, read_json, verify_file)
+from .common import (canonical, digest, held, identifier, now, read_json, verify_file)
 
 PLAN_KIND = "source-refresh-plans"
 STATE_SCHEMA = "upstate.source-refresh-state/v1"
@@ -198,8 +198,9 @@ class SourceRefresh:
                 result["runs"].append(identifier(value["id"]))
         return {kind: sorted(set(ids)) for kind, ids in result.items()}
 
-    def plan(self, old_id: str, new_id: str, *, mapping=None, roots=None,
-             title="Source refresh") -> dict:
+    def _plan_value(self, old_id: str, new_id: str, *, mapping=None, roots=None,
+                    title="Source refresh") -> dict:
+        """Read the original dependency graph without writing a plan or checkpoint."""
         changes = self.source_diff(old_id, new_id, mapping)
         roots = self._roots(old_id, roots)
         diff = {row["source_id"]: row for row in changes["changes"] if row["source_id"] is not None}
@@ -263,6 +264,11 @@ class SourceRefresh:
                    "mapping": changes["mapping"], "changes": changes["changes"],
                    "source_counts": changes["counts"], "roots": sorted(set(selected_roots)),
                    "nodes": list(nodes.values())}
+        return payload
+
+    def plan(self, old_id: str, new_id: str, *, mapping=None, roots=None,
+             title="Source refresh") -> dict:
+        payload = self._plan_value(old_id, new_id, mapping=mapping, roots=roots, title=title)
         with held(self.root / ".source-refresh-plan.lock"):
             return self.ws._save(PLAN_KIND, payload)
 
@@ -320,9 +326,11 @@ class SourceRefresh:
         for root in plan["roots"]:
             kind, key = root.split("/", 1)
             roots[kind].append(identifier(key))
-        rebuilt = self.plan(plan["from_collection_id"], plan["to_collection_id"],
-                            mapping=plan["mapping"], roots=roots, title=plan["title"])
-        if rebuilt["id"] != plan["id"]:
+        payload = self._plan_value(plan["from_collection_id"], plan["to_collection_id"],
+                                   mapping=plan["mapping"], roots=roots, title=plan["title"])
+        # Match Workspace._save exactly while keeping restore verification read-only.
+        rebuilt = {"schema": "upstate." + PLAN_KIND + "/v1", **payload}
+        if digest(rebuilt) != plan["id"]:
             raise ValueError("Native selections changed since this refresh plan was prepared")
 
     def _prepare(self, plan, node, state):
@@ -444,9 +452,10 @@ class SourceRefresh:
             rows.append({"kind": node["kind"], "action": node["action"],
                          "old_id": node["old_id"], "new_id": step.get("new_id", ""),
                          "state": step.get("status", "planned"),
+                         "native_state": step.get("native_state", "") if node["kind"] == "runs" else "",
                          "reason": "; ".join(node["reasons"])})
         stream = io.StringIO(newline="")
-        writer = csv.DictWriter(stream, fieldnames=("kind", "action", "old_id", "new_id", "state", "reason"))
+        writer = csv.DictWriter(stream, fieldnames=("kind", "action", "old_id", "new_id", "state", "native_state", "reason"))
         writer.writeheader()
         writer.writerows(rows)
         esc = lambda value: html.escape(str(value), quote=True)
@@ -461,9 +470,11 @@ class SourceRefresh:
             "</style><h1>" + esc(plan["title"]) + "</h1><p>Status: <strong>" + esc(state["status"]) +
             "</strong></p><p>Plan: " + esc(plan_id) + "</p><p>Previous source edition: " + esc(plan["from_collection_id"]) +
             "<br>Replacement source edition: " + esc(plan["to_collection_id"]) + "</p><p>Reused selections retain their original source "
-            "bindings. Derived selections use the replacement edition. Previous outputs remain available.</p>"
+            "bindings. Derived selections use the replacement edition. Previous outputs remain available. "
+            "Refresh status describes source-replacement work; the separate native run state records scientific execution. "
+            "An unchanged prepared or failed run stays in its original state.</p>"
             "<h2>Source changes</h2><table><thead><tr><th>Previous source</th><th>Replacement</th><th>Change</th><th>Reason</th></tr>"
             "</thead><tbody>" + sources + "</tbody></table><h2>Native selections</h2><table><thead><tr>"
-            "<th>Kind</th><th>Action</th><th>Previous ID</th><th>Result ID</th><th>Status</th><th>Reason</th></tr></thead><tbody>" + body +
+            "<th>Kind</th><th>Action</th><th>Previous ID</th><th>Result ID</th><th>Refresh step</th><th>Native run state</th><th>Reason</th></tr></thead><tbody>" + body +
             "</tbody></table><p>TokenJunkieLabs · Upper Savannah scientific workspace</p></html>")
         return {"json": {"plan": plan, "state": state}, "csv": stream.getvalue(), "html": document}
