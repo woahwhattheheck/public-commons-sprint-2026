@@ -46,13 +46,22 @@ function sourceContent(raw) {
   if (!plain(value)) fail('CONTACT_CHECKPOINT_NATIVE_RESPONSE_REQUIRED');
   return value;
 }
+function snapshotSourceFieldsMatch(snapshot,savedSource={}) {
+  if(!plain(snapshot)||!plain(savedSource))return false;
+  const fields=['journal','pending_pointer','transports'];
+  for(const key of ['input_revision_source','session_input_revision_source']){
+    if(savedSource[key]!==undefined)fields.push(key);
+    if(canonical(snapshot[key]??null)!==canonical(savedSource[key]??null))return false;
+  }
+  return canonical(Object.keys(snapshot).sort())===canonical(fields.sort());
+}
+
 function validateReceivedReturnedAccountTail({savedState,snapshot,reviewed,account,lease,intent,path,operationKey,sha256Utf8}) {
  const bad=()=>fail('CONTACT_CHECKPOINT_RETURNED_ACCOUNT_TAIL_INVALID');
  const saved=savedState?.journal,complete=snapshot?.journal,old=savedState?.transports,transports=snapshot?.transports;
  const digest=v=>hash(sha256Utf8,v).sha256,without=(v,keys)=>Object.fromEntries(Object.entries(v).filter(([k])=>!keys.includes(k)));
  if(!plain(savedState)||!plain(snapshot)||snapshot.pending_pointer!==null||
-  canonical(Object.keys(snapshot).sort())!==canonical(['journal','pending_pointer','transports',...(savedState.input_revision_source?['input_revision_source']:[])].sort())||
-  canonical(snapshot.input_revision_source??null)!==canonical(savedState.input_revision_source??null)||
+  !snapshotSourceFieldsMatch(snapshot,savedState)||
   !plain(saved)||!plain(complete)||!Array.isArray(saved.events)||!Array.isArray(complete.events)||
   !Array.isArray(old)||!Array.isArray(transports)||old.length!==transports.length||!old.length||
   !plain(account)||!hex(operationKey)||typeof sha256Utf8!=='function'||
@@ -452,12 +461,11 @@ function validateReceivedCompletion({savedJournal,completedJournal,transports,
  * proved was never dispatched. Any actual or uncertain native mutation remains
  * on its existing returned/uncertain recovery path.
  */
-function validateReceivedWaitingRenewalTail({savedJournal,savedTransports,snapshot,
+function validateReceivedWaitingRenewalTail({savedJournal,savedTransports,snapshot,savedSource={},
   reviewed,account,lease,intent,path,operationKey,sha256Utf8}) {
   const bad=()=>fail('CONTACT_CHECKPOINT_WAITING_RENEWAL_TAIL_INVALID');
   const saved=savedJournal,complete=snapshot?.journal,transports=snapshot?.transports;
-  if(!plain(snapshot)||canonical(Object.keys(snapshot).sort())!==canonical(
-      ['journal','pending_pointer','transports'])||snapshot.pending_pointer!==null||
+  if(!plain(snapshot)||!snapshotSourceFieldsMatch(snapshot,savedSource)||snapshot.pending_pointer!==null||
      !plain(saved)||!plain(complete)||!Array.isArray(saved.events)||!Array.isArray(complete.events)||
      complete.events.length<=saved.events.length||!Array.isArray(savedTransports)||
      !Array.isArray(transports)||transports.length!==savedTransports.length+1||
@@ -676,15 +684,15 @@ function validateReceivedWaitingRenewalTail({savedJournal,savedTransports,snapsh
     proposed_waiting_expires_at:renewed.expires_at};
 }
 
-function validateReceivedUndispatchedTail({savedJournal,savedTransports,snapshot,
+function validateReceivedUndispatchedTail({savedJournal,savedTransports,snapshot,savedSource={},
   reviewed,account,lease,intent,path,operationKey,sha256Utf8}) {
   if(snapshot?.journal?.events?.at(-1)?.phase==='operation-account-deferred-ended')
-    return validateReceivedWaitingRenewalTail({savedJournal,savedTransports,snapshot,
+    return validateReceivedWaitingRenewalTail({savedJournal,savedTransports,snapshot,savedSource,
       reviewed,account,lease,intent,path,operationKey,sha256Utf8});
   const bad=()=>fail('CONTACT_CHECKPOINT_UNDISPATCHED_TAIL_INVALID');
   const saved=savedJournal,complete=snapshot?.journal,transports=snapshot?.transports;
   if(!plain(saved)||!plain(complete)||!plain(snapshot)||snapshot.pending_pointer!==null||
-     canonical(Object.keys(snapshot).sort())!==canonical(['journal','pending_pointer','transports'])||
+     !snapshotSourceFieldsMatch(snapshot,savedSource)||
      !Array.isArray(saved.events)||!Array.isArray(complete.events)||
      complete.events.length<=saved.events.length||!Array.isArray(savedTransports)||
      !Array.isArray(transports)||transports.length!==savedTransports.length+1||
@@ -843,12 +851,11 @@ function validateReceivedUndispatchedTail({savedJournal,savedTransports,snapshot
  * Gmail before dispatch and the ended caller could not retain its account
  * release. The selected native call and every later mutation must have the
  * wrapper's exact NOT_DISPATCHED transport; original history is append-only. */
-function validateReceivedPreflightTail({savedJournal,savedTransports,snapshot,
+function validateReceivedPreflightTail({savedJournal,savedTransports,snapshot,savedSource={},
   reviewed,args,account,lease,intent,path,operationKey,sha256Utf8}) {
   const bad=()=>fail('CONTACT_CHECKPOINT_PREFLIGHT_TAIL_INVALID');
   const saved=savedJournal,complete=snapshot?.journal,transports=snapshot?.transports;
-  if(!plain(snapshot)||canonical(Object.keys(snapshot).sort())!==canonical(
-      ['journal','pending_pointer','transports'])||snapshot.pending_pointer!==null||
+  if(!plain(snapshot)||!snapshotSourceFieldsMatch(snapshot,savedSource)||snapshot.pending_pointer!==null||
      !plain(saved)||!plain(complete)||!Array.isArray(saved.events)||!saved.events.length||
      !Array.isArray(complete.events)||complete.events.length<saved.events.length+15||
      !Array.isArray(savedTransports)||!savedTransports.length||!Array.isArray(transports)||
@@ -1088,12 +1095,11 @@ function validateReceivedPreflightTail({savedJournal,savedTransports,snapshot,
     meaning:'Exact ended preflight retained. Original account ownership still requires reconciliation; fresh admission and recipient checks remain mandatory.'};
 }
 
-function validateReceivedCancelledSendTail({savedJournal,savedTransports,snapshot,
+function validateReceivedCancelledSendTail({savedJournal,savedTransports,snapshot,savedSource={},
   reviewed,args,account,lease,intent,path,operationKey,sha256Utf8}) {
   const bad=()=>fail('CONTACT_CHECKPOINT_CANCELLED_SEND_TAIL_INVALID');
   const saved=savedJournal,complete=snapshot?.journal,transports=snapshot?.transports;
-  if(!plain(snapshot)||canonical(Object.keys(snapshot).sort())!==canonical(
-      ['journal','pending_pointer','transports'])||snapshot.pending_pointer!==null||
+  if(!plain(snapshot)||!snapshotSourceFieldsMatch(snapshot,savedSource)||snapshot.pending_pointer!==null||
      !plain(saved)||!plain(complete)||!Array.isArray(saved.events)||
      !Array.isArray(complete.events)||complete.events.length<=saved.events.length||
      !Array.isArray(savedTransports)||!Array.isArray(transports)||
@@ -1225,8 +1231,7 @@ function validateReceivedPendingPreflightTail({preparedPayload,snapshot,reviewed
   const pending=snapshot?.pending_pointer,saved=preparedPayload?.journal,
     complete=snapshot?.journal,priorTransports=preparedPayload?.transports,
     transports=snapshot?.transports;
-  if(!plain(snapshot)||canonical(Object.keys(snapshot).sort())!==
-       canonical(['journal','pending_pointer','transports'])||
+  if(!plain(snapshot)||!snapshotSourceFieldsMatch(snapshot,preparedPayload)||
      !plain(pending)||!plain(pending.next)||!plain(saved)||!plain(complete)||
      !Array.isArray(saved.events)||!saved.events.length||!Array.isArray(complete.events)||
      ![saved.events.length+2,saved.events.length+5].includes(complete.events.length)||
@@ -1391,8 +1396,7 @@ function validateReceivedPendingAccountTail({preparedPayload,snapshot,reviewed,
   const pending=snapshot?.pending_pointer,saved=preparedPayload?.journal,
     complete=snapshot?.journal,savedTransports=preparedPayload?.transports,
     transports=snapshot?.transports;
-  if(!plain(snapshot)||canonical(Object.keys(snapshot).sort())!==
-       canonical(['journal','pending_pointer','transports'])||
+  if(!plain(snapshot)||!snapshotSourceFieldsMatch(snapshot,preparedPayload)||
      !plain(pending)||!plain(pending.next)||!plain(saved)||!plain(complete)||
      !Array.isArray(saved.events)||!saved.events.length||
      !Array.isArray(complete.events)||complete.events.length!==saved.events.length+3||
@@ -1959,9 +1963,41 @@ function validateContactSourceActivation(record,{journal,stateKey,lease,operatio
   return selection;
 }
 
+function originalSessionRevision({origin,runtimeInput,journal,stateKey,lease,operationKey,modules,factory,tools}) {
+  if(!plain(origin)||origin.kind!=='original-session-journal-readback'||
+     origin.operation_key!==operationKey||origin.state_key!==stateKey||origin.operation_lease!==lease||
+     typeof origin.runtime_input_content!=='string'||typeof origin.journal_content!=='string'||
+     !plain(origin.source)||!iso(origin.observed_at))
+    fail('CONTACT_SESSION_ORIGINAL_SOURCE_REQUIRED');
+  const originalInput=parse(origin.runtime_input_content),originalJournal=parse(origin.journal_content);
+  const measuredInput=hash(modules.sha256Utf8,origin.runtime_input_content),measuredJournal=hash(modules.sha256Utf8,origin.journal_content);
+  if(canonical(origin.runtime_input)!==canonical(measuredInput)||canonical(origin.journal)!==canonical(measuredJournal)||
+     canonical(originalInput)!==canonical(runtimeInput)||originalJournal.input_sha256!==origin.input_sha256||
+     originalJournal.lease!==lease||!Array.isArray(originalJournal.events)||!Array.isArray(journal.events)||
+     journal.events.length<originalJournal.events.length||
+     originalJournal.events.some((row,i)=>canonical(row)!==canonical(journal.events[i]))||
+     canonical(journal.returned_mailbox_revision??null)!==canonical(originalJournal.returned_mailbox_revision??null)||
+     canonical(journal.input_revisions??null)!==canonical(originalJournal.input_revisions??null))
+    fail('CONTACT_SESSION_ORIGINAL_SOURCE_CHANGED');
+  const memory=new Map([[stateKey,clone(originalJournal)]]);
+  const original=factory.createConnectedFirstContact({tools,input:originalInput,modules,lease,stateKey,
+    load:key=>memory.get(key),store:(key,value)=>memory.set(key,value)});
+  if(typeof original.validateOriginalJournalRevision!=='function')
+    fail('CONTACT_SESSION_ORIGINAL_VALIDATOR_REQUIRED');
+  const selected=original.validateOriginalJournalRevision();
+  if(canonical(memory.get(stateKey))!==canonical(originalJournal))
+    fail('CONTACT_SESSION_ORIGINAL_JOURNAL_CHANGED');
+  return selected?.revision_kind==='draft'?{
+    schema:'commons.contact-checkpoint-session-input-revision-source/v1',
+    operation_key:operationKey,input_sha256:origin.input_sha256,operation_lease:lease,state_key:stateKey,
+    source:clone(origin.source),runtime_input:measuredInput,journal:measuredJournal,
+    original_event_count:originalJournal.events.length,selection_sha256:hash(modules.sha256Utf8,canonical(selected)).sha256
+  }:null;
+}
+
 async function openConnectedContactCheckpoint(options) {
   const {tools,factory,modules,input,lease,stateKey,owner,beforeSend,beforeNativeSend,organizationQuery,organizationDomains,githubActorAction,githubRefAction,
-    mode='reopen',journal:providedJournal,snapshot:providedSnapshot,recovery,chunkCache:providedChunkCache,storage}=options || {};
+    mode='reopen',journal:providedJournal,snapshot:providedSnapshot,recovery,chunkCache:providedChunkCache,storage,originalSessionSource}=options || {};
   if(storage&&(storage.kind!=='commons.connected-contact-local-state/v1'||typeof storage.read!=='function'||typeof storage.compareAndSwap!=='function'))fail('CONTACT_LOCAL_STORAGE_REQUIRED');
   if (!factory?.createConnectedFirstContact || !factory?.classifyReturnedGmailRateLimit ||
       !modules?.gateway || !modules?.intent || !modules?.sha256Utf8 ||
@@ -2112,7 +2148,14 @@ async function openConnectedContactCheckpoint(options) {
          value.transports.some(t=>t.event_index<record.journal.events.length))
         fail('CONTACT_CHECKPOINT_INPUT_REVISION_SOURCE_CHANGED');
     }
-    if(j.returned_mailbox_revision?.revision_kind==='draft'&&!value.input_revision_source)
+    if(value.session_input_revision_source){
+      const origin=remote?.local?.receipt?.origin||(mode==='adopt'?originalSessionSource:null);
+      const expected=originalSessionRevision({origin,runtimeInput:value.runtime_input,journal:j,
+        stateKey,lease,operationKey,modules,factory,tools});
+      if(!expected||canonical(expected)!==canonical(value.session_input_revision_source))
+        fail('CONTACT_CHECKPOINT_SESSION_REVISION_SOURCE_CHANGED');
+    }
+    if(j.returned_mailbox_revision?.revision_kind==='draft'&&!value.input_revision_source&&!value.session_input_revision_source)
       fail('CONTACT_CHECKPOINT_INPUT_REVISION_SOURCE_REQUIRED');
     if(j.recovered_rate_history) validateReceivedRateHistory({history:j.recovered_rate_history,
       reviewed:fixed.reviewed,args:fixed.args,lease,intent:fixed.intent,path:fixed.path,
@@ -2311,7 +2354,8 @@ async function openConnectedContactCheckpoint(options) {
            state.journal.events.length<prior.received_event_count||
            digest(JSON.stringify(state.journal.events.slice(0,prior.received_event_count)))!==prior.received_events_sha256||
            canonical(state.transports.slice(0,prior.transport_count))!==canonical(providedSnapshot.transports)||
-           canonical(state.input_revision_source??null)!==canonical(providedSnapshot.input_revision_source??null))
+           canonical(state.input_revision_source??null)!==canonical(providedSnapshot.input_revision_source??null)||
+           canonical(state.session_input_revision_source??null)!==canonical(providedSnapshot.session_input_revision_source??null))
           fail('CONTACT_CHECKPOINT_RETURNED_ACCOUNT_TAIL_INVALID');
         // This exact original receipt cannot replace later sender progress.
       } else {
@@ -2364,7 +2408,7 @@ async function openConnectedContactCheckpoint(options) {
         if(!plain(expected)||expected.commit!==remote.commit||expected.blob_sha!==remote.sha||
            expected.revision!==remote.value.revision||expected.payload_sha256!==remote.value.payload.sha256)
           fail('CONTACT_CHECKPOINT_REMOTE_CHANGED');
-        const received=validateReceivedUndispatchedTail({savedJournal:state.journal,
+        const received=validateReceivedUndispatchedTail({savedSource:state,savedJournal:state.journal,
           savedTransports:state.transports,snapshot:providedSnapshot,reviewed:fixed.reviewed,
           account:fixed.account,lease,intent:fixed.intent,path:fixed.path,operationKey,
           sha256Utf8:modules.sha256Utf8});
@@ -2403,7 +2447,7 @@ async function openConnectedContactCheckpoint(options) {
         if(!plain(expected)||expected.commit!==remote.commit||expected.blob_sha!==remote.sha||
            expected.revision!==remote.value.revision||expected.payload_sha256!==remote.value.payload.sha256)
           fail('CONTACT_CHECKPOINT_REMOTE_CHANGED');
-        const received=validateReceivedPreflightTail({savedJournal:state.journal,
+        const received=validateReceivedPreflightTail({savedSource:state,savedJournal:state.journal,
           savedTransports:state.transports,snapshot:providedSnapshot,reviewed:fixed.reviewed,
           args:fixed.args,account:fixed.account,lease,intent:fixed.intent,path:fixed.path,
           operationKey,sha256Utf8:modules.sha256Utf8});
@@ -2442,7 +2486,7 @@ async function openConnectedContactCheckpoint(options) {
         if(!plain(expected)||expected.commit!==remote.commit||expected.blob_sha!==remote.sha||
            expected.revision!==remote.value.revision||expected.payload_sha256!==remote.value.payload.sha256)
           fail('CONTACT_CHECKPOINT_REMOTE_CHANGED');
-        const received=validateReceivedCancelledSendTail({savedJournal:state.journal,
+        const received=validateReceivedCancelledSendTail({savedSource:state,savedJournal:state.journal,
           savedTransports:state.transports,snapshot:providedSnapshot,reviewed:fixed.reviewed,
           args:fixed.args,account:fixed.account,lease,intent:fixed.intent,path:fixed.path,
           operationKey,sha256Utf8:modules.sha256Utf8});
@@ -2469,8 +2513,11 @@ async function openConnectedContactCheckpoint(options) {
     }
   } else if(mode==='receive-revised') state=validateState(await receiveRevisedInput());
   else if(mode==='adopt') {
+    const sessionRevision=originalSessionSource?originalSessionRevision({origin:originalSessionSource,
+      runtimeInput:input,journal:providedJournal,stateKey,lease,operationKey,modules,factory,tools}):null;
     state=validateState({schema:'commons.connected-contact-checkpoint-payload/v1',
-      runtime_input:clone(input),transports:[],journal:clone(providedJournal)});
+      runtime_input:clone(input),transports:[],journal:clone(providedJournal),
+      ...(sessionRevision?{session_input_revision_source:sessionRevision}:{})});
   } else if(mode==='receive-rejected') state=validateState(await receiveRejected());
   else fail('CONTACT_CHECKPOINT_NOT_FOUND','Reopen an existing checkpoint or receive the original complete journal/provider record.');
 
@@ -3087,6 +3134,7 @@ async function openConnectedContactCheckpoint(options) {
     snapshot:()=>clone({journal,transports:state.transports,pending_pointer:pendingPointer,
       ...(state.reviewed_input_revision?{reviewed_input_revision:state.reviewed_input_revision}:{}),
       ...(state.input_revision_source?{input_revision_source:state.input_revision_source}:{}),
+      ...(state.session_input_revision_source?{session_input_revision_source:state.session_input_revision_source}:{}),
       ...(state.send_return_recovery?{send_return_recovery:state.send_return_recovery}:{})}),
     async close(){
       if(busy)fail('CONTACT_CHECKPOINT_OPERATION_ACTIVE');
@@ -3167,4 +3215,74 @@ async function prepareConnectedContactCheckpointAdoption(options) {
       observed_at:observedAt,metadata_content:proof.metadata_content,receipt:proof.receipt}};
 }
 
-module.exports={prepareConnectedContactCheckpointAdoption,validateContactSourceActivation,validateReceivedReturnedAccountTail,validateReturnedDraftRevision,validateReceivedPreflightTail,validateReceivedCancelledSendTail,validateInterruptedAccountAttempt,reviewConnectedContactInput:reviewedInput,readUndispatchedContactContinuation,openConnectedContactCheckpoint,readConnectedContactCheckpoint,validateReceivedRateHistory,validateReceivedCompletion,validateRetainedSentReturn,validateUndispatchedNativeCall,validateReceivedUndispatchedTail,validateReceivedPendingAccountTail,validateReceivedPendingPreflightTail};
+
+/**
+ * Prepare the original operator-retained factory journal for explicit receiving.
+ * The raw input and journal are retained as their own non-Git source. This
+ * validates the original adoption course in memory; it performs no provider or
+ * storage operation and never invokes a contact method.
+ */
+async function prepareConnectedContactJournalAdoption(options) {
+  const {tools,factory,modules,runtimeInputText,journalText,stateKey,lease,source,
+    observedAt=new Date().toISOString(),githubActorAction,githubRefAction}=options||{};
+  if(typeof runtimeInputText!=='string'||typeof journalText!=='string'||
+     typeof stateKey!=='string'||!stateKey||typeof lease!=='string'||!lease||
+     !plain(source)||typeof source.reference!=='string'||!source.reference||
+     typeof source.custodian!=='string'||!source.custodian||!iso(source.observed_at)||
+     !iso(observedAt)||!factory?.createConnectedFirstContact||!modules?.sha256Utf8)
+    fail('CONTACT_SESSION_ORIGINAL_SOURCE_REQUIRED',
+      'Retain the complete original input/journal texts, unchanged state key and lease, and actual source custody.');
+  const measuredInput=hash(modules.sha256Utf8,runtimeInputText),measuredJournal=hash(modules.sha256Utf8,journalText);
+  if(measuredInput.bytes>LIMIT||measuredJournal.bytes>LIMIT)fail('CONTACT_CHECKPOINT_TOO_LARGE');
+  const input=parse(runtimeInputText),journal=parse(journalText),fixed=reviewedInput(input,modules);
+  if(!plain(journal)||journal.schema!=='commons.connected-first-contact/v1'||
+     journal.input_sha256!==fixed.identity||journal.lease!==lease||
+     canonical(journal.input)!==canonical(fixed.reviewed)||!Array.isArray(journal.events))
+    fail('CONTACT_SESSION_ORIGINAL_JOURNAL_CHANGED');
+  const operationKey=hash(modules.sha256Utf8,{input_sha256:fixed.identity,lease}).sha256;
+  const blocked=()=>fail('CONTACT_SESSION_PREPARATION_IS_READ_ONLY');
+  const selectedTools=new Proxy(tools||{}, {get(target,key){
+    const value=target[key];return typeof value==='function'?blocked:value;
+  }});
+  // These are explicit source-validation objects, not a new initialized
+  // coordinator or provider response. No supplied live storage is called.
+  const inspectionStorage={kind:'commons.connected-contact-local-state/v1',
+    coordinatorId:'original-session-source-validation',
+    verify:async()=>({kind:'commons.connected-contact-local-state/v1'}),
+    read:async()=>null,compareAndSwap:blocked,receive:blocked,history:blocked};
+  const sourceOrigin={kind:'original-session-journal-readback',operation_key:operationKey,
+    input_sha256:fixed.identity,operation_lease:lease,state_key:stateKey,
+    runtime_input_content:runtimeInputText,runtime_input:measuredInput,
+    journal_content:journalText,journal:measuredJournal,source:clone(source),observed_at:observedAt};
+  const inspected=await openConnectedContactCheckpoint({
+    tools:selectedTools,factory,modules,input,lease,stateKey,
+    owner:'original-session-source-validation',mode:'adopt',journal:clone(journal),
+    storage:inspectionStorage,originalSessionSource:sourceOrigin,githubActorAction,githubRefAction});
+  const snapshot=inspected.snapshot();
+  if(canonical(snapshot.journal)!==canonical(journal)||snapshot.transports.length||
+     snapshot.pending_pointer!==null)
+    fail('CONTACT_SESSION_ORIGINAL_JOURNAL_CHANGED');
+  const payload={schema:'commons.connected-contact-checkpoint-payload/v1',
+    runtime_input:input,journal,transports:[],
+    ...(snapshot.session_input_revision_source?{session_input_revision_source:snapshot.session_input_revision_source}:{})};
+  const payloadText=serializeCheckpointPayload(payload),measuredPayload=hash(modules.sha256Utf8,payloadText);
+  if(measuredPayload.bytes>LIMIT)fail('CONTACT_CHECKPOINT_TOO_LARGE');
+  const originalLocation={kind:'commons.connected-contact-session-origin/v1',
+    source:clone(source),operation_key:operationKey,input_sha256:fixed.identity,
+    operation_lease:lease,state_key:stateKey,
+    runtime_input:{...measuredInput},journal:{...measuredJournal}};
+  const metadata={schema:SCHEMA,operation_key:operationKey,input_sha256:fixed.identity,
+    operation_lease:lease,state_key:stateKey,revision:1,updated_at:observedAt,active:null,
+    payload:{...measuredPayload,chunks:[{kind:'local-inline',...measuredPayload}]}};
+  const content=JSON.stringify({metadata,payload_text:payloadText,original_location:originalLocation});
+  const origin={kind:'original-session-journal-readback',operation_key:operationKey,
+    input_sha256:fixed.identity,operation_lease:lease,state_key:stateKey,
+    runtime_input_content:runtimeInputText,runtime_input:measuredInput,
+    journal_content:journalText,journal:measuredJournal,source:clone(source),
+    observed_at:observedAt,sha256:hash(modules.sha256Utf8,content).sha256};
+  const result={namespace:'checkpoint',key:operationKey,content,origin};
+  if(hash(modules.sha256Utf8,JSON.stringify(result)).bytes>LIMIT)fail('CONTACT_CHECKPOINT_TOO_LARGE');
+  return result;
+}
+
+module.exports={prepareConnectedContactJournalAdoption,prepareConnectedContactCheckpointAdoption,validateContactSourceActivation,validateReceivedReturnedAccountTail,validateReturnedDraftRevision,validateReceivedPreflightTail,validateReceivedCancelledSendTail,validateInterruptedAccountAttempt,reviewConnectedContactInput:reviewedInput,readUndispatchedContactContinuation,openConnectedContactCheckpoint,readConnectedContactCheckpoint,validateReceivedRateHistory,validateReceivedCompletion,validateRetainedSentReturn,validateUndispatchedNativeCall,validateReceivedUndispatchedTail,validateReceivedPendingAccountTail,validateReceivedPendingPreflightTail};

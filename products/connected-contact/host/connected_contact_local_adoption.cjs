@@ -99,9 +99,9 @@ function checkPrepared(prepared){
  return prepared;
 }
 async function prepareConnectedContactAdoption(options){
- const {tools,storage,modules:given,sha256Utf8,classifyReturnedGmailRateLimit,classifyReturnedSendRateLimit,
-  operationId,accounts=[],contacts=[],checkpoints=[],ownerHandoff,observedAt=new Date().toISOString(),
-  githubRefAction='github_fetch_commit',record}=options||{};
+ const {tools,storage,factory,modules:given,sha256Utf8,classifyReturnedGmailRateLimit,classifyReturnedSendRateLimit,
+  operationId,accounts=[],contacts=[],checkpoints=[],originalJournals=[],ownerHandoff,observedAt=new Date().toISOString(),
+  githubRefAction='github_fetch_commit',githubActorAction,record}=options||{};
  storageSelection(storage);const modules=modulesSelected(given);
  printable(operationId,'Original receiving operation ID',900);need(iso(observedAt),'Retain the first preparation timestamp.');
  need(typeof record==='function'&&typeof sha256Utf8==='function'&&typeof classifyReturnedGmailRateLimit==='function',
@@ -109,9 +109,12 @@ async function prepareConnectedContactAdoption(options){
  need(['github_fetch','github_fetch_commit'].includes(githubRefAction),'Select one original ref read binding before invocation.');
  need(typeof tools?.['mcp__codex_apps__'+githubRefAction]==='function'&&
   typeof tools?.mcp__codex_apps__github_fetch_file==='function','Original read-only Git bindings are required.');
- need(Array.isArray(accounts)&&Array.isArray(contacts)&&Array.isArray(checkpoints)&&
-  accounts.length+contacts.length+checkpoints.length>0,
-  'Select a nonempty original account, contact or checkpoint batch explicitly.');
+ need(Array.isArray(accounts)&&Array.isArray(contacts)&&Array.isArray(checkpoints)&&Array.isArray(originalJournals)&&
+  accounts.length+contacts.length+checkpoints.length+originalJournals.length>0,
+  'Select a nonempty original account, contact, checkpoint or session-journal batch explicitly.');
+ if(originalJournals.length)need(typeof factory?.createConnectedFirstContact==='function'&&
+  typeof modules.checkpoint.prepareConnectedContactJournalAdoption==='function',
+  'Use the complete original factory and checkpoint session receiver; draft inputs require the maintained draft wrapper.');
  const selectedAuthority=authority(await storage.verify(),storage),owner=handoff(ownerHandoff),entries=[],observations=[],heads=new Map();
  let sequence=0;
  async function invoke(name,args){
@@ -222,6 +225,26 @@ async function prepareConnectedContactAdoption(options){
   if(!prior)heads.set(headKey,{repository:location.repository,branch:location.branch,sha:location.commit});
   entries.push({...clone(entry),expected_sha256:null});
  }
+ for(const selected of originalJournals){
+  need(selected&&typeof selected.runtimeInputText==='string'&&typeof selected.journalText==='string',
+   'Retain the complete original session input and journal text.');
+  const entry=await modules.checkpoint.prepareConnectedContactJournalAdoption({
+   tools,factory,modules,runtimeInputText:selected.runtimeInputText,journalText:selected.journalText,
+   stateKey:selected.stateKey,lease:selected.lease,source:selected.source,
+   observedAt,githubActorAction,githubRefAction});
+  const origin=entry?.origin;
+  need(entry?.namespace==='checkpoint'&&hex(entry.key)&&typeof entry.content==='string'&&
+   origin?.kind==='original-session-journal-readback'&&origin.sha256===sha(entry.content)&&
+   origin.runtime_input_content===selected.runtimeInputText&&origin.journal_content===selected.journalText&&
+   origin.state_key===selected.stateKey&&origin.operation_lease===selected.lease&&
+   canonical(origin.source)===canonical(selected.source)&&origin.observed_at===observedAt&&
+   hex(origin.input_sha256)&&entry.key===sha({input_sha256:origin.input_sha256,lease:selected.lease}),
+   'Keep the exact original session bytes, operation identity and truthful source custody.');
+  if(selected.operationKey!==undefined)need(selected.operationKey===entry.key,
+   'The original session operation identity changed.');
+  need(!checkpointKeys.has(entry.key),'Duplicate checkpoint selection.');checkpointKeys.add(entry.key);
+  entries.push({...clone(entry),expected_sha256:null});
+ }
  // These rereads detect a changed original source selection during preparation.
  // They do not replace the required original-controller handoff.
  for(const source of heads.values()){
@@ -233,7 +256,7 @@ async function prepareConnectedContactAdoption(options){
  const prepared={schema:SCHEMA,operation_id:operationId,prepared_at:observedAt,
   coordinator:{kind:KIND,coordinator_id:storage.coordinatorId,authority:clone(selectedAuthority),authority_sha256:sha(canonical(selectedAuthority))},
   handoff:owner,request,request_sha256:sha(request),source_observations:observations,
-  selection_counts:{accounts:accounts.length,contacts:contacts.length,checkpoints:checkpoints.length}};
+  selection_counts:{accounts:accounts.length,contacts:contacts.length,checkpoints:checkpoints.length,original_journals:originalJournals.length}};
  prepared.preparation_sha256=sha(canonical(prepared));checkPrepared(prepared);
  await record({phase:'original-local-batch-prepared',operation_id:operationId,preparation_sha256:prepared.preparation_sha256,
   request_sha256:prepared.request_sha256,observed_at:new Date().toISOString()});

@@ -50,11 +50,11 @@ async function main(argv=process.argv.slice(2)){
   if(!tools||!args['--selection']||!args['--request'])throw Error('Prepare requires original tools, explicit private selection, and a retained request path.');
   const selected=privateJSON(args['--selection']);
   result=await product.adoption.prepareConnectedContactAdoption({tools,storage:product.storage,
-   modules:{admission:product.modules.mailboxAdmission,gateway:product.modules.gateway,intent:product.modules.intent,checkpoint:product.checkpoint},
+   factory:product.factory,modules:{...product.modules,admission:product.modules.mailboxAdmission,checkpoint:product.checkpoint},
    sha256Utf8:product.modules.sha256Utf8,classifyReturnedGmailRateLimit:product.factory.classifyReturnedGmailRateLimit,
    classifyReturnedSendRateLimit:product.factory.classifyReturnedSendRateLimit,
-   operationId:selected.operation_id,accounts:selected.accounts,contacts:selected.contacts,checkpoints:selected.checkpoints,
-   ownerHandoff:selected.ownerHandoff,observedAt:selected.observed_at,githubRefAction:selected.githubRefAction,record});
+   operationId:selected.operation_id,accounts:selected.accounts,contacts:selected.contacts,checkpoints:selected.checkpoints,originalJournals:selected.originalJournals,
+   ownerHandoff:selected.ownerHandoff,observedAt:selected.observed_at,githubRefAction:selected.githubRefAction,githubActorAction:selected.githubActorAction,record});
   savePrivate(args['--request'],result);
  }
  if(action==='receive'){
