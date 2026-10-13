@@ -21,6 +21,42 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "integration/component_fragments/study-transfer-native-lineage.json",
+    "model/customer_review_study_transfer.py",
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
+    "operator/web/reviews.mjs",
+    "integration/customer-review-study-transfer.patch.json",
+    "integration/component_fragments/customer-review-study-transfer.json",
+    "model/conservation_design_study_transfer.py",
+    "model/chemistry_study_transfer.py",
+    "model/CHEMISTRY_STUDY_TRANSFER.md",
+    "source_tools/chemistry_study_composition.py",
+    "integration/component_fragments/chemistry_study_transfer.json",
+    "model/ensemble_study_transfer.py",
+    "model/ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/ensemble-scientific-study-transfer.json",
+    "model/gauge_study_transfer.py",
+    "model/GAUGE_STUDY_TRANSFER.md",
+    "integration/component_fragments/gauge-study-transfer.json",
+    "model/landcover_study_transfer.py",
+    "integration/component_fragments/landcover-scientific-report.json",
+    "model/published_review_study_transfer.py",
+    "model/published_review_report_source.py",
+    "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+    "integration/component_fragments/published-review-report-source.json",
+    "model/implementation_report_transfer.py",
+    "model/receptor_report_maps.py",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/spatial_esri.py",
+    "source/capture_upstream_network.py",
+    "model/receptor_study_transfer.py",
+    "model/RECEPTOR_STUDY_TRANSFER.md",
+    "operator/web/receptors.mjs",
+    "integration/receptor_study_transfer.json",
+    "integration/component_fragments/receptor-study-transfer.json",
+    "model/monitoring_frontier_comparison.py",
+    "model/monitoring_comparison_report.py",
     "model/community_study_transfer.py",
     "model/COMMUNITY_STUDY_TRANSFER.md",
     "operator/web/community.mjs",
@@ -79,6 +115,42 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "integration/component_fragments/study-transfer-native-lineage.json",
+    "model/customer_review_study_transfer.py",
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
+    "operator/web/reviews.mjs",
+    "integration/customer-review-study-transfer.patch.json",
+    "integration/component_fragments/customer-review-study-transfer.json",
+    "model/conservation_design_study_transfer.py",
+    "model/chemistry_study_transfer.py",
+    "model/CHEMISTRY_STUDY_TRANSFER.md",
+    "source_tools/chemistry_study_composition.py",
+    "integration/component_fragments/chemistry_study_transfer.json",
+    "model/ensemble_study_transfer.py",
+    "model/ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/ensemble-scientific-study-transfer.json",
+    "model/gauge_study_transfer.py",
+    "model/GAUGE_STUDY_TRANSFER.md",
+    "integration/component_fragments/gauge-study-transfer.json",
+    "model/landcover_study_transfer.py",
+    "integration/component_fragments/landcover-scientific-report.json",
+    "model/published_review_study_transfer.py",
+    "model/published_review_report_source.py",
+    "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+    "integration/component_fragments/published-review-report-source.json",
+    "model/implementation_report_transfer.py",
+    "model/receptor_report_maps.py",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/spatial_esri.py",
+    "source/capture_upstream_network.py",
+    "model/receptor_study_transfer.py",
+    "model/RECEPTOR_STUDY_TRANSFER.md",
+    "operator/web/receptors.mjs",
+    "integration/receptor_study_transfer.json",
+    "integration/component_fragments/receptor-study-transfer.json",
+    "model/monitoring_frontier_comparison.py",
+    "model/monitoring_comparison_report.py",
     "model/community_study_transfer.py",
     "model/COMMUNITY_STUDY_TRANSFER.md",
     "operator/web/community.mjs",
@@ -302,9 +374,54 @@ def verify_composition(application, pending):
         for module in ("scientific_report_study_transfer", "calibration_study_transfer",
                        "study_report_transfer", "monitoring_study_transfer",
                        "community_study_transfer", "conservation_study_transfer",
-                       "native_process_study_transfer"):
+                       "native_process_study_transfer", "receptor_study_transfer",
+                       "customer_review_study_transfer", "conservation_design_study_transfer",
+                       "chemistry_study_transfer", "ensemble_study_transfer",
+                       "gauge_study_transfer", "landcover_study_transfer",
+                       "published_review_study_transfer", "implementation_report_transfer"):
             if module.encode("ascii") in transfer:
                 assembled_data(application, pending, "model/" + module + ".py")
+        if b"receptor_study_transfer" in transfer:
+            for dependency in ("model/compute_programme.py", "model/receptor_report_source.py",
+                               "model/receptor_network_cli.py", "model/receptor_scenarios.py",
+                               "model/receptor_programmes.py", "model/receptor_experiments.py",
+                               "model/receptor_cli.py", "model/receptor_execution.py",
+                               "model/receptors.py", "operator/web/receptors.mjs"):
+                assembled_data(application, pending, dependency)
+        if b"customer_review_study_transfer" in transfer:
+            for dependency in ("model/reviews.py", "model/review_handback.py",
+                               "model/review_receiving.py", "model/review_reconciliation.py",
+                               "model/review_worklist.py", "model/scientific_report_editions.py",
+                               "model/scientific_report_review.py",
+                               "model/scientific_report_study_transfer.py",
+                               "model/spatial_exports.py", "operator/review_app.html",
+                               "delivery_snapshot.py"):
+                assembled_data(application, pending, dependency)
+        if b"conservation_design_study_transfer" in transfer:
+            for dependency in ("model/conservation_design_editor.py",
+                               "model/conservation_design.py", "model/conservation_bindings.py",
+                               "model/conservation_scenarios.py", "model/portable_databases.py",
+                               "model/conservation_study_transfer.py",
+                               "scenario-design/__init__.py", "scenario-design/engine.py",
+                               "scenario-design/conservation.py", "scenario-design/server.py",
+                               "scenario-design/eco_bridge.py"):
+                assembled_data(application, pending, dependency)
+        if b"implementation_report_transfer" in transfer:
+            for dependency in ("model/implementation.py", "model/implementation_schema.py",
+                               "model/implementation_reporting.py", "model/portable_implementation.py",
+                               "model/implementation_outcomes.py", "model/implementation_outcome_figures.py",
+                               "model/implementation_observations.py", "model/field_deployment.py",
+                               "model/monitoring_packet.py", "model/monitoring_common.py"):
+                assembled_data(application, pending, dependency)
+        if b"receptor_study_transfer" in transfer:
+            producer = assembled_data(application, pending, "model/receptor_report_source.py")
+            if b"receptor_report_maps" in producer:
+                for dependency in ("model/receptor_report_maps.py", "model/scientific_figures.py",
+                                   "model/scientific_map_figures.py", "model/spatial_esri.py",
+                                   "source/capture_upstream_network.py"):
+                    assembled_data(application, pending, dependency)
+        if b"monitoring_study_transfer" in transfer:
+            assembled_data(application, pending, "model/monitoring_frontier_comparison.py")
         if b"community_study_transfer" in transfer:
             for dependency in ("model/communities.py", "model/community_reports.py",
                                "model/community_report_context.py", "model/community_revisions.py",
@@ -330,15 +447,26 @@ def verify_composition(application, pending):
                 assembled_data(application, pending, dependency)
             dispatcher = assembled_data(application, pending, "model/scientific_report_study_transfer.py")
             for module in ("community_study_transfer", "conservation_study_transfer",
-                           "native_process_study_transfer"):
+                           "native_process_study_transfer", "receptor_study_transfer",
+                           "customer_review_study_transfer", "conservation_design_study_transfer",
+                           "chemistry_study_transfer", "ensemble_study_transfer",
+                           "gauge_study_transfer", "landcover_study_transfer",
+                           "published_review_study_transfer", "implementation_report_transfer"):
                 if module.encode("ascii") in dispatcher:
                     helper = assembled_data(application, pending, "model/" + module + ".py")
                     if b"def include_source(" not in helper:
                         raise ValueError("Receive the matching scoped scientific-report lineage helper: " + module)
+            if b"published_review_study_transfer" in dispatcher:
+                assembled_data(application, pending, "model/published_review_report_source.py")
             lineage = assembled_data(application, pending, "model/study_report_transfer.py")
             monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
             if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:
                 raise ValueError("Receive the matching original calibration and Monitoring report lineage helpers")
+    monitoring_report = pending.get("model/monitoring_report_source.py")
+    if monitoring_report is None:
+        monitoring_report = read_existing(application, "model/monitoring_report_source.py")
+    if monitoring_report is not None:
+        assembled_data(application, pending, "model/monitoring_comparison_report.py")
     server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
     client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
     if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:

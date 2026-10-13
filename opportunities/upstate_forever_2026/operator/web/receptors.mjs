@@ -12,6 +12,7 @@ const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosp
 
 export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme, openScientificReport}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
+  let transferVersion=0, transferring=false;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
   let filters={profile:'',scenario:'',area:'',pollutant:'',search:''}, page=0;
@@ -301,6 +302,41 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       '<div class="rc-choices">'+checkList(profileOptions,'profile_ids','Parameter profiles')+
       checkList(scenarioOptions,'scenario_ids','Land-cover scenarios')+'</div>' : '';
   }
+  const transferKinds = {
+    network:'receptor-networks', 'source-areas':'receptor-scenario-areas',
+    programme:'receptor-programmes', comparison:'receptor-experiments',
+    inventory:'receptor-inventories', 'report-source':'receptor-report-sources',
+  };
+  function studyTransferButton(kind,id) {
+    if(typeof openExtension!=='function'||!transferKinds[kind]||!/^[0-9a-f]{64}$/.test(id||''))return '';
+    return '<button type="button" data-receptor-action="transfer-study" data-kind="'+esc(kind)+
+      '" data-id="'+esc(id)+'" data-workspace="'+esc(workspace)+'">Transfer editable study</button>';
+  }
+  async function transferStudy(target) {
+    const kind=target?.dataset?.kind,id=target?.dataset?.id,requested=target?.dataset?.workspace;
+    if(!transferKinds[kind]||!/^[0-9a-f]{64}$/.test(id||'')||
+       !requested||requested!==workspace||requested!==currentWorkspace())
+      throw Error('Open the saved source-water study in its original workspace.');
+    if(typeof openExtension!=='function')throw Error('The original selected-study desk is unavailable.');
+    if(transferring)return;
+    const context=viewContext(),epoch=generation,version=++transferVersion;
+    const current=()=>currentView(context)&&epoch===generation&&version===transferVersion;
+    transferring=true;
+    status('Reading the exact saved source-water study for editable transfer…');
+    try {
+      const retained=await api(endpoint('/api/receptors/'+kind,{id,workspace:requested}));
+      if(!current())return;
+      if(retained?.id!==id||retained?._kind!==kind)
+        throw Error('The saved source-water reply identifies another original study.');
+      const selected={kind:transferKinds[kind],id,title:retained.title||id};
+      if(typeof retained.state==='string')selected.state=retained.state;
+      await openExtension('study-transfer','openForStudies',{workspace_key:requested,roots:[selected]});
+    } catch(error) {
+      if(current())status(error.message||String(error),true);
+    } finally {
+      if(version===transferVersion)transferring=false;
+    }
+  }
   function renderSaved() {
     if(!frame||!catalog)return;
     const rows=[...(catalog.comparisons||[]).map(row=>({...row,kind:'comparison'})),
@@ -311,7 +347,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       ...(catalog.report_sources||[]).map(row=>({...row,kind:'report-source'}))].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
     node('[data-rc-saved]').innerHTML=rows.length ?
       '<div class="rc-scroll"><table><caption>Retained source-water products</caption><thead><tr><th>Title</th><th>Type</th><th>State</th><th>Rows</th><th>Open</th></tr></thead><tbody>'+
-      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':row.kind==='programme'?'Paired native programme':row.kind==='report-source'?'Scientific source report':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button></td></tr>').join('')+
+      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':row.kind==='programme'?'Paired native programme':row.kind==='report-source'?'Scientific source report':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button>'+studyTransferButton(row.kind,row.id)+'</td></tr>').join('')+
       '</tbody></table></div>' : '<p>Saved original watershed networks, native comparisons and inventories appear here as their workspace tasks finish.</p>';
   }
   function selection() {
@@ -447,6 +483,14 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
   const resultRows = () => result?._kind==='network'?result.memberships||[]:
     result?._kind==='comparison'?result.rows||[]:result?.scenario_exports||[];
   function renderResult() {
+    renderResultBody();
+    const header=node('[data-rc-result-header]');
+    if(result&&header&&!header.querySelector('[data-receptor-action="transfer-study"]')){
+      const button=studyTransferButton(result._kind,result.id);
+      if(button)header.insertAdjacentHTML('beforeend','<div class="rc-toolbar">'+button+'</div>');
+    }
+  }
+  function renderResultBody() {
     if(!result||!frame)return;
     node('[data-rc-result]').hidden=false;
     if(result._kind==='network')return renderNetwork();
@@ -1130,6 +1174,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
   }
 
   async function act(action,target) {
+    if(action==='transfer-study')return transferStudy(target);
     if(action==='scientific-compose')return openSourceReportComposer();
     if(action==='scientific-source')return sourceReportForm();
     if(action==='prepare-areas')return prepareAreaForm();
@@ -1360,7 +1405,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     loadCatalog();
   }
   function detach() {
-    remember();generation++;root=null;frame=null;fetching=false;observing=false;
+    remember();generation++;transferVersion++;transferring=false;root=null;frame=null;fetching=false;observing=false;
   }
   return {mount,update,detach,taskActions,dispatch};
 }
