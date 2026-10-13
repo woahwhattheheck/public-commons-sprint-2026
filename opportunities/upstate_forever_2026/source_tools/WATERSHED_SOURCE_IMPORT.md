@@ -41,8 +41,21 @@ view recreates their relative filenames after workspace transfer.
 The two model-input JSON files can also be prepared by omitting the three
 publisher-body flags. The existing native model then calculates from those
 retained inputs. The inspect output lists exactly which original query/geometry
-bodies were checked. Supply `--native-network` only when the original native
-network JSON is available; it is preserved as `native-network.json`.
+bodies were checked. Supply `--native-network` with the retained original native network JSON or gzip.
+Plain JSON is preserved as `native-network.json`; an original gzip is preserved
+byte-for-byte as `native-network.json.gz`. The loader decodes that companion for
+the same watershed model while the manifest, exact byte count and SHA-256 retain
+the compressed original. Keep one network edition per prepared source directory.
+
+For the retained 217-HUC domain, add this option to the same preparation command:
+
+```sh
+--native-network /actual/source/model-domain.esri.json.gz
+```
+
+Use the original source path on the receiving host. Its HUC12/ToHUC attributes
+supply the existing model's native connectivity; the saved report and selection
+CSVs retain the complete native state and upstream fields.
 
 ## Use the existing desk
 
