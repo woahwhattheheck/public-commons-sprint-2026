@@ -111,10 +111,12 @@ class PairedEnsembleService:
         }
 
     def _records(self, app, key, result):
-        records = list(result.get("artifacts", {}).values()) + result.get("reports", {}).get("files", [])
+        complete = result.get("state") == "complete"
+        reports = result.get("reports", {}).get("files", []) if complete else []
+        records = list(result.get("artifacts", {}).values()) + reports
         # JSON descriptions are small and their fingerprints are computed only
         # for an explicit item/member request, never on the state poll.
-        for name in ("analysis.json", "reports.json"):
+        for name in (("analysis.json", "reports.json") if complete else ("analysis.json",)):
             path = app.root / key / name
             if path.is_file():
                 records.append({"path": name, **fingerprint(path)})
@@ -125,7 +127,7 @@ class PairedEnsembleService:
         app = self._app(workspace_key)
         value = app.describe(key)
         records = self._records(app, key, value)
-        result = {**value, "_downloads": [
+        result = {**value, "reports": value.get("reports", {}) if value.get("state") == "complete" else {}, "_downloads": [
             self.operator._ticket(workspace_key, member(app.root / key, row["path"]), row, row["path"])
             for row in records
         ]}
@@ -187,6 +189,8 @@ class PairedEnsembleService:
                 tickets = _files(self.operator, workspace_key, result)
                 result["_downloads"] = list(tickets.values())
                 result["document"] = _preview_document(app, result, tickets)
+            else:
+                result["reports"] = {}
             return result
         if operation == "selection":
             return self.retained_selection(workspace_key, payload.get("ensemble_id"))
