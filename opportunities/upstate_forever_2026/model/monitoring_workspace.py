@@ -363,9 +363,8 @@ class MonitoringWorkspace:
             if campaign and observed_context.get("campaign_revision_id") != campaign["revision"]["id"]:
                 raise ContractError("Observed context must match the exported campaign revision")
         # Native backups must be outside the workspace so old archives never recurse.
-        base = self.export_root or (self.root.parent / (self.root.name + "-monitoring-exports")
-                if callable(getattr(self.workspace, "backup", None)) else self.root / "tmp")
-        if format == "workspace" and callable(getattr(self.workspace, "backup", None)) and base.resolve().is_relative_to(self.root.resolve()):
+        base = self.export_root or (self.root.parent / (self.root.name + "-monitoring-exports"))
+        if format == "workspace" and base.resolve().is_relative_to(self.root.resolve()):
             raise ContractError("Native complete-workspace exports need an output directory outside the workspace")
         folder = base / f"monitoring-export-{uuid.uuid4().hex}"
         folder.mkdir(parents=True)
@@ -375,9 +374,9 @@ class MonitoringWorkspace:
                 if callable(getattr(self.workspace, "backup", None)):
                     manifest = self.workspace.backup(destination, include_intermediates=True)
                 else:
-                    # Compatibility for original older application editions.
-                    from .portable import export_workspace
-                    manifest = export_workspace(self.root, destination)
+                    # The maintained portable API accepts the original workspace.
+                    from .portable import backup
+                    manifest = backup(self.workspace, destination, include_intermediates=True)
             return self._download(destination, {"native_manifest": manifest, "format": "original-workspace"})
         selected = set(plan["selected_ids"])
         covered = set(plan["covered_ids"])
