@@ -242,6 +242,30 @@
       "title": "Original daily mean discharge with native source lines",
       "station_id_field": "site_no",
       "source_manifest_sha256": "1c21135f9b7b51ecaeb2b12323a73a8ad6b68b1b92dea3928c49f004adb2d695"
+    },
+    "regional_year_flow": {
+      "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+      "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1",
+      "bytes": 33415,
+      "kind": "table",
+      "title": "Additional HUC05–07 annual observed flow",
+      "station_id_field": "site"
+    },
+    "regional_month_flow": {
+      "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+      "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e",
+      "bytes": 348121,
+      "kind": "table",
+      "title": "Additional HUC05–07 monthly observed flow",
+      "station_id_field": "site"
+    },
+    "regional_study_flow": {
+      "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+      "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712",
+      "bytes": 5904,
+      "kind": "table",
+      "title": "Additional HUC05–07 observed flow during the 2023 lake study",
+      "station_id_field": "site"
     }
   },
   "studies": [
@@ -1806,6 +1830,695 @@
         "basin_support": "Full original simplified=false, splitCatchment=false NLDI whole catchments",
         "coordinate_choice": "Original NLDI geographic positions",
         "original_217_domain": "Automatically joined when its unchanged original source is retained"
+      }
+    },
+    {
+      "id": "upper-savannah-usgs-flow-29",
+      "title": "Upper Savannah observed discharge — 29 gauges",
+      "point_sources": [
+        "gauges",
+        "additional_nwis_gauges"
+      ],
+      "observation_tables": [
+        "year_flow",
+        "month_flow",
+        "study_flow",
+        "regional_year_flow",
+        "regional_month_flow",
+        "regional_study_flow"
+      ],
+      "sites": [
+        {
+          "station_id": "USGS-02176930",
+          "aliases": [
+            "02176930"
+          ],
+          "label": "CHATTOOGA RIVER AT BURRELLS FORD, NR PINE MTN, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02177000",
+          "aliases": [
+            "02177000"
+          ],
+          "label": "CHATTOOGA RIVER NEAR CLAYTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02178400",
+          "aliases": [
+            "02178400"
+          ],
+          "label": "TALLULAH RIVER NEAR CLAYTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02180400",
+          "aliases": [
+            "02180400"
+          ],
+          "label": "TIGER CREEK NEAR LAKEMONT, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1982,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02181350",
+          "aliases": [
+            "02181350"
+          ],
+          "label": "TALLULAH R AT TERRORA PWRHSE, NR TALLULAH FALLS,GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02181580",
+          "aliases": [
+            "02181580"
+          ],
+          "label": "TALLULAH RIVER AB POWERHOUSE, NR TALLULAH FALLS,GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2191,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02185010",
+          "aliases": [
+            "02185010"
+          ],
+          "label": "EASTATOEE CRK ON CLEO CHAPMAN HWY NEAR SUNSET, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2014,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186000",
+          "aliases": [
+            "02186000"
+          ],
+          "label": "TWELVEMILE CREEK NEAR LIBERTY, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186645",
+          "aliases": [
+            "02186645"
+          ],
+          "label": "CONEROSS CK NR SENECA, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 969,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186702",
+          "aliases": [
+            "02186702"
+          ],
+          "label": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02187910",
+          "aliases": [
+            "02187910"
+          ],
+          "label": "ROCKY RIVER NR STARR, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2191,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02188600",
+          "aliases": [
+            "02188600"
+          ],
+          "label": "BEAVERDAM CREEK ABOVE ELBERTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02191227",
+          "aliases": [
+            "02191227"
+          ],
+          "label": "GROVE CREEK AT US 441 AND GA 15 NEAR COMMERCE, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02191300",
+          "aliases": [
+            "02191300"
+          ],
+          "label": "BROAD RIVER ABOVE CARLTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02192000",
+          "aliases": [
+            "02192000"
+          ],
+          "label": "BROAD RIVER NEAR BELL, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02192500",
+          "aliases": [
+            "02192500"
+          ],
+          "label": "LITTLE RIVER NEAR MT. CARMEL, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02193340",
+          "aliases": [
+            "02193340"
+          ],
+          "label": "KETTLE CREEK NEAR WASHINGTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02193500",
+          "aliases": [
+            "02193500"
+          ],
+          "label": "LITTLE RIVER NEAR WASHINGTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02195320",
+          "aliases": [
+            "02195320"
+          ],
+          "label": "KIOKEE CREEK AT GA 104, NEAR EVANS, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02195470",
+          "aliases": [
+            "02195470"
+          ],
+          "label": "UCHEE CREEK AT GA 104, NEAR EVANS, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1190,
+          "retained_numeric_flow_days": 1190,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196000",
+          "aliases": [
+            "02196000"
+          ],
+          "label": "STEVENS CREEK NEAR MODOC, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196485",
+          "aliases": [
+            "02196485"
+          ],
+          "label": "AUGUSTA CANAL UPPER NR AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2132,
+          "retained_numeric_flow_days": 2132,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196690",
+          "aliases": [
+            "02196690"
+          ],
+          "label": "HORSE CREEK AT CLEARWATER, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1729,
+          "retained_numeric_flow_days": 1728,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196835",
+          "aliases": [
+            "02196835"
+          ],
+          "label": "BUTLER CREEK BELOW 7TH AVENUE, AT FT. GORDON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1623,
+          "retained_numeric_flow_days": 1623,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-021968385",
+          "aliases": [
+            "021968385"
+          ],
+          "label": "BUTLER CR BELOW BUTLER CR RSVR AT FORT GORDON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2190,
+          "retained_numeric_flow_days": 2190,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197000",
+          "aliases": [
+            "02197000"
+          ],
+          "label": "SAVANNAH RIVER AT AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197020",
+          "aliases": [
+            "02197020"
+          ],
+          "label": "SPIRIT CREEK AT US 1, NEAR AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-021973269",
+          "aliases": [
+            "021973269"
+          ],
+          "label": "SAVANNAH RIVER NEAR WAYNESBORO, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2034,
+          "retained_numeric_flow_days": 2034,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197500",
+          "aliases": [
+            "02197500"
+          ],
+          "label": "SAVANNAH R AT BURTONS FERRY BR NR MILLHAVEN, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        }
+      ],
+      "watershed_sources": [
+        "basin",
+        "additional_whole_basins"
+      ],
+      "require_original_domain": true,
+      "source_context": {
+        "summary_observation_rows": 2291,
+        "whole_catchment_feature_count": 14,
+        "original_flow_record_count": 59701,
+        "additional_numeric_daily_records": 26241,
+        "additional_nonnumeric_daily_records": 1,
+        "source_period": "2020-01-01/2025-12-31",
+        "notes": [
+          "Annual, monthly and study-period summaries retain native source qualifiers and completeness fields.",
+          "Point/HUC membership and complete contributing-area geometry are separate spatial supports.",
+          "Original HUC05–07 daily rows and all coordinate alternatives remain available through the separate NWIS/NLDI prepared studies."
+        ]
+      }
+    },
+    {
+      "id": "upper-savannah-usgs-observed-30",
+      "title": "Upper Savannah observed discharge and stage — 30 stations",
+      "point_sources": [
+        "gauges",
+        "additional_nwis_gauges"
+      ],
+      "observation_tables": [
+        "year_flow",
+        "month_flow",
+        "study_flow",
+        "regional_year_flow",
+        "regional_month_flow",
+        "regional_study_flow",
+        "year_stage"
+      ],
+      "sites": [
+        {
+          "station_id": "USGS-02176930",
+          "aliases": [
+            "02176930"
+          ],
+          "label": "CHATTOOGA RIVER AT BURRELLS FORD, NR PINE MTN, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02177000",
+          "aliases": [
+            "02177000"
+          ],
+          "label": "CHATTOOGA RIVER NEAR CLAYTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02178400",
+          "aliases": [
+            "02178400"
+          ],
+          "label": "TALLULAH RIVER NEAR CLAYTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02180400",
+          "aliases": [
+            "02180400"
+          ],
+          "label": "TIGER CREEK NEAR LAKEMONT, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1982,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02181350",
+          "aliases": [
+            "02181350"
+          ],
+          "label": "TALLULAH R AT TERRORA PWRHSE, NR TALLULAH FALLS,GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02181580",
+          "aliases": [
+            "02181580"
+          ],
+          "label": "TALLULAH RIVER AB POWERHOUSE, NR TALLULAH FALLS,GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2191,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02185010",
+          "aliases": [
+            "02185010"
+          ],
+          "label": "EASTATOEE CRK ON CLEO CHAPMAN HWY NEAR SUNSET, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2014,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186000",
+          "aliases": [
+            "02186000"
+          ],
+          "label": "TWELVEMILE CREEK NEAR LIBERTY, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186645",
+          "aliases": [
+            "02186645"
+          ],
+          "label": "CONEROSS CK NR SENECA, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 969,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02186702",
+          "aliases": [
+            "02186702"
+          ],
+          "label": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-344108083090600",
+          "aliases": [
+            "344108083090600"
+          ],
+          "label": "CHAUGA RIVER ABOVE WESTMINSTER, SC",
+          "role": "retained_daily_stage",
+          "retained_flow_days": 0,
+          "retained_stage_days": 808
+        },
+        {
+          "station_id": "USGS-02187910",
+          "aliases": [
+            "02187910"
+          ],
+          "label": "ROCKY RIVER NR STARR, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2191,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02188600",
+          "aliases": [
+            "02188600"
+          ],
+          "label": "BEAVERDAM CREEK ABOVE ELBERTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02191227",
+          "aliases": [
+            "02191227"
+          ],
+          "label": "GROVE CREEK AT US 441 AND GA 15 NEAR COMMERCE, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02191300",
+          "aliases": [
+            "02191300"
+          ],
+          "label": "BROAD RIVER ABOVE CARLTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02192000",
+          "aliases": [
+            "02192000"
+          ],
+          "label": "BROAD RIVER NEAR BELL, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02192500",
+          "aliases": [
+            "02192500"
+          ],
+          "label": "LITTLE RIVER NEAR MT. CARMEL, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02193340",
+          "aliases": [
+            "02193340"
+          ],
+          "label": "KETTLE CREEK NEAR WASHINGTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02193500",
+          "aliases": [
+            "02193500"
+          ],
+          "label": "LITTLE RIVER NEAR WASHINGTON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02195320",
+          "aliases": [
+            "02195320"
+          ],
+          "label": "KIOKEE CREEK AT GA 104, NEAR EVANS, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02195470",
+          "aliases": [
+            "02195470"
+          ],
+          "label": "UCHEE CREEK AT GA 104, NEAR EVANS, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1190,
+          "retained_numeric_flow_days": 1190,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196000",
+          "aliases": [
+            "02196000"
+          ],
+          "label": "STEVENS CREEK NEAR MODOC, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196485",
+          "aliases": [
+            "02196485"
+          ],
+          "label": "AUGUSTA CANAL UPPER NR AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2132,
+          "retained_numeric_flow_days": 2132,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196690",
+          "aliases": [
+            "02196690"
+          ],
+          "label": "HORSE CREEK AT CLEARWATER, SC",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1729,
+          "retained_numeric_flow_days": 1728,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02196835",
+          "aliases": [
+            "02196835"
+          ],
+          "label": "BUTLER CREEK BELOW 7TH AVENUE, AT FT. GORDON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 1623,
+          "retained_numeric_flow_days": 1623,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-021968385",
+          "aliases": [
+            "021968385"
+          ],
+          "label": "BUTLER CR BELOW BUTLER CR RSVR AT FORT GORDON, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2190,
+          "retained_numeric_flow_days": 2190,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197000",
+          "aliases": [
+            "02197000"
+          ],
+          "label": "SAVANNAH RIVER AT AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197020",
+          "aliases": [
+            "02197020"
+          ],
+          "label": "SPIRIT CREEK AT US 1, NEAR AUGUSTA, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-021973269",
+          "aliases": [
+            "021973269"
+          ],
+          "label": "SAVANNAH RIVER NEAR WAYNESBORO, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2034,
+          "retained_numeric_flow_days": 2034,
+          "retained_stage_days": 0
+        },
+        {
+          "station_id": "USGS-02197500",
+          "aliases": [
+            "02197500"
+          ],
+          "label": "SAVANNAH R AT BURTONS FERRY BR NR MILLHAVEN, GA",
+          "role": "retained_daily_flow",
+          "retained_flow_days": 2192,
+          "retained_numeric_flow_days": 2192,
+          "retained_stage_days": 0
+        }
+      ],
+      "watershed_sources": [
+        "basin",
+        "additional_whole_basins"
+      ],
+      "require_original_domain": true,
+      "source_context": {
+        "summary_observation_rows": 2294,
+        "whole_catchment_feature_count": 14,
+        "original_flow_record_count": 59701,
+        "additional_numeric_daily_records": 26241,
+        "additional_nonnumeric_daily_records": 1,
+        "source_period": "2020-01-01/2025-12-31",
+        "notes": [
+          "Annual, monthly and study-period summaries retain native source qualifiers and completeness fields.",
+          "Point/HUC membership and complete contributing-area geometry are separate spatial supports.",
+          "Original HUC05–07 daily rows and all coordinate alternatives remain available through the separate NWIS/NLDI prepared studies."
+        ]
       }
     }
   ]

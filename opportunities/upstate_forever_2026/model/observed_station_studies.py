@@ -108,6 +108,9 @@ def prepared_studies(workspace, original_studies=None):
             "source_summary": {"station_count": len(selection["sites"]), "station_roles": roles,
                 "watershed_count": domain_count,
                 "additional_whole_catchment_sources": len(recipe.get("watershed_sources", [])),
+                "additional_whole_catchment_features": sum(
+                    spec["sources"][key]["expected_features"]
+                    for key in recipe.get("watershed_sources", [])),
                 "observation_table_count": len(selection["observation_tables"]),
                 "selected_outfall_geometry": recipe.get("outfall_choice_source"),
                 "selected_coordinate_source": choice_key,
