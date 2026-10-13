@@ -105,7 +105,7 @@ def _render(data):
         ("South Carolina reporting area", "—", geo["areas_ha"]["reporting_area"],
          "Selected HUCs intersected with the original reporting boundary"),
         ("Utility focus in reporting area", "—", geo["areas_ha"]["utility_reporting_intersection"],
-         "Original utility protection footprint intersected with reporting support"),
+         "Retained utility focus intersected with reporting support; original or derived geometry is recorded in its source binding"),
     ]
     shapes = _table(["Geometry", "HUCs", "Vector area (ha)", "Meaning"],
                     [[label, count, _number(area), meaning] for label, count, area, meaning in shape_rows])
