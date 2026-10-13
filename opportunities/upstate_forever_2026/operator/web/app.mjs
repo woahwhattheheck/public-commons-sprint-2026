@@ -90,9 +90,20 @@ const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({fo
 const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args),openScientificReport});
 async function openScientificReport(selection){
  if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
+ const request={workspace,workspaceRevision,connectionEpoch};
+ const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch&&
+  (typeof selection.isCurrent!=='function'||selection.isCurrent());
+ if(!admitted())return null;
  detailDialog.close();detailContext=null;
- navigate('sources');
- return sourceReports.openForSources(selection,$('#content'));
+ const navigation=navigate('sources'),targetNavigation=navigationRevision;
+ await navigation;
+ if(!admitted()||view!=='sources'||navigationRevision!==targetNavigation)return null;
+ const container=$('#content'),anchor=container?.firstChild;
+ const isCurrent=()=>admitted()&&view==='sources'&&navigationRevision===targetNavigation&&
+  container?.isConnected&&$('#content')===container&&container.firstChild===anchor;
+ if(!isCurrent())return null;
+ try{return await sourceReports.openForSources({...selection,isCurrent},container);}
+ catch(error){if(!isCurrent())return null;throw error;}
 }
 async function openRetainedBuiltIn(selection,target,open){
  if(selection?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection?.id||''))
@@ -212,6 +223,7 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
 const sourceReports=attachSourceReports({
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,openItem,navigate,
  hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options),
+ openExtension:(...args)=>extensions.openExtension(...args),
  showTask,refresh,openBackup:()=>backupForm(),
  prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),
  openGISStudy:value=>extensions.openDesk('gis-projects','createForNativeStudy',value),
