@@ -1,6 +1,6 @@
 # Measurements: incorporate returned review work
 
-Version 1.0.1. This extends the existing Measurements 1.2 large-file and original
+Version 1.0.2. This extends the existing Measurements 1.2 large-file and original
 MeasurementWorkspace workflows. It does not introduce another measurement store,
 model scheduler, scientific calculator or HTTP controller.
 
@@ -155,19 +155,23 @@ import failure rolls back only the new files from this installation.
 The original application-component composer discovers
 `integration/component_fragments/measurement-returned-reviews.json`; it declares
 the existing `measurement-large-files` dependency and keeps these complete source
-files with the original application's selected-component receiving. It does not
-make this component a replacement for the full geospatial application.
+files with the original application's selected-component receiving. Both existing
+workflow scripts live under the native archive's retained `checks/` family; the
+complete source inventory therefore remains installable after an original
+scientific-workspace backup/receive. These are retained source files, not an
+automatic test or hosted-CI invocation. This component does not replace the full
+geospatial application.
 
 ## Operated examples
 
-`verification/returned_review_journey.mjs` consumes the retained original
+`checks/returned_review_journey.mjs` consumes the retained original
 five-station review package and operates receiving, exact-source comparison,
 explicit native review/selection choices, complete export, cold receiving and
 later independent editing. The reported measurements are original; its review
 choices are clearly labelled internal workflow demonstrations. The unchanged
 original observation package remains the opening scientific source.
 
-`verification/returned_review_capacity.mjs` continues a completed original
+`checks/returned_review_capacity.mjs` continues a completed original
 `large_file_capacity.mjs` workload, compares the entire native population, creates
 thousands of ordinary review actions, terminates the actual native incorporation
 process, resumes its committed event prefix, exports the complete result and
@@ -175,9 +179,9 @@ cold-receives every original record. The workload is explicitly authored softwar
 capacity data, kept separate from observed chemistry.
 
 ```sh
-node verification/returned_review_journey.mjs ORIGINAL_REVIEW NEW_OUTPUT
+node checks/returned_review_journey.mjs ORIGINAL_REVIEW NEW_OUTPUT
 node verification/large_file_capacity.mjs 350000 NEW_CAPACITY_OUTPUT
-node verification/returned_review_capacity.mjs NEW_CAPACITY_OUTPUT NEW_RETURN_OUTPUT
+node checks/returned_review_capacity.mjs NEW_CAPACITY_OUTPUT NEW_RETURN_OUTPUT
 ```
 
 The complete outgoing application/attachment inspection and original sprint
