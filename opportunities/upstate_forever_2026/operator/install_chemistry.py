@@ -101,6 +101,14 @@ STUDY_PREVIOUS_SHA256 = {
     "integration/component_fragments/chemistry_reports.json": "934c20327454e074f6a7af3c29e65d10e260257bebcc3802b2f8df6146fb1ef6",
     "integration/component_fragments/chemistry_report_sources.json": "6770524f1e908912e82aa2aebcf9538b95dec6b66a7d99be96c8f0cd5b3a4762"
 }
+COMPOSITE_PREVIOUS_SHA256 = {
+    "model/reach_chemistry/reporting.py": "ed2d4bf87ad91f4db6af4ee4f43b485a18c8a92fea45dd55356cdab2269a4947",
+    "model/chemistry_report_source.py": "d32ad0b514473dbbbfebaf5df5e415b136613ccd2db31f82ff10bac5dc550e87",
+    "model/CHEMISTRY_REPORTS.md": "549adb84f00167d2e2d3892c571126b1fcf3eaa5080b6e370a70227ea4c2555b",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "cfeba48f9639d9c3626bdd4256dfdca4701aee6d57b53f02418f612f1e77e578",
+    "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -146,7 +154,7 @@ def install(application, source_root=None, dry_run=False):
                     and hashlib.sha256(current).hexdigest() not in
                     {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
                      REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name),
-                     STUDY_PREVIOUS_SHA256.get(name)}):
+                     STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         composer = "source_tools/chemistry_study_composition.py"

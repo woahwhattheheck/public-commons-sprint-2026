@@ -97,7 +97,13 @@
     "/api/published-studies/geographic-selection",
     "/api/published-studies/review-source-preview",
     "/api/published-studies/review-sources",
-    "/api/published-studies/review-source"
+    "/api/published-studies/review-source",
+    "/api/profile-workbench/biophysical/catalog",
+    "/api/profile-workbench/biophysical/template",
+    "/api/profile-workbench/biophysical/evidence-preview",
+    "/api/profile-workbench/biophysical/evidence-inspect",
+    "/api/profile-workbench/biophysical/ranges-preview",
+    "/api/profile-workbench/biophysical/ranges-inspect"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

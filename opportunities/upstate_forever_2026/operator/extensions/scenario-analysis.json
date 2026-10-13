@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scenario-analysis",
   "title": "Scenario analysis",
-  "version": "20261013.4",
+  "version": "20261013.5",
   "order": 55,
   "assets": [
     "scenario_analysis.mjs",
@@ -36,6 +36,7 @@
     ],
     "state": {
       "key": "scenario_analyses",
+      "when_missing": true,
       "handler": "overview",
       "args": [
         "workspace"

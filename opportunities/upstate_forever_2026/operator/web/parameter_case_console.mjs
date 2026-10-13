@@ -91,7 +91,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
   function paint(value) {
     snapshot = value;
     const native = value.native, attempt = value.attempt;
-    const ownerActive = value.programme_active === true;
+    const ownerActive = value.programme_active === true || value.programme_native_active === true;
     panel.querySelector('[data-case-heading]').textContent =
       value.case_bindings.map(row => row.label || row.id).join(' / ');
     const phase = native.execution?.phase;
@@ -100,6 +100,8 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
       (native.execution?.model ? ' · ' + native.execution.model.toUpperCase() : '');
     panel.querySelector('[data-case-live]').textContent = native.active
       ? 'This original native run currently holds its execution lock.'
+      : value.programme_native_active && !value.programme_active
+      ? 'Another original native run in this programme currently holds its execution lock.'
       : ownerActive
       ? 'The original programme is active · ' + String(value.programme?.phase || '').replaceAll('_', ' ') + '.'
       : value.coordinator_active
@@ -234,7 +236,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
     if (name === 'native') { const id = runId; detach(); return host.openItem('runs', id); }
     if (name === 'task') { const id = node.dataset.taskId; detach(); return host.openItem('tasks', id); }
     if (name === 'resume') {
-      if (!snapshot || snapshot.native.active || snapshot.coordinator_active || snapshot.programme_active)
+      if (!snapshot || snapshot.native.active || snapshot.coordinator_active || snapshot.programme_active || snapshot.programme_native_active)
         throw new Error('Follow the original active calculation before continuing this saved ' + settings.noun + '.');
       node.disabled = true;
       const payload = {[settings.payloadId]: studyId};

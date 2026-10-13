@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.0",
+  "version": "2.4.2",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "158ae309ec112f09d2063d006d5b9b085384b3f3",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source.",
+  "source_reference_base": "75fd43d00aea71192a62eb36ecadcc3ddbbd711e",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 16086,
-      "sha256": "7b3573825d9ad017e3894e81e47965e4b5bdf9098da0a9351fc797f09a1f52ff"
+      "bytes": 16208,
+      "sha256": "6ae600c88657c7227f242516890fd41e2637aa166618b553caf47e68327dba1c"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -63,8 +63,13 @@
     },
     {
       "path": "integration/component_fragments/published-review-report-source.json",
-      "bytes": 759,
-      "sha256": "87a05b5e1e98de3024d5b6912be0b59e9582c4c0ee767d2c5a08ef73991eb13d"
+      "bytes": 1087,
+      "sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042"
+    },
+    {
+      "path": "integration/component_fragments/published-study-report-receiving.json",
+      "bytes": 799,
+      "sha256": "62cf93f81b2d843d16273831e2a9af4c1a66e42ea2f74d8376e85df2ad0f59e7"
     },
     {
       "path": "integration/component_fragments/published-study-reviews.json",
@@ -123,8 +128,8 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 15316,
-      "sha256": "fe5ce92cbf5fa9549daf40e63a6a9cb76cc556d21098addc77e86d1feed16d89"
+      "bytes": 21679,
+      "sha256": "45ebb0fe307313733f4423dc8a3ed2c8e2a88c286eeafddf2c274be11fd82d67"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
@@ -1207,14 +1212,19 @@
       "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
     },
     {
+      "path": "source_tools/continue_study_report.py",
+      "bytes": 27916,
+      "sha256": "27a609e1e95f9acd6750accc63d2f3a7fe5e0c509172f3c911a3b72cad504c72"
+    },
+    {
       "path": "source_tools/receive_geographic_study_review.py",
       "bytes": 5430,
       "sha256": "fd514789805394fb3a752fd21da36ffab53cd87939b16ac57664b42057f936eb"
     },
     {
       "path": "source_tools/receive_original_study.py",
-      "bytes": 38465,
-      "sha256": "58910054c623724ebdef3c690386324b59a77b2f0d13470f30453b9b70c0f2b0"
+      "bytes": 39119,
+      "sha256": "2281854bad8ff8298f474c354b8b6720504d85c6865516d1ead78c8e439378ee"
     },
     {
       "path": "source_tools/receive_rl18151_study.py",
@@ -2211,7 +2221,9 @@
       "source_folder": "published-review-report-sources",
       "scope": "Exact saved review and original study edition with current selected interpretation; full original archive separately retained",
       "composer": "Existing ordered Sources scientific composer",
-      "installer": "Guarded scoped registration preserves the installed shared dispatcher"
+      "installer": "Guarded scoped registration preserves the installed shared dispatcher",
+      "component_graph_repair_commit": "82db8c08a26d2f3e36bae8a51f61573f0ac8e4df",
+      "component_fragment_sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042"
     }
   }
 }

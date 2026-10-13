@@ -20,6 +20,52 @@ else:
     import gis_project as gis
 
 
+
+def inspect_atlas_styles(layer, expected, *, require_original):
+    """Exercise every retained native style, then restore the actual current one."""
+    variants = expected.get("atlas_styles", [])
+    if not variants:
+        return []
+    manager = layer.styleManager()
+    current = manager.currentStyle()
+    observed = []
+    try:
+        for variant in variants:
+            if variant["name"] not in manager.styles():
+                if require_original:
+                    raise ValueError("A saved atlas style did not load in QGIS: " + variant["name"])
+                continue
+            if not manager.setCurrentStyle(variant["name"]):
+                raise ValueError("QGIS could not select its retained atlas style")
+            renderer = layer.renderer()
+            style = variant["style"]
+            if renderer.type() != "singlebandpseudocolor":
+                if require_original:
+                    raise ValueError("QGIS did not retain the atlas color ramp")
+                continue
+            ramp = renderer.shader().rasterShaderFunction()
+            entries = ramp.colorRampItemList()
+            transparency = renderer.rasterTransparency()
+            matches = (ramp.colorRampTypeAsQString() == "INTERPOLATED"
+                       and renderer.band() == expected["data"]["band"]
+                       and renderer.opacity() == 1 and renderer.alphaBand() == -1
+                       and (transparency is None or transparency.isEmpty())
+                       and renderer.classificationMin() == style["minimum"]
+                       and renderer.classificationMax() == style["maximum"]
+                       and not ramp.clip() and len(entries) == len(style["entries"])
+                       and all(a.value == b["value"] and a.color.name().lower() == b["color"]
+                               and a.color.alpha() == b["alpha"]
+                               for a, b in zip(entries, style["entries"])))
+            if require_original and not matches:
+                raise ValueError("QGIS changed a retained atlas range or palette")
+            observed.append({"style_id": variant["id"], "name": variant["name"],
+                             "original_legend_matches": matches, "stops": len(entries)})
+    finally:
+        if not manager.setCurrentStyle(current):
+            raise ValueError("Could not restore the selected native QGIS style")
+    return observed
+
+
 def run(directory, output):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qgis.core import (QgsApplication, QgsProject, QgsMapSettings,
@@ -58,6 +104,8 @@ def run(directory, output):
                 item.update(width=layer.width(), height=layer.height())
                 if (item["width"], item["height"]) != (expected[key]["data"]["width"], expected[key]["data"]["height"]):
                     raise ValueError("Native QGIS raster dimensions differ")
+            item["atlas_styles"] = inspect_atlas_styles(layer, expected[key],
+                                                        require_original=not manifest.get("history"))
             rows.append(item)
         settings = QgsMapSettings()
         settings.setDestinationCrs(project.crs())
@@ -82,6 +130,8 @@ def run(directory, output):
             raise ValueError("The native saved project did not reopen")
         if any(not layer.isValid() for layer in check.mapLayers().values()):
             raise ValueError("A layer did not reopen from the native saved edition")
+        for key, layer in check.mapLayers().items():
+            inspect_atlas_styles(layer, expected[key], require_original=not manifest.get("history"))
         import zipfile
         with zipfile.ZipFile(native_file) as archive:
             qgs = [n for n in archive.namelist() if n.endswith(".qgs")]

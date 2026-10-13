@@ -23,6 +23,10 @@ FILES = (
     "model/programme_experiments.py",
     "model/programme_interactions.py",
     "model/programme_case_status.py",
+    "model/programme_views.py",
+    "model/record_catalog.py",
+    "model/delivery_catalogue.py",
+    "docs/PROGRAMME_LARGE_DESIGNS.md",
     "model/parameter_case_status.py",
     "docs/PROGRAMME_CASE_CONSOLE.md",
     "docs/PARAMETER_CASE_CONSOLE.md",
@@ -177,6 +181,7 @@ def replace(source, old, new, label):
 CONSOLE_QUERY_KEYS = (
     "programme_id", "include_sources", "run_id", "attempt_id", "stream",
     "log_offset", "expected_attempt_id", "history_offset", "limit",
+    "offset", "case_filter", "query",
 )
 
 

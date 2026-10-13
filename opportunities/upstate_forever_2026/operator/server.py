@@ -1249,7 +1249,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],
                         {name: one(name) for name in ("programme_id", "include_sources", "run_id",
                             "attempt_id", "stream", "log_offset", "expected_attempt_id",
-                            "history_offset", "limit")}))
+                            "history_offset", "limit", "offset", "case_filter", "query")}))
                 review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}
                 if url.path in review_reads:
                     return self.send_json(200, self.app.customer_reviews.read(workspace, review_reads[url.path],
