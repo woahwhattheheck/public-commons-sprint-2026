@@ -94,7 +94,8 @@ KNOWN_RELEASES = {
         "58dcacb2ad0d5aa24beea7afd9cee9b7835fc8c11a32dad479614335300a27a7",
         "881fd5317b1fb556461af1484704540c2ef0116294031e47006ad6657a483cb1",
         "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
-        "956a8fd908495b37915674713f7c1f88fdecfacc3dd0b9388041ae688e168275"
+        "956a8fd908495b37915674713f7c1f88fdecfacc3dd0b9388041ae688e168275",
+        "70a3965275d657bb214efdadf50437ce2d28f9018dccdfbd8009c52cd6109602"
     ],
     "operator/web/source-refresh-nav.mjs": [
         "5b5413232748ed4aeb70bb0b31d6b8e3f0308ed92eec642b5199f67c177c3f70",
@@ -110,7 +111,8 @@ KNOWN_RELEASES = {
         "3320a1abddc882ac10534c7139430f52e98e5cbab11132b3a82fa7d05af0e19e",
         "a601dda094dd0841016cf5d4835a055e7da3b910583deb61361ebec21d942cfc",
         "1054da9af879eb2f75f0886dd11524f15022c024bff5ef9eac5406124676894c",
-        "915587db87612a08b9a7c72e61c0c23b8f6e74f47a4f5d9dd00ddfa86a5bc7e2"
+        "915587db87612a08b9a7c72e61c0c23b8f6e74f47a4f5d9dd00ddfa86a5bc7e2",
+        "68de10652357116be30f68648666b0dace95c57d748cc48c03d9a4d5eafa836d"
     ],
     "source/landcover-change/METHOD.md": [
         "38939f8077422e6210b8d2f31739962fc3160a9a65cbfe031f0e3c914d17931c"
@@ -125,11 +127,14 @@ KNOWN_RELEASES = {
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
-        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385"
+        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
+        "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
     ],
     "operator/extensions/source-updates.json": [
         "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5",
-        "4e92f023a4a6b6de1710186a4bd8bab62e06701c35fe3c5f2fdd208c0558c669"
+        "4e92f023a4a6b6de1710186a4bd8bab62e06701c35fe3c5f2fdd208c0558c669",
+        "952bdc1e7a021678ab8db367c19ef755b47c7a40f4a430a93d68f862f6a83285"
     ],
     "operator/source_refresh_native.py": [
         "7c619c771fa584568ecf9ea68a9227bd7594ab9fa90f65bb3f753cb0f9acb6da"
@@ -145,7 +150,9 @@ KNOWN_RELEASES = {
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
-        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385"
+        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
+        "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
     ],
     "model/source_refresh_compat.py": [
         "cf775aa3c318ab2f9ae7b1432faa932f57303f754f44d0cc6cc50ce939932de4"
@@ -157,13 +164,16 @@ KNOWN_RELEASES = {
         "59084a5a125313fd3b892eef58630ca298d1d8a95193c977e76e691fbc8196d5"
     ],
     "operator/source_refresh_legacy.py": [
-        "9060fa2d033c88f59b6674c2cdc08ab6d99895530ac32f7a508b3d355556e056"
+        "9060fa2d033c88f59b6674c2cdc08ab6d99895530ac32f7a508b3d355556e056",
+        "8c1d10c96566752ddde72c11e64bc09df8ceaa5d10d18805c4ef65ce0e861ddf",
+        "63daebbd8deb6faa4b0f219e4949fbd437b85e4de377d625da5558e58f928b5f"
     ],
     "operator/web/source-refresh-legacy/source-refresh.html": [
         "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e"
     ],
     "operator/web/source-refresh-legacy/source-refresh.mjs": [
-        "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c"
+        "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
+        "b7559b98370916d7b638b99f5b7b2982fc438af714c1f3d2a43da35d4eb48099"
     ],
     "operator/web/source-refresh-legacy/source-refresh.css": [
         "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e"
@@ -172,7 +182,14 @@ KNOWN_RELEASES = {
         "08d39dd1b5165733005ae946cc895e81ed7ca461e126c4c4d80673ecac39a540"
     ],
     "docs/source-refresh-compatibility.md": [
-        "e7add31bcf296b06a80fe1fa936b37c62cc7bce3ed5449be9357997900137547"
+        "e7add31bcf296b06a80fe1fa936b37c62cc7bce3ed5449be9357997900137547",
+        "4698277a21b8bf0044bc5335964d94e6d8847e6627f0133e5668012cfedaf705"
+    ],
+    "source/run_source_updates_browser.mjs": [
+        "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728"
+    ],
+    "model/source_refresh_receiving.py": [
+        "83e88d5c6ca62843716a4cba3cfa3272060b9a815f98b10396ba7ed5ab575d8c"
     ]
 }
 STATE_SCHEMA = "upstate.source-refresh-install/v2"

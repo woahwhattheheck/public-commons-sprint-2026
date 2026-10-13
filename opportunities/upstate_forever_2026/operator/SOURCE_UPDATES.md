@@ -139,4 +139,4 @@ continuation uses the saved operation.
 
 ### Existing plan bookmarks
 
-The original root-selective `/source-refresh` page remains available. Its catalogue lists both retained plan formats; selecting a source-edition plan opens that exact plan in the common Source updates page, preserving its workspace. Direct `/web/source-refresh.html?workspace=...&plan_id=...` bookmarks also reopen the selected original plan after capability bootstrap.
+The original root-selective `/source-refresh` page remains available. Its catalogue keeps the original root-selective plans. An existing direct source-edition plan bookmark opens that exact plan in the common Source updates page, preserving its workspace; the common desk lists both formats. Direct `/web/source-refresh.html?workspace=...&plan_id=...` bookmarks also reopen the selected original plan after capability bootstrap.
