@@ -25,6 +25,8 @@ const help = [
   '  jobs retry --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs cancel --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs result --config FILE --state DIR --id JOB --out NEW_RESULT_FILE',
+  '  jobs outputs --config FILE --state DIR --id JOB',
+  '  jobs output-file --config FILE --state DIR --id JOB --slot SLOT --out NEW_FILE',
   '  jobs inputs --help',
   '  jobs delivery --help',
   '  jobs receiver --help',
@@ -62,6 +64,7 @@ const allowed = {
   status: [], 'intake-catalog': ['--intake-config'], show: ['--id'], create: ['--function', '--input', '--label', '--reference', '--out'],
   reconcile: [], work: ['--once'], retry: ['--id', '--revision', '--reason'],
   cancel: ['--id', '--revision', '--reason'], result: ['--id', '--out'],
+  outputs: ['--id'], 'output-file': ['--id', '--slot', '--out'],
   'renew-claim': ['--id', '--revision', '--reason', '--out'],
 };
 function options(argv) {
@@ -203,6 +206,13 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
     if (command === 'reconcile') return emit(await model.reconcile());
     if (['retry', 'cancel'].includes(command)) return emit(await model[command]({ id: required(out, '--id'),
       expectedRevision: integer(out, '--revision', undefined), reason: required(out, '--reason') }));
+    if (command === 'outputs') return emit(await model.outputPackage(required(out, '--id')));
+    if (command === 'output-file') {
+      const result = await model.outputFile(required(out, '--id'), required(out, '--slot'));
+      const saved = await publishNew(required(out, '--out'), result.body);
+      return emit({ ...saved, contentType: result.contentType, filename: result.filename,
+        jobId: out.get('--id'), slot: out.get('--slot'), originalSha256: result.sha256 });
+    }
     if (command === 'result') {
       const result = await model.result(required(out, '--id'));
       const saved = await publishNew(required(out, '--out'), result.body);
