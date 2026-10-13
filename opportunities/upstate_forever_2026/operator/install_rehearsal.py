@@ -118,6 +118,8 @@ def patch_server(text):
 
 
 def patch_app(text):
+    text = text.replace("for(const node of $('[data-view]'))",
+                        "for(const node of $$('[data-view]'))")
     if "import {attachRehearsal}" not in text:
         text = "import {attachRehearsal} from './rehearsal.mjs';\n" + text
     text = once(text, "const viewLabels={",
