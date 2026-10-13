@@ -169,13 +169,14 @@
     },
     {
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 24175,
-      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "predecessor_sha256": [
         "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
         "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
         "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
-        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
+        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+        "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0"
       ]
     },
     {
@@ -186,8 +187,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 38910,
-      "sha256": "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c",
+      "bytes": 39178,
+      "sha256": "449b7946932d6fd9830048595f7079fbe9abde848ca5d007f69c5ab1e989c8c4",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -201,7 +202,8 @@
         "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
         "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a",
         "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
-        "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221"
+        "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
+        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c"
       ]
     },
     {
@@ -718,10 +720,11 @@
     {
       "path": "operator/install_receiving_waters.py",
       "predecessor_sha256": [
-        "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71"
+        "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71",
+        "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
       ],
-      "bytes": 46653,
-      "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
+      "bytes": 49036,
+      "sha256": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
     },
     {
       "path": "operator/extensions/monitoring-report.json",
