@@ -10,16 +10,7 @@
 <p>Create one support record before investigating. Retain the tool name, approved inputs, selected deployment, client version, start time, request identifier if available, and the complete returned message. Reference sensitive original inputs in their existing authorized store; a support note need not copy their contents.</p>
 <p>Keep observations separate from conclusions. “The client stopped waiting at 10:32” describes something observed. “The application did not create the record” requires a separate application observation. This distinction helps the next operator choose a useful check without repeating an uncertain mutation.</p>
 <p>A compact working record can be maintained in the customer's existing ticket or project system:</p>
-<p>| Field | What to retain |</p>
-<p>| --- | --- |</p>
-<p>| Operation | The original task and selected tool |</p>
-<p>| Context | Deployment, account role, client and relevant release |</p>
-<p>| Intended result | The record or business state the operator expected |</p>
-<p>| Attempt | Original approved inputs or their authorized source reference |</p>
-<p>| Returned information | Complete message, status and available record/job identifiers |</p>
-<p>| Inspection | Where the operator looked, what was found and when |</p>
-<p>| Decision | Adopt a result, resolve a partial result, or authorize a later attempt |</p>
-<p>| Owner | The person responsible for the next action and customer communication |</p>
+<div class="table-wrap"><table><thead><tr><th>Field</th><th>What to retain</th></tr></thead><tbody><tr><td>Operation</td><td>The original task and selected tool</td></tr><tr><td>Context</td><td>Deployment, account role, client and relevant release</td></tr><tr><td>Intended result</td><td>The record or business state the operator expected</td></tr><tr><td>Attempt</td><td>Original approved inputs or their authorized source reference</td></tr><tr><td>Returned information</td><td>Complete message, status and available record/job identifiers</td></tr><tr><td>Inspection</td><td>Where the operator looked, what was found and when</td></tr><tr><td>Decision</td><td>Adopt a result, resolve a partial result, or authorize a later attempt</td></tr><tr><td>Owner</td><td>The person responsible for the next action and customer communication</td></tr></tbody></table></div>
 <p>This is a documentation pattern, not a new API request format. Preserve the application's own identifiers.</p>
 <h2>2. Classify the failure at the right layer</h2>
 <p>MCP distinguishes protocol errors from tool-execution errors. A tool result can carry <code>isError: true</code>; unstructured content can include text, and structured results have their own optional field and schema contract. Preserve the actual envelope as well as the message displayed to the user. [2]</p>
