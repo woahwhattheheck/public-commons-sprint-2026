@@ -478,8 +478,71 @@ async function inspectReport(report,plan,folder='report'){
  const zipResult=JSON.parse(zip.stdout);
  return {files:records,archive_members:zipResult,html_presentation:{padding:presentation.padding,status:received.status()},plan_id:plan.id,report_id:report.id};
 }
+
+async function retainCommunityJourney(edition){
+ if(edition.community_journey){saved.community_journey=edition.community_journey;return;}
+ await openCommunityTab('explore');
+ await page.locator('[name="community_table"]').selectOption(saved.table.id);
+ await page.locator('[name="community_utility"]').selectOption('PRWD');
+ await page.locator('[name="community_watershed"]').selectOption('030601020502');
+ await page.locator('[name="community_sort"]').selectOption('income_asc');
+ await page.locator('[name="community_query"]').fill('450730309');
+ await page.locator('[data-action="community-clear-comparison"]').click();
+ const geoids=['450730309011','450730309041'];
+ for(const geoid of geoids)await page.locator('[data-community-compare="'+geoid+'"]').setChecked(true);
+ await openReport(saved.report.id);await closeOverlays();
+ await navigate('journey');
+ await page.locator('[data-action="journey-step"][data-step="reopen"]').click();
+ const field=page.locator('[data-journey-field="notes"]');
+ const previous=await field.inputValue();
+ const marker='Community receiving: retain original table '+saved.table.id+', revised plan '+saved.revised_plan.id+
+  ' and report '+saved.report.id+'. The selected whole block groups and proposed interventions remain linked to their original source edition.';
+ const notes=previous.includes(marker)?previous:[previous,marker].filter(Boolean).join('\n\n');
+ await field.fill(notes);
+ const posted=page.waitForResponse(r=>r.url()===origin+'/api/operator-session'&&r.request().method()==='POST');
+ await page.locator('[data-action="journey-save-view"]').click();
+ assert.ok((await posted).ok(),'Save the original Community view and operating notes.');
+ const state=await getState(),session=state.data.operator_session;
+ assert.equal(session?.project_id,saved.project_id);
+ const expected={schema:'upstate.community-view/v1',project_id:saved.project_id,table_id:saved.table.id,
+  tab:'reports',utility_id:'PRWD',watershed_id:'030601020502',query:'450730309',sort:'income_asc',
+  compare_geoids:geoids,plan_id:saved.revised_plan.id,report_id:saved.report.id};
+ assert.deepEqual(session.journey.community,expected);
+ assert.equal(session.journey.notes,notes);
+ edition.community_journey={revision:session.revision,community:expected,notes};
+ saved.community_journey=edition.community_journey;
+ await checkpoint();
+}
+async function verifyCommunityJourney(state){
+ const expected=saved.community_journey;
+ assert.ok(expected,'Continue the original operation with the complete saved Community view before receiving it.');
+ assert.equal(state.data.operator_session?.revision,expected.revision);
+ assert.deepEqual(state.data.operator_session.journey.community,expected.community);
+ assert.equal(state.data.operator_session.journey.notes,expected.notes);
+ await navigate('communities');
+ await page.waitForFunction(id=>document.querySelector('[name="community_table"]')?.value===id,expected.community.table_id);
+ assert.equal(await page.locator('[data-action="community-tab-'+expected.community.tab+'"]').getAttribute('aria-pressed'),'true');
+ assert.equal(await page.locator('[data-community-saved-selection] [data-action="community-plan-open"]').getAttribute('data-id'),expected.community.plan_id);
+ assert.equal(await page.locator('[data-community-saved-selection] [data-action="community-report-open"]').getAttribute('data-id'),expected.community.report_id);
+ await page.locator('[data-action="community-tab-explore"]').click();
+ for(const [name,value]of [['community_utility',expected.community.utility_id],['community_watershed',expected.community.watershed_id],
+  ['community_query',expected.community.query],['community_sort',expected.community.sort]])
+  assert.equal(await page.locator('[name="'+name+'"]').inputValue(),value);
+ const checked=await page.locator('[data-community-compare]:checked').evaluateAll(nodes=>nodes.map(node=>node.dataset.communityCompare).sort());
+ assert.deepEqual(checked,[...expected.community.compare_geoids].sort());
+ await navigate('journey');
+ await page.locator('[data-action="journey-step"][data-step="reopen"]').click();
+ assert.equal(await page.locator('[data-journey-field="notes"]').inputValue(),expected.notes);
+ await page.locator('[data-action="journey-open-saved-view"]').click();
+ await page.waitForFunction(()=>document.querySelector('#toast')?.textContent.includes('Saved project view opened'));
+ await page.locator('[data-action="journey-community-open"]').click();
+ await page.waitForFunction(()=>document.querySelector('[data-view="communities"]')?.getAttribute('aria-current')==='page');
+ assert.equal(await page.locator('[data-action="community-tab-'+expected.community.tab+'"]').getAttribute('aria-pressed'),'true');
+}
+
 async function verifyReopened(){
  const state=await getState();assert.equal(state.data.project.id,saved.project_id);
+ await verifyCommunityJourney(state);
  for(const [kind,id]of [['sources',saved.source.collection_id],['community_tables',saved.table.id],
   ['community_plans',saved.initial_plan.id],['community_plans',saved.revised_plan.id],['community_reports',saved.report.id]])
   assert.ok(state.data[kind].some(row=>row.id===id),'Original retained '+kind+' / '+id);
@@ -547,6 +610,7 @@ try{
   const deliveryStage=name=>editionKey==='legacy'?name:name+':'+editionKey;
   const deliveryPath=editionKey==='legacy'?output:path.join(output,'application-editions',editionKey);
   await checkpoint();
+  await retainCommunityJourney(edition);
   const backup=await retainedStage(deliveryStage('backup'),'workspace.backup',async()=>{
    await page.locator('[data-action="backup"]').first().click();
    await form().locator('[name="include_intermediates"]').setChecked(true);
@@ -581,7 +645,7 @@ try{
   table_id:saved.table.id,initial_plan_id:saved.initial_plan.id,revised_plan_id:saved.revised_plan.id,report_id:saved.report.id,
   task_ids:Object.fromEntries(Object.entries(saved.stages).map(([name,row])=>[name,row.task_id])),
   comparison:saved.comparison,report_downloads:saved.report_downloads,workspace_archive:saved.workspace_archive,
-  received:saved.received,reopened:saved.reopened,original_records:saved.original_records,progress:statePath,
+  received:saved.received,reopened:saved.reopened,community_journey:saved.community_journey,original_records:saved.original_records,progress:statePath,
   source_revision:c.source_revision??null,delivery_editions:saved.delivery_editions??{},
   attempts:saved.attempts.map(row=>({mode:row.mode,started_at:row.started_at,completed_at:row.completed_at,
    complete:Boolean(row.complete),error:row.error,screenshots:row.screenshots,page_errors:row.page_errors,http_errors:row.http_errors}))};

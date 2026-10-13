@@ -177,3 +177,25 @@ For the current complete application, use the existing installer in `docs/COMPLE
 The current Monitoring installer accepts `--source-root /absolute/pinned/application-or-repository` in addition to its existing target argument. When invoked from a complete current checkout without that option, it chooses that checkout's maintained source. `current_application_files.json` lists the owned current files and existing native dependencies. The original packaged `src/` route remains available for its original standalone bundle. Use `--check` to inspect the selected source mode, complete file identities and exact changes before applying the same invocation.
 
 The live application requires the existing Implementation, registered extension-host and Monitoring report-source families. The report-source producer/descriptor/assets remain with their own maintained installer; this installer checks their presence instead of replacing them. Updates preserve current unknown peer postimages and retain original backup/rollback handling. The cumulative whole-application route supplies these dependencies in one installation.
+
+
+## Current application import and source identities
+
+The maintained compatibility module `operator/monitoring.py` imports the original
+`model.monitoring_actions.invoke` through the same top-level model namespace as
+the current operator. The registered desk continues to use
+`operator/monitoring_native.py` and its existing descriptor.
+
+The source-adoption inventory records the complete current application files,
+including the campaign-to-Implementation bridge and streaming packet helper.
+The observational-context installer carries those same original source bodies
+and accepts only their recorded published predecessors. Its hashes include the
+maintained PR3334 outside-Workspace native archive path and portable.backup
+fallback, current campaign fieldwork and PR3366 streaming source members.
+The original archived standalone bundle and its manifest remain retained.
+
+Receive this source with the existing complete application installer and
+`--source-root` selection described above. Use the same original Workspace and
+its saved campaign revision. After receiving, the original complete-application
+inspection can import the compatibility module; the existing Monitoring export
+and independent Workspace receiving course uses the maintained backup producer.

@@ -18,7 +18,8 @@ export function renderSV833HydrologyFigure(result) {
   let s=`<text x="${x}" y="${y-25}" font-size="18" font-weight="bold">${e(label)}</text><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff" stroke="#888"/>`;
   for(let i=0;i<5;i++){
    const lon=p.lo+(p.hi-p.lo)*i/4,lat=p.south+(p.north-p.south)*i/4,px=p.project([lon,p.cy])[0],py=p.project([p.cx,lat])[1];
-   s+=`<line x1="${px}" x2="${px}" y1="${y}" y2="${y+h}" stroke="#eee"/><text x="${px}" y="${y+h+20}" text-anchor="middle" font-size="10">${n(lon,3)}°</text>`;
+   s+=`<line x1="${px}" x2="${px}" y1="${y}" y2="${y+h}" stroke="#eee"/>`;
+   if(w>=400||i%2===0)s+=`<text x="${px}" y="${y+h+20}" text-anchor="middle" font-size="10">${n(lon,3)}°</text>`;
    s+=`<line x1="${x}" x2="${x+w}" y1="${py}" y2="${py}" stroke="#eee"/><text x="${x-8}" y="${py+3}" text-anchor="end" font-size="10">${n(lat,3)}°</text>`;
   }
   s+=`<path d="M${x+w-24},${y+47}V${y+17}m-5,8l5,-8l5,8" fill="none" stroke="#222"/><text x="${x+w-24}" y="${y+12}" font-size="11" text-anchor="middle">N</text>`;

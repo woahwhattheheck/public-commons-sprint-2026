@@ -1102,8 +1102,8 @@
       "url": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms?service=WMS&version=1.3.0&request=GetMap&layers=Land-Cover-Native_conus_year_data&crs=EPSG:5070&bbox=1207019.9994449127,1305329.9982498835,1237739.9994402055,1336049.9982766386&width=1024&height=1024&format=image/png&time=2025-01-01T00:00:00.000Z&sld_body=%3CStyledLayerDescriptor+version%3D%221.0.0%22+xmlns%3D%22http://www.opengis.net/sld%22%3E%3CNamedLayer%3E%3CName%3Emrlc_Land-Cover-Native_conus_year_data:Land-Cover-Native_conus_year_data%3C/Name%3E%3CUserStyle%3E%3CFeatureTypeStyle%3E%3CRule%3E%3CRasterSymbolizer%3E%3CColorMap+type%3D%22values%22%3E%3CColorMapEntry+color%3D%22%230b0000%22+quantity%3D%2211%22/%3E%3CColorMapEntry+color%3D%22%230c0000%22+quantity%3D%2212%22/%3E%3CColorMapEntry+color%3D%22%23150000%22+quantity%3D%2221%22/%3E%3CColorMapEntry+color%3D%22%23160000%22+quantity%3D%2222%22/%3E%3CColorMapEntry+color%3D%22%23170000%22+quantity%3D%2223%22/%3E%3CColorMapEntry+color%3D%22%23180000%22+quantity%3D%2224%22/%3E%3CColorMapEntry+color%3D%22%231f0000%22+quantity%3D%2231%22/%3E%3CColorMapEntry+color%3D%22%23290000%22+quantity%3D%2241%22/%3E%3CColorMapEntry+color%3D%22%232a0000%22+quantity%3D%2242%22/%3E%3CColorMapEntry+color%3D%22%232b0000%22+quantity%3D%2243%22/%3E%3CColorMapEntry+color%3D%22%23340000%22+quantity%3D%2252%22/%3E%3CColorMapEntry+color%3D%22%23470000%22+quantity%3D%2271%22/%3E%3CColorMapEntry+color%3D%22%23510000%22+quantity%3D%2281%22/%3E%3CColorMapEntry+color%3D%22%23520000%22+quantity%3D%2282%22/%3E%3CColorMapEntry+color%3D%22%235a0000%22+quantity%3D%2290%22/%3E%3CColorMapEntry+color%3D%22%235f0000%22+quantity%3D%2295%22/%3E%3CColorMapEntry+color%3D%22%23fa0000%22+quantity%3D%22250%22+opacity%3D%220%22/%3E%3C/ColorMap%3E%3C/RasterSymbolizer%3E%3C/Rule%3E%3C/FeatureTypeStyle%3E%3C/UserStyle%3E%3C/NamedLayer%3E%3C/StyledLayerDescriptor%3E&transparent=true&interpolations=nearest+neighbor",
       "png_bytes": 279736,
       "png_sha256": "aada47d6e45c6bc57c692cd638690a991e1cd02393356e1904c1cbb80aa55eec",
-      "pixel_bytes": 0,
-      "pixel_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pixel_bytes": 1048576,
+      "pixel_sha256": "099bd6f2a7cce65e56fce8ada8840daa707b3dce41a08674646d1c9a5b3232fd",
       "class_counts": {
         "11": 105593,
         "21": 47757,
@@ -2038,8 +2038,8 @@
   ],
   "raster": {
     "path": "land-cover.tif",
-    "bytes": 9237060,
-    "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+    "bytes": 9443751,
+    "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
     "width": 6443,
     "height": 6319,
     "dtype": "uint8",
@@ -2065,5 +2065,12 @@
     "90": 1105091,
     "95": 23599
   },
-  "model_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+  "model_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+  "assembly_revision": "original-png-cell-verified-20261013",
+  "supersedes": {
+    "bytes": 9237060,
+    "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+    "git_commit": "52268642f8ea33e5d07d8369b56b185f71ace442",
+    "reason": "Tile24 cached pixel array was empty; 1,048,576 original cells were zero."
+  }
 }

@@ -1,0 +1,154 @@
+{
+"Results":{
+"Message":"Success",
+"SourceId":"SC0000477",
+"EPASystem":"ICP",
+"RegistryId":"110000354811",
+"Statute":"CWA",
+"CWPName":"MILLIKEN PENDLETON PLANT",
+"CWPStreet":"200 EXCELSIOR MILL RD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"29670",
+"CWPPermitStatusDesc":"Admin Continued",
+"CWPMajorMinorStatusFlag":"M",
+"CWPPermitTypeDesc":"NPDES Individual Permit",
+"CWPCurrentSNCStatus":null,
+"CWPComplianceTracking":"On",
+"StartDate":"01/01/2023",
+"EndDate":"12/31/2023",
+"LinkedPermits":[
+{
+"SourceId":"SCG250280",
+"CWPName":"MILLIKEN PENDLETON PLANT",
+"CWPStreet":"200 EXCELSIOR MILL RD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"29670",
+"CWPPermitStatusDesc":"Effective",
+"CWPMajorMinorStatusFlag":"N",
+"CWPPermitTypeDesc":"General Permit Covered Facility",
+"CWPCurrentSNCStatus":null
+}
+],
+"PermFeatures":[
+{
+"PermFeatureNmbr":"001",
+"PermFeatureTypeCode":"EXO",
+"PermFeatureTypeDesc":"External Outfall",
+"Parameters":[
+{
+"ParameterCode":"TCP3B",
+"ParameterDesc":"%Effect Static Renewal 7 Day Chronic Ceriodaphnia dubia",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"TIE3B",
+"ParameterDesc":"LC50 Pass/Fail Static 24Hr Acute Ceriodaphnia",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+]
+}
+,{
+"PermFeatureNmbr":"T1M",
+"PermFeatureTypeCode":"EXO",
+"PermFeatureTypeDesc":"External Outfall",
+"Parameters":[
+{
+"ParameterCode":"00300",
+"ParameterDesc":"Oxygen, dissolved [DO]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00310",
+"ParameterDesc":"BOD, 5-day, 20 deg. C",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"Violation Identified"
+}
+,{
+"ParameterCode":"00340",
+"ParameterDesc":"Oxygen demand, chem. [high level] [COD]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00400",
+"ParameterDesc":"pH",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00530",
+"ParameterDesc":"Solids, total suspended",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00620",
+"ParameterDesc":"Nitrogen, nitrate total [as N]",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00665",
+"ParameterDesc":"Phosphorus, total [as P]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00745",
+"ParameterDesc":"Sulfide, total [as S]",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"01034",
+"ParameterDesc":"Chromium, total [as Cr]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"46000",
+"ParameterDesc":"Phenols",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"50050",
+"ParameterDesc":"Flow, in conduit or thru treatment plant",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"72107",
+"ParameterDesc":"Length of longest pH excursion",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"72108",
+"ParameterDesc":"% of time exceeding pH limits",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+]
+}
+,{
+"PermFeatureNmbr":"T1Q",
+"PermFeatureTypeCode":"EXO",
+"PermFeatureTypeDesc":"External Outfall",
+"Parameters":[
+{
+"ParameterCode":"00610",
+"ParameterDesc":"Nitrogen, ammonia total [as N]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+]
+}
+]
+}
+}
