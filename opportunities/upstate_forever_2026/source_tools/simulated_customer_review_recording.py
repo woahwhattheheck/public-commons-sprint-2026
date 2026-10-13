@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from model.common import atomic_bytes, file_digest, identifier
-from model.simulated_customer_review import inspect_export, inspect_review
+from model.simulated_customer_review import inspect_export, inspect_review, presentation_descends_from
 
 IDS = ("operation_id", "original_review_id", "response_id", "planning_handback_id",
        "revised_review_id", "handback_id")
@@ -67,8 +67,8 @@ def bind_case(workspace, receipt, output, *, source=None):
     exported = inspect_export(directory)
     expected = {key: value for key, value in packages.items()
                 if key not in {"directory", "original_index", "handback_index"}}
-    if exported != expected:
-        raise ValueError("The selected customer export differs from the complete original receipt")
+    if exported != expected and (source is None or not presentation_descends_from(directory, expected)):
+        raise ValueError("Select the original export or an explicit complete presentation descendant of that receipt")
     selected = {"project_id": workspace.project["id"], **{key: reference[key] for key in IDS}}
     for key, value in selected.items():
         if exported.get(key) != value:
