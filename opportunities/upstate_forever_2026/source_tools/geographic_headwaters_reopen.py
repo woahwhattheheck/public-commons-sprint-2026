@@ -72,7 +72,7 @@ def _scientific_identity(scientific):
 def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id,
                 output, *, receiving_lock_fd, receiving_lock_path,
                 review_response_id=None, receiving_context=None, scenario_context=None,
-                reference_basis=None):
+                reference_basis=None, programme=None):
     """Retain and run one complete read-only cold-reopen invocation."""
     support = _support()
     root = Path(restored["directory"]).resolve(strict=True)
@@ -113,6 +113,7 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
             "receiving_context": receiving_context,
             "scenario_context": scenario_context,
             "reference_basis": reference_basis,
+            "geographic_programme": programme,
             "receiving_lock": lock_identity,
         }
         support._write(request_path, request)
@@ -147,7 +148,8 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
                 or result.get("archive_sha256") != restored["archive_sha256"]
                 or result.get("application") != str(application)
                 or result.get("workspace") != str(workspace)
-                or result.get("reference_basis") != reference_basis):
+                or result.get("reference_basis") != reference_basis
+                or result.get("geographic_programme") != programme):
             raise ValueError("Cold receiving returned a different source, project or invocation")
         for name, identity in snapshots.items():
             if support._identity(support._member(application, name).lstat()) != identity:
@@ -328,6 +330,22 @@ def _inspect(request, lock_fd):
         key = interpretation["source"]["source_collection_id"]
         support._sources(ws, files, key)
         expected_source_ids.add(key)
+    programme = request.get("geographic_programme")
+    programme_verification = None
+    if programme is not None:
+        from model.geographic_programme import verify as verify_programme
+        item = (request.get("archive_delivery") or {}).get("files", {}).get("geographic_programme")
+        expected = request["members"].get("delivery/geographic-programme.json")
+        if (not item or item.get("path") != "delivery/geographic-programme.json"
+                or expected is None or any(item.get(key) != expected[key] for key in ("bytes", "sha256"))):
+            raise ValueError("Retain the exact Programme adoption inside the original archive")
+        path = support._member(ws.root.parent, item["path"])
+        before = support._check_file(path, expected)
+        if (support._read(path) != programme or support._identity(path.lstat()) != before
+                or programme.get("geographic_id") != prepared["id"]
+                or programme.get("existing_delivery_id") != delivery_id):
+            raise ValueError("The archived Programme adoption selects another original delivery")
+        programme_verification = verify_programme(ws, programme)
     from model import reviews
     review_id = request["review_id"]
     files.json("reviews/" + review_id + ".json")
@@ -351,6 +369,8 @@ def _inspect(request, lock_fd):
         "completion_scope": "full_course" if reference_basis is None else "reference",
         "receiving_context": context,
         "scenario_context": interpretation,
+        "geographic_programme": programme,
+        "programme_verification": programme_verification,
         "review_response_id": request.get("review_response_id"),
         "review_response_ids": [row["id"] for row in response_prefix],
         "archive_sha256": request["archive_sha256"], "receiving_lock": lock,

@@ -65,6 +65,34 @@ def _scientific_source(workspace, ensemble_id, output):
     return scientific
 
 
+def _geographic_programme(workspace, output, prepared, delivery):
+    """Retain the original completed-output adoption before any archive capture."""
+    from model import geographic_programme
+
+    scope = {"project_id": workspace.project["id"], "geographic_id": prepared["id"],
+             "existing_delivery_id": delivery["id"]}
+    target = Path(output) / "programme-editions" / (digest(scope) + ".json")
+    previous = read_json(target) if target.exists() else None
+    pointer = Path(output) / "geographic-programme.json"
+    old = read_json(pointer) if pointer.exists() else None
+    if old is not None:
+        if (old.get("schema") != geographic_programme.SCHEMA
+                or old.get("project_id") != workspace.project["id"]):
+            raise ValueError("Retain the original programme output in its own receiving project")
+        atomic_json(Path(output) / "programme-history" / (digest(old) + ".json"),
+                    old, immutable=True)
+        if previous is None and all(old.get(key) == value for key, value in scope.items()):
+            previous = old
+    programme = geographic_programme.adopt(
+        workspace, prepared["id"], delivery_id=delivery["id"], previous=previous)
+    if any(programme.get(key) != value for key, value in scope.items()):
+        raise ValueError("The adopted programme changed its original geographic delivery")
+    geographic_programme.verify(workspace, programme)
+    atomic_json(target, programme, immutable=True)
+    atomic_json(pointer, programme)
+    return programme
+
+
 def _reference_report(workspace, output, prepared, course, basis, scientific,
                       delivery, exported, utilities, interpreted):
     """Retain an actual completed reference report while sensitivities stay partial."""
@@ -332,6 +360,9 @@ def receive(args):
             raise ValueError("Complete the original mapped delivery before handover")
         save(scientific_source=scientific["source"],delivery_id=delivery["id"])
         atomic_json(output/"mapped-delivery.json",delivery)
+        programme = phase("geographic_programme", lambda: _geographic_programme(
+            workspace, output, prepared, delivery))
+        save(geographic_programme=programme)
         from model import reviews
         review_selection = {"schema":reviews.SELECTION_SCHEMA,
             "title":selection["title"]+": geography, assumptions and native results",
@@ -379,13 +410,13 @@ def receive(args):
         save(selected_completion_scope="reference" if selected_reference is not None else "full_course")
         handover = phase("handover", lambda: prepare_handover(
             workspace, output, state, prepared, scientific, delivery, exported,
-            reference_basis=selected_reference))
+            reference_basis=selected_reference, programme=programme))
         save(**{"reference_handover" if selected_reference is not None else "handover": handover})
         archive_policy = {"include_intermediates": True, "include_deliveries": True}
         selected_binding = retain_binding(
             workspace, output, prepared, scientific, delivery, review, response_id,
             archive_selection=archive_policy, handover=handover, utility_context=utilities,
-            reference_basis=selected_reference)
+            reference_basis=selected_reference, programme=programme)
         save(**{"reference_archive_binding_id" if selected_reference is not None
                 else "archive_binding_id": selected_binding["id"]})
         from model import portable
@@ -427,7 +458,7 @@ def receive(args):
             output/"cold-reopen"/edition, receiving_lock_fd=receiving_lock_fd,
             receiving_lock_path=output/".geographic-receiving.lock",
             review_response_id=response_id, receiving_context=utilities,
-            scenario_context=interpreted, reference_basis=selected_reference))
+            scenario_context=interpreted, reference_basis=selected_reference, programme=programme))
         if selected_reference is not None:
             history = state.setdefault("reference_handover_editions", {})
             history[edition] = {"reference_basis": selected_reference,
