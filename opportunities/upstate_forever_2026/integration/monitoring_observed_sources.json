@@ -75,22 +75,24 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 24516,
-      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
+      "bytes": 25250,
+      "sha256": "0226a65719bea63020a69e41bf0b9efc68ff27ff0c5dc11fe6b55066ec367f0b",
       "predecessor_sha256": [
         "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
         "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
-        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+        "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e"
       ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 19011,
-      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
+      "bytes": 19887,
+      "sha256": "62ec7d4c2bc092d00f862b40115ad345135e728db268a6508c9746de2a1db7fb",
       "predecessor_sha256": [
         "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992",
         "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c",
-        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
+        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
+        "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363"
       ]
     },
     {
@@ -151,8 +153,8 @@
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8855,
-      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
+      "bytes": 13110,
+      "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
@@ -161,17 +163,19 @@
         "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
         "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
         "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
-        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
+        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+        "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb"
       ]
     },
     {
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 23901,
-      "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "bytes": 24175,
+      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
       "predecessor_sha256": [
         "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
         "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
-        "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d"
+        "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
+        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
       ]
     },
     {
@@ -182,8 +186,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 39220,
-      "sha256": "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
+      "bytes": 40760,
+      "sha256": "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -197,7 +201,9 @@
         "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
         "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a",
         "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
-        "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221"
+        "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
+        "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
+        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c"
       ]
     },
     {
@@ -341,10 +347,11 @@
     },
     {
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 8459,
-      "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
+      "bytes": 9796,
+      "sha256": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce",
       "predecessor_sha256": [
-        "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+        "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692",
+        "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224"
       ]
     },
     {
@@ -842,5 +849,22 @@
     "report_descriptor": "operator/extensions/monitoring-report.json",
     "component": "integration/component_fragments/monitoring-comparison-report.json",
     "behavior": "Exact saved budget choices enter the existing ordered scientific report with every original plan, source-bound observed context and retained comparison packet. Single-study report enrichment stays unchanged outside this explicit compound report kind."
+  },
+  "saved_record_opening": {
+    "route": "Study transfer → Open in Monitoring",
+    "host_method": "openDesk('monitoring', 'openStudy', selection)",
+    "selection_fields": [
+      "workspace_key",
+      "kind",
+      "id"
+    ],
+    "kinds": [
+      "monitoring_networks",
+      "monitoring_plans",
+      "monitoring_heads",
+      "monitoring_observed_contexts"
+    ],
+    "context_calendar": "Original immutable context; current campaign revision is not substituted",
+    "network_only_context": true
   }
 }
