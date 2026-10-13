@@ -2,6 +2,7 @@
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { buildAssociationReport } from "./assessment_association_report.mjs";
 import { zipReportFiles } from "./assessment_association_package.mjs";
+import { annualReferenceInterpretation } from "./native_assessment_reviewer.mjs";
 import { retainMicrobialSources, microbialScientificSections } from "./native_assessment_microbiology.mjs";
 const codec = createArchiveCodec();
 const json = value => JSON.stringify(value, null, 2) + "\n";
@@ -247,6 +248,56 @@ function validateRecordPointers(context, originals) {
   }
   requireSame(count,context.summary.assessment_record_count,"Native source pointer count differs");
 }
+
+function verifyAnnualTargetSources(interpretation, files) {
+  const directory="source/usgs-southeast-sparrow-2012/";
+  const tables=new Map();
+  for(const row of interpretation.rows){
+    if(!tables.has(row.source_member)){
+      const path=directory+row.source_member, body=files[path];
+      if(body===undefined || identity(path,body).sha256!==row.source_sha256)
+        throw Error("Annual yield lost its exact original target table: "+path);
+      const source=JSON.parse(text(body));
+      if(!Array.isArray(source.features))throw Error("Original annual table has no feature rows.");
+      tables.set(row.source_member,source.features);
+    }
+    const matches=tables.get(row.source_member).filter(feature=>
+      feature.attributes?.OBJECTID===row.original_record_id &&
+      String(feature.attributes?.COMID)===row.comid);
+    if(matches.length!==1)throw Error("Annual yield original target row is not unique.");
+    const ordered=value=>Object.keys(value).sort().map(key=>[key,value[key]]);
+    requireSame(ordered(matches[0].attributes),ordered(row.original_attributes),
+      "Annual yield source row differs from the original published table.");
+  }
+}
+function annualYieldSections(interpretation) {
+  const result=[];
+  for(const group of unique(interpretation.rows.map(row=>row.parameter+"/"+row.reference_basis))){
+    const rows=interpretation.rows.filter(row=>row.parameter+"/"+row.reference_basis===group),first=rows[0];
+    result.push(["Whole-catchment annual reference yield — "+first.reference_basis,[
+      "Original annual mass: "+first.annual_mass_unit+". Whole-catchment annual yield: "+first.yield_unit+".",
+      table(["Original reference / COMID","Whole basin (ha)","Annual reference mass","Annual reference yield"],
+        rows.map(row=>[row.station_name+" / "+row.comid,fixed(row.whole_catchment_area_ha,2),
+          fixed(row.annual_reference_mass,2),fixed(row.annual_reference_yield,6)]),[2.5,1,1.1,1.1]),
+      "Each yield divides the retained original annual value by the complete selected EPSG:5070 basin area. The source basin area is independent of raster valid-cell support and of the assessment cohort's geographic extent.",
+    ]]);
+  }
+  const p=interpretation.reference_period;
+  result.push(["Annual yield source support and complete downloads",[
+    "Reference year "+p.reference_year+"; source-global target horizon "+p.start+" to "+p.end_exclusive+
+      " (end exclusive). Individual station sampling periods and target standard errors are not exposed in this regional source.",
+    "These are published reference loads and derived reference yields, not native predictions. TSS remains the original TSS constituent; no SSC conversion, TSS_CONV adjustment or temporal multiplication is applied. The separate sediment-method sensitivity source remains separately selected.",
+    "The ten original catchment-pair relations remain unchanged. Nested whole-basin totals and source-normalized yields do not create independent regional components, incremental loads or downstream delivery estimates.",
+    "When native calibration is complete, its existing catchment interpretation adds the selected model's complete-support yield, partial-mass status and held-out results. Reference-only values here do not change observation admission, nominal calibration metrics or rankings.",
+    {kind:"links",items:[
+      {title:"All eleven reference yields, units, periods and exact source records",path:"association/annual-reference-yields.csv"},
+      {title:"Complete whole-basin yield interpretation and original source attributes",path:"association/annual-reference-yields.json"},
+      {title:"All ten retained original catchment-pair relationships",path:"association/annual-reference-relations.csv"},
+    ]},
+  ]]);
+  return result;
+}
+
 function scientificSections(context, annual, report) {
   const s=context.summary, stations=context.stations, selection=context.utility_selection;
   requireSame(annual.input_sha256,context.input_sha256,"Annual and watershed results use different native inputs");
@@ -359,6 +410,8 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   validateRecordPointers(context,originalAssessmentFiles);
   const stationSources=retainStationSources(stationSourceFiles,context);
   const annualSources=retainAnnualSources(annualSourceFiles);
+  const annualYields=annualReferenceInterpretation(annual);
+  verifyAnnualTargetSources(annualYields,annualSources);
   if ((microbialFiles === undefined) !== (microbialOriginalFiles === undefined))
     throw Error("Retain both the measured source edition and its complete original provenance.");
   const microbial=microbialFiles===undefined?null:retainMicrobialSources(microbialFiles,microbialOriginalFiles,context);
@@ -385,18 +438,22 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
     }
   }
   const sections=scientificSections(context,annual,report);
+  const yieldPosition=sections.findIndex(section=>section[0]==="Complete native results, original records and existing application use");
+  if(yieldPosition<0)throw Error("Retain the current native report source section.");
+  sections.splice(yieldPosition,0,...annualYieldSections(annualYields));
   if (microbial) {
     sections.splice(3,0,...microbialScientificSections(microbial.bound.coverage,NATIVE_SOURCE_DIRECTORY+"/"));
     sections[sections.length-1][1][0]="Import the included 17-entry source manifest to retain four original native vector/table entries, seven original station/assessment entries, four original measured microbial entries, the interactive assessment report and this scientific report recipe. Existing Spatial Review opens the original-point layers; Annual load observations retains the target/catchment intake and calibration actions.";
   }
   const reportId="native-assessment-observed-"+RESULT_HASHES["assessment-native-huc-context.json"].slice(0,20)+
-    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"");
+    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"")+"-annual-yields-v1";
   const inputs=Object.entries(files).map(([path,body])=>identity(path,body));
   const recipe={schema:"upstate.observed-report/v1",title:microbial?"Physical assessment coverage, measured E. coli and annual references":"Physical assessment coverage, utility selection and annual references",
-    edition:microbial?"original-native-assessment-microbial-context-20261013-v1":"original-native-assessment-context-20261013-v1",vintage:"2026-10-13",
+    edition:microbial?"original-native-assessment-microbial-context-20261013-v2-annual-yields":"original-native-assessment-context-20261013-v2-annual-yields",vintage:"2026-10-13",
     interpretation_kind:"completed_native_geography_and_original_assessment_context",
     inputs,sections,source_links:[nativePath("README.md"),nativePath("sources.json"),nativePath("assessment-native-huc-context.json"),
-      nativePath("annual-reference-assessment-summary.json"),"association/sources.json","association/OPEN_ASSESSMENT_ASSOCIATIONS.html"]};
+      nativePath("annual-reference-assessment-summary.json"),"association/sources.json","association/OPEN_ASSESSMENT_ASSOCIATIONS.html",
+      "association/annual-reference-yields.csv","association/annual-reference-yields.json","association/annual-reference-relations.csv"]};
   if (microbial) {
     recipe.measured_source_context=microbial.bound.source;
     recipe.source_links.push(nativePath("microbial-assessment-sources.json"),nativePath("MICROBIAL_COVERAGE.md"),
