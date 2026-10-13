@@ -6,7 +6,7 @@ The existing **Chemical transport & inference** desk accepts single-pool measure
 
 1. Open the actual saved chemical scenario in the Chemistry desk. Its original project and source references remain attached to subsequent scenario editions and analyses.
 2. Choose the analysis and retain its complete native request: fitted parameter targets and bounds, or the original candidate/error/prior specification for a monitoring design.
-3. Under **Import observation CSV**, supply a meaningful original source reference and choose the CSV. Imported calibration/sensitivity/uncertainty records populate `observations`; an explicit monitoring request receives them in `candidates`.
+3. Under **Import observation CSV**, supply a meaningful original source reference and choose the CSV. Imported records populate the original request's `observations` array in every inference mode, including monitoring candidate design.
 4. **Review measurement definitions and limits** opens after import. Inspect the retained measurement label, weighted pools, conserved basis, role, reach, model day, error scale, qualifiers and source. The complete JSON remains editable in the original request field.
 5. Save and open any changed physical scenario before running the request through the original task queue. Native validation checks actual species, reach, model duration and analysis-specific inputs.
 
@@ -60,6 +60,7 @@ Choose **Prepare source for scientific reports**, then **Open scientific report*
 
 - Complete reference, point-score and interval-support CSV tables.
 - Full local sensitivity, design and ensemble tables when present.
+- Native observation-fit CSV columns preserving complete compound operators and interval endpoints; interval analyses also retain the native interval-support CSV.
 - Original numeric figure specifications and SVG companions, used by the existing PDF/HTML renderer.
 - The saved Chemistry report, original project/request/result, artifact inventory and editable Chemistry archive.
 

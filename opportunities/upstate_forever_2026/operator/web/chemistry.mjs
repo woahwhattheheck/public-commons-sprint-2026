@@ -193,7 +193,7 @@ export function attachChemistry(host){
   }
   function observations(){
    const target=area.querySelector('[data-observation-review]');
-   try{const q=parse(area.querySelector('[data-request]'),'Analysis request'),rows=(q.mode==='monitoring'?q.candidates:q.observations)||[];
+   try{const q=parse(area.querySelector('[data-request]'),'Analysis request'),rows=q.observations||[];
     target.innerHTML=table(rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','error_scale','source']);
    }catch(error){target.textContent=error.message;}
   }
@@ -209,7 +209,7 @@ export function attachChemistry(host){
   area.querySelector('[data-project]').addEventListener('change',physical);
   area.querySelector('[data-project-file]').addEventListener('change',async e=>{try{const file=e.target.files[0];if(file){const p=JSON.parse(await file.text());area.querySelector('[data-project]').value=pretty(p);physical();}}catch(e){report(e)}});
   area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);}catch(e){report(e)}});
-  area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');const text=await f.text();if(!root||current!==editorGeneration||!area.isConnected)return;const imported=csvObservations(text,area.querySelector('[data-observation-reference]').value,parse(area.querySelector('[data-project]'),'Chemical project'));if(q.mode==='monitoring')q.candidates=imported;else q.observations=imported;area.querySelector('[data-request]').value=pretty(q);observations();area.querySelector('[data-observation-review]').parentElement.open=true;}catch(e){report(e)}});
+  area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');const text=await f.text();if(!root||current!==editorGeneration||!area.isConnected)return;const imported=csvObservations(text,area.querySelector('[data-observation-reference]').value,parse(area.querySelector('[data-project]'),'Chemical project'));q.observations=imported;area.querySelector('[data-request]').value=pretty(q);observations();area.querySelector('[data-observation-review]').parentElement.open=true;}catch(e){report(e)}});
  }
  async function openRun(id,field='final',offset=0){
   sourceGeneration++;reportGeneration++;
