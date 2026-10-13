@@ -1,0 +1,147 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "report-changes",
+  "title": "Scientific report changes",
+  "version": "1.0.0",
+  "order": 57,
+  "requires_actions": [
+    "source-reports.render"
+  ],
+  "assets": [
+    "report_changes.mjs",
+    "report_changes.css"
+  ],
+  "backend": {
+    "module": "report_changes",
+    "factory": {
+      "handler": "ReportChanges",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "report-changes.prepare",
+      "report-changes.export"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/report-changes/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/report-changes/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/report-changes/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/report-changes/rows",
+        "operation": "rows",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "file_routes": [
+      {
+        "path": "/api/file/report-changes/{workspace_key}/{comparison_id}/{member...}",
+        "response": "ticket_policy_pair",
+        "handler": "member",
+        "args": [
+          "route.workspace_key",
+          "route.comparison_id",
+          "route.member"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "scientific-report-comparisons",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/report_changes.mjs",
+    "factory": "attachReportChanges",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh"
+    ],
+    "styles": [
+      "/web/report_changes.css"
+    ],
+    "view": {
+      "id": "report-changes",
+      "title": "Report changes",
+      "after": "sources"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
