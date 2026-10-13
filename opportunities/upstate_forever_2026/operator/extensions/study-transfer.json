@@ -11,7 +11,8 @@
     "gauge_received_studies.mjs",
     "ensemble_received_studies.mjs",
     "observed_landcover_received.mjs",
-    "observed_landcover_received.css"
+    "observed_landcover_received.css",
+    "study_report_navigation.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
