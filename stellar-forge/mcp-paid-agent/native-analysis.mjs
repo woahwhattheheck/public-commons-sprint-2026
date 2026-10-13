@@ -14,6 +14,7 @@ import {createNativeArchiveActions} from './native-analysis-archives.mjs';
 import {createNativeSemanticActions} from './native-analysis-semantics.mjs';
 import {createNativeResearchActions,publicNativeResearchJob} from './native-analysis-research.mjs';
 import {createNativeLineageActions} from './native-analysis-lineage.mjs';
+import {createNativePublicationActions} from './native-analysis-publication.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -126,6 +127,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   const meanings=createNativeSemanticActions();
   const research=createNativeResearchActions({publicJob});
   const lineage=createNativeLineageActions({reads,parse});
+  const publication=createNativePublicationActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -320,6 +322,8 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     else if(op==='file')value=await file(record,connection,body,context.signal);
     else if(meanings.handles(op))value=await meanings.call({operation:op,body,get,
       cacheScope:record.workspaceId+':'+connection.url.href+':'+connection.capability,
+      getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
+    else if(publication.handles(op))value=await publication.call({operation:op,body,record,get,post,signal:context.signal,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
     else if(lineage.handles(op))value=await lineage.call({operation:op,body,record,get,post,signal:context.signal,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
