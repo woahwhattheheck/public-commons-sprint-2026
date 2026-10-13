@@ -95,3 +95,10 @@ The source's 77 parameter rows retain their original cycles and approval fields:
 ## Use the rendered result before delivery
 
 The repository's owner-directed rendered-product inspection applies to this receiving course. Open the populated geographic layer in the actual operator, view the exact generated report and downloaded attachments, operate the relevant controls, and reopen the delivered project. Inspect the presentation width and a narrow layout where applicable; fix clipping, unreadable tables, broken source links or exports in the maintained application. Source review and source counts support this work, while the actual rendered map and report remain the human-facing delivery. Preserve the current application AGENTS.md with the source handoff.
+
+
+## Save and independently reopen the scientific report
+
+Continue this same command with `--report` to publish the source through the maintained saved scientific-report edition, report-file ZIP, selected Study archive and independent archived-application reopening. Add `--report-with-operation` for the other completed jurisdiction's original operation JSON; `--report-selection` preserves an existing ordered source list.
+
+For already completed source operations, run `python -B -m source_tools.assessment_report_receiving` with their exact original operation files. The complete command, resumption behavior, scientific interpretation and actual rendered-product course are in [ASSESSMENT_REPORT_RECEIVING.md](ASSESSMENT_REPORT_RECEIVING.md). Both entry points use the same original report publisher and Study transfer implementation.
