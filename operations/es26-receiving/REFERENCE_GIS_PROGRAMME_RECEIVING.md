@@ -2,7 +2,7 @@
 
 This is the cumulative source handoff for the existing ES26 / ASTRA13 regional receiver. It retains all original188 source bodies and composes the original selected-Study reader (PR4481), completed-reference GIS handoff (PR4482), Programme-operation capture and locks (PR4536 with its original4486 helper), and the full original GIS/native-history component modules, browser controls, receiving courses and guides.
 
-The bank contains 213 complete source files and 11 complete predecessor bodies. It belongs to the existing full restored application. Its source files are an overlay; all original scientific source objects, model outputs, project identity, recipient scope and unrelated application files remain in that application.
+The bank contains 216 complete source files and 11 complete predecessor bodies. It belongs to the existing full restored application. Its source files are an overlay; all original scientific source objects, model outputs, project identity, recipient scope and unrelated application files remain in that application.
 
 ## Same owner, same operation
 
@@ -57,6 +57,24 @@ Finish the same operation with actual geographic_gis.export.id and gis_verificat
 Open the real outgoing application at desktop and390px, use the controls, open every report/map/PDF/table, follow source links, open the QGIS/ZIP and native history, and cold-reopen the delivered application/project. Correct defects in the actual outgoing version. Return its complete durable files and concrete source/native/visual outcome to the original receiving thread.
 
 Source-body, hash and component checks here confirm the transmitted source. Native execution, browser operation, visual inspection and cold receiving belong to that same actual recipient operation.
+
+## Continue original GIS edition receiving
+
+After the same restored Workspace contains the real geographic_gis.export.id and gis_verification.received.id, use the included original PR4141 receiving command with both exact IDs. It retains the original native comparator, desktop/390px operator course and complete ZIP reopen:
+
+```sh
+"$NATIVE_PYTHON" -B source_tools/receive_gis_edition_review.py \
+  --application "$APPLICATION" \
+  --workspace "$ACTUAL_RESTORED_WORKSPACE" \
+  --output "$SAME_EXISTING_RECEIVING_OUTPUT" \
+  --export-id "$ACTUAL_EXPORT_ID" \
+  --receipt-id "$ACTUAL_RECEIPT_ID" \
+  --require-raster \
+  --node "$BROWSER_NODE" \
+  --playwright-module "$INSTALLED_PLAYWRIGHT_MODULE"
+```
+
+Use the owned output/argv/PID if already issued. There is no second export or model in this continuation. The three exact PR4141 source files accompany this bank; preserve current GIS4337/4322 dependencies in the original application. The current owner brief below supersedes the preserved14UTC paragraph in its historical receiving guide.
 
 ## Current instruction authority
 
