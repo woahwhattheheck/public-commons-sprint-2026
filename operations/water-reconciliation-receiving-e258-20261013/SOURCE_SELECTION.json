@@ -1,0 +1,242 @@
+{
+  "schema": "tjlabs.water-reconciliation.complete-source-selection.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "selected_core": "e1f70e82ed371e914e5fb3055ad539f36a507493",
+  "selected_renderer_and_browser": "b7be7f31bde4885c8eacad935d4656403c199e94",
+  "original_engine": "51769c99f7b2d365501d63bac1b041961cc238e0",
+  "product_files": 32,
+  "archive_files": 33,
+  "files": [
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+      "git_blob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+    },
+    {
+      "path": "OPERATOR_GUIDE.md",
+      "mode": "100644",
+      "bytes": 15417,
+      "sha256": "467b9e9b9be8741549157659f79a742c50af0410a044f5f3b7828ad66169c2e0",
+      "git_blob": "4d391e5c7e92cf9a1a230e13474fc1da29d1da54"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "bytes": 6879,
+      "sha256": "0c3fe5f33c89a34849bbe27e3e7586b5e7454dcc77561026d8d9c52a1c7412bd",
+      "git_blob": "8eb1945e8ea8f67fe7a64275df9b6fd98a1ab159"
+    },
+    {
+      "path": "SOURCE_PROVENANCE.json",
+      "mode": "100644",
+      "bytes": 3286,
+      "sha256": "466403a848f0b79ebb223c6a80a08f70b3553fd5036da238f6323572143221da",
+      "git_blob": "376f7ff737f16acb6748e75323f3283176f653cc"
+    },
+    {
+      "path": "WATER_RECONCILIATION.md",
+      "mode": "100644",
+      "bytes": 25299,
+      "sha256": "502b8c8776f2116c6d49ac4c9bfbbf078c1805646e9a5975f8e76d87959f5acf",
+      "git_blob": "59bbbb08059718d414369627e5a61f7a70bfd718"
+    },
+    {
+      "path": "WATER_SELECTION_API.json",
+      "mode": "100644",
+      "bytes": 15711,
+      "sha256": "6745f38253bd86b0a97ac58122c31ef82c39d08573cfc1f6401a11f3d0814107",
+      "git_blob": "f6cacc67021140aa3120fd2451d9c2a66ab67f0e"
+    },
+    {
+      "path": "discovery_cli.py",
+      "mode": "100644",
+      "bytes": 4026,
+      "sha256": "496c4ef383799af58021cf44da33a94699f6715fc7336c66689d546e815ac134",
+      "git_blob": "7d4a11008f1867f13de965800e0c6c83c764763a"
+    },
+    {
+      "path": "discovery_engine.py",
+      "mode": "100644",
+      "bytes": 52136,
+      "sha256": "8247e68ec8399e68cd0d42d1626e2de0c6cc3b31c5529ade7dd05e148ba8e357",
+      "git_blob": "8709121fd2dd1eafb78ec68a9a592714799f598b"
+    },
+    {
+      "path": "examples/a/intervals.csv",
+      "mode": "100644",
+      "bytes": 15164,
+      "sha256": "76572f65d68f7979bd784ee5bf94eb9f9e48c09cb24a7c7d9c77767d2ded0393",
+      "git_blob": "a7b006fba9e4b7cca5e7199e037229c2134e0b59"
+    },
+    {
+      "path": "examples/a/manifest.json",
+      "mode": "100644",
+      "bytes": 10221,
+      "sha256": "82553a9ed3d5961ae6e7593047456f03aca9673f8d3aac0d9dff2d9fc4a31c06",
+      "git_blob": "92e6c069e77ebfadfee4f06e1653d9f909b09893"
+    },
+    {
+      "path": "examples/a/periods.csv",
+      "mode": "100644",
+      "bytes": 924,
+      "sha256": "595d90bfdf5b0d80089f995fe7e12d753d421cebf93038f28b92aa388f79c503",
+      "git_blob": "4d2931032bcf38bb940a3342e7818cc042eca3df"
+    },
+    {
+      "path": "examples/a/reads.csv",
+      "mode": "100644",
+      "bytes": 948,
+      "sha256": "db10cc0436f17c6b871cc5e1e30a2b0604daa3420123ae04b508da139fa7f73d",
+      "git_blob": "f1da44bfab2e94d44485f105d33ef4ec4fb7f8c8"
+    },
+    {
+      "path": "examples/a/segments.csv",
+      "mode": "100644",
+      "bytes": 664,
+      "sha256": "fccebf0def0d61c4d19fee2eea75ad5dde9f68076f0acd7e7c4bdecc36dc8b4a",
+      "git_blob": "2a2bdf3e279a367d3b58be08815696a6f186f165"
+    },
+    {
+      "path": "examples/a/selection.json",
+      "mode": "100644",
+      "bytes": 3946,
+      "sha256": "19f5145108d37c012073afdef2c944dbaea799993ba714a65b05a40048e20711",
+      "git_blob": "a4fdc3cc86243f996a38f4e24c36bcccc8078799"
+    },
+    {
+      "path": "examples/a/tariff_evidence.csv",
+      "mode": "100644",
+      "bytes": 176,
+      "sha256": "550b518d48568a7d9c5cf7af845b987e96c37d2685a3795ab8606d38565a058a",
+      "git_blob": "cac9b49b6f7563b74274bd925758cc4f4dabc6be"
+    },
+    {
+      "path": "examples/b/intervals.csv",
+      "mode": "100644",
+      "bytes": 15288,
+      "sha256": "80ca08370700297337aaa5eebf4d22c6838adaa0b5714b4d454481b75c011283",
+      "git_blob": "6d58272107a66b1552a78c0d2affb69300c71147"
+    },
+    {
+      "path": "examples/b/manifest.json",
+      "mode": "100644",
+      "bytes": 10221,
+      "sha256": "a33452a951f4fa0083f0d246c90a8d65d0b99b0e262bceecfe801af5fe6fbbf8",
+      "git_blob": "10d7b2e74da4e02b9cfb95c7bc2a55a7945125a7"
+    },
+    {
+      "path": "examples/b/periods.csv",
+      "mode": "100644",
+      "bytes": 924,
+      "sha256": "5f39fc04de354aeccdfa4229fc5a08253540a5d8008f65b1f129f06703a6a7cc",
+      "git_blob": "45aa3f5033986020c3a36f745365f7675ab316f4"
+    },
+    {
+      "path": "examples/b/reads.csv",
+      "mode": "100644",
+      "bytes": 948,
+      "sha256": "db10cc0436f17c6b871cc5e1e30a2b0604daa3420123ae04b508da139fa7f73d",
+      "git_blob": "f1da44bfab2e94d44485f105d33ef4ec4fb7f8c8"
+    },
+    {
+      "path": "examples/b/segments.csv",
+      "mode": "100644",
+      "bytes": 664,
+      "sha256": "fccebf0def0d61c4d19fee2eea75ad5dde9f68076f0acd7e7c4bdecc36dc8b4a",
+      "git_blob": "2a2bdf3e279a367d3b58be08815696a6f186f165"
+    },
+    {
+      "path": "examples/b/selection.json",
+      "mode": "100644",
+      "bytes": 3946,
+      "sha256": "19f5145108d37c012073afdef2c944dbaea799993ba714a65b05a40048e20711",
+      "git_blob": "a4fdc3cc86243f996a38f4e24c36bcccc8078799"
+    },
+    {
+      "path": "examples/b/tariff_evidence.csv",
+      "mode": "100644",
+      "bytes": 176,
+      "sha256": "550b518d48568a7d9c5cf7af845b987e96c37d2685a3795ab8606d38565a058a",
+      "git_blob": "cac9b49b6f7563b74274bd925758cc4f4dabc6be"
+    },
+    {
+      "path": "fixtures/demo-a/enrolments.csv",
+      "mode": "100644",
+      "bytes": 710,
+      "sha256": "22ca282b997b14795ee470d16267a0a3a86295404c1ea7416800a66baa1f1ee4",
+      "git_blob": "c0822b59e08dd7426b57dec803f26d8b78cc869c"
+    },
+    {
+      "path": "fixtures/demo-a/manifest.json",
+      "mode": "100644",
+      "bytes": 6199,
+      "sha256": "f79f4b6b64672925311b2c9cc0ba4e60946ca6cba9b0c194441fb76b21045993",
+      "git_blob": "b85f4c3c71a94747c458648de70c16217d734f6a"
+    },
+    {
+      "path": "fixtures/demo-a/programmes.csv",
+      "mode": "100644",
+      "bytes": 126,
+      "sha256": "cc273d8f6c554b8c6c264b53e72f366e8dc051b08e8d4e352e7b4c1b9a1524bb",
+      "git_blob": "ddeadc3ce75f0c4ce6a176f6a7bfdcb9d4c7fbd7"
+    },
+    {
+      "path": "fixtures/demo-b/enrolments.csv",
+      "mode": "100644",
+      "bytes": 769,
+      "sha256": "ad12d79492cdc937f647ad5e3edd9e166c9335291399a513076e28af5c3fe641",
+      "git_blob": "49beb4e64dbae909236d1a8685e29b3b510c3f45"
+    },
+    {
+      "path": "fixtures/demo-b/manifest.json",
+      "mode": "100644",
+      "bytes": 6199,
+      "sha256": "064a9657404478d1fd289fa56a6442d1aed837d8495cd451edc552471197e79e",
+      "git_blob": "a693f3b130adcbf17251473f610876f6ae5c0a4d"
+    },
+    {
+      "path": "fixtures/demo-b/programmes.csv",
+      "mode": "100644",
+      "bytes": 126,
+      "sha256": "cc273d8f6c554b8c6c264b53e72f366e8dc051b08e8d4e352e7b4c1b9a1524bb",
+      "git_blob": "ddeadc3ce75f0c4ce6a176f6a7bfdcb9d4c7fbd7"
+    },
+    {
+      "path": "receiving.py",
+      "mode": "100644",
+      "bytes": 9582,
+      "sha256": "5d7b32a8c16268597e4181994401efa1bc5a641786c57c66983205bc80cddabc",
+      "git_blob": "cd7be655c99dd6b002b1a27c7fc308115ab01de6"
+    },
+    {
+      "path": "receiving_water.py",
+      "mode": "100644",
+      "bytes": 6290,
+      "sha256": "ab888f5c262621e7d9909b53df079397a1d1f26c51aca7b4250d87e6563779b9",
+      "git_blob": "df276a547c96733c8acdab741ec38ec0c7d5bc97"
+    },
+    {
+      "path": "receiving_water_browser.mjs",
+      "mode": "100644",
+      "bytes": 19879,
+      "sha256": "2cb210396e81432344ab054306748c3bff90f617d2f0a4743b25a706cf829b15",
+      "git_blob": "c968f5298f051129b8217fb2e5c48136be1cc3ab"
+    },
+    {
+      "path": "water_reconciliation.py",
+      "mode": "100644",
+      "bytes": 46179,
+      "sha256": "0a1df6f3bec2990e9ce20b499f316ba8347feda5f8a0cdfcabb73a19489ce77e",
+      "git_blob": "76e327d999fdbf09ab64ce0137ad93c08df332b0"
+    },
+    {
+      "path": "water_report.py",
+      "mode": "100644",
+      "bytes": 65207,
+      "sha256": "644aba07b1dea19d6504e657b8c497f6b4c402e9938786581a6db9fd0bfbafe3",
+      "git_blob": "fc82dda0358b935f3b5650db4fd9700b3f43e8f3"
+    }
+  ]
+}

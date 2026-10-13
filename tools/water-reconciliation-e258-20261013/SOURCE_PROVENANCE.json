@@ -1,0 +1,83 @@
+{
+  "schema": "tjlabs.water-reconciliation.source-provenance.v1",
+  "product": "Water reconciliation",
+  "operation": "WATER-RECONCILIATION-RECEIVING-E258-20261013",
+  "source_owner": "TokenJunkieLabs",
+  "original_engine": {
+    "description": "Maintained complete CSV discovery, exact keyed comparison and source receiving engine; all original files preserved unchanged.",
+    "carrier_blob": "51769c99f7b2d365501d63bac1b041961cc238e0",
+    "carrier_sha256": "1f5bea221f2d88adc5b9ed720190bba397d95aabc04646b60a26d26b31731909",
+    "files": [
+      {
+        "path": "discovery_engine.py",
+        "bytes": 52136,
+        "sha256": "8247e68ec8399e68cd0d42d1626e2de0c6cc3b31c5529ade7dd05e148ba8e357"
+      },
+      {
+        "path": "discovery_cli.py",
+        "bytes": 4026,
+        "sha256": "496c4ef383799af58021cf44da33a94699f6715fc7336c66689d546e815ac134"
+      },
+      {
+        "path": "receiving.py",
+        "bytes": 9582,
+        "sha256": "5d7b32a8c16268597e4181994401efa1bc5a641786c57c66983205bc80cddabc"
+      },
+      {
+        "path": "README.md",
+        "bytes": 6879,
+        "sha256": "0c3fe5f33c89a34849bbe27e3e7586b5e7454dcc77561026d8d9c52a1c7412bd"
+      },
+      {
+        "path": "OPERATOR_GUIDE.md",
+        "bytes": 15417,
+        "sha256": "467b9e9b9be8741549157659f79a742c50af0410a044f5f3b7828ad66169c2e0"
+      },
+      {
+        "path": "fixtures/demo-a/manifest.json",
+        "bytes": 6199,
+        "sha256": "f79f4b6b64672925311b2c9cc0ba4e60946ca6cba9b0c194441fb76b21045993"
+      },
+      {
+        "path": "fixtures/demo-b/manifest.json",
+        "bytes": 6199,
+        "sha256": "064a9657404478d1fd289fa56a6442d1aed837d8495cd451edc552471197e79e"
+      },
+      {
+        "path": "fixtures/demo-a/enrolments.csv",
+        "bytes": 710,
+        "sha256": "22ca282b997b14795ee470d16267a0a3a86295404c1ea7416800a66baa1f1ee4"
+      },
+      {
+        "path": "fixtures/demo-b/enrolments.csv",
+        "bytes": 769,
+        "sha256": "ad12d79492cdc937f647ad5e3edd9e166c9335291399a513076e28af5c3fe641"
+      },
+      {
+        "path": "fixtures/demo-a/programmes.csv",
+        "bytes": 126,
+        "sha256": "cc273d8f6c554b8c6c264b53e72f366e8dc051b08e8d4e352e7b4c1b9a1524bb"
+      },
+      {
+        "path": "fixtures/demo-b/programmes.csv",
+        "bytes": 126,
+        "sha256": "cc273d8f6c554b8c6c264b53e72f366e8dc051b08e8d4e352e7b4c1b9a1524bb"
+      }
+    ]
+  },
+  "additive_product": {
+    "calculator": "water_reconciliation.py",
+    "report": "water_report.py",
+    "receiving": "receiving_water.py",
+    "guide": "WATER_RECONCILIATION.md",
+    "interface": "WATER_SELECTION_API.json",
+    "examples": [
+      "examples/a",
+      "examples/b"
+    ]
+  },
+  "example_origin": "Invented software commissioning records with explicit DEMONSTRATION data class. No City, prospect or customer records are included.",
+  "runtime": "Python3.11+ standard library, SQLite, and installed selected IANA timezone data.",
+  "source_policy": "Preserve original source and TJLabs attribution. Use existing authorized native equipment; no hosted GitHub Actions execution.",
+  "receiving": "Run receiving_water.py into a new private directory; operate and view the actual report/export/reopened case following the full owner instruction in WATER_RECONCILIATION.md."
+}
