@@ -10,13 +10,21 @@ const active = value => ['queued', 'running'].includes(value);
 const ticketURL = ticket => /^\/api\/file\/[a-f0-9]{64}$/.test(ticket?.url || '') ? ticket.url : '';
 const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'}[key] || label(key));
 
-export function attachReceptorWorkbench({getState, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme}) {
+export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
   let filters={profile:'',scenario:'',area:'',pollutant:'',search:''}, page=0;
   const node = selector => frame?.querySelector(selector);
-  const currentWorkspace = () => getState()?.workspace_key;
+  const currentWorkspace = () => typeof getWorkspace==='function'?getWorkspace():getState()?.workspace_key;
+  const viewContext = () => ({workspace,frame});
+  const currentView = context => Boolean(context?.frame)&&context.frame===frame&&
+    context.workspace===workspace&&context.workspace===currentWorkspace();
+  const sameTask = (left,right) => Boolean(left&&right)&&
+    (!left.workspace||!right.workspace||left.workspace===right.workspace)&&
+    (!left.action||!right.action||left.action===right.action)&&
+    Boolean((left.id&&right.id&&left.id===right.id)||
+      (left.operation_id&&right.operation_id&&left.operation_id===right.operation_id));
   const storageKey = () => 'upstate-source-water:' + workspace;
   const defaultDraft = () => ({
     mode:'experiment', title:'Source-water scenario comparisons',
@@ -391,14 +399,15 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
   }
   async function submit(action,payload) {
     if(pending&&active(pending.state)){status('The current workspace task is '+pending.state+'.');return;}
-    const requested=workspace, epoch=generation, key=action+':'+JSON.stringify(payload);
+    const requested=workspace, context=viewContext(), key=action+':'+JSON.stringify(payload);
     if(!pending||pending.body_key!==key)pending={
-      operation_id:crypto.randomUUID(),action,body_key:key,state:'submitting'};
+      operation_id:crypto.randomUUID(),workspace:requested,action,body_key:key,state:'submitting'};
     remember();status('Submitting the selected source-water task…');
     const operation=pending.operation_id;
     const queued=await api('/api/actions',{method:'POST',body:{
       workspace:requested,action,payload,operation_id:operation}});
-    if(workspace!==requested||epoch!==generation||!frame)return;
+    if(!currentView(context)||pending?.operation_id!==operation)return queued;
+    if(queued.workspace!==requested||queued.action!==action)throw Error('The returned task belongs to a different source-water request.');
     pending={...pending,...queued,body_key:key,operation_id:operation,action};
     remember();status('Source-water task '+pending.state+'. Its original progress is retained.');
   }
@@ -407,11 +416,11 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       '<a href="'+esc(ticketURL(item))+'?download=1" download>'+esc(item.label||item.filename)+'</a>').join(' · ');
   }
   async function openResult(kind,id) {
-    const requested=workspace, epoch=++generation;fetching=true;
+    const requested=workspace, context=viewContext(), epoch=++generation;fetching=true;
     status('Opening the saved source-water product and original file references…');
     try {
       const loaded=await api(endpoint('/api/receptors/'+kind,{id}));
-      if(workspace!==requested||epoch!==generation||!frame)return;
+      if(!currentView(context)||epoch!==generation)return false;
       result=loaded;filters={profile:'',scenario:'',area:'',pollutant:'',search:''};page=0;packageFiles=[];pathSelection=null;selectedMapHuc='';
       if(kind==='network'){
         retainNetworkSource(loaded);
@@ -421,8 +430,8 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
           remember();
         }
       }
-      renderResult();renderAuthoring();status('Saved source-water results reopened.');
-    }catch(error){if(epoch===generation)status(error.message||String(error),true);}
+      renderResult();renderAuthoring();status('Saved source-water results reopened.');return true;
+    }catch(error){if(currentView(context)&&epoch===generation)status(error.message||String(error),true);return false;}
     finally{if(epoch===generation)fetching=false;}
   }
   const resultRows = () => result?._kind==='network'?result.memberships||[]:
@@ -670,9 +679,11 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     return copy(result);
   }
   async function submitFormAction(action,payload,requested) {
-    if(workspace!==requested||currentWorkspace()!==requested)throw Error('Reopen the form in the intended workspace.');
+    const context=viewContext();
+    if(workspace!==requested||!currentView(context))throw Error('Reopen the form in the intended workspace.');
     const queued=await submitAction(action,payload);
-    if(workspace!==requested||currentWorkspace()!==requested)return queued;
+    if(!currentView(context))return queued;
+    if(queued.workspace!==requested||queued.action!==action)throw Error('The returned task belongs to a different source-water request.');
     pending={...queued,action,body_key:action+':'+JSON.stringify(payload)};
     remember();await update();return queued;
   }
@@ -692,16 +703,17 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       });
   }
   async function waitForRetainedState(collectionId,scenarioId=null) {
-    const requested=workspace,deadline=Date.now()+15000;
+    const requested=workspace,context=viewContext(),deadline=Date.now()+15000;
     const ready=()=>{
       const state=getState();
       return state?.workspace_key===requested&&
         (state.data?.sources||[]).some(row=>row.id===collectionId)&&
         (!scenarioId||(state.data?.scenarios||[]).some(row=>row.id===scenarioId));
     };
-    while(!ready()){
-      if(workspace!==requested||currentWorkspace()!==requested)
+    for(;;){
+      if(!currentView(context))
         throw Error('Reopen this operation in the intended workspace.');
+      if(ready())return;
       if(Date.now()>=deadline)
         throw Error('The saved source records are still refreshing. The completed task is retained; retry when the Workspace reconnects.');
       await refreshState({force:true});
@@ -709,9 +721,9 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     }
   }
   async function usePreparedAnalysis() {
-    const prepared=requirePreparation(),requested=workspace;
+    const prepared=requirePreparation(),requested=workspace,context=viewContext();
     await waitForRetainedState(prepared.source_collection_id);
-    if(workspace!==requested||currentWorkspace()!==requested)return;
+    if(!currentView(context))return;
     return openExtension('scenario-analysis','createForSourceAreas',{
       ...copy(prepared.scenario_source_areas),workspace_key:requested});
   }
@@ -1101,7 +1113,11 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     if(action==='previous'){page--;return renderQuantities();}
     if(action==='next'){page++;return renderQuantities();}
     if(action==='resume'&&pending?.id) {
-      const resumed=await api('/api/task/resume',{method:'POST',body:{id:pending.id}});
+      const context=viewContext(),original=pending;
+      const resumed=await api('/api/task/resume',{method:'POST',body:{id:original.id}});
+      if(!currentView(context)||!sameTask(pending,original))return;
+      if(resumed.workspace!==context.workspace||!sameTask(resumed,original))
+        throw Error('The resumed task belongs to a different source-water request.');
       pending={...pending,...resumed};remember();node('[data-receptor-action="resume"]').hidden=true;
       return status('The original workspace task is queued for continuation.');
     }
@@ -1109,10 +1125,12 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
   async function update() {
     if(!frame)return;
     if(workspace!==currentWorkspace())return mount(root);
-    const sourceState=getState()?.data?.source_water;
+    const state=getState();
+    if(state?.workspace_key!==workspace)return;
+    const sourceState=state.data?.source_water;
     if(sourceState&&catalog){catalog.comparisons=sourceState.comparisons||[];catalog.inventories=sourceState.inventories||[];catalog.networks=sourceState.networks||[];catalog.source_areas=sourceState.source_areas||[];catalog.programmes=sourceState.programmes||[];renderSaved();if(result?._kind==='source-areas')renderPreparedSources();}
     if(!pending||observing)return;
-    const task=(getState()?.tasks||[]).find(row=>row.id===pending.id||row.operation_id===pending.operation_id);
+    const task=(state.tasks||[]).find(row=>row.workspace===workspace&&sameTask(row,pending));
     if(!task)return;
     pending={...pending,...task};remember();
     if(['failed','interrupted','cancelled'].includes(task.state)){
@@ -1120,36 +1138,42 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       node('[data-receptor-action="resume"]').hidden=false;return;
     }
     if(task.state!=='complete'){status('Source-water task '+task.state+'.');return;}
-    observing=true;
-    const requested=workspace, epoch=generation, finished=pending;
+    const context=viewContext(),finished=pending,observation={context,task:finished};
+    const ownsCompletion=()=>currentView(context)&&sameTask(pending,finished);
+    observing=observation;
     try {
+      let completed=false;
       if(finished.action==='receptor.package.export'){
         const decorated=await api('/api/task?id='+encodeURIComponent(finished.id));
-        if(workspace!==requested||epoch!==generation||!frame)return;
+        if(!ownsCompletion())return;
+        if(decorated.workspace!==context.workspace||!sameTask(decorated,finished))
+          throw Error('The retained package task belongs to a different request.');
         packageFiles=decorated._downloads||[];
         node('[data-rc-packages]').innerHTML='<strong>Completed result package</strong> · '+downloadLinks(packageFiles);
         node('[data-rc-package]')?.replaceChildren();
         if(node('[data-rc-package]'))node('[data-rc-package]').innerHTML=downloadLinks(packageFiles);
         status('The complete results package is ready to download.');toast('Source-water package ready.');
+        completed=true;
       } else if(finished.action==='receptor.scenario.save'&&finished.result?.id){
         await waitForRetainedState(finished.result.source_collection_id,finished.result.id);
-        if(workspace!==requested||epoch!==generation||!frame)return;
-        pending=null;remember();
-        await openResult('source-areas',finished.result.preparation_id);
-        toast('Land-cover scenario saved. Prepare its native run from these source areas.');
+        if(!ownsCompletion())return;
+        completed=await openResult('source-areas',finished.result.preparation_id);
+        if(completed&&ownsCompletion())toast('Land-cover scenario saved. Prepare its native run from these source areas.');
       } else if(finished.result?.id){
         const kind=finished.action==='receptor.programme.create'?'programme':
           ['receptor.experiment.build','receptor.programme.compare'].includes(finished.action)?'comparison':finished.action==='receptor.network.build'?'network':finished.action==='receptor.source-areas.prepare'?'source-areas':'inventory';
         if(kind==='source-areas'){
           await waitForRetainedState(finished.result.source_collection_id);
-          if(workspace!==requested||epoch!==generation||!frame)return;
+          if(!ownsCompletion())return;
         }
-        pending=null;remember();await openResult(kind,finished.result.id);
-        toast('Source-water results saved.');
+        completed=await openResult(kind,finished.result.id);
+        if(completed&&ownsCompletion())toast('Source-water results saved.');
       }
-      if(workspace===requested){pending=null;remember();node('[data-receptor-action="resume"]').hidden=true;}
-    }catch(error){if(workspace===requested)status(error.message||String(error),true);}
-    finally{observing=false;}
+      if(completed&&ownsCompletion()){
+        pending=null;remember();node('[data-receptor-action="resume"]').hidden=true;
+      }
+    }catch(error){if(ownsCompletion())status(error.message||String(error),true);}
+    finally{if(observing===observation)observing=false;}
   }
   function mount(container) {
     if(root===container&&frame?.isConnected&&workspace===currentWorkspace()){update();return;}
@@ -1163,7 +1187,9 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       const target=event.target.closest('[data-receptor-action]');
       if(!target||!frame?.contains(target))return;
       event.preventDefault();event.stopPropagation();target.disabled=true;
-      Promise.resolve(act(target.dataset.receptorAction,target)).catch(error=>status(error.message||String(error),true))
+      const context=viewContext();
+      Promise.resolve(act(target.dataset.receptorAction,target))
+        .catch(error=>{if(currentView(context))status(error.message||String(error),true);})
         .finally(()=>{if(target.isConnected)target.disabled=false;});
     });
     frame.addEventListener('keydown',event=>{
@@ -1227,7 +1253,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       if(target.dataset.rcFilter){const field=target.dataset.rcFilter;draft[field]=[...frame.querySelectorAll('[data-rc-filter="'+field+'"]:checked')].map(row=>row.value);planned=null;}
       if(target.dataset.rcRowFilter){filters[target.dataset.rcRowFilter]=target.value;page=0;renderQuantities();}
       if(target.name==='rc-profile-file'&&target.files?.[0]){
-        const requested=workspace, epoch=generation;
+        const requested=workspace, context=viewContext(), epoch=generation;
         target.files[0].text().then(text=>{
           if(workspace!==requested||epoch!==generation||!frame)return;
           const value=JSON.parse(text);
@@ -1235,7 +1261,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
           customProfile=value;draft.receptor_profile_id='';draft.receptor_ids=value.receptors.map(row=>row.id);
           draft.network_body_sha256='';draft.network_decoded_sha256='';draft.network_product=null;draft.area_authoring=null;
           planned=null;syncControls();remember();status('Loaded the complete receptor specification.');
-        }).catch(error=>status(error.message||String(error),true));
+        }).catch(error=>{if(currentView(context)&&epoch===generation)status(error.message||String(error),true);});
       }
       remember();
     });
