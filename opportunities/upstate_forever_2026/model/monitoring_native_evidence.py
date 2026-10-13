@@ -233,7 +233,10 @@ def catalog(workspace):
             metadata = entry.get("metadata", {})
             if (entry.get("kind") != "document" or entry.get("role") != "OBSERVED_CONTEXT"
                     or not isinstance(metadata, dict) or not (any(k in metadata for k in FAMILIES)
-                        or (is_source(entry) and metadata.get("origin", {}).get("mode") == "native_model"))):
+                        or is_source(entry))):
+                continue
+            if (is_source(entry) and isinstance(metadata.get("origin"), dict)
+                    and metadata["origin"].get("mode") == "source_context"):
                 continue
             try:
                 value = describe(workspace, collection["id"], entry["id"])

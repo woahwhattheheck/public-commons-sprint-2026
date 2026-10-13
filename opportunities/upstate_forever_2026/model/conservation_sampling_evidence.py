@@ -61,6 +61,7 @@ def document(workspace, collection, entry):
         paths[name] = verify_file(workspace.root, {**item, "path": item["object"]})
         descriptors[name] = deepcopy(item)
     recipe = read_json(paths[_name(body.get("view_path", body.get("filename")))])
+    _need(isinstance(recipe, dict), "The original Conservation recipe must be an object")
     origin = recipe.get("origin")
     _need(recipe.get("schema") == "upstate.observed-report/v1"
           and recipe.get("edition") in REPORT_EDITIONS and isinstance(origin, dict)
@@ -97,7 +98,9 @@ def document(workspace, collection, entry):
 
 def _json(paths, name):
     _need(name in paths, "Retain the complete Conservation companion " + name)
-    return read_json(paths[name])
+    value = read_json(paths[name])
+    _need(isinstance(value, dict), "The original Conservation record must be an object: " + name)
+    return value
 
 
 def _descriptor(entry, name):
@@ -119,6 +122,8 @@ def _packet_support(paths, study, plan, support):
         _need("packet-manifest.json" in names, "Retain the original packet manifest")
         with packet.open("packet-manifest.json") as stream:
             manifest = json.load(stream)
+        _need(isinstance(manifest, dict), "The original Conservation packet manifest must be an object")
+        _need(isinstance(manifest.get("members"), dict), "The original packet needs its complete member inventory")
         _need(manifest.get("schema") == "upstate.conservation-packet/v1"
               and manifest.get("study_id") == study["id"]
               and manifest.get("plan_id") == plan["id"],
@@ -161,6 +166,16 @@ def native(workspace, entry, paths, native_id, recipe):
     portfolio = _json(paths, "records/portfolio.json")
     candidates = _json(paths, "records/candidates.json")
     sources = _json(paths, "records/source-bindings.json")
+    for value, fields in ((plan, ("selection", "files", "summary")),
+                          (study, ("selection", "files")),
+                          (state, ("selection", "files"))):
+        for field in fields:
+            _need(isinstance(value.get(field), dict),
+                  "The original Conservation record needs an object: " + field)
+    _need(isinstance(study["selection"].get("spec"), dict)
+          and isinstance(study["selection"].get("bindings"), dict)
+          and isinstance(plan["summary"].get("pollutants"), dict),
+          "Retain the original scientific specification, bindings and pollutant summary")
     _need(plan.get("schema") == "upstate.conservation-plan/v1"
           and plan.get("state") == "complete" and plan.get("id") == origin["plan_id"]
           and digest(plan.get("selection")) == plan["id"]
@@ -175,6 +190,10 @@ def native(workspace, entry, paths, native_id, recipe):
         _need(state.get(name) == study.get(name),
               "The scientific inspection differs from its original study: " + name)
     spec, bindings = study["selection"]["spec"], study["selection"]["bindings"]
+    _need(all(isinstance(bindings.get(key), dict) for key in ("runs", "sources", "grid"))
+          and all(isinstance(run, dict) and isinstance(run.get("outputs"), dict)
+                  and isinstance(run.get("selection"), dict) for run in bindings["runs"].values()),
+          "Retain the original native run, source and grid bindings")
     _need(state.get("spec") == spec and study.get("mode") == "native_model"
           and study.get("metric_state") == "modeled"
           and origin["mode"] == study["mode"] and origin["purpose"] == study["purpose"]
@@ -194,7 +213,9 @@ def native(workspace, entry, paths, native_id, recipe):
           "The selected decision lost its exact candidate/geometry edition")
     inventory = candidates.get("candidates")
     selected = portfolio.get("selected_candidates")
-    _need(isinstance(inventory, list) and isinstance(selected, list),
+    _need(isinstance(inventory, list) and isinstance(selected, list)
+          and all(isinstance(row, dict) for row in inventory + selected)
+          and isinstance(plan.get("selected_ids"), list),
           "Retain the complete original planning-unit inventories")
     by_id = {row["id"]: row for row in inventory}
     _need(len(by_id) == len(inventory) and [row["id"] for row in selected] == plan["selected_ids"]
@@ -205,12 +226,15 @@ def native(workspace, entry, paths, native_id, recipe):
           and sources.get("study_id") == study["id"] and isinstance(sources.get("sources"), list),
           "Retain the original planning/source classification register")
     for original in sources["sources"]:
+        _need(isinstance(original, dict) and isinstance(original.get("entry"), dict),
+              "Retain each original planning-source register entry")
         collection_id = identifier(original.get("source_collection_id"))
         original_entry = original.get("entry", {})
         _need(original_entry.get("id") == original.get("source_id"),
               "The original planning-source register changed its source ID")
         prefix = "originals/" + collection_id + "/" + digest(original["source_id"]) + "/"
         for item in [original_entry["body"], *original_entry.get("companions", [])]:
+            _need(isinstance(item, dict), "Retain the original planning-source file descriptor")
             name = prefix + _name(item.get("view_path", item.get("filename")))
             _need(_same(item, _descriptor(entry, name)),
                   "The original planning-source register lost its retained member: " + name)
@@ -231,7 +255,11 @@ def native(workspace, entry, paths, native_id, recipe):
           and _same(plan["files"]["footprint"], plan["files"]["geopackage"])
           and plan["files"]["footprint"].get("layer") == "selected_union",
           "The selected original land geometry is missing from the report")
-    families = {row["id"]: row for row in spec.get("matched_families", [])}
+    from .conservation_families import normalize
+    declared_families = normalize(spec.get("matched_families", []))
+    _need(declared_families == spec.get("matched_families", []),
+          "Retain the original normalized scientific family declarations")
+    families = {row["id"]: row for row in declared_families}
     _need(len(families) == len(spec.get("matched_families", [])),
           "The original scientific families have repeated IDs")
     support_record = study.get("matched_family_support")
@@ -240,6 +268,9 @@ def native(workspace, entry, paths, native_id, recipe):
         validate(spec, bindings["runs"])
         _need(isinstance(support_record, dict)
               and support_record.get("schema") == "upstate.conservation-matched-family-support/v1"
+              and isinstance(support_record.get("metrics"), dict)
+              and set(support_record["metrics"]) == set(POLLUTANTS)
+              and all(isinstance(value, dict) for value in support_record["metrics"].values())
               and support_record.get("selection") == _selection(study)
               and digest({key: value for key, value in support_record.items() if key != "id"})
                   == support_record.get("id"),
@@ -253,6 +284,9 @@ def native(workspace, entry, paths, native_id, recipe):
     for pollutant, metric in plan["summary"].get("pollutants", {}).items():
         if pollutant not in selected_outputs:
             continue
+        _need(isinstance(metric, dict) and isinstance(metric.get("alternatives"), dict)
+              and isinstance(metric.get("matched_families", {}), dict),
+              "Retain each original pollutant summary and comparison inventory")
         unit = metric.get("unit")
         _need(pollutant in POLLUTANTS and unit == POLLUTANTS[pollutant][2],
               "Retain each pollutant's original physical unit")
@@ -277,6 +311,7 @@ def native(workspace, entry, paths, native_id, recipe):
         _need(set(matched) == set(families),
               "The selected-union result lost an original matched family")
         for family_id, value in matched.items():
+            _need(isinstance(value, dict), "Retain each original matched-family result")
             family = families[family_id]
             _need(value.get("family_id") == family_id
                   and value.get("baseline_run_id") == family["baseline_run_id"]
@@ -302,6 +337,9 @@ def native(workspace, entry, paths, native_id, recipe):
                 "optimization": None}
     reference = plan["selection"].get("optimization")
     if reference is not None:
+        _need(isinstance(reference, dict) and isinstance(reference.get("request"), dict)
+              and isinstance(reference["request"].get("objective"), dict),
+              "Retain the original authored optimization request")
         if recipe["edition"] == "conservation-saved-plan-report/1" and "optimization/analysis.json" not in paths:
             # This original edition predates separate optimization companions.
             # Preserve its authored decision, without claiming absent case rows.
@@ -316,6 +354,7 @@ def native(workspace, entry, paths, native_id, recipe):
         else:
             analysis = _json(paths, "optimization/analysis.json")
             from .conservation_study_transfer import _optimization_analysis
+            _need(isinstance(analysis.get("input"), dict), "Retain the original analysis input binding")
             _optimization_analysis(study, plan, analysis)
             _need(_same(reference["files"]["analysis"], _descriptor(entry, "optimization/analysis.json")),
                   "The original saved priority analysis changed its retained file")
