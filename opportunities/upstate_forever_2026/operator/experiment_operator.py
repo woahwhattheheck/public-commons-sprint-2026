@@ -238,8 +238,10 @@ class ExperimentOperator:
         self.app = operator
         self.Fault = fault
 
-    def catalog(self, workspace):
-        return [_exact_counts(item) for item in experiments.list_experiments(self.app.ws(workspace))]
+    def catalog(self, workspace, *, catalogue=None):
+        ws = self.app.ws(workspace)
+        rows = experiments.list_experiments(ws) if catalogue is None else catalogue.experiments(ws)
+        return [_exact_counts(item) for item in rows]
 
     def axes(self):
         provider = getattr(experiments, "supported_axes", None)

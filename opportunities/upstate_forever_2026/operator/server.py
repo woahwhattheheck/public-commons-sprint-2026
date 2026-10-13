@@ -44,6 +44,7 @@ from delivery_review import read as read_delivery_report, send_preview as send_d
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 from task_requests import TaskRequests
+from study_catalogues import StudyCatalogues
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -130,6 +131,7 @@ class Operator:
         self.downloads = {}
         self.task_catalog = ProjectedFileCache()
         self.task_requests = TaskRequests(self.root)
+        self.study_catalogues = StudyCatalogues()
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -817,11 +819,13 @@ class Operator:
             state["operator_session"] = None
             state["operator_session_error"] = str(error)
         state = self.extensions.extend_state(workspace, state)
-        state["experiments"] = self.experiments.catalog(workspace)
-        state["parameter-studies"] = self.parameter_studies.list(workspace)
-        for study in state["parameter-studies"]:
-            study["case_count"] = len(study.get("cases", []))
-            study.pop("cases", None)
+        catalogue = self.study_catalogues if compact else None
+        state["experiments"] = self.experiments.catalog(workspace, catalogue=catalogue)
+        state["parameter-studies"] = self.parameter_studies.list(workspace, catalogue=catalogue)
+        if not compact:
+            for study in state["parameter-studies"]:
+                study["case_count"] = len(study.get("cases", []))
+                study.pop("cases", None)
         from programme_activity import ProgrammeActivity
         state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
         # Compact core readers already retain these exact summaries without
