@@ -371,3 +371,57 @@ The official source archives are [NDR.zip](https://storage.googleapis.com/releas
 ### Current host continuation
 
 The journey installer preserves the current completed-stage predicate when the host already uses `completedModelStage`. A delivery candidate must retain completion times and original files for both NDR and SDR, together with all three export rasters. It also repairs the Rehearsal navigation collection in the shared host so opening the walkthrough marks each navigation button correctly. These joins preserve the current portfolio, delivery inspection, saved journey, source preview and registered desk integrations.
+
+
+## Optional calibration evidence review
+
+The original eight operating steps remain available in their original order.
+**Review calibration evidence (optional)** adds a separate ninth step for a
+completed observation-based calibration dossier. Its scientific selection stays
+independent of the scenario comparison and seven-map delivery selected elsewhere
+in the journey.
+
+1. Complete the original calibration analysis in **Calibration and validation**.
+   Choose any source-error sensitivity and original-catchment map editions, then
+   prepare the complete review package.
+2. In **Guided journey → Review calibration evidence (optional)**, choose that
+   completed review. The view shows the original calibration and plan, selected
+   native run and profile, error edition, map edition and retained file count.
+3. Use **Open complete review** for its complete package and supporting files, or
+   **Read report** for the authenticated readable report. The adjacent controls
+   open its actual nominal analysis, chosen source-error sensitivity and maps.
+4. Use **Save review selection and notes**. **Save view and transfer project**
+   saves the same original view before opening Project continuity. Its full ZIP
+   or incremental handover carries the dossier, maps, copied original sources,
+   source identities, and selected operating view.
+5. Open the received workspace and return to the optional review step. It resolves
+   the same dossier in that workspace and opens the existing calibration
+   controller. The original source and file validators run again on report read.
+
+The editable choice is one `selection.calibration_review_id`. Related identities
+come from the saved dossier; the separate journey JSON's
+`recorded_context.calibration_review` captures those exact identities.
+Import rejects a mismatched dossier or context. Saving uses the original
+revision check and session lock, then the original dossier validator checks the
+report, selected supplements and supporting source files. Old journey files
+without a calibration review continue to open normally.
+
+Changing a scenario, run or model in the original journey does not silently
+change the selected calibration dossier. The optional review step explains
+this separation and shows the dossier's own native selection. Choose another
+completed dossier explicitly when the scientific review changes.
+
+### Current source installation
+
+Receive the complete current Guided journey component and the complete current
+calibration component. Run the maintained guided installer and native saved-view
+composition first, then `operator/install_calibration.py`. The latter joins the
+review validator into the actual current `_save_operator_session` method while
+preserving its original record resolution, revision checks, notes history and
+capture locks. The cumulative installer follows this ordering.
+
+The calibration component also carries the original source-design module,
+support data, guide and installer introduced with the observation-support
+workflow. Its existing design diagnostics remain part of the same calibration
+form. Current source manifests record the full updated browser, guide and
+installer bodies.
