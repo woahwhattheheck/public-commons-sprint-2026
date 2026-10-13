@@ -172,7 +172,10 @@
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/staff-portal-workbench.json",
     "products/staff-portal-workbench/OPERATING.md",
     "stellar-forge/developer-site/GRANT_STAFF_PORTAL_WORKBENCH.md",
-    "stellar-forge/developer-site/grant-products/staff-portal-workbench.json"
+    "stellar-forge/developer-site/grant-products/staff-portal-workbench.json",
+    "products/staff-portal-workbench/PACKAGE_README.md",
+    "products/staff-portal-workbench/PUBLIC_SOURCE.json",
+    "products/staff-portal-workbench/AGENTS.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
@@ -180,12 +183,12 @@
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "TJLabs Staff Portal Workbench: reusable managed lifecycle and customer-agent tools for complete privately selected original staff applications and independent receiving.",
-    "readme": "products/staff-portal-workbench/OPERATING.md",
+    "readme": "products/staff-portal-workbench/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     },
     "repository": {
-      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""
     }
   }
