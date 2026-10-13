@@ -1,0 +1,83 @@
+{
+  "schema": "upstate.source-family-release/v1",
+  "operation_id": "ECO-GEO-0D0F",
+  "edition": "station-assessment-638",
+  "source_scope": "638 complete source files;635 installed into an existing complete scientific application. Three original producer/assembly tools accompany the installed family.",
+  "files": 638,
+  "installed_files": 635,
+  "bytes": 22223107,
+  "sha256": "bf69640abeab11be8c7b26113ab10a071bff2a10198250028fa598b84ff6c17d",
+  "gzip_bytes": 3210254,
+  "gzip_sha256": "366d1d3fcda52ff600c9d12e6cc45276c32dbfb951e4f574ba28e6517e3a97f7",
+  "base64_text_bytes": 4280341,
+  "base64_text_sha256": "a5fc7f6196debf5c56b461e63764cfe585abf06d7bb17840254615ab35209364",
+  "baseline": "c4f0d53884357046368c70d9a2f185753b43fe4d",
+  "merge": "ec920114f8b73dfd523b1163c1716590aaa260a5",
+  "head": "db5729308932a0c43a54d0be9186db24ca1deb67",
+  "predecessor_634_sha256": "29eac5d38fdc8cc9c97e46ec3601228f063c8f7282a58c1df03f870c5673d201",
+  "verified_members": 638,
+  "binary_blob": "5c5f0627222ac7269423c486efd24595f924e9f7",
+  "text_blob": "01e2efbe1197a379b9917647c777a91d64c8f7d2",
+  "connected_readback_verified": true,
+  "carriers": [
+    {
+      "path": "station-assessment-family.json.gz",
+      "git_blob": "5c5f0627222ac7269423c486efd24595f924e9f7",
+      "bytes": 3210254,
+      "sha256": "366d1d3fcda52ff600c9d12e6cc45276c32dbfb951e4f574ba28e6517e3a97f7",
+      "encoding": "gzip"
+    },
+    {
+      "path": "station-assessment-family.json.gz.base64.txt",
+      "git_blob": "01e2efbe1197a379b9917647c777a91d64c8f7d2",
+      "bytes": 4280341,
+      "sha256": "a5fc7f6196debf5c56b461e63764cfe585abf06d7bb17840254615ab35209364",
+      "encoding": "base64 UTF-8 with terminal newline"
+    }
+  ],
+  "source_provenance": {
+    "baseline": "c4f0d53884357046368c70d9a2f185753b43fe4d",
+    "composed_merges": [
+      "454b350b47249b9ccb75306b2e9cb55f35a43413",
+      "2a1c83642aadacbb7fe2dd1e7a52a8ad85f537af",
+      "b8915539fdf33057ba616aaf5a0fdd06243dc53b",
+      "32fd6468d3457b37512a816a14919c8e1022bfeb",
+      "55a36d256a25685134be017816f09acd03b8eb84",
+      "ec920114f8b73dfd523b1163c1716590aaa260a5"
+    ],
+    "description": "Exact frozen634 source plus4355 paired generated report/briefing origin repair, its existing native source reader dependencies and4394 append-only component declaration. Every member retains its original Git blob and SHA256; this is a coherent source composition, not an assertion that every member equals latest main."
+  },
+  "change_summary": {
+    "files": 638,
+    "installed": 635,
+    "verified_members": 638,
+    "unchanged_members": 630,
+    "changed": [
+      "integration/component_fragments/assessment-study-receiving.json",
+      "operator/source_report_editions.py",
+      "operator/source_reports.py",
+      "operator/web/source_report_editions.mjs"
+    ],
+    "newMembers": [
+      "operator/extensions/source-reports.json",
+      "operator/scientific_source_reader.py",
+      "operator/SOURCE_REPORTS.md",
+      "operator/web/scientific_source_reader.mjs"
+    ],
+    "manifests": 8,
+    "original_references": 801,
+    "unique_original_files": 259
+  },
+  "native_boundary": "Continue the admitted634 preparation. Install638 only at the natural operator/browser boundary and start a fresh operator process. All12 preparation-source bodies are byte-identical; no science restart or changed original source selection is required.",
+  "original217_release": {
+    "commit": "05d6c64f2b0884d6d86ec798a32d5c8e63f66e1d",
+    "directory": "deliveries/ecosystem_20261013/original_217_domain",
+    "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+  },
+  "bootstrap": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791874731085779?thread_ts=1791724121.853269",
+  "receiver": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791894132775449?thread_ts=1791724121.853269",
+  "owner_direction": {
+    "path": "CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.3"
+  }
+}
