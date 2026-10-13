@@ -172,11 +172,15 @@ export function attachReceivedStudies(host) {
     }
     if(action?.startsWith('published-review-')){
       const ws=workspace,e=epoch,value=opened;
+      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value?.id;
       if(!value||value.id!==selected||value.workspace_key!==ws)
         throw Error('Reopen the original received Study.');
-      return await openReceivedPublishedReview(host,value,target,{
-        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
-      });
+      try{
+        return await openReceivedPublishedReview(host,value,target,{workspace_key:ws,current:stillCurrent});
+      }catch(error){
+        if(!stillCurrent())return;
+        throw error;
+      }
     }
     if(action?.startsWith('cohort-')){
       const ws=workspace,e=epoch,value=opened;

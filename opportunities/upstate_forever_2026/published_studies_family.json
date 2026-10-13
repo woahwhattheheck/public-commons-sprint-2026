@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 21574,
-      "sha256": "41d075f7c74c215fa68d156becf011fb86aa6f41df6a7441de0374b41b488c57"
+      "bytes": 22303,
+      "sha256": "4b11fb291fa5e8c39a20b700dfa3542356887fd86f9ce0121d70aaaa8d0ca69d"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
