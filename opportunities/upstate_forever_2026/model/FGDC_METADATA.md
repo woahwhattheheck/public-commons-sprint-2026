@@ -74,6 +74,15 @@ separate from all of these.
 ## Contacts and distribution
 
 The selected original contact supports a person or an organization primary.
+Native-study preparation deep-copies the complete declared contact before the
+delivery digest. Its existing name, organization and email normalization remains
+unchanged; phone, address, position, fax and other supplied contact declarations
+are preserved. Both delivery modes validate known writer fields before source binding or export;
+they must have their supported text, text-list or address-object shapes. Optional absent values remain absent, and unknown original
+metadata stays in the retained contact rather than being silently discarded.
+The receiving exercise passes a complete contact through the actual preparation
+function before writing XML, checks both contact locations and preserves the
+caller's original nested values.
 Address blocks retain supplied type, street lines, city, state, postal code and
 country. Voice, email, fax, TDD, position, hours and instructions are retained
 when supplied. Required contact fields absent from the original record are
