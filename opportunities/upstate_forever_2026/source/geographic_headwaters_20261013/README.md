@@ -126,3 +126,17 @@ Use the original joint comparison across both alternatives for each profile, ret
 The selected utility protection footprint is an explicit spatial focus. It is not an intake-delivery conversion, measured concentration or forecast. Source loading, river export and a drinking-water intake remain separate scientific concepts.
 
 The demonstration should be operated in the actual existing application: open the saved source, inspect the upstream/reporting distinction, select baseline and alternatives, inspect the real differences and matched-control residuals, edit/review a parameter successor and open the export in the independently restored project. Keep the prime's scientific question and review authority visible throughout the production workshare.
+
+## Interrupted input preparation
+
+The producer retains a stable `.input-staging` directory under the immutable geographic edition. After all nine original physical rasters close, `physical-input-receipt.json` binds their exact hashes and complete generation summary to the actual selection, source geometry, software and runtime. A retry verifies and reuses those raster bytes and paths before continuing the maintained matching operation. A completed input receipt also permits recovery between input publication and its final directory rename.
+
+Matching checkpoints remain available while preparation is incomplete. Once the complete input handover has been verified and renamed, the producer may retire only its own completed matcher `work` directory. The published control mask, pairs, method, source files and receipts stay retained in the input edition. Cleanup records its outcome and can be retried; a restored project does not clean a different machine’s recorded paths.
+
+An already admitted process continues with its original source. Installing a producer or matcher successor creates a distinct identity for subsequent preparation. Reuse of an interrupted stage requires that exact original identity and source closure; a software change is never silently substituted into the saved scientific edition.
+
+## Explicit exact precipitation matching
+
+The original `four-anchor-selection.json` keeps its declared greedy control. To choose the maintained exact dyadic Monge method for a new prepared edition, use `four-anchor-exact-selection.json`. It adds the explicit `matching_method: exact_monge` and `max_working_bytes: 2147483648` fields while retaining the same original geographic selectors and physical assumptions. The complete matching source family must be installed together. `EXACT_MATCHING.md` explains the objective, numerical admission estimate, actual source-grid sizing and existing-host invocation.
+
+Selections with neither matching option retain their original normalized shape. An explicit method may be `greedy` or `exact_monge`; an explicit budget is a positive integer and requires the method. There is no silent fallback to another method. Inspect the actual saved method, matched pairs and residuals when comparing the resulting scientific editions.
