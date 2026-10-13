@@ -1,3 +1,5 @@
+import {benchmarkOperation,readBenchmark,benchmarkCSV} from './benchmark_workspace.mjs';
+import {benchmarkHTML} from './benchmark_reports.mjs';
 import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
 import {flowLoadOperation,readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
 import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
@@ -43,6 +45,13 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     }
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
+      if(parts[0]==='benchmarks'){
+        if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['report.html','rows.csv','periods.csv'].includes(parts[3])){
+          const study=readBenchmark(s,parts[2]),html=parts[3]==='report.html';
+          send(response,200,html?benchmarkHTML(study):benchmarkCSV(study,parts[3].split('.')[0]),html?'text/html; charset=utf-8':'text/csv; charset=utf-8','observed-benchmark-'+study.id.slice(0,12)+'-'+parts[3]);return;
+        }
+        send(response,200,await benchmarkOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
+      }
       if(parts[0]==='intake'){send(response,200,intakeOperation(s,method,parts.slice(1),['POST','PUT'].includes(method)?await readBody(request):{}));return;}
       if(parts[0]==='reconciliation'){
         if(method==='GET'&&parts[1]==='reports'&&parts.length===4&&parts[3]==='report.csv'){
