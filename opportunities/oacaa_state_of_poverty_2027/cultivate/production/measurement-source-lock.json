@@ -1,0 +1,85 @@
+{
+  "schema": "tjl.oacaa.acs-source-lock.v1",
+  "files": [
+    {
+      "path": "sources/Census2024-thresholds-measures-reader.txt",
+      "bytes": 23548,
+      "sha256": "0d2a5536a7c5c39a830ea525100e466b9093f4b3c589f2bf8b870e5c9185cab8"
+    },
+    {
+      "path": "sources/Census2019-poverty-dynamics-tables-reader.txt",
+      "bytes": 19018,
+      "sha256": "97f650c64be73cc9936d9b694930579793c5c8733c529c2c8921606d907eaca5"
+    },
+    {
+      "path": "sources/Census2022-poverty-dynamics-figure5-reader.txt",
+      "bytes": 6051,
+      "sha256": "00f1c0a29b52a44ff271399b16f9e9f9a4a905d8a7b300f6eeecf4a0ed0e31f5"
+    },
+    {
+      "path": "sources/Census-SIPP-corrected-table-index-original.txt",
+      "bytes": 22357,
+      "sha256": "46c0d2b46fb033ee8c4e1c19f874e5e30bbad834c6f2312cf6c2b9e45a60e885"
+    },
+    {
+      "path": "sources/Census-SIPP-processing-correction-reader.txt",
+      "bytes": 11852,
+      "sha256": "4ef51102ee8c1ac54dd49193c90e36fcd8a24d190f12f2fd9ec7d311d94b5a63"
+    },
+    {
+      "path": "sources/HHS2024-poverty-guidelines-original-reader.txt",
+      "bytes": 13075,
+      "sha256": "5d7aa1a3d0c716ee8148e934411dbbc3605ea04c63159f43aa1f78cb59685e28"
+    },
+    {
+      "path": "sources/OACAA2026-Tables1-3-retained-OCR.json",
+      "bytes": 2868,
+      "sha256": "052bd8e7b185691e7b6a78df8c1be870fb12f5d5276d774318e616ff1a76a78f"
+    },
+    {
+      "path": "datasets/us-official-poverty-thresholds-2024.json",
+      "bytes": 11548,
+      "sha256": "3cdc345397d9b9980364ffdef406f210e795ab7cb7f960516c6101e317a57ea7"
+    },
+    {
+      "path": "datasets/us-hhs-poverty-guidelines-2024.json",
+      "bytes": 15754,
+      "sha256": "034e4e72f23809e83d01657a5e980dbd8306d22ad8c3ca8cb6d0a5374701faee"
+    },
+    {
+      "path": "datasets/us-poverty-measure-comparison-2024.json",
+      "bytes": 6338,
+      "sha256": "ef039f6d698c81ff784fefa205b7f9bed2a9297e8cebcf92059141714d5380a2"
+    },
+    {
+      "path": "datasets/us-sipp-published-poverty-dynamics.json",
+      "bytes": 61297,
+      "sha256": "9a3bd90e5e8970442d0e06a5837a21047c9d1cd5fa5d989b8123d9fccbdb1352"
+    },
+    {
+      "path": "MEASUREMENT_SOURCE_MANIFEST.json",
+      "bytes": 5456,
+      "sha256": "8a083ca9fcddebc79f5dfdb7191cc2d2d97ac489296446268a4348b51323cb85"
+    },
+    {
+      "path": "measurement_reporting.cjs",
+      "bytes": 17755,
+      "sha256": "a52c2d43044c547bec3fca4a16272fdaef966c3dc2844cd0c2005f9d782cad6c"
+    },
+    {
+      "path": "MEASUREMENT_CONCORDANCE.json",
+      "bytes": 21725,
+      "sha256": "1ba25282aa5c3125ee96ad7338f4c3ea4f46c6818247acb51f9e5e661a4bd225"
+    },
+    {
+      "path": "measurement-working-plan.json",
+      "bytes": 20357,
+      "sha256": "b248ecd0b8c0a11c8a58174d6b43f533dd2d0ed1efd3d33445b617b46ba01ced"
+    },
+    {
+      "path": "MEASUREMENT_SOURCE_GUIDE.md",
+      "bytes": 10811,
+      "sha256": "75a310bca0e6ea956c3df52b28fb3e15bfe7dbe69d0695c7b76d5c46b4b4606e"
+    }
+  ]
+}

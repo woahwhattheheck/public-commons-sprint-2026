@@ -1,0 +1,151 @@
+Poverty Dynamics: 2017-2019 (https://www.census.gov/content/dam/Census/library/publications/2022/demo/p70br-179.pdf)
+【turn273view1】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 11; Source: open({"ref_id":"turn272view1","lineno":430}); Total lines: 726
+L383@P5: likely to experience both episodic
+L384@P5: and chronic poverty during this
+L385@P5: period—47.0 percent experienced
+L386@P5: an episodic poverty spell, and 9.5
+L387@P5: percent were in chronic poverty.
+L388@P5: Higher educated groups had
+L389@P5: lower episodic and chronic poverty rates. Those with a bachelor’s
+L390@P5: degree or higher were the least
+L391@P5: likely to experience either episodic or chronic poverty, with 13.4
+L392@P5: percent being in episodic poverty
+L393@P5: and 0.5 percent being in chronic
+L394@P5: poverty over the period.
+L395@P5: Examining episodic and chronic
+L396@P5: poverty by family type, marriedcouple families were the least
+L397@P5: likely to be in episodic or chronic
+L398@P5-6: poverty, with 16.8 percent experiencing episodic poverty and U.S. Census Bureau 7
+L399@P6: 0.8 percent in chronic poverty
+L400@P6: over the period. In contrast, those
+L401@P6: in families with female householders but no spouse present were
+L402@P6: the most likely to experience
+L403@P6: episodic and chronic poverty, with
+L404@P6: 48.1 percent experiencing episodic
+L405@P6: poverty and 9.2 percent in chronic
+L406@P6: poverty over the period. For
+L407@P6: individuals in families with male
+L408@P6: householders but no spouse present, 36.0 percent were in episodic
+L409@P6: poverty, and 1.0 percent were in
+L410@P6: chronic poverty. For unrelated
+L411@P6: individuals, 40.0 percent experienced episodic poverty, with 6.7
+L412@P6: percent in chronic poverty over
+L413@P6: the period.
+L414@P6: Figure 5.
+L415@P6: Episodic and Chronic Poverty Rates: 2017–2019
+L416@P6: 1
+L417@P6:  Age as of December of 2019.
+L418@P6: 2 Data on educational attainment are limited to individuals aged 25 and older for this report.
+L419@P6: Source: U.S. Census Bureau, 2018–2020 Survey of Income and Program Participation.
+L420@P6: All people
+L421@P6: Age1
+L422@P6: Under 18 years
+L423@P6: 18–64 years
+L424@P6: 65 years and over
+L425@P6: Sex
+L426@P6: Male
+L427@P6: Female
+L428@P6: Race and Hispanic Origin
+L429@P6: White, non-Hispanic
+L430@P6: Black
+L431@P6: Asian
+L432@P6: Hispanic
+L433@P6: Educational Attainment2
+L434@P6: No high school diploma
+L435@P6: High school, no college
+L436@P6: Some college, no degree
+L437@P6: Bachelor’s degree or higher
+L438@P6: Family Status
+L439@P6: In married-couple families
+L440@P6: In families with a male householder,
+L441@P6: no spouse present
+L442@P6: In families with a female householder,
+L443@P6: no spouse present
+L444@P6: Unrelated individuals
+L445@P6: 3.3 27.1
+L446@P6: 5.5 35.1
+L447@P6: 2.8 27.6
+L448@P6: 2.5 15.2
+L449@P6: 2.6 25.3
+L450@P6: 3.9 28.7
+L451@P6: 2.1 19.9
+L452@P6: 6.4 42.4
+L453@P6: 1.6 25.2
+L454@P6: 5.7 40.3
+L455@P6: 9.5 47.0
+L456@P6: 3.6 27.8
+L457@P6: 2.3 22.0
+L458@P6: 0.5 13.4
+L459@P6: 0.8 16.8
+L460@P6: 1.0 36.0
+L461@P6: 9.2 48.1
+L462@P6: 6.7 40.0
+L463@P6-7: Episodic Chronic8 U.S. Census Bureau
+L464@P7: CONCLUSION
+L465@P7: Monthly and annual poverty rates
+L466@P7: decreased over the 2017–2019
+L467@P7: period, with monthly poverty
+L468@P7: rates decreasing 3.5 percentage
+L469@P7: points and annual poverty rates
+L470@P7: decreasing 2.3 percentage points
+L471@P7: (with particularly large declines in
+L472@P7: poverty rates for children). Over
+L473@P7: the 2017–2019 period, 27.1 percent
+L474@P7: of individuals were in episodic
+L475@P7: poverty, while 3.3 percent of the
+L476@P7: population was in chronic poverty.
+L477@P7: Children were more likely than
+L478@P7: other age groups to experience
+L479@P7: episodic poverty and nearly twice
+L480@P7: as likely as adults to experience
+L481@P7: chronic poverty.
+L482@P7: Some of the largest differences
+L483@P7: in poverty were among those
+L484@P7: with different levels of education.
+L485@P7: Among adults aged 25 and older,
+L486@P7: those with no high school diploma
+L487@P7: were over three times more likely
+L488@P7: than those with a bachelor’s
+L489@P7: degree to experience episodic
+L490@P7: poverty and 19 times more likely
+L491@P7: to experience chronic poverty.
+L492@P7: ACCURACY OF ESTIMATES
+L493@P7: Statistics from surveys are subject to sampling and nonsampling
+L494@P7: error. All comparisons presented
+L495@P7: in this report have taken sampling error into account and are
+L496@P7: significant at the 90 percent
+L497@P7: confidence level unless otherwise
+L498@P7: noted. This means the 90 percent
+L499@P7: confidence interval for the difference between the estimates being
+L500@P7: compared does not include zero.
+L501@P7: Nonsampling errors in surveys
+L502@P7: may be attributed to a variety of
+L503@P7: sources such as how the survey
+L504@P7: was designed, how respondents
+L505@P7: interpret questions, how able
+L506@P7: and willing respondents are to
+L507@P7: provide correct answers, and
+L508@P7: how accurately the answers are
+L509@P7: coded and classified. To minimize
+L510@P7: these errors, the Census Bureau
+L511@P7: employs quality control procedures throughout the production
+L512@P7: process, including the overall
+L513@P7: design of surveys, wording of
+L514@P7: questions, review of the work of
+L515@P7: interviewers and coders, and the
+L516@P7: statistical review of reports.
+L517@P7: For technical documentation
+L518@P7: and more information about
+L519@P7: SIPP data quality, please visit
+L520@P7: the SIPP website’s Technical
+L521@P7: Documentation page at <www.
+L522@P7: census.gov/programs-surveys/
+L523@P7: sipp/tech-documentation.html>.
+L524@P7: USER COMMENTS
+L525@P7: For additional information, contact the SIPP coordination team
+L526@P7: at <sehsd.sipp.coordination.
+L527@P7: outreach.staff.list@census.gov>.
+L528@P7: For further information on the
+L529@P7: content of this report, contact
+L530@P7: Lewis Warren (from the Social,
+L531@P7: Economic, and Housing Statistics
