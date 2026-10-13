@@ -33,6 +33,277 @@ def _retain(path, value):
     atomic_json(path, value, immutable=True)
 
 
+def _source_input(path):
+    """Bind an existing source package before any native import."""
+    path = Path(path).resolve(strict=True)
+    if not path.is_file():
+        raise ValueError("Select the complete original observation source file")
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_digest(path)}
+
+
+def _original_package(path, course):
+    """Read exact original members without extracting untrusted archive paths."""
+    from zipfile import ZipFile
+    expected = course["observation_original"]
+    suffix = "source/temporal-workspace-observations/"
+    with ZipFile(path) as archive:
+        def member(name, descriptor):
+            matches = [item for item in archive.infolist()
+                       if item.filename == suffix + name
+                       or item.filename.endswith("/" + suffix + name)]
+            if len(matches) != 1:
+                raise ValueError("The original source package needs exactly one " + name)
+            item = matches[0]
+            if (item.is_dir() or item.file_size != descriptor["bytes"]
+                    or item.flag_bits & 1):
+                raise ValueError("The original source member has a different size or is encrypted")
+            body = archive.read(item)
+            if hashlib.sha256(body).hexdigest() != descriptor["sha256"]:
+                raise ValueError("The original source member differs: " + name)
+            return body, item.filename
+        record_bytes, record_member = member("original-workspace-record.json",
+            expected["record_snapshot"])
+        csv_bytes, csv_member = member("original.csv", expected)
+    record = json.loads(record_bytes)
+    if (not isinstance(record, dict) or record.get("id") != course["observation_id"]
+            or record.get("schema") != "upstate.observations/v1"
+            or not isinstance(record.get("metadata"), dict)
+            or not isinstance(record.get("rows"), list)):
+        raise ValueError("The source package does not contain this original observation record")
+    from model.common import digest
+    if digest({key: value for key, value in record.items() if key != "id"}) != record["id"]:
+        raise ValueError("The retained original observation identity does not verify")
+    original = record.get("original", {})
+    if any(original.get(key) != expected[key] for key in ("bytes", "sha256")):
+        raise ValueError("The original record names another source CSV")
+    filename = original.get("filename", "original.csv")
+    if not isinstance(filename, str) or Path(filename).name != filename or filename in ("", ".", ".."):
+        raise ValueError("The original source filename must be one ordinary basename")
+    return {
+        "kind": "original_package", "csv": csv_bytes, "filename": filename,
+        "metadata": copy.deepcopy(record["metadata"]), "rows": record["rows"],
+        "columns": record["columns"],
+        "provenance": {"original_record": record, "original_record_text": record_bytes.decode("utf-8"),
+                       "original_record_member": record_member, "original_csv_member": csv_member},
+    }
+
+
+def _extracted_source(path, course):
+    """Verify an explicit extracted table against the complete retained native source."""
+    packet = json.loads(Path(path).read_text(encoding="utf-8"))
+    if (not isinstance(packet, dict)
+            or packet.get("schema") != "upstate.sampling-extracted-native-observations/v1"
+            or packet.get("original_observation_id") != course["observation_id"]
+            or packet.get("original_project_id") != course["project_id"]):
+        raise ValueError("The extracted table names another original observation source")
+    source_text = packet.get("source_packet_text")
+    if not isinstance(source_text, str):
+        raise ValueError("Retain the complete original source packet with the extracted table")
+    source_bytes = source_text.encode("utf-8")
+    if hashlib.sha256(source_bytes).hexdigest() != course["source_data"]["metadata_sha256"]:
+        raise ValueError("The extracted table's original source packet differs")
+    original = json.loads(source_text)
+    if (original.get("project_id") != course["project_id"]
+            or original.get("native", {}).get("observation_id") != course["observation_id"]):
+        raise ValueError("The original source packet belongs to another observation")
+    records = original["original_analysis"]["records"]
+    if len(records) != course["observation_original"]["row_count"]:
+        raise ValueError("The complete original observation roster is required")
+    rows = []
+    for row in sorted(records, key=lambda value: value["source_csv_row"]):
+        raw = row.get("raw")
+        if (not isinstance(raw, dict) or str(raw.get("id")) != str(row["original_record_id"])
+                or raw.get("line") != row["source_csv_row"]
+                or raw.get("original") != row.get("original_cells")):
+            raise ValueError("The original source packet lost its raw row correspondence")
+        rows.append(copy.deepcopy(raw))
+    csv_info = packet.get("csv", {})
+    if not isinstance(csv_info.get("text"), str):
+        raise ValueError("The extracted source must include the complete CSV text")
+    body = csv_info["text"].encode("utf-8")
+    if len(body) != csv_info.get("bytes") or hashlib.sha256(body).hexdigest() != csv_info.get("sha256"):
+        raise ValueError("The extracted CSV does not match its retained descriptor")
+    metadata = packet.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError("Retain the explicitly selected native import metadata")
+    if metadata.get("columns") != original["source_store"]["original_import_mapping"]:
+        raise ValueError("The extracted source changed its original column mapping")
+    if (metadata.get("source_uri") != records[0]["source_references"][0]["uri"]
+            or not metadata.get("title") or metadata.get("value_basis") == "annual_mass_rate"):
+        raise ValueError("Retain the original source URI and observation quantity")
+    # These are original native support declarations, not new scientific choices.
+    supports = {"observation_kind": "context_kind", "time_support": "time_support",
+                "measurement_support": "measurement_support", "quantity_basis": "quantity_basis"}
+    for key, raw_key in supports.items():
+        values = {json.dumps(row.get(raw_key), sort_keys=True) for row in rows}
+        if len(values) != 1 or metadata.get(key) != rows[0].get(raw_key):
+            raise ValueError("The extracted import changed or pooled original support: " + key)
+    supplied_original = packet.get("provenance", {}).get("original_csv", {})
+    if any(supplied_original.get(key) != course["observation_original"][key]
+           for key in ("bytes", "sha256")):
+        raise ValueError("The extracted table lost its different original CSV identity")
+    filename = csv_info.get("filename")
+    if (not isinstance(filename, str) or Path(filename).name != filename
+            or filename in ("", ".", "..")):
+        raise ValueError("The extracted source filename must be one ordinary basename")
+    return {"kind": "extracted_original_cells", "csv": body, "filename": filename,
+            "metadata": copy.deepcopy(metadata), "rows": rows, "columns": csv_info["columns"],
+            "provenance": {
+                "original_source_packet": {"bytes": len(source_bytes),
+                    "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                    "git_blob": course["source_data"]["metadata_blob"]},
+                "original_native_rows": rows,
+                "extraction": copy.deepcopy(packet.get("provenance", {})),
+                "original_import_mapping": copy.deepcopy(original["source_store"]["original_import_mapping"]),
+            }}
+
+
+def _source_rows(source):
+    """Require a complete cell-by-cell correspondence before native publication."""
+    import csv
+    import io
+    table = csv.DictReader(io.StringIO(source["csv"].decode("utf-8-sig")))
+    if (table.fieldnames != source["columns"]
+            or len(table.fieldnames or []) != len(set(table.fieldnames or []))):
+        raise ValueError("The retained source CSV changed its complete column inventory")
+    rows = list(table)
+    originals = sorted(source["rows"], key=lambda value: value["line"])
+    if (len(rows) != len(originals)
+            or len({str(row["id"]) for row in originals}) != len(originals)
+            or len({row["line"] for row in originals}) != len(originals)):
+        raise ValueError("The source must preserve every unique original row")
+    for cells, row in zip(rows, originals):
+        if None in cells or cells != row["original"]:
+            raise ValueError("The source CSV changed an original cell or row order")
+    return originals
+
+
+def _row_correspondence(originals, imported):
+    """Bind actual returned row identities without copying donor IDs into a new record."""
+    if len(originals) != len(imported):
+        raise ValueError("The native import omitted an original row")
+    result = []
+    actuals = sorted(imported, key=lambda value: value["line"])
+    if len({str(row["id"]) for row in actuals}) != len(actuals):
+        raise ValueError("The native import returned repeated row identities")
+    fields = ("station_id", "catchment_id", "parameter", "original_parameter",
+              "value_text", "unit", "qualifier", "period_start", "period_end",
+              "method", "species", "context_kind", "measurement_support", "quantity_basis", "time_support")
+    for old, new in zip(originals, actuals):
+        if old["original"] != new["original"]:
+            raise ValueError("Native import changed original observation cells")
+        for key in fields:
+            if (key in old) != (key in new) or old.get(key) != new.get(key):
+                raise ValueError("Native import changed original observation support: " + key)
+        result.append({"original_record_id": str(old["id"]), "source_csv_row": old["line"],
+                       "imported_record_id": str(new["id"]), "imported_csv_row": new["line"]})
+    return result
+
+
+def _recover_source(workspace, course, input_path, output):
+    """Use normal native intake for a genuine retained source; preserve all authored choices."""
+    from model.common import atomic_bytes
+    from zipfile import is_zipfile
+    if workspace.project["id"] != course["project_id"]:
+        raise ValueError("The original observation source belongs to another project")
+    descriptor = _source_input(input_path)
+    source = (_original_package(input_path, course) if is_zipfile(input_path)
+              else _extracted_source(input_path, course))
+    originals = _source_rows(source)
+    if _source_input(input_path) != descriptor:
+        raise ValueError("The original source input changed during intake")
+    if len(originals) != course["observation_original"]["row_count"]:
+        raise ValueError("The original source package does not contain all authored rows")
+    provenance = {"schema": "upstate.original-observation-source-recovery/v1",
+        "kind": source["kind"], "original_project_id": course["project_id"],
+        "original_observation_id": course["observation_id"],
+        "original_csv": copy.deepcopy(course["observation_original"]),
+        "received_input": {key: descriptor[key] for key in ("bytes", "sha256")},
+        **source["provenance"]}
+    # Preserve an already complete donor observation exactly. A missing object can
+    # instead be recovered through the ordinary import below.
+    existing = workspace.root / "observations" / (course["observation_id"] + ".json")
+    imported = None
+    receipt_path = output / "original-source-import.json"
+    if receipt_path.exists():
+        saved = read_json(receipt_path)
+        if (saved.get("input") != descriptor
+                or saved.get("original_project_id") != course["project_id"]
+                or saved.get("original_observation_id") != course["observation_id"]
+                or saved.get("original_course_sha256") != hashlib.sha256(_canonical(course)).hexdigest()):
+            raise ValueError("The saved source import belongs to another input or authored course")
+        imported = workspace._get("observations", saved["observation_id"])
+        if hashlib.sha256(_canonical(imported)).hexdigest() != saved["imported_record_sha256"]:
+            raise ValueError("The actual saved source import changed")
+        verify_file(workspace.root, {**imported["original"], "path": imported["original"]["object"]})
+    else:
+        # Freeze reuse versus normal import before the latter can restore a donor
+        # CAS object. A lost acknowledgement must not change this native choice.
+        intent_path = output / "original-source-import-intent.json"
+        binding = {"schema": "upstate.sampling-original-source-import-intent/v1",
+            "input": descriptor, "original_project_id": course["project_id"],
+            "original_observation_id": course["observation_id"],
+            "original_course_sha256": hashlib.sha256(_canonical(course)).hexdigest()}
+        if intent_path.exists():
+            intent = read_json(intent_path)
+            if (not isinstance(intent, dict)
+                    or any(intent.get(key) != value for key, value in binding.items())
+                    or intent.get("mode") not in ("reuse_original", "native_import")):
+                raise ValueError("The saved source import intent belongs to another input or course")
+        else:
+            mode = "native_import"
+            if existing.is_file():
+                candidate = workspace._get("observations", course["observation_id"])
+                original = candidate.get("original", {})
+                if (workspace.root / original.get("object", "")).is_file():
+                    imported = _original(workspace, course)
+                    mode = "reuse_original"
+            intent = {**binding, "mode": mode}
+            _retain(intent_path, intent)
+        if intent["mode"] == "reuse_original":
+            imported = _original(workspace, course)
+    if imported is None:
+        metadata = copy.deepcopy(source["metadata"])
+        if "original_observation_recovery" in metadata:
+            raise ValueError("The original metadata already defines a source-recovery field")
+        metadata["original_observation_recovery"] = provenance
+        # The source hash describes the actual imported file. Its different
+        # upstream CSV, if extracted, remains explicitly retained in provenance.
+        metadata["sha256"] = hashlib.sha256(source["csv"]).hexdigest()
+        source_dir = output / "received-original-source"
+        source_dir.mkdir(parents=True, exist_ok=True)
+        retained = source_dir / source["filename"]
+        atomic_bytes(retained, source["csv"], immutable=True)
+        imported = workspace.import_observations(retained, metadata)
+    mapping = _row_correspondence(originals, imported["rows"])
+    actual = copy.deepcopy(course)
+    actual["observation_id"] = imported["id"]
+    snapshot = _canonical(imported)
+    actual["observation_original"] = {
+        "bytes": imported["original"]["bytes"], "sha256": imported["original"]["sha256"],
+        "row_count": len(imported["rows"]),
+        "record_snapshot": {"bytes": len(snapshot), "sha256": hashlib.sha256(snapshot).hexdigest(),
+                            "encoding": "JSON sorted keys, compact separators, UTF-8"}}
+    lookup = {row["original_record_id"]: row["imported_record_id"] for row in mapping}
+    for target in actual["sampling"]["targets"]:
+        target["original_row_ids"] = [lookup[key] for key in target["original_row_ids"]]
+    recovery = {"schema": "upstate.sampling-original-source-import/v1",
+        "input": descriptor, "kind": source["kind"],
+        "original_project_id": course["project_id"],
+        "original_observation_id": course["observation_id"],
+        "observation_id": imported["id"], "original_csv": course["observation_original"],
+        "imported_csv": imported["original"], "row_correspondence": mapping,
+        "original_course_sha256": hashlib.sha256(_canonical(course)).hexdigest(),
+        "imported_record_sha256": hashlib.sha256(snapshot).hexdigest(),
+        "reused_original_observation": imported["id"] == course["observation_id"]}
+    if imported["id"] != course["observation_id"]:
+        actual["source_recovery"] = copy.deepcopy(recovery)
+    _retain(output / "original-source-import.json", recovery)
+    _retain(output / "source-bound-course.json", actual)
+    _original(workspace, actual)
+    return actual, imported, recovery
+
+
 def _original(workspace, course):
     if workspace.project["id"] != course["project_id"]:
         raise ValueError("The authored observation course names another original project")
@@ -237,6 +508,8 @@ def verify_received(workspace, expected):
         observation_id=source["id"], network_id=network["id"], context_id=context["id"],
         original_rows=len(source["rows"]), full_original_observation_equal=True,
         resolved_cohorts_equal=True, flow_availability="not_received")
+    if "source_recovery" in course:
+        base["source_recovery"] = copy.deepcopy(course["source_recovery"])
     return base
 
 
@@ -270,7 +543,12 @@ def receive(workspace, original_result, args):
         if (course.get("schema") != "upstate.sampling-native-observation-course/v1"
                 or course["original_operation_id"] != args.operation_id):
             raise ValueError("The authored continuation must retain this original Sampling operation")
-        source = _original(workspace, course)
+        input_path = getattr(args, "native_observation_input", None)
+        if input_path:
+            _retain(output / "original-source-input.json", _source_input(input_path))
+            course, source, source_import = _recover_source(workspace, course, input_path, output)
+        else:
+            source = _original(workspace, course)
         network = _network(workspace, course, output)
         native_selection = {"observation_id": source["id"], "network_id": network["id"],
             "plan_id": None, "campaign_id": None, "title": course["context"]["title"],
@@ -385,5 +663,7 @@ def receive(workspace, original_result, args):
             "contained_reopen": str(cold_path), "flow_availability": "not_received",
             "original_course_preserved": original_result, "rendered_inspection": False,
             "browser_course": "Operate the exact populated Observations and Sampling interfaces at desktop and390px. Open and LOOK at every outgoing report, CSV/JSON, original source, calendar and extracted Study; reopen the contained editable application. No source/DOM result substitutes for rendered inspection. Preserve TJLabs attribution."}
+        if "source_recovery" in course:
+            result["source_recovery"] = copy.deepcopy(course["source_recovery"])
         _retain(output / "sampling-native-observation-result.json", result)
         return result
