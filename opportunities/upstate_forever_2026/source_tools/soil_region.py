@@ -190,21 +190,104 @@ def _clear_tile(db, name):
     db.execute("DELETE FROM soil WHERE tile=?", (name,))
 
 
-def _store_rows(db, tile, rows):
-    """Consume one already validated original page without decoding it again."""
+def _geometry_source(client, request_name):
+    """Describe an already validated original page; never recapture its body."""
+    directory = client.root / "original" / request_name
+    paths = sorted(directory.glob("[0-9][0-9][0-9][0-9].capture.json"))
+    if not paths:
+        raise ValueError("Original geometry correction lacks its retained response")
+    receipt_path = paths[-1]
+    record = read_json(receipt_path)
+    request = read_json(directory / "request.json")
+    if (record.get("state") != "complete" or record.get("status") != 200
+            or record.get("request_sha256") != request.get("request_sha256")):
+        raise ValueError("Complete the original geometry page before deriving its correction")
+    body = relative_file(directory, record["stored_file"])
+    return {"request": request_name, "request_sha256": record["request_sha256"],
+            "response_sha256": record["sha256"], "response_bytes": record["bytes"],
+            "stored_body": {"path": body.relative_to(client.root).as_posix(),
+                            "bytes": record["stored_bytes"],
+                            "sha256": record["stored_sha256"]}}
+
+
+def _polygon_geometry(body):
+    """Keep valid source WKB unchanged; repair invalid linework explicitly."""
     import shapely
-    count = 0
+    geometry = shapely.from_wkb(body)
+    if geometry.is_empty or geometry.is_valid:
+        return geometry, body, None
+    original = geometry
+    reason = str(shapely.is_valid_reason(original))
+    # Default linework make_valid preserves the original edges and vertices.
+    # Unlike buffer(0), it does not choose one side of a crossing ring.
+    repaired = shapely.make_valid(original)
+    parts = _polygons(repaired)
+    if not parts:
+        raise ValueError("Original soil geometry has no polygonal area after linework repair: "
+                         + reason)
+    # Retain polygonal area only for the soil raster. Any collapsed line/point
+    # remains fully reproducible from the original WKB and is recorded below.
+    geometry = parts[0] if len(parts) == 1 else shapely.union_all(parts)
+    if (geometry.is_empty or not geometry.is_valid
+            or geometry.geom_type not in ("Polygon", "MultiPolygon")
+            or not all(math.isfinite(value) for value in geometry.bounds)):
+        raise ValueError("Original soil linework did not yield valid finite polygonal area: "
+                         + reason)
+    indexed = bytes(shapely.to_wkb(geometry, byte_order=1))
+    nonpolygon = {}
+    def retain_lower_dimensions(item):
+        if item.geom_type in ("MultiPolygon", "GeometryCollection"):
+            for part in item.geoms:
+                retain_lower_dimensions(part)
+        elif item.geom_type != "Polygon" and not item.is_empty:
+            nonpolygon[item.geom_type] = nonpolygon.get(item.geom_type, 0) + 1
+    retain_lower_dimensions(repaired)
+    correction = {
+        "schema": "upstate.soil-geometry-correction/v1",
+        "method": "shapely.make_valid:linework; polygonal union",
+        "method_reference": "https://shapely.readthedocs.io/en/stable/reference/shapely.make_valid.html",
+        "shapely_version": str(shapely.__version__),
+        "geos_version": str(shapely.geos_version_string),
+        "source_crs": "EPSG:4326",
+        "original_validity_reason": reason,
+        "original_geometry_type": original.geom_type,
+        "original_wkb_sha256": hashlib.sha256(body).hexdigest(),
+        "original_wkb_bytes": len(body),
+        "make_valid_geometry_type": repaired.geom_type,
+        "lower_dimensional_components": nonpolygon,
+        "indexed_geometry_type": geometry.geom_type,
+        "indexed_polygon_parts": len(_polygons(geometry)),
+        "indexed_wkb_sha256": hashlib.sha256(indexed).hexdigest(),
+        "indexed_wkb_bytes": len(indexed),
+        "indexed_bounds": list(geometry.bounds),
+    }
+    return geometry, indexed, correction
+
+
+def _store_rows(db, tile, rows, *, client=None, request_name=None):
+    """Consume an original page into one consistent geometry/index transaction."""
+    count, source = 0, None
     for row in rows:
-        body = bytes.fromhex(row["GeometryWkb"])
-        geometry = shapely.from_wkb(body)
-        if geometry.is_empty:
-            continue
-        if not geometry.is_valid:
-            raise ValueError("Original soil polygon requires a source correction: "
-                             + str(row[POLYGON_ID]))
-        if not _polygons(geometry):
+        original_body = bytes.fromhex(row["GeometryWkb"])
+        try:
+            geometry, body, correction = _polygon_geometry(original_body)
+        except Exception as error:
+            raise ValueError("Original soil polygon " + str(row[POLYGON_ID])
+                             + ": " + str(error)) from error
+        if geometry.is_empty or not _polygons(geometry):
             continue
         properties = {k: v for k, v in row.items() if k != "GeometryWkb"}
+        if correction is not None:
+            if client is None or request_name is None:
+                raise ValueError("Bind the original page before retaining a geometry correction")
+            if "upstate_geometry_correction" in properties:
+                raise ValueError("Original soil attributes occupy the derived correction field")
+            if source is None:
+                source = _geometry_source(client, request_name)
+            properties["upstate_geometry_correction"] = {
+                **correction, "source": source, "source_tile": tile["name"],
+                "native_aoiid": tile["aoiid"], "native_polygon_id": str(row[POLYGON_ID]),
+                "mapunit_key": _int(row["MapUnitKey"])}
         cursor = db.execute(
             "INSERT INTO soil(tile,aoiid,native_id,mukey,properties,wkb) VALUES(?,?,?,?,?,?)",
             (tile["name"], tile["aoiid"], str(row[POLYGON_ID]), _int(row["MapUnitKey"]),
@@ -225,7 +308,7 @@ def _materialize_tile(client, db, tile):
             rows = client.query(page["request"], page["sql"], maximum_bytes=64 * 1024 * 1024)
             if [_int(r[POLYGON_ID]) for r in rows] != page["ids"]:
                 raise ValueError("Original geometry page IDs changed")
-            count += _store_rows(db, tile, rows)
+            count += _store_rows(db, tile, rows, client=client, request_name=page["request"])
             del rows
     return count
 
@@ -311,11 +394,13 @@ def _capture_tile(client, db, expected, *, page_size, plan_sha256):
     tile = {**expected, "aoiid": _int(created["id"])}
     with db:
         _clear_tile(db, tile["name"])
-        count = 0
+        count, page_offset = 0, 0
 
         def consume(rows):
-            nonlocal count
-            count += _store_rows(db, tile, rows)
+            nonlocal count, page_offset
+            request_name = tile["name"] + f"/polygons-{page_offset:07d}"
+            count += _store_rows(db, tile, rows, client=client, request_name=request_name)
+            page_offset += len(rows)
 
         ids, pages = _geometry_pages(client, tile, page_size=page_size, on_page=consume)
         tile.update(polygons=len(ids), pages=pages, indexed_polygons=count)
@@ -547,6 +632,7 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
                        "native_units": "customary RUSLE K",
                        "derived_units": K_UNITS,
                        "capture_crs": crs.to_string(),
+                       "geometry_processing": "Valid original WKB is unchanged. Invalid source linework is repaired with original response/WKB identities, method, versions and resulting polygonal geometry retained in each feature's upstate_geometry_correction.",
                        "feature_semantics": "Source AOIs overlap; fragments retain native AOI and mapunit IDs. Use geometric coverage and cell rasterization, not summed fragment areas."}
             atomic_json(root / "coverage.json", summary, immutable=True)
             atomic_json(root / "progress.json", {
