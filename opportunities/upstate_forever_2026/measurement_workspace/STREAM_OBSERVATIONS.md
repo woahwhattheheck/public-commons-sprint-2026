@@ -189,3 +189,52 @@ version. Saved source-cohort records retain original qualifiers and comments.
 Queued source imports and exports retain their original task and operation
 identities when the desk is left. Late task responses cannot open a task,
 show an error or update controls in a remounted or different Workspace.
+
+## Paired sampling sensitivity in the retained study
+
+The same stream import includes the original
+`eighteenmile_paired_sensitivity.sources.json` when installed. Open
+**Eighteenmile paired sampling sensitivity** in the original-studies section.
+The report preserves 116 analyte comparisons, 58 station-pair/date combinations
+on 36 dates, six station-pair/analyte cohorts and all 148 retained selections.
+Its original paired subset covers 2023–2025 within the complete 2020–2025
+parent study.
+
+Use the report's station/analyte and scenario controls to inspect the complete
+cohort, individual years, omitted years, omitted sampling dates and the
+documented lower-reference-flow selection. The two empty selections retain
+their explicit state. Original censored interval endpoints, endpoint openness,
+exact scaled sums, included/excluded source-row IDs and sampling clocks travel
+with each selection. The original difference is station B minus station A
+in mg/L; the retained station order and original network classifications supply
+separate spatial context. Reference-gauge flow remains its declared regional
+context.
+
+The registry keeps this report, its JSON/CSV and complete parent study under
+the existing `application-context/stream-nutrients/` root. Its declared
+parent `eighteenmile_stream_nutrient_analysis.sources.json` is admitted as an
+exact application-root path. Both original manifest bodies and all shared
+source bodies remain unchanged; any conflicting declaration fails the
+existing source-byte check.
+
+The original report's five local links resolve inside that retained tree:
+parent nutrient report, complete sensitivity JSON, scenario CSV, original
+paired-source CSV and author method guide. Existing native report preview,
+selected-report ZIP, complete-study ZIP and portable Workspace reopen use
+the same source collection and original entry ID
+`eighteenmile-paired-sensitivity`. Re-import the current stream builtin to
+create or reuse the complete source-bound edition; older immutable versions
+retain their original source scope.
+
+After extracting the selected-report ZIP, the original full rebuild runs from
+`original-sources/application-context/stream-nutrients/`:
+
+```sh
+node observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_paired_sensitivity.mjs --output NEW_APPLICATION_DIRECTORY
+```
+
+The original builder verifies the paired CSV, rebuilds the complete parent
+study and carries all source/method/report members into the new directory.
+The source author's
+[PAIRED_SENSITIVITY.md](../observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md)
+documents the exact interval arithmetic, source pin and retained selections.

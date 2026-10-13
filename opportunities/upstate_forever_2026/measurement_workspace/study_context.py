@@ -34,6 +34,15 @@ FAMILIES = {
         ),
         "paths": ("observations/observed_hydrology_20261013/derived/daily_flow.csv",),
     },
+    "eighteenmile_paired_sensitivity.sources.json": {
+        "studies": (STREAM_STUDY,),
+        "retained_root": STREAM_ROOT,
+        "prefixes": (
+            "observations/eighteenmile_stream_nutrients_2020_2025/analysis/",
+            "source/eighteenmile-stream-nutrients-20261013/original/",
+        ),
+        "paths": ("eighteenmile_stream_nutrient_analysis.sources.json",),
+    },
     "eighteenmile_physical_context.sources.json": {
         "studies": (LAKE_STUDY, STREAM_STUDY),
         "retained_root": PHYSICAL_ROOT,
