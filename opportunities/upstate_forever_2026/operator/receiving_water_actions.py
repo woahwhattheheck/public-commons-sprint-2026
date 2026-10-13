@@ -63,6 +63,19 @@ class ReceivingWaterActions:
         value = value or {}
         if operation == "catalog":
             overview = ws.overview()
+            try:
+                from source_tools.receiving_water_catalog import PROFILES, FIELD_ALIASES, CLASS_CODES
+            except ModuleNotFoundError as error:
+                if error.name not in ("source_tools", "source_tools.receiving_water_catalog"):
+                    raise
+                compiler_profiles = []
+            else:
+                compiler_profiles = [
+                    {"id": key, **row,
+                     "required_fields": ["classification"] if row["kind"] == "classified_water" else [],
+                     "field_aliases": FIELD_ALIASES, "class_codes": list(CLASS_CODES)}
+                    for key, row in PROFILES.items()
+                ]
             return {
                 "workspace_key": workspace, "project": ws.project, **self.snapshot(workspace),
                 "sources": [
@@ -86,6 +99,7 @@ class ReceivingWaterActions:
                 "families": list(receiving_waters.FAMILIES),
                 "relationships": ["upstream_huc", "source_area", "geometric_context"],
                 "quantity_scopes": ["reporting", "model_domain"],
+                "compiler_profiles": compiler_profiles,
             }
         if operation == "designation-catalog":
             key = identifier(value.get("catalog_id"))
@@ -93,7 +107,14 @@ class ReceivingWaterActions:
             result = read_json(directory / "operator-catalog.json")
             if result.get("id") != key:
                 raise ValueError("The retained receiving-water catalog identity changed")
-            result["catalog"] = read_json(directory / "receiving-water-catalog.json")
+            catalog = read_json(directory / "receiving-water-catalog.json")
+            result["catalog"] = {
+                **catalog,
+                "records": [
+                    {name: field for name, field in row.items() if name != "geometry"}
+                    for row in catalog["records"]
+                ],
+            }
             filename = "operator-catalog.json"
         elif operation == "plan":
             key = identifier(value.get("plan_id"))
