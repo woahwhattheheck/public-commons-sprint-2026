@@ -1,5 +1,6 @@
 import {createPublishedReviewReports} from "./published_review_reports.mjs";
 import {createPublishedMicrobialSelection} from "./published_microbial_selection.mjs";
+import {createPublishedOriginalReports} from "./published_original_reports.mjs";
 
 const PARAMETERS = {
   total_phosphorus: "Total phosphorus", total_nitrogen: "Total nitrogen",
@@ -66,6 +67,16 @@ export function createPublishedStudiesDesk(host) {
     queue: (action, payload) => queue(action, payload),
     changed: () => edited(),
   });
+
+  const originalReports = createPublishedOriginalReports(host, {
+    context: () => ({workspace, study_id:complete?.record?.study_id, version_id:complete?.record?.version_id, view:viewGeneration}),
+    exportComplete: value => queue("published-study.export", value),
+  });
+  function originalReportLink(item, title) {
+    return item?.path && item.preview_url
+      ? '<button type="button" class="ps-link-button" data-ps-original-report="' + esc(item.path) + '">' + esc(title) + '</button>'
+      : link(item?.download?.url, title);
+  }
 
   let geographicInput = null, geographicPreview = null, geographicChoice = "";
   let geographicLoading = false, geographicRequest = 0, geographicPrevious = null;
@@ -386,6 +397,7 @@ export function createPublishedStudiesDesk(host) {
       '<p class="ps-help">Import restores the saved review and its exact original study edition from a previously exported review ZIP.</p>' +
       '<button type="submit">Import review</button></form></details></section>' +
       '<div data-ps-summary></div>' +
+      '<section class="ps-original-report" data-ps-original-report-view hidden aria-label="Original study report"></section>' +
       '<form class="ps-filters" data-ps-filters hidden><fieldset><legend>Stations</legend><div data-ps-sites></div></fieldset>' +
       '<div class="ps-filter-grid"><label>Parameter<select name="parameter" multiple size="4" aria-describedby="ps-filter-help">' +
       Object.entries(PARAMETERS).map(([key, value]) => '<option value="' + key + '">' + esc(value) + "</option>").join("") +
@@ -427,6 +439,7 @@ export function createPublishedStudiesDesk(host) {
   }
 
   function renderSummary() {
+    originalReports.sync();
     const target = find("[data-ps-summary]");
     if (!complete) {
       target.innerHTML = '<div class="ps-empty"><h2>Study context follows its sources</h2><p>Import the installed Eighteenmile study or select a retained study source to inspect the original tables.</p></div>';
@@ -485,7 +498,7 @@ export function createPublishedStudiesDesk(host) {
     const reports = arr(value?.retained_reports);
     if (!reports.length) return "";
     return '<section class="ps-methods"><h3>Original studies and scientific analyses</h3><p>Open each retained report to inspect its stated observation cohort, sampling dates, figures and source files. Full-study analyses keep their original scope when the tables below are filtered.</p><ul class="ps-source-list">' +
-      reports.map(report => "<li>" + link(report.url, report.title ? "Open " + report.title : "Open " + report.path.split("/").pop()) +
+      reports.map(report => "<li>" + originalReportLink({...report, preview_url:report.url}, report.title ? "Open " + report.title : "Open " + report.path.split("/").pop()) +
         " · " + link(report.download?.url + "?download=1", "Download original HTML") +
         '<span class="ps-help">' + Number(report.bytes).toLocaleString() + " bytes</span></li>").join("") +
       "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
@@ -563,12 +576,12 @@ export function createPublishedStudiesDesk(host) {
         ]);
       }
       const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
-      if (illustrated) output += '<p>' + link(illustrated.preview_url || illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
+      if (illustrated) output += '<p>' + originalReportLink(illustrated, "Original activity figures and complete chlorophyll cohort report") + '</p>';
       const paired = arr(complete?.source_artifacts).find(item => item.path === "paired_analysis/paired-observations-report.html");
-      if (paired) output += '<p>' + link(paired.preview_url || paired.download?.url, "Original matched-activity and paired-station analysis") +
+      if (paired) output += '<p>' + originalReportLink(paired, "Original matched-activity and paired-station analysis") +
         ' · The report export includes its linked tables and complete original source files.</p>';
       const microcystinReport = arr(complete?.source_artifacts).find(item => item.path === "microcystin_reconciliation/report-reconciliation.html");
-      if (microcystinReport) output += '<p>' + link(microcystinReport.preview_url || microcystinReport.download?.url, "Table 8 candidate cohort and original microcystin reconciliation") +
+      if (microcystinReport) output += '<p>' + originalReportLink(microcystinReport, "Table 8 candidate cohort and original microcystin reconciliation") +
         ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["method_specification_name","Method specification"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
@@ -696,7 +709,7 @@ export function createPublishedStudiesDesk(host) {
     } else {
       output = '<section class="ps-methods"><h2>Original report and retained files</h2><p>' +
         link(complete.study.original_url,"Publisher report") + '</p><ul class="ps-source-list">' +
-        arr(context.source_artifacts).map(item => "<li>" + link(item.preview_url || item.download?.url,item.path) +
+        arr(context.source_artifacts).map(item => "<li>" + originalReportLink(item,item.path) +
           (item.preview_url ? " · " + link(item.download?.url + "?download=1", "Original HTML") : "") + '<span class="ps-help">' +
           Number(item.bytes).toLocaleString() + " bytes</span></li>").join("") + "</ul></section>";
       const composed = arr(complete?.record?.origin?.installed_context);
@@ -864,6 +877,10 @@ export function createPublishedStudiesDesk(host) {
   }
   function click(event) {
     const button = event.target.closest("button"); if (!button || !node.contains(button)) return;
+    if (button.dataset.psOriginalReport) {
+      originalReports.open(button.dataset.psOriginalReport).catch(error => { if(node && host.getWorkspace()===workspace) showError(error); });
+      return;
+    }
     if (button.dataset.psBuiltin) queue("published-study.import",{builtin_id:button.dataset.psBuiltin});
     if (button.dataset.psTab) { tab = button.dataset.psTab; edited(); loadSelection(); }
     if (button.dataset.psRow) detail(button.dataset.psRow);
@@ -944,6 +961,7 @@ export function createPublishedStudiesDesk(host) {
     geographicChoice = draft?.geographicChoice || ""; geographicPrevious = copy(draft?.geographicPrevious || null); geographicLoading = false;
     ++editGeneration;
     frame(); renderGeographic();
+    originalReports.mount(find("[data-ps-original-report-view]"));
     microbialSelection.mount(find("[data-ps-microbial-selection]"));
     node.addEventListener("click",click,{signal:events.signal});
     node.addEventListener("submit",submit,{signal:events.signal});
@@ -965,7 +983,7 @@ export function createPublishedStudiesDesk(host) {
     renderReview(); update(state); refreshCatalog();
   }
   function detach() {
-    remember(); reviewReports.detach(); microbialSelection.detach();
+    remember(); reviewReports.detach(); microbialSelection.detach(); originalReports.detach();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
     ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null; directReviewOpening = null;
     if (node) node.classList.remove("published-studies-desk");
