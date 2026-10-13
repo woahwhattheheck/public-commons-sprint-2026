@@ -2,7 +2,7 @@
 import {createMerchantWorkspaceRuntime} from '../../fhir_eltss/connected/runtime.mjs';
 import {gravityReferralNativeRoute,gravityReferralUploadRoute} from '../../fhir_referral/connected/runtime.mjs';
 import {HumanServicesDirectoryConnection} from './connection.mjs';
-import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,directoryCorrectionsContract,directoryCorrectionWorksheetsContract,
+import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,directoryCorrectionsContract,directoryCorrectionWorksheetsContract,directoryWorksheetReconciliationContract,
   validateHumanServicesDirectoryArguments,nativeInputActions,directoryForeignKeyQueries} from './catalog.mjs';
 import {EXPORT_SCHEMA,RESULT_SCHEMA,MANIFEST_NAME,parseHumanServicesDirectoryExport,checked,SHA} from './contracts.mjs';
 export {humanServicesDirectoryMerchantTools} from './catalog.mjs';
@@ -18,6 +18,13 @@ function filename(member,fallback){
     value:fallback;
 }
 export function humanServicesDirectoryNativeRoute(action,args){
+  if(action==='directory_correction_worksheet_reconciliation_catalogue')return {method:'GET',target:path('correction-worksheet-reconciliations','catalogue')};
+  if(action==='directory_correction_worksheet_reconciliation_rows')return {method:'GET',
+    target:query(path(args.collection,args.recordId,'rows'),{offset:args.offset,limit:args.limit,rowKey:args.rowKey,state:args.state})};
+  if(action==='directory_correction_worksheet_reconciliation_file')return {method:'GET',
+    target:path(args.collection,args.recordId,'files',args.fileKind),kind:'directory-export-file',
+    filename:'Directory_Three_Way_Review_'+args.recordId+'_'+args.fileKind+(args.fileKind==='input'?'.json':'.jsonl')};
+
   if(action==='directory_correction_worksheet_rows')return {method:'GET',
     target:query(path(args.collection,args.recordId,'rows'),{offset:args.offset,limit:args.limit,rowKey:args.rowKey,state:args.state})};
   if(action==='directory_correction_worksheet_document')return {method:'GET',
@@ -153,6 +160,8 @@ export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
     operatingReturns:directoryOperatingReturnsContract,
     corrections:directoryCorrectionsContract,
     correctionWorksheets:directoryCorrectionWorksheetsContract,
+    worksheetReconciliation:directoryWorksheetReconciliationContract,
+    worksheetReconciliationSemantics:"Every original worksheet row retains an explicit current-row binding. Typed base/proposal/current comparisons and all explicit decisions remain immutable. Reviewed plans use the selected current edition; preview and acceptance remain separate.",
     worksheetSemantics:'Original selected rows stay immutable. A complete returned file is retained before typed field comparison. Every change needs one explicit review decision; a prepared correction plan does not preview or accept itself. Omitted rows make no proposal. Full original files remain available above the page budget.',
     correctionSemantics:'Exact original HSDS row/resource/member hashes bind ordered JSON-pointer or physical CSV edits. Original bytes remain retained. Preview produces complete derived sources, an immutable candidate edition and full comparison; acceptance records that exact candidate without replacing a mutable head or writing to a provider.',
     foreignKeySemantics:'Only declarations in the selected immutable HSDS tabular edition are evaluated. Complete outcomes, candidates, matches and coverage remain retained. Existence can pass while resolution is ambiguous; original null markers, physical absence and values stay distinct. Earlier seven-file assessments remain exact and do not gain inferred relationships.',

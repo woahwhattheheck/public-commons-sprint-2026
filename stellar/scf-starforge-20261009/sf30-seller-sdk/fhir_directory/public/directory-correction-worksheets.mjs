@@ -28,7 +28,7 @@ function validateWorking(v,workspaceId){
  need(new TextEncoder().encode(JSON.stringify(v)).length<=33554432,'Working worksheet exceeds32MiB.');
  return v;
 }
-export function mountDirectoryCorrectionWorksheets({root,api,download,readCompleteFile,getState,notify=()=>{},openCorrection=()=>{}}){
+export function mountDirectoryCorrectionWorksheets({root,api,download,readCompleteFile,getState,notify=()=>{},openCorrection=()=>{},openReconciliation=()=>{}}){
  need(root&&api&&download&&readCompleteFile&&getState,'Use the original Directory operator and complete-file transport.');
  const S={workspaceId:null,busy:false,disposed:false,dirty:false,error:'',message:'',storageError:'',
   editionId:'',edition:null,label:'',actor:'',note:'',predecessorId:null,rows:[],query:'',table:'',
@@ -226,7 +226,7 @@ export function mountDirectoryCorrectionWorksheets({root,api,download,readComple
    button('Receive a returned file',()=>{S.worksheetId=r.id;S.view='intake';},'dws-open-intake'));
   if(k==='correctionWorksheetImports')box.append(el('p',{},'Reselect the original file and continue this saved intake.'),
    button('Use this saved intake',()=>{const wanted={action:'receive',body:{importId:r.id,bytes:r.expectedBytes,sha256:r.expectedSha256}};need(!S.pending||JSON.stringify(S.pending)===JSON.stringify(wanted),'Reconcile the exact original pending request before selecting another saved intake.');need(SHA.test(r.expectedSha256||'')&&Number.isSafeInteger(r.expectedBytes),'Choose a byte-bound intake, or select the complete file and save exact intake metadata.');S.pending=wanted;S.worksheetId=r.worksheetId;S.view='intake';persist();},'dws-use-import'));
-  if(k==='correctionWorksheetReturns')box.append(metadata({ReturnedBy:r.returnedBy,ReturnedAt:r.returnedAt,CustomerNote:r.note}),
+  if(k==='correctionWorksheetReturns')box.append(button('Review against current edition',()=>openReconciliation(r.id),'dws-three-way-review'),metadata({ReturnedBy:r.returnedBy,ReturnedAt:r.returnedAt,CustomerNote:r.note}),
    field('Review label',S.reviewLabel,v=>S.reviewLabel=v,{test:'dws-review-label'}),
    field('Review actor',S.actor,v=>S.actor=v,{test:'dws-review-actor'}),
    field('Review note',S.reviewNote,v=>S.reviewNote=v,{test:'dws-review-note',multiline:true}),

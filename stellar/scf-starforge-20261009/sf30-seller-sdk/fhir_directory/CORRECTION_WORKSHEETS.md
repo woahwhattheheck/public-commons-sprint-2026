@@ -86,3 +86,7 @@ The native receiver verifies worksheet selections, exact returned bytes, all der
 [CORRECTION_WORKSHEETS_OPERATING.md](CORRECTION_WORKSHEETS_OPERATING.md) operates two original native worksheet rounds, an explicit all-kept alternative, exact request replay and complete cold receiving.
 
 [CORRECTION_WORKSHEET_CLIENTS.md](CORRECTION_WORKSHEET_CLIENTS.md) operates the actual offline customer editor and private operator, full SDK/MCP originals, Merchant reopen and a fresh customer workspace. A published programme is source evidence. Actual completion is represented by its completed result, original journal and exact saved packet.
+
+## A returned worksheet from an older edition
+
+Open its saved return and choose **Review against current edition**. [Three-way review](WORKSHEET_RECONCILIATION.md) retains the complete original proposal, explicitly matches original/current rows, and presents base, customer and current values together. Every change requires a decision. Reviewing prepares a plan on the selected current edition; it does not preview or accept a source correction.
