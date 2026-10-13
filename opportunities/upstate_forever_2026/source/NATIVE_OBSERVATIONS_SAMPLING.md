@@ -199,3 +199,40 @@ python -m model.monitoring_recommendations --workspace ACTUAL_WORKSPACE design -
 Resume the same operation/request after interruption. Inspect the returned native design and its original plan; use the existing proposal export for its exact calendar CSV/HTML and the existing Study/full-Workspace route for cold reopening. If the original UI is being exercised, use its saved-design editor and queue instead of issuing a second CLI operation. Do not run both independently.
 
 The selected historical window remains January 20, 2021 through April 1, 2026. Its December target-date shortfalls are 2, 1, 2 and 1. Two distinct future December visits offer two planned sampling opportunities for each applicable target; they do not close that historical window or prove future observations, laboratory suitability, reporting limits, flow events or regulatory attainment. Those results require actual valid retained measurements and an explicitly reviewed later evidence window. The baseline and alternative therefore compare planned allocation while preserving all208 original observations, exact analytical cohorts, original unknowns and separate historical date counts.
+
+## Compare two exact saved Sampling designs
+
+The existing Sampling desk now compares two actual native designs from one saved recommendation. Open the original saved Sampling edition and expand **Compare two saved designs**. Select the left and right designs explicitly. This is a read-only operation: it verifies each immutable recommendation/design/plan binding and uses the recorded calendar, original configuration and native cost. It does not invoke the optimizer, change a campaign or create a source record.
+
+The comparison shows original status, selected catchments, geographic costs, exact original physical visits, target-by-month planned dates, unchanged historical date goals and complete configuration differences. Presence and explicit null remain distinct. Missing/infeasible calendars remain disclosed by native status. A geographic cost delta is shown only when both original totals are known and use the same recorded currency. Itemized target costs remain a separate authored estimate; unknown laboratory prices are not replaced with a geographic budget or zero.
+
+For the completed SV-833 baseline and the separately authored December alternative, choose their actual saved design IDs after the existing native operation returns. Do not guess an alternative ID or substitute the baseline twice. The expected difference is a planned round date only when the native result confirms it. Four target opportunities on one shared station/date remain one physical visit. Historical distinct-date gaps across the selected evidence window do not change because a later plan adds future December dates. No field observation, successful analysis, event occurrence, reporting-limit attainment or regulatory conclusion follows from the comparison.
+
+### Downloads and cold reopening
+
+The comparison provides four complete ordinary downloads:
+
+- `sampling-design-comparison.json`: deterministic comparison plus both COMPLETE native design records, both original plans and the complete source-bound recommendation/context snapshot.
+- `sampling-design-comparison.html`: readable grayscale comparison with original calendar, target-month evidence, exact configuration changes, costs, unknowns and source identities.
+- `sampling-design-months.csv`: literal historical window/date counts/gaps beside separate planned date arrays.
+- `sampling-design-visits.csv`: each native visit key and complete original before/after visit, including missing-side state.
+
+Use **Export original recommendation and all sources** for the maintained native source/report archive and **Export editable Study** for the original typed recommendation root, which includes its actual retained designs. No parallel transfer root or incomplete source reconstruction is introduced. After ordinary Study restoration into its own application, open the original saved recommendation, then choose **Reopen a comparison JSON**. The same native reader recomputes the pair from its exact retained sources; the entire comparison must equal the downloaded record. The JSON is never silently imported as native scientific records and no optimizer is invoked on reopen.
+
+The existing authenticated `/api/monitoring-recommendations` reader accepts `action="compare-designs"` with exactly `{recommendation_id,left_design_id,right_design_id}` in its original payload. It returns the original Workspace/project binding, `comparison` and the four complete `files` text bodies. The original operator authorization and Workspace selection still apply. There is no new queued mutation.
+
+Within the original native application, the same read can be invoked directly:
+
+~~~python
+from model.monitoring_sampling_comparison import compare, files
+value = compare(
+    workspace,
+    recommendation_id=ACTUAL_SAVED_RECOMMENDATION_ID,
+    left_design_id=ACTUAL_LEFT_SAVED_DESIGN_ID,
+    right_design_id=ACTUAL_RIGHT_SAVED_DESIGN_ID,
+)
+# files(value) returns the four exact original downloadable texts.
+# Preserve each filename/media_type/text through the existing receiving output.
+~~~
+
+The producing native peer must personally open the affected populated/empty/error/loading Sampling interface at desktop and390, operate both explicit selectors and all four downloads, and reopen the full JSON after ordinary cold Study receiving before claiming presentation readiness. The full owner direction v2026-10-13.5 remains in force. This feature's source publication does not substitute for that actual final-product use.
