@@ -51,7 +51,7 @@ Each opener owns an independent browser working copy. Earlier copies remain expl
 
 **Download complete working copy** includes the full definition, unfinished entry edits and original requests. Reopen that JSON only in the same project. Imported task observations are not treated as proof of completion: the original operation ID is retried through the server.
 
-Before dispatch, the exact request is retained. A lost response does not authorize a replacement UUID. **Reopen same request** sends the original action/payload/operation ID. The original task queue decides whether it is already complete, queued, failed or resumable. Browser storage failure stops dispatch until the exact working file has been downloaded and the operator confirms retaining it. Keep that file; a browser download request alone is not a receiving receipt.
+Before dispatch, the exact request is retained. A lost response does not authorize a replacement UUID. **Reopen same request** sends the original action/payload/operation ID. The original task queue decides whether it is already complete, queued, failed or resumable. Returned tasks are bound to the exact workspace/action/payload/request SHA and accepted task ID; an original server alias may carry a different task operation ID. Task-state hints are resolved through the existing decorated task reader before showing saved results. Browser storage failure stops dispatch until the exact working file has been downloaded and the operator confirms retaining it. Keep that file; a browser download request alone is not a receiving receipt.
 
 The editor supports an explicit automatic native masked mean for optional `ndr.runoff_proxy_av=null` in a supplied native-parameter library. A null selection is not replaced by the old value in the displayed choice. All other numeric limits remain with the original profile validator.
 
@@ -132,11 +132,11 @@ The complete archive is the original scientific Workspace format. The smaller Re
 
 ### Actual browser leg
 
-`source_tools/regional_biophysical_browser.mjs` exports `runRegionalBiophysicalCourse(page, options)`. Pass an existing authorized operator page and its exact URL, authored definition, output directory and operation ID. This function does not launch a browser, select an unrelated host, start a new source capture or run a solver. The current browser owner controls admission and `allow_navigation`.
+`source_tools/regional_biophysical_browser.mjs` exports `runRegionalBiophysicalCourse(page, options)`. Pass an existing authorized operator page and its exact URL, authored definition, output directory, operation ID and the existing receiving owner's `python` executable. The borrowed-browser course holds an ordinary POSIX flock with that same Python in a small stdin-bound child; process/pipe exit releases it automatically. It never removes or takes a live owner's lock. This function does not launch a browser, select an unrelated host, start a new source capture or run a solver. The current browser owner controls admission and `allow_navigation`.
 
 The course operates actual UI controls: original library/definition intake, exact preview, one accepted original profile request with deliberately withheld response, retained-request download and reload/retry, saved selection, actual JSON/HTML/ZIP downloads, unfinished-title save/reload/reopen, desktop/390px screen captures, and the readable report. It records the exact download bytes; the native course compares those bytes against its same saved source selection and cold receiver.
 
-Read the screenshots and every attachment as a user would. Full source review or JavaScript parsing does not establish visual/native success. Keep existing scientific jobs and unrelated browser tabs intact. No current source delivery claims a new native run or browser execution until its actual retained result exists.
+Read the screenshots and every attachment as a user would. Full source review or JavaScript parsing does not establish visual/native success. Keep existing scientific jobs and unrelated browser tabs intact. No current source delivery claims a new native run or browser execution until its actual retained result exists. Preserve TokenJunkieLabs attribution and every original source/license notice in the application and outgoing attachments; a prospect request does not authorize removing them.
 
 ## Source and receiving verification
 

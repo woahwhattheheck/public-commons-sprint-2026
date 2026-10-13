@@ -12,7 +12,7 @@ export function attachRegionalBiophysical(host){
   let root=null,events=null,workspace=null,project=null,generation=0,requestEpoch=0;
   let catalog=null,library=null,memory=null,preview=null,detail=null,busy=false,leaving=false,message='',error=false;
   let search='',page=0,editing=null,taskState='',busySequence=0;
-  const memories=new Map();
+  const memories=new Map(),requestReads=new Map();
   const current=()=>host.getState()?.workspace_key||null;
   const storagePrefix=key=>'upstate-regional-biophysical-v1:'+key+':';
   const scope=()=>({workspace,project,generation,instance:memory?.instance});
@@ -85,7 +85,11 @@ export function attachRegionalBiophysical(host){
     if(memory.selected_id)await openSaved(memory.selected_id);
     render();
   }
-  function currentTask(request){return list(host.getState()?.tasks).find(t=>t.id===request.task_id)||request.task||null;}
+  function currentTask(request){return request.task||null;}
+  function checkedTask(task,request,s){
+    if(task?.schema!=='upstate.operator-task/v1'||!/^[a-f0-9]{64}$/.test(task.id||'')||task.workspace!==s.workspace||task.action!==request.action||stable(task.payload)!==stable(request.payload)||task.request_sha256!==request.request_sha256||(request.task_id&&request.task_id!==task.id))throw Error('The returned task differs from this original workspace/action/source request.');
+    return task;
+  }
   function requestsHTML(){
     return list(memory.requests).slice().reverse().map(r=>{const t=currentTask(r);return '<article class="rb-request"><strong>'+esc(r.action)+'</strong> · '+esc(t?.state||'original request retained')+'<code>'+esc(r.operation_id)+'</code>'+(t?.error?'<p>'+esc(t.error.message)+'</p>':'')+
       '<button data-rb-action="retry" data-id="'+esc(r.operation_id)+'">Reopen same request</button>'+
@@ -98,7 +102,7 @@ export function attachRegionalBiophysical(host){
   function render(){
     if(!root)return;
     const d=memory.definition,profiles=list(catalog?.profiles),family=list(library?.families);
-    root.innerHTML='<section class="rb-desk"><header><h1>Regional biophysical library</h1><p>Choose published coefficients, retain their source meaning, and prepare an editable native profile alongside the original baseline.</p></header>'+
+    root.innerHTML='<section class="rb-desk"><header><h1>Regional biophysical library</h1><p>Choose published coefficients, retain their source meaning, and prepare an editable native profile alongside the original baseline.</p><p>TokenJunkieLabs scientific workbench · original publication attribution is retained with every choice.</p></header>'+
       '<p data-rb-message role="status" data-error="'+error+'">'+esc(message)+'</p>'+
       '<div class="rb-toolbar"><button data-rb-action="refresh">Refresh retained sources</button><button data-rb-action="working">Download complete working copy</button>'+
       '<label>Reopen working JSON<input type="file" data-rb-working accept=".json,application/json"></label>'+
@@ -133,10 +137,10 @@ export function attachRegionalBiophysical(host){
     const n=root?.querySelector('[data-rb-editor]');if(!n)return;
     if(!editing){n.replaceChildren();return;}
     const original=entries().get(editing),change=memory.definition.edits.find(x=>x.entry_id===editing);
-    let val=change||{entry_id:editing,value:original.value,load_type:original.load_type,range:original.range,
-      source:{...clone(original.source),classification:'operator_hypothesis'},reason:''};
+    let val={entry_id:editing,value:original.value,load_type:original.load_type,range:original.range,
+      source:{...clone(original.source),classification:'operator_hypothesis'},reason:'',...clone(change||{})};
     const sourceFields=['title','uri','locator','period','geography','management','method','notes'];
-    if(memory.editors?.[editing]){const f=memory.editors[editing];val={...clone(val),value:f.auto_mean==='yes'?null:f.value,load_type:original.load_type?f.load_type:null,reason:f.reason,source:{...val.source,classification:f.classification},range:f.lower||f.upper?{lower:f.lower,upper:f.upper,basis:f.range_basis}:null};for(const k of sourceFields)val.source[k]=f['source_'+k];}
+    if(memory.editors&&Object.prototype.hasOwnProperty.call(memory.editors,editing)){const f=memory.editors[editing];val={...clone(val),value:f.auto_mean==='yes'?null:f.value,load_type:original.load_type?f.load_type:null,reason:f.reason,source:{...val.source,classification:f.classification},range:f.lower||f.upper?{lower:f.lower,upper:f.upper,basis:f.range_basis}:null};for(const k of sourceFields)val.source[k]=f['source_'+k];}
     n.innerHTML='<section class="rb-editor"><h2>Explicit choice: '+esc(original.target)+' / '+esc(original.lucode??'whole model')+'</h2><p>Original value '+esc(original.value)+' '+esc(original.units)+'. Editing never changes the retained publication. Supply the new source or clearly identify an operator hypothesis.</p>'+
       '<form data-rb-edit-form><div class="rb-grid">'+(original.target==='ndr.runoff_proxy_av'?'<label>Runoff normalization<select name="auto_mean">'+opt('no','Explicit positive mean',val.value!==null)+opt('yes','Automatic native masked mean',val.value===null)+'</select></label>':'')+'<label>Selected value<input name="value" value="'+esc(val.value)+'" '+(original.target==='ndr.runoff_proxy_av'?'':'required')+'></label>'+
       (original.load_type?'<label>Native load interpretation<select name="load_type">'+['application-rate','measured-runoff'].map(x=>opt(x,x,x===val.load_type)).join('')+'</select></label>':'')+
@@ -173,9 +177,12 @@ export function attachRegionalBiophysical(host){
     detail=result;memory.selected_id=id;save();renderDetail();
   }
   async function issue(request,s,m){
-    active(s);durable(m);
-    const result=await host.api('/api/actions',{method:'POST',body:{workspace:s.workspace,action:request.action,payload:clone(request.payload),operation_id:request.operation_id}});
-    if(!result?.id)throw Error('No original task identity returned. Retry the same retained request.');
+    active(s);
+    const raw=stable({workspace:s.workspace,action:request.action,payload:request.payload});
+    const checksum=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));active(s);
+    request.request_sha256=[...new Uint8Array(checksum)].map(x=>x.toString(16).padStart(2,'0')).join('');
+    durable(m);
+    const result=checkedTask(await host.api('/api/actions',{method:'POST',body:{workspace:s.workspace,action:request.action,payload:clone(request.payload),operation_id:request.operation_id}}),request,s);
     const retained=m.requests.find(x=>x.operation_id===request.operation_id);
     retained.task_id=result.id;retained.task=clone(result);save(m);
     if(!alive(s))return result;
@@ -191,16 +198,43 @@ export function attachRegionalBiophysical(host){
     if(!request){request={operation_id:uid(),action,payload:clone(payload),signature,created_at:new Date().toISOString()};m.requests.push(request);m.download_barrier=null;}
     return issue(request,s,m);
   }
+  function validateWorking(value,selectedLibrary){
+    const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+    const strings=x=>Array.isArray(x)&&x.every(y=>typeof y==='string')&&new Set(x).size===x.length;
+    if(!object(value.experiment)||typeof value.experiment.baseline_run_id!=='string'||!strings(value.experiment.scenario_ids)||typeof value.selected_id!=='string')throw Error('Retain the complete original saved-selection and experiment fields.');
+    const d=value.definition,all=new Set(list(selectedLibrary?.entries).map(e=>e.id));
+    if(d!==null){
+      if(!object(d)||d.schema!=='upstate.regional-biophysical-selection/v1'||!object(d.library)||!['baseline_profile_id','family_id','title','reason','applicability_note'].every(k=>typeof d[k]==='string')||!strings(d.selected_entry_ids)||!Array.isArray(d.edits))throw Error('The unfinished definition is missing its original fields or selections.');
+      if(!list(selectedLibrary?.families).some(f=>f.id===d.family_id)||d.selected_entry_ids.some(id=>!all.has(id)))throw Error('An unfinished choice is not in this retained source library.');
+      const edited=new Set(),sourceFields=['title','uri','locator','period','geography','management','method','classification','notes'];
+      for(const e of d.edits){
+        if(!object(e)||!all.has(e.entry_id)||edited.has(e.entry_id)||!d.selected_entry_ids.includes(e.entry_id)||(Object.prototype.hasOwnProperty.call(e,'value')&&!(e.value===null||typeof e.value==='string'||typeof e.value==='number'&&Number.isFinite(e.value)))||typeof e.reason!=='string'||!object(e.source)||sourceFields.some(k=>!(k==='notes'&&e.source[k]===undefined)&&typeof e.source[k]!=='string')||!(e.load_type===undefined||e.load_type===null||typeof e.load_type==='string'))throw Error('A retained edited choice is structurally incomplete.');
+        if(e.range!==undefined&&e.range!==null&&(!object(e.range)||!['lower','upper'].every(k=>typeof e.range[k]==='string'||typeof e.range[k]==='number'&&Number.isFinite(e.range[k]))||typeof e.range.basis!=='string'))throw Error('Retain the complete original range fields.');
+        edited.add(e.entry_id);
+      }
+    }
+    if(value.editors!==undefined){
+      if(!object(value.editors))throw Error('Retain the per-entry unfinished writing map.');
+      for(const [id,form] of Object.entries(value.editors))if(!all.has(id)||!object(form)||Object.values(form).some(v=>typeof v!=='string'))throw Error('Unfinished entry writing must bind an original library entry and text fields.');
+    }
+    if(value.editor_id!==undefined&&value.editor_id!==null&&(!all.has(value.editor_id)||typeof value.editor_id!=='string'))throw Error('The open entry editor is not in this source library.');
+    if(d===null&&(Object.keys(value.editors||{}).length||value.editor_id))throw Error('Entry writing needs its original definition and library.');
+  }
   async function adopt(value){
     const s=scope();active(s);
     if(value?.schema!=='upstate.regional-biophysical-working/v1'||value.workspace_key!==workspace||value.project_id!==project||!Array.isArray(value.requests))throw Error('Select an original working file from this exact project.');
     const incoming=clone(value);
     for(const r of incoming.requests){
-      if(!ACTIONS.has(r.action)||typeof r.operation_id!=='string'||!r.operation_id||r.signature!==stable({action:r.action,payload:r.payload}))throw Error('The incoming original request binding is invalid.');
+      if(!r||typeof r!=='object'||Array.isArray(r)||!r.payload||typeof r.payload!=='object'||Array.isArray(r.payload)||!ACTIONS.has(r.action)||typeof r.operation_id!=='string'||!r.operation_id||r.signature!==stable({action:r.action,payload:r.payload}))throw Error('The incoming original request binding is invalid.');
       // Imported task observations do not authorize a replacement request or prove completion.
       r.task=null;r.task_id=null;
     }
-    if(incoming.definition){await read('library',{library:incoming.definition.library},s);active(s);}
+    let importedLibrary=null;
+    if(incoming.definition!==null){
+      if(!incoming.definition||typeof incoming.definition!=='object'||!incoming.definition.library)throw Error('Retain the complete original library binding.');
+      const source=await read('library',{library:incoming.definition.library},s);active(s);importedLibrary=source.library;
+    }
+    validateWorking(incoming,importedLibrary);
     durable();incoming.instance=uid();delete incoming.download_barrier;
     if(!save(incoming))throw Error('Cannot save this separate incoming copy. Existing draft remains open; retain the original input file.');
     memory=incoming;generation++;preview=null;detail=null;editing=null;await refresh();
@@ -267,7 +301,7 @@ export function attachRegionalBiophysical(host){
   }
   function retainEditor(){
     const form=root?.querySelector('[data-rb-edit-form]');if(!form||!editing||!memory)return;
-    memory.editors??={};memory.editors[editing]=Object.fromEntries(new FormData(form).entries());memory.editor_id=editing;memory.download_barrier=null;save();
+    memory.editors??={};Object.defineProperty(memory.editors,editing,{value:Object.fromEntries(new FormData(form).entries()),writable:true,enumerable:true,configurable:true});memory.editor_id=editing;memory.download_barrier=null;save();
   }
   function submit(event){
     if(!event.target.matches('[data-rb-edit-form]'))return;
@@ -298,7 +332,17 @@ export function attachRegionalBiophysical(host){
     if(!root)return;
     if(state?.workspace_key!==workspace){detach();return;}
     const signature=stable(list(state.tasks).filter(x=>ACTIONS.has(x.action)).map(x=>[x.id,x.state]));
-    if(signature!==taskState){taskState=signature;for(const r of memory.requests){const t=list(state.tasks).find(x=>x.id===r.task_id);if(t)r.task=clone(t);}save();const n=root.querySelector('[data-rb-requests]');if(n)n.innerHTML=requestsHTML();lock();}
+    if(signature===taskState)return;taskState=signature;
+    const s=scope(),m=memory;
+    for(const r of m.requests){
+      const hint=list(state.tasks).find(x=>x.id===r.task_id);
+      if(!hint||hint.state===r.task?.state||!r.request_sha256)continue;
+      const readKey=m.instance+':'+r.operation_id,sequence=(requestReads.get(readKey)||0)+1;requestReads.set(readKey,sequence);
+      host.api('/api/task?id='+encodeURIComponent(r.task_id)).then(value=>{
+        if(requestReads.get(readKey)!==sequence)return;checkedTask(value,r,s);r.task=clone(value);save(m);
+        if(alive(s)){const n=root.querySelector('[data-rb-requests]');if(n)n.innerHTML=requestsHTML();lock();}
+      }).catch(e=>{if(alive(s))notice(e.message||e,true);});
+    }
   }
   function detach(){if(memory)save();events?.abort();events=null;root=null;generation++;requestEpoch++;busySequence++;busy=false;leaving=false;preview=null;detail=null;}
   async function prepareLeave(){if(busy)throw Error('Wait for the original regional operation.');leaving=true;lock();try{durable();}catch(e){leaving=false;lock();throw e;}}
