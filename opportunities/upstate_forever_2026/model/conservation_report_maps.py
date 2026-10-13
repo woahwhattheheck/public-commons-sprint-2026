@@ -13,7 +13,7 @@ from . import conservation
 from .common import describe_file, file_digest, read_json, verify_file
 
 SCHEMA = "upstate.conservation-report-map-inputs/v1"
-EDITION = "conservation-report-geography/1"
+EDITION = "conservation-report-geography/2"
 AREA_CHECK = {
     "absolute_ha": 0.000001,
     "relative": 0.000000001,
@@ -196,7 +196,11 @@ def capture(workspace, state, plan):
                 raise ValueError("Retained designated-water map differs from saved line contact")
             context_sources[name]["saved_contact_length_m"] = expected_length
 
+    from . import conservation_decision_geography
+    case_stability = conservation_decision_geography.capture_scenario_stability(
+        workspace, state, plan, geometry_data, candidate_data)
     implementations = {
+        "decision_geography": Path(conservation_decision_geography.__file__),
         "map_capture": Path(__file__),
         "conservation_geometry_reader": Path(conservation.__file__),
         "native_vector_reader": Path(conservation.rasters.__file__),
@@ -221,6 +225,7 @@ def capture(workspace, state, plan):
         "implementations": {name: {"bytes": path.stat().st_size, "sha256": file_digest(path)}
                             for name, path in sorted(implementations.items())},
         "native_libraries": versions, "context_sources": context_sources,
+        "scenario_stability": case_stability,
         "geometry": {
             "candidate_reporting_footprints": _collection(background_features),
             "selected_original_units": _collection(whole_features),
@@ -244,7 +249,7 @@ CONTEXT_REGISTER = "figures/conservation-map-context-features.json"
 def implementation():
     """Bind the installed geographic presentation before choosing its source ID."""
     from reportlab import Version as reportlab_version
-    from . import scientific_figures, scientific_map_figures
+    from . import scientific_figures, scientific_map_figures, conservation_decision_geography
     from source import capture_upstream_network
     from importlib.metadata import version
     role_reader = getattr(scientific_map_figures, "_role_labels", None)
@@ -254,6 +259,7 @@ def implementation():
     return {
         "edition": EDITION, "reportlab_version": reportlab_version,
         "capture_sha256": file_digest(__file__),
+        "decision_geography_sha256": file_digest(conservation_decision_geography.__file__),
         "renderer_sha256": file_digest(scientific_map_figures.__file__),
         "dispatcher_sha256": file_digest(scientific_figures.__file__),
         "conservation_geometry_reader_sha256": file_digest(conservation.__file__),
@@ -396,6 +402,40 @@ def figures(captured, descriptor):
           [("contribution", selected, "geometry.selected_reporting_union"),
            ("receptor", whole, "geometry.selected_original_union")],
           {"contribution": "Selected reporting footprint", "receptor": "Whole selected-unit union"})
+
+    stability = captured.get("scenario_stability")
+    if stability is not None:
+        any_land = stability["any_selected"]["geometry"]
+        every_land = stability["every_selected"]["geometry"]
+        case_names = "; ".join(case["name"] for case in stability["cases"])
+        caption = (
+            str(stability["case_count"]) + " distinct retained native cases: " + case_names + ". "
+            "Light fill is the reporting-footprint union of " +
+            str(len(stability["any_selected_ids"])) + " original units selected in at least one case (" +
+            format(stability["any_selected"]["area_ha"], ",.6f") + " ha). "
+            "Dark outline is the reporting-footprint union of " +
+            str(len(stability["every_selected_ids"])) + " units selected in every case (" +
+            format(stability["every_selected"]["area_ha"], ",.6f") + " ha). "
+            "Membership is evaluated by original unit ID before geometry union. This is not the "
+            "pixelwise intersection of overlapping case portfolios, a probability or a map of score magnitude. "
+            "All cases retain the selected decision weights and fixed criterion scales; named preference "
+            "comparisons are separate. Source coverage may differ by case."
+        )
+        if every_land is None:
+            caption += " No original unit is selected in every case; that outline layer is absent."
+        frame_count = len(result)
+        frame("conservation-native-case-stability", "Selected land across retained native cases",
+              caption,
+              [("contribution", any_land, "scenario_stability.any_selected"),
+               ("receptor", every_land, "scenario_stability.every_selected")],
+              {"contribution": "Selected in any native case",
+               "receptor": "Selected in every native case"})
+        if len(result) > frame_count:
+            result[-1]["source_binding"]["decision_analysis"] = {
+                "analysis_id": stability["analysis_id"],
+                "analysis_file": stability["analysis_file"],
+                "cases": stability["cases"],
+            }
 
     titles = {"drinking_water": "Retained source-water context",
               "protected_lands": "Retained protected-land context",

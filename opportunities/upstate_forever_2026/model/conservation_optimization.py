@@ -1491,7 +1491,8 @@ def save(workspace, selection, *, retained_analysis=None):
 
 
 def export(workspace, plan_id):
-    """Export the original plan packet plus every complete decision-analysis file."""
+    """Export the original plan packet plus decision analysis and editable geography."""
+    from . import conservation_decision_geography
     plan = conservation.get_plan(workspace, identifier(plan_id))
     reference = plan["selection"].get("optimization")
     if not isinstance(reference, dict) or reference.get("schema") != REFERENCE_SCHEMA:
@@ -1505,6 +1506,7 @@ def export(workspace, plan_id):
         "version": VERSION, "plan_id": plan["id"], "study_id": plan["study_id"],
         "analysis_id": reference["analysis_id"], "analysis_files": reference["files"],
         "original_packet": {key: original[key] for key in ("path", "bytes", "sha256")},
+        "decision_geography": conservation_decision_geography.implementation(),
     }
     key = digest(selection)
     directory = workspace.root / "conservation-exports" / key
@@ -1517,6 +1519,10 @@ def export(workspace, plan_id):
                 raise ValueError("The retained decision export selection differs")
             verify_file(workspace.root, saved)
             return {**saved, "reused": True}
+        study = conservation.inspect(workspace, plan["study_id"], include_candidates=False)
+        geography_directory = directory / "decision-geography"
+        geography = conservation_decision_geography.prepare(
+            workspace, study, plan, result["analysis"], geography_directory)
         pending = directory / ".decision.pending.zip"
         pending.unlink(missing_ok=True)
         try:
@@ -1528,9 +1534,17 @@ def export(workspace, plan_id):
                 for name, item in reference["files"].items():
                     member = {"analysis": "analysis.json", "candidates": "candidates.csv", "report": "index.html"}[name]
                     output.write(verify_file(workspace.root, item), "optimization/" + member)
+                for item in geography["files"]:
+                    member_path = verify_file(geography_directory, item)
+                    output.write(member_path, "optimization/geography/" + item["path"])
+                    verify_file(geography_directory, item)
                 output.writestr("optimization/REFERENCE.json", canonical({
                     "plan_id": plan["id"], "study_id": plan["study_id"],
                     "analysis": reference, "original_packet": original,
+                    "decision_geography": {
+                        "entrypoint": "geography/README.md", "directory": "geography/",
+                        "identity": geography["identity"], "files": geography["files"],
+                    },
                 }) + b"\n")
             pending.replace(destination)
         finally:
@@ -1542,6 +1556,8 @@ def export(workspace, plan_id):
             "plan_id": plan["id"], "study_id": plan["study_id"],
             "analysis_id": reference["analysis_id"], "created_at": now(),
             "entrypoint": "index.html", "decision_entrypoint": "optimization/index.html",
+            "decision_geography": "optimization/geography/decision-geography.gpkg",
+            "decision_geography_files": geography["files"],
         }
         atomic_json(state_path, saved, immutable=True)
         return saved
