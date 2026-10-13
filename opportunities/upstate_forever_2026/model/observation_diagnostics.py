@@ -10,9 +10,9 @@ from collections import Counter
 import json
 import math
 
-from . import observation_support
+from . import observation_support, catchment_interpretation
 
-VERSION = "upstate.observation-diagnostics/v2-reference-basis"
+VERSION = "upstate.observation-diagnostics/v3-catchment-yields"
 BASIS = (
     "Residuals are modeled minus observed annual mass. The original pooled scores "
     "give each retained comparison row equal weight. The complementary catchment "
@@ -161,7 +161,9 @@ def build(comparison):
         "omitted_rows": omitted, "source_exclusion_count": len(comparison.get("exclusions", [])),
         "cohorts": cohorts,
     }
+    review["catchment_yields"] = catchment_interpretation.from_comparison(comparison)
     review["blocks"] = report_blocks(review)
+    review["blocks"].extend(catchment_interpretation.blocks(review["catchment_yields"]))
     return review
 
 
