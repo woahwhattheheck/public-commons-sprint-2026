@@ -21,6 +21,7 @@ FILES = (
     "model/compute_programme.py",
     "model/compute_programme_cli.py",
     "model/programme_experiments.py",
+    "model/PAIR_COMPLETION.md",
     "source_tools/receive_gura.py",
     "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv",
     "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv",
@@ -37,45 +38,60 @@ PREVIOUS_EDITIONS = {
     "0d676a655f42427749a835706d139ce287bc8ea8f138970413652b6938a93e03",
     "f3ffdf5ed39aa827e83ed67b73fabad894f6219e46509e18da8f5a7c88512bce",
     "b118d793dc2b2cc2de8ea0016ccb8b0e0e18af422a1f154e8dd822801c6387c1",
-    "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5"
+    "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5",
+    "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1"
   ],
   "model/compute_programme_cli.py": [
     "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
     "268ea8468e60e13b81b6f2236df7cdcf8dae35a3767751e5168bd94e5dee3518",
-    "a49c784ccfb96497780444f8259db5743b446c4568c5c143e010b200d1f5b7ea"
+    "a49c784ccfb96497780444f8259db5743b446c4568c5c143e010b200d1f5b7ea",
+    "29437b34d83c871f652b7d5300f50c0aa46a144671013aabc877366068f93551"
   ],
   "operator/programmes.py": [
     "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61",
-    "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7"
+    "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7",
+    "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4"
   ],
   "operator/web/programmes.mjs": [
     "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
     "6bfb24faecccc34da3668c77234d871c75fa68195d44d804ce78cd04b7b7d81a",
     "2e0438a63ee057ecef5bf36d14a9053701b98f83f09cea3a14a57dffa9432571",
     "5a3f6d32cc1de2a8a4dc86550684c240cb51be5dad675eb6d3c7fe6e96bb3f0d",
-    "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30"
+    "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30",
+    "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443"
   ],
   "operator/web/programmes.css": [
-    "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf"
+    "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf",
+    "83cbf4f2d83088665f6719f8f687f5efdf7b7f15c30f5cbaf3364af6e2d68034"
   ],
   "install_programmes.py": [
     "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0",
-    "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508"
+    "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508",
+    "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06"
   ],
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
-    "59c5602aac0a6d476610cea86f7481087b808f9dec67522e5b8e0da11d2090be"
+    "59c5602aac0a6d476610cea86f7481087b808f9dec67522e5b8e0da11d2090be",
+    "8820d98e4c7b02ab587fae65cb9e36010ef2cc24b1ce7b1978d1de08a80a44f8"
   ],
   "model/programme_experiments.py": [
     "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
     "ecba938e891af641a245e1c453c22a9a6d257e7b85d70c3b5d495999fead972d"
   ],
   "source_tools/receive_gura.py": [
-    "4282b6f65b59c97a94b7f6528615c17a48741a378f42e41db2397d7395e3ed5b"
+    "4282b6f65b59c97a94b7f6528615c17a48741a378f42e41db2397d7395e3ed5b",
+    "474e2dee21f878bac64c4cd513fdc5898ce8cc771aa027e74fd71388a662ecdc"
   ],
-  "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv": [],
-  "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv": [],
-  "source/gura-original-tables-3.20/source.json": []
+  "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv": [
+    "e3f503cb1c82fb1035225eb68eb84303de8de7842b1bda6e94f4754fe538c42c"
+  ],
+  "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv": [
+    "b27b1549a41c4929f161e3b18962d6bc8627c10ed7ed27e504203c175a0f5f69"
+  ],
+  "source/gura-original-tables-3.20/source.json": [
+    "40aba1995f45941b0391db17b94bceb36d6478b07339d2fb486644c3624e35d2"
+  ],
+  "model/PAIR_COMPLETION.md": []
 }
 
 def sha(data):
@@ -112,12 +128,13 @@ def patch_server(source):
     if "self.programmes.decorate_task(" not in source:
         source = replace(source, "        return self.customer_reviews.decorate_task(task)\n",
                          "        return self.programmes.decorate_task(self.customer_reviews.decorate_task(task))\n", "programme task view")
-    source = add(source, '                review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}\n',
-                 '                programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}\n'
-                 '                if url.path in programme_reads:\n'
-                 '                    return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n'
-                 '                        {"programme_id": one("programme_id")}))\n',
-                 "programme read routes", after=False)
+    if 'if url.path in programme_reads:' not in source:
+        source = add(source, '                review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}\n',
+                     '                programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}\n'
+                     '                if url.path in programme_reads:\n'
+                     '                    return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n'
+                     '                        {"programme_id": one("programme_id")}))\n',
+                     "programme read routes", after=False)
     source = add(source, "            value = self.body()\n",
                  '            if url.path == "/api/programmes/preview":\n'
                  '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n'
@@ -158,6 +175,9 @@ def patch_app(source):
                  "'compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme',"
                  "'compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery',",
                  "programme action labels")
+    source = add(source, "const actionLabels={",
+                 "'compute.programme.pair-completion':'Prepare matching scenario baselines',",
+                 "matched scenario continuation task label")
     source = add(source, "const actionLabels={",
                  "'compute.programme.experiment':'Use saved experiment',",
                  "saved experiment task label")
