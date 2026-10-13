@@ -202,7 +202,8 @@ def prepare_decision(workspace, ensemble_id, *, profile_ids=None, scenario_ids=N
 
 def prepare_calibration(workspace, ensemble_id, reference_selection=None, *,
                         profile_ids=None, pollutants=None, reference_import_id=None,
-                        reference_options=None):
+                        reference_options=None, flow_support_source=None,
+                        prepare_flow_support=False, flow_source_root=None):
     """Bind completed baseline candidates to explicitly retained observations."""
     from . import calibration
     catalog = inspect(workspace, ensemble_id, profile_ids=profile_ids, scenario_ids=[])
@@ -245,14 +246,38 @@ def prepare_calibration(workspace, ensemble_id, reference_selection=None, *,
                    if name not in parameters and isinstance(item, dict) and item.get("weight", 1) != 0]
         if outside:
             raise ValueError("Positive-weight objectives exceed this study's selected actual outputs: " + ", ".join(outside))
+    if not isinstance(prepare_flow_support, bool):
+        raise ValueError("Prepare-flow-support must be true or false")
+    if flow_support_source is not None and prepare_flow_support:
+        raise ValueError("Choose a retained flow-support source or prepare the original source")
+    if (flow_support_source is not None or prepare_flow_support) and source_reference is None:
+        raise ValueError("Linked flow support requires the original annual-import binding")
+    if flow_source_root is not None and not prepare_flow_support:
+        raise ValueError("A flow source directory applies only to the original replay")
     plan = calibration.prepare(workspace, value)
+    flow_support = None
+    if flow_support_source is not None or prepare_flow_support:
+        from . import ensemble_flow_support
+        if prepare_flow_support:
+            operation = ensemble_flow_support.prepare(
+                workspace, reference_import_id, source_root=flow_source_root)
+            flow_support_source = operation["source"]
+        selected_records = plan["selection"].get("observation_record_ids")
+        selected_parameters = {name for name, item in plan["selection"]["objective"].items()
+                               if item.get("weight", 1) != 0}
+        selected_ids = [row["id"] for row in source_reference["reference_records"]
+                        if row["parameter"] in selected_parameters
+                        and (selected_records is None or row["id"] in selected_records)]
+        flow_support = ensemble_flow_support.retain_report(
+            workspace, ensemble_flow_support.bind(
+                workspace, source_reference, flow_support_source, record_ids=selected_ids))
     return workspace._save(KIND, {
         "mode": "calibration", "workspace_id": workspace.project["id"],
         "ensemble_id": catalog["ensemble_id"], "catalog": _snapshot(catalog),
         "selected_member_count": len(ready), "selected_profile_ids": [row["profile_id"] for row in ready],
         "pollutants": [name for name in outputs if OUTPUT_PARAMETERS[name] in plan["selection"]["objective"]],
         "available_pollutants": outputs, "selection": plan["selection"], "calibration_plan_id": plan["id"],
-        "annual_reference": source_reference,
+        "annual_reference": source_reference, "flow_support": flow_support,
         "reference_units": plan["units"], "spatial_groups": plan["spatial_groups"],
         "normalization": plan["normalization"], "exclusions": plan["exclusions"],
         "producer": {"path": "model/ensemble_consumers.py", "sha256": file_digest(Path(__file__))},
@@ -353,6 +378,16 @@ def run_calibration(workspace, consumer_id, *, standard_errors=None):
                  "requested_standard_errors": standard_errors}
         atomic_json(path, state)
         try:
+            if plan.get("flow_support"):
+                from . import ensemble_flow_support
+                ensemble_flow_support.bind(workspace, plan["annual_reference"],
+                    plan["flow_support"]["source"], record_ids=plan["flow_support"]["record_ids"])
+                for descriptor in plan["flow_support"]["files"].values():
+                    verify_file(workspace.root, descriptor)
+                state["flow_support"] = {
+                    "source": plan["flow_support"]["source"],
+                    "record_count": plan["flow_support"]["record_count"],
+                    "status_counts": plan["flow_support"]["status_counts"]}
             report = calibration.analyze(workspace, plan["calibration_plan_id"])
             state.update(state=report["state"], calibration_id=report["id"],
                          selected_run_id=report.get("selected_run_id"),

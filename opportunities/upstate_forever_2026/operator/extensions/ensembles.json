@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "ensembles",
   "title": "Scenario sensitivity",
-  "version": "4.2",
+  "version": "4.3",
   "order": 50,
   "assets": [
     "ensembles.mjs"
@@ -22,7 +22,8 @@
       "ensemble.report",
       "ensemble.decision",
       "ensemble.calibration",
-      "ensemble.consumer.resume"
+      "ensemble.consumer.resume",
+      "ensemble.flow-support"
     ],
     "invoke": {
       "handler": "invoke",
