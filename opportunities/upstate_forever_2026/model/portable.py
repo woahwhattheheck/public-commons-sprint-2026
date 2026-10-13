@@ -798,8 +798,12 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
         for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
-                     "planning-inventories", "portfolios", "portfolio-reports"):
+                     "planning-inventories", "portfolios", "portfolio-reports",
+                     "biophysical-evidence", "biophysical-ranges"):
             restored._list(kind)
+        if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):
+            from .biophysical_evidence import verify_all as verify_biophysical_evidence
+            verify_biophysical_evidence(restored)
         if restored._list("planning-inventories"):
             from .planning_inventory import inspect as inspect_planning_inventory
             for inventory in restored._list("planning-inventories"):
