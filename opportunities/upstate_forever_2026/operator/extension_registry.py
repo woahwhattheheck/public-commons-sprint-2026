@@ -218,7 +218,7 @@ class ExtensionRegistry:
                 manifest = json.loads(path.read_text(encoding="utf-8"))
                 if not isinstance(manifest, dict) or manifest.get("schema") != SCHEMA:
                     raise ValueError("Unsupported extension manifest schema.")
-                extension_id = manifest.get("id", extension_id)
+                extension_id = manifest.get("id")
                 if not isinstance(extension_id, str) or not _IDENTIFIER.fullmatch(extension_id):
                     raise ValueError("An extension needs a stable lowercase id.")
                 identity_paths.setdefault(extension_id, []).append(path.name)
