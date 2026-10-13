@@ -69,7 +69,8 @@
     "keowee-regional-review-setup",
     "observed-station-studies",
     "gauge-support",
-    "observed-context"
+    "observed-context",
+    "workspace-finder"
   ],
   "components": {
     "core": {
@@ -3196,6 +3197,19 @@
         "report_manifest": "observed_hydrology_context.sources.json",
         "report_manifest_sha256": "ebb5f63c95b77d7c5bfa32786871f70a93893d19b4fac7e4c96a74a38ba0c2d4"
       }
+    },
+    "workspace-finder": {
+      "title": "Find in the current scientific workspace",
+      "paths": [
+        "operator/WORKSPACE_FINDER.md",
+        "operator/extensions/workspace-finder.json",
+        "operator/web/workspace_finder.mjs",
+        "operator/web/workspace_finder.css"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": "ES-20261013-WORKSPACE-FINDER: existing operator navigation, original retained core item routes and tasks."
     }
   }
 }
