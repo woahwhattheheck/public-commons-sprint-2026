@@ -15,7 +15,6 @@ from typing import Any, Callable
 from . import __version__
 from .store import (ScenarioError, atomic_json, canonical, digest, exclusive,
                     dataset_hash, file_hash, inside, read_json, snapshot)
-from .spatial import prepare_lulc
 from .results import binding_for, read_results
 
 MODELS = {"ndr": "natcap.invest.ndr.ndr", "sdr": "natcap.invest.sdr.sdr",
@@ -136,6 +135,9 @@ def freeze(plan_path: Path, destination: Path) -> dict:
         atomic_json(staging / "plan.json", plan)
         atomic_json(staging / "state.json", {"schema": 1, "jobs": {}, "prepared": {}})
         atomic_json(staging / "original-plan.json", source)
+        # The spatial runtime is needed when creating interventions; received
+        # native summaries can be inspected and reported with standard Python.
+        from .spatial import prepare_lulc
         # Prepare every alternative before publishing a runnable plan.
         state = read_json(staging / "state.json")
         for scenario in scenarios:
@@ -221,7 +223,7 @@ def run_workspace(root: Path, *, python: str | None = None,
     executor = executor or native_run
     with exclusive(root):
         plan, state = verify_plan(root)
-        if plan.get("mode") == "adopted-experiment":
+        if plan.get("mode") in {"adopted-experiment", "adopted-upstate-experiment"}:
             raise ScenarioError("This workspace receives original experiment results; execute or revise through the original experiment queue")
         python = python or plan["native"]["python"]
         if built_in_native:
@@ -328,7 +330,7 @@ def revise(root: Path, revision: Path, changes_path: Path) -> dict:
     """Receive an independent revision with retained inputs; never edit the sender."""
     with exclusive(root):
         plan, _ = verify_plan(root)
-        if plan.get("mode") == "adopted-experiment":
+        if plan.get("mode") in {"adopted-experiment", "adopted-upstate-experiment"}:
             raise ScenarioError("Revise the original experiment and receive its new completed edition")
         changes = read_json(changes_path)
         allowed = {"setup_id", "scenarios", "cases", "source_manifest", "native"}
