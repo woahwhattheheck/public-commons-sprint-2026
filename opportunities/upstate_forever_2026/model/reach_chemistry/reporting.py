@@ -9,7 +9,7 @@ import html
 import json
 import math
 
-REPORT_EDITION = "reach-chemistry-scientific-report/2"
+REPORT_EDITION = "reach-chemistry-scientific-report/3"
 PARAMETER_UNITS = {
     "reaction_rate_day": "day^-1",
     "load_kg_day": "kg of declared basis/day",
@@ -57,10 +57,73 @@ def _provenance(value):
             "source_detail": value}
 
 
-def _species(project, row):
+def _observation_operator(project, row):
+    """Describe the retained single-species or same-basis observation operator."""
     sid = row.get("species")
-    species = project.species.get(sid, {})
-    return {**row, "basis": species.get("basis"), "species_label": species.get("name", sid)}
+    if isinstance(sid, str) and sid in project.species:
+        # Legacy output is interpreted exactly as its original single-species
+        # engine. Unused request metadata must not change old result semantics.
+        species = project.species[sid]
+        return {"identity": {"kind": "species", "species": sid, "basis": species["basis"]},
+                "label": _text(species.get("name") or sid), "basis": species["basis"], "expression": sid}
+    components = row.get("components")
+    if components is not None:
+        if row.get("species") is not None:
+            raise ValueError("A composite Chemistry observation must not name a single species")
+        measurement, basis = row.get("measurement"), row.get("basis")
+        if (not isinstance(measurement, str) or not measurement.strip()
+                or not isinstance(basis, str) or not basis
+                or not isinstance(components, list) or not components):
+            raise ValueError("A composite Chemistry observation needs its original measurement, basis and components")
+        seen, canonical, expression = set(), [], []
+        for item in components:
+            if not isinstance(item, dict):
+                raise ValueError("An original Chemistry observation component must be an object")
+            sid, weight = item.get("species"), item.get("weight")
+            if (not isinstance(sid, str) or sid not in project.species or sid in seen
+                    or isinstance(weight, bool) or not isinstance(weight, (int, float))
+                    or not math.isfinite(weight) or weight <= 0):
+                raise ValueError("Original Chemistry observation weights require unique species and positive finite values")
+            if project.species[sid]["basis"] != basis:
+                raise ValueError("A composite Chemistry observation combines different conserved bases")
+            seen.add(sid)
+            canonical.append({"species": sid, "weight": float(weight)})
+            expression.append(_text(weight) + " × " + sid)
+        identity = {"kind": "composite", "measurement": measurement, "basis": basis,
+                    "components": sorted(canonical, key=lambda item: item["species"])}
+        return {"identity": identity, "label": measurement, "basis": basis,
+                "expression": " + ".join(expression)}
+    raise ValueError("A retained Chemistry observation needs its declared species or composite operator")
+
+
+def _species(project, row):
+    # Retain all original operator fields; add presentation labels only.
+    if row.get("components") is not None or row.get("species") in project.species:
+        operator = _observation_operator(project, row)
+        return {**row, "basis": operator["basis"], "species_label": operator["label"],
+                "measurement_label": operator["label"], "operator_expression": operator["expression"]}
+    sid = row.get("species")
+    return {**row, "basis": row.get("basis"), "species_label": sid,
+            "measurement_label": row.get("measurement", sid),
+            "operator_expression": row.get("measurement", sid)}
+
+
+def _observation_groups(project, rows):
+    """Group plotted references by their actual operator, never by basis alone."""
+    groups = {}
+    for row in rows:
+        operator = _observation_operator(project, row)
+        key = json.dumps(operator["identity"], sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        if key not in groups:
+            groups[key] = {**operator, "rows": []}
+        groups[key]["rows"].append(row)
+    return list(groups.values())
+
+
+OBSERVATION_FIELDS = [
+    ("measurement_label", "Measurement"), ("operator_expression", "Observation operator"),
+    ("components", "Original components"), ("basis", "Conserved basis"),
+]
 
 
 def _parameters(project, result, request):
@@ -102,8 +165,9 @@ def summary(project, result, request=None):
 def _scatter(project, observations):
     """Equal-axis plot of original exact-valued reference/prediction pairs."""
     panels = []
-    for sid, species in project.species.items():
-        rows = [r for r in observations if r["species"] == sid and r.get("qualifier", "equal") == "equal"]
+    exact = [row for row in observations if row.get("qualifier", "equal") == "equal"]
+    for operator in _observation_groups(project, exact):
+        label, basis, rows = operator["label"], operator["basis"], operator["rows"]
         if not rows:
             continue
         if any(not math.isfinite(float(r[key])) for r in rows for key in ("observed_mg_l", "predicted_mg_l")):
@@ -120,31 +184,32 @@ def _scatter(project, observations):
         def y(value):
             return top + height - (value - low) / (high - low) * height
         pieces = ["<figure><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 620' role='img' aria-label='"
-                  + _escape(sid + " reference and modeled concentration") + "'>",
+                  + _escape(label + " reference and modeled concentration") + "'>",
                   "<rect width='620' height='620' fill='white'/>",
                   "<g font-family='sans-serif' fill='#171717' font-size='13'>",
-                  "<text x='84' y='27' font-size='19'>" + _escape(sid + " / " + species["basis"]) + "</text>",
+                  "<text x='84' y='27' font-size='19'>" + _escape(label + " / " + basis) + "</text>",
                   "<path d='M84 58V518H544' fill='none' stroke='#171717'/>",
                   "<path d='M84 518L544 58' fill='none' stroke='#777' stroke-dasharray='5 4'/>"]
         for i in range(6):
             value = low + (high - low) * i / 5
             xp, yp = x(value), y(value)
-            label = format(value, ".4g")
-            pieces += [f"<text x='{xp:.3f}' y='542' text-anchor='middle'>{label}</text>",
-                       f"<text x='73' y='{yp+4:.3f}' text-anchor='end'>{label}</text>"]
+            tick_label = format(value, ".4g")
+            pieces += [f"<text x='{xp:.3f}' y='542' text-anchor='middle'>{tick_label}</text>",
+                       f"<text x='73' y='{yp+4:.3f}' text-anchor='end'>{tick_label}</text>"]
+        pieces.append("<desc>" + _escape(operator["expression"]) + "</desc>")
         for row in rows:
             xp, yp = x(float(row["observed_mg_l"])), y(float(row["predicted_mg_l"]))
-            label = _escape(row["id"] + " / " + row.get("role", "fit")
+            point_label = _escape(row["id"] + " / " + row.get("role", "fit")
                             + " / reference " + _text(row["observed_mg_l"])
-                            + " / modeled " + _text(row["predicted_mg_l"]) + " mg/L")
+                            + " / modeled " + _text(row["predicted_mg_l"]) + " mg " + basis + "/L")
             if row.get("role") == "holdout":
-                pieces.append(f"<rect x='{xp-4:.3f}' y='{yp-4:.3f}' width='8' height='8' fill='white' stroke='#111'><title>{label}</title></rect>")
+                pieces.append(f"<rect x='{xp-4:.3f}' y='{yp-4:.3f}' width='8' height='8' fill='white' stroke='#111'><title>{point_label}</title></rect>")
             else:
-                pieces.append(f"<circle cx='{xp:.3f}' cy='{yp:.3f}' r='3.5' fill='#333'><title>{label}</title></circle>")
-        pieces += ["<text x='314' y='575' text-anchor='middle'>Original reference (mg of " + _escape(species["basis"]) + "/L)</text>",
+                pieces.append(f"<circle cx='{xp:.3f}' cy='{yp:.3f}' r='3.5' fill='#333'><title>{point_label}</title></circle>")
+        pieces += ["<text x='314' y='575' text-anchor='middle'>Original reference (mg of " + _escape(basis) + "/L)</text>",
                    "<text transform='translate(19 288) rotate(-90)' text-anchor='middle'>Modeled concentration (same units)</text>",
                    "<text x='84' y='605'>Solid circle: fit. Open square: held out. Dashed: equality.</text>",
-                   "</g></svg><figcaption>Equal axis ranges for this species. Original below-limit records appear in the full table; they are not plotted as exact-valued concentrations.</figcaption></figure>"]
+                   "</g></svg><figcaption>Equal axis ranges for this original observation operator. Original below-limit records appear in the full table; they are not plotted as exact-valued concentrations.</figcaption></figure>"]
         panels.append("".join(pieces))
     return "<div class='figures'>" + "".join(panels) + "</div>" if panels else ""
 
@@ -202,7 +267,7 @@ def report(project, result, request=None, *, identity=None, links=None):
                   ("Presentation edition", REPORT_EDITION),
                   ("Recorded solver elapsed seconds", info["recorded_solver_elapsed_seconds"])], "Retained analysis identity")
         + _table(source_rows, [("item", "Provenance field"), ("value", "Original value")], "Original project provenance")
-        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed at a fixed volume, with phasewise-constant linear coefficients. Times are model days from the project origin.</p>"]
+        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed at a fixed volume, with phasewise-constant linear coefficients. Times are model days from the project origin. Composite measurements retain their declared positive weighted sum of species on one conserved basis; that sum is an observation operator, not an additional modeled species.</p>"]
     if identity:
         sections.append(_items(list(identity.items()), "Saved native result and source identities"))
     run = result.get("baseline", result)
@@ -244,11 +309,11 @@ def report(project, result, request=None, *, identity=None, links=None):
                      ("upper", "Upper bound"), ("original", "Original value"), ("fitted", "Fitted value"),
                      ("bound_meaning", "Final bound status"), ("source_reference", "Coefficient source")], "Retained fitted coefficients and supplied bounds")
             + _table([_species(project, row) for row in result.get("scores", [])],
-                     [("role", "Role"), ("species", "Species"), ("basis", "Basis"), ("count", "Exact-valued records"),
+                     [("role", "Role"), *OBSERVATION_FIELDS, ("count", "Exact-valued records"),
                       ("rmse_mg_l", "RMSE (mg basis/L)"), ("bias_mg_l", "Mean modeled minus reference (mg basis/L)")],
-                     "Original engine scores; below-limit records are excluded from these RMSE/bias summaries")
+                     "Original engine scores for the retained observation operators; below-limit records are excluded from these RMSE/bias summaries")
             + _scatter(project, observations)
-            + _table(observations, [("id", "Record"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+            + _table(observations, [("id", "Record"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                      ("day", "Day"), ("role", "Role"), ("qualifier", "Original qualifier"),
                      ("observed_mg_l", "Reference value / limit (mg basis/L)"), ("predicted_mg_l", "Modeled (mg basis/L)"),
                      ("sigma_mg_l", "Supplied error scale (mg basis/L)"), ("weighted_residual", "Objective residual"),
@@ -263,7 +328,7 @@ def report(project, result, request=None, *, identity=None, links=None):
                                    "parameter_units": PARAMETER_UNITS.get(derivative.get("parameter_kind"))}))
         sections.append("<h2>Local coefficient sensitivity</h2>"
             + "<p>These are the saved forward-tangent derivatives at the supplied parameter values. Elasticity is the derivative multiplied by the parameter value and divided by the prediction; it is undefined when the prediction equals zero.</p>"
-            + _table(derivatives, [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+            + _table(derivatives, [("id", "Target"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                       ("day", "Day"), ("parameter", "Parameter"), ("parameter_units", "Parameter units"),
                       ("predicted_mg_l", "Prediction (mg basis/L)"), ("mg_l_per_parameter_unit", "Derivative (mg basis/L per parameter unit)"),
                       ("elasticity", "Elasticity")], "Every original local sensitivity"))
@@ -279,8 +344,7 @@ def report(project, result, request=None, *, identity=None, links=None):
                       ("Resulting linearized precision", result.get("posterior_linearized_precision"))], "Saved design assumptions and outcome")
             + _table(_parameters(project, result, request), [("id", "Parameter in matrix order"), ("target", "Target"),
                      ("parameter_units", "Units"), ("basis", "Basis"), ("lower", "Lower bound"), ("upper", "Upper bound")], "Original parameter order")
-            + _table(choices, [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), ("species", "Species"),
-                     ("basis", "Basis"), ("day", "Day"), ("sigma_mg_l", "Assumed error scale (mg basis/L)"),
+            + _table(choices, [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), *OBSERVATION_FIELDS, ("day", "Day"), ("sigma_mg_l", "Assumed error scale (mg basis/L)"),
                      ("predicted_mg_l", "Prediction (mg basis/L)"), ("incremental_logdet_gain", "Incremental log-determinant gain")], "Exact selected candidate records"))
     if "summaries" in result:
         priors = {value["id"]: value for value in result.get("distributions", [])}
@@ -295,7 +359,7 @@ def report(project, result, request=None, *, identity=None, links=None):
             + _table(parameters, [("id", "Parameter in draw order"), ("target", "Target"), ("parameter_units", "Units"),
                       ("basis", "Basis"), ("lower", "Lower bound"), ("upper", "Upper bound"),
                       ("distribution", "Original distribution specification")], "Every supplied prior")
-            + _table(rows, [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+            + _table(rows, [("id", "Target"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                       ("day", "Day"), ("p05_mg_l", "5th percentile (mg basis/L)"), ("median_mg_l", "Median (mg basis/L)"),
                       ("p95_mg_l", "95th percentile (mg basis/L)"), ("mean_mg_l", "Mean (mg basis/L)")], "Original target-by-target ensemble quantiles"))
     sections.append(_input_sections(project))
