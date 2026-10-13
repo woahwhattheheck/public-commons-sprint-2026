@@ -4,20 +4,20 @@
   "files": [
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 20195,
-      "sha256": "dea17f752f8c1ec4e09c1b6878f79fd3344174e6f49a659f28c8cd1f1e1086b5",
+      "bytes": 22458,
+      "sha256": "ba6afbce79d4f2e80691a6e367bbdd63aa63dd15a97cbc4e5f3972cb7db8bf42",
       "role": "addition"
     },
     {
       "path": "install_measurement_large_files.py",
       "bytes": 12865,
-      "sha256": "12dc4f8f34746959738b22867aa3af443fa65a388ff1ba7b3436294671eb967c",
+      "sha256": "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8",
       "role": "addition"
     },
     {
       "path": "integration/component_fragments/measurement-large-files.json",
-      "bytes": 1474,
-      "sha256": "f37a796c4e442e9e179c8402522b2ee75785fe2cf1f3517cf0cb3986db24643c",
+      "bytes": 1555,
+      "sha256": "a2f5db4eba22ad8b0a230b2f04a9fc626f17ccaa9137b6516e5dad7bb16e2282",
       "role": "addition"
     },
     {
@@ -172,8 +172,8 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17940,
-      "sha256": "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "bytes": 17979,
+      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
       "role": "addition"
     },
     {
@@ -211,6 +211,18 @@
       "role": "addition",
       "bytes": 9345,
       "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f"
+    },
+    {
+      "path": "model/portable_databases.py",
+      "role": "native",
+      "bytes": 7984,
+      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
+    },
+    {
+      "path": "model/MEASUREMENTS_PORTABLE.md",
+      "role": "native",
+      "bytes": 9735,
+      "sha256": "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
@@ -220,6 +232,8 @@
     "atomic_source_hydration_commit": "804f98226ddc4677abd7d4603846bc496c25be60",
     "complete_installer": "operator/install_measurements.py",
     "complete_inventory": "integration/measurements/INSTALLATION.json",
-    "original_standalone_module": "measurement_workspace/legacy_chemistry.py"
+    "original_standalone_module": "measurement_workspace/legacy_chemistry.py",
+    "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
+    "original_outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc"
   }
 }

@@ -28,7 +28,7 @@ export function attachReceivingWaterReport(context){
     const reports=rows(),pageSize=50,max=Math.max(0,Math.ceil(reports.length/pageSize)-1);
     page=Math.min(page,max);
     const visible=reports.slice(page*pageSize,(page+1)*pageSize);
-    let html='<section class="water-section"><header><h2>Scientific report sources</h2><p>Publish an original source plan or a completed analysis through the existing scientific report. Source plans retain receiving areas, designations and contribution methods; analysis sources also retain their saved modeled exports and comparison support.</p><p>Open this report only replaces the composer’s source selection with this saved source. Add to current report keeps the current sources and adds this source once.</p></header>';
+    let html='<section class="water-section"><header><h2>Scientific report sources</h2><p>Publish an original source plan or a completed analysis through the existing scientific report. Source plans retain receiving areas, designations and contribution methods; analysis sources also retain their saved source-pixel exports reaching streams and original comparison support.</p><p>Open this report only replaces the composer’s source selection with this saved source. Add to current report keeps the current sources and adds this source once.</p></header>';
     if(!reports.length)return html+'<p class="water-empty">Open a saved source plan or completed analysis and choose Prepare scientific report source.</p></section>';
     html+='<div class="water-table-scroll"><table><thead><tr><th scope="col">Retained source</th><th scope="col">Selection</th><th scope="col">Prepared</th><th scope="col">Actions</th></tr></thead><tbody>'+
       visible.map(row=>'<tr><td><strong>'+esc(title(row))+'</strong><small>'+esc(row.id)+'</small></td><td>'+esc(selectionLabel(row))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'')+'</td><td class="water-row-actions">'+button('open','Inspect source',row.id)+button('use','Open this report only',row.id)+button('add','Add to current report',row.id)+'</td></tr>').join('')+'</tbody></table></div>';
@@ -46,7 +46,7 @@ export function attachReceivingWaterReport(context){
     if(!current(key,version,sequence))return;
     if(record.id!==id||record.state!=='complete')throw Error('Complete the selected original receiving-water '+kind+' before publishing its scientific source.');
     const summary=kind==='analysis'
-      ? 'Saved analysis '+id+' · '+(record.pollutants||[]).map(name=>labels[name]||name).join(', ')+' · '+String(record.quantity_scope||'').replaceAll('_',' ')+'. Its original quantities, overlapping individual areas and unduplicated family totals are retained.'
+      ? 'Saved analysis '+id+' · '+(record.pollutants||[]).map(name=>labels[name]||name).join(', ')+' · '+String(record.quantity_scope||'').replaceAll('_',' ')+'. It retains source-pixel stream export, original support, overlapping individual areas and unduplicated family totals. This does not calculate load crossing a boundary or arriving at an intake.'
       : 'Saved source plan '+id+' · '+(record.receptors?.length||0)+' receiving waters. Its original source editions, native feature identifiers, geometry, designation vintage and contribution relationships are retained.';
     const html='<p>'+esc(summary)+'</p><label class="full"><span>Report source title</span>'+input('water_report_title',title(record), 'required maxlength="300"')+'</label>'+reportChoices();
     return openForm('Prepare receiving-water scientific source',

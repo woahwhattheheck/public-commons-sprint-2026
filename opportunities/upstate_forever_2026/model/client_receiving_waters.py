@@ -31,6 +31,85 @@ _ASSET_TITLES = {
 }
 
 
+
+def quantity_interpretation(scope):
+    """Describe the original source-pixel quantity without changing its support."""
+    scopes = {
+        "reporting": (
+            "Source export from the reporting area",
+            "The selected receiving-area mask intersected with the original reporting "
+            "support. This counts source pixels inside that support, including any "
+            "modeled change in their delivery to streams."
+        ),
+        "model_domain": (
+            "Source export from the modeled domain",
+            "The selected receiving-area mask intersected with the retained native model "
+            "domain and each quantity's actual valid output support. The larger domain "
+            "can include contributing source pixels outside the reporting area."
+        ),
+    }
+    if scope not in scopes:
+        raise ValueError("Choose the retained reporting or model_domain quantity scope")
+    label, support = scopes[scope]
+    return {
+        "edition": "receiving-water-source-origin/1",
+        "quantity_scope": scope, "scope_label": label, "scope_meaning": support,
+        "quantity_basis": "modeled_source_pixel_export_to_streams",
+        "physical": (
+            "Annual modeled export originates at each selected land-source pixel and is "
+            "delivered to the modeled stream network. Summing a receiving-area mask groups "
+            "those source contributions; it does not calculate material crossing the mask "
+            "boundary or arriving at a water intake."
+        ),
+        "downstream_effect": (
+            "NDR combines each source pixel's nutrient load with its downstream delivery "
+            "ratio. A downstream land-cover change can therefore affect exports assigned "
+            "to upstream source pixels. Compare the retained reporting and model-domain "
+            "views to inspect that wider modeled response; their valid supports remain separate."
+        ),
+        "sediment": (
+            "SDR sediment export is attributed to its eroding source pixel. It represents "
+            "modeled sediment reaching streams, with its own native support and annual units."
+        ),
+        "placement": (
+            "A scenario-placement mask identifies where land cover may change. A reporting "
+            "mask selects which source contributions are summarized. Neither alone identifies "
+            "all changed delivery pathways; inspect the retained scenario footprint for actual "
+            "changed cells. Upstream context does not establish that land there was treated."
+        ),
+        "relationships": (
+            "HUC upstream associations, published protection polygons and scenario-placement "
+            "areas retain distinct original meanings. A HUC planning union is not an "
+            "intake-delineated catchment. Overlapping subject totals are not additive; an "
+            "original family or utility mask union counts each selected pixel once."
+        ),
+        "comparison": (
+            "Each scenario change retains its original baseline/alternative common valid "
+            "cells. Separate restoration and control pairs may use different cells; their "
+            "changes are not a matched three-run effect merely because both pairs exist."
+        ),
+        "limits": (
+            "These outputs do not model stream or reservoir routing to a downstream intake, "
+            "intake concentration, treatment removal, or an observed water-quality load."
+        ),
+        "units": {"nitrogen_export": "kg/year", "phosphorus_export": "kg/year",
+                  "sediment_export": "metric_tonnes/year"},
+        "method_references": [
+            {"title": "InVEST 3.20 NDR: source-pixel nutrient export",
+             "uri": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html#nutrient-export"},
+            {"title": "InVEST 3.20 SDR: source-pixel sediment export",
+             "uri": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html#sediment-export"},
+        ],
+    }
+
+
+def quantity_paragraphs(scope):
+    value = quantity_interpretation(scope)
+    return [value[name] for name in
+            ("physical", "scope_meaning", "downstream_effect", "sediment",
+             "placement", "relationships", "comparison", "limits")]
+
+
 def _table(columns, rows, caption=None):
     return {"columns": list(columns), "rows": list(rows), "caption": caption}
 
@@ -85,7 +164,7 @@ def _quantity(record, field, number):
 
 def _physical_table(values, caption, number, text):
     return _table(
-        ["Quantity", "Annual export", "Units", "Valid cells", "Valid fraction"],
+        ["Quantity", "Annual source export", "Units", "Valid cells", "Valid fraction"],
         [[_label(pollutant), _quantity(row, "sum", number), text(row.get("sum_units")),
           number(row.get("valid_cells")), number(row.get("coverage_fraction"))]
          for pollutant, row in values.items()],
@@ -154,10 +233,7 @@ def build_sections(directory, state, *, baseline_run_id, alternative_run_ids,
     measurement = inventory["measurement"]
     normalization = inventory["normalization"]
     scope = inventory["quantity_scope"]
-    paragraphs = [
-        "Receiving-water quantities use the saved " + scope.replace("_", " ")
-        + " scope and each selected contributing-area footprint.",
-    ]
+    paragraphs = quantity_paragraphs(scope)
     for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship"):
         if measurement.get(key):
             paragraphs.append(str(measurement[key]))
@@ -178,7 +254,7 @@ def build_sections(directory, state, *, baseline_run_id, alternative_run_ids,
     selection_rows = [
         ["Analysis", text(identity.get("analysis_id"))],
         ["Source plan", text(identity.get("plan_id"))],
-        ["Quantity scope", text(scope)],
+        ["Quantity scope", quantity_interpretation(scope)["scope_label"] + " (" + text(scope) + ")"],
         ["Baseline", text(run_names.get(baseline_run_id) or baseline_run_id)],
         ["Baseline run", baseline_run_id],
     ]
@@ -301,8 +377,8 @@ def accounting_sections(inventory, *, number, text, run_names=None):
     """Present saved disjoint accounting and closure without recomputing quantities."""
     run_names = run_names or {}
     roles = {
-        "total": "Downstream total", "upstream_union": "Upstream union",
-        "incremental": "Downstream incremental",
+        "total": "Whole selected source area", "upstream_union": "Upstream source-area union",
+        "incremental": "Remaining source-area partition",
         "reservoir_inflow": "Above-reservoir land", "other_upstream": "Other upstream land",
     }
     statistics = {
@@ -318,16 +394,17 @@ def accounting_sections(inventory, *, number, text, run_names=None):
         ordered = list(dict.fromkeys(["total", "upstream_union"] + group["partition_roles"]))
         paragraphs = [
             str(group.get("rationale") or ""),
-            "These quantities describe modeled land export to streams inside the original source "
-            "catchments. Above-reservoir land retains that interpretation. Reservoir throughput "
-            "requires additional sourced modelling.",
+            "Each quantity is attributed to source pixels in its original catchment partition "
+            "and represents modeled delivery to streams. The whole-area total is not a load "
+            "crossing a downstream outlet; above-reservoir land is not reservoir inflow or "
+            "throughput. The remaining partition excludes the selected upstream source-area masks.",
             "Disjoint partition: " + " + ".join(roles.get(role, role)
                                                 for role in group["partition_roles"])
             + ". The upstream union is a subtotal.",
         ]
         tables = [_table(["Accounting selection", "Retained value"], [
             ["Group", text(group["id"])],
-            ["Downstream total receptor", text(group["subject_ids"]["total"])],
+            ["Whole source-area receptor", text(group["subject_ids"]["total"])],
             ["Selected-cell partition residual", number(group.get("selected_cell_residual"))],
             *[[roles.get(role, role) + " subject", text(group["subject_ids"][role])]
               for role in ordered if role != "total" and role in group["subject_ids"]],
