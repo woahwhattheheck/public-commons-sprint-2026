@@ -47,7 +47,7 @@ The complete CLI also retains source import, original request inspection/resume,
 
 ## Complete handover and source selection
 
-New deliveries contain all 59 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v6. Complete historical 16-, 21-, 24-, 31-, 39-, 48- and 56-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
+New deliveries contain all 65 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v8. Complete historical 16-, 21-, 24-, 31-, 39-, 48-, 56-, 59- and 61-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
 
 Read reports/review.html, reports/case-review.html, reports/register-review.html, reports/property-review.html, reports/financial-review.html and reports/crf-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
 
@@ -110,3 +110,8 @@ The DOR COMMBUYS public original page is available; the EOVS official attachment
 ## Outgoing product inspection
 
 The complete owner-directed rendered-product instruction is retained in [OPERATING_WORKBENCH.md](OPERATING_WORKBENCH.md#standing-lab-rule-inspect-the-rendered-product-before-presenting-it). Read and apply it before presenting the exact outgoing application or its attachments; open the actual product, operate its controls, view its rendered results and reopen its downloads. Include the instruction in delegated operating assignments.
+
+
+## Adviser migration commissioning
+
+The complete application now includes **Adviser commissioning** in the original workbench navigation. Use [ADVISER_MIGRATION.md](ADVISER_MIGRATION.md) for complete original intake, thirteen source-family decisions, reconstruction, independent target review, release and portable receiving. The application source profile is v8; all earlier complete profiles remain supported. Run the original authored course with `python3 adviser_receiving.py --directory /absolute/private/adviser-course`.
