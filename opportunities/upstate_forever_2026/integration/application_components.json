@@ -768,10 +768,15 @@
     "gis-projects": {
       "title": "gis projects",
       "paths": [
-        "operator/extensions/gis-projects.json"
+        "operator/extensions/gis-projects.json",
+        "model/gis_workspace.py",
+        "model/GIS_PROJECTS.md",
+        "operator/web/gis-projects.mjs",
+        "operator/web/delivery_inspection.mjs"
       ],
       "requires": [
-        "core"
+        "core",
+        "delivery-datasets"
       ]
     },
     "guided-journey": {
