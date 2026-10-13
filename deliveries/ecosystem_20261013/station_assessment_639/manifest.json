@@ -1,0 +1,80 @@
+{
+  "schema": "upstate.source-family-release/v1",
+  "operation_id": "ECO-GEO-0D0F",
+  "edition": "station-assessment-639",
+  "source_scope": "639 complete source files;636 installed into an existing complete scientific application. Three original producer/assembly tools accompany the installed family.",
+  "files": 639,
+  "installed_files": 636,
+  "bytes": 22261414,
+  "sha256": "96044c50f9924ee149ce960dc5ca98f372a4def358c7f04f90356e75a6c9e182",
+  "gzip_bytes": 3217794,
+  "gzip_sha256": "a140c3db8ee0f608db168dc05b0faf652767ae15985f7c8f3c6552bce70d2ba7",
+  "base64_text_bytes": 4290393,
+  "base64_text_sha256": "b59ae45e71aca10cf6767199fdff8dc24b55eefa48d633d5aefbe8dc42cf204e",
+  "baseline": "c4f0d53884357046368c70d9a2f185753b43fe4d",
+  "merge": "a9e2caa39670158421aa6b56935421e9d74ad31f",
+  "head": "1159bbc976289ebc5490f628e017621ae8f206e0",
+  "verified_members": 639,
+  "binary_blob": "e8b1e60cf30d16c864048d5d80f829d315bbf5e9",
+  "text_blob": "fd09c8d31fbc60b800f2fe3296379ca281b53c14",
+  "connected_readback_verified": true,
+  "carriers": [
+    {
+      "path": "station-assessment-family.json.gz",
+      "git_blob": "e8b1e60cf30d16c864048d5d80f829d315bbf5e9",
+      "bytes": 3217794,
+      "sha256": "a140c3db8ee0f608db168dc05b0faf652767ae15985f7c8f3c6552bce70d2ba7",
+      "encoding": "gzip"
+    },
+    {
+      "path": "station-assessment-family.json.gz.base64.txt",
+      "git_blob": "fd09c8d31fbc60b800f2fe3296379ca281b53c14",
+      "bytes": 4290393,
+      "sha256": "b59ae45e71aca10cf6767199fdff8dc24b55eefa48d633d5aefbe8dc42cf204e",
+      "encoding": "base64 UTF-8 with terminal newline"
+    }
+  ],
+  "source_provenance": {
+    "baseline": "c4f0d53884357046368c70d9a2f185753b43fe4d",
+    "composed_merges": [
+      "454b350b47249b9ccb75306b2e9cb55f35a43413",
+      "2a1c83642aadacbb7fe2dd1e7a52a8ad85f537af",
+      "b8915539fdf33057ba616aaf5a0fdd06243dc53b",
+      "32fd6468d3457b37512a816a14919c8e1022bfeb",
+      "55a36d256a25685134be017816f09acd03b8eb84",
+      "ec920114f8b73dfd523b1163c1716590aaa260a5",
+      "3dbd2bf3b5bcb85e5a328a08f44ba618904a3034",
+      "a9e2caa39670158421aa6b56935421e9d74ad31f"
+    ],
+    "description": "Exact frozen638 source plus merged4410's original archived paired-report receiving repair, the complete current exporter’s coefficient-evidence helper and its append-only component declaration. Every member retains its original Git blob and SHA256; the release retains this complete source composition."
+  },
+  "change_summary": {
+    "files": 639,
+    "installed_files": 636,
+    "unchanged_members": 636,
+    "changed_members": [
+      "integration/component_fragments/assessment-study-receiving.json",
+      "model/ensemble_study_transfer.py"
+    ],
+    "new_members": [
+      "model/ensemble_coefficient_evidence.py"
+    ],
+    "original_manifests": 8,
+    "original_references": 801,
+    "unique_original_files": 259,
+    "unchanged_science_pins": 12
+  },
+  "native_boundary": "Continue the admitted634 preparation. Install639 only at the natural operator/browser boundary and start a fresh operator process. All12 preparation-source bodies are byte-identical; preserve active regional compute and current4410 native repair.",
+  "original217_release": {
+    "commit": "f99b517d62754c3f424630ffd0074fc77c026495",
+    "directory": "deliveries/ecosystem_20261013/original_217_domain",
+    "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+  },
+  "bootstrap": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791874731085779?thread_ts=1791724121.853269",
+  "receiver": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791898410836459?thread_ts=1791724121.853269",
+  "owner_direction": {
+    "path": "CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.3"
+  },
+  "predecessor_638_sha256": "bf69640abeab11be8c7b26113ab10a071bff2a10198250028fa598b84ff6c17d"
+}
