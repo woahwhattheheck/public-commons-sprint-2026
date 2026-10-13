@@ -1,0 +1,847 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile monitoring observational support and original topology",
+  "scope": "Four original WQP stations and USGS02186702 source network and dated observations,2020–2025",
+  "entries": [
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/monitoring-context.json",
+      "id": "eighteenmile-monitoring-observed-context-20261013",
+      "title": "Eighteenmile original observations, topology and historical monitoring support",
+      "kind": "document",
+      "role": "monitoring_observed_context",
+      "units": "Original mg/L concentration intervals and USGS ft3/s daily context",
+      "bytes": 1524679,
+      "sha256": "9f4e9f8676a11cf858a193d398d139346b1ba182099fb5a7de20f5de541eb25f",
+      "uri": "https://api.water.usgs.gov/docs/nldi/navigation/",
+      "vintage": "2020–2025 observations; original network responses retained2026-10-13",
+      "metadata": {
+        "schema": "upstate.monitoring-observed-source/v1",
+        "source_period": {
+          "start_inclusive": "2020-01-01",
+          "end_inclusive": "2025-12-31"
+        },
+        "station_id_field": "station_id",
+        "originals_preserved": true
+      },
+      "companions": [
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/report.html",
+          "bytes": 69261,
+          "sha256": "1b338fe2e488fed6f32426d265214b3c23ab07ef788159ccbccb6de06f16fd11"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+          "bytes": 115732,
+          "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+          "bytes": 368719,
+          "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nitrogen-components.csv",
+          "bytes": 51672,
+          "sha256": "e94474a10e7dc0e39a711c5439b415002b39d6196a9674ffec4d48806a6f6c48"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/component-consistency.csv",
+          "bytes": 3383,
+          "sha256": "a1b0fd31cbdb3823d4c699b7b50949be4aef6cb8e66926b67ac6adbc772ae09d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+          "bytes": 1421,
+          "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+          "bytes": 3762,
+          "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+          "bytes": 44734,
+          "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-stratum-concentrations.csv",
+          "bytes": 7140,
+          "sha256": "a6988b834171bdf7be727542982d258fcc586bcbe538a62f3be891455410eae4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+          "bytes": 27241,
+          "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+          "bytes": 467,
+          "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+          "bytes": 7980,
+          "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-duration.svg",
+          "bytes": 47236,
+          "sha256": "04ed5dc9a09afda5650a9dc7bd6cf693c3d47479051d4d10e39f72e066116fdf"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analyze-stream-flow.mjs",
+          "bytes": 29802,
+          "sha256": "72cb4506ccc6c1509bbc7c0376e18d190bca1ae548de1fc42a55d32cc6942b76"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/import_into_workspace.py",
+          "bytes": 8291,
+          "sha256": "adc64ba3278f73f5f94509d8aaa87f5319dc11fd815c84368be93687bce96256"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
+          "bytes": 5733,
+          "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+          "bytes": 22552,
+          "sha256": "530a7f75775c28669516d46e7b4a60bc8c4f1feaa6fc6100d16270d15f0430f9"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+          "bytes": 199318,
+          "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+          "bytes": 2297,
+          "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+          "bytes": 69221,
+          "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+          "bytes": 153018,
+          "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+          "bytes": 2273280,
+          "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+          "bytes": 3746,
+          "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+          "bytes": 727,
+          "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+          "bytes": 725,
+          "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+          "bytes": 723,
+          "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+          "bytes": 720,
+          "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/station-topology.csv",
+          "bytes": 11298,
+          "sha256": "d9b470b28a9efbe81aece089fcebe8320ed214160a0c13d80cc8bccf58865697"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/paired-contrasts-network.csv",
+          "bytes": 97910,
+          "sha256": "ea83882184e0d76bfb6364cda4c5eb5d0068146a4d2f0a8e623fed4ff60db626"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original-station-points.geojson",
+          "bytes": 2460,
+          "sha256": "54c846513c0e5a885c9f9b06ab43dc9c29dcdd9dfb7abc49917eba4cc19451c0"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/context-summary.json",
+          "bytes": 1106,
+          "sha256": "9f00117e5ba34b847ad7246c671e7f26711300310c62b1571b70b4a585df77aa"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+          "bytes": 1111,
+          "sha256": "b2ec0eed6f86400099afd835762c1bb3225b0f34e4f1bdebf25f4312e40f715d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+          "bytes": 2141,
+          "sha256": "0c33e1bfa5049b71682ad2c7f79731aa9dfce5e977b579f374a3c01590c2873c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+          "bytes": 2676,
+          "sha256": "8c318710f5c52c7c2767cc80b1b2c9582d9c9809efd860a26ab79aefcb32c2f4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/derive-monitoring-context.mjs",
+          "bytes": 11134,
+          "sha256": "0add82fd22a6ac8dadcd06790f6af34516ed7f3f46b1dee85644dbe3d4d3bdfe"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/input-manifest.json",
+          "bytes": 3824,
+          "sha256": "afa16c127e7511ae1d975ece6e05cf1142607b7d903ab7a786e0ba36c2cd1f17"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+          "bytes": 23431,
+          "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_nldi_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
+          "bytes": 3671,
+          "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
+          "bytes": 29226,
+          "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
+          "bytes": 29353,
+          "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
+          "bytes": 29216,
+          "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2024_2024.json",
+          "bytes": 29295,
+          "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2025_2025.json",
+          "bytes": 29522,
+          "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e"
+        },
+        {
+          "path": "model/MONITORING_OBSERVED_CONTEXT.md",
+          "bytes": 11799,
+          "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+        }
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original-station-points.geojson",
+      "id": "eighteenmile-monitoring-source-stations-20261013",
+      "title": "Eighteenmile original WQP monitoring station points",
+      "kind": "vector",
+      "role": "monitoring_stations",
+      "units": "WGS84 longitude/latitude",
+      "bytes": 2460,
+      "sha256": "54c846513c0e5a885c9f9b06ab43dc9c29dcdd9dfb7abc49917eba4cc19451c0",
+      "uri": "https://api.water.usgs.gov/docs/nldi/navigation/",
+      "vintage": "2020–2025 observations; original network responses retained2026-10-13",
+      "metadata": {
+        "source_period": {
+          "start_inclusive": "2020-01-01",
+          "end_inclusive": "2025-12-31"
+        },
+        "station_id_field": "station_id",
+        "originals_preserved": true
+      },
+      "companions": [
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/report.html",
+          "bytes": 69261,
+          "sha256": "1b338fe2e488fed6f32426d265214b3c23ab07ef788159ccbccb6de06f16fd11"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+          "bytes": 115732,
+          "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+          "bytes": 368719,
+          "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nitrogen-components.csv",
+          "bytes": 51672,
+          "sha256": "e94474a10e7dc0e39a711c5439b415002b39d6196a9674ffec4d48806a6f6c48"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/component-consistency.csv",
+          "bytes": 3383,
+          "sha256": "a1b0fd31cbdb3823d4c699b7b50949be4aef6cb8e66926b67ac6adbc772ae09d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+          "bytes": 1421,
+          "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+          "bytes": 3762,
+          "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+          "bytes": 44734,
+          "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-stratum-concentrations.csv",
+          "bytes": 7140,
+          "sha256": "a6988b834171bdf7be727542982d258fcc586bcbe538a62f3be891455410eae4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+          "bytes": 27241,
+          "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+          "bytes": 467,
+          "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+          "bytes": 7980,
+          "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-duration.svg",
+          "bytes": 47236,
+          "sha256": "04ed5dc9a09afda5650a9dc7bd6cf693c3d47479051d4d10e39f72e066116fdf"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analyze-stream-flow.mjs",
+          "bytes": 29802,
+          "sha256": "72cb4506ccc6c1509bbc7c0376e18d190bca1ae548de1fc42a55d32cc6942b76"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/import_into_workspace.py",
+          "bytes": 8291,
+          "sha256": "adc64ba3278f73f5f94509d8aaa87f5319dc11fd815c84368be93687bce96256"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
+          "bytes": 5733,
+          "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+          "bytes": 22552,
+          "sha256": "530a7f75775c28669516d46e7b4a60bc8c4f1feaa6fc6100d16270d15f0430f9"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+          "bytes": 199318,
+          "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+          "bytes": 2297,
+          "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+          "bytes": 69221,
+          "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+          "bytes": 153018,
+          "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+          "bytes": 2273280,
+          "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+          "bytes": 3746,
+          "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+          "bytes": 727,
+          "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+          "bytes": 725,
+          "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+          "bytes": 723,
+          "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+          "bytes": 720,
+          "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/monitoring-context.json",
+          "bytes": 1524679,
+          "sha256": "9f4e9f8676a11cf858a193d398d139346b1ba182099fb5a7de20f5de541eb25f"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/station-topology.csv",
+          "bytes": 11298,
+          "sha256": "d9b470b28a9efbe81aece089fcebe8320ed214160a0c13d80cc8bccf58865697"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/paired-contrasts-network.csv",
+          "bytes": 97910,
+          "sha256": "ea83882184e0d76bfb6364cda4c5eb5d0068146a4d2f0a8e623fed4ff60db626"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/context-summary.json",
+          "bytes": 1106,
+          "sha256": "9f00117e5ba34b847ad7246c671e7f26711300310c62b1571b70b4a585df77aa"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+          "bytes": 1111,
+          "sha256": "b2ec0eed6f86400099afd835762c1bb3225b0f34e4f1bdebf25f4312e40f715d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+          "bytes": 2141,
+          "sha256": "0c33e1bfa5049b71682ad2c7f79731aa9dfce5e977b579f374a3c01590c2873c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+          "bytes": 2676,
+          "sha256": "8c318710f5c52c7c2767cc80b1b2c9582d9c9809efd860a26ab79aefcb32c2f4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/derive-monitoring-context.mjs",
+          "bytes": 11134,
+          "sha256": "0add82fd22a6ac8dadcd06790f6af34516ed7f3f46b1dee85644dbe3d4d3bdfe"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/input-manifest.json",
+          "bytes": 3824,
+          "sha256": "afa16c127e7511ae1d975ece6e05cf1142607b7d903ab7a786e0ba36c2cd1f17"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+          "bytes": 23431,
+          "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_nldi_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
+          "bytes": 3671,
+          "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
+          "bytes": 29226,
+          "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
+          "bytes": 29353,
+          "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
+          "bytes": 29216,
+          "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2024_2024.json",
+          "bytes": 29295,
+          "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2025_2025.json",
+          "bytes": 29522,
+          "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e"
+        },
+        {
+          "path": "model/MONITORING_OBSERVED_CONTEXT.md",
+          "bytes": 11799,
+          "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+        }
+      ]
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/station-topology.csv",
+      "id": "eighteenmile-station-network-relations-20261013",
+      "title": "Eighteenmile original indexed station and gauge relations",
+      "kind": "table",
+      "role": "monitoring_station_network_context",
+      "units": "Original reach identity and connectivity",
+      "bytes": 11298,
+      "sha256": "d9b470b28a9efbe81aece089fcebe8320ed214160a0c13d80cc8bccf58865697",
+      "uri": "https://api.water.usgs.gov/docs/nldi/navigation/",
+      "vintage": "2020–2025 observations; original network responses retained2026-10-13",
+      "metadata": {
+        "source_period": {
+          "start_inclusive": "2020-01-01",
+          "end_inclusive": "2025-12-31"
+        },
+        "station_id_field": "station_id",
+        "originals_preserved": true
+      },
+      "companions": [
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/report.html",
+          "bytes": 69261,
+          "sha256": "1b338fe2e488fed6f32426d265214b3c23ab07ef788159ccbccb6de06f16fd11"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+          "bytes": 115732,
+          "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+          "bytes": 368719,
+          "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nitrogen-components.csv",
+          "bytes": 51672,
+          "sha256": "e94474a10e7dc0e39a711c5439b415002b39d6196a9674ffec4d48806a6f6c48"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/component-consistency.csv",
+          "bytes": 3383,
+          "sha256": "a1b0fd31cbdb3823d4c699b7b50949be4aef6cb8e66926b67ac6adbc772ae09d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+          "bytes": 1421,
+          "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+          "bytes": 3762,
+          "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+          "bytes": 44734,
+          "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-stratum-concentrations.csv",
+          "bytes": 7140,
+          "sha256": "a6988b834171bdf7be727542982d258fcc586bcbe538a62f3be891455410eae4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+          "bytes": 27241,
+          "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+          "bytes": 467,
+          "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+          "bytes": 7980,
+          "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-duration.svg",
+          "bytes": 47236,
+          "sha256": "04ed5dc9a09afda5650a9dc7bd6cf693c3d47479051d4d10e39f72e066116fdf"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analyze-stream-flow.mjs",
+          "bytes": 29802,
+          "sha256": "72cb4506ccc6c1509bbc7c0376e18d190bca1ae548de1fc42a55d32cc6942b76"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/import_into_workspace.py",
+          "bytes": 8291,
+          "sha256": "adc64ba3278f73f5f94509d8aaa87f5319dc11fd815c84368be93687bce96256"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
+          "bytes": 5733,
+          "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+          "bytes": 22552,
+          "sha256": "530a7f75775c28669516d46e7b4a60bc8c4f1feaa6fc6100d16270d15f0430f9"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+          "bytes": 199318,
+          "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+          "bytes": 2297,
+          "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+          "bytes": 69221,
+          "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+          "bytes": 153018,
+          "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+          "bytes": 2273280,
+          "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+          "bytes": 3746,
+          "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+          "bytes": 727,
+          "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+          "bytes": 725,
+          "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+          "bytes": 723,
+          "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+          "bytes": 720,
+          "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/monitoring-context.json",
+          "bytes": 1524679,
+          "sha256": "9f4e9f8676a11cf858a193d398d139346b1ba182099fb5a7de20f5de541eb25f"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/paired-contrasts-network.csv",
+          "bytes": 97910,
+          "sha256": "ea83882184e0d76bfb6364cda4c5eb5d0068146a4d2f0a8e623fed4ff60db626"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original-station-points.geojson",
+          "bytes": 2460,
+          "sha256": "54c846513c0e5a885c9f9b06ab43dc9c29dcdd9dfb7abc49917eba4cc19451c0"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/context-summary.json",
+          "bytes": 1106,
+          "sha256": "9f00117e5ba34b847ad7246c671e7f26711300310c62b1571b70b4a585df77aa"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+          "bytes": 1111,
+          "sha256": "b2ec0eed6f86400099afd835762c1bb3225b0f34e4f1bdebf25f4312e40f715d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+          "bytes": 2141,
+          "sha256": "0c33e1bfa5049b71682ad2c7f79731aa9dfce5e977b579f374a3c01590c2873c"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+          "bytes": 2676,
+          "sha256": "8c318710f5c52c7c2767cc80b1b2c9582d9c9809efd860a26ab79aefcb32c2f4"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/derive-monitoring-context.mjs",
+          "bytes": 11134,
+          "sha256": "0add82fd22a6ac8dadcd06790f6af34516ed7f3f46b1dee85644dbe3d4d3bdfe"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/input-manifest.json",
+          "bytes": 3824,
+          "sha256": "afa16c127e7511ae1d975ece6e05cf1142607b7d903ab7a786e0ba36c2cd1f17"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+          "bytes": 23431,
+          "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_nldi_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
+          "bytes": 3671,
+          "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
+          "bytes": 29226,
+          "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
+          "bytes": 29353,
+          "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
+          "bytes": 29216,
+          "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2024_2024.json",
+          "bytes": 29295,
+          "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650"
+        },
+        {
+          "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2025_2025.json",
+          "bytes": 29522,
+          "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e"
+        },
+        {
+          "path": "model/MONITORING_OBSERVED_CONTEXT.md",
+          "bytes": 11799,
+          "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Daily mean discharge belongs to USGS 02186702 and supplies regional date context.",
+    "Original nutrient station IDs and activity IDs remain distinct; simultaneous calendar date does not establish the same water parcel.",
+    "Historical flow and sampling coverage are descriptive of 2020–2025; future saved calendar dates have no received historical observation.",
+    "Original below-quantification bounds and paired concentration intervals remain unreplaced.",
+    "NLDI navigation indexes whole catchments; same-reach direction uses original ReachCode measures, zero downstream and 100 upstream.",
+    "No monitoring objective, cost, campaign binding or selected plan is changed by this context."
+  ]
+}
