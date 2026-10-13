@@ -151,10 +151,10 @@ class ImplementationOperator:
         root = Path(workspace.root)
         if not (root / "implementation" / "plans").exists():
             return dict(plans=0, revisions=0)
-        store = ImplementationStore(workspace)
-        plans = store.list_plans()
-        revisions = sum(len(store.history(plan["id"])) for plan in plans)
-        return dict(plans=len(plans), revisions=revisions)
+        from model.portable_implementation import verify_implementation
+        summary = verify_implementation(workspace.root)
+        return dict(plans=summary["plan_count"], revisions=summary["revision_count"],
+                    implementation=summary)
 
     def list(self, workspace):
         return dict(workspace_key=workspace, plans=self.store(workspace).list_plans())
@@ -198,9 +198,19 @@ class ImplementationOperator:
                     workspace, path, source["label"],
                     dict(bytes=source.get("size_bytes"), sha256=source.get("sha256")),
                 ))
+        reports = []
+        for edition in store.list_reports(plan_id):
+            report = self._report_result(
+                workspace, edition["directory"], expected_plan=plan_id,
+                expected_revision=edition["revision"],
+            )
+            reports.append({
+                "id": edition["id"], "revision": edition["revision"], "as_of": edition["as_of"],
+                "files": edition["files"], "_downloads": report["_downloads"],
+            })
         return dict(
             workspace_key=workspace, plan=plan, summary=summarize_plan(plan, as_of),
-            history=store.history(plan_id), _downloads=downloads,
+            history=store.history(plan_id), _downloads=downloads, reports=reports,
         )
 
     def item(self, workspace, plan_id):
@@ -365,7 +375,10 @@ class ImplementationOperator:
         return result
 
     def _report_result(self, workspace, directory, *, expected_plan=None, expected_revision=None):
-        directory = Path(directory)
+        # A report remains reopenable after the host/task store is replaced.
+        # Keep its exact original members beside the saved native plan revisions.
+        retained = self.store(workspace).retain_report(directory)
+        directory = Path(retained["directory"])
         manifest_path = directory / "manifest.json"
         if not manifest_path.is_file():
             raise self.Fault("IMPLEMENTATION_REPORT_INCOMPLETE",
@@ -388,7 +401,8 @@ class ImplementationOperator:
         return dict(
             id=manifest["plan_id"], plan_id=manifest["plan_id"], revision=manifest["revision"],
             workspace_key=workspace, as_of=manifest["as_of"], status="reported",
-            directory=str(directory), manifest_ref=str(manifest_path), _downloads=downloads,
+            directory=str(directory), manifest_ref=str(manifest_path),
+            report_id=retained["id"], _downloads=downloads,
         )
 
     def _attach(self, store, task, plan_id, expected, actor):
@@ -626,8 +640,11 @@ class ImplementationOperator:
         if task.get("state") == "complete":
             result = task.get("result", {})
             if task["action"] == "implementation.plan.report":
+                directory = (self.store(workspace).base / self._id(result["plan_id"]) /
+                             "reports" / result["report_id"]
+                             if result.get("report_id") else Path(result["directory"]))
                 refreshed = self._report_result(
-                    workspace, result["directory"], expected_plan=result["plan_id"],
+                    workspace, directory, expected_plan=result["plan_id"],
                     expected_revision=result["revision"],
                 )
                 task["_downloads"] = refreshed["_downloads"]

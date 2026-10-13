@@ -117,9 +117,9 @@ export class ImplementationWorkbench {
   fail(error){if(this.gone)return;this.error=error?.message||String(error);const dialog=this.root.querySelector('dialog[open]');if(dialog){let notice=dialog.querySelector('.iw-form-error');if(!notice){notice=document.createElement('pre');notice.className='iw-error iw-form-error';notice.setAttribute('role','alert');dialog.querySelector('[data-impl-dialog]').prepend(notice);}notice.textContent=this.error;}else this.render();this.host.toast?.(this.error.slice(0,180));}
   async read(path,args={}){return this.host.api(this.host.endpoint?this.host.endpoint(path,args):path+'?'+new URLSearchParams({workspace:this.workspace,...args}));}
   async reloadList(){if(this.native){const r=await this.read('/api/implementation/list');if(this.gone)return;this.planList=r.plans||r.implementation_plans||[];}else this.planList=Object.values(this.offlineCopies).map(x=>x.document);}
-  async openPlan(id,preferNative=false){
-    const turn=++this.generation;this.cache();let remote=null,history=[],downloads=[];
-    if(this.native){try{const r=await this.read('/api/implementation/detail',{id});remote=r.plan||r.document||null;history=r.history||[];downloads=r._downloads||[];}catch(e){if(!this.offlineCopies[id])throw e;}}
+  async openPlan(id,preferNative=false,revision=null){
+    const turn=++this.generation;this.cache();let remote=null,history=[],downloads=[],reports=[];
+    if(this.native){try{const r=await this.read('/api/implementation/detail',{id,...(revision===null?{}:{revision})});remote=r.plan||r.document||null;history=r.history||[];downloads=r._downloads||[];reports=r.reports||[];}catch(e){if(preferNative||!this.offlineCopies[id])throw e;}}
     if(this.gone||turn!==this.generation)return;
     const local=this.offlineCopies[id];
     if(preferNative&&remote){if(local?.dirty)this.preserveDraft(local.document,'before-native-reopen');this.plan=clone(remote);this.dirty=false;}
@@ -127,7 +127,28 @@ export class ImplementationWorkbench {
     else if(remote){this.plan=clone(remote);this.dirty=false;}
     else if(local){this.plan=clone(local.document);this.dirty=!!local.dirty;}
     else throw Error('This plan is not available in the selected workspace.');
-    this.history=history;this.downloads=downloads;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
+    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
+  }
+  async receiveSavedPlan(payload){
+    if(!this.native||this.gone||payload?.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the saved plan in its received workspace.');
+    if(typeof payload.plan_id!=='string'||!payload.plan_id)throw Error('Choose the original saved plan.');
+    const revision=payload.revision??null;
+    if(revision!==null&&(!Number.isSafeInteger(revision)||revision<1))throw Error('Choose the original saved revision.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Close the current plan editor before opening the received plan.');
+    await this.openPlan(payload.plan_id,true,revision);
+    if(this.gone||this.plan?.id!==payload.plan_id||revision!==null&&this.plan.revision!==revision)throw Error('The saved plan changed while opening its original revision.');
+    this.tab='handover';this.message='Opened the original saved plan at native revision '+this.plan.revision+'. Its retained reports and source files are available below.';this.render();
+    return {accepted:true,workspace_key:this.workspace,plan_id:this.plan.id,revision:this.plan.revision};
+  }
+  nativeDownloads(rows){
+    return (rows||[]).map(row=>{
+      if(typeof row.url!=='string'||!/^\/api\/file\/[0-9a-f]{64}$/.test(row.url))return '';
+      return '<a href="'+esc(row.url+'?download=1')+'" download>'+esc(row.label||row.filename||row.name||'Original file')+'</a>';
+    }).filter(Boolean).join(' · ');
+  }
+  retainedReports(){
+    if(!this.native)return '';
+    return '<h3>Retained original files</h3><p>'+this.nativeDownloads(this.downloads)+'</p><h3>Saved native report editions</h3><p>These complete reports retain their exact native revision and original report date. They reopen from this Workspace after transfer.</p>'+this.table(['Revision','Report date','Files','Original downloads'],(this.reports||[]).map(row=>[esc(row.revision),esc(row.as_of),esc(row.files),this.nativeDownloads(row._downloads)]),'Create a Native report package to retain its complete edition with this plan.');
   }
   preserveDraft(doc,reason){try{const key=this.storageKey+'/preserved/'+doc.id+'/'+Date.now();localStorage.setItem(key,JSON.stringify({reason,document:doc}));}catch{}download(doc.id+'-'+reason+'.json',JSON.stringify(doc,null,2),'application/json');}
   commitLocal(next,message='Draft saved in this browser.'){
@@ -195,7 +216,7 @@ export class ImplementationWorkbench {
       await this.reloadList();if(!current())return;
       const r=await this.read('/api/implementation/detail',{id:pending.plan_id});
       if(!current()||this.root.querySelector('dialog[open]'))return;
-      this.nativePlan=clone(r.plan||r.document);this.history=r.history||[];this.downloads=r._downloads||[];this.pending=null;this.error='';
+      this.nativePlan=clone(r.plan||r.document);this.history=r.history||[];this.downloads=r._downloads||[];this.reports=r.reports||[];this.pending=null;this.error='';
       if(docEqual(this.plan,pending.snapshot)){this.plan=clone(this.nativePlan);this.dirty=false;this.importedFile=false;this.message=pending.action==='implementation.plan.report'?'Native report package is ready for revision '+this.plan.revision+'.':'Native revision '+this.plan.revision+' saved and reopened.';}
       else this.message='Native revision '+this.nativePlan.revision+' saved. Later browser edits are retained separately; export or reconcile them before the next commit.';
       this.cache();this.render();await this.finishEconomicOperation(pending);
@@ -240,7 +261,7 @@ export class ImplementationWorkbench {
       return '<div class="iw-section-head"><h3>Conservation and intervention selections</h3><div class="iw-actions">'+(this.native?button('source-import','Import native selection','','iw-primary'):'')+this.addButton('candidates','Add source-linked candidate')+'</div></div><p class="iw-muted">Selected rows retain the original scientific source and model references. Community-area totals stay with their original area; source snapshots can be inspected below.</p>'+this.table(['Candidate','Whole area (ha)','Source / native identity','Retained quantities',''],p.candidates.map(c=>[esc(c.label),esc(c.area_ha??''),'<code>'+esc(textObject(c.source))+'</code>','<code>'+esc(textObject(c.modeled_benefits||[]))+'</code>',button('inspect','Inspect source','data-collection="candidates" data-id="'+esc(c.id)+'"')]))+'<div class="iw-section-head"><h3>Source register</h3>'+this.addButton('source_links')+'</div>'+this.table(['Reference','Kind','Location',''],p.source_links.map(s=>{const link=safeLink(s.reference);return [esc(s.label),esc(s.kind),link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.reference)+'</a>':esc(format(s.reference)),button('inspect','Inspect','data-collection="source_links" data-id="'+esc(s.id)+'"')];}));
     }
     if(this.tab==='handover'){
-      return '<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div><h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
+      return '<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div>'+this.retainedReports()+'<h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
     }
     return '';
   }
@@ -301,7 +322,7 @@ export function attachImplementationWorkbench(host){
       await start;
       if(request!==selected)return;
       if(workbench!==instance){selected.consuming=false;return consume();}
-      const value=await instance.receiveEconomicScenario(selected.payload);
+      const value=selected.kind==='saved-plan'?await instance.receiveSavedPlan(selected.payload):await instance.receiveEconomicScenario(selected.payload);
       if(request===selected){request=null;selected.resolve(value);}
     }catch(error){
       if(request===selected&&workbench!==instance){selected.consuming=false;return consume();}
@@ -319,6 +340,19 @@ export function attachImplementationWorkbench(host){
     detach(){
       workbench?.detach();workbench=null;ready=null;
       if(request){request.reject(Error('The implementation desk was closed before the scenario opened.'));request=null;}
+    },
+    openSavedPlan(payload){
+      if(payload?.workspace_key!==host.getState?.()?.workspace_key)return Promise.reject(Error('Open the saved plan in its received workspace.'));
+      if(typeof host.navigate!=='function')return Promise.reject(Error('The extension host needs its original desk navigation capability.'));
+      if(request)return Promise.reject(Error('The previous saved selection is still opening.'));
+      return new Promise((resolve,reject)=>{
+        request={kind:'saved-plan',payload:clone(payload),resolve,reject};
+        try{
+          const navigation=host.navigate('implementation');
+          Promise.resolve(navigation).then(()=>consume()).catch(error=>{if(request){const selected=request;request=null;selected.reject(error);}});
+          consume();
+        }catch(error){request=null;reject(error);}
+      });
     },
     openEconomicScenario(payload){
       if(payload?.workspace_key!==host.getState?.()?.workspace_key)return Promise.reject(Error('Open the selected economic edition in its original workspace.'));
