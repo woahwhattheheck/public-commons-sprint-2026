@@ -171,6 +171,7 @@ class PairedEnsembleService:
         value = app.describe(key)
         records = self._records(app, key, value)
         result = {**value, "native_context": self.native_context(app, value),
+                  "execution_settings": app.execution_settings(key),
                   "reports": value.get("reports", {}) if value.get("state") == "complete" else {}, "_downloads": [
             self.operator._ticket(workspace_key, member(app.root / key, row["path"]), row, row["path"])
             for row in records
@@ -191,33 +192,15 @@ class PairedEnsembleService:
         return ticket, REPORT_POLICY if path.suffix == ".html" else None
 
     def retained_selection(self, workspace_key, ensemble_id):
-        """Recover native pairs from the durable analysis after browser loss."""
+        """Recover native pairs and accepted controls after browser loss."""
         app = self._app(workspace_key)
         result = app.describe(identifier(ensemble_id))
-        stored = result["selection"]
-        if stored.get("input_kind") != "original Workspace native run artifacts":
+        if result["selection"].get("input_kind") != "original Workspace native run artifacts":
             raise self.Fault("PAIRED_NATIVE_SELECTION", "Choose an analysis bound to original Workspace native runs.", 409)
-        pairs = [{
-            "profile_id": identifier(row["profile_id"]),
-            "baseline_run_id": identifier(row["baseline_run_id"]),
-            "alternative_run_id": identifier(row["alternative_run_id"]),
-            "scenario_id": identifier(row["scenario_id"]),
-        } for row in stored["members"]]
-        # These original records also make a missing native workspace actionable
-        # before the expensive binding begins.
-        for pair in pairs:
-            for side in ("baseline_run_id", "alternative_run_id"):
-                app.workspace.inspect_run(pair[side])
-        selection = {
-            "title": stored["title"], "purpose": stored["purpose"],
-            "input_description": stored["input_description"], "pairs": pairs,
-            "pollutants": stored["pollutants"], "quantiles": stored["quantiles"],
-            "support": stored["support"], "planned_member_count": stored["planned_member_count"],
-            "improvement_thresholds": stored["improvement_thresholds"],
-            "memory_mb": 256, "tile_size": 256, "max_open_datasets": 48,
-        }
+        selection = app.retained_selection(result["id"])
         return {"ensemble_id": result["id"], "state": result["state"],
-                "selection": selection, "source_kernel_sha256": stored["kernel_sha256"]}
+                "selection": selection,
+                "source_kernel_sha256": result["selection"]["kernel_sha256"]}
 
     def read(self, workspace_key, operation, payload=None):
         payload = payload or {}
