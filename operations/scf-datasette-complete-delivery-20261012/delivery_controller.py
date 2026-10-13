@@ -258,7 +258,7 @@ def persist_complete_phase(original_outcome,phase):
                     members.append({"path":rel,"kind":"symlink","target":os.readlink(path)});continue
                 if not stat.S_ISREG(info.st_mode):excluded.append({"path":rel,"kind":"non-regular-runtime-member"});continue
                 z.write(path,rel);members.append({"path":rel,"bytes":info.st_size,"sha256":digest(path),"mtime_ns":info.st_mtime_ns})
-        z.writestr("complete-checkpoint-manifest.json",json.dumps({"schema":"commons.datasette-complete-checkpoint.v1","operation":OP,"original_root":str(root),"state":outcome["state"],"source":source_identity,"files":members,"directories":directories,"excluded":excluded},indent=2)+"\n")
+        z.writestr("complete-checkpoint-manifest.json",json.dumps({"schema":"commons.datasette-complete-checkpoint.v1","operation":OP,"original_root":payload.get("logical_original_root",str(root)),"physical_root":str(root),"physical_workspace_binding":payload.get("physical_workspace_binding"),"state":outcome["state"],"source":source_identity,"files":members,"directories":directories,"excluded":excluded},indent=2)+"\n")
     archive_identity={"file_name":archive_path.name,"bytes":archive_path.stat().st_size,"sha256":digest(archive_path),"members":len(members)+1}
     emit("datasette_complete_checkpoint",state=outcome["state"],**archive_identity)
     if report_saved is not None and succeeded(report_saved):
@@ -332,7 +332,7 @@ def installed_checkpoint(request):
     if (not journal or journal.get("schema")!="stellar-forge.datasette-installed-browser-journey.v1"
         or journal.get("phase")!="INSTALLED_SOURCE_VERIFIED"):
         raise RuntimeError("The installed runner has not paused at its source-verified journal.")
-    original_input=journal["input"];build=journal["build"];runtime=journal["runtime"]
+    original_input=journal.get("executionInput",journal["input"]);build=journal["build"];runtime=journal["runtime"]
     installation=journal["installation"];source=journal["installedSource"]
     if (original_input["sourceRef"]!=source_identity["installed_source_ref"]
         or original_input["repository"]!=str(root/"canonical-repository")
@@ -528,10 +528,20 @@ try:
     effective_raw=json.dumps(effective,separators=(",",":")).encode("utf-8")
     (root/"publisher-effective-capsule.json").write_bytes(effective_raw)
     outcome["publisher_source_selection"]={"files":len(effective["files"]),"bytes":len(effective_raw),"sha256":hashlib.sha256(effective_raw).hexdigest(),"postimages":applied}
-    namespace={"q":{"capsule":effective},"root":str(root),"__name__":"__datasette_original_publisher__"}
-    try:exec(compile(capsule["runnerSource"],"<original 119-file publisher runner>","exec"),namespace)
-    except SystemExit as error:
-        if error.code not in (None,0):raise RuntimeError("Original publisher runner returned "+str(error.code)+": "+(root/"native.stderr").read_text(errors="replace")[-9000:])
+    physical_binding=payload.get("physical_workspace_binding")
+    if physical_binding:
+        if (physical_binding.get("state")!="COMPLETE" or physical_binding.get("operation")!=OP
+            or physical_binding.get("physicalRoot")!=str(root)
+            or digest(root/"journey/publisher-programme-result.json")!=physical_binding.get("publisherResultSha256")
+            or digest(root/"journey/publisher-programme-state.json")!=physical_binding.get("publisherJournalSha256")):
+            raise RuntimeError("The completed original publisher storage binding differs.")
+        outcome["physical_workspace_binding"]=physical_binding
+        emit("datasette_completed_publisher_retained",operation=OP,physical_root=str(root),original_root=physical_binding["originalRoot"])
+    else:
+        namespace={"q":{"capsule":effective},"root":str(root),"__name__":"__datasette_original_publisher__"}
+        try:exec(compile(capsule["runnerSource"],"<original 119-file publisher runner>","exec"),namespace)
+        except SystemExit as error:
+            if error.code not in (None,0):raise RuntimeError("Original publisher runner returned "+str(error.code)+": "+(root/"native.stderr").read_text(errors="replace")[-9000:])
     native=read_json(root/"native-result.json")
     programme=read_json(root/"journey/publisher-programme-result.json")
     journal=read_json(root/"journey/publisher-programme-state.json")
@@ -630,6 +640,8 @@ try:
     emit("datasette_browser_runtime_ready",**outcome["browser_runtime"])
     installed_input={"repository":str(repository),"sourceRef":got,"publisherProgrammeDirectory":str(root/"journey"),"outputDirectory":str(root/"installed"),"playwrightModule":str(playwright),"browserExecutable":str(chromium),"port":53173,"receivedPort":53174,"offline":False,"npmCache":str(tmp/"npm-cache"),"python":sys.executable,"npm":str(node.parent/"npm")}
     installed_input["installedCheckpoint"]={"protocol":"controller-stdio-v1","operation":OP}
+    if payload.get("physical_workspace_binding"):
+        installed_input["storageBindingFile"]=str(root/"run-history/physical-storage/binding.json")
     save_json(root/"installed-input.json",installed_input)
     emit("datasette_installed_started",source_ref=got,port=53173,received_port=53174,publisher_directory=str(root/"journey"))
     run([node,continuation/"run-installed.mjs","--input",root/"installed-input.json"],"installed-programme",timeout=1800,checkpoint_callback=installed_checkpoint)

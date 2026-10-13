@@ -11,8 +11,8 @@
     },
     {
       "path": "run_conapi.mjs",
-      "bytes": 57981,
-      "sha256": "fb2df93ccceda029f9faac7fa5251f007e4754db3510e487007f1e57456b1a4c"
+      "bytes": 58972,
+      "sha256": "79ab2cff78654917b4f1da586e1d67b13c77e18fa8cdf3031951d03d540a6254"
     },
     {
       "path": "preserve_delivery.py",
@@ -26,8 +26,8 @@
     },
     {
       "path": "OPERATING.md",
-      "bytes": 32992,
-      "sha256": "3b1f2e574237cbce2df1b673a2afb01f0b6b923d3b934eb010169625d4646dad"
+      "bytes": 34779,
+      "sha256": "4d6ce61ccf8c14b2deba1c4dc58751dc7e418a538790e0877b4f7f3efd95d7f5"
     },
     {
       "path": "workbook_following.py",
