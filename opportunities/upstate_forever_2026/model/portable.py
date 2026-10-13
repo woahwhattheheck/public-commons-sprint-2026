@@ -16,6 +16,7 @@ from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 from .portable_implementation import locked_implementation, verify_implementation
 from .portable_parameter_studies import verify_parameter_studies
 from . import joint_parameter_study_transfer as joint_transfer
+from . import client_source_recipe_portable as recipe_transfer
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -531,6 +532,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
         excluded.add(pending)
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            stack.enter_context(recipe_transfer.locked_recipes(root))
             stack.enter_context(held(root / ".programme-source-updates.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
@@ -621,6 +623,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 implementation = verify_implementation(root, records)
                 parameter_studies = verify_parameter_studies(workspace, records)
                 joint_parameter_studies = joint_transfer.verify_workspace(workspace, records)
+                client_source_recipes = recipe_transfer.verify_workspace(workspace, records)
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
                             "database_snapshots": databases,
@@ -629,7 +632,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             "source_acquisitions": source_acquisitions,
                             "implementation": implementation,
                             "parameter_studies": parameter_studies,
-                            "joint_parameter_studies": joint_parameter_studies}
+                            "joint_parameter_studies": joint_parameter_studies,
+                            "client_source_recipes": client_source_recipes}
                 if delivery:
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
@@ -655,7 +659,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                       "source_acquisitions": source_acquisitions,
                       "implementation": implementation,
                       "parameter_studies": parameter_studies,
-                      "joint_parameter_studies": joint_parameter_studies}
+                      "joint_parameter_studies": joint_parameter_studies,
+                      "client_source_recipes": client_source_recipes}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -1074,9 +1079,14 @@ def _verify_restored_workspace(manifest, destination):
     retained_joint = manifest.get("joint_parameter_studies")
     if retained_joint is not None and retained_joint != joint_parameter_studies:
         raise ValueError("Receiving changed the captured original joint studies")
+    client_source_recipes = recipe_transfer.verify_workspace(restored, verified_members)
+    retained_recipes = manifest.get("client_source_recipes")
+    if retained_recipes is not None and retained_recipes != client_source_recipes:
+        raise ValueError("Receiving changed the complete source recipes or their original histories")
     details = {"source_acquisitions": source_acquisitions,
                "implementation": implementation, "parameter_studies": parameter_studies,
-               "joint_parameter_studies": joint_parameter_studies}
+               "joint_parameter_studies": joint_parameter_studies,
+                      "client_source_recipes": client_source_recipes}
     if joint_parameter_studies:
         from .study_transfer import verify_received_studies
         details["selected_joint_studies"] = verify_received_studies(restored, joint_only=True)
