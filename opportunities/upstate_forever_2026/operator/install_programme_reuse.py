@@ -26,9 +26,17 @@ def patch_text(source, patches):
         before, after = patch["before"], patch["after"]
         if source.count(after) == 1 and before not in source.replace(after, "", 1):
             continue
-        if source.count(before) != 1:
-            raise ValueError("Compose the current Programme native reuse seam: " + patch["id"])
-        source = source.replace(before, after, 1)
+        previous = [value for value in patch.get("previous_after", [])
+                    if source.count(value) == 1
+                    and before not in source.replace(value, "", 1)]
+        if len(previous) > 1:
+            raise ValueError("Ambiguous prior Programme native reuse seam: " + patch["id"])
+        if previous:
+            source = source.replace(previous[0], after, 1)
+        else:
+            if source.count(before) != 1:
+                raise ValueError("Compose the current Programme native reuse seam: " + patch["id"])
+            source = source.replace(before, after, 1)
     for patch in patches:
         if source.count(patch["after"]) != 1:
             raise ValueError("A later join changed the Programme native reuse seam: " + patch["id"])
@@ -101,7 +109,7 @@ def install(application, source_root):
                     raise ValueError("An original Programme native reuse composition preimage differs")
                 if not saved.exists():
                     _atomic(saved, original)
-        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.0.1",
+        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.0.2",
                   "patch_sha256": _sha(spec_bytes), "files": metadata}
         _atomic(pending_path, _encoded(result))
         for name in candidates:
