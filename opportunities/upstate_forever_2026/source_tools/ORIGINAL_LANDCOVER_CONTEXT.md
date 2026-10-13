@@ -6,13 +6,9 @@ The complete original-grid zonal result can enter the existing **Original source
 
 Use the exact complete `upstate.landcover-zonal-summary/v1` JSON returned by `original_landcover_zonal.mjs`, with the SHA256 recorded by its producing operation. Retain the unchanged raster `source-entry.json` and its adjacent original `class-area.csv` from the corrected source edition. The command verifies that CSV against the original companion descriptor and compares every full-raster class count with it.
 
-When invoking `summarizeRows`, metadata must include:
+The unchanged annual JSON written by current `run_original_landcover.mjs` is accepted directly. Its retained metadata uses `sha256`, `domain_sha256` and `source_uri`, with the original `source_id`, `raster_bytes`, `epsg`, numeric `year` and `nodata`. The receiving command verifies those values against the raster entry. An original in-memory `summarizeRows` result may instead use `raster_sha256`, `polygon_body_sha256` and `source_urls`. If both names are present, every value must match the original source; conflicting aliases are rejected. No metadata rewrite or numerical replay is required.
 
-- `raster_sha256`: the retained original TIFF digest.
-- `polygon_body_sha256`: the decoded original polygon-body digest.
-- `year`: the numeric original product year.
-- `source_urls`: an array of the original public source URLs.
-- `nodata`: the actual source NoData code.
+The report displays the original structured coordinate-operation description, CRS pair and stated accuracy. For the current EPSG:3857 original domain this includes the retained native operation's stated 4 m accuracy. The complete original pipeline and native control point remain in `original-zonal.json`.
 
 The current full regional raster is the corrected PR3387 edition: 9,443,751 bytes, SHA256 `3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`. Its decoded original 217-HUC polygon source has SHA256 `2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af`. The source entry carries the native affine, dimensions, product time and original domain count. Receiving compares these fields with the completed calculation before writing a report.
 
@@ -28,7 +24,7 @@ node source_tools/original_landcover_context_cli.mjs \
   --output /actual/new-landcover-report
 ~~~
 
-Use a new output directory in its existing parent. The command retains both input bodies exactly, creates the searchable grayscale HTML report, all CSV tables, scientific delivery recipe and import manifest. It reports the resulting source ID, actual watershed/class-row counts and domain support. The command does not rerun the raster calculation.
+Use a new output directory in its existing parent. The command retains all three input bodies exactly, creates the searchable grayscale HTML report, all CSV tables, scientific delivery recipe and import manifest. It reports the resulting source ID, actual watershed/class-row counts and domain support. The command does not rerun the raster calculation.
 
 | Member | Content |
 | --- | --- |
@@ -44,6 +40,10 @@ Use a new output directory in its existing parent. The command retains both inpu
 The program checks unique original HUC12 identifiers, the full declared watershed count, native source identities, affine and dimensions, exact pixel accounting, all 16 categorical rows and their cell areas. Domain totals count the union once. Individual watershed totals preserve original overlaps. Each HUC row covers its complete original polygon, including portions across state boundaries. Forest combines 41–43, developed 21–24, and agriculture 81–82; the separate class CSV retains their original distinctions. Percentages use valid classified cells. Full-raster counts and cells outside the polygon domain remain visible, including the model-context buffer.
 
 CSV consumers should import HUC12 as text to retain its leading zero. The full JSON preserves source properties and identifiers.
+
+## Application assembly
+
+The additive `integration/component_fragments/original-landcover-context.json` component includes this module, CLI, guide and exact archive codec, and requires the original annual analysis plus the existing observed-context and saved scientific-report components. A current full application assembly therefore retains the complete calculation-to-report path while preserving concurrent component additions.
 
 ## Continue in the existing Workspace
 
