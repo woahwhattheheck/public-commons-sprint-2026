@@ -49,6 +49,11 @@ def _saved_summary(path, signature):
         "scenario_rows": value.get("membership_rows", len(value.get("scenario_exports", value.get("rows", [])))),
         "network_huc12_count": value.get("network_huc12_count"),
         "selected_huc12_count": value.get("selected_huc12_count"),
+        "source_body_filename": value.get("source_body_filename"),
+        "source_body_bytes": value.get("source_binding", {}).get("body_bytes"),
+        "source_body_sha256": value.get("source_binding", {}).get("body_sha256"),
+        "decoded_source_sha256": value.get("source_binding", {}).get("decoded_sha256"),
+        "source_reference": value.get("identity", {}).get("receptor_spec", {}).get("source_reference"),
         "counts": value.get("counts", {}),
         "pollutants": value.get("pollutants",
             sorted({row["pollutant"] for row in value.get("scenario_exports", value.get("rows", []))})),
@@ -124,6 +129,18 @@ def _catalog(operator, workspace_key):
             network_sources.append({"id": digest(reference), **reference,
                                     "filename": filename, "bytes": entry["body"]["bytes"],
                                     "collection_title": collection["title"]})
+    saved = overview(operator, workspace_key)
+    for row in saved["networks"]:
+        reference = row.get("source_reference") or {}
+        network_sources.append({
+            "id": "network:" + row["id"], "network_result_id": row["id"],
+            "title": row["title"], "collection_title": "Retained source-water studies",
+            "uri": reference.get("uri") or "urn:sha256:" + row["source_body_sha256"],
+            "vintage": reference.get("vintage") or row["created_at"].split("T")[0],
+            "filename": row["source_body_filename"], "bytes": row["source_body_bytes"],
+            "sha256": row["source_body_sha256"],
+            "decoded_sha256": row["decoded_source_sha256"],
+            "source_reference": reference})
     try:
         engine = importlib.import_module('model.experiments')
         experiment_rows, experiment_available = engine.list_experiments(workspace), True
@@ -142,7 +159,7 @@ def _catalog(operator, workspace_key):
             "title": workspace.project["title"], "experiments": experiment_rows,
             "experiment_available": experiment_available,
             "receptor_profiles": _profiles(), "runs": runs, "network_sources": network_sources,
-            **overview(operator, workspace_key)}
+            **saved}
 
 
 def _inventory(workspace, key):
@@ -162,6 +179,23 @@ def _inventory(workspace, key):
 
 
 def _network_selection(workspace, selection):
+    if selection.get("network_result_id"):
+        if selection.get("member"):
+            raise ValueError("A retained network already contains its original selected source body")
+        original = _network(workspace, identifier(selection["network_result_id"]))
+        directory = workspace.root / "receptor-networks" / original["id"]
+        path = verify_file(directory, original["files"]["source_body"])
+        spec = deepcopy(selection["receptor_spec"])
+        previous = original["identity"]["receptor_spec"]
+        # Preserve the original source binding without appending a chain of
+        # product IDs to the scientific selection on every repeated build.
+        for name in ("source_collection_id", "network_source_id", "source_reference",
+                     "source_network_reference"):
+            if name in previous:
+                spec[name] = deepcopy(previous[name])
+            else:
+                spec.pop(name, None)
+        return path, spec
     collection_id = identifier(selection["source_collection_id"])
     source_id = selection["network_source_id"]
     path, entry = workspace.source_file(collection_id, source_id)
@@ -187,7 +221,10 @@ def _network_plan(workspace, selection):
         huc12_field=spec.get("huc12_field"), tohuc_field=spec.get("tohuc_field"),
         name_field=spec.get("name_field"), type_field=spec.get("type_field"))
     return {"title": spec.get("title", "Original watershed connections"),
-            "source_reference": spec["source_reference"], "source_binding": binding,
+            "source_reference": spec.get("source_reference") or {
+                "uri": "urn:sha256:" + binding["body_sha256"],
+                "sha256": binding["body_sha256"], "title": source.name},
+            "source_binding": binding,
             "network_huc12_count": network["network_huc12_count"],
             "selected_huc12_count": network["selected_huc12_count"],
             "shared_huc12s": network["shared_huc12s"],
