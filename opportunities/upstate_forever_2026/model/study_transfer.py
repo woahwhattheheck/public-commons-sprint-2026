@@ -411,10 +411,16 @@ class _Closure:
                 continue
             self.need("observation-comparisons", path.stem, "Saved observation comparison for this study")
 
-    def resolve(self):
+    def resolve(self, additional=()):
         self.read("workspace.json")
         for item in self.selection["roots"]:
             self.need(item["kind"], item["id"], "Selected study")
+        for item in additional:
+            kind = item.get("kind")
+            if kind not in LABELS or type(item.get("required", True)) is not bool:
+                raise ValueError("An investigation needs a known original scientific record.")
+            self.need(kind, item["id"], item.get("reason") or "Retained investigation dependency",
+                      required=item.get("required", True))
         while self.pending:
             self._visit(*self.pending.popleft())
         if self.selection["include_related_results"]:
@@ -530,7 +536,83 @@ def inspect_transfer_archive(path, *, verify=True):
     return {"manifest": manifest, "study": _receipt_from_archive(path, manifest)}
 
 
-def export_study(workspace, destination, selection, *, progress=None):
+def _prepare_investigation_snapshot(workspace):
+    """Use the installed original project's snapshot implementation for CLI exports."""
+    database = Path(workspace.root) / "intelligence" / "investigations.sqlite3"
+    if not database.exists():
+        return None
+    _member(Path(workspace.root).resolve(), "intelligence/investigations.sqlite3")
+    try:
+        from eco_intelligence.study_transfer import prepare_workspace_study_snapshot
+    except ModuleNotFoundError as error:
+        if error.name not in {"eco_intelligence", "eco_intelligence.study_transfer"}:
+            raise
+        raise ValueError("Receive the original scientific investigation source with this workspace.") from error
+    return prepare_workspace_study_snapshot(workspace)
+
+
+def _investigation_dependencies(workspace, snapshot, plan):
+    if snapshot is None:
+        return []
+    prepare = getattr(snapshot, "prepare", None)
+    if not callable(prepare):
+        raise ValueError("Receive the matching selected-study investigation dependency adapter.")
+    prepared = prepare(plan)
+    if (not isinstance(prepared, dict)
+            or prepared.get("project_id") != workspace.project["id"]):
+        raise ValueError("The investigation dependency selection belongs to another workspace.")
+    rows = prepared.get("scientific_dependencies")
+    if not isinstance(rows, list):
+        raise ValueError("The investigation selection needs its original scientific dependencies.")
+    selected = {}
+    for row in rows:
+        if not isinstance(row, dict) or row.get("kind") not in LABELS:
+            raise ValueError("An investigation dependency has an unknown scientific record kind.")
+        key = (row["kind"], identifier(row.get("id")))
+        required = row.get("required", True)
+        if type(required) is not bool:
+            raise ValueError("A scientific dependency must state whether its record is materialized.")
+        reason = row.get("reason") or "Retained investigation dependency"
+        if not isinstance(reason, str):
+            raise ValueError("A scientific dependency needs its original selection reason.")
+        previous = selected.get(key)
+        selected[key] = {"kind": key[0], "id": key[1], "reason": reason,
+                         "required": required or bool(previous and previous["required"])}
+    return [selected[key] for key in sorted(selected)]
+
+
+def _captured_investigations(staged, snapshot):
+    if snapshot is None:
+        return None, {}
+    if not isinstance(snapshot, dict) or snapshot.get("project_id") != staged.project["id"]:
+        raise ValueError("The investigation snapshot belongs to a different scientific workspace.")
+    members = snapshot.get("members")
+    if not isinstance(members, list):
+        raise ValueError("The original investigation snapshot needs its retained member descriptors.")
+    captured = {}
+    for member in members:
+        if not isinstance(member, dict):
+            raise ValueError("An investigation snapshot member is unreadable.")
+        path, size, sha = member.get("path"), member.get("bytes"), member.get("sha256")
+        if not isinstance(path, str) or type(size) is not int or size < 0:
+            raise ValueError("An investigation snapshot member needs its original path and size.")
+        identifier(sha)
+        retained = _member(Path(staged.root).resolve(), path)
+        if retained.stat().st_size != size:
+            raise ValueError("The captured investigation member length changed: " + path)
+        # Retain original mutable/immutable member semantics for later receiving.
+        descriptor = copy.deepcopy(member)
+        descriptor.pop("path")
+        if path in captured and captured[path] != descriptor:
+            raise ValueError("Investigation snapshot descriptors disagree: " + path)
+        captured[path] = descriptor
+    original = copy.deepcopy(snapshot)
+    original["members"] = [{"path": path, **item} for path, item in sorted(captured.items())]
+    canonical(original)
+    return original, captured
+
+
+def export_study(workspace, destination, selection, *, progress=None, investigation_snapshot=None):
     """Freeze one selected dependency closure and publish an original archive.
 
     The original portable writer hashes and verifies all retained members. Native
@@ -559,21 +641,33 @@ def export_study(workspace, destination, selection, *, progress=None):
         report("complete", archive_bytes=result["bytes"], id=result["id"], reused_completed_output=True)
         return result
 
+    # Bind the original Store before the exclusive guard: its normal connections
+    # acquire that same workspace guard in shared mode.
+    if investigation_snapshot is None:
+        investigation_snapshot = _prepare_investigation_snapshot(workspace)
+
     with contextlib.ExitStack() as stack:
         root = Path(workspace.root).resolve()
         stack.enter_context(held(root / ".workspace.lock", blocking=False))
         stack.enter_context(held(root / ".native-model-batch.lock", blocking=False))
         report("resolving")
         closure = _Closure(workspace, normal).resolve()
+        original_plan = closure.plan()
+        # Freeze the initially selected conversation cohort once, before its
+        # science dependencies expand the selected record closure.
+        dependencies = _investigation_dependencies(
+            workspace, investigation_snapshot, original_plan)
+        if dependencies:
+            closure = _Closure(workspace, normal).resolve(dependencies)
         locked = set()
         # The first read discovers owners; repeat under their original locks.
         _capture_locks(stack, closure, locked)
-        closure = _Closure(workspace, normal).resolve()
+        closure = _Closure(workspace, normal).resolve(dependencies)
         _capture_locks(stack, closure, locked)
         closure.assert_unchanged()
         plan = closure.plan()
         expected_token = selection.get("preview_token")
-        changed = bool(expected_token and expected_token != plan["preview_token"])
+        changed = bool(expected_token and expected_token != original_plan["preview_token"])
         stage_parent = Path(stack.enter_context(tempfile.TemporaryDirectory(
             prefix=".study-workspace-", dir=root.parent)))
         output_parent = Path(stack.enter_context(tempfile.TemporaryDirectory(
@@ -593,6 +687,16 @@ def export_study(workspace, destination, selection, *, progress=None):
                 raise ValueError("The original study changed while its native members were staged.")
             item["identity"] = observed
         closure.assert_unchanged()
+        staged = Workspace(stage_root)
+        investigations, investigation_members = None, {}
+        if investigation_snapshot is not None:
+            report("investigations", files=plan["files"], bytes=plan["bytes"])
+            investigations, investigation_members = _captured_investigations(
+                staged, investigation_snapshot(staged, plan))
+            closure.assert_unchanged()
+        additional = {path: value for path, value in investigation_members.items() if path not in closure.files}
+        source_files = plan["files"] + len(additional)
+        source_bytes = plan["bytes"] + sum(value["bytes"] for value in additional.values())
         identity = {
             "project_id": workspace.project["id"], "selection": normal,
             "source_preview_token": plan["preview_token"],
@@ -601,21 +705,24 @@ def export_study(workspace, destination, selection, *, progress=None):
             "planned_cases": plan["planned_cases"],
             "related_result_issues": plan["related_result_issues"],
         }
+        if dependencies:
+            identity["investigation_dependencies"] = dependencies
+        if investigations is not None:
+            identity["investigations"] = investigations
         transfer_id = digest(identity)
         receipt = {
             "schema": RECEIPT_SCHEMA, "id": transfer_id, "identity": identity,
             "title": normal["title"], "captured_at": now(),
-            "source_files": plan["files"], "source_bytes": plan["bytes"],
+            "source_files": source_files, "source_bytes": source_bytes,
             "groups": plan["groups"], "preview_changed": changed,
             "receiving": "Original workspace restore; reopen the received workspace and continue its saved studies.",
         }
         atomic_json(stage_root / "study-transfers" / (transfer_id + ".json"), receipt, immutable=True)
-        staged = Workspace(stage_root)
-        report("archiving", files=plan["files"], bytes=plan["bytes"])
+        report("archiving", files=source_files, bytes=source_bytes)
         archive_path = output_parent / "study.zip"
         result = portable.backup(staged, archive_path, include_intermediates=True, include_deliveries=True)
         manifest = portable.inspect_archive(archive_path, verify=False)
-        for relative, item in closure.files.items():
+        for relative, item in {**closure.files, **investigation_members}.items():
             retained = manifest["members"].get("workspace/" + relative)
             if retained is None or retained["bytes"] != item["bytes"]:
                 raise ValueError("The original archive omitted a selected scientific member: " + relative)
@@ -630,7 +737,7 @@ def export_study(workspace, destination, selection, *, progress=None):
         finally:
             os.close(directory_fd)
         result.update(id=transfer_id, path=str(destination), study=receipt,
-                      source_files=plan["files"], source_bytes=plan["bytes"])
+                      source_files=source_files, source_bytes=source_bytes)
         report("complete", archive_bytes=result["bytes"], id=transfer_id)
         return result
 
@@ -644,13 +751,20 @@ def verify_received_studies(workspace):
                 or digest(receipt.get("identity")) != path.stem
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
-        closure = _Closure(workspace, receipt["identity"]["selection"]).resolve()
+        closure = _Closure(workspace, receipt["identity"]["selection"]).resolve(
+            receipt["identity"].get("investigation_dependencies", ()))
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):
             raise ValueError("The received scientific study lost an original dependency.")
+        investigations = receipt["identity"].get("investigations")
+        history = None
+        if investigations is not None:
+            from eco_intelligence.study_transfer import verify_received_investigations
+            history = verify_received_investigations(workspace, investigations)
         result.append({"id": receipt["id"], "title": receipt["title"],
-                       "retained_records": len(required), "identity": "MATCH"})
+                       "retained_records": len(required), "identity": "MATCH",
+                       "investigations": history})
     return result
 
 
