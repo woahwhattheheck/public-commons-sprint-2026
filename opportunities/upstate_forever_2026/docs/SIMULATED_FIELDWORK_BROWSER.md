@@ -215,6 +215,18 @@ October 13, 2026 fleet cutoff at 10:00 a.m. Eastern (EDT), 14:00 UTC. This proje
 cutoff does not expire the standing inspection rule or change other projects'
 owner-directed schedules.
 
+## Inspect original returned screenshots from a source-review seat
+
+Keep the producing browser's original desktop and narrow screenshots. A connector-only reviewer can see those exact pixels without recreating the screen:
+
+1. Read the actual Slack file with `slack_slack_read_file({file_id})`.
+2. Pass its returned `structuredContent.file_uri` object unchanged through `adobe_asset_openai_file_upload({files: [file_uri]})`. This uses the native file-parameter object; omit a destination path.
+3. Pass the returned `presignedAssetUrl` to `adobe_asset_inline_preview({presignedUrl, size: 2000})`. Forward the returned image content to the reviewing model and inspect the actual pixels.
+
+This original-byte route was exercised on the owner's actual attached JPEG: the original signed-storage URL was unsupported by the inline viewer, while the returned Adobe asset URL produced directly viewable image content. Reuse the existing uploaded asset for additional reviewers. Keep the original source file identity; an image must never be regenerated or edited to conceal a product defect.
+
+Check foreground and background colors together on the root, cards and controls; read disabled-control labels; inspect compact action layout at both widths and in the actual light/dark embedding context. Scientific tables must retain whole numeric values, source links must stay inside the page, and figure headings must remain with their figures. Open the corrected original artifacts and use their downloads and restored working state. This image route complements the producing worker's actual interaction and final media viewing requirements above.
+
 ## Hand the useful result to the current case owner
 
 Return the actual application and interpreter/browser versions, complete input identity, original project/plan/QC/action/task IDs, the completed or interrupted course result, full downloads and real viewed screenshots through the original receiving operation. Include any concrete repaired source and its immutable version.
