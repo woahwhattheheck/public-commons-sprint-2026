@@ -419,7 +419,8 @@ def run(args):
                 "studies": original["studies"], "sources": state["sources"],
                 "report_id": science["id"], "render_identity": science["render_identity"],
                 "report_files": science["files"], "study_id": archive["id"],
-                "receiver_source": describe_file(APPLICATION, APPLICATION / LEAF),
+                "receiver_source": describe_file(Path(received["application"]),
+                    Path(received["application"]) / LEAF),
             }
             expected_path = root / "receiving-selection.json"
             atomic_json(expected_path, expected, immutable=True)
