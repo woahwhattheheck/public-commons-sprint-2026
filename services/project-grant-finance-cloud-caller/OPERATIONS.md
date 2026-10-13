@@ -66,6 +66,8 @@ Use --ca-file only to select the actual institution CA bundle when it is not alr
 
 ## Full pages, reports and handovers
 
+ReadHealth is an explicit compact identity view: actual native workspace fields plus the full observed /api/state byte count and SHA-256. It excludes the historical command population so growth of the original workspace cannot overflow a connection preflight. Command, record and delivery responses retain complete native_json with its exact digest.
+
 The connector exposes original record, totals, findings, ownership and delivery reads. ReadTotals and ReadFindings accept offset and limit1–100; the native response retains its original items and page metadata. Continue actual pages until the original page says there are no more. The native record view intentionally includes only the first25 reconciliation totals/findings, so do not treat that first view as the complete population.
 
 Original downloads remain on the native operator:

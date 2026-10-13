@@ -3,13 +3,13 @@
   "files": [
     {
       "path": "pmrs_cloud_gateway.py",
-      "bytes": 27983,
-      "sha256": "2ca49c934b1e421a528bd296e8bd2c65cea803751dc4ca0395f6ae40ccbba3f4"
+      "bytes": 28283,
+      "sha256": "bff6e85f382d8e1503b7b764334b4774e69951373aeb516d939040d73b1cebe6"
     },
     {
       "path": "connector/apiDefinition.swagger.json",
-      "bytes": 14457,
-      "sha256": "36395a8e38cddc16bc0c80f8bb9c3d6fdf29a3cbd1bab9f0207ceca6ec622504"
+      "bytes": 15374,
+      "sha256": "4cd52922c853eb69bc55f19014fc9a1602b28fa48e360df20184e617d137f323"
     },
     {
       "path": "connector/apiProperties.json",
@@ -38,8 +38,8 @@
     },
     {
       "path": "pmrs_cloud_client.py",
-      "bytes": 12300,
-      "sha256": "84b362675a908bdf03f7b163ad609269cf4fe87658b06fa9d95dbf46fcca1075"
+      "bytes": 12958,
+      "sha256": "e20c7cba70dd1adfb35fe1c0a4fd4b2d5fdb3703eae736a8fd6cbdd920501225"
     },
     {
       "path": "README.md",
@@ -58,8 +58,8 @@
     },
     {
       "path": "OPERATIONS.md",
-      "bytes": 8067,
-      "sha256": "15fd6f0838408de438c726a2b86d51853e7086e2e3fac9798312997eb8ba762d"
+      "bytes": 8418,
+      "sha256": "7a6c635d65f3a559af288130f95f94ef534c6ec46ef0a8df1b71acc1411b477b"
     },
     {
       "path": "RECEIVING.md",

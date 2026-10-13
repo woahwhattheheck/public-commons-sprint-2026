@@ -322,10 +322,14 @@ class Caller:
     def read(self, path, query):
         workspace_id = self.config["workspace_id"]
         if path == "/v1/health":
+            need(not query, "QUERY", "Health takes no query.")
             value, raw = self.native.state()
+            # Native state includes 100 full historical commands; only identity belongs
+            # in a preflight. Full finance responses retain their original text below.
             return {"workspace_id": workspace_id, "version": VERSION, "state": "CONNECTED",
-                    "native_sha256": hashlib.sha256(raw).hexdigest(),
-                    "native_json": raw.decode("utf-8")}
+                    "native_workspace": value["workspace"],
+                    "native_state_sha256": hashlib.sha256(raw).hexdigest(),
+                    "native_state_bytes": len(raw)}
         parts = path.strip("/").split("/")
         need(parts[0] == "v1", "ROUTE", "Unknown caller route.", 404)
         if len(parts) == 3 and parts[1] in {"commands", "deliveries"}:

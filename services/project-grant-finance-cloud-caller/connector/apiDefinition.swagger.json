@@ -151,7 +151,7 @@
           "200": {
             "description": "Complete original result",
             "schema": {
-              "$ref": "#/definitions/NativeResult"
+              "$ref": "#/definitions/HealthResult"
             }
           },
           "default": {
@@ -517,6 +517,40 @@
               "type": "object"
             }
           }
+        }
+      }
+    },
+    "HealthResult": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "version",
+        "state",
+        "native_workspace",
+        "native_state_sha256",
+        "native_state_bytes"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "native_workspace": {
+          "type": "object",
+          "description": "Actual original native workspace identity; excludes historical command population."
+        },
+        "native_state_sha256": {
+          "type": "string",
+          "description": "SHA256 of the full original observed /api/state response"
+        },
+        "native_state_bytes": {
+          "type": "integer",
+          "description": "Complete original observed state byte count"
         }
       }
     }
