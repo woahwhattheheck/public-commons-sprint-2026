@@ -140,6 +140,108 @@ The original study ID comes from its saved record. In a Gura suite, each
 ID itself is not a study ID or an Ensemble ID. Keep the original result edition,
 Workspace and case identities through the report and receiving operation.
 
+
+## Transfer the selected scientific report with its editable Parameter study
+
+Open the completed scientific report edition in **Sources → Saved scientific
+reports** and choose **Transfer this report and its studies**. The existing
+**Study transfer** desk selects that exact saved edition. **Preview contents**
+now follows each original Parameter scientific source to its saved specification,
+current checkpoint and complete prepared case cohort. Choose **Export editable
+study**, then use the original download and **Receive study archive** flow.
+
+This is the Parameter family stored as `experiments/<study-id>/experiment.json`
+and `experiment-specs/<study-id>.json`. It is distinct from the experiment
+programme family whose record is `plan.json`. The source's original experiment
+ID, selected result SHA256 and reference run remain unchanged.
+
+The selected archive carries:
+
+- The exact ordered scientific-report edition, all original source companions,
+  frozen result/CSV/export manifest, case and area choices, figures and report
+  outputs.
+- The original Parameter specification and complete current study directory,
+  including its partial checkpoint, case history, pair-cache/context, original
+  exports and saved result descriptors.
+- Every originally prepared case run, including unfinished or failed cases;
+  their original profiles, scenarios, prepared grid, source collections,
+  large native inputs, outputs, intermediates and retained comparisons.
+- The selected scientific-source operation and any current source operation
+  referenced by the study's latest-source pointer, under their original paths.
+
+The reference is retained even when its displayed row is excluded. Selecting a
+few completed cases for the report does not discard the other cases needed to
+continue the original design. Capture keeps their saved state and starts no
+native computation. A later result edition can coexist with the earlier frozen
+report; the transfer preserves each identity instead of rewriting the report
+to use current numbers.
+
+An interrupted export can leave a saved descriptor ahead of a file. The complete
+working study still travels with its exact checkpoint and present files. The
+ordinary Parameter receiving summary identifies declared exports requiring
+refresh. Use **Refresh completed results** to rebuild those exports from retained
+completed runs; **Resume remaining cases** is the separate native execution
+action. An original scientific source imported from another project keeps its
+contained source bytes and project provenance. Its donor's editable study is
+included when transferring from that original Workspace.
+
+### Continue the actual received case
+
+Use the saved scientific report edition ID returned by the original report
+catalogue. This selection uses the existing transfer CLI:
+
+```json
+{
+  "schema": "upstate.study-selection/v1",
+  "title": "Original Parameter report and editable study",
+  "roots": [
+    {"kind": "scientific-report-editions", "id": "<original-full-report-edition-id>"}
+  ],
+  "include_related_results": true
+}
+```
+
+```sh
+python -B -m model.study_transfer_cli preview --workspace /actual/workspace --selection selected-report.json
+python -B -m model.study_transfer_cli export --workspace /actual/workspace --selection selected-report.json --destination /actual/output/parameter-study.zip
+python -B -m model.study_transfer_cli inspect --archive /actual/output/parameter-study.zip
+python -B -m model.cli restore /actual/output/parameter-study.zip /actual/new-receiving-directory
+```
+
+Use the application and Workspace paths actually returned by restore. In that
+received application, open the original saved report and the same ID in
+**Parameter studies**. Confirm the original reference, selected cases, unfinished
+cases, source editions and retained downloads by using those screens. Open the
+report's actual HTML/PDF pages, original CSV/JSON, figures, maps and archive
+contents. Reopen the delivered working project in a fresh process and operate
+its ordinary study selection, report selection, downloads and continuation
+controls at the actual screenshare width and a narrow width.
+
+For the existing Gura course, use its actual `studies[].study_id`, original
+`reference_run_id` and saved report edition. Keep that case and its results
+through this receiving operation. The native Ensembles demonstration is a
+separate family; its twelve selections are not a substitute Parameter fixture.
+Inspect the actual outgoing version and every attachment under the owner rule
+above, repair visible defects directly, and preserve current computation and
+the October 13 cutoff.
+
+### Source installation and original locking
+
+Receive the complete maintained `model/parameter_study_transfer.py`, its narrow
+hooks in `model/scientific_report_study_transfer.py` and
+`model/study_transfer.py`, this guide and
+`integration/component_fragments/parameter-scientific-study-transfer.json`.
+Compose shared files on their current versions so other study families remain
+present. The additive fragment includes the helper and receiving guide in the
+same application source inventory.
+
+The original export acquires the existing study's `.experiment.lock`, source
+operations' `.prepare.lock`, native run/grid locks and Workspace transfer locks.
+It then resolves the same original dependency set again before copying. Receiving
+uses the original scientific-source lineage receipt and portable Parameter
+verifier. Earlier archives retain their captured source-only dependency semantics;
+a newly received source does not retroactively invent an absent study.
+
 ## Operate and view the exact outgoing delivery
 
 The producing owner opens and uses the exact outgoing application and every
@@ -160,3 +262,55 @@ Saving a screenshot, running a source check or receiving a peer's approval does
 not replace looking at the actual output. Keep completed scientific inputs and
 results while repairing presentation; a layout correction needs no new model
 run.
+
+## Current owner direction carried with this receiving operation
+
+The following is the complete owner brief from `CURRENT_OWNER_DIRECTION.md`,
+version `2026-10-13.3`. Carry it into the actual receiving host and delegated
+work order with this guide; preserve active native work and existing owners.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
