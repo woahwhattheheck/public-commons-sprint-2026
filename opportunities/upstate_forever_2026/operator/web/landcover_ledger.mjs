@@ -4,23 +4,24 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const identity = value => JSON.stringify([value.source_collection_id, value.source_id]);
 const defaults = () => ({title:'Land-cover change ledger',input_mode:'runs',baseline:'',alternatives:[],baseline_source:'',source_alternatives:[],baseline_band:'1',source_bands:{},zones:'',id_field:'huc12',name_field:'name',layer:'',ids:'',support:'all',unknown:'error',overlap:false,projected_area:false});
 
-export function attachLandcoverLedger({getState, api, endpoint, toast}) {
+export function attachLandcoverLedger({getState, api, endpoint, toast, openScientificReport}) {
   const sessions = new Map();
   let root=null, key=null, current=null, catalog=null, epoch=0, events=null;
-  let catalogRequest=0, inputRequest=0, editionRequest=0;
+  let catalogRequest=0, inputRequest=0, editionRequest=0, reportReadRequest=0;
+  let openedEdition=null, openedReport=null;
   const find = selector => root?.querySelector(selector);
   const all = selector => [...(root?.querySelectorAll(selector) || [])];
   const field = name => find('[name="'+name+'"]');
   const alive = (workspace, view) => Boolean(root && key===workspace && epoch===view && getState()?.workspace_key===workspace);
   const note = (text,error=false) => {const p=find('[data-note]');if(p){p.textContent=text;p.setAttribute('role',error?'alert':'status');}};
   function save(session,workspace) {
-    try {localStorage.setItem('upstate.landcover.draft:'+workspace,JSON.stringify({draft:session.draft,pending:session.pending,request:session.request,edit:session.edit,lastOpened:session.lastOpened}));session.storageFailure=false;}
+    try {localStorage.setItem('upstate.landcover.draft:'+workspace,JSON.stringify({draft:session.draft,pending:session.pending,request:session.request,edit:session.edit,lastOpened:session.lastOpened,reportPending:session.reportPending,reportRequest:session.reportRequest}));session.storageFailure=false;}
     catch (_) {session.storageFailure=true;}
   }
   function sessionFor(workspace) {
     if(sessions.has(workspace))return sessions.get(workspace);
     let stored=null;try{stored=JSON.parse(localStorage.getItem('upstate.landcover.draft:'+workspace)||'null');}catch(_){}
-    const session={draft:{...defaults(),...(stored?.draft||{})},pending:stored?.pending||null,request:stored?.request||null,edit:Number.isSafeInteger(stored?.edit)?stored.edit:0,lastOpened:stored?.lastOpened||'',sending:false,storageFailure:false};
+    const session={draft:{...defaults(),...(stored?.draft||{})},pending:stored?.pending||null,request:stored?.request||null,edit:Number.isSafeInteger(stored?.edit)?stored.edit:0,lastOpened:stored?.lastOpened||'',reportPending:stored?.reportPending||null,reportRequest:stored?.reportRequest||null,reportSending:false,reportFinishing:false,sending:false,storageFailure:false};
     sessions.set(workspace,session);return session;
   }
   const controls = () => '<header><p>RETAINED LAND-COVER EDITIONS</p><h1>Land-cover changes</h1><p>Compare land-cover classes and changed hectares on the original raster grid, with coverage for each reporting area.</p></header>'+
@@ -82,6 +83,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
     find('[data-action="check"]').disabled=!catalog;
     find('[data-action="resume"]').hidden=current.pending?.state!=='failed';
     find('[data-action="resume"]').disabled=current.sending;
+    reportButtons();
   }
   async function refresh() {
     const workspace=key,view=epoch,ticket=++catalogRequest;
@@ -145,7 +147,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
     }
   }
   function renderEdition(result) {
-    const target=find('[data-result]');target.replaceChildren();
+    const target=find('[data-result]');target.replaceChildren();openedEdition=result.edition;openedReport=null;reportReadRequest++;
     const title=document.createElement('h2');title.textContent=result.edition.title;target.append(title);
     const caption=document.createElement('p');caption.textContent='Saved edition '+result.edition.id+' · '+result.edition.zone_count+' reporting areas · '+result.edition.alternative_count+' alternatives. Download the portable ZIP to retain the offline report with all report companions.';target.append(caption);
     const downloads=document.createElement('div');downloads.className='lc-downloads';
@@ -154,15 +156,104 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
       if(typeof url!=='string'||!/^\/api\/file(?:\/|\?)/.test(url))continue;
       const link=document.createElement('a');link.href=url;link.textContent=ticket.label||ticket.title||ticket.filename||'Download retained file';link.setAttribute('download','');downloads.append(link);
     }
-    target.append(downloads);
+    target.append(downloads);target.append(reportPanel(result));reportButtons();
     const preview=result.preview_url;
     if(typeof preview!=='string'||!/^\/api\/file\/landcover-ledger\/[A-Za-z0-9_-]+\/[a-f0-9]{64}\?embedded=1$/.test(preview))throw Error('The saved report has no valid original-host preview route.');
     const iframe=document.createElement('iframe');iframe.title=result.edition.title;iframe.setAttribute('sandbox','allow-scripts allow-downloads allow-modals');iframe.src=preview;target.append(iframe);
     const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('pre');summary.textContent='Retained selection and original source bindings';body.textContent=JSON.stringify(result.binding,null,2);details.append(summary,body);target.append(details);
   }
+  function reportButtons() {
+    const prepare=find('[data-action="prepare-report"]'),resume=find('[data-action="resume-report"]');
+    const pending=current?.reportPending,active=current?.reportSending||['queued','running'].includes(pending?.state);
+    if(prepare)prepare.disabled=Boolean(active);
+    if(resume){resume.hidden=pending?.state!=='failed';resume.disabled=Boolean(current?.reportSending);}
+    const status=find('[data-report-status]');
+    if(status&&pending)status.textContent='Original report-source task '+pending.id+': '+pending.state+(pending.error?.message?' · '+pending.error.message:'');
+  }
+  function reportPanel(result) {
+    const section=document.createElement('section');section.setAttribute('data-report-panel','');
+    const rows=result.report_sources||[];
+    section.innerHTML='<h3>Use this ledger in a scientific report</h3><p>Prepare the saved quantities, coverage, complete original files and source bindings for the existing Scientific Reports composer.</p>'+
+      '<label>Report-source title<input name="report_title" maxlength="240" value="'+escape(result.edition.title)+'"></label>'+
+      '<div class="lc-toolbar"><button type="button" data-action="prepare-report">Prepare scientific report</button><button type="button" data-action="resume-report" hidden>Resume original report preparation</button></div><p data-report-status role="status" aria-live="polite"></p>'+
+      (rows.length?'<h4>Retained report sources</h4><ul>'+rows.map(row=>'<li>'+escape(row.title)+' · '+escape(row.created_at)+' <button type="button" data-action="open-report" data-report-id="'+escape(row.id)+'">Open report source</button></li>').join('')+'</ul>':'')+
+      '<div data-report-source></div>';
+    return section;
+  }
+  function renderReportSource(receipt) {
+    const box=find('[data-report-source]');if(!box)return;
+    if(receipt.ledger_id!==openedEdition?.id||receipt.state!=='complete'||!receipt.source?.source_collection_id||!receipt.source?.source_id)throw Error('This report source does not belong to the open completed ledger.');
+    openedReport=receipt;
+    box.innerHTML='<h4>'+escape(receipt.title)+'</h4><p>Retained report source '+escape(receipt.id)+'. The scientific composer keeps this saved ledger and its original source edition.</p>'+
+      (typeof openScientificReport==='function'?'<button type="button" data-action="compose-report">Open Scientific Reports composer</button>':'<p>Open Sources → Scientific Reports and select this retained source.</p>')+
+      '<div class="lc-downloads" data-report-downloads></div><details><summary>Original report-source binding</summary><pre>'+escape(JSON.stringify({id:receipt.id,ledger_id:receipt.ledger_id,source:receipt.source,selection:receipt.selection},null,2))+'</pre></details>';
+    const downloads=box.querySelector('[data-report-downloads]');
+    for(const ticket of receipt._downloads||[]){const url=ticket.url||ticket.href;if(typeof url!=='string'||!/^\/api\/file(?:\/|\?)/.test(url))continue;const link=document.createElement('a');link.href=url;link.textContent=ticket.label||ticket.title||ticket.filename||'Download retained report source';link.setAttribute('download','');downloads.append(link);}
+  }
+  async function loadReportSource(id, expectedLedger=openedEdition?.id) {
+    const workspace=key,view=epoch,edition=editionRequest,ticket=++reportReadRequest;
+    const result=await api(endpoint('/api/landcover-ledger/report-source',{id,workspace}));
+    if(!alive(workspace,view)||edition!==editionRequest||ticket!==reportReadRequest||openedEdition?.id!==expectedLedger)return;
+    if(result.ledger_id!==expectedLedger)throw Error('The requested report source belongs to another saved ledger.');
+    renderReportSource(result);note('Saved ledger report source verified and ready for the original composer.');
+  }
+  async function prepareReport() {
+    if(!openedEdition)throw Error('Open a completed saved ledger first.');
+    const session=current,workspace=key,view=epoch,ledger_id=openedEdition.id;
+    if(session.reportSending||['queued','running'].includes(session.reportPending?.state))throw Error('Continue the original report-source task.');
+    const title=field('report_title')?.value.trim();if(!title)throw Error('Enter a report-source title.');
+    const payload={ledger_id,title},fingerprint=JSON.stringify(payload);
+    if(!session.reportRequest||session.reportRequest.fingerprint!==fingerprint)session.reportRequest={fingerprint,operation_id:crypto.randomUUID()};
+    const operation=session.reportRequest.operation_id;session.reportSending=true;save(session,workspace);reportButtons();
+    try{
+      const task=await api('/api/actions',{method:'POST',body:{workspace,action:'landcover_report_source',payload,operation_id:operation}});
+      if(session.reportRequest?.operation_id!==operation)return;
+      session.reportPending={...task,ledger_id};save(session,workspace);
+      if(alive(workspace,view)){note('Original scientific report-source task '+task.id+' accepted.');await reportCompleted(session,workspace,view);}
+    }finally{session.reportSending=false;save(session,workspace);if(alive(workspace,view))reportButtons();}
+  }
+  async function reportCompleted(session,workspace,view) {
+    const task=session.reportPending;if(!task||task.state!=='complete'||session.reportFinishing)return;
+    session.reportFinishing=true;
+    const ledger=task.ledger_id,request=editionRequest;
+    try{
+      let id=task.result?.id;
+      if(!id){const full=await api(endpoint('/api/task',{id:task.id}));id=full.result?.id;if(!id)throw Error('The completed report-source task has no retained receipt. Open the original task detail.');}
+      if(session.reportPending?.id!==task.id)return;
+      session.reportPending=null;session.reportRequest=null;save(session,workspace);
+      if(!alive(workspace,view))return;
+      toast('Land-cover scientific report source completed.');
+      if(openedEdition?.id===ledger&&editionRequest===request)await loadReportSource(id,ledger);
+      else note('The scientific report source is retained with its original saved ledger. Your current selection is preserved.');
+    }finally{session.reportFinishing=false;if(alive(workspace,view))reportButtons();}
+  }
+  async function resumeReport() {
+    const session=current,workspace=key,view=epoch,id=session.reportPending?.id;if(!id||session.reportSending)return;
+    session.reportSending=true;reportButtons();
+    try{const task=await api('/api/task/resume',{method:'POST',body:{id}});if(session.reportPending?.id===id){session.reportPending={...session.reportPending,...task};save(session,workspace);}if(alive(workspace,view))note('The original report-source task is queued for continuation.');}
+    finally{session.reportSending=false;if(alive(workspace,view))reportButtons();}
+  }
+  async function composeReport() {
+    const source=openedReport?.source,workspace=key,ledger=openedEdition?.id;
+    if(!source||openedReport.ledger_id!==ledger)throw Error('Open the saved ledger’s retained report source first.');
+    if(typeof openScientificReport!=='function')throw Error('Open Sources → Scientific Reports to select this retained source.');
+    if(getState()?.workspace_key!==workspace)throw Error('Open this report source in its original Workspace.');
+    await openScientificReport({workspace_key:workspace,sources:[clone(source)],title:openedReport.title});
+  }
+  function observeReport() {
+    const pending=current.reportPending;if(!pending)return;
+    const task=(getState()?.tasks||[]).find(row=>row.id===pending.id&&(row.workspace==null||row.workspace===key));
+    if(task)current.reportPending={...pending,...task};
+    save(current,key);reportButtons();
+    const workspace=key,view=epoch;
+    reportCompleted(current,workspace,view).catch(error=>{if(alive(workspace,view))note(error.message||String(error),true);});
+  }
+
   async function openEdition(id) {
     if(!id)throw Error('Choose a saved edition.');
     const workspace=key,view=epoch,ticket=++editionRequest;
+    openedEdition=null;openedReport=null;reportReadRequest++;
+    const oldPanel=find('[data-report-panel]');if(oldPanel)oldPanel.replaceChildren();
     note('Opening the saved report, GIS files and source bindings…');
     try {
       const result=await api(endpoint('/api/landcover-ledger/edition',{id,workspace}));
@@ -183,7 +274,9 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
     }
   }
   function observe() {
-    if(!root||key!==getState()?.workspace_key||!current.pending)return;
+    if(!root||key!==getState()?.workspace_key)return;
+    observeReport();
+    if(!current.pending)return;
     const task=(getState()?.tasks||[]).find(row=>row.id===current.pending.id&&(row.workspace==null||row.workspace===key));
     if(task)current.pending={...current.pending,...task};
     save(current,key);buttons();
@@ -208,7 +301,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
     if(event.target.name==='source_alternatives'||event.target.name==='baseline_source')sourceDetails();
     save(current,key);
   }
-  function detach() {if(root&&current)retain();epoch++;catalogRequest++;inputRequest++;editionRequest++;events?.abort();events=null;root=null;}
+  function detach() {if(root&&current)retain();epoch++;catalogRequest++;inputRequest++;editionRequest++;reportReadRequest++;openedEdition=null;openedReport=null;events?.abort();events=null;root=null;}
   function mount(container) {
     if(root===container&&key===getState()?.workspace_key){observe();return;}
     detach();root=container;key=getState()?.workspace_key;current=sessionFor(key);catalog=null;
@@ -224,6 +317,10 @@ export function attachLandcoverLedger({getState, api, endpoint, toast}) {
       if(button.dataset.action==='check')promise=checkInputs();
       if(button.dataset.action==='open')promise=openEdition(field('edition').value);
       if(button.dataset.action==='resume')promise=resume();
+      if(button.dataset.action==='prepare-report')promise=prepareReport();
+      if(button.dataset.action==='resume-report')promise=resumeReport();
+      if(button.dataset.action==='open-report')promise=loadReportSource(button.dataset.reportId);
+      if(button.dataset.action==='compose-report')promise=composeReport();
       Promise.resolve(promise).catch(error=>{if(alive(workspace,view))note(error.message||String(error),true);});
     });
     const workspace=key,view=epoch;

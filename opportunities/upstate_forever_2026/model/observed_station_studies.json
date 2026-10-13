@@ -266,6 +266,15 @@
       "kind": "table",
       "title": "Additional HUC05–07 observed flow during the 2023 lake study",
       "station_id_field": "site"
+    },
+    "wbd_site_context": {
+      "path": "observations/wbd_station_join_20261013/derived/station_context.csv",
+      "sha256": "31488b1b105906240c779db7c268d69ec76c4252440d09d1aee373f09b841f0e",
+      "bytes": 433871,
+      "kind": "table",
+      "title": "Original WBD polygon context for each station coordinate variant",
+      "station_id_field": "station_id",
+      "record_id_field": "context_record_id"
     }
   },
   "studies": [
@@ -954,7 +963,10 @@
         }
       ],
       "watershed_sources": [],
-      "require_original_domain": true
+      "require_original_domain": true,
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "upper-savannah-usgs-observed-17",
@@ -1141,7 +1153,10 @@
         }
       ],
       "watershed_sources": [],
-      "require_original_domain": true
+      "require_original_domain": true,
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "eighteenmile-lake-study-5",
@@ -1204,7 +1219,10 @@
       "watershed_sources": [
         "basin"
       ],
-      "require_original_domain": true
+      "require_original_domain": true,
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "eighteenmile-observed-context-agency-10",
@@ -1318,7 +1336,10 @@
         "basin"
       ],
       "require_original_domain": true,
-      "outfall_choice_source": "outfalls_native"
+      "outfall_choice_source": "outfalls_native",
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "eighteenmile-observed-context-network-10",
@@ -1432,7 +1453,10 @@
         "basin"
       ],
       "require_original_domain": true,
-      "outfall_choice_source": "outfalls_indexed"
+      "outfall_choice_source": "outfalls_indexed",
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "huc05-07-calibration-gauges-13-nwis",
@@ -1631,7 +1655,10 @@
         "basin_support": "Full original simplified=false, splitCatchment=false NLDI whole catchments",
         "coordinate_choice": "Original NWIS NAD83 gauge positions",
         "original_217_domain": "Automatically joined when its unchanged original source is retained"
-      }
+      },
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "huc05-07-calibration-gauges-13-nldi",
@@ -1830,7 +1857,10 @@
         "basin_support": "Full original simplified=false, splitCatchment=false NLDI whole catchments",
         "coordinate_choice": "Original NLDI geographic positions",
         "original_217_domain": "Automatically joined when its unchanged original source is retained"
-      }
+      },
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "upper-savannah-usgs-flow-29",
@@ -2169,7 +2199,10 @@
           "Point/HUC membership and complete contributing-area geometry are separate spatial supports.",
           "Original HUC05–07 daily rows and all coordinate alternatives remain available through the separate NWIS/NLDI prepared studies."
         ]
-      }
+      },
+      "site_tables": [
+        "wbd_site_context"
+      ]
     },
     {
       "id": "upper-savannah-usgs-observed-30",
@@ -2519,7 +2552,10 @@
           "Point/HUC membership and complete contributing-area geometry are separate spatial supports.",
           "Original HUC05–07 daily rows and all coordinate alternatives remain available through the separate NWIS/NLDI prepared studies."
         ]
-      }
+      },
+      "site_tables": [
+        "wbd_site_context"
+      ]
     }
   ]
 }

@@ -11,7 +11,7 @@ function current(w,s,turn){return !w.gone&&w.briefingIntake===s&&w.generation===
 function changed(w,s){s.preview=null;s.stage='selecting';s.result=null;s.operation_id=null;w.cache();}
 function payload(w,s){
  const out={plan_id:w.plan.id,revision:w.plan.revision,notes_upload_id:s.notes?.id};
- if(s.mode==='saved'){if(s.delivery_id.startsWith('source-context:'))out.source_export_id=s.delivery_id.slice(15);else out.delivery_id=s.delivery_id;}
+ if(s.mode==='saved'){if(s.delivery_id.startsWith('scientific-briefing:'))out.scientific_briefing_id=s.delivery_id.slice(20);else if(s.delivery_id.startsWith('source-context:'))out.source_export_id=s.delivery_id.slice(15);else out.delivery_id=s.delivery_id;}
  else{out.report_upload_id=s.report?.id;out.index_upload_id=s.index?.id;}
  if(s.selected_entry_ids!==null)out.selected_entry_ids=s.selected_entry_ids;
  return out;
@@ -31,7 +31,7 @@ function render(w){
  const file=(role,label)=>'<label class="iw-field"><span>'+esc(label)+'</span><input type="file" accept=".json,application/json" data-briefing-file="'+role+'" '+(disabled?'disabled':'')+'><small>'+esc(s[role]?.filename||'Choose original JSON')+'</small></label>';
  let out='<section class="iw-notice"><div class="iw-section-head"><h3>Report review follow-up</h3>'+button('close','Close receiving form',disabled)+'</div><p>The original report and page index identify each note. Due dates remain source deadlines; working durations and costs are entered separately.</p>'+
  '<label class="iw-field"><span>Original report</span><select data-briefing-field="mode" '+(disabled?'disabled':'')+'><option value="saved" '+(s.mode==='saved'?'selected':'')+'>Saved report in this workspace</option><option value="uploaded" '+(s.mode==='uploaded'?'selected':'')+'>Report from an exported delivery</option></select></label>';
- if(s.mode==='saved')out+='<label class="iw-field"><span>Saved report or utility source briefing</span><select data-briefing-field="delivery_id" '+(disabled?'disabled':'')+'><option value="">Choose original report</option>'+(s.reports||[]).map(r=>'<option value="'+esc(r.choice_key||r.id)+'" '+((r.choice_key||r.id)===s.delivery_id?'selected':'')+' '+(!r.available?'disabled':'')+'>'+esc(r.title+(r.available?'':' — '+r.reason))+'</option>').join('')+'</select></label>'+button('refresh','Refresh saved reports',disabled);
+ if(s.mode==='saved')out+='<label class="iw-field"><span>Saved report or scientific briefing</span><select data-briefing-field="delivery_id" '+(disabled?'disabled':'')+'><option value="">Choose original report</option>'+(s.reports||[]).map(r=>'<option value="'+esc(r.choice_key||r.id)+'" '+((r.choice_key||r.id)===s.delivery_id?'selected':'')+' '+(!r.available?'disabled':'')+'>'+esc(r.title+(r.available?'':' — '+r.reason))+'</option>').join('')+'</select></label>'+button('refresh','Refresh saved reports',disabled);
  else out+=file('report','Original report model JSON')+file('index','Original briefing page index JSON');
  out+=file('notes','Exported meeting-notes JSON')+'<div class="iw-actions">'+button('preview',w.dirty||!w.nativePlan?'Save plan and preview follow-up':'Preview follow-up',disabled)+'</div>';
  const p=s.preview;

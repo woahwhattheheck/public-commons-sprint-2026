@@ -14,6 +14,7 @@ import zipfile
 
 from .common import atomic_bytes, atomic_json, digest, file_digest, held, read_json
 from .implementation import ImplementationStore
+from .implementation_observation_quality import method_context
 from .implementation_schema import ImplementationError, document_digest, validate_plan
 
 EDITION = "laboratory-dispatch-20261013-v1"
@@ -23,6 +24,7 @@ SCHEMA = "upstate.implementation-lab-dispatch/v1"
 RECONCILIATION_SCHEMA = "upstate.implementation-lab-dispatch-reconciliation/v1"
 ORDER_FIELDS = ("activity_id", "parameter", "unit", "basis", "fraction", "method", "notes")
 REQUEST_FIELDS = ("parameter", "unit", "basis", "fraction", "method")
+METHOD_FIELDS = ("method_context", "method_name")
 RETURN_FIELDS = (
     "dispatch_id", "order_id", "activity_id", "sample_id", "site_id", "visit_id",
     "collected_at", "requested_parameter", "requested_unit", "requested_basis",
@@ -65,11 +67,15 @@ def _selection(value):
     result["orders"] = []
     seen = set()
     for index, item in enumerate(orders):
-        if not isinstance(item, dict) or set(item) - set(ORDER_FIELDS):
+        if not isinstance(item, dict) or set(item) - set(ORDER_FIELDS + METHOD_FIELDS):
             raise ImplementationError("Every requested analysis must use the explicit order fields")
         row = {key: _text(item.get(key), "orders[" + str(index) + "]." + key,
                           required=key in ("activity_id", "parameter")) for key in ORDER_FIELDS}
-        key = tuple(row[field] for field in ("activity_id", *REQUEST_FIELDS))
+        for field in METHOD_FIELDS:
+            definition = _text(item.get(field), "orders[" + str(index) + "]." + field)
+            if definition.strip():
+                row[field] = definition
+        key = tuple(row.get(field, "") for field in ("activity_id", *REQUEST_FIELDS, *METHOD_FIELDS))
         if key in seen:
             raise ImplementationError("The same original sample and analysis definition was requested twice")
         seen.add(key)
@@ -80,7 +86,7 @@ def _selection(value):
     if len(ids) != len(set(ids)):
         raise ImplementationError("The original attachment selection contains a duplicate")
     result["attachment_source_ids"] = sorted(ids)
-    result["orders"].sort(key=lambda row: tuple(row[field] for field in ORDER_FIELDS))
+    result["orders"].sort(key=lambda row: tuple(row.get(field, "") for field in (*ORDER_FIELDS, *METHOD_FIELDS)))
     return result
 
 
@@ -280,12 +286,14 @@ def _csv(fields, rows):
     return output.getvalue().encode("utf-8")
 
 
-def _return_mapping():
+def _return_mapping(*, include_method_definition=False):
     fields = (
         "activity_id", "sample_id", "site_id", "visit_id", "collected_at", "parameter",
         "original_text", "value", "result_type", "unit", "basis", "fraction", "qualifier",
         "detection_limit", "quantitation_limit", "method", "qa_status", "notes",
     )
+    if include_method_definition:
+        fields += METHOD_FIELDS
     return {
         "schema": "upstate.implementation-lab-mapping/v1", "delimiter": ",",
         "encoding": "utf-8-sig", "columns": {key: key for key in fields},
@@ -302,6 +310,7 @@ def _return_rows(context):
                ("dispatch_id", "order_id", "activity_id", "sample_id", "site_id",
                 "visit_id", "collected_at")}
         row.update({"requested_" + key: order[key] for key in REQUEST_FIELDS})
+        row.update({"requested_" + key: order[key] for key in METHOD_FIELDS if key in order})
         row["parameter"] = order["parameter"]
         rows.append(row)
     return rows
@@ -343,6 +352,18 @@ the dispatch revision are listed separately as pre-existing records.
 Preparing this package preserves a request. Record any actual transfer or
 receipt in the existing original custody/source records. Keep the original
 laboratory report and returned CSV as evidence.
+"""
+
+METHOD_README = """
+## Explicit requested analytical method definitions
+
+This request includes an explicitly supplied method context or full name.
+requested_method_context and requested_method_name preserve the request.
+method_context and method_name are blank actual-result fields in the return
+template: enter the laboratory's declared values, not copies of the requested
+values. The supplied mapping imports these exact declared fields with the
+original CSV. A requested context or name restricts reconciliation by exact
+text. Unstated or different returned definitions remain unresolved.
 """
 
 
@@ -389,10 +410,16 @@ def prepare_dispatch(workspace, saved_plan, selection, *, expected_operation_id,
             "source_links": copy.deepcopy(context["plan_document"]["source_links"]),
         }
         atomic_json(root / "dispatch.json", dispatch, immutable=True)
-        atomic_bytes(root / "lab-submission.csv", _csv(SUBMISSION_FIELDS, context["orders"]), immutable=True)
-        atomic_bytes(root / "return-template.csv", _csv(RETURN_FIELDS, _return_rows(context)), immutable=True)
-        atomic_json(root / "return-mapping.json", _return_mapping(), immutable=True)
-        atomic_bytes(root / "README.md", README.encode("utf-8"), immutable=True)
+        has_method_definition = any(any(key in row for key in METHOD_FIELDS) for row in context["orders"])
+        submission_fields = SUBMISSION_FIELDS + (METHOD_FIELDS if has_method_definition else ())
+        return_fields = RETURN_FIELDS + (tuple("requested_" + key for key in METHOD_FIELDS) +
+                                         METHOD_FIELDS if has_method_definition else ())
+        atomic_bytes(root / "lab-submission.csv", _csv(submission_fields, context["orders"]), immutable=True)
+        atomic_bytes(root / "return-template.csv", _csv(return_fields, _return_rows(context)), immutable=True)
+        atomic_json(root / "return-mapping.json",
+                    _return_mapping(include_method_definition=has_method_definition), immutable=True)
+        extra = (METHOD_README if has_method_definition else "")
+        atomic_bytes(root / "README.md", (README + extra).encode("utf-8"), immutable=True)
         names = ["original-plan.json", "selection.json", "dispatch.json", "lab-submission.csv",
                  "return-template.csv", "return-mapping.json", "README.md"]
         for entry in context["attachments"]:
@@ -499,11 +526,29 @@ def _explicit_order(observation):
     return dispatch_id, order_id
 
 
-def _compatible(order, observation):
-    return (order["activity_id"] == observation["activity_id"]
-            and order["parameter"] == observation["parameter"]
-            and all(not order.get(key) or order[key] == (observation.get(key) or "")
-                    for key in ("unit", "basis", "fraction", "method")))
+def _compatible(order, observation, activity=None, *, method_definition=True):
+    basic = (order["activity_id"] == observation["activity_id"]
+             and order["parameter"] == observation["parameter"]
+             and all(not order.get(key) or order[key] == (observation.get(key) or "")
+                     for key in ("unit", "basis", "fraction", "method")))
+    if not basic or not method_definition:
+        return basic
+    if not any(order.get(key) for key in METHOD_FIELDS):
+        return True
+    declared = method_context(observation, activity or {})
+    return all(not order.get(key) or order[key] == declared[key] for key in METHOD_FIELDS)
+
+
+def _returned_method(observation, activity):
+    declared = method_context(observation, activity or {})
+    return {
+        "observation_id": observation["id"], "method": observation.get("method") or "",
+        **{key: declared[key] for key in METHOD_FIELDS},
+        "binding": declared["method_binding"],
+        "original_analytical_method": declared["original_analytical_method"],
+        "source_link_ids": declared["original_source_links"],
+        "original_lab_record": declared["original_lab_record"],
+    }
 
 
 def reconcile_dispatch(workspace, saved_plan, dispatch_id):
@@ -539,14 +584,18 @@ def reconcile_dispatch(workspace, saved_plan, dispatch_id):
                 continue
             order = order_index[original_order]
             by_order[original_order].append(observation)
-            if not _compatible(order, observation):
+            if not _compatible(order, observation, current_activities.get(observation["activity_id"])):
                 problems.append(_issue("request_definition", "Returned result differs from the original requested sample or analysis definition",
                                        severity="warning", observation_id=observation["id"],
-                                       order_id=original_order))
+                                       order_id=original_order,
+                                       requested_method_definition={key: order.get(key) for key in ("method", *METHOD_FIELDS)},
+                                       returned_method_definition=_returned_method(
+                                           observation, current_activities.get(observation["activity_id"]))))
             continue
         if observation["activity_id"] not in relevant_activity_ids:
             continue
-        candidates = [row["order_id"] for row in orders if _compatible(row, observation)]
+        candidates = [row["order_id"] for row in orders
+                      if _compatible(row, observation, current_activities.get(observation["activity_id"]))]
         if len(candidates) == 1:
             by_order[candidates[0]].append(observation)
         elif len(candidates) > 1:
@@ -556,7 +605,20 @@ def reconcile_dispatch(workspace, saved_plan, dispatch_id):
                                    severity="warning", observation_id=observation["id"],
                                    candidate_order_ids=candidates))
         else:
-            unrequested.append(observation["id"])
+            method_candidates = [row for row in orders
+                                 if any(row.get(key) for key in METHOD_FIELDS)
+                                 and _compatible(row, observation, method_definition=False)]
+            if method_candidates:
+                for candidate in method_candidates:
+                    ambiguous.setdefault(candidate["order_id"], []).append(observation["id"])
+                    problems.append(_issue(
+                        "method_definition", "The original result matches the sample and analysis but its declared method context or name differs or is unstated",
+                        severity="warning", observation_id=observation["id"], order_id=candidate["order_id"],
+                        requested_method_definition={key: candidate.get(key) for key in ("method", *METHOD_FIELDS)},
+                        returned_method_definition=_returned_method(
+                            observation, current_activities.get(observation["activity_id"]))))
+            else:
+                unrequested.append(observation["id"])
     rows = []
     for order in orders:
         matches = by_order[order["order_id"]]
@@ -592,6 +654,12 @@ def reconcile_dispatch(workspace, saved_plan, dispatch_id):
         rows.append({
             **{key: order[key] for key in ("order_id", "activity_id", "sample_id", "parameter",
                                           "unit", "basis", "fraction", "method")},
+            **{key: order[key] for key in METHOD_FIELDS if key in order},
+            **({"returned_method_definitions": [
+                _returned_method(item, current_activities.get(item["activity_id"]))
+                for item in plan["observations"]
+                if item["id"] in {row["id"] for row in matches} | set(competing)]}
+               if any(order.get(key) for key in METHOD_FIELDS) else {}),
             "status": status, "observation_ids": [row["id"] for row in matches],
             "ambiguous_observation_ids": competing,
             "original_sample_context": original_context, "current_sample_context": current_context,

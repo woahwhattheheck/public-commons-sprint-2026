@@ -12,7 +12,11 @@
         "model/MONITORING_BUDGET_COMPARISON.md",
         "model/monitoring_actions.py",
         "operator/monitoring_native.py",
-        "operator/extensions/monitoring.json"
+        "operator/extensions/monitoring.json",
+        "operator/web/monitoring-frontiers.mjs",
+        "operator/web/monitoring-frontiers.css",
+        "operator/web/monitoring.mjs",
+        "operator/MONITORING_BUDGET_CHOICES.md"
       ]
     }
   },

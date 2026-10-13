@@ -11,7 +11,9 @@
     "monitoring-observed.mjs",
     "monitoring_fieldwork.mjs",
     "monitoring-study-transfer.mjs",
-    "monitoring_field_return.mjs"
+    "monitoring_field_return.mjs",
+    "monitoring-frontiers.mjs",
+    "monitoring-frontiers.css"
   ],
   "backend": {
     "module": "monitoring_native",
