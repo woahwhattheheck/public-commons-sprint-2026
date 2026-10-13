@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "project-continuity",
   "title": "Project continuity",
-  "version": "6",
+  "version": "7",
   "order": 90,
   "requires_actions": [
     "workspace.backup",
@@ -117,7 +117,9 @@
       "detail",
       "fileList",
       "uploadFile",
-      "showTask"
+      "showTask",
+      "selectWorkspace",
+      "navigate"
     ],
     "view": {
       "id": "project-continuity",

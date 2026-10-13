@@ -4,12 +4,13 @@ The original TransferStore, block protocol, native restore and file tickets rema
 the authorities. Completed study capture resolves its server-owned export task.
 """
 from __future__ import annotations
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import time
 import zipfile
 
-from model.common import atomic_json, now, read_json
+from model.common import atomic_json, held, now, read_json
 from model.project_transfer import (
     TransferStore, TransferError, canonical, digest_id, file_hash, load_json, integer, _atomic,
 )
@@ -175,10 +176,21 @@ class ProjectTransfers:
             if action.endswith("capture-study"):
                 snapshot, extra = self._capture_study(task, store, progress)
             else:
+                @contextmanager
+                def saved_view():
+                    try:
+                        with held(ws.root / ".operator-session.lock", blocking=False):
+                            self.operator._save_operator_session(task["workspace"], {
+                                "journey": value["journey"],
+                                "expected_revision": value.get("journey_revision")})
+                            yield
+                    except BlockingIOError as error:
+                        raise self.Fault("JOURNEY_BUSY", "The project view is being saved. Resume this capture when the current save finishes.", 409) from error
                 captured = native.capture(
                     task["id"], include_intermediates=value.get("include_intermediates", True),
                     include_deliveries=value.get("include_deliveries", True),
-                    chunk_bytes=chunk_bytes, progress=progress)
+                    chunk_bytes=chunk_bytes, progress=progress,
+                    backup_context=saved_view if value.get("journey") is not None else None)
                 snapshot, extra = captured["snapshot"], {}
             path = out / "project.transfer.json"
             _atomic(path, canonical(snapshot) + b"\n")

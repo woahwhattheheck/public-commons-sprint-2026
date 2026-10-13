@@ -1,32 +1,32 @@
 # Project continuity in the shared operator
 
-This addition registers the existing ProjectTransfers service in the current shared extension host. The operator's Project continuity view opens the original snapshot, receive and recovery controls for the selected workspace.
+The installed descriptor joins the existing scientific archive, original incremental handover and operator task queue. The **Project continuity** view saves selected scientific operation history and the original inputs needed to continue unfinished work.
 
-## Source join
+## Maintained source
 
-Install the original six-file Project continuity source together with:
+| Path | Responsibility |
+| --- | --- |
+| `operator/project_continuity.py` | `ProjectContinuity`: snapshot history and inputs, receive and reconcile tasks, resume selections |
+| `operator/extension_modules/project_continuity.py` | Shared-registry adapter and initialized action set |
+| `operator/extensions/project-continuity.json` | Three task actions, authenticated reads, state, task decoration and workspace receiving verification |
+| `operator/web/project_continuity.mjs` | Registered complete-project, receiving, incremental and resumption controls |
+| `operator/project_continuity_cli.py` | The same complete-project workflow from the command line |
+| `operator/project_transfer.py` | Original incremental provider, registered once by `project-transfer.json` |
 
-- operator/project_continuity_registry.py
-- operator/extensions/project-continuity.json
-- the guarded additions to operator/web/project_transfer.mjs
-
-The source integration record names the exact browser preimages. Apply each edit once to the original complete browser module, then run the current shared extension installer on the cumulative application. Its registry discovers the descriptor from operator/extensions.
-
-The service remains operator/project_transfer.py. The original operator/PROJECT_CONTINUITY.md describes snapshot construction, receiving and continued task history.
+The service and browser paths above are part of the current application. Preserve the maintained transport provider at its original path when composing earlier source editions.
 
 ## Runtime binding
 
-The registry constructs the adapter with the current operator and its Fault class. After registry initialization, each read, task invocation, state read and task decoration refreshes the service's supported actions from the complete builtin and extension handler set. A received task therefore uses the handlers present in the receiving application.
+The registry constructs the adapter with the current operator and its Fault class. Reads, task invocation, state and task decoration obtain the initialized builtin and extension action set. A received task uses the handlers actually installed in the receiving application.
 
-The original queue executes workspace.snapshot, workspace.receive and workspace.recovery.resume. The three authenticated reads remain /api/extensions/project-continuity/plan, /list and /inspect.
+The original queue executes `workspace.snapshot`, `workspace.receive` and `workspace.recovery.resume`. Authenticated reads under `/api/extensions/project-continuity/` are `plan`, `list`, `inspect` and `transport`. The plan includes the current saved `operator_session` so the form freezes the selected view and its revision with the transfer request.
 
-The registry publishes one data.project_continuity object:
+The registry publishes `data.project_continuity.transfers` and `data.project_continuity.accepted_actions`. The browser uses the existing host's forms, uploads, queue, task details and file downloads. Its `selectWorkspace` capability opens the completed receiving result; `navigate` returns to the saved Guided journey. Stale reads from another workspace or an earlier panel request are discarded.
 
-- transfers contains the original verified transfer summaries.
-- actions contains the initialized task handlers used by the recovery controls.
+The original incremental descriptor is the sole owner of its transport actions. Its provider also supplies `operator.project_transfers` for continuity. Capture enters the optional saved-view context only when creating a new native archive; completed archive and capture replay retain their original edition.
 
-The browser reads these fields through the existing shared context. The host calls its original renderer on active state updates, so completed transfers and changing task state appear in the open panel. It keeps the original forms, upload service, task inspection and file downloads. Snapshot task attachments continue to come from ProjectTransfers.decorate_task.
+## Operate the handoff
 
-## Continue the retained project
+Choose **Save view and transfer project** in Guided journey, then **Create complete project**. Review the saved view, selected history and intermediate-file choice. Download the completed ZIP, or use the original incremental manifest and missing-part exchange.
 
-Use the original selected workspace to create a project snapshot. Receive its completed archive through the same operator, open its transfer history and select the recovered project. Resume an appropriate retained interrupted task through its original recovery control. The action list comes from the receiving application's current handlers, and completed source and workspace outputs keep the identities recorded by the original service.
+Receive the edition, choose **Open received project**, and inspect the retained operations. **Save or continue the selected analysis** opens the saved guide. **Resume unfinished work** explicitly selects the remaining work for the original queue. Reopening uses the same receiving workspace and operator-state directory. The complete instructions and command-line examples are in [PROJECT_CONTINUITY.md](PROJECT_CONTINUITY.md).
