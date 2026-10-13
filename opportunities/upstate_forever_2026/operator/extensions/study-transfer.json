@@ -7,7 +7,8 @@
   "assets": [
     "extensions/study_transfer.mjs",
     "extensions/study_transfer.css",
-    "received_studies.mjs"
+    "received_studies.mjs",
+    "gauge_received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -132,7 +133,10 @@
       "api",
       "refreshState",
       "showTask",
-      "navigate"
+      "navigate",
+      "openExtension",
+      "openItem",
+      "openScientificReport"
     ],
     "styles": [
       "/web/extensions/study_transfer.css"

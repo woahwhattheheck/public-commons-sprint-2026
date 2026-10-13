@@ -309,5 +309,28 @@ export function attachGaugeSupport(host) {
     if(prepared?.source)return openReport(prepared);
     return prepareReport(false);
   }
-  return {mount,update,detach,refresh,open,prepare,scientificReport};
+  async function openSavedStudy(value={}){
+    const key=host.getWorkspace(),version=generation;
+    if(!root||workspace!==key||value.workspace_key!==key)
+      throw Error('Open the received Study in its original receiving Workspace.');
+    const id=value.edition_id;
+    if(typeof id!=='string'||!/^[0-9a-f]{64}$/.test(id))
+      throw Error('Choose the saved original Gauge support edition.');
+    await refresh();
+    if(!root||workspace!==key||host.getWorkspace()!==key||generation!==version)return;
+    await open(id);
+    if(!root||workspace!==key||host.getWorkspace()!==key||generation!==version)return;
+    if(edition?.id!==id||(value.build_id&&edition.build_id!==value.build_id))
+      throw Error('The received Gauge edition no longer matches its original Study.');
+    const expected=value.source;
+    if(expected){
+      const actual=(reportReady?.gauge_support_id===id?reportReady:edition.scientific_report)?.source;
+      if(actual&&(actual.source_collection_id!==expected.source_collection_id||actual.source_id!==expected.source_id))
+        message='Opened the original saved Gauge build. This Study retains its own scientific source; use the Study links for that historical report.';
+      else message='Opened the original saved Gauge build and its retained source choices.';
+      note();
+    }
+    root.querySelector('[data-gs-result]')?.scrollIntoView({block:'start'});
+  }
+  return {mount,update,detach,refresh,open,prepare,scientificReport,openSavedStudy};
 }

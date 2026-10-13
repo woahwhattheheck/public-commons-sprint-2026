@@ -1,3 +1,4 @@
+import {receivedGaugePreview} from '../gauge_received_studies.mjs';
 import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
 /** Selected editable scientific-study transfer in the original operator.
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
@@ -271,6 +272,7 @@ export function attachStudyTransfer(host) {
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
     html+=receivedFieldworkPreview(plan.implementation_report_sources);
+    html+=receivedGaugePreview(plan.scientific_report_sources);
     body.innerHTML=html;
   }
 
