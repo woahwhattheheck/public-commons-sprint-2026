@@ -2,7 +2,7 @@
 
 The spatial viewer uses categorical grayscale swatches for retained class rasters. A swatch identifies a class; its shade has no quantitative meaning. Physical export and rate rasters keep their numeric scales.
 
-Class names are read from the selected source collection's original CSV columns `lucode` and `description`. For a run, a description-bearing selected biophysical table takes precedence. When the selected combined table contains coefficients only, the viewer uses agreeing descriptions from its retained source-edition tables. It records each table source ID, URI and SHA256. Conflicting or unavailable descriptions display the original numeric code. No NLCD classification is inferred from a logical input role.
+Class names are read from the selected source collection's original CSV columns `lucode` and `description`. For a run, a description-bearing selected biophysical table takes precedence. When the selected combined table contains coefficients only, the viewer uses agreeing descriptions from its retained source-edition tables. It records each table source ID, URI and SHA256. Conflicting or unavailable descriptions display the original numeric code. No NLCD classification is inferred from a logical input role. Biophysical class names are used only for retained land-cover roles; binary reporting/contribution masks and other categorical layers keep their own original numeric codes, even when they share a run or profile identity.
 
 The Gura intake already retains its original NDR and SDR tables alongside the combined coefficient table, so the source tables supply the original ten land-cover descriptions without changing the intake, scenario, profile, grid or native-run identities.
 
