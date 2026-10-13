@@ -190,6 +190,7 @@ export function attachParameterStudies(host) {
     const actions = (canRun ? button('run', item.state === 'prepared' ? 'Run all cases' : 'Resume remaining cases', 'data-id="' + escapeHTML(id) + '"', true) : '') +
       (!isBusy && Number(progress.completed) > 0 ? button('summarize', 'Refresh completed results', 'data-id="' + escapeHTML(id) + '"') : '') +
       button('revise', 'Use as new draft', 'data-id="' + escapeHTML(id) + '"') +
+      button('calibration', 'Use completed cases in calibration', 'data-id="' + escapeHTML(id) + '"') +
       (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button>' : '');
     const detail = thisRoot.querySelector('[data-parameter-study-detail]');
     detail.innerHTML = '<section class="section"><header class="section-header"><div><h2>' + escapeHTML(item.selection.title) +
@@ -451,6 +452,42 @@ export function attachParameterStudies(host) {
       });
   }
 
+  async function openCalibration(id) {
+    const originalWorkspace = workspace();
+    const packet = await host.api(requested('/api/parameter-studies/calibration', {id}));
+    if (workspace() !== originalWorkspace) throw new Error('Reopen the parameter study in its original workspace.');
+    const eligible = packet.eligible || [], excluded = packet.excluded || [];
+    const rows = eligible.map(row => '<tr><td><input type="checkbox" name="parameter_study_calibration_run" value="' +
+      escapeHTML(row.run_id) + '" checked aria-label="Use ' + escapeHTML(row.labels.join(', ')) + '"></td><td><strong>' +
+      escapeHTML(row.labels.join(', ')) + '</strong><small class="mono">' + escapeHTML(row.run_id) +
+      '</small></td><td>' + escapeHTML(row.selected_models.map(value => value.toUpperCase()).join(' + ')) +
+      '<small>' + escapeHTML(row.available_parameters.map(label).join(', ')) + '</small></td><td>' +
+      escapeHTML(row.title) + (row.is_reference ? '<small>Original study reference</small>' : '') + '</td></tr>');
+    const excludedRows = excluded.map(row => '<tr><td>' + escapeHTML(row.labels.join(', ')) +
+      '<small class="mono">' + escapeHTML(row.run_id) + '</small></td><td>' + status(row.state) +
+      '</td><td>' + row.reasons.map(escapeHTML).join('<br>') + '</td></tr>');
+    const body = '<div class="parameter-study-calibration"><p>' + escapeHTML(packet.method) + '</p>' +
+      (packet.issues?.length ? '<div class="notice">' + packet.issues.map(escapeHTML).join('<br>') + '</div>' : '') +
+      '<p><strong>' + format(eligible.length) + '</strong> eligible native runs · ' + format(excluded.length) +
+      ' remaining or excluded runs. Reused runs appear once, with every original case label.</p>' +
+      (rows.length ? gridTable(['Use', 'Original study cases', 'Native outputs', 'Parameter profile'], rows) :
+        '<p class="note">This study has no completed unchanged-baseline cases for annual-load calibration.</p>') +
+      (excludedRows.length ? '<details class="technical"><summary>Remaining and excluded cases</summary>' +
+        gridTable(['Case', 'State', 'Reason'], excludedRows) + '</details>' : '') +
+      '<p class="note">Continue preserves your saved observation and catchment draft. The next form reviews objective weights, observed annual loads and the spatial validation split.</p></div>';
+    host.openForm('Calibrate completed study cases', packet.title, body, 'Open calibration selection', async () => {
+      if (workspace() !== originalWorkspace) throw new Error('Reopen this candidate selection in its original workspace.');
+      const ids = [...document.querySelectorAll('#operation-form [name="parameter_study_calibration_run"]:checked')].map(node => node.value);
+      if (!ids.length) throw new Error('Choose at least one completed original baseline run.');
+      if (typeof host.openExtension !== 'function') throw new Error('Open this source edition with its registered calibration desk.');
+      return host.openExtension('calibration', 'openForCandidates', {
+        workspace_key: originalWorkspace, study_id: id, candidate_run_ids: ids});
+    }, () => {
+      const submit = document.getElementById('form-submit');
+      if (submit) submit.disabled = !eligible.length;
+    });
+  }
+
   async function dispatch(node) {
     const action = node.dataset.action.slice('parameter-study-'.length), id = node.dataset.id;
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
@@ -467,6 +504,7 @@ export function attachParameterStudies(host) {
       return;
     }
     if (action === 'run' || action === 'summarize') return host.executeAction('parameter-study.' + action, {experiment_id: id});
+    if (action === 'calibration') return openCalibration(id);
     if (action === 'preview') return previewDesign();
     if (action === 'axis-add') {
       draftRoot.querySelector('[data-parameter-study-axes]').insertAdjacentHTML('beforeend', axisEditor());
@@ -484,11 +522,31 @@ export function attachParameterStudies(host) {
     }
   }
 
+
+  async function openSavedStudy(selection) {
+    const selectedWorkspace=workspace(), id=selection?.experiment_id;
+    if(!selection||selection.workspace_key!==selectedWorkspace||!/^[0-9a-f]{64}$/.test(id||'')) {
+      throw new Error('Open a retained parameter study in its original workspace.');
+    }
+    const retained=await host.api(requested('/api/item',{kind:'parameter-studies',id}));
+    if(workspace()!==selectedWorkspace||retained.id!==id) {
+      throw new Error('The workspace or saved parameter study changed while opening it.');
+    }
+    currentWorkspace=selectedWorkspace;selected=id;study=null;results=null;
+    pendingOpen={workspace:selectedWorkspace,id};
+    resultFilters={area_id:'',pollutant:'',offset:0};caseFilter='';caseOffset=0;
+    await host.navigate('parameter-studies');
+    if(workspace()!==selectedWorkspace)throw new Error('Reopen the retained study in its selected workspace.');
+    if(pendingOpen)await host.refreshState();
+    if(workspace()!==selectedWorkspace)throw new Error('The selected workspace changed while refreshing the study.');
+    return {workspace_key:selectedWorkspace,experiment_id:id};
+  }
+
   function taskActions(task) {
     return task.action?.startsWith('parameter-study.') && task.result?.id && task.workspace ?
       (task.result.state === 'partial' ? '<div class="notice">Completed-case results are available. Resume the study to recover the remaining cases.</div>' : '') +
       '<div class="page-actions">' + button('open', 'Open parameter study', 'data-id="' + escapeHTML(task.result.id) + '" data-workspace="' + escapeHTML(task.workspace) + '"') + '</div>' : '';
   }
 
-  return {render, mount, detach, dispatch, taskActions};
+  return {render, mount, detach, dispatch, taskActions, openSavedStudy};
 }

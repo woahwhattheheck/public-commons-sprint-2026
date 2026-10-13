@@ -108,11 +108,34 @@ def _text(files, metadata, path):
     return content
 
 
-def _module_candidates(name, roots=("", "operator")):
+def _module_base(name):
+    # A tuple is an application-relative path derived from an actual ImportFrom
+    # and its retained owner file. Keep those filesystem components intact:
+    # legacy package directories can contain hyphens or literal dots.
+    if isinstance(name, tuple):
+        if (not name or any(not isinstance(part, str) or not part
+                            or "/" in part for part in name)):
+            raise ValueError("Relative import must retain its original source path")
+        return relative("/".join(name))
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", name):
         raise ValueError("Backend module must name installed Python source")
-    base = name.replace(".", "/")
-    return [prefix + base + suffix for root in roots
+    return name.replace(".", "/")
+
+
+def _child_module(name, child):
+    return (*name, child) if isinstance(name, tuple) else name + "." + child
+
+
+def _module_label(name):
+    return "/".join(name) if isinstance(name, tuple) else name
+
+
+def _module_candidates(name, roots=("", "operator")):
+    base = _module_base(name)
+    # Relative filesystem origins already contain their complete application
+    # parent. Applying import-root aliases again can select another component.
+    chosen_roots = ("",) if isinstance(name, tuple) else roots
+    return [prefix + base + suffix for root in chosen_roots
             for prefix in (root + "/" if root else "",)
             for suffix in (".py", "/__init__.py")]
 
@@ -297,10 +320,12 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             for candidate in found:
                 require(candidate, owner, kind)
             return
-        targets = [(root + "/" if root else "") + name.replace(".", "/") + "/" for root in roots]
+        chosen_roots = ("",) if isinstance(name, tuple) else roots
+        targets = [(root + "/" if root else "") + _module_base(name) + "/"
+                   for root in chosen_roots]
         if namespace and any(path.startswith(target) for path in files for target in targets):
             return
-        issue(kind, owner, name, "Installed Python module is absent", candidates=candidates)
+        issue(kind, owner, _module_label(name), "Installed Python module is absent", candidates=candidates)
 
     exports_cache = {}
 
@@ -385,8 +410,8 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         if item.module:
                             package = list(PurePosixPath(candidate).parent.parts)
                             if item.level and item.level <= len(package):
-                                target = ".".join([*package[:len(package) - item.level + 1],
-                                                   item.module])
+                                target = (*package[:len(package) - item.level + 1],
+                                          *item.module.split("."))
                             elif not item.level:
                                 target = item.module
                             else:
@@ -433,9 +458,9 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             if alias.name == "*" or alias.name in exports:
                 continue
             if is_package:
-                require_module(name + "." + alias.name, owner, "python-import", namespace=True)
+                require_module(_child_module(name, alias.name), owner, "python-import", namespace=True)
             elif module_files:
-                issue("python-import", owner, name + "." + alias.name,
+                issue("python-import", owner, _module_label(_child_module(name, alias.name)),
                       "Imported name is absent from the retained module", line=line)
 
     for name in selected:
@@ -544,7 +569,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                                   "Relative import leaves the application", line=node.lineno)
                             continue
                         prefix = package[:len(package) - node.level + 1]
-                        name = ".".join([*prefix, *([node.module] if node.module else [])])
+                        name = (*prefix, *(node.module.split(".") if node.module else []))
                         require_from(name, node.names, path, node.lineno)
                     elif node.module and node.module.split(".", 1)[0] in local_roots:
                         require_from(node.module, node.names, path, node.lineno)

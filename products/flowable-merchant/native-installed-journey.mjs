@@ -14,7 +14,7 @@ const SDK = 'stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/';
 const RUNTIME = 'stellar/scf-starforge-20261009/distribution/runtime-workspace/';
 const MCP = 'stellar-forge/mcp-merchant-operator/';
 const CORE_KINDS = ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation',
-  'casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask'];
+  'casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask','programme'];
 const HASH = /^[a-f0-9]{64}$/;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = value => JSON.stringify(value, (_, item) =>
@@ -158,6 +158,10 @@ export async function runInstalledFlowableJourney({
   const sourceRoot=await realpath(configuration.installedSourceRoot??join(configuration.runtimeDirectory,'package','source'));
   need(sourceRoot===resolve(dirname(fileURLToPath(import.meta.url)),'../..'),'Execute this hook from the original installed source.');
   const load=path=>import(pathToFileURL(join(sourceRoot,path)).href);
+  const [{FLOWABLE_WORKSPACE_ACTIONS:declaredActions},{flowableWorkspaceTools:declaredTools}]=await Promise.all([
+    load(SDK+'workspace/actions.mjs'),load(MCP+'catalog/flowable-workspace.mjs')]);
+  const expectedActionNames=Object.keys(declaredActions).sort();
+  const expectedToolNames=declaredTools(name=>({name})).map(tool=>tool.name).sort();
   const [{inspectMerchantRuntime},product,managed,common,{FlowableProductClient},runtime,{retainFlowableResponse}]=await Promise.all([
     load('stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs'),load(PRODUCT+'workspace.mjs'),
     load(PRODUCT+'managed.mjs'),load(PRODUCT+'common.mjs'),load(PRODUCT+'client.mjs'),
@@ -322,7 +326,7 @@ export async function runInstalledFlowableJourney({
     ];
     for(const args of cliCalls) {
       const result=await runCLI(sourceRoot,args,signal);report.cli.push(result.receipt);
-      if(args[0]==='actions')need(result.value.length===41,'The installed CLI exposes every original workspace action.');
+      if(args[0]==='actions')need(canonical(result.value.map(item=>item.name).sort())===canonical(expectedActionNames),'The installed CLI exposes every declared original workspace action.');
       if(args[0]==='status')need(result.value.workspaceId===senderStatus.workspaceId,'CLI and SDK use the same native workspace.');
       if(args[0]==='record')need(result.value.sha256===selectedRelease.sha256,'CLI reads the same immutable native record.');
     }
@@ -701,7 +705,7 @@ export async function runInstalledFlowableJourney({
       if(!result.nextCursor)break;need(result.nextCursor!==cursor,'MCP tool pagination advances.');cursor=result.nextCursor;
     }
     const names=advertised.filter(name=>name.startsWith('merchant_flowable_'));
-    need(names.length===47 && new Set(names).size===47,'The selected installed merchant exposes all 47 original Flowable tools.');
+    need(new Set(names).size===names.length&&canonical([...names].sort())===canonical(expectedToolNames),'The selected installed merchant exposes every source-declared Flowable tool.');
     const remoteStatus=await mcp.tool('merchant_flowable_status',{workspace:'sender'});
     need(remoteStatus.workspaceId===senderStatus.workspaceId,'Authenticated MCP and Applications use the same original workspace.');
     let chunksRead=0,reopenedReader=false;

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "7+source-design1",
+  "version": "8+source-design1",
   "order": 65,
   "assets": [
     "calibration.mjs",
@@ -28,7 +28,8 @@
       "calibration.uncertainty.export",
       "calibration.maps.prepare",
       "calibration.maps.review",
-      "calibration.review.prepare"
+      "calibration.review.prepare",
+      "calibration.review.source"
     ],
     "invoke": {
       "handler": "invoke",
@@ -127,6 +128,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -186,6 +200,16 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "kind": "calibration-report-sources",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -226,7 +250,8 @@
       "fileList",
       "openItem",
       "showTask",
-      "toast"
+      "toast",
+      "openDelivery"
     ],
     "styles": [
       "/web/calibration.css"

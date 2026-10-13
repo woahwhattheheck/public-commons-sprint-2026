@@ -12,11 +12,11 @@ const {values:args}=parseArgs({options:{
  request:{type:'string'},reason:{type:'string'},output:{type:'string'},
  receive:{type:'boolean',default:false},transfer:{type:'boolean',default:false},resume:{type:'boolean',default:false},
  video:{type:'boolean',default:false},headed:{type:'boolean',default:false},
- 'browser-channel':{type:'string'},'task-timeout-seconds':{type:'string',default:'3600'},
+ 'browser-channel':{type:'string'},'browser-executable':{type:'string'},'task-timeout-seconds':{type:'string',default:'3600'},
  help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--output DIRECTORY] [--resume]');
+ console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--browser-channel NAME | --browser-executable PATH] [--output DIRECTORY] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','chemistry-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -41,7 +41,14 @@ async function atomicText(path,text){
 async function persistRequests(){
  await atomicText(join(output,'request-state.json'),JSON.stringify(requestState,null,2)+'\n');
 }
+function browserRuntime(){
+ required(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ return{kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
+  executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
+  channel:args['browser-channel']||null,headless:!args.headed};
+}
 async function initializeContinuation(){
+ browserRuntime();
  required(!args.resume||args.output,'Resume with the original explicit --output directory.');
  const projectBytes=args['edited-project']?await readFile(resolve(args['edited-project'])):null;
  const requestBytes=args.request?await readFile(resolve(args.request)):null;
@@ -63,13 +70,13 @@ async function initializeContinuation(){
   required(requestState.requests&&typeof requestState.requests==='object'&&!Array.isArray(requestState.requests),'Original queued request state is missing.');
   if(previous){journal=JSON.parse(previous);required(journal.schema==='upstate.chemistry-browser/v1','Choose the original chemistry journey.');}
   journal.attempts=journal.attempts||[];
-  journal.attempts.push({resumed_at:new Date().toISOString(),previous_status:journal.status,previous_error:journal.error||null});
+  journal.attempts.push({resumed_at:new Date().toISOString(),previous_status:journal.status,previous_error:journal.error||null,previous_browser_runtime:journal.browser_runtime||null});
   journal.status='running';journal.browser_errors=[];delete journal.error;delete journal.finished_at;
  }else{
   required(!retained&&!previous,'This output already contains a journey. Use --resume to continue its original tasks, or choose a new output directory.');
   requestState={schema:'upstate.chemistry-browser-requests/v1',created_at:new Date().toISOString(),input,requests:{}};
  }
- journal.workspace_key=args.workspace;journalWritable=true;
+ journal.workspace_key=args.workspace;journal.browser_runtime=browserRuntime();journalWritable=true;
  await persistRequests();await writeJournal();
 }
 function hasRequest(action){return Boolean(requestState.requests[action]);}
@@ -292,7 +299,9 @@ async function main(){
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original operator HTTP/HTTPS startup URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
  required(capability,'Use the original startup URL containing its capability fragment.');
- browser=await chromium.launch({headless:!args.headed,...(args['browser-channel']?{channel:args['browser-channel']}:{})});
+ browser=await chromium.launch({headless:!args.headed,
+  ...(args['browser-channel']?{channel:args['browser-channel']}:{}),
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();

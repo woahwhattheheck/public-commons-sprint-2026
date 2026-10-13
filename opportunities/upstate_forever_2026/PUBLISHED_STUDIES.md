@@ -350,3 +350,8 @@ The [stream observations guide](measurement_workspace/STREAM_OBSERVATIONS.md#sam
 ## Paired sensitivity companion (1.8.1)
 
 The original stream study now retains its complete paired-sampling sensitivity report through the same context registry. Its 116 comparisons and 148 selections preserve station/analyte cohorts, source-row membership, censored interval bounds and the original parent report. Open **Eighteenmile paired sampling sensitivity**, inspect an original selection, then use the existing report/complete-study exports. The complete rebuilding layout and both original source manifests reopen together. See the [stream guide](measurement_workspace/STREAM_OBSERVATIONS.md#paired-sampling-sensitivity-in-the-retained-study) for the exact source and offline command.
+
+
+## SV-833 original-result cohort (1.9)
+
+Published studies now includes the separate SV-833 physical, nutrient and microbial cohort. All 610 original NarrowResult identifiers remain selectable, with exact activity and reporting-limit source joins. The complete original scientific report and WGS84 station source remain part of each saved edition. See measurement_workspace/SV833_OBSERVATIONS.md for the native import, selected export and reopen workflow and the explicit distinction between 610 source rows and 576 activity-characteristic measurements.

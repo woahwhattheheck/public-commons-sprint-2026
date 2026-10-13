@@ -1,6 +1,7 @@
 // MIT. Original Flowable operator workspace; all native mutations use saved reviewed requests.
 import {FLOWABLE_WORKSPACE_ACTIONS,FLOWABLE_RECORD_KINDS,FLOWABLE_OPERATION_KINDS,validateFlowableAction,
   flowableCaseInstanceId as nativeCaseId} from './actions.mjs';
+import {installProgrammeBrowser} from './programme-browser.mjs';
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
 const tokenKey='flowable-token:'+location.origin;
 const fragment=location.hash.slice(1);
@@ -233,7 +234,9 @@ async function capturedCollection(id,method,collection){
 const captured=collection=>capturedCollection(state.portfolio,'readPortfolio',collection);
 const capturedDecision=collection=>capturedCollection(state.decisionPortfolio,'readDecisionPortfolio',collection);
 const capturedCase=collection=>capturedCollection(state.casePortfolio,'readCasePortfolio',collection);
+const programmeBrowser=installProgrammeBrowser({api,write,busy,button,node,pre,keyValues,table,originalLink,notice,reload,openRecord,requireEngine,records,forEngine,detail});
 async function renderAll(){
+  await programmeBrowser.render();
   retainSelectedCollections();
   const metrics=$('#metrics');metrics.replaceChildren();
   const portfolioKind=state.casePortfolio?'casePortfolio':state.decisionPortfolio?'decisionPortfolio':'portfolio',
@@ -521,6 +524,7 @@ function openNative(title,item,action){
   revealDetail();
 }
 async function openRecord(kind,id){
+  if(kind==='programme'){switchPage('programmes');return programmeBrowser.open(id);}
   const record=await api('getRecord',{kind,id}),operation=FLOWABLE_OPERATION_KINDS.includes(kind);
   state.detail={kind,id};
   const container=detail(record.value.label??kind+' '+id);

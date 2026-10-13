@@ -123,7 +123,7 @@ export function attachWaterQuality(helpers) {
     return '<section class="wq-section"><h3>Work in this workspace</h3><div class="wq-scroll"><table class="wq-table"><thead><tr><th>Operation</th><th>Status</th><th>Started</th><th></th></tr></thead><tbody>' +
       tasks.slice(0, 12).map(task => "<tr><td>" + esc(task.action === "water.quality.context.build" ? "Build water-quality context" : "Acquire official sources") +
         "</td><td>" + esc(words(task.state)) + "</td><td>" + esc(task.created_at || "") + "</td><td>" +
-        button("water-quality-task", "Open task", 'data-id="' + esc(task.id) + '"') + "</td></tr>").join("") + "</tbody></table></div></section>";
+        button("waterquality-task", "Open task", 'data-id="' + esc(task.id) + '"') + "</td></tr>").join("") + "</tbody></table></div></section>";
   }
   function acquisitionSection(state) {
     const records = asArray(data(state).water_quality_acquisitions);
@@ -131,7 +131,7 @@ export function attachWaterQuality(helpers) {
     return '<section class="wq-section"><h3>Acquired source editions</h3><div class="wq-scroll"><table class="wq-table"><thead><tr><th>Received</th><th>Publisher files</th><th></th></tr></thead><tbody>' +
       records.map(record => "<tr><td>" + esc(record.created_at || "") + "</td><td>" +
         asArray(record.entries).map(entry => link(entry.uri, entry.title || entry.id) + " · " + esc(entry.status_date || entry.vintage)).join("<br>") +
-        "</td><td>" + button("water-quality-acquisition", "Open source files", 'data-id="' + esc(record.id) + '"') + "</td></tr>").join("") +
+        "</td><td>" + button("waterquality-acquisition", "Open source files", 'data-id="' + esc(record.id) + '"') + "</td></tr>").join("") +
       "</tbody></table></div></section>";
   }
   function renderShell(state) {
@@ -140,11 +140,11 @@ export function attachWaterQuality(helpers) {
     if (!selectedContext && contexts.length) selectedContext = contexts[0].id;
     host.innerHTML = '<div class="wq-panel"><header class="wq-header"><div><h2>Water-quality context</h2>' +
       "<p>Connect official assessments and classified waters to your watershed study. Inspect local and upstream evidence alongside the model results.</p></div>" +
-      '<div class="wq-actions">' + button("water-quality-build", "Build context") + button("water-quality-acquire", "Acquire official sources") +
-      button("water-quality-import", "Import sources") + '</div></header><section class="wq-section"><div class="wq-row"><label class="wq-grow">Saved context<select data-wq-context>' +
+      '<div class="wq-actions">' + button("waterquality-build", "Build context") + button("waterquality-acquire", "Acquire official sources") +
+      button("waterquality-import", "Import sources") + '</div></header><section class="wq-section"><div class="wq-row"><label class="wq-grow">Saved context<select data-wq-context>' +
       option("", contexts.length ? "Choose a saved context" : "No context built yet", selectedContext) +
       contexts.map(context => option(context.id, context.title || context.id, selectedContext)).join("") + "</select></label>" +
-      (selectedContext ? button("water-quality-record", "Open full record", 'data-id="' + esc(selectedContext) + '"') : "") +
+      (selectedContext ? button("waterquality-record", "Open full record", 'data-id="' + esc(selectedContext) + '"') : "") +
       '</div><div data-wq-results><p class="wq-muted">' +
       (selectedContext ? "Opening watershed context…" : "Acquire or import the original source editions, then select the watershed domain and build a context.") +
       '</p></div></section><div data-wq-catalog><p class="wq-muted">Opening the official source catalogue…</p></div>' + acquisitionSection(state) + taskSection(state) + "</div>";
@@ -216,7 +216,7 @@ export function attachWaterQuality(helpers) {
         '</td><td class="wq-number">' + number(row.assessment_site_count) + '</td><td class="wq-number">' + number(row.nonattaining_site_count) +
         '</td><td class="wq-number">' + number(row.tmdl_nonattaining_site_count) + "</td><td>" + esc(classificationText(row.direct_classification_codes) || "—") +
         "</td><td>" + esc(classificationText(row.upstream_of_high_quality_codes) || "—") + '</td><td class="wq-number">' +
-        number(row.upstream_nonattaining_site_count) + "</td><td>" + button("water-quality-watershed", "Evidence", 'data-huc="' + esc(row.huc12) + '"') + "</td></tr>").join("") +
+        number(row.upstream_nonattaining_site_count) + "</td><td>" + button("waterquality-watershed", "Evidence", 'data-huc="' + esc(row.huc12) + '"') + "</td></tr>").join("") +
       (rows.length ? "" : '<tr><td colspan="10">No watersheds match these filters.</td></tr>') + "</tbody></table></div>";
   }
   async function loadContext(id, key, token, node) {
@@ -637,13 +637,13 @@ export function attachWaterQuality(helpers) {
   }
   function dispatch(element) {
     const action = element.dataset.action;
-    if (action === "water-quality-build") { void openBuild().catch(reportError); return true; }
-    if (action === "water-quality-acquire") { void openAcquisition().catch(reportError); return true; }
-    if (action === "water-quality-import") { sourceForm(); return true; }
-    if (action === "water-quality-task") { Promise.resolve(showTask(element.dataset.id)).catch(reportError); return true; }
-    if (action === "water-quality-record") { Promise.resolve(openItem("water_quality_contexts", selectedContext || element.dataset.id)).catch(reportError); return true; }
-    if (action === "water-quality-acquisition") { Promise.resolve(openItem("water_quality_acquisitions", element.dataset.id)).catch(reportError); return true; }
-    if (action === "water-quality-watershed") { openWatershed(element.dataset.huc); return true; }
+    if (action === "waterquality-build") { void openBuild().catch(reportError); return true; }
+    if (action === "waterquality-acquire") { void openAcquisition().catch(reportError); return true; }
+    if (action === "waterquality-import") { sourceForm(); return true; }
+    if (action === "waterquality-task") { Promise.resolve(showTask(element.dataset.id)).catch(reportError); return true; }
+    if (action === "waterquality-record") { Promise.resolve(openItem("water_quality_contexts", selectedContext || element.dataset.id)).catch(reportError); return true; }
+    if (action === "waterquality-acquisition") { Promise.resolve(openItem("water_quality_acquisitions", element.dataset.id)).catch(reportError); return true; }
+    if (action === "waterquality-watershed") { openWatershed(element.dataset.huc); return true; }
     return false;
   }
   return {mount, update, detach, dispatch};

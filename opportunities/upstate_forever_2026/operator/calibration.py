@@ -15,11 +15,13 @@ from model import calibration as science
 from model import calibration_uncertainty as uncertainty_science
 from model import calibration_maps as map_science
 from model import calibration_review as review_science
+from model import calibration_report_source as report_source_science
 
 ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.export",
                      "calibration.uncertainty", "calibration.uncertainty.export",
-                     "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare"})
-READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review"})
+                     "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare",
+                     "calibration.review.source"})
+READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
     "ranking": ("rank", "run_id", "profile_id", "title", "selected_models", "available_parameters",
@@ -399,7 +401,8 @@ class CalibrationOperations:
                 "calibration_uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)],
                 "calibration_maps": [_map_summary(row) for row in ws._list("calibration-maps")],
                 "calibration_map_reviews": ws._list("calibration-map-reviews"),
-                "calibration_reviews": [_review_summary(row) for row in ws._list("calibration-reviews")]}
+                "calibration_reviews": [_review_summary(row) for row in ws._list("calibration-reviews")],
+                "calibration_report_sources": report_source_science.list_saved(ws)}
 
     def read(self, workspace, operation, value=None):
         value = value or {}
@@ -439,7 +442,30 @@ class CalibrationOperations:
             prefix = "/api/file/calibration-review/" + "/".join(
                 urllib.parse.quote(str(part), safe="") for part in (workspace, key)) + "/"
             return {"workspace_key": workspace, "review": review, "viewer_url": prefix + "index.html",
-                    "_downloads": self._review_downloads(workspace, review)}
+                    "_downloads": self._review_downloads(workspace, review),
+                    "report_sources": report_source_science.list_saved(ws, review["id"])}
+        if operation == "report-source":
+            record = report_source_science.inspect(ws, self._id(value, "id"))
+            choice = {name: record[name] for name in ("source_collection_id", "source_id")}
+            selection, issue = None, None
+            try:
+                from model.model_selection import require_complete_delivery
+                run = ws.inspect_run(record["selected_run_id"])
+                if run["state"] != "complete":
+                    raise ValueError("Complete the original selected native run before map delivery")
+                require_complete_delivery(run)
+                if ws._get("scenarios", run["selection"]["scenario_id"])["kind"] != "baseline":
+                    raise ValueError("The complete delivery needs an original baseline scenario")
+                selection = {"title": record["title"], "baseline_run_id": run["id"],
+                             "source_roles": {"OBSERVED_CONTEXT": choice},
+                             "observed_context_sources": [choice]}
+            except ValueError as error:
+                issue = str(error)
+            return {"workspace_key": workspace, "report_source": record,
+                    "source_selection": choice, "delivery_selection": selection,
+                    "delivery_issue": issue,
+                    "_downloads": [self._document(workspace, report_source_science.KIND,
+                                                   record["id"], "Native calibration report source")]}
         if operation == "maps":
             key = self._id(value, "id")
             result = map_science.inspect(ws, key)
@@ -497,6 +523,13 @@ class CalibrationOperations:
                     "selection_sensitivity": result["selection_sensitivity"]}
         if task["action"] == "calibration.uncertainty.export":
             return self._uncertainty_export(workspace, self._id(payload, "uncertainty_id"))
+        if task["action"] == "calibration.review.source":
+            result = report_source_science.prepare(ws, self._id(payload, "review_id"))
+            return {"report_id": result["calibration_id"], "plan_id": result["plan_id"],
+                    "calibration_review_id": result["review_id"],
+                    "calibration_report_source_id": result["id"],
+                    "source_collection_id": result["source_collection_id"],
+                    "source_id": result["source_id"], "state": result["state"]}
         if task["action"] == "calibration.review.prepare":
             report_id = self._id(payload, "report_id")
             result = review_science.prepare(
@@ -744,10 +777,12 @@ class CalibrationOperations:
         for row in workspace._list("calibration-reviews"):
             value = review_science.inspect(workspace, row["id"])
             reviews.append({"id": value["id"], "calibration_id": value["calibration_id"]})
-        return {"calibration_reviews": reviews, "calibration_uncertainties": verified,
+        report_sources = report_source_science.verify_workspace(workspace)
+        return {"calibration_report_sources": report_sources,
+                "calibration_reviews": reviews, "calibration_uncertainties": verified,
                 "calibration_maps": [{"id": row["id"], "calibration_id": row["calibration_id"]}
                                      for row in maps.values()],
-                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews)}
+                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews) + len(report_sources)}
 
     def decorate_task(self, task):
         if task["state"] != "complete" or task["action"] not in ACTIONS:
@@ -780,4 +815,8 @@ class CalibrationOperations:
             review = review_science.inspect(self.operator.ws(task["workspace"]),
                                             result["calibration_review_id"])
             downloads.extend(self._review_downloads(task["workspace"], review))
+        if result.get("calibration_report_source_id"):
+            downloads.append(self._document(task["workspace"], report_source_science.KIND,
+                                            result["calibration_report_source_id"],
+                                            "Original native calibration report source"))
         return {**task, "_downloads": downloads}

@@ -15,7 +15,7 @@ const sha={type:'string',pattern:'^[a-f0-9]{64}$'};
 const uuid={type:'string',pattern:'^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$'};
 const revision={type:'integer',minimum:1};
 export const FLOWABLE_RECORD_KINDS=Object.freeze(['connection','portfolio','release','process','task','migration',
-  'decisionPortfolio','decisionRelease','decisionEvaluation','casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask','delivery','receiving']);
+  'decisionPortfolio','decisionRelease','decisionEvaluation','casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask','programme','delivery','receiving']);
 export const FLOWABLE_OPERATION_KINDS=Object.freeze(['release','process','task','migration','decisionRelease','decisionEvaluation',
   'caseRelease','caseInstance','casePlanItem','caseTask']);
 const kind={enum:FLOWABLE_RECORD_KINDS};
@@ -55,6 +55,15 @@ export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
     {reference},['reference']),
   readReview:action('Operation review','Read the saved request, native preimage, validation and complete response references.',false,
     {kind:operationKind,id,revision},['kind','id']),
+  readProgramme:action('Commissioning programme','Read the complete saved programme, native step outcomes, sources and review history.',false,
+    {id,revision},['id']),
+  saveProgramme:action('Receive programme','Retain a complete commissioning plan and original sources against the selected native REST connection.',true,
+    {connectionId:id,programmeText:text(16*1024*1024)},['connectionId','programmeText']),
+  prepareProgrammeStep:action('Prepare programme step','Resolve native identifiers from confirmed original steps and prepare this exact saved operation.',true,
+    {id,expectedRevision:revision,stepKey:text(120),renew:{type:'boolean'}},['id','expectedRevision','stepKey']),
+  reviewProgramme:action('Review commissioning','Retain the operator decision against the complete current programme and native outcome edition.',true,
+    {id,expectedRevision:revision,basisSha256:sha,decision:{enum:['accepted','changes-requested']},reviewer:text(300),note:text(20000)},
+    ['id','expectedRevision','basisSha256','decision','reviewer','note']),
   saveConnection:action('Save engine','Save the engine URL and names of its credential environment variables.',true,
     {id,expectedRevision:{type:'integer',minimum:0},connection},['connection']),
   capturePortfolio:action('Refresh portfolio','Capture complete native definitions, deployments, active work and history with original source resources.',true,
@@ -121,7 +130,7 @@ export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
 export const FLOWABLE_RECORD_STATES=Object.freeze([
   'SAVED','CAPTURING','CAPTURED','COMPLETED','PREPARING','PREPARED','INVALID','DISPATCHED','READBACK',
   'CONFIRMED','ACCEPTED','OBSERVED','REJECTED','UNKNOWN','STALE','PREPARE_FAILED','INTERRUPTED',
-  'EXPORTED','INSPECTED','ADOPTING','ADOPTED',
+  'EXPORTED','INSPECTED','ADOPTING','ADOPTED','IN_PROGRESS',
 ]);
 export function validateFlowableAction(method,args){
   const contract=FLOWABLE_WORKSPACE_ACTIONS[method];

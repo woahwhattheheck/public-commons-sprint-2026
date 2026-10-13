@@ -2,7 +2,7 @@
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type RecordKind = 'connection' | 'portfolio' | 'release' | 'process' | 'task' | 'migration'
   | 'decisionPortfolio' | 'decisionRelease' | 'decisionEvaluation'
-  | 'casePortfolio' | 'caseRelease' | 'caseInstance' | 'casePlanItem' | 'caseTask' | 'delivery' | 'receiving';
+  | 'casePortfolio' | 'caseRelease' | 'caseInstance' | 'casePlanItem' | 'caseTask' | 'programme' | 'delivery' | 'receiving';
 export type OperationKind = 'release' | 'process' | 'task' | 'migration' | 'decisionRelease' | 'decisionEvaluation'
   | 'caseRelease' | 'caseInstance' | 'casePlanItem' | 'caseTask';
 export type CaseCollectionKind = 'deployments' | 'definitions' | 'cases' | 'planItems' | 'tasks' | 'variables'
@@ -12,7 +12,7 @@ export type CollectionKind = 'deployments' | 'definitions' | 'processes' | 'task
   | 'historicProcesses' | 'historicTasks' | 'historicActivities' | 'historicVariables';
 export type FlowableState = 'SAVED' | 'CAPTURING' | 'CAPTURED' | 'COMPLETED' | 'PREPARING' | 'PREPARED'
   | 'INVALID' | 'DISPATCHED' | 'READBACK' | 'CONFIRMED' | 'ACCEPTED' | 'OBSERVED' | 'REJECTED'
-  | 'UNKNOWN' | 'STALE' | 'PREPARE_FAILED' | 'INTERRUPTED' | 'EXPORTED' | 'INSPECTED' | 'ADOPTING' | 'ADOPTED';
+  | 'UNKNOWN' | 'STALE' | 'PREPARE_FAILED' | 'INTERRUPTED' | 'EXPORTED' | 'INSPECTED' | 'ADOPTING' | 'ADOPTED' | 'IN_PROGRESS';
 export interface FlowableConnection {
   schema?: 'stellar-forge.flowable-connection.v1';
   /** Human alias. The saved connection separately has a 24-hex record ID. */
@@ -244,7 +244,46 @@ export interface ReceivingValue {
   sourceWorkspace: { schema: 'stellar-forge.flowable-workspace.v1'; workspaceId: string; createdAt: string };
   sourceDeliveryId: string; summary: Record<string, unknown>; original: SourceReference; [key: string]: unknown;
 }
+
+/** Exact declarative programme sources and bindings; original JSON bodies remain text. */
+export interface ProgrammeSourceSelector {
+  step: string; document: 'response' | 'before' | 'after' | 'reconciliation' | 'selection'; pointer: string;
+  where?: Record<string, null | boolean | string | number | ProgrammeSourceSelector>; valuePointer?: string;
+}
+export interface ProgrammeBinding { field?: 'processInstanceId' | 'caseInstanceId' | 'taskId' | 'planItemInstanceId'; token?: string; from: ProgrammeSourceSelector }
+export interface ProgrammeStep {
+  key: string; label: string; kind: OperationKind; selection: Record<string, Json>;
+  after?: string[]; bindings?: ProgrammeBinding[]; note?: string;
+}
+export interface FlowableProgramme {
+  schema: 'stellar-forge.flowable-programme.v1'; key: string; label: string; note?: string;
+  sources?: { name: string; bytes: number; sha256: string; mediaType?: string; contentBase64: string }[];
+  steps: ProgrammeStep[];
+}
+export interface SaveProgrammeInput { requestId: string; connectionId: string; programmeText: string }
+export interface PrepareProgrammeStepInput { requestId: string; id: string; expectedRevision: number; stepKey: string; renew?: boolean }
+export interface ReviewProgrammeInput {
+  requestId: string; id: string; expectedRevision: number; basisSha256: string;
+  decision: 'accepted' | 'changes-requested'; reviewer: string; note: string;
+}
+export interface ProgrammeView {
+  schema: 'stellar-forge.flowable-programme-view.v1'; record: RecordReference; label: string; note: string;
+  connectionId: string; programmeKey: string; programmeSha256: string; source: SourceReference;
+  sources: { name: string; reference: SourceReference }[]; programme: FlowableProgramme;
+  progress: { total: number; confirmed: number; state: string; next: string | null;
+    rows: { key: string; label: string; kind: OperationKind; state: string; ready: boolean; waitingFor: string[];
+      attempts: number; selected: null | { operationId: string; index: number; command: PrepareProgrammeStepInput; input: Record<string, Json> };
+      record: null | (RecordReference & { state: FlowableState; phase: string; dispatchedAt: string | null }) }[];
+    basis: { key: string; record: RecordReference | null }[] };
+  basisSha256: string; review: null | { decision: string; reviewer: string; note: string; reviewedAt: string;
+    basisSha256: string; current: boolean }; reviewHistory: Record<string, unknown>[];
+}
+
 export interface ActionInputs {
+  saveProgramme: SaveProgrammeInput;
+  readProgramme: { id: string; revision?: number };
+  prepareProgrammeStep: PrepareProgrammeStepInput;
+  reviewProgramme: ReviewProgrammeInput;
   view: Record<string, never>;
   listRecords: ListRecordsInput;
   getRecord: GetRecordInput;
@@ -288,6 +327,10 @@ export interface ActionInputs {
   adoptDelivery: AdoptDeliveryInput;
 }
 export interface ActionResults {
+  saveProgramme: FlowableRecord;
+  readProgramme: ProgrammeView;
+  prepareProgrammeStep: { programme: RecordReference; stepKey: string; attempt: number; operation: FlowableRecord<OperationValue> };
+  reviewProgramme: FlowableRecord;
   view: WorkspaceView;
   listRecords: RecordPage;
   getRecord: FlowableRecord;
@@ -364,6 +407,10 @@ export class FlowableProductClient {
     options: { path: string }): Promise<RetainedFile & { method: Method; requestId?: string }>;
   view(): Promise<WorkspaceView>;
   status(): Promise<WorkspaceView>;
+  saveProgramme(input: SaveProgrammeInput): Promise<FlowableRecord>;
+  readProgramme(input: { id: string; revision?: number }): Promise<ProgrammeView>;
+  prepareProgrammeStep(input: PrepareProgrammeStepInput): Promise<ActionResults['prepareProgrammeStep']>;
+  reviewProgramme(input: ReviewProgrammeInput): Promise<FlowableRecord>;
   listRecords(input?: ListRecordsInput): Promise<RecordPage>;
   getRecord(input: GetRecordInput): Promise<FlowableRecord>;
   readPortfolio(input: ReadPortfolioInput): Promise<PortfolioPage>;

@@ -90,3 +90,9 @@ The original operator capability remains in the private URL file. Native API obs
 ## Current source
 
 The maintained regional preparation is PR3278. The Monitoring browser consumes the composed WATERLINK12/observational client from PR3238 and PR3261, the original Monitoring APIs, and the existing native workspace receiving form. Complete scientific project contents, source bindings, campaign history and generated files travel through those original mechanisms.
+
+## Use an existing Chromium executable
+
+When the receiving machine already has a working Chromium binary, add `--browser-executable /actual/installed/chromium`. The driver passes that explicit path to the existing Playwright launch. Choose either this option or `--browser-channel NAME`; omitting both retains Playwright’s bundled Chromium selection.
+
+The public journey records the requested browser kind, executable path or channel, and headless setting in `browser_runtime`. A resumed attempt preserves its previous runtime selection in the attempt history. This runtime choice is separate from the original scientific input and task fingerprints, so a repaired or newly available browser can continue the same retained requests with `--resume`.
