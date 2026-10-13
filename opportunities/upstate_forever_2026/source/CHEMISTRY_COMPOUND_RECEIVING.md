@@ -21,7 +21,7 @@ python -B /actual/source-bank/source/run_chemistry_compound_receiving.py \
 
 The application is resolved before native model imports. Its resolved path and the original inference, reporting, rendering and portable implementation hashes are retained with the request so a resume cannot silently adopt another installed engine.
 
-The output directory must be outside the Workspace. Run one owner through this course and coordinate its full-Workspace capture with other writers. Restart the exact same command after an interrupted process: each original native request selects the same immutable run, source, report and rendered edition; the receiving journal retains the original input identity. A completed native analysis is reopened rather than calculated again.
+The output directory must be outside the application and Workspace. Run one owner through this course and coordinate its full-Workspace capture with other writers. Restart the exact same command after an interrupted process: each original native request selects the same immutable run, source, report and rendered edition; the receiving journal retains the original input identity. A completed native analysis is reopened rather than calculated again.
 
 ## Exact original selections
 
@@ -74,3 +74,8 @@ Existing saved report/source editions are inspected before and after the course 
 - `complete-workspace.zip` and `received/`: the original full portable archive and independently reopened application/Workspace.
 
 Use the original Chemistry desk to inspect the new run/report IDs from the summary. Open their scientific sources in the existing composer for human review and ordered report continuation.
+
+
+## Product inspection before the sprint handoff
+
+Before the October 13 14:00 UTC sprint handoff, the producing worker opens the exact generated scientific HTML and PDF, looks at the rendered figures and tables, and operates the relevant populated desktop and narrow operator views. Inspect the original limits, compound pool labels, fit/holdout distinction, native downloads and reopened receiving copy. Retain the actual screenshots with the completed course output so the receiving team can inspect the same product. A successful numerical course alone does not establish visual readiness.
