@@ -2,7 +2,7 @@
 
 This source continues RIVER13's completed Upper Savannah monitoring and compound Chemistry study. It builds the delivered offline workbench and two-page brief from original saved results and retains the independent application receiving tools. The regional monitoring plans use the original 217-catchment source geometry. The separate four-reach Chemistry example is the explicitly authored numerical-method case.
 
-Read [CURRENT_OWNER_DIRECTION.md](CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`, and the application's [AGENTS.md](../../AGENTS.md). Continue the actual Upper Savannah 30 m native baseline, riparian alternative and matched control with the existing geographic owners; the sprint cutoff remains October 13 at 14:00 UTC. This completed complementary study joins that application without restarting its active model work.
+Read [CURRENT_OWNER_DIRECTION.md](CURRENT_OWNER_DIRECTION.md), version `2026-10-13.4`, and the application's [AGENTS.md](../../AGENTS.md). Continue the actual Upper Savannah 30 m native baseline, riparian alternative and matched control with the existing geographic owners; Bryce's October 13 10:46 a.m. Eastern renewal supersedes the earlier cutoff. Continue unfinished receiving from its saved state. This completed complementary study joins that application without restarting its active model work.
 
 ## Open the completed work
 

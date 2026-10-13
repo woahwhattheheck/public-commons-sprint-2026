@@ -86,8 +86,8 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 61953,
-      "sha256": "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640",
+      "bytes": 62644,
+      "sha256": "097cc146cfd124a45127d267e2567f7a3a0eb716874e672f7066ea95b7d20c8d",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
         "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
@@ -98,7 +98,8 @@
         "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1",
         "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
         "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29",
-        "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a"
+        "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a",
+        "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640"
       ]
     },
     {
@@ -115,7 +116,7 @@
     {
       "path": "integrations/monitoring/source_adoption.json",
       "bytes": 52009,
-      "sha256": "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4",
+      "sha256": "ec815e7f72a15bc92332565ffec3d68079d122b685bd8fd8f687c84503997d4a",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -139,7 +140,8 @@
         "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd",
         "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
         "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12",
-        "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75"
+        "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75",
+        "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4"
       ]
     },
     {
@@ -462,8 +464,8 @@
     },
     {
       "path": "operator/MONITORING_FIELD_SELECTION.md",
-      "bytes": 7795,
-      "sha256": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9"
+      "bytes": 7883,
+      "sha256": "039b27b3f93aa72af6e2aceab47aff3aa911122492268c8c64e748059981526e"
     },
     {
       "path": "operator/monitoring_native.py",

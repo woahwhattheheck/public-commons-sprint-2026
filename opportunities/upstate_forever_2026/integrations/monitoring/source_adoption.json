@@ -631,8 +631,8 @@
       "source": "operator/MONITORING_FIELD_SELECTION.md",
       "source_role": "current_application_source",
       "path": "operator/MONITORING_FIELD_SELECTION.md",
-      "bytes": 7795,
-      "sha256": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9"
+      "bytes": 7883,
+      "sha256": "039b27b3f93aa72af6e2aceab47aff3aa911122492268c8c64e748059981526e"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
