@@ -7,10 +7,11 @@ The Handover tab can publish an existing native Implementation report as an orig
 1. Open **Implementation & fieldwork** and the intended saved plan. Save actual field edits through its normal revision control.
 2. Open **Handover**. Choose the actual report date and **Native report package**, or select an already retained report. Every report is tied to its original saved revision and date.
 3. In **Saved native report editions**, choose **Review whole plan report**. Inspect the report revision, task/site/visit/activity/result counts and the availability of original local attachments. A newer browser draft stays separate from this selected edition.
-4. Choose **Register reviewed report source**. The original operator queue retains the operation and its reviewed source identity. If the process is interrupted, resume the existing task. If the response is lost, retry the same task operation.
-5. Choose **Open scientific report**. The original Source Reports composer appends this source to its current ordered selection, deduplicates the exact original selector and preserves the other studies and contact details. Review the complete order and use the composer's ordinary preview and render controls.
-6. Open the saved scientific edition's HTML/PDF and complete report ZIP. Original plan JSON, native report HTML and CSV tables, the attachment inventory and all available managed attachment bytes travel with the source. The editable plan remains in Implementation.
-7. Use the existing complete Project transfer to capture the Workspace. On the received project, open the exact saved Implementation revision and its retained report, then review/register the report again. This reuses the same native source operation. The saved scientific report can also reopen through its own retained edition controls.
+4. To preserve the current Report desk selection, choose **Review with current Report desk selection**. The preview retains its complete ordered source list and unrelated model/geography settings, then appends this saved whole-plan source once. **Review this report source only** keeps the original source-only path. Inspect the new preview before proceeding.
+5. Choose **Register reviewed report source**. The original operator queue retains the operation and its reviewed source identity. If the process is interrupted, resume the existing task. If the response is lost, retry the same task operation.
+6. Choose **Open scientific report**. A captured complete selection replaces the publisher’s source list with that exact retained order; it does not append stale draft sources ahead of it. A source-only handoff appends the selected whole-plan source once to the current publisher draft. Contact details remain available. Review the complete order and use the composer’s ordinary preview and render controls. With a captured Report desk selection, **Prepare client report** opens the full returned delivery selection.
+7. Open the saved scientific edition's HTML/PDF and complete report ZIP. Original plan JSON, native report HTML and CSV tables, the attachment inventory and all available managed attachment bytes travel with the source. The editable plan remains in Implementation.
+8. Use the existing complete Project transfer to capture the Workspace. On the received project, open the exact saved Implementation revision and its retained report, then review/register the report again. This reuses the same native source operation. The saved scientific report can also reopen through its own retained edition controls.
 
 A historical native report can be selected while a later browser draft exists. Source registration does not save, discard or overwrite that draft. The completed source task returns to the same Handover review. After a browser refresh, the source review and queued operation remain in the existing plan's local draft record; after a complete Workspace transfer, the original report permits the same review to be reconstructed without browser storage.
 
@@ -72,3 +73,17 @@ Use the current cumulative application or the maintained Implementation installe
 The source bank is `implementation/report-context/<source SHA>/`. The immutable identity includes the actual native report member hashes and attachment inventory. Source publication holds the original Workspace lock while copying/importing its source edition; backups therefore cannot capture half-published source state. Each source also holds its own operation lock. Successful replays verify the retained original members and imported object binding before returning the prior operation.
 
 For the existing DD6B receiving course, use the actual plan/report IDs produced by `receive_monitoring_fieldwork.py`. For the existing original Eighteenmile case, use its actual retained WQP plan report. Keep each project's original identity and active scientific source edition. The new whole-plan source complements the separate original observations, Outcomes and QC sources, which can be selected alongside it in their intended reading order.
+
+
+## Inspect this exact outgoing workflow
+
+Use the existing populated native receiving operation. Open this exact installed
+edition and view its actual screen or screenshots at screenshare width and
+390 px. Review a saved report while a later editable plan draft is present;
+capture the current Report desk selection; register and reopen the full ordered
+selection in a populated scientific publisher; operate both report handoffs,
+original downloads, export and reopening. Inspect loading, source-only, empty and
+error states. Preserve readable industrial tables, clear hierarchy, restrained
+controls and consistent spacing. Correct visible defects before calling the
+product client-ready. Source/API checks and an empty-Workspace screen do not
+replace actual rendered-product inspection or opening the final attachments.
