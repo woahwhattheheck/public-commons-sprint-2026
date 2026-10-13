@@ -16,6 +16,8 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_study_transfer.py",
+    "source_tools/MATCHED_CONSERVATION_RECEIVING.md",
     "model/conservation_families.py",
     "model/conservation_decision_geography.py",
     "CONSERVATION_DECISION_METHODS.md",
@@ -1058,7 +1060,9 @@ def read_packet(path):
                      "model/conservation_decision_geography.py")
         for node in ast.walk(ast.parse(files.get(name, ""))))
     if families_requested:
-        needed.add("model/conservation_families.py")
+        needed.update({"model/conservation_families.py",
+                       "model/conservation_study_transfer.py",
+                       "source_tools/MATCHED_CONSERVATION_RECEIVING.md"})
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
