@@ -510,12 +510,14 @@ export function createPublishedStudiesDesk(host) {
 
   function table(title, rows, columns, source = true) {
     if (!rows.length) return '<section class="ps-table-section"><h2>' + esc(title) + '</h2><p class="ps-empty-row">No rows match this selection.</p></section>';
+    const originalIds = new Set([...Object.values(complete?.tables || {}).flat(), ...arr(complete?.observation_rows), ...arr(complete?.original_measurements), ...arr(complete?.wqp_coverage), ...arr(complete?.flow_rows)].map(row => row.record_id).filter(Boolean));
+    const showOriginal = rows.some(row => originalIds.has(row.record_id));
     return '<section class="ps-table-section"><h2>' + esc(title) + ' <span class="ps-help">(' + rows.length + ')</span></h2><div class="ps-table-scroll"><table><thead><tr>' +
       columns.map(([,title]) => "<th>" + esc(title) + "</th>").join("") +
-      (source ? "<th>Source</th>" : "") + "<th>Original row</th></tr></thead><tbody>" +
+      (source ? "<th>Source</th>" : "") + (showOriginal ? "<th>Original row</th>" : "") + "</tr></thead><tbody>" +
       rows.map(row => "<tr>" + columns.map(([field]) => "<td>" + esc(cell(row,field)) + "</td>").join("") +
         (source ? "<td>" + sourcePage(row) + "</td>" : "") +
-        '<td><button type="button" class="ps-link-button" data-ps-row="' + esc(row.record_id || "") + '">Details</button></td></tr>').join("") +
+        (showOriginal ? '<td>' + (originalIds.has(row.record_id) ? '<button type="button" class="ps-link-button" data-ps-row="' + esc(row.record_id) + '">Details</button>' : '—') + '</td>' : '') + '</tr>').join("") +
       "</tbody></table></div></section>";
   }
   function renderTables(context) {
@@ -559,7 +561,7 @@ export function createPublishedStudiesDesk(host) {
         ...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
-      ]);
+      ], false);
       output += series.map(row => '<p class="ps-help"><strong>' + esc(row.site_id) + " / " + esc(label(row.parameter)) +
         ":</strong> " + esc(row.basis) + "</p>").join("");
       const supported = series.filter(row => row.observation_support).map(row => {

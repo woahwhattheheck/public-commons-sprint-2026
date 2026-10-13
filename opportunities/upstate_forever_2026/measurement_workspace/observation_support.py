@@ -1,7 +1,7 @@
 """Describe original concentration support without substituting censored results.
 
 Consumes PublishedStudyStore observation rows and preserves their result/series
-identities. Bounds apply to an arithmetic mean of retained result rows, conditional
+identities. Bounds apply to the declared original-row or activity-weighted mean, conditional
 on nonnegative concentration and the original reporting-limit statements.
 """
 from __future__ import annotations
@@ -14,7 +14,8 @@ from typing import Any
 
 VERSION = "upstate.observation-support/v1"
 CONCENTRATIONS = {"total_chlorophyll_a", "microcystins", "Ammonia",
-                  "Nitrate + Nitrite", "Kjeldahl nitrogen", "Phosphorus", "Nitrogen"}
+                  "Nitrate + Nitrite", "Kjeldahl nitrogen", "Phosphorus", "Nitrogen",
+                  "Biochemical oxygen demand, standard conditions"}
 BASIS = (
     "The mean interval uses every retained result row in this station, parameter, "
     "source project and activity-type series. A quantified result contributes its "
