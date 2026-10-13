@@ -68,6 +68,10 @@ The original completed regional result has three optimal budgets: USD4,800 / six
 
 The streamed ZIP includes a printable plain HTML report, exact CSV table, saved comparison and selection JSON, full original frontier/network/plans, every original network source body and companion, plus complete selected observed-context reports/tables/source editions. Repeated observed source bodies share their binding-derived packet directory. Every ZIP member is checked against its retained byte count and SHA-256 during streaming.
 
+Open index.html after extracting the complete ZIP. Its readable directory links the comparison, original plans, each selected observed-context report and table, and every retained source member. File paths, byte counts and SHA-256 values come from the same descriptors used to stream the archive; names with spaces or punctuation remain usable links.
+
+Export edition 2 records index.html as its entrypoint and receives into an edition-specific ZIP directory. Existing saved comparison IDs and numerical records remain unchanged. An earlier completed export keeps its original packet; requesting a new export creates the indexed edition without replacing that packet.
+
 The source/report packet accompanies the full editable Workspace archive. Complete Workspace backup/restore preserves the saved comparison and its original record dependencies. Reopen the comparison through the same native reader after receiving; do not reconstruct plan or campaign identities from labels or totals.
 
 ## Receiving verification

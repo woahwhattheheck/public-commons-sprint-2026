@@ -175,5 +175,10 @@
     "src/opportunities/upstate_forever_2026/model/monitoring_study_transfer.py": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
     "src/opportunities/upstate_forever_2026/operator/web/monitoring-frontiers.mjs": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0",
     "src/opportunities/upstate_forever_2026/model/MONITORING_STUDY_TRANSFER.md": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce"
+  },
+  "maintained-application-before-budget-navigator-a6af6c79628098b57050ba04959d62a4c79fb6db": {
+    "src/opportunities/upstate_forever_2026/model/monitoring_frontier_comparison.py": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+    "src/opportunities/upstate_forever_2026/model/MONITORING_BUDGET_COMPARISON.md": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+    "src/opportunities/upstate_forever_2026/operator/MONITORING_BUDGET_CHOICES.md": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
   }
 }

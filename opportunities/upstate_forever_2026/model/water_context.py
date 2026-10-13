@@ -6,6 +6,7 @@ it does not alter source bytes, native model engines, or Workspace methods.
 from __future__ import annotations
 
 import csv
+from functools import lru_cache
 import hashlib
 import io
 import json
@@ -454,14 +455,22 @@ def _rows(workspace, ref, target_crs, category, corrections, *, clip=None):
                         required_fields=required)
 
 
-def _geodesic_length(geometry, crs):
+@lru_cache(maxsize=16)
+def _geodesic_context(crs_definition):
+    """Reuse coordinate setup; feature geometry and measurements stay uncached."""
     from pyproj import CRS, Transformer, Geod
+    return (Transformer.from_crs(CRS.from_user_input(crs_definition),
+                                 "EPSG:4326", always_xy=True),
+            Geod(ellps="WGS84"))
+
+
+def _geodesic_length(geometry, crs):
+    from pyproj import CRS
     from shapely.ops import transform
     if geometry.is_empty:
         return 0.0
-    project = Transformer.from_crs(CRS.from_user_input(crs), "EPSG:4326", always_xy=True)
-    return float(Geod(ellps="WGS84").geometry_length(transform(project.transform, geometry))) / 1000.0
-
+    project, geod = _geodesic_context(CRS.from_user_input(crs).srs)
+    return float(geod.geometry_length(transform(project.transform, geometry))) / 1000.0
 
 def _measurement(geometry, category, crs):
     if category in LINE_CATEGORIES:

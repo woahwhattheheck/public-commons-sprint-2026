@@ -1,4 +1,4 @@
-"""Import original regional gauge sources, build support, and reopen the same Workspace."""
+"""Receive original Gauge sources, publish a saved report, and reopen editable studies."""
 from __future__ import annotations
 
 import argparse
@@ -8,11 +8,12 @@ import platform
 import socket
 import sys
 import stat
+import subprocess
 import zipfile
 from pathlib import Path
 
 from model import gauge_support, portable
-from model.common import atomic_bytes, atomic_json, describe_file, file_digest, read_json, now, digest, held
+from model.common import atomic_bytes, atomic_json, describe_file, file_digest, read_json, now, digest, held, verify_file
 from model.workspace import Workspace
 
 DAILY_FILES = (
@@ -150,11 +151,12 @@ def _selected_members(workspace, edition):
     return selected
 
 
-def _archive_snapshot(path, output, workspace, edition, previous):
+def _archive_snapshot(path, output, workspace, edition, previous, *, extra_members=None):
     """Verify the ZIP and its SHA using the maintained same-opened-file reader."""
     if path.is_symlink() or not path.is_file():
         raise ValueError("Select the original retained regular Workspace archive")
     selected = _selected_members(workspace, edition)
+    selected.update(extra_members or {})
     with path.open("rb") as source:
         before = portable._archive_identity(source)
         with zipfile.ZipFile(source) as archive:
@@ -189,6 +191,318 @@ def _verify_reopened(root, manifest):
         if (path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(root)
                 or path.stat().st_size != record["bytes"] or file_digest(path) != record["sha256"]):
             raise ValueError("The reopened Workspace differs from its original archive: " + name)
+
+
+def _scientific_members(workspace, source_capture, report_id):
+    """Original source capture and saved scientific edition needed by this release."""
+    from model import scientific_report_editions
+    selected = {}
+    def keep(path):
+        path = Path(path)
+        selected["workspace/" + path.relative_to(workspace.root).as_posix()] = describe_file(workspace.root, path)
+    source = source_capture["source"]
+    collection = workspace._get("sources", source["source_collection_id"])
+    keep(workspace.root / "sources" / (collection["id"] + ".json"))
+    for entry in collection["entries"]:
+        for item in [entry["body"], *entry.get("companions", [])]:
+            keep(workspace.root / item["object"])
+    capture_root = (workspace.root / source_capture["manifest"]["path"]).parent
+    for path in sorted(capture_root.rglob("*")):
+        if path.is_file() and not path.name.endswith((".lock", ".pyc", ".pyo")):
+            keep(path)
+    record, directory, unused = scientific_report_editions.inspect(workspace, report_id)
+    for item in scientific_report_editions.files(record, directory).values():
+        keep(directory / item["path"])
+    return selected
+
+
+def _prepare_scientific(workspace, edition, output, receipt, checkpoint):
+    """Register the original Gauge source and save one actual composer edition."""
+    from model import gauge_report_context, observed_context, scientific_report_editions
+    previous = receipt["phases"].get("scientific_source")
+    if previous:
+        path = verify_file(workspace.root, previous["capture"])
+    else:
+        prepared = gauge_report_context.prepare(workspace, edition["id"], render=False)
+        path = verify_file(workspace.root, prepared["manifest"]).parent / "registered-context.json"
+    captured = read_json(path)
+    if (captured.get("schema") != gauge_report_context.SCHEMA
+            or captured.get("workspace_id") != workspace.project["id"]
+            or captured.get("gauge_support_id") != edition["id"]
+            or captured.get("gauge_build_id") != edition["build_id"]
+            or captured.get("regional_report_id") != edition["regional"]["report_id"]):
+        raise ValueError("The retained scientific source belongs to another original Gauge edition")
+    for item in captured["files"]:
+        verify_file(workspace.root, item)
+    source = captured["source"]
+    if observed_context.bind(workspace, {"observed_context_sources": [source]}) != captured["observed_context_binding"]:
+        raise ValueError("The original Gauge scientific source binding changed")
+    capture_descriptor = describe_file(workspace.root, path)
+    if previous and (previous.get("source") != source
+                     or previous.get("operation_id") != captured["operation_id"]
+                     or not _same_file(previous["capture"], capture_descriptor)):
+        raise ValueError("The saved Gauge scientific source capture changed")
+    checkpoint("scientific_source", capture=capture_descriptor,
+               operation_id=captured["operation_id"], source=source,
+               gauge_support_id=edition["id"], regional_report_id=edition["regional"]["report_id"])
+
+    preview_path = output / "selected-report-preview.json"
+    previous_preview = receipt["phases"].get("scientific_preview")
+    if preview_path.exists():
+        prepared = read_json(preview_path)
+    else:
+        if previous_preview:
+            raise ValueError("The saved scientific preview is missing")
+        prepared = scientific_report_editions.preview(workspace,
+            {"sources": [source], "title": edition["title"] + " — gauge and catchment support"})
+        atomic_json(preview_path, prepared, immutable=True)
+    expected_choices = [source]
+    choices = observed_context.source_choices(prepared["selection"])
+    if (choices != expected_choices
+            or prepared.get("id") != digest(prepared.get("render_identity"))
+            or prepared.get("binding") != captured["observed_context_binding"]):
+        raise ValueError("The retained scientific preview has another original source selection")
+    preview_descriptor = describe_file(output, preview_path)
+    if previous_preview and (previous_preview.get("id") != prepared["id"]
+                             or not _same_file(previous_preview["preview"], preview_descriptor)):
+        raise ValueError("The original scientific preview changed")
+    checkpoint("scientific_preview", id=prepared["id"], preview=preview_descriptor)
+
+    saved = scientific_report_editions.render_prepared(workspace, prepared)
+    report_id = saved["scientific_report_edition_id"]
+    record, directory, unused = scientific_report_editions.inspect(workspace, report_id)
+    descriptor = describe_file(workspace.root, directory / "edition.json")
+    previous_report = receipt["phases"].get("scientific_report")
+    if previous_report and (previous_report.get("id") != report_id
+                            or not _same_file(previous_report["record"], descriptor)):
+        raise ValueError("The saved scientific report edition changed")
+    checkpoint("scientific_report", **saved, id=report_id, record=descriptor,
+               source=source, files=record["files"])
+    return captured, report_id, record
+
+
+def _contains_members(manifest, expected):
+    """Missing new editions allow a new snapshot; changed same-path bytes do not."""
+    missing = False
+    for name, item in expected.items():
+        actual = manifest["members"].get(name)
+        if actual is None:
+            missing = True
+        elif any(actual.get(key) != item[key] for key in ("bytes", "sha256")):
+            raise ValueError("An existing archive changed the same original report member: " + name)
+    return not missing
+
+
+def _scientific_workspace(workspace, edition, source_capture, report_id, output,
+                          original_archive, original_manifest, receipt, checkpoint):
+    """Keep older complete snapshots and explicitly retain the current report."""
+    extras = _scientific_members(workspace, source_capture, report_id)
+    current = _contains_members(original_manifest, extras)
+    archive = original_archive if current else output / (
+        "gauge-support-workspace-" + edition["id"] + "-scientific-" + report_id + ".zip")
+    previous = receipt["phases"].get("scientific_workspace_backup")
+    if not archive.exists():
+        if previous:
+            raise ValueError("The saved current scientific Workspace archive is missing")
+        portable.backup(workspace, archive)
+    manifest, descriptor, app_sha = _archive_snapshot(
+        archive, output, workspace, edition, previous, extra_members=extras)
+    checkpoint("scientific_workspace_backup", archive=descriptor, report_id=report_id,
+               application_sha256=app_sha, members=len(manifest["members"]),
+               reuses_original_snapshot=current,
+               original_snapshot_path=original_archive.relative_to(output).as_posix())
+    root = output / ("reopened-" + edition["id"]) if current else output / (
+        "reopened-scientific-" + report_id)
+    previous_reopen = receipt["phases"].get("scientific_workspace_reopen")
+    if previous_reopen and (previous_reopen.get("archive_sha256") != descriptor["sha256"]
+                           or Path(previous_reopen["workspace"]).resolve() != (root / "workspace").resolve()):
+        raise ValueError("The saved scientific Workspace reopening belongs to another archive")
+    if not root.exists():
+        if previous_reopen:
+            raise ValueError("The saved scientific Workspace reopening is missing")
+        result = portable.restore(archive, root)
+        if result["archive_sha256"] != descriptor["sha256"]:
+            raise ValueError("The current scientific Workspace archive changed during restore")
+    _verify_reopened(root, manifest)
+    from model import scientific_report_editions
+    reopened = Workspace(root / "workspace")
+    if reopened.project != workspace.project:
+        raise ValueError("The scientific Workspace reopening changed its original project")
+    record, unused, operation = scientific_report_editions.inspect(reopened, report_id)
+    if record["id"] != report_id or operation["state"] != "complete":
+        raise ValueError("The scientific Workspace lost its selected report")
+    checkpoint("scientific_workspace_reopen", workspace=str(reopened.root),
+               project_id=reopened.project["id"], report_id=report_id,
+               archive_sha256=descriptor["sha256"], verified_members=len(manifest["members"]))
+
+
+def _verify_selected_report(workspace, expected):
+    """Run from the selected archive's application in the independent child."""
+    from model import scientific_report_editions, study_transfer
+    if workspace.project != expected["project"]:
+        raise ValueError("Selected-report receiving changed the original project")
+    transferred = read_json(workspace.root / "study-transfers" / (expected["study"]["id"] + ".json"))
+    if transferred != expected["study"]:
+        raise ValueError("Selected-report receiving changed the original Study receipt")
+    checks = study_transfer.verify_received_studies(workspace)
+    matches = [row for row in checks if row["id"] == transferred["id"] and row["identity"] == "MATCH"]
+    if len(matches) != 1:
+        raise ValueError("The exact selected Study did not pass its native lineage verifier")
+    edition = gauge_support.inspect(workspace, expected["gauge_support_id"], verify=True, include_result=True)
+    if (edition["build_id"] != expected["gauge_build_id"]
+            or edition["station_edition_id"] != expected["station_edition_id"]
+            or edition["regional"] != expected["regional"]
+            or edition["selection"] != expected["selection"]
+            or edition["summary"] != expected["summary"]
+            or edition["sources"] != expected["original_sources"]):
+        raise ValueError("The selected Study changed its original Gauge selection or sources")
+    station = gauge_support.geography.inspect(workspace, expected["station_edition_id"], verify=True)
+    if station["build_id"] != expected["station_build_id"]:
+        raise ValueError("The selected Study changed its original Station Geography")
+    record, directory, unused = scientific_report_editions.inspect(workspace, expected["report_id"])
+    if record != expected["report_record"]:
+        raise ValueError("The selected Study changed the original scientific report edition")
+    source = expected["source"]
+    source_path, entry = workspace.source_file(source["source_collection_id"], source["source_id"])
+    if entry["body"]["sha256"] != expected["source_body_sha256"]:
+        raise ValueError("The selected Study changed the Gauge report's native source")
+    recipe = read_json(source_path)
+    if (recipe.get("gauge_support_id") != edition["id"]
+            or recipe.get("station_edition_id") != station["id"]
+            or recipe.get("regional") != edition["regional"]):
+        raise ValueError("The received report recipe lost its editable Gauge lineage")
+    return {"schema": "upstate.gauge-selected-report-reopen/v1", "identity": "MATCH",
+        "project_id": workspace.project["id"], "study_id": transferred["id"],
+        "report_id": record["id"], "report_operation_id": record["operation_id"],
+        "gauge_support_id": edition["id"], "gauge_build_id": edition["build_id"],
+        "station_edition_id": station["id"], "station_build_id": station["build_id"],
+        "regional_report_id": edition["regional"]["report_id"], "source": source,
+        "source_body_sha256": entry["body"]["sha256"],
+        "original_source_choices": [{"collection_id": row["collection_id"],
+            "source_id": row["source_id"], "source_sha256": row["source_sha256"]}
+            for row in edition["sources"]],
+        "verified_study": matches[0], "report_directory": str(directory)}
+
+
+_COLD_SELECTED = """
+import json, os, platform, socket, sys
+from pathlib import Path
+application = Path(sys.argv[1]).resolve(strict=True)
+sys.path.insert(0, str(application))
+from model.workspace import Workspace
+from model.common import atomic_json, read_json
+from source_tools import receive_gauge_support as receiver
+if Path(receiver.__file__).resolve() != application / "source_tools/receive_gauge_support.py":
+    raise ValueError("Cold receiving imported a different application")
+result = receiver._verify_selected_report(Workspace(sys.argv[2]), read_json(sys.argv[3]))
+result["process"] = {"pid": os.getpid(), "hostname": socket.gethostname(),
+                     "interpreter": sys.executable, "python": platform.python_version(),
+                     "application": str(application)}
+atomic_json(Path(sys.argv[4]), result)
+print(json.dumps(result, ensure_ascii=False, allow_nan=False), flush=True)
+"""
+
+
+def _selected_report(workspace, edition, source_capture, report_id, report_record,
+                     output, receipt, checkpoint):
+    """Export just the saved report and reopen its original editable dependency closure."""
+    from model import study_transfer
+    selection = {"schema": study_transfer.SELECTION_SCHEMA,
+        "title": edition["title"] + " — editable scientific report",
+        "roots": [{"kind": "scientific-report-editions", "id": report_id}],
+        "include_related_results": False}
+    archive = output / ("gauge-selected-report-" + report_id + ".zip")
+    previous = receipt["phases"].get("selected_report_archive")
+    if previous and not archive.exists():
+        raise ValueError("The retained selected-report archive is missing")
+    def progress(value):
+        checkpoint("selected_report_progress", progress=value)
+    exported = study_transfer.export_study(workspace, archive, selection, progress=progress)
+    inspected = study_transfer.inspect_transfer_archive(archive, verify=True)
+    study = inspected["study"]
+    if exported["id"] != study["id"] or exported["study"] != study:
+        raise ValueError("Selected Study export differs from its original archive")
+    source = source_capture["source"]
+    unused, entry = workspace.source_file(source["source_collection_id"], source["source_id"])
+    lineage = [row for row in study["identity"].get("scientific_report_sources", [])
+        if row.get("report_context_kind") == "gauge_support"
+        and row.get("source_collection_id") == source["source_collection_id"]
+        and row.get("source_id") == source["source_id"]]
+    required = {("gauge-support", edition["id"]),
+                ("station-geographies", edition["station_edition_id"]),
+                ("watershed-context", edition["regional"]["report_id"])}
+    if (len(lineage) != 1 or lineage[0].get("relationship") != "same_project"
+            or lineage[0].get("gauge_support_id") != edition["id"]
+            or lineage[0].get("gauge_build_id") != edition["build_id"]
+            or lineage[0].get("source_body_sha256") != entry["body"]["sha256"]
+            or not required.issubset({(row["kind"], row["id"])
+                for row in lineage[0].get("required_records", [])})):
+        raise ValueError("The saved report did not capture its original editable Gauge lineage")
+    reports = study["identity"].get("scientific_report_editions", [])
+    if len(reports) != 1 or reports[0]["id"] != report_id:
+        raise ValueError("The selected archive must retain the exact saved scientific report")
+    manifest, descriptor, app_sha = _archive_snapshot(
+        archive, output, workspace, edition, previous)
+    if manifest != inspected["manifest"] or descriptor["sha256"] != exported["sha256"]:
+        raise ValueError("The selected archive changed during original receiving")
+    checkpoint("selected_report_archive", id=study["id"], archive=descriptor,
+        report_id=report_id, application_sha256=app_sha, members=len(manifest["members"]),
+        lineage=lineage[0], scientific_report=reports[0])
+    station = gauge_support.geography.inspect(workspace, edition["station_edition_id"], verify=True)
+    expected = {"schema": "upstate.gauge-selected-report-expectation/v1",
+        "project": workspace.project, "study": study, "source": source,
+        "source_body_sha256": entry["body"]["sha256"], "report_id": report_id,
+        "report_record": report_record, "gauge_support_id": edition["id"],
+        "gauge_build_id": edition["build_id"], "station_edition_id": station["id"],
+        "station_build_id": station["build_id"], "regional": edition["regional"],
+        "selection": edition["selection"], "summary": edition["summary"],
+        "original_sources": edition["sources"]}
+    expected_path = output / ("selected-report-" + report_id + ".expected.json")
+    atomic_json(expected_path, expected, immutable=True)
+    root = output / ("selected-report-reopened-" + report_id)
+    previous_reopen = receipt["phases"].get("selected_report_cold_reopen")
+    if previous_reopen and (previous_reopen.get("archive_sha256") != descriptor["sha256"]
+                           or Path(previous_reopen["workspace"]).resolve() != (root / "workspace").resolve()):
+        raise ValueError("The retained selected-report reopen belongs to another original archive")
+    if not root.exists():
+        if previous_reopen:
+            raise ValueError("The saved selected-report reopening is missing")
+        restored = portable.restore(archive, root)
+        if restored["archive_sha256"] != descriptor["sha256"]:
+            raise ValueError("The selected Study archive changed during restore")
+    _verify_reopened(root, manifest)
+    result_path = output / ("selected-report-" + report_id + ".cold-reopen.json")
+    log_path = output / ("selected-report-" + report_id + ".cold-reopen.log")
+    application = root / "application"
+    command = [sys.executable, "-I", "-B", "-c", _COLD_SELECTED, str(application),
+               str(root / "workspace"), str(expected_path), str(result_path)]
+    if previous_reopen:
+        result = read_json(verify_file(output, previous_reopen["result"]))
+    else:
+        environment = {key: value for key, value in os.environ.items()
+                       if key not in ("PYTHONPATH", "PYTHONHOME")}
+        with log_path.open("wb") as log:
+            process = subprocess.run(command, cwd=application, env=environment,
+                                     stdout=log, stderr=subprocess.STDOUT, check=False)
+        if process.returncode:
+            raise RuntimeError("Selected-report cold receiving exited %s; retained log: %s"
+                               % (process.returncode, log_path))
+        result = read_json(result_path)
+    if (result.get("identity") != "MATCH" or result.get("study_id") != study["id"]
+            or result.get("report_id") != report_id
+            or result.get("gauge_support_id") != edition["id"]
+            or result.get("station_edition_id") != edition["station_edition_id"]
+            or result.get("regional_report_id") != edition["regional"]["report_id"]
+            or result.get("source") != source
+            or result.get("process", {}).get("application") != str(application.resolve())):
+        raise ValueError("The cold receiver returned another scientific report identity")
+    checkpoint("selected_report_cold_reopen", workspace=str(root / "workspace"),
+        project_id=workspace.project["id"], report_id=report_id, study_id=study["id"],
+        gauge_support_id=edition["id"], station_edition_id=edition["station_edition_id"],
+        regional_report_id=edition["regional"]["report_id"], source=source,
+        archive_sha256=descriptor["sha256"], application_sha256=app_sha,
+        verified_members=len(manifest["members"]), process=result["process"],
+        result=describe_file(output, result_path), log=describe_file(output, log_path))
 
 
 def receive(args):
@@ -307,6 +621,10 @@ def _receive(args):
             build_id=edition["build_id"], summary=edition["summary"],
             support=gauge_support.support_for_result(gauge_support.inspect(workspace,
                 edition["id"], verify=True, include_result=True)["result"]))
+        # Keep original receiving identities stable; the added scientific phase is versioned separately.
+        receipt["receiving_edition"] = "gauge-scientific-study-receiving-v2"
+        source_capture, report_id, report_record = _prepare_scientific(
+            workspace, edition, output, receipt, checkpoint)
         archive = output / ("gauge-support-workspace-" + edition["id"] + ".zip")
         previous_backup = receipt["phases"].get("workspace_backup")
         if not archive.exists():
@@ -341,6 +659,10 @@ def _receive(args):
             regional_report_id=reopened_edition["regional"]["report_id"],
             archive_sha256=archive_descriptor["sha256"],
             application_sha256=application_sha256, verified_members=len(manifest["members"]))
+        _scientific_workspace(workspace, edition, source_capture, report_id, output,
+                              archive, manifest, receipt, checkpoint)
+        _selected_report(workspace, edition, source_capture, report_id, report_record,
+                         output, receipt, checkpoint)
         receipt["state"], receipt["completed_at"] = "complete", now()
         atomic_json(receipt_path, receipt)
         return receipt

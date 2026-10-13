@@ -171,3 +171,33 @@ membership and original upstream drainage support retain their own meanings.
 The eight group balances preserve gross crossing gains/losses beside net
 annual change. The original CSV/JSON/source files carry the complete numerical
 precision, original station identities, source dates and manifest hashes.
+
+## View and operate the exact received product
+
+The native HTTP driver establishes the saved source/export/archive behavior.
+Complete the same receiving course by opening and visually inspecting its exact
+outgoing application and files before calling the product ready. Bryce's
+[standing rendered-product instruction](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449)
+applies across providers and local/cloud seats and must travel in delegated work
+and owner-controlled receiving instructions.
+
+Use the original populated project at the intended screenshare width and a
+narrow/mobile width. View the source choice, table/detail, utility selection,
+actual task progress and saved observed evidence. Operate the include-evidence
+control, an existing selection/export control, the resulting downloads and saved
+selection reopening. View empty-source, loading and error displays when reached
+by that course. Inspect the actual screenshots or live rendered screens; merely
+saving screenshots, reading source or counting DOM elements is insufficient.
+
+Open the exported HTML brief and extracted packet briefing, and view any outgoing
+PDF at normal reading scale. Then open the independently restored project and the
+same saved selection/downloads. Selected HUCs, distinct contributing union,
+source years, assessment edition, hectares and all group balances must remain
+legible and clearly labeled. Correct visible overflow, clipping, missing styles,
+broken controls/links and unreadable tables in the existing source before handoff.
+
+Use the existing receiving notes to record the viewed version/project/export,
+actual widths, completed controls and any repaired defect. Preserve the plain
+industrial design and existing source/native operation. The complete procedure
+is in [the Regional watersheds operator guide](../operator/WATERSHED_CONTEXT.md#inspect-the-rendered-outgoing-watershed-product);
+no additional test suite or standalone review product is required.

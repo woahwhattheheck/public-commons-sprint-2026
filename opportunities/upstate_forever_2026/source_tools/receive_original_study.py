@@ -429,11 +429,15 @@ def main(argv=None, *, profile="sv833"):
                         help="Continue an existing completed operation with its exact saved source and review transfer.")
     parser.add_argument("--relocate-receiving", type=Path,
                         help="With --saved-review, verify an explicit original-operation and archive location specification.")
+    parser.add_argument("--scientific-report", type=Path,
+                        help="After --saved-review, continue exact original and hydrology reviews through scientific reports and editable Study receiving.")
     parser.add_argument("--year", type=int, default=2025)
     parser.add_argument("--parameter", default=expected["parameter"])
     args = parser.parse_args(argv)
     if args.relocate_receiving and (not args.saved_review or args.create_workspace):
         parser.error("--relocate-receiving requires --saved-review and an already restored original Workspace.")
+    if args.scientific_report and (not args.saved_review or args.create_workspace):
+        parser.error("--scientific-report requires --saved-review and the original completed Workspace.")
     application = args.application.expanduser().resolve(strict=True)
     workspace_path = args.workspace.expanduser().resolve()
     output = args.output.expanduser().resolve()
@@ -476,8 +480,12 @@ def main(argv=None, *, profile="sv833"):
                 if not state_path.is_file():
                     parser.error("--saved-review requires the original receiving/operation.json.")
                 state = json.loads(state_path.read_text(encoding="utf-8"))
-            return continue_saved_review(workspace, output, state, state_path,
-                                         profile=profile, location=location)
+            result = continue_saved_review(workspace, output, state, state_path,
+                                           profile=profile, location=location)
+            if args.scientific_report:
+                from source_tools.continue_study_report import continue_report
+                return continue_report(workspace, output, state, state_path, args.scientific_report)
+            return result
         if state_path.is_file():
             state = json.loads(state_path.read_text(encoding="utf-8"))
             if state.get("request") != request:
