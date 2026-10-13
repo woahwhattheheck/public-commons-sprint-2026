@@ -1,0 +1,135 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original California E. coli cohort — Los Angeles River at Imperial Highway",
+  "captured_at": "2026-10-13T08:21:05Z",
+  "scope": {
+    "source": "https://publish.data.ca.gov/api/3/action/datastore_search",
+    "resource_id": "15a63495-8d9f-4a49-b43a-3092ef3106b9",
+    "filters": {
+      "RegionNumber": "4",
+      "StationCode": "412LARAIH",
+      "Analyte": "E. coli",
+      "Project": "Lower LA River Restoration Access Feb24-Jan25"
+    },
+    "rows": 24
+  },
+  "entries": [
+    {
+      "id": "source-2a25b61d8a46b452d069",
+      "kind": "document",
+      "path": "raw/page-0000000000.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc",
+      "title": "raw/page-0000000000.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "8eab666fba345c5fca8a2c9eae0a88e8be23b582500baa7cd5d2d3d037344696"
+    },
+    {
+      "id": "source-c3f836ec3220fab8443a",
+      "kind": "document",
+      "path": "raw/page-0000000000.receipt.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc",
+      "title": "raw/page-0000000000.receipt.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "2836f417d753add8b7595e9f5fc72b4314debcf411e1c49441a7723a5fd80619"
+    },
+    {
+      "id": "source-7165195818e8e16f5b35",
+      "kind": "document",
+      "path": "raw/terminal-offset-24.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=1&offset=24&sort=_id%20asc",
+      "title": "raw/terminal-offset-24.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "781553d73e48a2ad73d5ad568cd802f54dfd7a72d8d8dc0187a7bf12fdbb8687"
+    },
+    {
+      "id": "source-b5dc60a0ea2a063d1487",
+      "kind": "document",
+      "path": "raw/terminal-offset-24.receipt.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=1&offset=24&sort=_id%20asc",
+      "title": "raw/terminal-offset-24.receipt.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "3e0e3b9866d10cac8e1fb94a485e8ae4a1c384b8d8c0f93cc6c55270661eab3f"
+    },
+    {
+      "id": "source-5d9843a11189a26b7ecf",
+      "kind": "document",
+      "path": "raw/selection-region4-ecoli.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22Analyte%22%3A%22E.%20coli%22%7D&limit=3&sort=_id%20asc",
+      "title": "raw/selection-region4-ecoli.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "614035e3bfc2b31fe87aff663928869120e1f61eb5ff040d981e8ff3388ed012"
+    },
+    {
+      "id": "source-29a256bf3acab063ad16",
+      "kind": "document",
+      "path": "raw/selection-region4-ecoli.receipt.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22Analyte%22%3A%22E.%20coli%22%7D&limit=3&sort=_id%20asc",
+      "title": "raw/selection-region4-ecoli.receipt.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "997604434cc2d6ef0a15f237d4c5d4b6fa46e2378782313da43f18a0ecbe5c1b"
+    },
+    {
+      "id": "source-2a735cdded132c8e58ff",
+      "kind": "document",
+      "path": "raw/selection-los-angeles-ecoli.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22Analyte%22%3A%22E.%20coli%22%7D&limit=3&sort=_id%20asc&q=Los%20Angeles",
+      "title": "raw/selection-los-angeles-ecoli.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "ea52c4f2bb2d8a1cc5db122aa7c64c402c6eae030843fbc78f7757df0661365d"
+    },
+    {
+      "id": "source-db23f6d2ee7bdca3b2e2",
+      "kind": "document",
+      "path": "raw/selection-los-angeles-ecoli.receipt.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22Analyte%22%3A%22E.%20coli%22%7D&limit=3&sort=_id%20asc&q=Los%20Angeles",
+      "title": "raw/selection-los-angeles-ecoli.receipt.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "1c7c7fb414fc97945c72398941e3c14d0bd21f1bda2b6a7a5cb39ce85d316e63"
+    },
+    {
+      "id": "cohort-csv",
+      "kind": "table",
+      "path": "safe-to-swim-cohort.csv",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc#safe-to-swim-cohort.csv",
+      "title": "Complete E. coli observations — Los Angeles River at Imperial Highway",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "73953246f971379960064b0205b0fc976e1830bb57fe12e618ff4cbfab7e6683"
+    },
+    {
+      "id": "source-36254190fd35e95fea7d",
+      "kind": "document",
+      "path": "provider-field-schema.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc#provider-field-schema.json",
+      "title": "provider-field-schema.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "fc1febe2323c936ca8bad6091244857ef8ed01b4c2eaf394f040e48f694b8273"
+    },
+    {
+      "id": "source-40c72d48fd72b175aec0",
+      "kind": "document",
+      "path": "acquisition.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc#acquisition.json",
+      "title": "acquisition.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "2bbddb58656d6901975d164add814d0b4ebfeabe966c867bd2ae6701cdb5f557"
+    },
+    {
+      "id": "source-4da17ad850e3eb3582f1",
+      "kind": "document",
+      "path": "cohort.json",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc#cohort.json",
+      "title": "cohort.json",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "5423e865957108063d66be3c5adc66d149e456e0bba84b4691a7fa846ce39fbf"
+    },
+    {
+      "id": "source-b335630551682c19a781",
+      "kind": "document",
+      "path": "README.md",
+      "uri": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc#README.md",
+      "title": "README.md",
+      "vintage": "2026-10-13T08:21:05Z",
+      "sha256": "b60fd850095598886a88f2cd7ba6b5adcfa8aebe9644f88c10d1d1c610e2d4a8"
+    }
+  ]
+}

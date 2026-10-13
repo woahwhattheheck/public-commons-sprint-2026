@@ -19,7 +19,7 @@ from .common import (
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.conservation-report-source/v1"
-EDITION = "conservation-saved-plan-report/2"
+EDITION = "conservation-saved-plan-report/3"
 DIRECTORY = "conservation-report-sources"
 
 
@@ -458,8 +458,15 @@ def list_sources(workspace, plan_id=None):
 
 def prepare(workspace, spec):
     """Retain a source document for the current Scientific Reports composer."""
-    if not isinstance(spec, dict) or set(spec) - {"plan_id", "title"}:
-        raise ValueError("Supply the original plan_id and optional report-source title")
+    if not isinstance(spec, dict) or set(spec) - {"plan_id", "title", "include_maps"}:
+        raise ValueError("Supply the original plan_id, optional title and include_maps choice")
+    include_maps = spec.get("include_maps", True)
+    if not isinstance(include_maps, bool):
+        raise ValueError("include_maps must be true or false")
+    map_implementation = None
+    if include_maps:
+        from . import conservation_report_maps
+        map_implementation = conservation_report_maps.implementation()
     plan = conservation.get_plan(workspace, identifier(spec.get("plan_id")))
     if plan.get("state") != "complete":
         raise ValueError("Choose a completed original Conservation portfolio")
@@ -490,6 +497,7 @@ def prepare(workspace, spec):
                          if optimization is not None else None),
         "source_entries": originals,
         "native_execution": state.get("native_execution", {}),
+        "maps": map_implementation,
     }
     key = digest(identity)
     directory = workspace.root / DIRECTORY / key
@@ -536,6 +544,15 @@ def prepare(workspace, spec):
                 native_name = _relative(item.get("view_path", item["filename"]))
                 retain(prefix + native_name, {"path": item["object"], "bytes": item["bytes"],
                                               "sha256": item["sha256"]})
+        maps = None
+        if include_maps:
+            maps = conservation_report_maps.prepare(workspace, state, plan, directory)
+            for item in maps["files"]:
+                name = _relative(item["path"])
+                if name in members:
+                    raise ValueError("Original map companion names collide: " + name)
+                verify_file(directory, item)
+                members[name] = item
         recipe = {
             "schema": observed_context.SCHEMA, "edition": EDITION, "title": title,
             "origin": {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
@@ -547,6 +564,38 @@ def prepare(workspace, spec):
             "source_links": ["records/source-bindings.json", "records/study-inspection.json",
                              "records/plan.json", "records/candidates.json", "decision-packet.zip"],
         }
+        if maps is not None:
+            recipe.update(figure_spec=maps["figure_spec"], figures=maps["figures"])
+            recipe["source_links"] += [conservation_report_maps.INPUTS,
+                                       conservation_report_maps.SPEC,
+                                       conservation_report_maps.INVENTORY,
+                                       conservation_report_maps.CONTEXT_REGISTER]
+            recipe["sections"].append(["Original geographic figures", [
+                "The geographic panels preserve saved original and reporting-clipped planning "
+                "geometry, selected unions and declared context boundaries. Saved planning vertices "
+                "and holes remain intact. Contexts use the same bound reader, projected CRS and "
+                "declared clipping/buffer; the renderer applies no reprojection or simplification. "
+                "Scale and north refer to the saved projected grid.",
+                "Grey and outlines represent the exact roles printed in each frame. An overlap "
+                "area remains separate from the entire selected footprint. Cartographic shapes "
+                "do not stand for a measured concentration, model output or inferred flow path.",
+                _links([
+                    ("Complete original geographic input and area checks", conservation_report_maps.INPUTS),
+                    ("Original geographic figure specification", conservation_report_maps.SPEC),
+                    ("Verified geographic figure inventory", conservation_report_maps.INVENTORY),
+                    ("Complete original context-feature register", conservation_report_maps.CONTEXT_REGISTER),
+                ]),
+            ]])
+            if maps["context_register"]:
+                recipe["sections"].append(["Original context features", [
+                    "These are original source attributes. Blank values mean the field is absent or null. "
+                    "Cartographic map labels identify these features; they are not monitoring or intake sites.",
+                    {"kind": "table", "columns": ["Context", "Source ID", "Native feature ID",
+                                                   "NAME", "FACILITY", "INTAKE", "BUFFER_FT"],
+                     "rows": [[row[name] for name in ("context", "source_id", "native_feature_id",
+                                                       "NAME", "FACILITY", "INTAKE", "BUFFER_FT")]
+                              for row in maps["context_register"]]},
+                ]])
         recipe_path = directory / "conservation-report.json"
         atomic_json(recipe_path, recipe, immutable=True)
         recipe_file = describe_file(directory, recipe_path)
@@ -586,6 +635,12 @@ def prepare(workspace, spec):
             "members": {name: describe_file(workspace.root, directory / name)
                         for name in sorted(members)},
         }
+        if maps is not None:
+            result["maps"] = {"summary": _copy(maps["summary"]),
+                              "figure_spec": maps["figure_spec"], "figures": _copy(maps["figures"])}
+            for index, item in enumerate(maps["files"]):
+                result["files"]["geography_%03d" % index] = describe_file(
+                    workspace.root, directory / item["path"])
         _verify_source(workspace, result)
         atomic_json(receipt, result, immutable=True)
         return result

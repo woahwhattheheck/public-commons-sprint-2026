@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-waters",
   "title": "Receiving waters",
-  "version": "8",
+  "version": "9",
   "order": 52,
   "assets": [
     "receiving_waters.mjs",
@@ -10,7 +10,8 @@
     "receiving_waters.css",
     "receiving_water_spatial.mjs",
     "receiving_water_monitoring.mjs",
-    "receiving_water_report.mjs"
+    "receiving_water_report.mjs",
+    "receiving_water_editing.mjs"
   ],
   "backend": {
     "module": "receiving_water_actions",

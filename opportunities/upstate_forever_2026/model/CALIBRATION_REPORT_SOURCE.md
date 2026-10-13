@@ -214,3 +214,44 @@ Producer edition `native-calibration-review-report-v2` carries the original cali
 Reopening an original `native-calibration-review-report-v1` source preserves that producer edition and reconstructs its original selection identity. New preparation uses v2 and therefore receives a distinct immutable source identity; it never changes an existing delivery's selected source. The review controller displays the retained edition beside each registered report source.
 
 Historical completed calibrations without a native-execution snapshot still produce a readable source with its original native records. New provenance is supplied by a newly completed calibration and its new review, rather than reconstructed from the executing machine's current model version.
+
+## Original sediment reference basis
+
+New report source edition `native-calibration-review-report-v3-reference-basis`
+retains the analytical basis encoded in the original reference rows. The existing
+F7DN436B and Southeast SPARROW intakes already preserve original parameter codes
+inside `source_records`; the report now reads those fields directly. For the
+retained Chattooga row, `00530` and `CONSTITUEN=TSS` identify total suspended
+solids. A source code `80154` identifies an SSC-based annual load. The original
+numeric annual mass and its units remain the source's values.
+
+The shared `observation_support.reference_basis` reader reports exact known
+parameter codes, original field locations, analytical labels and method context.
+Missing declarations stay unspecified; conflicting native-parameter evidence and
+mixed source constituents remain explicit. It does not rewrite source CSVs,
+saved observations, admitted rows, native comparisons, calibration plans, scores
+or selected candidates. It does not infer a TSS-to-SSC factor from a published
+`TSS_CONV` model field.
+
+The current ordinary observation diagnostic keeps different declared constituent
+bases in separate descriptive cohorts, alongside its existing method, unit and
+period distinctions. The original comparison's pooled metrics remain its original
+metrics. Scientific HTML/PDF details name the actual reference beside its
+catchment. Calibration dossiers add `tables/reference-basis.csv`, a readable
+source-method table and reference-basis captions on the original paired figures.
+The scientific report source carries the same table and complete dossier.
+
+TSS and SSC analytical methods can produce different natural-water results.
+USGS's original method comparison explains the whole-sample versus common
+subsample distinction and why the measurements should not be used interchangeably:
+[Gray and others, 2000, USGS WRI 00-4191](https://pubs.usgs.gov/publication/wri004191).
+An annual-load residual against modeled sediment export therefore also requires
+the retained sampling method, estimator, watershed support and transport context.
+No method conversion or in-stream transport correction is supplied by this
+presentation layer.
+
+New preparation creates a new presentation/source edition while retaining the
+same original scientific records. Existing v1/v2 report sources and prior
+dossiers continue to reopen with their exact saved identities. A new source can
+also be prepared from an existing completed review; the original nested source
+fields provide its constituent descriptions without dispatching a native model.

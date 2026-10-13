@@ -86,3 +86,9 @@
 .study-transfer .st-selection-bar>div{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.study-transfer *{scroll-behavior:auto!important;transition:none!important}}
+
+.study-transfer .st-received-detail { border-top:1px solid #b9bec4; margin-top:1rem; padding-top:1rem; }
+.study-transfer .st-received-source { border:1px solid #cdd1d5; padding:1rem; margin:1rem 0; background:#fff; }
+.study-transfer .st-received-files { list-style:none; padding:0; display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; }
+.study-transfer .st-received-files li { max-width:100%; overflow-wrap:anywhere; }
+.study-transfer .st-received-files small { display:block; color:#555; }

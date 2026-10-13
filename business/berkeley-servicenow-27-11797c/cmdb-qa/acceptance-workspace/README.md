@@ -51,3 +51,7 @@ The example contains fictional assets and customer approvals. Actual customer re
 ## Native receiving
 
 The complete original authored case has passed through 26 native CLI operations and both original comparator executions. The full independent receive and every re-exported member matched. A later exception review required a new acceptance, completed at revision 13. A focused carry-forward continuation also protects the original baseline and complete mapping when carrying accepted decisions.
+
+## Download the complete applications
+
+The [ready-to-open application delivery](deliveries/2026-10-13/README.md) includes both the empty workspace and the full worked example as self-contained HTML files. Download a file and open it in your browser; each includes the complete guide and editable source from the integrated source edition.

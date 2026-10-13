@@ -11,6 +11,7 @@ import math
 from .common import digest
 
 KIND = "projected_geometry_map"
+ROLE_LABELS_VERSION = 1
 _GEOMETRIES = {"Point", "MultiPoint", "LineString", "MultiLineString",
                "Polygon", "MultiPolygon", "GeometryCollection"}
 

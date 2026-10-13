@@ -7,6 +7,7 @@ their operations and retains the exact inputs and resumable request identities.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import base64
 import csv
 import hashlib
@@ -258,11 +259,12 @@ ORDER BY g.source_id,g.country_iso3,g.period"""
 
 
 class WorldBankAnalysis:
-    def __init__(self, workspace, *, operation_id, progress=None):
+    def __init__(self, workspace, *, operation_id, progress=None, active_workspace=None):
         require(re.fullmatch(r"[a-f0-9]{32}", operation_id) is not None,
                 "Use a stable 32-character lowercase hexadecimal operation ID.")
         self.workspace = private_directory(Path(workspace).expanduser().absolute(), create=True)
         self.operation_id = operation_id
+        self.active_workspace = active_workspace
         self.directory = private_directory(
             self.workspace / "worldbank-analysis" / operation_id, create=True)
         self.progress = progress or (lambda value: None)
@@ -273,6 +275,20 @@ class WorldBankAnalysis:
         require(self.record.get("schema") == SCHEMA and
                 self.record.get("operation_id") == operation_id,
                 "Continue the original World Bank Analysis operation.")
+
+    @contextmanager
+    def _workspace_session(self):
+        if self.active_workspace is not None:
+            workspace = self.active_workspace
+            require(workspace.database.directory == self.workspace and not workspace._closed,
+                    "Continue the same live Analysis workspace owner.")
+            yield workspace
+        else:
+            workspace = AnalysisWorkspace(self.workspace)
+            try:
+                yield workspace
+            finally:
+                workspace.close()
 
     def save(self):
         write(self.directory / "operation.json", encoded(self.record))
@@ -358,6 +374,8 @@ class WorldBankAnalysis:
             "transform_sha256": sha(inspect.getsource(typed_rows).encode()),
         }
         write(self.directory / "intent.json", encoded(intent), exact=True)
+        self._source_file = core.parent / "source.py"
+        self._source_sha256 = intent["source_engine"]["source_sha256"]
         ready = self.completed()
         if ready:
             self.emit("COMPLETE", rows=ready["source"]["observations"], reused=True)
@@ -452,12 +470,9 @@ class WorldBankAnalysis:
             "dataset_csv_sha256": sha(regenerated), "typed_source_sha256": sha(projection),
         }
         self.save()
-        workspace = AnalysisWorkspace(self.workspace)
-        try:
+        with self._workspace_session() as workspace:
             return self._prepare_analysis(workspace, document, name, source, review,
                 rows, columns, selected_recipes, max_rows, resume=resume)
-        finally:
-            workspace.close()
 
 
     def _prepare_analysis(self, workspace, document, name, source, review,
@@ -558,6 +573,12 @@ class WorldBankAnalysis:
         workbook = self.job(workspace, "WORKBOOK", "workbook", {
             "name": workbook_name, "revision": workbook_definition["revision"],
             "definition_sha256": workbook_definition["definition_sha256"]}, resume=resume)
+        return self._deliver(workspace, source, review, len(rows), version, publication,
+                             publication_sha, workbook, resume=resume)
+
+    def _deliver(self, workspace, source, review, row_count, version, publication,
+                 publication_sha, workbook, *, resume=False, extra_files=()):
+        """Use the original complete delivery route for first and recurring editions."""
         destination = private_directory(self.directory / "delivery", create=True)
 
         def download(manager, job_id, source_name, output_name):
@@ -573,6 +594,7 @@ class WorldBankAnalysis:
             download(workspace.workbooks, workbook["id"], "workbook.xlsx", "WorldBank_Analysis.xlsx"),
             download(workspace.workbooks, workbook["id"], "handoff.zip", "WorldBank_Workbook_Handover.zip"),
         ]
+        files.extend(extra_files)
         for format, filename in (("html", "WorldBank_Report.html"), ("json", "WorldBank_Report.json"),
                                  ("csv", "WorldBank_Report_Tables.zip")):
             report_export = self.job(workspace, "REPORT_" + format.upper(), "report-export", {
@@ -611,7 +633,7 @@ class WorldBankAnalysis:
         result["files"] = [*files, describe(bundle)]
         self.record["result"] = result
         self.save()
-        self.emit("COMPLETE", rows=len(rows), files=len(result["files"]))
+        self.emit("COMPLETE", rows=row_count, files=len(result["files"]))
         return result
 
     def guide(self, source, review, publication, archived):
@@ -658,7 +680,10 @@ are included in Analysis_Delivery.json.
 
 Use the same receiving operation and archive hash to continue an interrupted
 workspace delivery. A completed receive preserves subsequent customer edits.
-Additional World Bank editions use their own prepare operation and view name.
+For another approved edition of the same customer monitoring workbook, use the
+recurring-review / recurring-refresh workflow with the same saved view, report
+and workbook names. Use a separate prepare operation and view for an independent
+analysis.
 
 ## Retained source edition
 

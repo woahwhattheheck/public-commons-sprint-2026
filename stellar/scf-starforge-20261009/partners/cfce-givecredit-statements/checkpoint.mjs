@@ -74,7 +74,7 @@ export class CaptureCheckpointStore{
     this.lastStatus={...manifestStats(manifest),directory:this.directory,manifest:this.manifestPath};
     return source;
   }
-  save(source,{phase=null,provenance=null}={}){
+  save(source,{phase=null,provenance=null,request=null}={}){
     // Native acquisition awaits each save before mutating its borrowed checkpoint.
     return this.serial(()=>withNativeDocumentWrite(this.manifestPath,async()=>{
       const lock=join(this.directory,'.writer');
@@ -84,6 +84,23 @@ export class CaptureCheckpointStore{
       try{
         const prior=await optional(this.manifestPath);if(prior)validateCheckpointManifest(prior);
         const identity=this.acceptSource(source),captureKey=JSON.stringify(identity);
+        const imports=prior?.imports||[];
+        let importIntent=null;
+        if(request){
+          if(typeof request.requestId!=='string'||!request.requestId||request.requestId.length>160||
+             typeof request.actor!=='string'||!request.actor||request.actor.length>300)
+            fail('CAPTURE_IMPORT_REQUEST','Keep the original import request ID and operator.');
+          const original=jsonIdentity(source,{canonical:true});
+          importIntent={requestId:request.requestId,actor:request.actor,kind:identity.kind,
+            sourceSha256:original.sha256,sourceBytes:original.bytes};
+          const previous=imports.find(row=>row.requestId===request.requestId);
+          if(previous){
+            for(const key of Object.keys(importIntent))if(previous[key]!==importIntent[key])
+              fail('REQUEST_REUSED','This checkpoint request belongs to another exact original source or operator.');
+            return {...manifestStats(prior),directory:this.directory,manifest:this.manifestPath,
+              operation:previous,replayed:true};
+          }
+        }
         if(this.captureKey&&this.captureKey!==captureKey)this.identities.clear();
         this.captureKey=captureKey;
         const projection=projectCheckpoint(source,text=>{
@@ -111,13 +128,21 @@ export class CaptureCheckpointStore{
         const manifest={schema:CHECKPOINT_SCHEMA,generation:(prior?.generation||0)+1,savedAt:new Date().toISOString(),
           identity,progress:{phase},checkpoint:projection.checkpoint,references:projection.references,
           provenance:provenance||(prior&&JSON.stringify(prior.identity)===captureKey?prior.provenance:null)||null,
+          imports:[...imports],
           storage:{objects:projection.objects.length,objectBytes:projection.objects.reduce((n,row)=>n+row.bytes,0),
             references:projection.references.length,writtenObjects,writtenBytes,reusedBytes}};
+        if(importIntent)manifest.imports.push({...importIntent,generation:manifest.generation,savedAt:manifest.savedAt,
+          result:{kind:identity.kind,generation:manifest.generation,savedAt:manifest.savedAt,sourceStatus:source.metadata.status||null}});
         const written=await writeJSONFile(this.manifestPath,manifest,{replace:true,pretty:false});
         this.lastStatus={...manifestStats(manifest),manifestBytes:written.bytes,manifestSha256:written.sha256,directory:this.directory,manifest:this.manifestPath};
-        return this.lastStatus;
+        return importIntent?{...this.lastStatus,operation:manifest.imports.at(-1),replayed:false}:this.lastStatus;
       }finally{await lease.close();}
     }));
+  }
+  async operation(requestId){
+    await this.queue;const manifest=await optional(this.manifestPath);
+    if(!manifest)return null;validateCheckpointManifest(manifest);
+    return manifest.imports?.find(row=>row.requestId===requestId)||null;
   }
   releaseMemory(){this.identities.clear();}
   async importLegacy(path){

@@ -2,9 +2,9 @@
   "schema": "commons.ecosystem.extension-access-review.v1",
   "activeManifests": 57,
   "retiredManifests": 1,
-  "registeredRoutes": 230,
+  "registeredRoutes": 233,
   "registeredFileRoutes": 11,
-  "registeredActions": 168,
+  "registeredActions": 169,
   "safeViewerPosts": [
     "/api/assessment-context/catalog",
     "/api/assessment-context/edition",
@@ -94,7 +94,10 @@
     "/api/watershed-context/huc",
     "/api/watershed-context/report",
     "/api/published-studies/geographic-preview",
-    "/api/published-studies/geographic-selection"
+    "/api/published-studies/geographic-selection",
+    "/api/published-studies/review-source-preview",
+    "/api/published-studies/review-sources",
+    "/api/published-studies/review-source"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "fbf666aa388c14f312c601c82211ef2443e8faa0",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations.",
+  "source_reference_base": "158ae309ec112f09d2063d006d5b9b085384b3f3",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,13 +53,18 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 13258,
-      "sha256": "4240a75ab7569817830db955ccd0b726a0747be8f7f5f342c305a9187343cb69"
+      "bytes": 16086,
+      "sha256": "7b3573825d9ad017e3894e81e47965e4b5bdf9098da0a9351fc797f09a1f52ff"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
       "bytes": 399,
       "sha256": "aeb7d177d300a24f3e75a8663e7e550a9e97bdebe028caf3752c43381fc1a6f0"
+    },
+    {
+      "path": "integration/component_fragments/published-review-report-source.json",
+      "bytes": 759,
+      "sha256": "87a05b5e1e98de3024d5b6912be0b59e9582c4c0ee767d2c5a08ef73991eb13d"
     },
     {
       "path": "integration/component_fragments/published-study-reviews.json",
@@ -160,6 +165,21 @@
       "path": "microbial_temporal_observed_report.sources.json",
       "bytes": 9642,
       "sha256": "3023d7b412425c71ab7953d286695e7225148b9ca3fa59bd94c855bdb2d5f116"
+    },
+    {
+      "path": "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+      "bytes": 9929,
+      "sha256": "a0b1e5242e88a4c1d2510d192bb9d9b1492ddcda025ac8cb2be63e3ae78c78e5"
+    },
+    {
+      "path": "model/published_review_report_source.py",
+      "bytes": 33477,
+      "sha256": "82657950f516682859ba6f8a31e3fe3f8b7b929e0d895ce50ab3ba6838354d02"
+    },
+    {
+      "path": "model/published_review_study_transfer.py",
+      "bytes": 12279,
+      "sha256": "3d6716b0b8a915dd85830dcb9e57bdf379fa9fd25c3b3ca13b05242a655ab680"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -1128,8 +1148,8 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 3456,
-      "sha256": "2a644834113aa4e88b7d87ac9c309cca62fe9c1a21e2a6119633e72e83b9070c"
+      "bytes": 4412,
+      "sha256": "f20a3a09bbad3018353a7a170a480be513e3b807d40bd1104f41017793069afa"
     },
     {
       "path": "operator/extensions/station-geography.json",
@@ -1137,14 +1157,24 @@
       "sha256": "49fc2fdd5a8c2d98162fbd981e34e64fc74e6f2df50b3d70d261a48be3b4dba9"
     },
     {
+      "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
+      "bytes": 6463,
+      "sha256": "4bf6ee7a02e965291ffc16d702aa1685a01677541a1815a331d3cf9b6cada10c"
+    },
+    {
       "path": "operator/published_study_operator.py",
-      "bytes": 24844,
-      "sha256": "cf63ef824884d11f09737a09991a4d9173b9a6db95f71ad5618bde5bf8be14d0"
+      "bytes": 26325,
+      "sha256": "3383710dfd07904afbc793eabf2e7d502b8e80dcaee2a90ad16b2108b0c7382f"
     },
     {
       "path": "operator/team_route_policy.json",
-      "bytes": 6109,
-      "sha256": "3af3f848043479da4b1d450a2c1811adef3490ab2329d7eb69ce6e2968386ca6"
+      "bytes": 6250,
+      "sha256": "d8ab44660b9d411018b826258f80e514d552a953c358808445b15a220206fead"
+    },
+    {
+      "path": "operator/web/published_review_reports.mjs",
+      "bytes": 9328,
+      "sha256": "bbb0cceb979c715f3c47009aa30146a8bc35ae88c3ed50bb0e1b12f0395670e0"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -1153,8 +1183,8 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 72968,
-      "sha256": "d5a0bc8bd832c89dacb1d4b777e23c012995117cc6b9f5fb159324617eca18e9"
+      "bytes": 73651,
+      "sha256": "3ce28db7dc3456b1e6bacab9e826a930ee125cdf9fd1dfa48241b9546c07f25f"
     },
     {
       "path": "operator/web/station_geography.mjs",
@@ -2172,6 +2202,16 @@
       "selection": "Exact saved geographic station identifiers intersected with an explicitly chosen retained original study edition",
       "review_schema": "upstate.published-study-review/v1",
       "source_provenance": "Original geography analysis, donor receipt, study source manifest and canonical station filters"
+    },
+    "published_review_report_source": {
+      "producer_merge_commit": "e37a61fbc2e08f6fb0abd625caf25539ae29e8ec",
+      "producer": "model/published_review_report_source.py",
+      "transfer": "model/published_review_study_transfer.py",
+      "guide": "operator/PUBLISHED_REVIEW_REPORTS.md",
+      "source_folder": "published-review-report-sources",
+      "scope": "Exact saved review and original study edition with current selected interpretation; full original archive separately retained",
+      "composer": "Existing ordered Sources scientific composer",
+      "installer": "Guarded scoped registration preserves the installed shared dispatcher"
     }
   }
 }

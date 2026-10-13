@@ -61,13 +61,95 @@ Registered Receiving descriptors require `openExtension`, which the maintained s
 
 - `operator/web/receiving_waters.mjs` adds scoped saved-list, detail and completed-task actions, a passive original-record read and guarded navigation.
 - `operator/web/receiving_waters_extension.mjs` exposes the same method through the registered desk.
-- Both `operator/extensions/receiving-waters.json` and `operator/receiving_waters.extension.json` are the same version 8 descriptor with the required shared-host capability.
+- Both `operator/extensions/receiving-waters.json` and `operator/receiving_waters.extension.json` are the same version 9 descriptor with the required shared-host capability.
 - `model/study_transfer.py` admits the two existing Receiving dependency kinds as top-level selections. Its catalogue reads their selection from `identity.selection`, preserving the native saved-record layout.
 - `operator/web/extensions/study_transfer.mjs` includes the two original root labels in its supported choices.
 - `integration/component_fragments/receiving-water-study-navigation.json` appends the Study transfer dependency and this guide to the existing Receiving family. The original global catalogue and all other families remain unchanged.
 
-The existing Study transfer component already retains both shared transfer modules and the Receiving dependency visitor. No new transfer schema, archive reader, request queue, server route, model engine or portable lock is introduced. The standalone Receiving installer verifies the current joined cohort and admits its known version 7 descriptor predecessor while preserving earlier supported upgrades and concurrent shared source.
+The existing Study transfer component already retains both shared transfer modules and the Receiving dependency visitor. No new transfer schema, archive reader, request queue, server route, model engine or portable lock is introduced. The standalone Receiving installer verifies the current joined cohort and admits its known version 8 and version 7 descriptor predecessors while preserving earlier supported upgrades and concurrent shared source.
 
 ## Resume and reopen
 
 If an export request loses its response, continue through the existing Study transfer pending-operation recovery and saved export list. Reuse that original operation instead of starting another archive. On the receiving side, use the maintained project receiver, then reopen the exact saved plan or analysis in **Receiving waters**. Its source selections, model results and original IDs are retained. A changed scientific case is a new operation based on those original inputs.
+
+
+## Continue editing an original or received Receiving study
+
+After **Transfer and restore → Open restored workspace**, the existing Study
+transfer catalogue lists the retained original roots. **Open in Receiving waters**
+on a source plan or completed analysis opens that exact record in the current
+Workspace. The same action is available for Receiving records in a contents
+preview. It reads the original record before navigation and requires its native
+schema, identity and complete state. A changed Workspace, detached view or newer
+open request discards an earlier read. Monitoring and the other original desk
+actions remain available.
+
+A saved source plan now offers **Revise source plan**. A completed analysis offers
+**Revise analysis** and **Revise original source plan**. These commands read the
+original immutable record and populate the maintained forms from
+`identity.selection`. They do not reconstruct input choices from compiled
+receptors, derived geometry, normalized results or accounting output tables.
+
+### Retained source-plan choices
+
+The form retains the original title, projected CRS, complete catchment selector,
+layer, ID/downstream fields, every receptor and all original source filters.
+Receptor pages contain twenty areas at a time; changing pages retains edits on
+every page. Add/remove actions explicitly change that receptor population.
+
+Known fields have ordinary controls. Unknown top-level, source, relationship,
+classification and receptor metadata stay in the exact selection. This includes
+intake-reference selectors, original evidence, explicit upstream seeds and
+source-reader options. Unchanged feature-ID arrays keep original numeric/string
+types, and attribute filters keep their JSON value types. An omitted optional
+field remains omitted when its displayed default is unchanged.
+
+Changing a source choice retains its existing layer, feature filters and
+supporting metadata until they are explicitly edited. Review those settings
+when choosing a different source edition. The original engine validates the
+complete relationship and source selection on preparation.
+
+### Retained analysis choices
+
+Analysis revision retains the exact source-plan, baseline and alternative run
+IDs, original alternative ordering, quantity domain, pollutant subset,
+weights, normalization caps/reference and every accounting option. Its existing
+accounting editor loads the selected original plan before accepting retained
+groups. Group identities, parent/upstream/reservoir membership, references and
+rationale are populated; unknown group properties remain retained.
+
+Unavailable original run or source choices remain visible. A changed baseline
+does not silently remove a selected alternative. A changed plan does not silently
+remove an accounting group or its unavailable members. Correct those choices
+explicitly or restore their original inputs before submission. The original
+native analysis still validates cohort compatibility, scientific units,
+geographic containment and accounting closure.
+
+Clearing explicit weights or normalization deliberately removes that input
+field, restoring the engine's default choice. It does not insert an empty
+object. Leaving the controls unchanged preserves absent versus explicit
+settings and original values.
+
+### Advanced selections and saved editions
+
+**Advanced retained selection** displays the complete original JSON. To change
+unsupported settings, edit it and choose **Apply selection to form**. Applying
+repopulates the controls and retains the complete new base. Submission refuses
+unapplied JSON changes so they cannot disappear. The visible changed-settings
+summary compares the current form with the original saved selection.
+
+Saving uses the existing `receiving.water.plan` or
+`receiving.water.analyze` queue action. The original saved plan/analysis is
+unchanged. Changed scientific selections obtain their native content identity;
+an unchanged selection may reuse a completed result or resume through the
+original engine, depending on its state and current implementation identity.
+No title is automatically renamed and no replacement Workspace is created.
+
+The complete implementation adds
+`operator/web/receiving_water_editing.mjs` to the existing Receiving family and
+both identical version 9 descriptors. This module only preserves and edits
+selection fields; the original Python preparation, analysis, transfer closure
+and archive receiver remain authoritative. The Study transfer Receiving action
+uses the shared host's existing `openExtension` capability and existing
+Receiving `openPlan`/`openAnalysis` APIs; it introduces no reverse family
+dependency.

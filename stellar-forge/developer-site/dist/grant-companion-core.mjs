@@ -119,7 +119,7 @@ export function parseCompanionMarkdown(markdown) {
   }
   if(current)groups.push(current);
   const context={ids:new Map(),headings:[],tables:0,codeBlocks:0};
-  const chapters=groups.map((group,index)=>{const start=context.headings.length,html=renderBlocks(group.lines,context),headings=context.headings.slice(start);return {id:headings[0].id,title:group.title,ordinal:index+1,html,headings};});
+  const chapters=groups.map((group,index)=>{const start=context.headings.length,html=renderBlocks(group.lines,context),headings=context.headings.slice(start);return {id:headings[0].id,title:group.title,ordinal:index+1,markdown:group.lines.join("\n"),html,headings};});
   need(chapters.length>0,'The complete companion needs at least one section.');
   return {title,markdown,chapters,tables:context.tables,codeBlocks:context.codeBlocks};
 }
@@ -131,13 +131,16 @@ export function companionReaderMarkup(model,{sha256='',bytes=0}={}) {
 }
 
 /** Shared interaction for the hosted reader and its self-contained offline export. */
-export function activateCompanionReader(root,sourceFiles,onOfflineDownload=null) {
+export function activateCompanionReader(root,sourceFiles,onOfflineDownload=null,options={}) {
   const one=selector=>root.querySelector(selector),all=selector=>Array.from(root.querySelectorAll(selector));
   const chapters=all('[data-chapter]'),indices=all('[data-chapter-index]'),search=one('#companion-search'),status=one('#companion-status');
   const normal=value=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase().replace(/\s+/g,' ').trim();
   const records=chapters.map((element,i)=>({element,index:indices[i],id:element.dataset.chapter,title:indices[i].querySelector('a').textContent,text:element.textContent.replace(/\s+/g,' ').trim()}));
   records.forEach(record=>record.search=normal(record.text));
-  let selected=records[0].id,showAll=false,matches=records.slice(),busy=false;
+  let selected=records.some(x=>x.id===options.reading?.chapter_id)?options.reading.chapter_id:records[0].id,showAll=!!options.reading?.show_all,matches=records.slice(),busy=false;
+  search.value=options.reading?.query||'';
+  const disposal=[];
+  const listen=(target,type,handler)=>{target.addEventListener(type,handler);disposal.push(()=>target.removeEventListener(type,handler));};
   const report=message=>{status.textContent=message;};
   const download=(value,name,type)=>{const url=URL.createObjectURL(new Blob([value],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);};
   function update(){
@@ -149,6 +152,7 @@ export function activateCompanionReader(root,sourceFiles,onOfflineDownload=null)
     one('[data-action="previous"]').disabled=showAll||at<=0;one('[data-action="next"]').disabled=showAll||at<0||at>=matches.length-1;
     one('[data-action="print"]').disabled=matches.length===0;one('[data-action="print"]').textContent=showAll?'Print visible chapters':'Print chapter';one('[data-action="read-all"]').setAttribute('aria-pressed',String(showAll));one('[data-action="read-all"]').textContent=showAll?'Read one chapter':'Read all chapters';one('[data-no-results]').hidden=matches.length>0;
     report(terms.length?matches.length+' of '+records.length+' chapters match.':(showAll?'Reading all '+records.length+' chapters.':'Reading '+(records.find(x=>x.id===selected)?.title||'the companion')+'.'));
+    options.onReading?.({chapter_id:selected,query:search.value,show_all:showAll});
   }
   function select(hash,focus=false){
     let id;try{id=decodeURIComponent(String(hash).replace(/^#/,''));}catch{return;}
@@ -157,13 +161,13 @@ export function activateCompanionReader(root,sourceFiles,onOfflineDownload=null)
     const target=Array.from(record.element.querySelectorAll('[id]')).find(n=>n.id===id)||record.element;
     if(focus){target.scrollIntoView({block:'start'});one('#companion-content').focus({preventScroll:true});}
   }
-  root.addEventListener('click',event=>{
+  listen(root,'click',event=>{
     const link=event.target.closest('a[href^="#"]');if(!link)return;
     let id;try{id=decodeURIComponent(link.hash.slice(1));}catch{return;}
     const record=records.find(x=>x.id===id||Array.from(x.element.querySelectorAll('[id]')).some(n=>n.id===id));
     if(!record)return;event.preventDefault();try{history.replaceState(null,'',link.hash);}catch{}select(link.hash,true);
   });
-  search.addEventListener('input',update);
+  listen(search,'input',update);
   async function action(name){
     if(name==='clear-search'){search.value='';update();search.focus();return;}
     if(name==='read-all'){showAll=!showAll;update();return;}
@@ -173,11 +177,11 @@ export function activateCompanionReader(root,sourceFiles,onOfflineDownload=null)
     if(name==='offline'&&onOfflineDownload){if(busy)return;busy=true;one('[data-action="offline"]').disabled=true;try{await onOfflineDownload();report('Saved the complete offline reader with its original Markdown and source index.');}catch(error){report(error.message||String(error));}finally{busy=false;one('[data-action="offline"]').disabled=false;}return;}
     if(name==='print'||name==='print-all'){document.documentElement.dataset.companionPrint=name==='print-all'?'all':'selection';window.print();}
   }
-  all('button[data-action]').forEach(button=>button.addEventListener('click',()=>action(button.dataset.action).catch(error=>report(error.message||String(error)))));
+  all('button[data-action]').forEach(button=>listen(button,'click',()=>action(button.dataset.action).catch(error=>report(error.message||String(error)))));
   one('[data-action="offline"]').hidden=!onOfflineDownload;
-  window.addEventListener('hashchange',()=>select(location.hash,true));window.addEventListener('afterprint',()=>{delete document.documentElement.dataset.companionPrint;});
-  update();if(location.hash)select(location.hash);
-  return {select,chapterCount:records.length};
+  listen(window,'hashchange',()=>select(location.hash,true));listen(window,'afterprint',()=>{delete document.documentElement.dataset.companionPrint;});
+  update();if(options.honorHash!==false&&location.hash)select(location.hash);
+  return {select,chapterCount:records.length,getReading:()=>({chapter_id:selected,query:search.value,show_all:showAll}),destroy:()=>disposal.forEach(fn=>fn())};
 }
 
 export function standaloneCompanion(model,{css,indexText,sha256,bytes,applicationUrl,submissionUrl}){

@@ -1,0 +1,64 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original 2023 land cover — complete watershed domain",
+  "entries": [
+    {
+      "id": "original-landcover-context-1e4bea16ffb1ccaf8361",
+      "title": "Original 2023 land cover — complete watershed domain",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "vintage": "USGS published Annual NLCD native time2023-01-01T00:00:00.000Z; captured2026-10-13",
+      "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+      "path": "observed-report.json",
+      "bytes": 48372,
+      "sha256": "4d88edb8d9bd1cf520ab94df363aaabfd4e872bb91f16e84fa8d77dd08f699b8",
+      "description": "Complete original native-grid watershed land cover and source accounting.",
+      "companions": [
+        {
+          "path": "original-zonal.json",
+          "bytes": 477495,
+          "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+        },
+        {
+          "path": "raster-source-entry.json",
+          "bytes": 3356,
+          "sha256": "5de93eb06eff2312478c878a0aea44ce59cab623ea302e5c18bba1f36ef4b10e"
+        },
+        {
+          "path": "class-area.csv",
+          "bytes": 741,
+          "sha256": "31d8361afdef967f7ff85d52e667e296e94067794e82301dedea85b74d6e354a"
+        },
+        {
+          "path": "watersheds.csv",
+          "bytes": 30593,
+          "sha256": "a47e638b4ef7ff83bfbceaf79ed9a4f26aa82b655bca5c018f6e7298916e563f"
+        },
+        {
+          "path": "watershed-classes.csv",
+          "bytes": 439846,
+          "sha256": "b0396a870164624e73c3b9152b5db185e4bc41959def77e76e27f949b8d56ffb"
+        },
+        {
+          "path": "landcover-report.html",
+          "bytes": 59466,
+          "sha256": "aa9277954f88ddafb330e8a24761de72550281d3e7829bca9138766434b6cd24"
+        }
+      ],
+      "metadata": {
+        "related_source_ids": [
+          "usgs-annual-nlcd-2023-native-region-d7db3a30d6595aa8"
+        ],
+        "interpretation_kind": "original_native_landcover_zonal",
+        "source_relationships": [
+          {
+            "id": "usgs-annual-nlcd-2023-native-region-d7db3a30d6595aa8",
+            "relationship": "original_categorical_raster"
+          }
+        ],
+        "watershed_count": 217,
+        "product_year": 2023
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /** Complete GIS export/receiving panel using the original Operator API and task queue. */
 export function attachGISProjects({getState, api, refreshState, showTask, toast}) {
   let root=null, catalogue=null, controller=null, signature='', activeWorkspace=null;
-  let pending=null, lastSelection=null, intakeVersion=0, intakeLoading=false;
+  let pending=null, lastSelection=null, intakeVersion=0, intakeLoading=false, vectorReviewVersion=0;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const pretty=n=>Number(n||0).toLocaleString();
   const options=(rows,label)=>'<option value="">None selected</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(label(x))+'</option>').join('');
@@ -20,8 +20,8 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     const all=catalogue?.sources.find(x=>x.id===collection)?.entries||[];
     const rows=all.filter(x=>!x.gis_required_context),context=all.filter(x=>x.gis_required_context);
     const keys=saved?.sources?new Set(saved.sources.map(x=>x.source_id)):null;
-    list.innerHTML=rows.length?rows.map(x=>'<label class="gis-choice"><input type="checkbox" name="source" value="'+esc(x.id)+'" '+((keys?keys.has(x.id):['vector','raster'].includes(x.kind))?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(x.units||'original source metadata')+'</small></span></label>').join(''):'<p>Select an original source edition or use completed model results below.</p>';
-    if(context.length)list.insertAdjacentHTML('beforeend','<details class="gis-context"><summary>'+pretty(context.length)+' original and attribution documents carried automatically</summary><p>These files accompany the associated selected working layers, including their original source companions and edition history.</p><ul>'+context.map(x=>'<li>'+esc(x.title)+'</li>').join('')+'</ul></details>');
+    list.innerHTML=rows.length?rows.map(x=>'<label class="gis-choice"><input type="checkbox" name="source" value="'+esc(x.id)+'" '+((keys?keys.has(x.id):['vector','raster'].includes(x.kind))?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(describe(x.units)||'original source metadata')+'</small></span></label>').join(''):'<p>Select an original source edition or use completed model results below.</p>';
+    if(context.length)list.insertAdjacentHTML('beforeend','<details class="gis-context"><summary>'+pretty(context.length)+' source context files carried automatically</summary><p>These files accompany the associated selected sources, including their original companions, dated context and edition history.</p><ul>'+context.map(x=>'<li>'+esc(x.title)+'</li>').join('')+'</ul></details>');
   }
   function fillForm(saved){
     if(!root||!catalogue)return;
@@ -36,12 +36,126 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     selected('notes').value=(saved?.notes||[]).join('\n');
   }
   function links(record){return '<div class="gis-links"><a target="_blank" rel="noopener" href="'+esc(record.viewer_url)+'">Open layer view</a><a href="'+esc(record.archive_download.url)+'?download=1">Download complete editable ZIP</a></div>';}
+  const describe=value=>value==null?'':typeof value==='object'?JSON.stringify(value):String(value);
+  const adoptionKey=(workspace,receipt)=>'upstate-gis-adoption:'+workspace+':'+receipt;
+  function adoptionDraft(receipt){try{return JSON.parse(localStorage.getItem(adoptionKey(activeWorkspace,receipt))||'null');}catch{return null;}}
+  function adoptionPayload(form){
+    const checked=name=>[...form.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
+    const payload={receipt_id:form.dataset.gisAdopt,
+      title:form.querySelector('[name="adoption_title"]').value.trim(),
+      reason:form.querySelector('[name="adoption_reason"]').value.trim(),
+      layer_ids:checked('adoption_layer'),attachment_ids:checked('adoption_attachment')};
+    if(!payload.layer_ids.length&&!payload.attachment_ids.length)
+      throw new Error('Select a received working layer, original table or document.');
+    if(!payload.title||!payload.reason)throw new Error('Name the source edition and explain its adoption.');
+    return payload;
+  }
+  function retainAdoption(form){
+    const draft={title:form.querySelector('[name="adoption_title"]').value,
+      reason:form.querySelector('[name="adoption_reason"]').value};
+    for(const name of ['adoption_layer','adoption_attachment'])
+      draft[name]=[...form.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
+    try{localStorage.setItem(adoptionKey(activeWorkspace,form.dataset.gisAdopt),JSON.stringify(draft));}catch{}
+  }
+  function syncAdoption(form){
+    const layers=form.querySelectorAll('[name="adoption_layer"]:checked').length>0;
+    for(const input of form.querySelectorAll('[name="adoption_attachment"]')){
+      if(layers)input.checked=true;
+      input.disabled=layers;
+    }
+    const help=form.querySelector('[data-gis-adoption-help]');
+    if(help)help.textContent=layers?'Working layers keep all original tables, documents and companions. Clear the working layers to choose only original tables or documents.':'Only the selected original tables or documents and this received edition’s provenance will be adopted. Complete declared companions remain attached.';
+  }
   function adoptionForm(record){
     if(record.kind!=='received')return '';
-    return '<details class="gis-adoption"><summary>Use edited working layers as new study sources</summary><p>This adds a new original source edition. Existing sources, grids, profiles and model runs stay unchanged.</p><form data-gis-adopt="'+esc(record.id)+'"><label>New source edition title<input name="adoption_title" value="'+esc('Received GIS sources · '+record.title)+'" required maxlength="240"></label><fieldset><legend>Working layers to adopt</legend>'+record.layer_choices.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_layer" value="'+esc(x.id)+'" checked><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(x.units)+'</small></span></label>').join('')+'</fieldset><label>Reason for this source edition<textarea name="adoption_reason" required rows="2"></textarea></label><button type="submit">Adopt selected study sources</button></form></details>';
+    const saved=adoptionDraft(record.id), layers=record.layer_choices||[], attachments=record.attachment_choices||[];
+    const chosen=(name,id)=>saved&&Array.isArray(saved[name])?saved[name].includes(id):true;
+    return '<details class="gis-adoption"><summary>Use received layers, tables or documents as study sources</summary><p>Choose a complete working-layer edition or select original tables and documents on their own.</p><form data-gis-adopt="'+esc(record.id)+'"><label>New source edition title<input name="adoption_title" value="'+esc(saved?.title??('Received GIS sources · '+record.title))+'" required maxlength="240"></label><fieldset><legend>Working layers</legend>'+layers.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_layer" value="'+esc(x.id)+'" '+(chosen('adoption_layer',x.id)?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(describe(x.units))+'</small></span></label>').join('')+'</fieldset><fieldset><legend>Original tables and documents</legend>'+attachments.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_attachment" value="'+esc(x.id)+'" '+(chosen('adoption_attachment',x.id)?'checked':'')+'><span>'+esc(x.title)+'<small>'+[x.kind,x.vintage,x.geography_basis,describe(x.units)].filter(x=>x!=null&&x!=='').map(esc).join(' · ')+' · '+pretty(x.companions)+' companions</small></span></label>').join('')+(attachments.length?'':'<p>No original attachments in this received edition.</p>')+'</fieldset><p data-gis-adoption-help class="gis-help"></p><label>Reason for this source edition<textarea name="adoption_reason" required rows="2">'+esc(saved?.reason??'')+'</textarea></label><button type="submit">Adopt selected study sources</button></form></details>';
   }
-  function records(rows){return rows.length?rows.map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.layers)+' layers · '+pretty(x.bytes)+' bytes · '+esc(x.kind==='received'?'Received independent edition':'Retained scientific-workspace export')+'</p><p class="gis-id">Edition '+esc(x.result.edition_id)+'</p>'+links(x)+adoptionForm(x)+'</article>').join(''):'<p>No GIS projects in this section yet.</p>';}
-  function adopted(){return (catalogue.adoptions||[]).map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.sources.length)+' working layers adopted through the original source importer.</p><p class="gis-id">Source edition '+esc(x.source_collection_id)+'</p><button type="button" data-gis-use-source="'+esc(x.source_collection_id)+'">Select this source edition for export</button></article>').join('')||'<p>Received working layers can be adopted below each independent edition.</p>';}
+  function vectorReviewControls(record){
+    const vectors=(record.layer_choices||[]).filter(row=>row.kind==='vector');
+    if(record.kind!=='received'||!vectors.length)return '';
+    return '<section class="gis-vector-review"><h4>Working vector changes</h4>'+
+      '<p>Compare the received features with their retained originals before choosing an adoption. Exact original identities pair the features; changed or missing identities remain explicit.</p>'+
+      '<button type="button" data-gis-vector-review="'+esc(record.id)+'">Review all '+pretty(vectors.length)+' vector layers</button>'+
+      '<div data-gis-vector-reviews="'+esc(record.id)+'"><p>Loading saved reviews…</p></div></section>';
+  }
+  function reviewSummary(review){
+    const sums={};for(const layer of review.layers||[])for(const [key,value] of Object.entries(layer.counts||{}))sums[key]=(sums[key]||0)+value;
+    return '<article><h5>'+esc(review.title)+'</h5><p>'+pretty(sums.matched)+' paired features · '+
+      pretty(sums.attribute_changed)+' with attribute changes · '+pretty(sums.geometry_changed)+' with geometry changes · '+
+      pretty(sums.added_identities)+' added identities · '+pretty(sums.removed_identities)+' removed identities</p>'+
+      '<p>'+pretty((sums.ambiguous_ids||0)+(sums.missing_working_identity||0)+(sums.unmatched_original||0))+
+      ' unresolved identity cases · '+pretty(sums.geometry_unassessed)+' geometry comparisons requiring review · '+
+      pretty((sums.invalid_original||0)+(sums.invalid_working||0))+' invalid geometries · '+pretty(sums.schema_changes)+' field schema changes</p>'+
+      '<button type="button" data-gis-open-vector-review="'+esc(review.id)+'">Open review and complete files</button>'+
+      '<div data-gis-vector-review-files="'+esc(review.id)+'"></div></article>';
+  }
+  async function loadVectorReviews(){
+    const workspace=activeWorkspace,node=root,version=++vectorReviewVersion;
+    if(!node||!workspace)return;
+    try{
+      const data=await api('/api/gis-vector-reviews/catalog?'+new URLSearchParams({workspace}));
+      if(version!==vectorReviewVersion||root!==node||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
+      if(data.workspace_key!==workspace)throw new Error('Vector review catalogue belongs to another workspace.');
+      for(const target of node.querySelectorAll('[data-gis-vector-reviews]')){
+        const rows=(data.reviews||[]).filter(row=>row.selection.receipt_id===target.dataset.gisVectorReviews);
+        target.innerHTML=rows.length?rows.map(reviewSummary).join(''):'<p>No saved vector review for this received edition yet.</p>';
+      }
+      for(const button of node.querySelectorAll('[data-gis-open-vector-review]'))
+        button.addEventListener('click',()=>openVectorReview(button.dataset.gisOpenVectorReview));
+    }catch(e){
+      if(version!==vectorReviewVersion||root!==node||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
+      for(const target of node.querySelectorAll('[data-gis-vector-reviews]'))target.textContent='Saved vector reviews could not be read: '+e.message;
+    }
+  }
+  async function submitVectorReview(receipt){
+    const workspace=activeWorkspace;
+    const record=(catalogue?.received||[]).find(row=>row.id===receipt);
+    const layer_ids=(record?.layer_choices||[]).filter(row=>row.kind==='vector').map(row=>row.id);
+    if(!layer_ids.length)return error('Choose a retained received vector layer.');
+    try{
+      error('');await submit('gis.vector.review',{receipt_id:receipt,layer_ids});
+      if(activeWorkspace===workspace&&getState()?.workspace_key===workspace)await loadVectorReviews();
+    }catch(e){if(activeWorkspace===workspace&&getState()?.workspace_key===workspace)error(e.message);}
+  }
+  async function openVectorReview(id){
+    const workspace=activeWorkspace,node=root;
+    const target=[...node.querySelectorAll('[data-gis-vector-review-files]')].find(row=>row.dataset.gisVectorReviewFiles===id);
+    if(!target)return;
+    target.textContent='Reading the retained review and original edition…';
+    try{
+      const data=await api('/api/gis-vector-reviews/inspect?'+new URLSearchParams({workspace,id}));
+      if(root!==node||activeWorkspace!==workspace||getState()?.workspace_key!==workspace||!node.contains(target))return;
+      if(data.workspace_key!==workspace||data.id!==id)throw new Error('The vector review belongs to a different original selection.');
+      const files=data._downloads||[];
+      const labels={'vector-review.zip':'Download complete offline review ZIP','review.html':'Open complete feature review',
+        'review.json':'Download full JSON','feature-changes.csv':'Download feature changes CSV'};
+      target.innerHTML='<p>Geometry comparisons use the retained original CRS; identity and attribute values remain exact. The ZIP opens offline with all three report files.</p>'+
+        files.map(file=>'<p><a target="_blank" rel="noopener" href="'+esc(file.url)+'?download='+(file.filename==='review.html'?'0':'1')+'">'+
+          esc(labels[file.filename]||file.label||file.filename)+'</a> · '+pretty(file.bytes)+' bytes</p>').join('')+
+        (data.layers||[]).map(layer=>'<details><summary>'+esc(layer.title)+' · '+pretty(layer.counts.matched)+' paired features</summary>'+
+          '<p>Original CRS '+esc(layer.crs.original)+' · Working CRS '+esc(layer.crs.working)+'</p><pre>'+
+          esc(JSON.stringify(layer.counts,null,2))+'</pre></details>').join('');
+    }catch(e){
+      if(root===node&&activeWorkspace===workspace&&getState()?.workspace_key===workspace&&node.contains(target))target.textContent=e.message;
+    }
+  }
+  function records(rows){return rows.length?rows.map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.layers)+' layers · '+pretty(x.bytes)+' bytes · '+esc(x.kind==='received'?'Received independent edition':'Retained scientific-workspace export')+'</p><p class="gis-id">Edition '+esc(x.result.edition_id)+'</p>'+links(x)+vectorReviewControls(x)+adoptionForm(x)+'</article>').join(''):'<p>No GIS projects in this section yet.</p>';}
+  function adopted(){return (catalogue.adoptions||[]).map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.sources?.length)+' working layers · '+(Array.isArray(x.context_sources)?pretty(x.context_sources.length)+' original tables and documents adopted.':'original source context retained.')+'</p><p class="gis-id">Source edition '+esc(x.source_collection_id)+'</p><button type="button" data-gis-open-source="'+esc(x.source_collection_id)+'">Open original source files</button>'+((x.sources||[]).length?'<button type="button" data-gis-use-source="'+esc(x.source_collection_id)+'">Select this source edition for GIS export</button>':'<p class="gis-help">These original sources are available in Sources and Investigations. Tables keep their original geography and dates.</p>')+'<div data-gis-source-files="'+esc(x.source_collection_id)+'"></div></article>').join('')||'<p>Adopt received layers or original tables and documents below each independent edition.</p>';}
+  async function openSource(collection){
+    const workspace=activeWorkspace,target=root?.querySelector('[data-gis-source-files="'+CSS.escape(collection)+'"]');
+    if(!target)return;
+    target.textContent='Opening original source files…';
+    try{
+      const record=await api('/api/item?'+new URLSearchParams({workspace,kind:'sources',id:collection}));
+      if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace||!target.isConnected)return;
+      if(record.id!==collection)throw new Error('The returned source edition has another identity.');
+      const downloads=record._downloads||[];
+      const file=body=>downloads.find(row=>row.sha256===body.sha256&&row.bytes===body.bytes&&row.filename===body.filename);
+      target.innerHTML=(record.entries||[]).map(row=>'<section><h4>'+esc(row.title)+'</h4><p>'+[row.kind,row.vintage,row.geography_basis,describe(row.units)].filter(x=>x!=null&&x!=='').map(esc).join(' · ')+'</p><ul>'+[row.body,...(row.companions||[])].map(body=>{const link=file(body);return '<li>'+(link?'<a href="'+esc(link.url)+'?download=1">'+esc(body.filename)+'</a>':esc(body.filename))+' · '+pretty(body.bytes)+' bytes</li>';}).join('')+'</ul></section>').join('');
+    }catch(e){if(target.isConnected&&activeWorkspace===workspace)target.textContent=e.message;}
+  }
 
   function render(){
     if(!root||!catalogue)return;
@@ -58,7 +172,14 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     fillForm(saved);
     root.querySelector('[data-gis-export]').addEventListener('submit',submitExport);
     root.querySelector('[data-gis-receive]').addEventListener('submit',submitReceive);
-    for(const form of root.querySelectorAll('[data-gis-adopt]'))form.addEventListener('submit',submitAdoption);
+    for(const form of root.querySelectorAll('[data-gis-adopt]')){
+      syncAdoption(form);
+      form.addEventListener('submit',submitAdoption);
+      form.addEventListener('input',()=>{syncAdoption(form);retainAdoption(form);});
+      form.addEventListener('change',()=>{syncAdoption(form);retainAdoption(form);});
+    }
+    for(const button of root.querySelectorAll('[data-gis-open-source]'))
+      button.addEventListener('click',()=>openSource(button.dataset.gisOpenSource));
     for(const button of root.querySelectorAll('[data-gis-use-source]'))button.addEventListener('click',()=>{
       const source=catalogue.sources.find(x=>x.id===button.dataset.gisUseSource);
       if(!source)return error('Refresh the original source edition before selecting it.');
@@ -73,6 +194,10 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       try{const value=deliverySelection(delivery);saveSelection(value);render();}catch(failure){error(failure.message);}
     });
     root.querySelector('[data-gis-refresh]').addEventListener('click',()=>load(true));
+    for(const button of root.querySelectorAll('[data-gis-vector-review]'))
+      button.addEventListener('click',()=>submitVectorReview(button.dataset.gisVectorReview));
+    if((catalogue.received||[]).some(row=>(row.layer_choices||[]).some(layer=>layer.kind==='vector')))
+      loadVectorReviews();
   }
   function formSelection(validate=true){
     const selectedIDs=name=>[...root.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
@@ -89,21 +214,41 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     if(validate&&!sourceIDs.length&&!value.delivery_id&&!value.grid_id&&!value.baseline_run_id&&!value.scenario_run_ids.length&&!value.comparison_ids.length)throw new Error('Select a completed delivery, original source files, a completed grid, run or comparison.');
     return value;
   }
+  const canonical=value=>JSON.stringify(value,(key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(name=>[name,item[name]])):item);
+  const operationKey=workspace=>'upstate-gis-operation:'+workspace;
+  function saveOperation(workspace,value=pending){try{localStorage.setItem(operationKey(workspace)+':'+encodeURIComponent(value.key),JSON.stringify(value));}catch{}}
   function operation(action,payload){
-    const key=JSON.stringify({workspace:activeWorkspace,action,payload});
+    const key=canonical({workspace:activeWorkspace,action,payload});
     if(pending?.key===key)return pending;
+    try{const retained=JSON.parse(localStorage.getItem(operationKey(activeWorkspace)+':'+encodeURIComponent(key))||'null');
+      if(retained?.key===key&&typeof retained.operation_id==='string'&&/^gis-[0-9a-f]{32}$/.test(retained.operation_id)){
+        pending=retained;return pending;
+      }
+    }catch{}
     const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
-    pending={key,operation_id:'gis-'+[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')};return pending;
+    pending={key,operation_id:'gis-'+[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')};
+    saveOperation(activeWorkspace);return pending;
   }
   async function submit(action,payload){
-    const workspace=activeWorkspace,op=operation(action,payload);
+    const workspace=activeWorkspace,body=JSON.parse(JSON.stringify(payload)),op=operation(action,body);
     let task;
-    try{task=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:op.operation_id}});}
+    try{task=await api('/api/actions',{method:'POST',body:{workspace,action,payload:body,operation_id:op.operation_id}});}
     catch(original){
-      // A lost response can already have committed the original queued operation.
-      try{const state=await api('/api/state?'+new URLSearchParams({workspace}));task=state.tasks.find(x=>x.operation_id===op.operation_id);}catch{}
+      // Reconcile the same retained request after a lost response, including reload.
+      try{const state=await api('/api/state?'+new URLSearchParams({workspace}));
+        task=state.tasks.find(x=>x.operation_id===(op.accepted_operation_id||op.operation_id));
+      }catch{}
       if(!task)throw original;
     }
+    if(task?.workspace!==workspace||task.action!==action||canonical(task.payload)!==canonical(body))
+      throw new Error('The returned GIS task belongs to a different original selection.');
+    const accepted=op.accepted_operation_id||op.operation_id;
+    if(task.operation_id!==accepted){
+      if(op.accepted_operation_id||!['queued','running'].includes(task.state))
+        throw new Error('The returned GIS task changed its accepted operation identity.');
+      op.accepted_operation_id=task.operation_id;
+    }
+    saveOperation(workspace,op);
     if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
     toast('GIS operation queued in the original task list.');await showTask(task.id);await refreshState({force:true});
   }
@@ -123,10 +268,8 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
   async function submitAdoption(event){
     event.preventDefault();event.stopPropagation();error('');const form=event.currentTarget,button=event.submitter;button.disabled=true;
     try{
-      const layer_ids=[...form.querySelectorAll('[name="adoption_layer"]:checked')].map(x=>x.value);
-      if(!layer_ids.length)throw new Error('Choose at least one received working layer.');
-      const payload={receipt_id:form.dataset.gisAdopt,title:form.querySelector('[name="adoption_title"]').value.trim(),reason:form.querySelector('[name="adoption_reason"]').value.trim(),layer_ids};
-      if(!payload.title||!payload.reason)throw new Error('Name the source edition and explain its adoption.');
+      syncAdoption(form);retainAdoption(form);
+      const payload=adoptionPayload(form);
       await submit('gis.project.adopt-sources',payload);
     }catch(e){error(e.message);}finally{button.disabled=false;}
   }

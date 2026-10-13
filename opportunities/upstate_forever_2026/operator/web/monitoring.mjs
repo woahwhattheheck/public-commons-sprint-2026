@@ -77,9 +77,13 @@ export function attachMonitoring(host) {
     let node=nodes.get(key);
     if(!node){node=document.createElement('eco-monitoring');node.transport=(action,payload)=>transport(key,action,payload);nodes.set(key,node);}
     if(node.busy)throw Error('Finish the current monitoring operation before opening another network.');
+    applyNetwork(node,network);
+    return {network_id:id,workspace_key:key};
+  }
+  function applyNetwork(node,network) {
     const scoped=Object.values(network.nodes||{}).filter(row=>typeof row.source_properties?.rwmon_in_scope==='boolean');
     let scopedConfiguration=null;
-    if(node.network?.id!==id && scoped.length){
+    if(node.network?.id!==network.id && scoped.length){
       scopedConfiguration={...node.json('advanced')};
       for(const field of ['required_ids','existing_station_ids','minimum_by_stratum','site_costs','incompatible_pairs'])delete scopedConfiguration[field];
       scopedConfiguration.excluded_ids=scoped.filter(row=>!row.source_properties.rwmon_in_scope).map(row=>row.id).sort();
@@ -88,12 +92,78 @@ export function attachMonitoring(host) {
     node.network=network;node.plan=null;node.campaign=null;
     if(scopedConfiguration)node.$('advanced').value=JSON.stringify(scopedConfiguration,null,2);
     const select=node.$('networks');
-    if(![...select.options].some(option=>option.value===id))select.add(new Option(network.title||id,id));
-    select.value=id;node.$('plans').value='';node.$('campaigns').value='';
+    if(![...select.options].some(option=>option.value===network.id))select.add(new Option(network.title||network.id,network.id));
+    select.value=network.id;node.$('plans').value='';node.$('campaigns').value='';
     node.$('frontier-results').replaceChildren();node.$('downloads').replaceChildren();
     node.render();
     if(scoped.length){node.$('status').textContent='Opened the original network. Candidate search starts inside the selected water scope; the complete HUC routing remains available. Review Advanced constraints, costs and calendar before solving.';node.$('status').dataset.error='false';}
-    return {network_id:id,workspace_key:key};
+  }
+  function selectRecord(node,name,record,label) {
+    const select=node.$(name);
+    if (!record) {select.value='';return;}
+    if (![...select.options].some(option=>option.value===record.id))
+      select.add(new Option(label||record.title||record.id,record.id));
+    select.value=record.id;
+  }
+  async function openStudy(selection) {
+    const key=workspace(),kind=selection?.kind,id=selection?.id;
+    const kinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
+    if (!kinds.has(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved Monitoring network, design, campaign or context.');
+    if (selection.workspace_key!==key) throw Error('Open this Monitoring study in its original workspace.');
+    const node=active;
+    if (!node?.isConnected||nodes.get(key)!==node)
+      throw Error('Open Monitoring in this workspace before selecting its saved study.');
+    if (node.busy) throw Error('Finish the current Monitoring operation before opening this study.');
+    const ticket=++networkOpening,version=generation;
+    const current=()=>ticket===networkOpening&&version===generation&&active===node&&node.isConnected&&workspace()===key;
+    let result,failure;
+    await node.run(async()=>{
+      try {
+        let network,plan=null,campaign=null,context=null;
+        if (kind==='monitoring_networks') {
+          network=await transport(key,'get',{kind:'networks',record_id:id});
+          if (network.id!==id) throw Error('The saved Monitoring network identity changed.');
+        } else if (kind==='monitoring_plans') {
+          plan=await transport(key,'get',{kind:'plans',record_id:id});
+          if (plan.id!==id) throw Error('The saved Monitoring design identity changed.');
+          network=await transport(key,'get',{kind:'networks',record_id:plan.network_id});
+          if (network.id!==plan.network_id) throw Error('The saved design points to another network.');
+        } else if (kind==='monitoring_heads') {
+          campaign=await transport(key,'campaign.get',{campaign_id:id});
+          if (campaign.revision?.campaign_id!==id) throw Error('The saved Monitoring campaign identity changed.');
+          plan=campaign.plan;
+          network=await transport(key,'get',{kind:'networks',record_id:plan.network_id});
+          if (network.id!==plan.network_id||campaign.revision.plan_id!==plan.id)
+            throw Error('The saved campaign points to another design or network.');
+        } else {
+          context=await transport(key,'context.get',{context_id:id});
+          if (context.id!==id) throw Error('The saved observational context identity changed.');
+          network=await transport(key,'get',{kind:'networks',record_id:context.network_id});
+          if (network.id!==context.network_id) throw Error('The saved context points to another network.');
+          // Open the immutable context itself; its historical calendar stays in
+          // the context, without substituting the campaign's newer revision.
+          await node.refreshSources();
+        }
+        if (!current()) throw Error('The workspace or Monitoring selection changed while opening this study.');
+        applyNetwork(node,network);
+        if (plan) {
+          node.plan=plan;node.campaign=campaign;
+          node.loadConfig(plan.configuration);
+          node.$('title').value=campaign?.revision?.title||plan.title;
+          selectRecord(node,'plans',plan);
+          selectRecord(node,'campaigns',campaign?{id:campaign.revision.campaign_id,title:campaign.revision.title}:null,
+            campaign?campaign.revision.title+' · revision '+campaign.revision.revision:null);
+          node.render();
+        }
+        if (context) node.openSavedObservedContextRecord(context);
+        result={workspace_key:key,kind,id,network_id:network.id,
+          plan_id:plan?.id||null,campaign_id:campaign?.revision?.campaign_id||null,
+          context_id:context?.id||null};
+      } catch (error) {failure=error;throw error;}
+    },'Opening the original saved Monitoring study…');
+    if (failure) throw failure;
+    return result;
   }
   async function mount(root) {
     const key=workspace(), ticket=++generation;
@@ -140,5 +210,5 @@ export function attachMonitoring(host) {
     } finally { updating = false; }
   }
   function detach(){generation++;networkOpening++;active?.monitoringFrontiers?.detach();active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
-  return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
+  return {mount,update,detach,openNetwork,openStudy,render:()=>'',dispatch:()=>false};
 }

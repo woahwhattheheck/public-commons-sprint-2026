@@ -49,6 +49,12 @@
           "bytes": 45222,
           "sha256": "942afd8de94ac374b0c3a0e600f4f71c17bfdf1ed069b966c40c92cdf53b76f8",
           "git_blob": "e0a7225cb39a36dccf6482a0d34d713ae136f761"
+        },
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 45889,
+          "sha256": "ee0c302c570ee80af1d901755bdb03a00b103158766643b35f3380ca90d1226f",
+          "git_blob": "e319a93527872ac7f6ab55636ca6451d39b26f2b"
         }
       ]
     },
@@ -93,6 +99,12 @@
           "bytes": 16758,
           "sha256": "6f6e983a97ac086f313b81c21c282bd8c35c735e4d54d8034861415b471f0247",
           "git_blob": "63667552b98733b9496fbcb511a11d7dbfcfa40f"
+        },
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 16888,
+          "sha256": "bb6287b2350ea6e70276015feed40e7ca1500e306226ce44e0050012c3026387",
+          "git_blob": "1b6308a2ab549170820a6dfa09bfbd034ffc2782"
         }
       ]
     },
@@ -295,6 +307,70 @@
           "bytes": 7529,
           "sha256": "ffa9f796afd69637d38710200455a77e8f06f3e2858178e541a4754451303238",
           "git_blob": "a26ba1cb1a2a357ca26c1f648b0133811c2cc074"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-agent",
+      "label": "Complete paid document MCP workflow on the original customer",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/agent.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 7700,
+          "sha256": "5664c374eb0e7bea8d6c81ae8d6a5afc1700393a4f7dbee83b9bca254298b5ff",
+          "git_blob": "4ad69b6c701e84aee46dd719026300b5996e20fc"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-agent-client",
+      "label": "Typed original-customer client and complete streamed PDF/source receiving",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/agent-client.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 11290,
+          "sha256": "d7289f2ffc388a26edff66a1ba89e28083825a69e9ab5272a524840aea3e949b",
+          "git_blob": "93536920e2121401ed2c18f7ebb4c5a6be5f6f11"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-agent-catalog",
+      "label": "Fixed document source, quote, approved execution and receiving tool contract",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/agent-schema.mjs",
+      "required": false,
+      "editions": [
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 8931,
+          "sha256": "b8c711b9ffad6e688c7eacff11638c11b5dc7bf46d246b29edbd66c704946720",
+          "git_blob": "f16dc7fb1b56359c9d020564721530ff61834b7f"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-agent-guide",
+      "label": "Complete customer agent configuration, fulfillment and handover",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/document-merchant/AGENT.md",
+      "required": false,
+      "editions": [
+        {
+          "commit": "d0d677d4a9f9819c79758385f896c9e388eab99c",
+          "bytes": 16726,
+          "sha256": "e2819c958f16651059878148cfc85c8c6ff1a3cae143550ba70354e46254ed0b",
+          "git_blob": "00055d1a7ae41c2e255e86a197ce0c6e10394f52"
         }
       ]
     }
