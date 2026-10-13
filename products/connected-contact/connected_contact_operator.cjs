@@ -23,8 +23,8 @@ function savePrivate(file,value){
 async function main(argv=process.argv.slice(2)){
  const action=argv.shift(),args={};
  while(argv.length){const key=argv.shift();if(!/^--[a-z-]+$/.test(key)||!argv.length||args[key]!==undefined)throw Error('Use complete unique named arguments.');args[key]=argv.shift();}
- if(!['initialize','verify','prepare','receive','inspect'].includes(action)||!args['--config'])
-  throw Error('Usage: node connected_contact_operator.cjs initialize|verify|prepare|receive|inspect --config PRIVATE.json [--operator EXISTING.cjs] [--selection PRIVATE.json] [--request PRIVATE.json] [--result PRIVATE.json] [--operation KEY] [--journal PRIVATE_DIRECTORY]');
+ if(!['initialize','verify','prepare','receive','inspect','continue','select-continuation'].includes(action)||!args['--config'])
+  throw Error('Usage: node connected_contact_operator.cjs initialize|verify|prepare|receive|inspect|select-continuation|continue --config PRIVATE.json [--operator EXISTING.cjs] [--selection PRIVATE.json] [--request PRIVATE.json] [--result PRIVATE.json] [--operation KEY] [--journal PRIVATE_DIRECTORY]');
  const configuration=privateJSON(args['--config']);let tools;
  if(args['--operator']){
   const selected=path.resolve(args['--operator']),st=fs.lstatSync(selected);
@@ -42,7 +42,7 @@ async function main(argv=process.argv.slice(2)){
   const bytes=JSON.stringify(event),id=crypto.createHash('sha256').update(bytes,'utf8').digest('hex');
   savePrivate(path.join(dir,id+'.json'),event);
  };
- if(['prepare','receive'].includes(action)&&!args['--journal'])throw Error('Prepare and receive require the same private --journal directory.');
+ if(['prepare','receive','continue'].includes(action)&&!args['--journal'])throw Error('Prepare and receive require the same private --journal directory.');
  let result;
  if(action==='initialize')result=await product.initialize();
  if(action==='verify')result=await product.storage.verify();
@@ -62,6 +62,20 @@ async function main(argv=process.argv.slice(2)){
   result=await product.adoption.receivePreparedConnectedContactAdoption({storage:product.storage,prepared:privateJSON(args['--request']),record});
   savePrivate(args['--result'],result);
  }
+ if(action==='select-continuation'){
+  if(!args['--operation']||!args['--operation-id']||!args['--owner']||!args['--organization']||!args['--selection']||!args['--method'])throw Error('Select the actual original operation, owner, method, organization review file and private output.');
+  const {prepareOriginalContinuation}=require('./connected_contact_continuation.cjs');
+  result=await prepareOriginalContinuation({product,configuration,operationKey:args['--operation'],operationId:args['--operation-id'],
+   owner:args['--owner'],organization:privateJSON(args['--organization']),method:args['--method'],messageId:args['--message']});
+  savePrivate(args['--selection'],result);
+ }
+ if(action==='continue'){
+  if(!tools||!args['--selection']||!args['--result'])throw Error('Continue requires the exact private original selection, tools and result path.');
+  const {continueOriginalContact}=require('./connected_contact_continuation.cjs');
+  result=await continueOriginalContact({product,configuration,tools,selected:privateJSON(args['--selection']),record,
+   readResult:async()=>fs.existsSync(args['--result'])?privateJSON(args['--result']):null,
+   saveResult:async value=>savePrivate(args['--result'],value)});
+ }
  if(action==='inspect'){
   if(!args['--operation'])throw Error('Select the original operation key.');
   const r=await product.readOriginal(args['--operation']);
@@ -72,7 +86,8 @@ async function main(argv=process.argv.slice(2)){
    outcome:r.payload.journal.outcome?.status||null};
  }
  if(args['--result']&&action!=='receive')savePrivate(args['--result'],result);
- // Source intake and initialization never invoke a contact method or drain.
+ // Preparation remains read-only. Continue handles one explicitly selected
+ // original method; CLI completion does not mean the provider accepted mail.
  process.stdout.write(JSON.stringify({status:'COMPLETE',action,coordinator_id:product.storage.coordinatorId,
   ...(result?.operation_key?{operation_key:result.operation_key}:{}),
   ...(args['--request']&&action==='prepare'?{request_saved:true}:{}),
