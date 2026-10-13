@@ -1,0 +1,92 @@
+# Compose the current application in JavaScript
+
+The application now has one source composer for coordinators that can run JavaScript and read complete tool responses. It uses the existing carrier codec and emits the same complete source-map format that the original Python receiver installs. The Node command also writes the full source JSON, its Canvas carrier and the existing portable source ZIP.
+
+This workflow assembles the application before the native host opens it. It keeps the source files, component paths, original workspace methods and native task entrypoints together. Original scientific inputs remain in the existing receiving workspace.
+
+## Command line
+
+Run from the received application directory with Node:
+
+~~~sh
+node source_tools/application_join_cli.mjs complete-application.md \
+  --overlay current-component.json \
+  --join integration/d406-current-operator-parcel-join-20261013.json \
+  --edition upper-savannah-current \
+  --operation-id UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012 \
+  --source-map upper-savannah-current.json \
+  --carrier upper-savannah-current.md \
+  --zip upper-savannah-current.zip
+~~~
+
+The order of each --overlay and --join argument is the application source order. Select complete components whose declared predecessors match the source being composed. The original complete application is the first input. Keep an already newer shared file by applying the owner's exact join plan to that current file.
+
+The command writes to fresh output names. A repeated identical output is reused. Files are published from a temporary file with an atomic directory entry so a partial write cannot become the completed output.
+
+The ZIP contains the complete source root, including the original Python receiver and component installers. The Markdown carrier can be placed into the established source-delivery thread. It carries the complete original JSON bytes, divided into numbered gzip/base64 parts.
+
+## In a JavaScript coordinator
+
+The module takes strings, decoded source documents, or full original Slack/Drive file responses. It reads Slack text_content and Drive b64_string from structuredContent. Original byte counts and file SHA256 values are checked during decoding.
+
+~~~js
+import {readSourceLayer, composeApplication, layerFromDocument,
+        applySourceJoins} from "./source_tools/application_join.mjs";
+import {encodeApplicationCarrier} from "./source_tools/carrier_codec.mjs";
+
+const base = readSourceLayer(originalApplicationResponse, {
+  label: "original complete application",
+  expectedPayloadSha256: originalPayloadSha256
+});
+const component = readSourceLayer(originalComponentResponse, {
+  label: "current complete component"
+});
+const first = composeApplication([base, component], {
+  edition: "upper-savannah-current",
+  operationId: originalOperationId
+});
+const joined = applySourceJoins(layerFromDocument(first), originalJoinPlan);
+const final = composeApplication([base, component, joined], {
+  edition: "upper-savannah-current",
+  operationId: originalOperationId
+});
+const carrier = encodeApplicationCarrier(final);
+// Publish carrier.markdown through the existing source-delivery surface.
+~~~
+
+readSourceLayer handles a complete source map, a full base64 file bank, or all numbered application-source carrier parts. Original carriers that omit a compressed-byte hash still supply their complete payload SHA256 and size; the gzip framing, declared compressed size and complete decoded payload are checked. Drive's original UTF-8 BOM remains part of the original payload identity.
+
+A source bank contained in one JSON fence is identified by the exact JSON body inside that fence. Canvas nonbreaking-space indentation is accepted outside JSON strings while every source-string character is preserved.
+
+## Shared source joins
+
+An integration plan uses schema upstate.operator-integration/v1, allowed_paths and edits. Each edit names id, path, before and after. The composer applies the unique original span as literal text. A source span already at the exact postimage is retained. Ambiguous spans identify the current file that needs a fresh join.
+
+Literal replacement is essential for browser source: JavaScript replacement-string syntax would turn the all-elements selector $$ into $. applySourceJoins always uses a callback, so selectors and other dollar sequences retain their exact source text.
+
+The delivered current-operator plan joins these changes into the current maintained host:
+
+- The original run.start invocation keeps the retained native task and attempt.
+- The original run view can select completed NDR and SDR model stages and display their origins.
+- Navigation and model-profile controls select all matching elements.
+- Parcel inventory falls back to the imported source's declared id_field so county parcel identifiers survive conservation and map delivery.
+
+The complete source bank also supplies the current version 4 Watershed reports descriptor with its native preview route. Current programmes, customer reviews and experiment task actions stay in the maintained host.
+
+## Original sources and references
+
+Every embedded source file retains its full body, mode, SHA256 and contributing layer identities. Replacement layers can require the exact prior file SHA256. Unmentioned files remain present.
+
+The original cumulative application contains both external file identities and original document references. Byte-identified external files remain in external_sources. The original reference objects remain unchanged in external_references and participate in the composition identity. The current Python receiver contains the same compatibility correction, so later source composition preserves them.
+
+Scientific input files continue through the original source import and native model programme. Application composition neither copies a live workspace nor changes retained run, task, dataset or source-collection identifiers.
+
+## Receive and use the application
+
+Use the maintained source_tools/application_assembly.py receiver for the complete source map or carrier, and retain the current workspace and operator data paths. Apply the installed component registrations through the maintained installers before opening the operator. The parcel desk installer adds its descriptor to the same extension registry.
+
+The parcel operator guide and receiving command provide the actual capture → source import → native map → conservation → delivery workflow. Run that journey with the existing host's launch JSON and captured source directory, or with an already prepared parcel edition. The completed-model form continues the existing retained native run, including its source input comparison and annual reporting outputs.
+
+## Current source transports
+
+The reader accepts original multipart application gzip carriers, the separately headed experiment transport, and ordered plain Base64 source-bank parts. Original payload identities and every declared source member identity are checked before composition. When Canvas has replaced source indentation with nonbreaking spaces, restoration is accepted only if both the exact original byte count and SHA256 match the original declaration. Full byte-identified external inputs remain separate from original URL/reference records; both are retained in the resulting application identity.
