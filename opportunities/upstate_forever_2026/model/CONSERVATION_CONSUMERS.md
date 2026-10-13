@@ -287,3 +287,34 @@ A true practice prerequisite and equal total contribution bounds determine an ap
 Builder-produced criterion metadata records `spatial_criteria_basis` and per-field `metric_geometry`. New source derivations default to the whole original parcel; reporting-boundary criteria are an explicit retained adaptation. Parcel size, protected-land, land-cover, floodplain-development and native export bases can differ deliberately and are recorded separately. The source table binds the exact original parcel/reporting context, so a matching ID string alone is insufficient to substitute another geometry edition. The full metadata and original criterion source remain in the retained study and source assets.
 
 `conservation.export_packet` now binds an additional presentation edition to the same verified candidate and geometry files and saved selected IDs. It retains prior study/plan file descriptors and creates current HTML, CSV/GIS and criterion/source supplements in its own export directory. Consumers reopening an older saved plan keep the original source and decision identities while receiving the current readable presentation. The full working archive continues through the ordinary Workspace backup/restore path. See [CONSERVATION_REPORTS.md](CONSERVATION_REPORTS.md), [PARCEL_CRITERIA_GEOMETRY.md](../source_tools/PARCEL_CRITERIA_GEOMETRY.md) and [PARCEL_CRITERIA_INTERVALS.md](../source_tools/PARCEL_CRITERIA_INTERVALS.md).
+
+## Source-profile alternatives and native classification transfers
+
+Presentation version 3 adds four string fields to both candidate CSV and each
+parcel GeoPackage layer: `point_score_options`, `point_priority_options`,
+`point_source_profile` and `point_classification_states`. Each is JSON text for
+the saved typed value. Missing fields in an older candidate remain null; presentation
+does not infer a new option set or recompute its score.
+
+`criterion-contributions.csv` adds the retained `score_options`,
+`source_classifications` and `source_profile`. Each original top-level
+criterion contributes once. Classification records preserve nested criterion IDs,
+matched/possible classes, original references and all states encountered across a
+bounded acreage. Literal `ambiguous` classifications represent overlapping source
+bins; `unclassified` represents a gap or value outside the original bins.
+Their exact retained alternatives remain available rather than treating the entire
+minimum-to-maximum integer range as attainable.
+
+`criterion-values.csv` adds `raw_value`, `raw_unit`,
+`source_classifications`, `source_profile`, `native_pixel_area_m2`,
+`original_profile_pixel_area_m2` and `profile_transfer`. A typed class result
+uses `value_state=source_profile_classification`; its actual measured input stays
+separate. For a native source-band transfer, preserve the current raster area,
+native/profile units, adaptation reference and explicit sediment ton definition.
+A null original-profile pixel area means the source did not establish it.
+
+The HTML report renders total and criterion option lists, source class states,
+current-grid transfer details and original profile identity. The complete typed
+records remain in `criterion-scores.json` and `source-register.json`.
+Presentation identity versioning creates a new export edition from the original
+verified candidate/geometry inventory; it leaves earlier declared artifacts intact.

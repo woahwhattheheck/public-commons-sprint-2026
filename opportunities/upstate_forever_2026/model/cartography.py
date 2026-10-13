@@ -747,7 +747,7 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                         paragraph("Original numeric text: " + str(pixel["raw_value_text"]) +
                                   "; source SHA256 " + pixel["source_sha256"])
                     if result.get("difference"):
-                        paragraph("Alternative minus baseline: " + result["difference"]["value_text"] +
+                        paragraph("Right source minus left source: " + result["difference"]["value_text"] +
                                   " " + str(result["difference"]["units"]))
                     for group in result["features"]:
                         paragraph("Features: " + group["layer"]["title"] + "; IDs " +

@@ -1,0 +1,109 @@
+{
+  "ok": true,
+  "schema": "commons.source-artifact-transfer.v1",
+  "operation_id": "DBC61-UPSTATE-PRISM-ANNUAL-ORIGINAL-20261012",
+  "phase": "COMPLETE",
+  "source": {
+    "bytes": 62685097,
+    "content_type": "application/zip",
+    "etag": "\"3bc7fa9-62cf0afdb5466\"",
+    "final_url": "https://data.prism.oregonstate.edu/normals/us/800m/ppt/monthly/prism_ppt_us_30s_2020_avg_30y.zip",
+    "last_modified": "Thu, 30 Jan 2025 18:35:14 GMT",
+    "observed_at": "2026-10-12T19:44:45.365548Z",
+    "url": "https://data.prism.oregonstate.edu/normals/us/800m/ppt/monthly/prism_ppt_us_30s_2020_avg_30y.zip"
+  },
+  "body": {
+    "bytes": 62685097,
+    "complete": true,
+    "git_blob_sha1": "fbf9ef706bf2a09cd888d169fa8274317df415cc",
+    "sha256": "763f97b677711112ff7b1082c794476e2d9b7abe1f6e55dd4f1166e32523ccd3",
+    "streamed_at": "2026-10-12T19:45:10.420402Z"
+  },
+  "file_id": "F0C8H2FGAUV",
+  "destination": {
+    "channel_id": "C0BTTA66TK3",
+    "thread_ts": "1791724121.853269"
+  },
+  "receipt": {
+    "file_id": "F0C8H2FGAUV",
+    "bytes": 62685097,
+    "sha256": "763f97b677711112ff7b1082c794476e2d9b7abe1f6e55dd4f1166e32523ccd3",
+    "upload_receipt": {
+      "acknowledged_bytes": 62685097,
+      "bytes_uploaded": 62685097,
+      "http_status": 200,
+      "ok": true
+    },
+    "git_blob_sha1": "fbf9ef706bf2a09cd888d169fa8274317df415cc",
+    "source": {
+      "bytes": 62685097,
+      "content_type": "application/zip",
+      "etag": "\"3bc7fa9-62cf0afdb5466\"",
+      "final_url": "https://data.prism.oregonstate.edu/normals/us/800m/ppt/monthly/prism_ppt_us_30s_2020_avg_30y.zip",
+      "last_modified": "Thu, 30 Jan 2025 18:35:14 GMT",
+      "observed_at": "2026-10-12T19:44:45.365548Z",
+      "url": "https://data.prism.oregonstate.edu/normals/us/800m/ppt/monthly/prism_ppt_us_30s_2020_avg_30y.zip"
+    },
+    "channel_id": "C0BTTA66TK3",
+    "thread_ts": "1791724121.853269",
+    "filename": "PRISM-ppt-1991-2020-800m-original.zip",
+    "attribution": "PRISM Group, Oregon State University, https://prism.oregonstate.edu, accessed2026-10-12. Norm91m1991–2020 precipitation M4; original archive/FGDC metadata govern the received raster and source edition.",
+    "provider_completion": null,
+    "readback": {
+      "ok": true,
+      "file_id": "F0C8H2FGAUV",
+      "channel_id": "C0BTTA66TK3",
+      "thread_ts": "1791724121.853269",
+      "message_ts": "1791835510.185529",
+      "permalink": "https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C8H2FGAUV/prism-ppt-1991-2020-800m-original.zip",
+      "readback": "Actual completed file ID attached to the original thread; full byte digest and length remain the original maintained upload receipt."
+    },
+    "completed_at": "2026-10-12T20:43:18.225866Z"
+  },
+  "failure": null,
+  "unshared_attempts": [
+    {
+      "body": {
+        "bytes": 30007881,
+        "complete": false
+      },
+      "completion_attempted": false,
+      "ended_at": "2026-10-12T17:24:48.259495Z",
+      "failure": {
+        "error": "source_artifact_source_changed",
+        "uncertain": false
+      },
+      "file_id": "F0C9C71UHNU",
+      "phase": "SOURCE_CHANGED",
+      "upload_receipt": null
+    },
+    {
+      "body": null,
+      "completion_attempted": false,
+      "ended_at": "2026-10-12T17:35:37.080007Z",
+      "failure": null,
+      "file_id": null,
+      "phase": "ALLOCATING",
+      "upload_receipt": null
+    },
+    {
+      "body": null,
+      "completion_attempted": false,
+      "ended_at": "2026-10-12T19:30:43.841141Z",
+      "failure": null,
+      "file_id": null,
+      "phase": "ALLOCATING",
+      "upload_receipt": null
+    },
+    {
+      "body": null,
+      "completion_attempted": false,
+      "ended_at": "2026-10-12T19:44:37.197401Z",
+      "failure": null,
+      "file_id": null,
+      "phase": "ALLOCATING",
+      "upload_receipt": null
+    }
+  ],
+  "updated_at": "2026-10-12T20:43:18.225887Z"
+}

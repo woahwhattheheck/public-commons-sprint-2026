@@ -74,10 +74,48 @@
     {
       "fips": "45003",
       "name": "Aiken",
-      "preferred_provider": null,
-      "providers": [],
+      "preferred_provider": "aiken-scfc-coastal-stewardship-copy",
+      "providers": [
+        {
+          "id": "aiken-scfc-coastal-stewardship-copy",
+          "title": "Aiken County original parcels in SCFC Coastal stewardship source",
+          "url": "https://services9.arcgis.com/MvVEDRWecTZBD2xl/arcgis/rest/services/Parcels_Coastal/FeatureServer/0",
+          "where": "County = 'Aiken County'",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "T_Map_Number"
+          ],
+          "provenance": "state_forestry_stewardship_copy",
+          "authority_url": "https://www.scfc.gov/management/stewardship/forest-stewardship-application/",
+          "reviewed_at": "2026-10-13T03:29:40Z",
+          "native_oid_field": "OBJECTID",
+          "native_county_field": "County",
+          "native_county_value": "Aiken County",
+          "native_crs": {
+            "wkid": 103146,
+            "latestWkid": 6570
+          },
+          "observed_metadata_data_edit": 1776791197075,
+          "observed_metadata_data_edit_iso": "2026-04-21T17:06:37.075Z",
+          "observed_native_feature_count": 101173,
+          "observed_native_parcel_reference_nonnull_count": 101173,
+          "observed_native_oid_minimum": 1,
+          "observed_native_oid_maximum": 101173,
+          "source_date_fields": [],
+          "notes": [
+            "Official SCFC StoryMap8cbb85193ed94a3eb14c34260c894c46 Coastal button opens appf9340b121b1e4f1cb19e2b50e284a417. Its original Coastal web map027939b0a770497ba274604133c92982 names this exact Parcel Boundary layer.",
+            "The original service contains13 counties. Preserve the literal County = 'Aiken County' predicate through original count/OID queries, selected geometry requests, retained selection/capture metadata and reuse matching.",
+            "SCFC's stewardship parcel copy is a separate edition from the current county assessor. Its observed service data edit is not a per-parcel effective date.",
+            "Original native geometry is in103146/latest6570 with esriFeet units. Aiken-only returnedWGS84extent is[-82.014916373263887,33.196613421676339,-81.187129906507721,33.878601166090831].",
+            "OBJECTID is the source feature identity; keep T_Map_Number exactly as a string, including separators and leading zeros. A non-null reference is not an assertion of unique parcel references.",
+            "Retain all original Aiken polygons selected by the actual reporting masks. PriorityAcres,ForestAcres,PriorityPercent,ForestPercent and Acreage are separate SCFC source attributes and do not filter cadastral coverage.",
+            "Source originals, count/statistics/extent and one complete native polygon response are retained in the existing internal source operation. Actual acquisition retains full original HTTP response bodies and hashes."
+          ]
+        }
+      ],
       "notes": [
-        "A source is required only if the exact native reporting/county intersection selects this county. Current county parcel service discovery is active."
+        "A source is selected only if actual positive-area original reporting/county intersection includes Aiken.",
+        "The complete SCFC county selection is now available. A changed provider or selector requires a new source-bound plan; only an exactly matching original capture can be reused."
       ]
     },
     {

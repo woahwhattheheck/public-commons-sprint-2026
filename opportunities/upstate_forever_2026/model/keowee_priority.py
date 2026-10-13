@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 
 from .common import canonical, digest, identifier, read_json, verify_file
+from . import keowee_profile_adapter as profile_adapter
 
 METHOD_FILE = Path(__file__).resolve().parents[1] / "source" / "keowee-priority-methods-20261013.json"
 METHOD_SCHEMA = "upstate.keowee-priority-methods/v1"
@@ -75,7 +76,9 @@ def definition():
     value = json.loads(raw)
     if value.get("schema") != METHOD_SCHEMA:
         raise ValueError("The installed Lake Keowee method document has another schema")
-    return value, hashlib.sha256(raw).hexdigest()
+    value = profile_adapter.compose_definition(value)
+    value["native_definition_sha256"] = hashlib.sha256(raw).hexdigest()
+    return value, digest(value)
 
 
 def catalog():
@@ -92,6 +95,8 @@ def catalog():
             for row in document["categories"]
         ],
         "septic": document["septic"],
+        "source_profile": document["source_profile"],
+        "source_profile_observation_contract": document["source_profile_observation_contract"],
     }
 
 
@@ -154,6 +159,7 @@ def normalize_score(value, spec):
     if spec["purpose"] not in ("screening", selected["purpose"]):
         raise ValueError("Study purpose differs from the selected published practice")
     result.update(basis="published_method", scale="total", method_id=document["id"])
+    result["source_profile"] = document["source_profile"]
     result["interpretation"] = _text(
         result.get("interpretation", "Published category points with the retained current-study criterion bindings."),
         "Method interpretation",
@@ -205,11 +211,15 @@ def normalize_score(value, spec):
             binding["unit"] = EXPORT_UNITS[pollutant][0 if statistic == "parcel_mean_rate" else 1]
             native.add(pollutant)
             binding["band_method"] = binding.get("band_method", "explicit")
-            if binding["band_method"] not in ("explicit", "current_tertiles"):
-                raise ValueError("Choose explicit native cutoffs or a retained current_tertiles adaptation")
-            binding["transform"] = "band"
+            if binding["band_method"] not in ("explicit", "current_tertiles", "source_profile"):
+                raise ValueError("Choose explicit cutoffs, current_tertiles or a declared source_profile transfer")
+            binding["transform"] = "profile_band" if binding["band_method"] == "source_profile" else "band"
+            if "pixel_area_m2" in binding:
+                binding["pixel_area_m2"] = _number(binding["pixel_area_m2"], name + " pixel area")
+                if binding["pixel_area_m2"] <= 0:
+                    raise ValueError("Native pixel area must be positive")
         transform = binding.get("transform", "identity")
-        if transform not in ("identity", "positive", "ha_to_acres", "ge", "gt", "equals", "band"):
+        if transform not in ("identity", "positive", "ha_to_acres", "ge", "gt", "equals", "band", "profile_band"):
             raise ValueError("Unknown criterion transform for " + name)
         if transform in ("ge", "gt"):
             binding["threshold"] = _number(binding.get("threshold"), name + " threshold")
@@ -224,8 +234,10 @@ def normalize_score(value, spec):
             raise ValueError("The study-mean binding applies to the published stream-length criterion")
         if kind == "stream_order" and name != "headwater_stream":
             raise ValueError("Stream-order binding applies to the published headwater criterion")
-        if transform == "band" and required[name] != "level":
+        if transform in ("band", "profile_band") and required[name] != "level":
             raise ValueError("Band classification requires a priority-level metric")
+        if transform == "profile_band":
+            binding = profile_adapter.normalize_profile_binding(binding, name, kind)
         if transform in ("positive", "ge", "gt", "equals") and required[name] != "boolean":
             raise ValueError("The selected comparison requires a boolean metric")
         if transform == "ha_to_acres" and required[name] != "number":
@@ -298,6 +310,7 @@ def bind(workspace, spec):
         "implementation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "source_uri": document["source_uri"], "reference": document["reference"],
         "category": selected, "interpretation": score["interpretation"],
+        "source_profile": document["source_profile"],
         "headwater_orders": score["headwater_orders"],
     }
     if score.get("metrics"):
@@ -323,7 +336,7 @@ def bind(workspace, spec):
 
 def _table(workspace, score, retained):
     if not score.get("metrics"):
-        return {}, {"state": "parcel_attributes_and_native_quantities", "rows": 0}, {}
+        return profile_adapter.CriterionTable(), {"state": "parcel_attributes_and_native_quantities", "rows": 0}, {}
     choice = score["metrics"]
     path, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
     raw = path.read_bytes()
@@ -348,7 +361,8 @@ def _table(workspace, score, retained):
             metadata = {key: value for key, value in payload.items() if key != "rows"}
         else:
             raise ValueError("A criterion JSON table must contain rows under upstate.parcel-criteria/v1")
-    result, bounds = {}, {}
+    result, bounds = profile_adapter.CriterionTable(), {}
+    result.metadata = metadata
     for row in records:
         if not isinstance(row, dict):
             raise ValueError("Criterion table rows must be objects")
@@ -361,6 +375,7 @@ def _table(workspace, score, retained):
         if not isinstance(values, dict):
             raise ValueError("Parcel criterion values must be an object")
         result[key] = values
+        result.retain_row(key, row, choice["id_column"])
         limits = row.get("metric_bounds", {})
         if isinstance(limits, str):
             limits = json.loads(limits) if limits.strip() else {}
@@ -423,8 +438,11 @@ def _typed(value, kind, name):
         return _boolean(value, name)
     if kind == "number":
         return _number(value, name)
+    alternative = profile_adapter.typed_level(value, name)
+    if alternative is not None:
+        return alternative
     if not isinstance(value, str) or value.strip() not in ("low", "medium", "high"):
-        raise ValueError(name + " requires low, medium or high")
+        raise ValueError(name + " requires low, medium, high or retained source class alternatives")
     return value.strip()
 
 
@@ -434,6 +452,8 @@ def _transform(raw, binding, name):
     transform = binding.get("transform", "identity")
     if transform == "identity":
         return raw
+    if transform == "profile_band":
+        return profile_adapter.classify_binding(_number(raw, name), binding)
     if transform == "equals":
         expected = binding["value"]
         return type(raw) is type(expected) and raw == expected
@@ -527,7 +547,9 @@ def _resolve(row, table, score, required, means, cell_area_ha, table_bounds):
                     raw *= cell_area_ha
                 detail.update(raw=raw, baseline_run_id=score.get("_baseline_run_id"), valid_area_ha=area,
                               coverage_fraction=metric["coverage_fraction"],
-                              structural_stream_area_ha=metric["structural_stream_area_ha"])
+                              structural_stream_area_ha=metric["structural_stream_area_ha"],
+                              pixel_area_m2=cell_area_ha * 10000 if cell_area_ha is not None else None,
+                              original_profile_pixel_area_m2=None)
             if source not in ("study_mean", "stream_order"):
                 value = _typed(_transform(raw, binding, name), kind, name)
                 detail["raw"] = raw
@@ -551,10 +573,63 @@ def _threshold_points(rule, value):
 
 
 def _threshold_interval(rule, interval):
+    options = _threshold_options(rule, interval)
+    return min(options), max(options)
+
+
+
+def _source_profile_interval(rule, interval, profile_identity):
+    """Evaluate every literal source bin over a closed geometric interval.
+
+    Bin endpoints and the open regions between them exhaust the classification
+    changes. A gap keeps the profile's unresolved alternatives; an overlap keeps
+    every matched class. Probe values are evaluation points, never observations.
+    """
     lower, upper = interval["lower"], interval["upper"]
-    # Closed endpoints preserve an exact published boundary. Interior cutoffs
-    # and their immediate left side cover every attainable step, even if a
-    # future retained rule is not monotonic in point value.
+    boundaries = {lower, upper}
+    for band in rule["source_profile_rule"]["bins"]:
+        for key in ("min", "max"):
+            boundary = band[key]
+            if boundary is not None and lower <= boundary <= upper:
+                boundaries.add(float(boundary))
+    ordered = sorted(boundaries)
+    probes = list(ordered)
+    for left, right in zip(ordered, ordered[1:]):
+        # Half-sums avoid overflowing a finite interval; nextafter handles an
+        # endpoint-rounded midpoint without escaping the closed input bounds.
+        middle = left / 2 + right / 2
+        if not left < middle < right:
+            middle = math.nextafter(left, right)
+        if left < middle < right:
+            probes.append(middle)
+    classifications = [
+        profile_adapter.classify(
+            value, rule["source_profile_rule"],
+            criterion_id=rule["source_profile_criterion_id"],
+            identity=profile_identity, references=rule["source_profile_references"],
+        )
+        for value in probes
+    ]
+    options = sorted({value for item in classifications for value in item["score_options"]})
+    return {
+        "schema": profile_adapter.CLASS_SCHEMA,
+        "criterion_id": rule["source_profile_criterion_id"],
+        "value": None, "unit": rule["source_profile_rule"]["unit"],
+        "state": "bounded_interval",
+        "value_interval": {key: interval[key] for key in ("lower", "upper", "unit", "method", "reference")},
+        "attainable_states": sorted({item["state"] for item in classifications}),
+        "matched_classes": list(dict.fromkeys(
+            label for item in classifications for label in item["matched_classes"])),
+        "classes": list(dict.fromkeys(label for item in classifications for label in item["classes"])),
+        "score_options": options,
+        "source_profile": _copy(profile_identity),
+        "references": _copy(rule["source_profile_references"]),
+    }
+
+
+def _threshold_options(rule, interval):
+    """Retain attainable step values rather than filling gaps between scores."""
+    lower, upper = interval["lower"], interval["upper"]
     probes = [lower, upper]
     for threshold in rule["thresholds"]:
         cutoff = float(threshold["min"])
@@ -562,45 +637,66 @@ def _threshold_interval(rule, interval):
             probes.append(cutoff)
         if lower < cutoff <= upper:
             probes.append(max(lower, math.nextafter(cutoff, -math.inf)))
-    points = [_threshold_points(rule, value) for value in probes]
-    return min(points), max(points)
+    return sorted({_threshold_points(rule, value) for value in probes})
 
 
-def _criterion(rule, metrics, metric_bounds=None):
+def _criterion(rule, metrics, metric_bounds=None, profile_identity=None):
     metric_bounds = metric_bounds or {}
     kind = rule["type"]
     if kind in ("maximum", "sum"):
-        children = [_criterion(row, metrics, metric_bounds) for row in rule["terms"]]
-        if kind == "maximum":
-            lower = max(row["known_points"] for row in children)
-            upper = max(row["possible_points"] for row in children)
-        else:
-            lower = min(rule["cap"], sum(row["known_points"] for row in children))
-            upper = min(rule["cap"], sum(row["possible_points"] for row in children))
-        return {"id": rule["id"], "known_points": lower, "possible_points": upper,
-                "points": lower if lower == upper else None, "terms": children, "reference": rule["reference"]}
+        children = [_criterion(row, metrics, metric_bounds, profile_identity) for row in rule["terms"]]
+        options = profile_adapter.aggregate_options(
+            children, operation=kind, cap=rule.get("cap") if kind == "sum" else None)
+        lower, upper = min(options), max(options)
+        interval_used = any(row.get("interval_used", False) for row in children)
+        return {
+            "id": rule["id"], "known_points": lower, "possible_points": upper,
+            "points": lower if lower == upper else None, "score_options": options,
+            "terms": children, "reference": rule["reference"],
+            "interval_used": interval_used,
+            "points_determined_by_interval": interval_used and lower == upper,
+        }
     value = metrics.get(rule["metric"])
     interval = metric_bounds.get(rule["metric"]) if kind == "thresholds" else None
-    if kind == "boolean":
-        upper = rule["points"] if value is None or value else 0
-        lower = rule["points"] if value is True else 0
+    classification = None
+    if kind == "thresholds" and "source_profile_rule" in rule:
+        if value is None and interval is not None:
+            classification = _source_profile_interval(rule, interval, profile_identity)
+        else:
+            classification = profile_adapter.classify(
+                value, rule["source_profile_rule"],
+                criterion_id=rule["source_profile_criterion_id"],
+                identity=profile_identity, references=rule["source_profile_references"],
+            )
+        options = classification["score_options"]
+    elif kind == "boolean":
+        options = [0, rule["points"]] if value is None else [rule["points"] if value else 0]
     elif kind == "levels":
-        upper = max(rule["levels"].values()) if value is None else rule["levels"][value]
-        lower = min(rule["levels"].values()) if value is None else upper
+        if isinstance(value, dict) and value.get("schema") == profile_adapter.CLASS_SCHEMA:
+            classification = value
+            options = [rule["levels"][label] for label in value["classes"]]
+        else:
+            options = list(rule["levels"].values()) if value is None else [rule["levels"][value]]
     elif kind == "thresholds":
         if value is not None:
-            lower = upper = _threshold_points(rule, value)
+            options = [_threshold_points(rule, value)]
         elif interval is not None:
-            lower, upper = _threshold_interval(rule, interval)
+            options = _threshold_options(rule, interval)
         else:
-            possible = [rule["otherwise"], *(row["points"] for row in rule["thresholds"])]
-            lower, upper = min(possible), max(possible)
+            options = [rule["otherwise"], *(row["points"] for row in rule["thresholds"])]
     else:
         raise ValueError("Unsupported published criterion type")
-    result = {"id": rule["id"], "metric": rule["metric"], "value": value,
-              "known_points": lower, "possible_points": upper,
-              "points": lower if lower == upper else None, "reference": rule["reference"],
-              "evaluation": "exact_metric" if value is not None else "bounded_metric" if interval else "undetermined_metric"}
+    options = sorted(set(options))
+    lower, upper = min(options), max(options)
+    result = {
+        "id": rule["id"], "metric": rule["metric"], "value": value,
+        "known_points": lower, "possible_points": upper, "score_options": options,
+        "points": lower if lower == upper else None, "reference": rule["reference"],
+        "evaluation": "exact_metric" if value is not None else "bounded_metric" if interval else "undetermined_metric",
+        "interval_used": value is None and interval is not None,
+    }
+    if classification is not None:
+        result["classification"] = classification
     if interval is not None:
         result["value_interval"] = {
             key: interval[key] for key in ("lower", "upper", "unit", "method", "reference")
@@ -626,18 +722,30 @@ def _native_cell_area(workspace, spec, bindings):
     if not selected:
         return None
     import rasterio
+    from pyproj import CRS
     run_id = spec["baseline_run_id"]
-    output = bindings["runs"][run_id]["outputs"][selected[0]["pollutant"]]
-    path = verify_file(workspace.root / "runs" / run_id, output["rate"])
-    with rasterio.open(path) as raster:
-        transform = raster.transform
-        sides = (math.hypot(transform.a, transform.d), math.hypot(transform.b, transform.e))
-        area = abs(transform.a * transform.e - transform.b * transform.d) / 10000
-        if any(not math.isclose(side, 30, rel_tol=0, abs_tol=1e-8) for side in sides) or not math.isclose(
-                area, 0.09, rel_tol=0, abs_tol=1e-10):
-            raise ValueError("Mean cell-mass criteria require the actual retained 30-metre native raster")
-    return area
-
+    areas = []
+    for binding in selected:
+        output = bindings["runs"][run_id]["outputs"][binding["pollutant"]]
+        path = verify_file(workspace.root / "runs" / run_id, output["rate"])
+        with rasterio.open(path) as raster:
+            crs = CRS.from_user_input(raster.crs)
+            if not crs.is_projected or any(
+                    not math.isclose(axis.unit_conversion_factor, 1, abs_tol=1e-12)
+                    for axis in crs.axis_info[:2]):
+                raise ValueError("Native cell-mass conversion requires the retained metre-based grid")
+            transform = raster.transform
+            area_m2 = abs(transform.a * transform.e - transform.b * transform.d)
+            if not math.isfinite(area_m2) or area_m2 <= 0:
+                raise ValueError("The native raster has no finite positive pixel area")
+            if binding["band_method"] != "current_tertiles":
+                expected = binding.get("pixel_area_m2", 900.0)
+                if not math.isclose(area_m2, expected, rel_tol=0, abs_tol=1e-6):
+                    raise ValueError("Mean-cell-mass cutoff pixel area differs from its recorded current-grid binding")
+            areas.append(area_m2 / 10000)
+    if any(not math.isclose(area, areas[0], rel_tol=0, abs_tol=1e-10) for area in areas):
+        raise ValueError("Published export criteria use different native pixel areas")
+    return areas[0]
 
 def _native_bands(candidates, score, cell_area_ha):
     resolved = {}
@@ -678,6 +786,8 @@ def _native_bands(candidates, score, cell_area_ha):
             "tie_rule": "Equal-cutoff values are medium; lower positive values are low and higher values are high.",
             "zero_rule": "Observed zero export is low.",
             "unit": binding["unit"], "statistic": binding["statistic"],
+            "pixel_area_m2": cell_area_ha * 10000 if cell_area_ha is not None else None,
+            "original_profile_pixel_area_m2": None,
             "reference": binding["reference"],
             "meaning": "Current-study adaptation of the published point weights; thresholds are computed from the saved native study.",
         }
@@ -692,6 +802,9 @@ def rank(workspace, candidates, spec, retained, bindings):
     current_code = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     if retained["definition_sha256"] != sha or retained["implementation_sha256"] != current_code:
         raise ValueError("The saved published method differs from the installed method; prepare a successor study")
+    profile_state = profile_adapter.load()
+    if retained.get("source_profile") != document["source_profile"]:
+        raise ValueError("The saved study belongs to another source-profile binding; prepare its successor")
     table, table_info, table_bounds = _table(workspace, score, retained)
     required = metric_types(selected)
     cell_area_ha = _native_cell_area(workspace, spec, bindings)
@@ -711,7 +824,8 @@ def rank(workspace, candidates, spec, retained, bindings):
     for row in candidates:
         metrics, provenance, metric_bounds = _resolve(
             row, table, score, required, means, cell_area_ha, table_bounds)
-        components = [_criterion(rule, metrics, metric_bounds) for rule in selected["criteria"]]
+        components = [_criterion(rule, metrics, metric_bounds, document["source_profile"])
+                      for rule in selected["criteria"]]
         interval_criteria = sum(bool(item.get("points_determined_by_interval")) for item in components)
         summary["parcels_with_numeric_intervals"] += bool(metric_bounds)
         summary["criteria_determined_by_intervals"] += interval_criteria
@@ -733,6 +847,7 @@ def rank(workspace, candidates, spec, retained, bindings):
             "metric_bounds": metric_bounds,
             "definition_sha256": sha,
         }
+        profile_adapter.candidate_trace(row, table, score, document, components, profile_state)
         row["point_priority"] = priority
         row["score_unit"] = "points"
         summary["complete" if complete else "partial"] += 1
@@ -764,10 +879,13 @@ def rank(workspace, candidates, spec, retained, bindings):
         "formula": "Sum published criterion contributions, preserving each criterion maximum and practice prerequisite.",
         "numeric_intervals": (
             "Closed acreage limits retain observed positive geometry and unresolved source coverage; "
-            "published steps are evaluated across the whole interval. Exact points can be determined "
+            "literal source bins, including gaps and overlaps, are evaluated across the whole interval. "
+            "Exact points can be determined "
             "without assigning an exact acreage."),
         "interpretation": score["interpretation"], "headwater_orders": score["headwater_orders"],
         "source_interpretations": document["source_interpretations"],
+        "source_profile": document["source_profile"],
+        "native_pixel_area_m2": cell_area_ha * 10000 if cell_area_ha is not None else None,
         "criterion_table": table_info, "study_means": means, "resolved_native_bands": resolved_bands,
         "score_coverage": summary,
         "physical_quantities": "Original native annual mass and paired alternatives remain separately available.",

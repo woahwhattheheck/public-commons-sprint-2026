@@ -228,7 +228,7 @@ export function attachConservationOptimization(host, options = {}) {
     }else await host.showTask(id);
   }
   async function edit(studyId,seed={}) {
-    resetWorkspace();const selected=key(),token=++actionGeneration,study=await read('/api/conservation/study',{study_id:studyId});
+    resetWorkspace();const selected=key(),token=++actionGeneration,study=await read('/api/conservation-catalog/study',{study_id:studyId});
     if(!study||key()!==selected||token!==actionGeneration)return;
     if(study.state!=='complete')throw Error('Complete the original conservation study before choosing a portfolio.');
     const spec=study.selection?.spec||study.spec||{}, bindings=study.selection?.bindings||{}, rules=spec.rules||{};

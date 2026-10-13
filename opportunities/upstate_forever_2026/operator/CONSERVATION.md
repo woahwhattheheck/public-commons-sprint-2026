@@ -188,3 +188,30 @@ Export the candidate inventory or saved portfolio through its existing control. 
 The ZIP includes the normal editable GIS and candidate tables, `criterion-contributions.csv`, `criterion-values.csv`, `criterion-scores.json`, source-register JSON/CSV, the retained original criterion table and `presentation.json`. Original source URLs, editions, selected fields and file hashes accompany the result. Larger reports retain the complete machine-readable inventory alongside the clearly identified preview in HTML.
 
 A current presentation is created from the same verified saved measurements and selected plan IDs. Earlier study/plan artifact hashes remain intact. Reopen the same saved study or portfolio after restarting the operator; use the ordinary Workspace backup/restore workflow to carry the sources, queued operation records, criteria and decisions to another receiving copy. [Report and export contract](../model/CONSERVATION_REPORTS.md).
+
+### Reading literal source classes in an exported decision
+
+Open the saved study or portfolio report. The published-points table now shows
+**Attainable totals** and **Possible priorities**, alongside the exact total and
+lower/upper limits. Read the listed alternatives as the saved possibilities;
+the limits alone do not imply every intervening integer can occur.
+
+Expand a parcel to read each criterion's attainable contributions and the
+**Literal published class interpretation** table. **Ambiguous** means the original
+printed bins overlap at that value. **Unclassified** means the value lies in a
+printed gap or outside those bins. **Missing** means the observation is absent.
+A bounded acreage can encounter several of those states. The report retains its
+closed limits, geometry basis, source references and exact-versus-range points.
+
+For a native export criterion, the **Current native export classification** table
+shows the original input and unit, actual current cell area, classification method
+and any explicit transfer of the printed bins. An unresolved published source cell
+area remains visible. This lets a reviewer distinguish current-study tertiles from
+an explicitly recorded source-profile transfer while reading annual parcel mass
+in the separate pollutant fields.
+
+Download the criterion CSVs for complete alternatives and field bindings, or
+`criterion-scores.json` for their original typed records. The ordinary parcel
+CSV and GeoPackage also carry the option arrays, class states and profile identity.
+These exports retain the saved parcel decision and its original full/reporting
+geometry.
