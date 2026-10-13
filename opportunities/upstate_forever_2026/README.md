@@ -207,3 +207,8 @@ Scientific interpretation — **Needs expert review**: confirm the selected obse
 ## License
 
 Authored code uses the repository's [MIT license](../../LICENSE). Original environmental data, regulatory documents and external source material retain their publisher terms and attribution.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+Owner delivery rule: before presenting this product or ANY attachment, open, observe and normally use the exact outgoing result as its recipient would. Apply the complete [rendered product inspection policy](../../docs/policies/rendered-product-inspection-policy.md), including downloaded HTML/PDF/reports/slides/spreadsheets/maps/images/audio/video/archive/project contents, actual screenshare and relevant narrow widths, critical controls and states, and final exported media playback. Use available high-quality generative voice/TTS with natural professional delivery for videos and applicable generative media models when helpful. Fix concrete presentation defects and keep building/shipping; no review theatre, test theatre, parallel review bureaucracy or approval gate. Tests, source, metadata, checklists and receipts do not substitute for actual observation and normal use. Preserve the existing sprint cutoff and every other owner control.
+<!-- bryce-rendered-product-inspection:end -->
