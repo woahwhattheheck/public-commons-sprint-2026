@@ -1,5 +1,6 @@
 """Editable GIS inside the original Operator task, upload and download lifecycle."""
 from __future__ import annotations
+import hashlib
 import re
 import urllib.parse
 import zipfile
@@ -12,6 +13,45 @@ VIEW_POLICY = ("sandbox allow-scripts allow-downloads; default-src 'none'; "
                "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
                "connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; "
                "frame-ancestors 'self'")
+
+
+# Only a byte-exact rendering by the installed review producer may share the
+# operator origin. Retained/imported HTML keeps VIEW_POLICY, even in a review.
+GENERATED_REVIEW_POLICY = VIEW_POLICY.replace(
+    "sandbox allow-scripts allow-downloads;",
+    "sandbox allow-scripts allow-downloads allow-same-origin;", 1)
+
+
+def generated_review_policy(folder, record, member, expected):
+    """Keep cookie-backed member downloads usable for the trusted review template."""
+    if member != 'REVIEW.html' or expected.get('path') != 'REVIEW.html':
+        return VIEW_POLICY
+    from model import gis_edition_review
+    if record.get('selection', {}).get('version') != gis_edition_review.VERSION:
+        return VIEW_POLICY
+    descriptor = record.get('files', {}).get('review.json')
+    if not isinstance(descriptor, dict) or descriptor.get('path') != 'review.json':
+        return VIEW_POLICY
+    try:
+        report_path = gis.checked(folder, descriptor)
+        report = gis.load(report_path)
+        if (report.get('schema') != gis_edition_review.SCHEMA
+                or report.get('state') != 'complete'
+                or report.get('id') != record['id']
+                or report.get('selection') != record['selection']
+                or report.get('layers') != record['layers']):
+            return VIEW_POLICY
+        # Integrity alone does not establish script provenance. Reconstruct the
+        # exact portable HTML from installed source and escaped retained data.
+        rendered = gis_edition_review._report_html(report, folder).encode('utf-8')
+        if (len(rendered) == expected['bytes']
+                and hashlib.sha256(rendered).hexdigest() == expected['sha256']):
+            return GENERATED_REVIEW_POLICY
+    except (OSError, ValueError, TypeError, KeyError):
+        # Prior producer editions and unavailable rendering companions retain
+        # their original opaque document view and downloadable report archive.
+        pass
+    return VIEW_POLICY
 
 
 def identity(value):
@@ -51,7 +91,8 @@ class GISProjects:
             if expected is None:
                 raise ValueError('Choose a declared original GIS review file')
             path = gis.checked(folder, expected)
-            return self.operator._ticket(workspace, path, expected, member), VIEW_POLICY
+            policy = generated_review_policy(folder, record, member, expected)
+            return self.operator._ticket(workspace, path, expected, member), policy
         ws, parent, record = self._record(workspace, kind, key)
         root = parent / 'project'
         gis.member(name)
