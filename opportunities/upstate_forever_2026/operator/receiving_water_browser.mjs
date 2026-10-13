@@ -135,7 +135,8 @@ const attr = (name, value) => '[' + name + '=' + JSON.stringify(String(value)) +
 async function openWater(kind, id) {
   await navigate('receiving-waters');
   await page.locator('[data-action="water-open"]' + attr('data-kind', kind) + attr('data-id', id)).click();
-  await page.locator('#water-selected h2').waitFor();
+  await page.locator('#water-selected' + attr('data-water-record-kind', kind)
+    + attr('data-water-record-id', id) + '[aria-busy="false"] h2').waitFor();
 }
 async function readyMap() {
   await page.waitForFunction(() => {
@@ -283,10 +284,14 @@ function verifyReview(review, target, catalog) {
 }
 async function openTarget(target) {
   await openWater(target.kind, target.id);
+  if (target.kind === 'plan' && target.subject) {
+    await page.locator('[data-water-filter="family"]').selectOption('');
+    await page.locator('[data-water-search]').fill(target.subject);
+  }
   if (target.kind === 'analysis' && target.subject) {
     await page.locator('[data-water-filter="kind"]').selectOption(target.subject_kind);
     await page.locator('[data-water-filter="family"]').selectOption('');
-    await page.locator('[data-water-search]').fill('');
+    await page.locator('[data-water-search]').fill(target.subject);
     await page.locator('[data-water-filter="run"]').selectOption(target.alternative_run_id || '');
     const quantity = target.statistic === 'increased_export_priority' ? 'increased'
       : target.statistic === 'avoided_export_priority' ? 'avoided' : 'physical';
