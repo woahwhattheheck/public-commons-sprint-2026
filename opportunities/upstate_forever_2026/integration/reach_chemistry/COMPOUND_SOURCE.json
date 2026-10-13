@@ -1,7 +1,7 @@
 {
   "schema": "upstate.chemistry-maintained-source/v1",
   "engine_version": "0.3.0",
-  "scientific_report_edition": "reach-chemistry-scientific-report/3",
+  "scientific_report_edition": "reach-chemistry-scientific-report/4",
   "scientific_source_edition": "native-chemistry-scientific-source-v2",
   "readable_scientific_source_editions": [
     "native-chemistry-scientific-source-v1",
@@ -11,7 +11,9 @@
     "native_commit": "730fe92139fa31d86cac5e75a64545f5d236906a",
     "composed_current_main": "9b1aa2c7d06ce321a04bde372afb5edf0a84a59e",
     "pull_request": 3724,
-    "native_merge": "71f0c79e10f13d420d753e5b4df17cc126140e83"
+    "native_merge": "71f0c79e10f13d420d753e5b4df17cc126140e83",
+    "monitoring_chemistry_study_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
+    "monitoring_chemistry_study_pull_request": 4183
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -68,18 +70,18 @@
     },
     {
       "path": "model/CHEMISTRY_REPORTS.md",
-      "bytes": 10681,
-      "sha256": "d0026878dc6e6f32f9f46a95e9fcbb7189e52d6e3277dd9dd722538f4427d8d7"
+      "bytes": 11685,
+      "sha256": "9b738fd6f28b037e028b3f655f6a7895cafa8e5697e0d2cbc4504fd67412d992"
     },
     {
       "path": "model/reach_chemistry/reporting.py",
-      "bytes": 38121,
-      "sha256": "8622c6bbb7c7ff5198f39c78a7710008d920899b02abf9dbafec5d5549cc4c71"
+      "bytes": 42356,
+      "sha256": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1"
     },
     {
       "path": "integration/component_fragments/chemistry_reports.json",
       "bytes": 516,
-      "sha256": "67d80aac82ffbc09c150e7714801110f4cc4b75890c824ace39db64783dafca2"
+      "sha256": "58bc7e277b9253f012e87811919e8889698b0b18c86bec9745cb22eeb44e1416"
     },
     {
       "path": "model/chemistry_cli.py",
@@ -178,8 +180,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 24710,
-      "sha256": "7c41a00527032a004988b1db9902e63b73f8f11103a7baaf90d294eeed2ecdaf"
+      "bytes": 26870,
+      "sha256": "502aed32b9cdcf893216f7fd2f32f25cfec5332e2019f07b19772301331ede20"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -205,6 +207,76 @@
       "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
       "bytes": 7099,
       "sha256": "0085740aa371b70f1ae5e9c9635aa6a2ea02701e1cad36009521d08b30f21e6d"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json",
+      "bytes": 9135,
+      "sha256": "532dcb9f3029a74b84568696abd55a406624a87baf65ad28dadf6ca735555bc5"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/README.md",
+      "bytes": 10436,
+      "sha256": "e5a81b7d8bb7e135c2a626bd5b3c1be6b2cd00ce904427e3f77c7caceb284441"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/build_study_workbench.py",
+      "bytes": 3355,
+      "sha256": "a30a600b001481e6296b037307039763635921db75ca7bdcfe70cf2f3bd477fa"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/capture_editable_workspace.py",
+      "bytes": 11655,
+      "sha256": "213fd73b7a12749c7d60e9c45d5ee36ebb23049048948d26600639758e637b3e"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/make_study_brief.py",
+      "bytes": 8646,
+      "sha256": "de0bdced0fd048173f930dc54045abdd98ed2bf823a86c91fef94da79531bf2c"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/open_completed_study.py",
+      "bytes": 11929,
+      "sha256": "a58c4e2007b1ea8840292954cff7de9b6cf34b6a8adc3a382c3e835624753732"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/prepare_budget_study.py",
+      "bytes": 11780,
+      "sha256": "dae34f48d6b74ab9a5d8828d41f008022012c56d7a7d0c7d3800f7ac3ffe16b9"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/presentation_tables.py",
+      "bytes": 4953,
+      "sha256": "1dde6dec7b5b630dd3b2711b4bbc14717cd92294e599a41731878c3a79fd7c76"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/refresh_report_layout.py",
+      "bytes": 5519,
+      "sha256": "17ff1d6d0adac6d5357ebe75a3947bad201644fd1b3b38016e137c90f71044c1"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/reporting.py",
+      "bytes": 42356,
+      "sha256": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/run_compound_native.py",
+      "bytes": 12590,
+      "sha256": "62b5c3406179d80895b1a9664057a299a1e1339c01dafa392c5b003582803831"
+    },
+    {
+      "path": "source/monitoring-chemistry-study/study.html",
+      "bytes": 29520,
+      "sha256": "7a7eb38d40bb9ff10864574682675dfc2c4d29bf768a9b7cc2ef4a5d4b3e7519"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-chemistry-study.json",
+      "bytes": 1811,
+      "sha256": "547decbb015f91aa092c4d0672ec1630299101cdf7388768b42bec73bee7cdd0"
     }
   ],
   "preserved_shared_dependencies": [
@@ -218,7 +290,14 @@
     "operator/extensions/source-reports.json",
     "operator/web/extension_host.mjs",
     "model/study_transfer.py",
-    "model/scientific_report_study_transfer.py"
+    "model/scientific_report_study_transfer.py",
+    "model/common.py",
+    "model/workspace.py",
+    "model/portable.py",
+    "model/monitoring_workspace.py",
+    "model/monitoring_campaign.py",
+    "model/monitoring_common.py",
+    "model/monitoring_sources.py"
   ],
   "receiving": {
     "check": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE --dry-run",
@@ -230,7 +309,9 @@
     "selected_study_editions": [
       "native-chemistry-scientific-source-v1",
       "native-chemistry-scientific-source-v2"
-    ]
+    ],
+    "completed_monitoring_chemistry_study": "source/monitoring-chemistry-study/README.md",
+    "study_original_inventory": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json"
   },
   "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard.",
   "editor_lifetime": "pinned-workspace-and-native-activation"

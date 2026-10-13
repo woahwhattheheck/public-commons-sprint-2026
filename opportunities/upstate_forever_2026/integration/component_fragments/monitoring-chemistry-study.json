@@ -1,0 +1,39 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-chemistry-study",
+  "source_reference": "RIVER13 original completed Monitoring/Chemistry study, canonical scientific report edition4 and maintained complete editable receiving.",
+  "components": {
+    "monitoring-chemistry-study": {
+      "title": "Saved regional monitoring and compound Chemistry study",
+      "paths": [
+        "source/monitoring-chemistry-study/COMPOUND_SOURCE.json",
+        "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md",
+        "source/monitoring-chemistry-study/README.md",
+        "source/monitoring-chemistry-study/build_study_workbench.py",
+        "source/monitoring-chemistry-study/capture_editable_workspace.py",
+        "source/monitoring-chemistry-study/make_study_brief.py",
+        "source/monitoring-chemistry-study/open_completed_study.py",
+        "source/monitoring-chemistry-study/prepare_budget_study.py",
+        "source/monitoring-chemistry-study/presentation_tables.py",
+        "source/monitoring-chemistry-study/refresh_report_layout.py",
+        "source/monitoring-chemistry-study/reporting.py",
+        "source/monitoring-chemistry-study/run_compound_native.py",
+        "source/monitoring-chemistry-study/study.html",
+        "integration/component_fragments/monitoring-chemistry-study.json"
+      ],
+      "requires": [
+        "chemistry",
+        "monitoring"
+      ],
+      "retained_only": [
+        {
+          "path": "source/monitoring-chemistry-study/reporting.py",
+          "reason": "Exact original producer renderer retained as source provenance; executable application imports use model/reach_chemistry/reporting.py with its original inference dependency."
+        }
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-chemistry-study"
+  ]
+}
