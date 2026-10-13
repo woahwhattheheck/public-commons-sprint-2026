@@ -39,3 +39,19 @@ The adjacent `sources.json` is a current transport intake manifest. Its companio
 `INTAKE` is the directory containing these five files and the materialized original gzip. Keep the existing four assessment `--manifest` arguments as well. The native preparation imports every supplied manifest before selecting its original model domain and records the actual returned collection IDs. An explicit existing `Workspace.import_sources` import of this same manifest is also supported.
 
 If an earlier preparation already saved an immutable selection with only the original four manifests, choose a fresh preparation output directory for this five-manifest invocation. Keep the same actual receiving Workspace, project identity and operation4731. The original four assessment source bodies and the current admitted scientific calculation files remain identical.
+
+## Start a separate source-assessment Workspace
+
+The assessment preparation accepts an existing native Workspace. If this receiving host is starting the source-assessment course without an earlier project restore, initialize a fresh Workspace through the original API before running preparation. Set `ECO_APP` to the isolated application, `ECO_PYTHON` to its scientific Python executable and `ASSESSMENT_WORKSPACE` to a separate new source-assessment directory:
+
+```sh
+PYTHONPATH="$ECO_APP" "$ECO_PYTHON" - "$ASSESSMENT_WORKSPACE" <<'PY'
+import json
+import sys
+from model.workspace import Workspace
+workspace = Workspace(sys.argv[1], create=True, title="Upper Savannah source assessment")
+print(json.dumps({"workspace": str(workspace.root), "project_id": workspace.project["id"]}, indent=2))
+PY
+```
+
+Retain that actual generated project ID and use the same path as `--workspace` in the existing preparation command. Keep the separate receiving Workspace and preparation output outside the application and this source Workspace. The preparation imports the unchanged original source bodies through the five manifests, builds the three station studies and four assessment contexts, and independently receives them. This source-assessment course needs no NDR/SDR rerun or historical 246 MB Workspace restore. An already admitted native model or annual-map task continues in its own physical Workspace.
