@@ -4,7 +4,7 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 6 source parts contain **81 complete UTF-8 files / 1,591,774 source bytes**:
+The 6 source parts contain **81 complete UTF-8 files / 1,594,702 source bytes**:
 
 - All **75** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files and 1 complete shared-source reference body are staged beside the complete component. The guarded installer composes only its explicit field-selection hook in the receiver's current Monitoring module; it preserves all other current Monitoring source.
@@ -14,7 +14,7 @@ The separate bootstrap directory contains the complete unchanged original applic
 
 The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
-Complete field-study source pin: `6568e594e91ffba3f3b3202f06831660524ba635`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
+Complete field-study source pin: `e230bbfe1e2ad71110de96e01ff26ebb6232d52e`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
 
 ## Complete saved Monitoring and Chemistry study
 
