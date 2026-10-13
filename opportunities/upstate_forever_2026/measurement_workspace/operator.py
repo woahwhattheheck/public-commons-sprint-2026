@@ -116,7 +116,7 @@ class Measurements:
     @staticmethod
     def handles(path: str) -> bool:
         p = urlsplit(path).path
-        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements", "/measurements/", "/measurements/results.mjs", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs", "/measurements/large_files.mjs"}
+        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements", "/measurements/", "/measurements/results.mjs", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs", "/measurements/large_files.mjs", "/measurements/intake.mjs"}
 
     def try_handle(self, handler) -> bool:
         """Return False without touching unrelated native routes or response writers."""
