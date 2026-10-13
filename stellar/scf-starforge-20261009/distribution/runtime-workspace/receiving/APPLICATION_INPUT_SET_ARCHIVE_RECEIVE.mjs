@@ -22,8 +22,21 @@ export async function receiveCompanionArchiveBrowser({browser,sourceURL,sourceMo
  }await p.setViewportSize({width:1360,height:950});}
  try{
   const source=await page(sourceURL),shelf=source.locator('#application-input-sets');
+  async function listedAfter(action){
+   const waiting=source.waitForResponse(r=>r.url().includes('/api/application-input-sets?')&&r.request().method()==='GET');
+   await action();const response=await waiting,value=await response.json();
+   check(response.ok()&&Array.isArray(value.sets?.items),'The actual source shelf did not refresh.');
+   await source.waitForFunction(ids=>JSON.stringify([...document.querySelectorAll('#application-input-sets [data-input-set-id]')].map(row=>row.dataset.inputSetId))===JSON.stringify(ids),value.sets.items.map(item=>item.setId));return value;
+  }
+  let listed=await listedAfter(()=>shelf.getByRole('button',{name:'Refresh source sets',exact:true}).click());
+  while(!listed.sets.items.some(item=>item.setId===setId)){
+   const next=shelf.getByRole('button',{name:'Next sets',exact:true});
+   check(await next.isEnabled(),'The requested original source set is absent from the source shelf.');
+   listed=await listedAfter(()=>next.click());
+  }
+  const originalRow=shelf.locator('[data-input-set-id="'+setId+'"]');await originalRow.waitFor();
   const opened=source.waitForResponse(r=>r.url().includes('/api/application-input-sets/inspect?'));
-  await shelf.getByRole('button',{name:'Open original source set',exact:true}).first().click();
+  await originalRow.getByRole('button',{name:'Open original source set',exact:true}).click();
   const response=await opened,actual=await response.json();check(response.ok()&&actual.setId===setId,'The browser opened another original source set.');
   const downloading=source.waitForEvent('download');await shelf.getByRole('button',{name:'Download complete source-set ZIP',exact:true}).click();
   const downloaded=await downloading,archive=join(outputDirectory,'complete-original-source.zip');await downloaded.saveAs(archive);

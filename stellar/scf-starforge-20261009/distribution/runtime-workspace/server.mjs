@@ -678,7 +678,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         return send(200,{url:origin+'/application-input-set-archive/'+key,filename:file.filename,bytes:file.bytes,setId:file.setId});
       }
       if (url.pathname === '/api/application-input-sets/begin')
-        return send(200,await model.applicationInputSetBegin(await body(req,['manifest'],8*1024*1024)));
+        return send(200,await model.applicationInputSetBegin(await body(req,['manifest'],24*1024*1024)));
       if (url.pathname === '/api/application-input-sets/complete')
         return send(200,await model.applicationInputSetComplete(await body(req,['setId'],4096)));
       if (url.pathname === '/api/application-input-sets/prepare')
