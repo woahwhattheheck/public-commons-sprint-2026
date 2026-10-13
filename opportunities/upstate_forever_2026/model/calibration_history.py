@@ -64,12 +64,13 @@ def _catchment_source(workspace, plan):
     # DBF/PRJ and other companions can change feature identities or coordinates
     # while a geometry file remains byte-identical. Include their complete set.
     companions = sorted(
-        ({"filename": item["filename"], "sha256": item["sha256"], "bytes": item["bytes"]}
+        ({"path": item.get("view_path", item["filename"]), "sha256": item["sha256"], "bytes": item["bytes"]}
          for item in entry.get("companions", [])),
-        key=lambda item: (item["filename"], item["sha256"]),
+        key=lambda item: (item["path"], item["sha256"]),
     )
     return {
-        "body_sha256": entry["body"]["sha256"], "companions": companions,
+        "body_sha256": entry["body"]["sha256"],
+        "body_path": entry["body"].get("view_path", entry["body"]["filename"]), "companions": companions,
         "layer": choice.get("layer") or entry.get("layer"),
         "where": choice.get("where"), "id_field": choice["id_field"],
     }
