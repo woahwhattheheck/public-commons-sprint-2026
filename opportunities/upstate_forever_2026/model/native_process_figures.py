@@ -311,15 +311,19 @@ def produce(directory, selection, packets, comparisons, descriptors, comparison_
             # Only an unfinished, uncheckpointed SVG is replaceable. Completed
             # figure bytes are verified and reused above.
             atomic_bytes(directory / relative, encoded)
-            record = describe_file(directory, directory / relative)
+            record = {**describe_file(directory, directory / relative),
+                      "rendering": {"reportlab_version": importlib.metadata.version("reportlab")}}
             progress["files"][figure["id"]] = record
             atomic_json(progress_path, progress)
         figures.append({"id": figure["id"], "path": relative})
         blocks.append({"kind": "figure", **record, "title": figure["title"],
                        "caption": figure["caption"], "alt": figure["caption"], "spec": figure})
+    versions = sorted({item["rendering"]["reportlab_version"]
+                       for item in progress["files"].values()})
     rendering = {
         "schema": "upstate.native-process-figure-rendering/v1", "input_id": input_id,
-        "reportlab_version": importlib.metadata.version("reportlab"),
+        "reportlab_version": versions[0] if len(versions) == 1 else None,
+        "reportlab_versions": versions,
         "renderer": describe_file(Path(__file__).parent, Path(__file__).with_name("scientific_figures.py")),
         "figure_count": len(figures), "panel_count": sum(len(f["panels"]) for f in spec["figures"]),
         "files": list(progress["files"].values()),
