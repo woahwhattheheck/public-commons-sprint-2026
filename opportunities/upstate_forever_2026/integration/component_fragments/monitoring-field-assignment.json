@@ -1,0 +1,38 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-field-assignment",
+  "components": {
+    "monitoring-field-assignment": {
+      "title": "Saved original field selection into editable implementation and original report",
+      "paths": [
+        "model/monitoring_field_assignment.py",
+        "operator/monitoring_field_assignment_operator.py",
+        "operator/extensions/monitoring-field-assignment.json",
+        "operator/web/monitoring_field_assignment.mjs",
+        "operator/web/monitoring_field_assignment.css",
+        "source_tools/receive_monitoring_field_assignment.py",
+        "source/monitoring_field_assignment/RECEIVING.md"
+      ],
+      "requires": [
+        "implementation",
+        "extension-startup"
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-field-assignment"
+  ],
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/monitoring_field_assignment.py",
+        "operator/monitoring_field_assignment_operator.py",
+        "operator/extensions/monitoring-field-assignment.json",
+        "operator/web/monitoring_field_assignment.mjs",
+        "operator/web/monitoring_field_assignment.css",
+        "source_tools/receive_monitoring_field_assignment.py",
+        "source/monitoring_field_assignment/RECEIVING.md"
+      ]
+    }
+  }
+}
