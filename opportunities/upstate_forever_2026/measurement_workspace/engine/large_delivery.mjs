@@ -1,3 +1,4 @@
+import {validateBenchmarkExports} from './benchmark_workspace.mjs';
 /** Complete streamed exports and independently editable receiving, on the original engine. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -227,6 +228,7 @@ export function validateReceived(directory){
   for(const row of db.prepare('SELECT * FROM stations').iterate())if(JSON.parse(row.data).id!==row.id)throw new InputError('Invalid retained station');
   for(const row of db.prepare('SELECT * FROM mappings').iterate()){const data=JSON.parse(row.data);if(data.stationId!==row.station_id||data.reachId!==row.reach_id||!db.prepare('SELECT 1 FROM stations WHERE id=?').get(row.station_id))throw new InputError('Invalid retained native assignment');}
   const revision=db.prepare("SELECT value FROM meta WHERE key='revision'").get()?.value;if(!Number.isSafeInteger(revision)||revision<0)throw new InputError('Invalid native revision');
+  validateBenchmarkExports(db.prepare('SELECT * FROM exports').all());
   return {recordCount:expectedCount,sourceCount:imports,revision,tables:names};
  }finally{expected.close();db.close();for(const suffix of ['','-journal','-wal','-shm'])fs.rmSync(scratch+suffix,{force:true});}
 }

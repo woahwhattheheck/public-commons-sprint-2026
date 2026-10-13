@@ -27,5 +27,25 @@
   "applicationProviders": {
     "ndjson": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson.mjs",
     "opensanctions": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application-provider.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/gleif_portfolio.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/gleif-intake.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_refresh.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/portfolio-refresh.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REFRESH.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/portfolio_review_cycles.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/PORTFOLIO_REVIEW_CYCLES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_exchange_delivery.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/review-exchange.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/public/reviewer-copy.css",
+    "products/source-monitoring/REVIEWER_EXCHANGE.md",
+    "products/source-monitoring/receiving/reviewer-exchange.mjs",
+    "products/source-monitoring/receiving/reviewer-copy-browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/review_workspace_archive.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/REVIEW_WORKSPACE_ARCHIVES.md"
+  ]
 }

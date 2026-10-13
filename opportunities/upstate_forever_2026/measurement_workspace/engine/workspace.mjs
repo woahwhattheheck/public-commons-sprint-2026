@@ -1,3 +1,4 @@
+import {validateBenchmarkExports} from './benchmark_workspace.mjs';
 import {initialiseIntake,exportIntakes,validateIntakes,receiveIntakes} from './intake.mjs';
 import {installLargeFileReads} from './large_intake.mjs';
 import {DatabaseSync} from 'node:sqlite';
@@ -234,6 +235,7 @@ export class MeasurementWorkspace {
       for(const row of tables[name])if(columns.some(c=>!Object.hasOwn(row,c)))throw new InputError('Portable row missing required field in '+name);
     }
     if(packageValue.intake)validateIntakes(packageValue.intake,tables.imports);
+    validateBenchmarkExports(tables.exports);
     // Canonical values are rebuilt from complete originals, not trusted from the package.
     const expectedRecords=new Map(),expectedLinks=new Set();
     for(const source of tables.imports){

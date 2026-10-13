@@ -1,0 +1,11 @@
+{
+  "id": "foundation-report-20261012",
+  "action": "report.prepare",
+  "input": {
+    "title": "GLEIF foundation and Singapore branch — source research",
+    "captureIds": [
+      "foundation-name-20261012"
+    ],
+    "selection": "included"
+  }
+}

@@ -121,6 +121,8 @@ def _source(closure, choice, expected_source):
     geographic_study_transfer.include_source(closure, collection_id, entry)
     from . import multivariate_control_study_transfer
     multivariate_control_study_transfer.include_source(closure, collection_id, entry)
+    from . import terrain_conditioning_study_transfer
+    terrain_conditioning_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],

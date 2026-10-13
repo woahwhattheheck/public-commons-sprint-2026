@@ -1,0 +1,16 @@
+{
+  "id": "review-506700GE1G29325QX363-20261012",
+  "action": "review.save",
+  "input": {
+    "id": "lei-506700GE1G29325QX363",
+    "title": "Global Legal Entity Identifier Foundation",
+    "captureId": "foundation-name-20261012",
+    "lei": "506700GE1G29325QX363",
+    "decision": "include",
+    "reviewer": "Stellar Forge company source research",
+    "rationale": "Retain the exact foundation entity as the reference source for company identity and source comparison.",
+    "useCase": "Company reference-data integration and receiving",
+    "nextWork": "Receive this original source in the installed project and review the preserved legal and address fields with the operator.",
+    "expectedVersion": 0
+  }
+}
