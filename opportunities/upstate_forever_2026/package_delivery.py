@@ -73,8 +73,12 @@ def original_ids(filename, name):
 
 def collect_references(data, *, limits=None):
     limits = capture_limits(limits)
-    require(isinstance(data, dict) and data.get('schema') == 'upstate-ec-sdc-2026/delivery-v1',
-            'Expected the original upstate-ec-sdc-2026/delivery-v1 manifest')
+    require(isinstance(data, dict) and data.get('schema') in (
+            'upstate-ec-sdc-2026/delivery-v1', 'commons.native-study-delivery/v1'),
+            'Choose an original regional RFP or explicit native-study delivery manifest')
+    study = data['schema'] == 'commons.native-study-delivery/v1'
+    if study:
+        require(data.get('delivery_mode') == 'native_study', 'Declare native_study delivery mode')
     rasters = data.get('rasters') if isinstance(data.get('rasters'), dict) else {}
     maps = data.get('maps') if isinstance(data.get('maps'), dict) else {}
     references = []
@@ -86,7 +90,10 @@ def collect_references(data, *, limits=None):
         references.append({'role': 'metadata.' + key, 'path': entry.get('fgdc_xml')})
         if isinstance(entry.get('path'), str) and entry['path']:
             raster_paths.append(entry['path'])
-    for key in dict.fromkeys((*original_ids('audit.py', 'MAPS'), *maps.keys())):
+    required_maps = (original_ids('audit.py', 'MAPS') if not study else (
+        'future_sediment_loss', 'future_nutrient_runoff', 'current_nutrient_export',
+        'current_sediment_export', 'combined_pollutant_export'))
+    for key in dict.fromkeys((*required_maps, *maps.keys())):
         require(isinstance(key, str) and len(key) <= 200, 'Map IDs must be bounded strings')
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
@@ -148,7 +155,9 @@ def run_original_audit(captured_manifest, index, raster_paths, *, limits=None):
         if signature not in (b'II*\x00', b'MM\x00*', b'II+\x00', b'MM\x00+'):
             return unavailable('A declared raster lacks a TIFF/BigTIFF container signature; correct the source artifact before native audit.')
     try:
-        spec = importlib.util.spec_from_file_location('upstate_original_audit', HERE / 'audit.py')
+        audit_name = ('native_study_audit.py' if index.get('schema')
+                      == 'commons.native-study-package/v1' else 'audit.py')
+        spec = importlib.util.spec_from_file_location('upstate_selected_delivery_audit', HERE / audit_name)
         require(spec is not None and spec.loader is not None, 'Original audit module cannot be loaded')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
