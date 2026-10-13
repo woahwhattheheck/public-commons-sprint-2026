@@ -298,11 +298,15 @@ export async function workspaceReceivingState(directory) {
       plain(item) && typeof item.path === 'string' && item.path && !item.path.startsWith('/') &&
       !item.path.split('/').some(part => !part || part === '.' || part === '..') &&
       UUID.test(item.workspaceId) && absolute(item.originalDirectory)), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
-    const history = marker.receivedHistory;
-    for (const name of ['operations', 'runtimes', 'managedHomes'])
-      need(Array.isArray(history[name]) && new Set(history[name]).size === history[name].length &&
+    const history = marker.receivedHistory, historyIds = new Map();
+    for (const name of ['operations', 'runtimes', 'managedHomes']) {
+      need(Array.isArray(history[name]), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+      const ids = new Set(history[name]);
+      need(ids.size === history[name].length &&
         history[name].every(id => (name === 'operations' ? UUID : /^[a-f0-9]{24}$/).test(id)),
         'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+      historyIds.set(name, ids);
+    }
     need(plain(history.applications) && Object.entries(history.applications).every(([id, sha]) =>
       /^[a-f0-9]{24}$/.test(id) && HASH.test(sha)), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
     if (marker.phase === 'BINDINGS_REVIEWED') {
@@ -310,30 +314,65 @@ export async function workspaceReceivingState(directory) {
       need(plain(binding) && typeof binding.actor === 'string' && typeof binding.note === 'string' &&
         Array.isArray(binding.runtimes) && Array.isArray(marker.runtimeEntries), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
       absolute(binding.runtimeHome);
+      // Index the same verified runtime/directory pairs once. Original marker
+      // validation remains mandatory for every fresh receiving context.
+      const verified = new Set();
+      for (const row of marker.runtimeEntries) {
+        need(plain(row), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+        if (row.status === 'PRESENT' && row.sourceVerified === true)
+          verified.add(JSON.stringify([row.runtimeId, row.directory]));
+      }
       need(new Set(binding.runtimes.map(item => item.runtimeId)).size === binding.runtimes.length &&
-        binding.runtimes.every(item => history.runtimes.includes(item.runtimeId) && absolute(item.directory) &&
-          marker.runtimeEntries.some(row => row.runtimeId === item.runtimeId && row.directory === item.directory &&
-            row.status === 'PRESENT' && row.sourceVerified === true)),
+        binding.runtimes.every(item => historyIds.get('runtimes').has(item.runtimeId) && absolute(item.directory) &&
+          verified.has(JSON.stringify([item.runtimeId, item.directory]))),
       'RUNTIME_WORKSPACE_RECEIVING_INVALID');
     }
   }
   return marker;
 }
 
+// A reader belongs to one overview/observation call, never to a lifecycle
+// mutation. Validation and its in-flight read are shared only within that call;
+// the next refresh reopens the marker and workspace identity from disk.
+const receivingReaders = new WeakMap();
+export function createWorkspaceReceivingReader(directory) {
+  const reader = Object.freeze({});
+  receivingReaders.set(reader, { root: absolute(directory), pending: null });
+  return reader;
+}
+function indexReceiving(marker) {
+  const history = marker?.mode === 'new-host' ? marker.receivedHistory : null;
+  return {
+    marker,
+    operations: new Set(history?.operations ?? []),
+    runtimes: new Set(history?.runtimes ?? []),
+    managedHomes: new Set(history?.managedHomes ?? []),
+    bindings: new Map(marker?.phase === 'BINDINGS_REVIEWED' ?
+      (marker.hostBindings?.runtimes ?? []).map(item => [item.runtimeId, item]) : []),
+  };
+}
+async function receivingSelection(directory, reader = null) {
+  const root = absolute(directory);
+  if (reader === null) return indexReceiving(await workspaceReceivingState(root));
+  const retained = receivingReaders.get(reader);
+  need(retained?.root === root, 'RUNTIME_WORKSPACE_RECEIVING_READER_MISMATCH');
+  return retained.pending ??= workspaceReceivingState(root).then(indexReceiving);
+}
+
 // Receiving changes only active selections. Original records and their absolute
 // paths remain readable without transformation.
-export async function receivedOperation(root, id) {
+export async function receivedOperation(root, id, reader = null) {
   operationId(id);
-  const marker = await workspaceReceivingState(root);
-  return marker?.mode === 'new-host' && marker.receivedHistory.operations.includes(id) ? marker : null;
+  const selected = await receivingSelection(root, reader);
+  return selected.operations.has(id) ? selected.marker : null;
 }
 export async function requireCurrentOperation(root, id) {
   need(!await receivedOperation(root, id), 'RUNTIME_WORKSPACE_RECEIVED_HISTORY',
     'This imported request is retained history. Review current inputs and prepare a new request on this host; the original UUID and state remain unchanged.', 409);
 }
-export async function receivedApplication(root, id, value = null) {
+export async function receivedApplication(root, id, value = null, reader = null) {
   recordId(id);
-  const marker = await workspaceReceivingState(root), expected = marker?.receivedHistory?.applications?.[id];
+  const { marker } = await receivingSelection(root, reader), expected = marker?.receivedHistory?.applications?.[id];
   if (marker?.mode !== 'new-host' || !expected) return false;
   // Compare the exact archived head bytes; a normal reviewed Save creates its
   // successor through the existing writer, retaining this revision.
@@ -343,15 +382,14 @@ export async function requireCurrentApplication(root, id) {
   need(!await receivedApplication(root, id), 'APPLICATION_HOST_REVIEW_REQUIRED',
     'Review and save this received application against current runtime and data paths before connecting or starting it. Original settings and runs remain in history.', 409);
 }
-export async function receivedManagedHome(root, id) {
-  const marker = await workspaceReceivingState(root);
-  return marker?.mode === 'new-host' && marker.receivedHistory.managedHomes.includes(recordId(id)) ? marker : null;
+export async function receivedManagedHome(root, id, reader = null) {
+  const selected = await receivingSelection(root, reader);
+  return selected.managedHomes.has(recordId(id)) ? selected.marker : null;
 }
-export async function currentRuntimeEntry(root, value, required = true) {
-  const marker = await workspaceReceivingState(root);
-  if (marker?.mode !== 'new-host' || !marker.receivedHistory.runtimes.includes(value.id)) return value;
-  const selected = marker.phase === 'BINDINGS_REVIEWED' ?
-    marker.hostBindings.runtimes.find(item => item.runtimeId === value.id) : null;
+export async function currentRuntimeEntry(root, value, required = true, reader = null) {
+  const receiving = await receivingSelection(root, reader), { marker } = receiving;
+  if (!receiving.runtimes.has(value.id)) return value;
+  const selected = receiving.bindings.get(value.id);
   if (!selected) {
     need(!required, 'RUNTIME_WORKSPACE_HOST_BINDING_REQUIRED',
       'This original runtime has no current-host binding. Select and review its recovered runtime, or attach a current installation through the existing Runtime operator.', 409);

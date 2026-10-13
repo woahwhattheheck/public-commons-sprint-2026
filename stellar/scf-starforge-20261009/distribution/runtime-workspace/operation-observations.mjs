@@ -18,13 +18,14 @@ const errorView = error => ({
  * A failed native probe stops further flock launches in that batch, while process
  * identities and retained records remain readable.
  *
- * @param {{readJob: (id: string, observe: (state: object, lockPath: string) => Promise<OperationActivity>) => Promise<object>,
+ * @param {{readJob: (id: string, observe: (state: object, lockPath: string) => Promise<OperationActivity>, context?: unknown) => Promise<object>,
+ * createBatchContext?: () => unknown,
  * workerAlive: (state: object) => Promise<boolean>,
  * managedCommandAlive: (state: object) => Promise<boolean>,
  * operationRunning: (path: string) => Promise<boolean>,
  * projectError?: (error: unknown) => ObservationError}} dependencies
  */
-export function createOperationReader({ readJob, workerAlive, managedCommandAlive, operationRunning, projectError = errorView }) {
+export function createOperationReader({ readJob, workerAlive, managedCommandAlive, operationRunning, projectError = errorView, createBatchContext = null }) {
   const pending = new Map(), waiting = [];
   let active = 0;
   async function withSlot(run) {
@@ -74,7 +75,7 @@ export function createOperationReader({ readJob, workerAlive, managedCommandAliv
   }
   async function one(id, batch) {
     if (pending.has(id)) return pending.get(id);
-    const work = Promise.resolve().then(() => withSlot(() => readJob(id, (state, path) => activity(state, path, batch))))
+    const work = Promise.resolve().then(() => withSlot(() => readJob(id, (state, path) => activity(state, path, batch), batch.context)))
       .catch(error => ({ id, operation: 'Retained operation', phase: 'UNAVAILABLE',
         displayPhase: 'OBSERVATION_UNAVAILABLE', workerActive: null, commandActive: null,
         observation: { status: 'UNAVAILABLE', source: 'RECORD',
@@ -83,8 +84,9 @@ export function createOperationReader({ readJob, workerAlive, managedCommandAliv
     try { return await work; } finally { if (pending.get(id) === work) pending.delete(id); }
   }
   return {
-    async read(ids) {
-      const batch = { probeError: null }, results = new Array(ids.length);
+    async read(ids, context = undefined) {
+      const batch = { probeError: null, context: context === undefined && ids.length ?
+        createBatchContext?.() : context }, results = new Array(ids.length);
       let next = 0;
       await Promise.all(Array.from({ length: Math.min(4, ids.length) }, async () => {
         while (next < ids.length) {

@@ -12,7 +12,7 @@ import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime }
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
 import { absolute, privateDirectory, optionalPrivateEntries, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError,
-  receivedManagedHome, requireCurrentOperation } from './storage.mjs';
+  createWorkspaceReceivingReader, receivedManagedHome, requireCurrentOperation } from './storage.mjs';
 
 export const managedOperationFields = Object.freeze({
   'managed-adopt': ['homeId', 'reviewId'],
@@ -113,20 +113,20 @@ export async function openManagedHome(root, { directory, label } = {}) {
 }
 // A single-home read for application queries. Full managedState keeps the home
 // selector and review inventory used by the Managed workspace.
-export async function managedHome(root, homeId) {
+export async function managedHome(root, homeId, receiving = null) {
   recordId(homeId);
   const record = await readJSON(pathFor(root, 'managed-homes', homeId), true);
   if (!record) return null;
   need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
-  if (await receivedManagedHome(root, homeId)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
+  if (await receivedManagedHome(root, homeId, receiving)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
   try { return await homeView(record); }
   catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
 }
-export async function managedState(root, { homeId = null } = {}) {
+export async function managedState(root, { homeId = null } = {}, receiving = createWorkspaceReceivingReader(root)) {
   const names = (await optionalPrivateEntries(join(root, 'managed-homes'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
   const homes = await Promise.all(names.map(async name => {
     const record = await readJSON(join(root, 'managed-homes', name));
-    if (await receivedManagedHome(root, record.id)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
+    if (await receivedManagedHome(root, record.id, receiving)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
     try { return await homeView(record); }
     catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
   }));
