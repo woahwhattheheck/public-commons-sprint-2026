@@ -142,6 +142,8 @@ def main():
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--synthesis-input", type=Path,
                         help="Continue the complete attributed two-edition source in this original receiving programme.")
+    parser.add_argument("--synthesis-review", action="store_true",
+                        help="Read saved synthesis evidence and compare both editions in the same completed programme.")
     parser.add_argument("--node", required=True, type=Path)
     parser.add_argument("--node-modules", required=True, type=Path)
     parser.add_argument("--chromium", required=True, type=Path)
@@ -151,6 +153,8 @@ def main():
     parser.add_argument("--resume-failed-tasks", action="store_true",
                         help="Continue the retained failed task after its concrete source/input repair")
     args = parser.parse_args()
+    if args.synthesis_review and not args.synthesis_input:
+        raise ValueError("Use the original --synthesis-input with its complete review continuation")
     if not 1 <= args.upload_limit_mib <= 65536 or args.task_timeout_seconds <= 0:
         raise ValueError("Select the receiving file capacity and native task observation interval")
     for path in (args.node, args.chromium, args.node_modules / "playwright/index.mjs"):
@@ -218,6 +222,10 @@ def main():
                     retained_browser = json.loads((output / "scientific-synthesis" / "synthesis-receiving.json").read_text())
                     if not retained_browser.get("complete"):
                         raise ValueError("Continue the independently reopened authored browser phase")
+                if args.synthesis_review:
+                    from scientific_synthesis_review_receiving import continue_review
+                    continue_review(args, APP, workspace, model, output, accepted,
+                                    OperatorProcess, run_command, atomic)
                 print(json.dumps({"complete": True, "reused": True,
                                   "source_revision": accepted["source_revision"],
                                   "workspace_id": model["workspace_id"], "result": record(result_path),
@@ -295,10 +303,25 @@ def main():
                           delivered_cli=record(cli), original_run_ids=model["runs"],
                           original_comparison_id=model["comparison_id"])
             atomic(result_path, result)
+            if args.synthesis_review:
+                server.close()
+                server = None
+                from scientific_synthesis_review_receiving import continue_review
+                continue_review(args, APP, workspace, model, output, result,
+                                OperatorProcess, run_command, atomic)
             print(json.dumps({"complete": True, "workspace_id": model["workspace_id"],
                               "result": record(result_path), "workspace_archive": stage["workspace_archive"],
                               "delivery_archive": stage["delivery_archive"]}), flush=True)
         except BaseException as error:
+            if args.synthesis_review and result.get("complete") and result_path.exists():
+                # The following read-only phase must never replace original COMPLETE.
+                if json.loads(result_path.read_text()) != result:
+                    raise ValueError("The completed original receiving changed during its review") from error
+                atomic(output / "synthesis-review-continuation-error.json", {
+                    "schema": "upstate.scientific-synthesis-review-error/v1",
+                    "original_result": record(result_path),
+                    "error": {"type": type(error).__name__, "message": str(error)}})
+                raise
             result["error"] = {"type": type(error).__name__, "message": str(error)}
             if progress.exists():
                 result["browser_progress"] = record(progress)
