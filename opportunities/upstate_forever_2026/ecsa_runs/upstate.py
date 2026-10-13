@@ -163,6 +163,10 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
     return result
 
 
+# Advertise the maintained run.start payload consumed above.
+ORIGINAL_RUN_CAPABILITIES = {"run.start": {"source_runs": True}}
+
+
 def integrate_operator(source: str | Path, *, write: bool = False) -> dict:
     """Patch only the exact known original run.start return, preserving other code.
 
