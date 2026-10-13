@@ -173,7 +173,7 @@ def _vector(before_root, before, after_root, after, folder):
                 counts["paired"] += 1
                 p0, p1, g0, g1 = json.loads(oldprops), json.loads(newprops), json.loads(oldgeom), json.loads(newgeom)
                 fields = [key for key in sorted(p0.keys() | p1.keys())
-                          if key not in p0 or key not in p1 or p0[key] != p1[key]]
+                          if key not in p0 or key not in p1 or _json(p0[key]) != _json(p1[key])]
                 coordinate_change = oldgeom != newgeom
                 geometry_status, equivalent = "same coordinates", True
                 if not crs_equal:
@@ -268,7 +268,9 @@ def _raster(before_root, before, after_root, after, folder):
         counts = {"cells": a.width*a.height, "common_valid": 0, "added_valid": 0, "removed_valid": 0,
                   "neither_valid": 0, "exported_nonfinite_unmasked": 0, "received_nonfinite_unmasked": 0,
                   "raw_changed_common": 0, "physical_changed_common": 0}
-        stats = {"count": 0, "minimum": None, "maximum": None, "sum": 0.0, "sum_squares": 0.0}
+        stats = {"count": 0, "minimum": None, "maximum": None, "mean": 0.0, "rms": 0.0}
+        counts["unrepresentable_difference_cells"] = 0
+        decimal_cells = 0
         profile = {"driver": "GTiff", "width": a.width, "height": a.height, "count": 1,
                    "crs": a.crs, "transform": a.transform, "compress": "deflate",
                    "tiled": True, "blockxsize": WINDOW, "blockysize": WINDOW}
@@ -281,8 +283,7 @@ def _raster(before_root, before, after_root, after, folder):
                                     direction="received minus exported")
                 if delta:
                     delta.update_tags(units=str(after["data"]["units"]), direction="received minus exported",
-                                      support="common finite-valid cells in the original selected logical band")
-                precision = False
+                                      support="common finite-valid cells with a representable float64 received-minus-exported difference")
                 for row in range(0, a.height, WINDOW):
                     for col in range(0, a.width, WINDOW):
                         window = Window(col, row, min(WINDOW, a.width-col), min(WINDOW, a.height-row))
@@ -306,31 +307,80 @@ def _raster(before_root, before, after_root, after, folder):
                         codes[common], codes[added], codes[removed] = 1, 2, 3
                         support.write(codes, 1, window=window)
                         if numeric:
-                            x = old.data.astype("float64")*scale0+offset0
-                            y = new.data.astype("float64")*scale1+offset1
-                            good = common & np.isfinite(x) & np.isfinite(y)
-                            if int(good.sum()) != int(common.sum()):
-                                raise ValueError("The selected raster physical conversion is nonfinite on valid cells")
-                            for values in (old, new):
-                                if np.issubdtype(values.dtype, np.integer) and np.any(
-                                        np.abs(values.data[common].astype("longdouble")) > 2**53):
-                                    precision = True
+                            old_values, new_values = old.data[common], new.data[common]
+                            unsafe_integer = any(np.issubdtype(v.dtype, np.integer) and
+                                any(abs(int(x)) > 2**53 for x in (v.min(), v.max()))
+                                for v in (old_values, new_values) if v.size)
+                            accurate_scalar = (unsafe_integer or scale0 != scale1 or offset0 != offset1)
+                            if accurate_scalar:
+                                # Decimal represents every native integer and each binary64
+                                # scale/offset exactly. 5000 digits exceed the exponent span of
+                                # products and differences of finite binary64 inputs.
+                                from decimal import Decimal, localcontext
+                                numeric_values = np.empty(old_values.size, dtype="float64")
+                                changed = 0
+                                with localcontext() as context:
+                                    context.prec = 5000
+                                    def number(value):
+                                        return Decimal(int(value)) if isinstance(value, np.integer) else Decimal.from_float(float(value))
+                                    ds0, ds1 = Decimal.from_float(scale0), Decimal.from_float(scale1)
+                                    do = Decimal.from_float(offset1)-Decimal.from_float(offset0)
+                                    for i, (x, y) in enumerate(zip(old_values, new_values)):
+                                        difference_value = number(y)*ds1-number(x)*ds0+do
+                                        changed += difference_value != 0
+                                        rounded = float(difference_value)
+                                        if not math.isfinite(rounded) or (rounded == 0 and difference_value != 0):
+                                            numeric_values[i] = np.nan
+                                            counts["unrepresentable_difference_cells"] += 1
+                                        else:
+                                            numeric_values[i] = rounded
+                                decimal_cells += int(old_values.size)
+                            else:
+                                # Cancel identical offsets first; multiplying the native
+                                # difference avoids loss from a large shared offset.
+                                with np.errstate(over="ignore", invalid="ignore", under="ignore"):
+                                    raw_difference = new_values.astype("float64")-old_values.astype("float64")
+                                    numeric_values = raw_difference*scale0
+                                changed_mask = (old_values != new_values) & (scale0 != 0)
+                                changed = int(changed_mask.sum())
+                                unrepresentable = (~np.isfinite(numeric_values)) | ((numeric_values == 0)&changed_mask)
+                                # A finite physical difference can exist even when the raw
+                                # subtraction overflows. Recover those cases exactly.
+                                if unrepresentable.any():
+                                    from decimal import Decimal, localcontext
+                                    with localcontext() as context:
+                                        context.prec = 5000
+                                        ds = Decimal.from_float(scale0)
+                                        for i in np.flatnonzero(unrepresentable):
+                                            x, y = old_values[i], new_values[i]
+                                            dx = Decimal(int(x)) if isinstance(x,np.integer) else Decimal.from_float(float(x))
+                                            dy = Decimal(int(y)) if isinstance(y,np.integer) else Decimal.from_float(float(y))
+                                            exact = (dy-dx)*ds
+                                            rounded = float(exact)
+                                            numeric_values[i] = rounded if math.isfinite(rounded) and not (rounded == 0 and exact != 0) else np.nan
+                                            decimal_cells += 1
+                                    counts["unrepresentable_difference_cells"] += int((~np.isfinite(numeric_values)).sum())
+                            counts["physical_changed_common"] += changed
                             difference = np.full(old.shape, np.nan, dtype="float64")
-                            difference[good] = y[good]-x[good]
-                            if not np.isfinite(difference[good]).all():
-                                raise ValueError("The selected raster difference exceeds finite numeric range")
+                            difference[common] = numeric_values
                             delta.write(difference, 1, window=window)
-                            values = difference[good]
-                            counts["physical_changed_common"] += int(np.count_nonzero(values))
+                            values = numeric_values[np.isfinite(numeric_values)]
                             if values.size:
-                                stats["count"] += int(values.size)
+                                prior, total = stats["count"], stats["count"]+int(values.size)
                                 low, high = float(values.min()), float(values.max())
                                 stats["minimum"] = low if stats["minimum"] is None else min(stats["minimum"], low)
                                 stats["maximum"] = high if stats["maximum"] is None else max(stats["maximum"], high)
-                                stats["sum"] = math.fsum((stats["sum"], float(values.sum(dtype="float64"))))
-                                stats["sum_squares"] = math.fsum((stats["sum_squares"], float(np.square(values).sum(dtype="float64"))))
-                result["physical_precision"] = ("Float64 physical conversion; original integers above 2^53 are retained in source files. Exact raw-change counts use native/Python comparison."
-                                                if precision else "Float64 physical conversion of native values with original band scale and offset.")
+                                magnitude = float(np.max(np.abs(values)))
+                                mean = float((values/magnitude).mean())*magnitude if magnitude else 0.0
+                                rms = math.sqrt(float(np.square(values/magnitude).mean()))*magnitude if magnitude else 0.0
+                                stats["mean"] = stats["mean"]*(prior/total) + mean*(values.size/total)
+                                stats["rms"] = math.hypot(stats["rms"]*math.sqrt(prior/total),
+                                                          rms*math.sqrt(values.size/total))
+                                stats["count"] = total
+                result["physical_precision"] = {
+                    "method": "Equal offsets cancel before arithmetic; unequal encodings/scales use exact Decimal inputs; final delta storage is float64.",
+                    "decimal_evaluated_cells": decimal_cells,
+                    "unrepresentable": "Nonzero differences below float64 or overflowing its range are explicitly counted and stored as NoData; exact change counts and native sources remain retained."}
         finally:
             if delta:
                 delta.close()
@@ -342,8 +392,8 @@ def _raster(before_root, before, after_root, after, folder):
             result["value_change"] = "value-change.tif"
             result["difference"] = {"direction": "received minus exported", "units": after["data"]["units"],
                 "valid_cells": count, "minimum": stats["minimum"], "maximum": stats["maximum"],
-                "mean": stats["sum"]/count if count else None,
-                "rmse": math.sqrt(stats["sum_squares"]/count) if count else None}
+                "mean": stats["mean"] if count else None,
+                "rmse": stats["rms"] if count else None}
         else:
             result["physical_comparison"] = "Raw category/encoding changes and valid support; arithmetic differences are not assigned across categories or different units."
         return result
@@ -432,6 +482,11 @@ def review(workspace, selection, *, progress=None):
                     directory.mkdir(parents=True)
                     compare = _vector if before["data"]["kind"] == "vector" else _raster
                     comparison = compare(original[0], before, received[0], after, directory)
+                    # A layer checkpoint becomes reusable only after all actual native
+                    # data and mask/sidecar members still match their input inventory.
+                    for source_root, source_layer in ((original[0], before), (received[0], after)):
+                        for member in _members(source_root, source_layer):
+                            gis.checked(source_root, member)
                     value = {"selection": key, "layer_id": layer_id, "title": after["title"],
                         "kind": before["data"]["kind"], "units": after["data"]["units"],
                         "source": deepcopy(before.get("source")),
@@ -447,10 +502,17 @@ def review(workspace, selection, *, progress=None):
                     progress({"phase": "reviewing-gis-edition", "layer_id": layer_id,
                               "completed": index+1, "total": len(left), "review_id": key})
             # Recheck complete original input fingerprints before finishing a review.
-            for root, rec, manifest, descriptor, result in (original, received):
-                gis.checked(workspace.root, descriptor)
-                if gis.verify(root, native=False)["fingerprint"] != result["fingerprint"]:
-                    raise ValueError("A retained GIS input changed during review")
+            try:
+                for root, rec, manifest, descriptor, result in (original, received):
+                    gis.checked(workspace.root, descriptor)
+                    if gis.verify(root, native=False)["fingerprint"] != result["fingerprint"]:
+                        raise ValueError("A retained GIS input changed during review")
+            except Exception:
+                # A restored input must never cause mixed-input checkpoints from
+                # this failed attempt to be reused under the original binding.
+                for checkpoint in (folder / "layers").glob("*/layer.json"):
+                    checkpoint.unlink(missing_ok=True)
+                raise
             gis.save(folder / "exported-project.json", original[2])
             gis.save(folder / "received-project.json", received[2])
             report = {**state, "state": "complete"}
