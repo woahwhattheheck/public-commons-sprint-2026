@@ -562,10 +562,19 @@ def patch_registered_app(text):
         text = re.sub(pattern, lambda match: replacement, text)
     branch = REGISTERED_REPAIR["registered_block"]
     if branch not in text:
-        pattern = r"(?m)^  if\(extensions\.render\(view,\$\('#content'\),state\)\)\{[^\n]+\}\s*$"
-        text, count = re.subn(pattern, lambda match: branch, text)
-        if count != 1:
-            raise ValueError("Expected the current registered desk render branch")
+        # Other registered desks remove their obsolete standalone controllers.
+        # Preserve that complete current owner branch and its remaining cleanup.
+        native_dispatch = re.findall(
+            r"(?ms)^  if\(extensions\.hasView\(view\)\)\{\n.*?"
+            r"^    extensions\.render\(view,\$\('#content'\),state\);return;\n  \}",
+            text)
+        if len(native_dispatch) > 1:
+            raise ValueError("Preserve one current registered desk render branch")
+        if not native_dispatch:
+            pattern = r"(?m)^  if\(extensions\.render\(view,\$\('#content'\),state\)\)\{[^\n]+\}\s*$"
+            text, count = re.subn(pattern, lambda match: branch, text)
+            if count != 1:
+                raise ValueError("Expected the current registered desk render branch")
     if re.search(r"\bconservation\.(render|mount|detach|dispatch|taskActions)|const conservation=|import \{attachConservation", text):
         raise ValueError("Compose the remaining direct Conservation browser wiring before installation")
     return text
