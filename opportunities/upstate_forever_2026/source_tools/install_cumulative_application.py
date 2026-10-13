@@ -668,6 +668,37 @@ def context_desks_join(root, records, *, application_source=None):
         result = native["install"](root, application_source)
         records.append({"component": "Native conservation interactions", "result": result})
 
+    programme_interactions_path = "install_programme_interactions.py"
+    if (root / programme_interactions_path).is_file():
+        programme_interactions = module(root, programme_interactions_path)
+        complete("Conservation studies in run programmes",
+                 tuple(programme_interactions["SOURCE_FILES"]) + (programme_interactions_path,))
+        result = programme_interactions["install"](root, root)
+        records.append({"component": "Conservation studies in run programmes", "result": result})
+
+    programme_study_path = "operator/install_programme_study.py"
+    if (root / programme_study_path).is_file():
+        complete("Native-study Programme export", (
+            programme_study_path, "operator/programme_study_patch.json",
+            "operator/PROGRAMME_NATIVE_STUDY.md", "model/native_study.py",
+            "model/compute_programme.py", "operator/web/programmes.mjs"))
+        result = module(root, programme_study_path)["install"](root, root)
+        records.append({"component": "Native-study Programme export", "result": result})
+
+    point_source_path = "operator/install_point_source_context.py"
+    if (root / point_source_path).is_file():
+        point_sources = module(root, point_source_path)
+        complete("Retained point-source observation context", point_sources["FILES"])
+        result = point_sources["install"](root, root)
+        records.append({"component": "Retained point-source observation context", "result": result})
+
+    analysis_source_path = "operator/install_analysis_source_context.py"
+    if (root / analysis_source_path).is_file():
+        analysis_sources = module(root, analysis_source_path)
+        complete("Scenario analysis source context", analysis_sources["ADDITIONS"])
+        result = analysis_sources["install"](root, root)
+        records.append({"component": "Scenario analysis source context", "result": result})
+
     monitoring_path = "integrations/monitoring/install_observed_context.py"
     if (root / monitoring_path).is_file():
         adoption = json.loads((root / "integrations/monitoring/source_adoption.json").read_text("utf-8"))
