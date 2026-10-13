@@ -36,6 +36,7 @@ def _selection(args, application):
             ("calibration_hydrology", "source/hydrology-huc05-07-20261013/model-sources.json"),
             ("calibration_basins", "source/hydrology-huc05-07-20261013/nldi/model-sources.json"),
             ("calibration_geographic_support", "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json"),
+            ("calibration_station_study", "calibration_station_geography.sources.json"),
             ("study_figures", "eighteenmile_scientific_figures.sources.json"),
             ("flow_report", "observed_hydrology_context.sources.json")):
         context_manifest = application / relative
@@ -196,6 +197,100 @@ def _physical_support(workspace, application, manifests, collections, output, st
     return True
 
 
+def _calibration_station_studies(workspace, output, state, *, execute=False):
+    """Continue the two original-coordinate recipes through the maintained engine."""
+    from model.common import atomic_json, describe_file, now, read_json, verify_file
+    if not any(item["role"] == "calibration_station_study" for item in state["source_imports"]):
+        return False
+    study_ids = ("huc05-07-calibration-gauges-13-nwis",
+                 "huc05-07-calibration-gauges-13-nldi")
+    if not execute:
+        previous = state.get("calibration_station_preparations")
+        if previous:
+            if (previous.get("project_id") != workspace.project["id"]
+                    or previous.get("receiving_id") != state["id"]
+                    or tuple(item.get("study_id") for item in previous.get("studies", [])) != study_ids):
+                raise ValueError("Retain the original calibration station preparation identity")
+            for item in previous["studies"]:
+                selection = read_json(verify_file(workspace.root, item["selection"]))
+                for reference in [*selection["sources"], *selection["watersheds"],
+                                  *selection["observation_tables"]]:
+                    unused_path, entry = workspace.source_file(
+                        reference["collection_id"], reference["source_id"])
+                    if entry["body"]["sha256"] != reference["source_sha256"]:
+                        raise ValueError("A prepared calibration geography original source changed")
+            atomic_json(output / "calibration-station-preparations.json", previous)
+            return True
+        from model.observed_station_studies import prepare
+        prepared = []
+        for study_id in study_ids:
+            result = prepare(workspace, study_id)
+            study = result["study"]
+            if not study["ready"]:
+                raise ValueError("Prepare the retained calibration station study: " +
+                                 "; ".join(study["missing"]))
+            selection_path = Path(result["selection_path"])
+            prepared.append({
+                "study_id": study_id, "title": study["title"],
+                "operation_id": result["operation_id"],
+                "selection": describe_file(workspace.root, selection_path),
+                "source_summary": study["source_summary"],
+                "state": "prepared",
+            })
+        record = {"schema": "upstate.calibration-station-preparations/v1",
+                  "project_id": workspace.project["id"], "receiving_id": state["id"],
+                  "studies": prepared}
+        atomic_json(output / "calibration-station-preparations.json", record)
+        state["calibration_station_preparations"] = record
+        return True
+
+    from model import station_geography
+    prepared = state["calibration_station_preparations"]
+    if (prepared["project_id"] != workspace.project["id"]
+            or prepared["receiving_id"] != state["id"]
+            or tuple(item["study_id"] for item in prepared["studies"]) != study_ids):
+        raise ValueError("Continue the original prepared calibration station studies")
+    previous = state.get("calibration_station_geography", {})
+    completed = {}
+    for item in previous.get("studies", []):
+        completed[item["study_id"]] = item
+    record = {"schema": "upstate.calibration-station-geography/v1",
+              "project_id": workspace.project["id"], "receiving_id": state["id"],
+              "studies": []}
+    state["calibration_station_geography"] = record
+    for item in prepared["studies"]:
+        selection_path = verify_file(workspace.root, item["selection"])
+        selection = read_json(selection_path)
+        saved = completed.get(item["study_id"])
+        if saved and saved.get("selection") == item["selection"] and saved.get("edition_id"):
+            edition = station_geography.inspect(workspace, saved["edition_id"], verify=True)
+        else:
+            edition = station_geography.build(workspace, selection)
+            edition = station_geography.inspect(workspace, edition["id"], verify=True)
+        counts = edition["summary"]
+        expected = {"station_count": 13, "located_count": 13, "observation_count": 26242,
+                    "unassigned_observation_count": 0, "original_candidate_count": 26}
+        if any(counts.get(key) != value for key, value in expected.items()):
+            raise ValueError("The completed calibration geography differs from its original 13-gauge source counts")
+        completed_item = {
+            **item, "state": "complete", "edition_id": edition["id"],
+            "build_id": edition["build_id"], "summary": counts,
+            "files": edition["files"],
+        }
+        record["studies"].append(completed_item)
+        state["updated_at"] = now()
+        atomic_json(output / "calibration-station-geography.json", record)
+        inventory = read_json(output / "source-inventory.json")["sources"]
+        _index(output, state, inventory, {}, workspace)
+        retained_files = {item["path"]: item for item in state.get("files", [])}
+        for name in ("calibration-station-geography.json", "index.html"):
+            descriptor = describe_file(workspace.root, output / name)
+            retained_files[descriptor["path"]] = descriptor
+        state["files"] = list(retained_files.values())
+        atomic_json(output / "receiving.json", state)
+    return True
+
+
 def _source_inventory(workspace, collections, output):
     """Describe original retained tables and point to their complete original bodies."""
     from model.common import file_digest
@@ -277,6 +372,17 @@ th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}s
         document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
     else:
         document += '<p>Original source intake and observation views are complete. Continue this receiving operation to add source-water selections, station–watershed joins and geographic exports.</p>'
+    if state.get("calibration_station_preparations"):
+        document += '<h2>Calibration gauge geography</h2><p>Two prepared selections retain the original NWIS and NLDI locations of thirteen gauges and link all 26,242 original daily records. <a href="calibration-station-preparations.json">Open the selected sources and coordinate choices</a>.</p>'
+        rows = state.get("calibration_station_geography", {}).get("studies", [])
+        if rows:
+            document += '<ul>'
+            for item in rows:
+                maps = [entry for entry in item["files"] if Path(entry["path"]).name == "OPEN_STATIONS.html"]
+                if maps:
+                    href = Path(os.path.relpath(workspace.root / maps[0]["path"], output)).as_posix()
+                    document += '<li><a href="' + e(href) + '">' + e(item["title"]) + '</a></li>'
+            document += '</ul><p><a href="calibration-station-geography.json">Native geography results</a> retain both original coordinate candidates, whole catchments and any selected original model-domain memberships.</p>'
     document += "<h2>Source tables and geographic layers</h2><p>Table counts describe actual retained rows. Source scope and complete collection identities are in <a href=\"source-inventory.json\">the source inventory</a>. The existing operator Sources desk provides table previews and every original companion download; Spatial review and Exports display these same saved views.</p>"
     document += "<table><thead><tr><th>Source</th><th>Kind</th><th>Rows</th><th>Units / datum</th><th>Open</th></tr></thead><tbody>" + "".join(source_rows) + "</tbody></table>"
     document += "<h2>Reading the observations</h2><p>Gauge discharge and stage keep their original units and quality flags. Laboratory concentrations keep their sample dates, fractions, analytical methods and detection conditions. The published 2023 seasonal statistics and independently reconciled individual activities retain separate source identities. Same-date upstream discharge supplies hydrologic context for the lake samples. The four published public-water protection polygons retain their original regulatory footprint and source-area relation.</p>"
@@ -307,6 +413,8 @@ def receive(args):
             from model.common import verify_file
             for item in previous.get("files", []):
                 verify_file(workspace.root, item)
+            if previous.get("calibration_station_preparations"):
+                _calibration_station_studies(workspace, output, previous)
             if not previous.get("physical_support_import"):
                 upgraded = copy.deepcopy(previous)
                 if _physical_support(workspace, application, manifests,
@@ -421,6 +529,7 @@ def receive(args):
                 observation_summary["context_rows_across_views"] += sum(
                     item["context_count"] for item in nutrient["observations"])
             _physical_support(workspace, application, manifests, collections, output, state)
+            _calibration_station_studies(workspace, output, state)
             state["updated_at"] = now()
             atomic_json(state_path, state)
             inventory = _source_inventory(workspace, collections, output)
@@ -432,6 +541,8 @@ def receive(args):
                 source_files.append("nutrient-flow-observations.json")
             if state.get("physical_support_import"):
                 source_files.append("physical-support-observations.json")
+            if state.get("calibration_station_preparations"):
+                source_files.append("calibration-station-preparations.json")
             state["source_phase"] = {
                 "state": "complete", "completed_at": now(),
                 "observation_views": state["observation_import"]["views"],
@@ -449,6 +560,9 @@ def receive(args):
                 state["attempts"][-1].update(state="sources_complete", completed_at=now())
                 atomic_json(state_path, state)
                 return {**state, "directory": str(output), "index": str(output / "index.html")}
+            state.update(state="mapping_calibration_stations", updated_at=now())
+            atomic_json(state_path, state)
+            _calibration_station_studies(workspace, output, state, execute=True)
             water = next(item for item in collections if item["role"] == "public_water")
             state["public_water"] = _public_water(
                 workspace, workspace._get("sources", water["source_collection_id"]), spec_path, output)
@@ -490,6 +604,12 @@ def receive(args):
             if state.get("physical_support_import"):
                 state["files"].append(describe_file(
                     workspace.root, output / "physical-support-observations.json"))
+            if state.get("calibration_station_preparations"):
+                state["files"].append(describe_file(
+                    workspace.root, output / "calibration-station-preparations.json"))
+            if state.get("calibration_station_geography"):
+                state["files"].append(describe_file(
+                    workspace.root, output / "calibration-station-geography.json"))
             state["attempts"][-1].update(state="complete", completed_at=now())
             atomic_json(state_path, state)
         except BaseException as error:

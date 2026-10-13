@@ -266,7 +266,8 @@
         "flow_period": "2020-01-01/2025-12-31",
         "guide_file": "CALIBRATION_CONTEXT.md",
         "source_index": "calibration-inputs.json"
-      }
+      },
+      "vintage": "Original USGS station inventory retrieved 2026-10-13; discharge context 2020–2025"
     },
     {
       "path": "derived/daily-discharge.csv",
