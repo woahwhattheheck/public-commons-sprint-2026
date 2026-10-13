@@ -8,6 +8,9 @@ import { object, bytes, digest, identity, readPrivate, privateDirectory, fault, 
 import { parseCorrectionDocument, applyCorrectionOperations, inspectCorrectionDocument }
   from './public/dcat-correction-json.mjs';
 
+import { createDcatCorrectionExchanges, validateDcatCorrectionExchanges,
+  validateDcatCorrectionExchangeFiles, dcatCorrectionExchangeSummary } from './dcat-correction-exchange.mjs';
+
 const SCHEMA = 'stellar-forge.dcat-corrections.v1', REVISION = 'stellar-forge.dcat-correction-revision.v1';
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/, HASH = /^[a-f0-9]{64}$/;
 const MAX_DOCUMENT = 134217728, MAX_REVISION = 33554432;
@@ -84,6 +87,7 @@ export function validateDcatCorrections(state) {
       materialized.add(row.requestId);
     }
   }
+  validateDcatCorrectionExchanges(state);
 }
 async function revisionFiles(directory, draft, revision) {
   const root = revisionRoot(directory, draft.id, revision.id);
@@ -124,19 +128,22 @@ export async function validateDcatCorrectionFiles(directory, state) {
         need(identity(expected) === identity(value.record.changes), 'DCAT_CORRECTION_RESTORE_HISTORY_CHANGED');
       } else {
         need(value.record.kind === 'edit', 'DCAT_CORRECTION_REVISION_KIND');
-        const applied = applyCorrectionOperations(previous.text, value.record.operations);
+        const applied = value.record.operations.length ? applyCorrectionOperations(previous.text, value.record.operations) :
+          { text: previous.text, changes: [] };
         need(Buffer.from(applied.text, 'utf8').equals(value.document) &&
           identity(applied.changes) === identity(value.record.changes), 'DCAT_CORRECTION_CHANGE_HISTORY_CHANGED');
       }
       verified.set(revision.id, revision); previous = value;
     }
   }
+  await validateDcatCorrectionExchangeFiles(directory, state);
 }
 export function dcatCorrectionsSummary(state) {
   return (state?.corrections?.drafts ?? []).map(draft => ({
     id: draft.id, source: complete(draft.source), headRevisionId: draft.headRevisionId,
     revisions: draft.revisions.map(({ id, sha256, documentSha256, documentBytes }) => ({ id, sha256, documentSha256, documentBytes })),
-    materializations: complete(draft.materializations)
+    materializations: complete(draft.materializations),
+    ...(state.corrections.exchanges ? { exchanges: dcatCorrectionExchangeSummary(state, draft.id) } : {})
   }));
 }
 export function createDcatCorrections({ directory, state, dcat, launch, persist }) {
@@ -210,15 +217,17 @@ export function createDcatCorrections({ directory, state, dcat, launch, persist 
       'This request UUID already belongs to a different saved operation.', 409);
     return prior;
   }
-  async function preview(input) {
+  async function preview(input, allowEmpty = false) {
     const selected = draft(input.correctionId), revision = selectedRevision(selected, input.expectedRevisionId);
     sameGuard(selected, revision, input);
     const value = await revisionFiles(directory, selected, revision);
-    const result = applyCorrectionOperations(value.text, input.operations), raw = Buffer.from(result.text, 'utf8');
+    const result = allowEmpty && Array.isArray(input.operations) && input.operations.length === 0 ?
+      { text: value.text, changes: [] } : applyCorrectionOperations(value.text, input.operations);
+    const raw = Buffer.from(result.text, 'utf8');
     need(raw.length >= 2 && raw.length <= MAX_DOCUMENT, 'DCAT_CORRECTION_DOCUMENT_SIZE');
     return { selected, revision, value, result, raw };
   }
-  return {
+  const api = {
     listDcatCorrections({ offset = 0, limit = 50, query = '' } = {}) {
       need(Number.isSafeInteger(offset) && offset >= 0 && Number.isSafeInteger(limit) && limit > 0 && limit <= 200 &&
         typeof query === 'string' && query.length <= 2000, 'DCAT_CORRECTION_PAGE_INVALID');
@@ -283,17 +292,23 @@ export function createDcatCorrections({ directory, state, dcat, launch, persist 
         current.drafts.push(selected); finishRequest(id); await persist(); return complete(selected);
       }), correctionId: id, revisionId: id0 };
     },
-    saveDcatCorrection(input) {
+    saveDcatCorrection(input, internal = null) {
       const requestSha256 = mutationShape(input, 'edit'), selected = draft(input.correctionId), id = input.requestId, credit = attribution(input);
       const prior = replay(selected, id, requestSha256);
       return { ...launch(prior ? 'reopen saved catalogue correction revision' : 'save catalogue correction revision', async () => {
-        if (prior) { await revisionFiles(directory, selected, prior); return { correctionId: selected.id, revision: complete(prior) }; }
-        const value = await preview(input);
-        need(input.expectedResultSha256 === undefined || input.expectedResultSha256 === digest(value.raw),
+        if (prior) {
+          await revisionFiles(directory, selected, prior);
+          if (internal?.afterSave) { await internal.afterSave(prior); finishRequest(id); await persist(); }
+          return { correctionId: selected.id, revision: complete(prior) };
+        }
+        const prepared = internal?.prepare ? await internal.prepare() : input;
+        const value = await preview(prepared, Boolean(internal));
+        need(prepared.expectedResultSha256 === undefined || prepared.expectedResultSha256 === digest(value.raw),
           'DCAT_CORRECTION_PREVIEW_CHANGED', 'Preview the complete current change set before saving.', 409);
         const journal = await pending(input, requestSha256, selected.id, id);
         const revision = await retainRevision(selected, id, requestSha256, value.raw,
-          { kind: 'edit', createdAt: journal.createdAt, ...credit, operations: complete(input.operations), changes: value.result.changes });
+          { kind: 'edit', createdAt: journal.createdAt, ...credit, operations: complete(prepared.operations), changes: value.result.changes });
+        if (internal?.afterSave) await internal.afterSave(revision);
         finishRequest(id); await persist(); return { correctionId: selected.id, revision: complete(revision) };
       }), correctionId: selected.id, revisionId: id };
     },
@@ -340,4 +355,7 @@ export function createDcatCorrections({ directory, state, dcat, launch, persist 
       }), correctionId: selected.id, revisionId: revision.id, catalogId: id };
     },
   };
+  const exchanges = createDcatCorrectionExchanges({ directory, state, dcat, corrections: api, launch, persist,
+    commit: (input, internal) => api.saveDcatCorrection(input, internal) });
+  return { ...api, ...exchanges };
 }

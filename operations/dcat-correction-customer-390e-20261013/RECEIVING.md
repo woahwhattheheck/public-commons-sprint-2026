@@ -1,6 +1,6 @@
-# Complete GSA correction and receiving course
+# Complete GSA correction, recipient exchange and receiving course
 
-This course continues the actual completed GSA semantic-comparison case through the catalogue correction workbench. It receives that case’s complete following archive into a separate producer project, uses the real browser to create and edit a labelled draft, restores the original catalogue bytes, retains the restored document as a candidate, and follows the original review and complete-workspace receiving flow.
+This course continues the actual completed GSA semantic-comparison case through the catalogue correction workbench. It receives that case’s complete following archive into a separate producer project, uses the real browser to create and edit a labelled draft, restores the original catalogue bytes, retains the restored document as a candidate, and follows the original review and complete-workspace receiving flow. It then uses a second labelled draft for a complete standalone recipient proposal, concurrent author correction and explicit reconciliation before exporting and independently reopening the whole project.
 
 The original GSA migration, snapshot, SHACL and graph-comparison operations are not repeated. Their complete saved files, decisions and source identities travel with the new workspace. The new preservation review retains the exact original current catalogue and the byte-identical restored candidate. Its validation may still say that corrections are required. That outcome is retained accurately; the course does not select a release or change a semantic decision.
 
@@ -16,14 +16,17 @@ The result deliberately retains `presentation.ready: false`. Browser screenshots
 
 ## Source and the original case
 
-The production correction API was merged in Merchant PR1738, commit `f2a36e19f5f3f24ae4972a0e9ae479623b3d5bd2`. The course is shipped with its following original HTTP/UI continuation. Use the complete public product checkout or installed source containing all three files in this directory and the current production modules. Do not mix an older static browser module with a newer controller.
+The production correction API was merged in Merchant PR1738, commit `f2a36e19f5f3f24ae4972a0e9ae479623b3d5bd2`. The course is shipped with its following original HTTP/UI continuation. Use the complete public product checkout or installed source containing the complete course files in this directory, including `run-recipient-correction-browser.mjs` and the current production modules. Do not mix an older static browser module with a newer controller.
+
+The first correction course was merged in PR1773 at `8a27ca55e9705abe3d1a78c14009e46a896c05a5`. The additive recipient continuation preserves its actual input/result/archive and original browser module.
 
 The native caller reuses the original source-owned modules:
 
 - `stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/model.mjs`
 - `server.mjs`, `archive.mjs`, `capture.mjs`
 - `dcat-corrections.mjs` and `public/dcat-correction-json.mjs`
-- the original migration engine and semantic workspace validators.
+- `dcat-correction-exchange.mjs`, its exact public codec and original recipient renderer/assets;
+- the original migration engine, semantic workspace validators and complete exchange archive validators.
 
 The preceding programme is:
 
@@ -139,7 +142,7 @@ The review’s original source/candidate counts must remain 344 and candidate by
 
 The complete raw report and candidate are downloaded. The existing original catalogue, release history, acquisition history, semantic profiles/runs/findings, comparison history and decisions must equal the pre-course state after removing only this course’s draft, materialized catalogue and new review.
 
-### 4. Export and independently receive
+### 4. Complete the recipient exchange, export and independently receive
 
 The caller asks the original owner to export the complete workspace into `complete-gsa-corrections.ckanw`. The original exporter checks all saved correction history and the existing semantic source/artifacts.
 
@@ -155,22 +158,152 @@ The native caller compares the complete state before and after that browser use.
 
 The following archive is the portable customer continuation. Preserve both archives, both browser output directories and the complete result/progress files in the original delivered operation.
 
+## Complete recipient proposal and author reconciliation
+
+The same invocation now continues through a second, separately labelled correction draft on the original current 344-record catalogue. It keeps the first course’s three revisions, restored candidate and preservation review intact. This second draft exercises the real issued-package and recipient-return product without materializing its exercise fields or selecting a release.
+
+The native caller starts no additional workspace server for the recipient document. It supplies its existing authenticated producer listener to `runDcatRecipientCorrectionBrowser`. That module opens one owned Chromium process with an ephemeral author context and a separate persistent offline context. Authentication stays in the ephemeral context; its bearer navigation is never stored in the persistent profile. The actual downloaded standalone HTML opens through its local file URL in the offline context. It imports the product’s unchanged exact-text exchange codec to verify complete downloaded proposals. No RDF or migration engine is dispatched for this round trip.
+
+### Issue the original catalogue
+
+The author creates a second correction draft and selects its original source revision. Through the actual author controls, the browser issues that exact revision with the issuing editor, intended recipient, package label and purpose.
+
+The programme retains the complete recipient HTML, initial proposal JSON, issued source package and every original enclosed file. Each descriptor binds its complete bytes and SHA-256. The issue’s catalogue hash must equal the original selected GSA source, and its selected history contains the actual original source revision. The original package is never reconstructed from table previews.
+
+The authenticated workbench is checked through its original `/api/launch` response and saved catalogue selection. The output retains the instance/PID/project identity and origin, without the bearer URL or token.
+
+### Edit the standalone recipient package
+
+The actual standalone document is opened as a local file. HTTP and HTTPS requests from that recipient page are blocked and treated as an incomplete course; its source, editor, history and downloads are embedded in the exported file.
+
+The recipient saves one attributed edition containing three exact operations:
+
+| Path | Recipient’s saved change |
+|---|---|
+| `/dataset/0/title` | A clearly labelled proposed title edit |
+| `/dataset/0/dataQuality` | The exact boolean literal `false` |
+| `/_recipientExercise` | An explicitly labelled exercise object containing `900719925474099312345` and `1.2300000000000000001` with those exact numeric spellings |
+
+The programme queues these changes through the real controls, downloads their full preview and resulting document, and saves the attributed edition. It browses and pages the complete dataset, searches the original first identifier, downloads every embedded file, and captures the standalone interface at desktop and 390-pixel widths. Page overflow, script errors or a missing complete download makes the course incomplete.
+
+After saving, the recipient starts unfinished work deliberately: one queued `/_notAdopted` addition and an incomplete editor literal `{"unfinished":`. The full returned HTML retains the saved edition, queued operation, draft attribution and unfinished literal separately. The programme verifies the entire returned payload using the original codec and reopens the actual exported HTML. Its saved edition and unfinished input must remain present.
+
+The unfinished operation is not previewed or adopted as a saved edition. It remains available in the retained complete return for the recipient’s next action.
+
+### Preserve a concurrent author edit
+
+After issuing the original and receiving the recipient’s saved work, the author changes the same first-record title in the original author application and saves that local revision. This creates one deliberate conflict between the issued title, current author title and returned saved title.
+
+The browser uploads the exact complete returned HTML through the author’s original receive control. The request binds its full SHA-256, and the original domain retains the entire file, including unfinished work. The course does not substitute a newly serialized proposal or strip the local draft from the returned payload.
+
+The browser explicitly selects the saved recipient edition for reconciliation. Before a choice is made, the author’s save control must remain disabled and the complete unresolved comparison is downloaded. The browser then selects the returned value for `/dataset/0/title`, downloads the complete resolved comparison and choices, and verifies that the unfinished `/_notAdopted` path is absent.
+
+The actual author adoption binds:
+
+- the exact current author revision and document SHA-256;
+- the original issued package and baseline;
+- the complete received file and selected recipient edition;
+- the explicit title choice;
+- the complete reconciliation hash, independently of display paging;
+- the adopting author, reason and stable request UUID.
+
+The original correction writer saves the adopted revision and the original exchange writer retains its full decision. A saved revision without that decision is a partial operation; the programme preserves and retries the same request rather than inventing a replacement revision.
+
+### Verify the complete adopted history
+
+The second correction draft has exactly three retained revisions: original source, concurrent author edit and adopted reconciliation. It has no materialization. The original first draft still has its original three source/edit/restore revisions, materialized restored candidate and separate preservation review.
+
+The native caller verifies the second draft’s complete documents and revision records, all original issued members, exact returned HTML, original issue/initial proposal/recipient HTML and complete adoption decision. The adopted document must equal the selected saved recipient document byte for byte. Both exact numeric tokens must be present; neither unfinished field may have entered the adopted catalogue.
+
+The comparison’s decision must identify the original concurrent revision, saved recipient edition, returned file hash and explicit title choice. Complete native exchange validation runs before the whole workspace is exported. No record count, summary or browser screenshot replaces these original bytes.
+
+### Receive and reopen the full exchange
+
+The existing sender archive now includes both drafts, complete issues and returns, recipient history and unfinished work, author decisions, the original restored candidate/review and all preceding semantic/comparison evidence. The existing receiver opens that exact archive in its separate recipient directory.
+
+After verifying complete state equality and all retained exchange files, the native caller closes the recipient owner and cold-opens it. The original correction inspection still visits the first draft. The additive `inspectDcatRecipientCorrectionBrowser` then selects the second draft, opens its issue/return/adoption history, downloads every original file and all three revision documents/records, and captures desktop/narrow author views without a mutation.
+
+The complete DCAT state must be unchanged by both inspection passes. The existing `followingArchive` remains the full independently received continuation; it now includes the complete recipient-exchange history too. No new archive format or second receiver is introduced.
+
+### Recipient browser continuation and recovery
+
+The recipient module owns `browser-exchange/browser-profile/`, its persistent local browser state, content-hashed downloads and a separate `progress.json`. Keep that private directory together with its exact source selection. It is part of this operation’s continuation, not a public browser profile.
+
+Network mutations are intercepted only for this course’s actual create, save, issue, receive and apply calls. Before allowing the request to leave, the programme saves the complete body, stable UUID and request SHA. For a return upload, it also preserves the exact uploaded bytes. A resumed receive uses those retained bytes and that same hash, even if a browser download has since produced another working copy.
+
+The standalone application’s own local backup preserves its complete saved and unfinished state. The course also commits a complete JSON checkpoint and then matching working HTML after each queued change and after the saved edition. On restart, an already selected complete return is opened first; otherwise the retained working HTML is opened and the actual product file input restores the complete JSON if its HTML export was interrupted. An existing saved edition takes precedence over a differing local backup, which is downloaded intact before selecting the file. The original same-proposal backup can recover newer work when no portable saved edition exists. The course checks the exact queued prefix and does not append a second saved edition. Once the complete return has been selected for receiving, its retained original file remains authoritative.
+
+The native caller resumes an existing exchange browser journal before excluding only its exact completed draft/issue/proposal/decision IDs from the original-history comparison. It never removes unrelated rows or infers ownership from a similar title. Both the original first-draft recovery and the additive exchange recovery use the original saved request identities.
+
+An abrupt host loss before an unsaved in-memory edit reaches either local backup or a complete file is not reported as a saved recipient edition. Preserve the actual available checkpoint and original progress. A changed source selection, changed retained bytes, unexpected edition, unresolved operation or unavailable original result stops the course explicitly.
+
+### Additive output and browser ABI
+
+The same native `result.json` adds:
+
+| Field/output | Complete retained meaning |
+|---|---|
+| `exchange` | Actual producer recipient-course result, request identities, returned file, original IDs, downloads and images |
+| `exchangeDetails` | Native verified second draft, complete issue/proposal/decision, original member copies and all revision files |
+| `reopenedExchange` | Read-only browser result from the independently received, cold-opened workspace |
+| `browser-exchange/` | Original network intent journal, owned persistent browser profile, every standalone/author download and desktop/narrow capture |
+| `browser-received-exchange/` | Independent author-view inspection, complete file downloads and desktop/narrow captures |
+| `downloads/producer-exchange/` | Complete original issue/return/member/decision and revision bytes verified by the native caller |
+| `downloads/recipient-exchange/` and `downloads/cold-reopened-exchange/` | The same complete original bytes verified after independent receiving and cold reopening |
+
+The public callable boundary is:
+
+```js
+runDcatRecipientCorrectionBrowser({
+  playwright,
+  listener: { url, origin },
+  outputDirectory,
+  catalog: { id, sha256, bytes },
+  baselineDocumentPath,
+  author,
+  exchangeCodec, // the actual product public/dcat-correction-exchange.mjs module
+  signal,
+  timeoutMs,
+  executablePath
+})
+
+inspectDcatRecipientCorrectionBrowser({
+  playwright,
+  listener: { url, origin },
+  outputDirectory,
+  catalog: { id, sha256, bytes },
+  author,
+  exchangeCodec,
+  signal,
+  timeoutMs,
+  executablePath,
+  selection: {
+    correctionId, exchangeId, proposalId, editionId,
+    decisionId, authorRevisionId, adoptedRevisionId
+  }
+})
+```
+
+The native caller imports the codec from the same actual source root as the model/server/archive. The browser does not install dependencies. The caller retains listener/workspace ownership; the companion closes its own ephemeral author context and persistent offline context, then drains their Chromium process.
+
+All images still have `viewedByOperator: false` until the producing operator actually looks at them. The source shipment is not a claim that this standalone package, all its attachments or either application view has already been used on the equipped host. The same original serial receiving operation remains responsible for that actual run and observed delivery.
+
 ## Complete output and interpretation
 
 | Output | Meaning |
 |---|---|
 | `selection.json` | Immutable exact input result/archive, host paths, current run/comparison selection and original runtime choices |
 | `original-comparison-result.json` | Exact original complete predecessor result bytes |
-| `actual-source.json` | Full hashes/byte counts of the actual product modules and both course modules used |
+| `actual-source.json` | Full hashes/byte counts of the actual product modules and all three course modules used |
 | `actual-runtime.json` | Actual Node version and selected executable/module identities |
 | `progress.json` | Native review/archive intents, original returned IDs and reconciled complete results |
 | `producer-before-corrections.json` | Complete received baseline before this course’s draft |
-| `producer-before-transfer.json` | Complete DCAT state after correction and preservation review |
+| `producer-before-transfer.json` | Complete DCAT state after the original correction/review and second recipient-exchange draft |
 | `browser-producer/` | Exact browser selection, request journal, result, every download and desktop/narrow image |
 | `browser-recipient/` | Independent cold-recipient browser result, downloads and images |
-| `downloads/` | Complete original catalogue, all revision documents/records and original report/candidate copies |
+| `downloads/` | Complete original catalogue, both drafts’ revision documents/records, original report/candidate and complete issued/returned/decision/member copies |
 | `operation-<UUID>.json` | Actual retained native operation outcomes |
-| `complete-gsa-corrections.ckanw` | Complete sender workspace after browser correction and original review |
+| `complete-gsa-corrections.ckanw` | Complete sender workspace after both correction drafts, original review and complete recipient reconciliation |
 | `received-gsa-corrections-following.ckanw` | Complete independently received and cold-reopened following workspace |
 | `result.json` | Whole programme outcome, bindings, actual IDs, files, errors, cleanup and presentation qualification |
 
@@ -230,6 +363,8 @@ The caller owns the original server and workspace; the companion owns and closes
 
 - [Correction workbench](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_WORKBENCH.md)
 - [Correction CLI and agent guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTIONS_AGENT.md)
+- [Recipient exchange workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_EXCHANGES.md)
+- [Recipient CLI and agent continuation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_EXCHANGES_AGENT.md)
 - [Original migration operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MIGRATION_OPERATING.md)
 - [Semantic catalogue workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/SEMANTIC_CATALOGS.md)
 - [Preceding comparison operation](../dcat-semantic-comparison-customer-390e-20261013/)

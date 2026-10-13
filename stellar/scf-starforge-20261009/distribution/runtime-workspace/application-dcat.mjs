@@ -56,7 +56,11 @@ const SEMANTIC_SOURCE = [
 ].map(path => ROOT + path);
 const REQUIRED = [
   ...SEMANTIC_SOURCE,
-  ...['dcat-corrections.mjs', 'dcat-correction-cli.mjs', 'CORRECTION_WORKBENCH.md', 'CORRECTIONS_AGENT.md',
+  ...['dcat-correction-exchange.mjs', 'public/dcat-correction-exchange.mjs',
+    'public/dcat-correction-exchanges.mjs',
+    'dcat-correction-recipient.mjs', 'public/dcat-correction-recipient.mjs', 'public/dcat-correction-recipient.css',
+    'dcat-correction-exchange-cli.mjs', 'CORRECTION_EXCHANGES.md', 'CORRECTION_EXCHANGES_AGENT.md',
+    'dcat-corrections.mjs', 'dcat-correction-cli.mjs', 'CORRECTION_WORKBENCH.md', 'CORRECTIONS_AGENT.md',
     'public/dcat-corrections.mjs', 'public/dcat-correction-json.mjs'].map(path => ROOT + path),
   ROOT + 'dcat-cli.mjs', ROOT + 'dcat-workspace.mjs', ROOT + 'dcat_migration.py',
   ROOT + 'application-provider.mjs', ROOT + 'public/migration.mjs',
