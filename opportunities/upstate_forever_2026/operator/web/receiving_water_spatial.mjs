@@ -54,7 +54,7 @@ export function receivingWaterView(rows, target, selectionFor) {
     }
     return selection;
   };
-  const title = raster?.subject_title || reference.subject_title || reference.title;
+  const title = raster?.title || reference.title || raster?.subject_title || reference.subject_title;
   const interpretation = raster?.relationship_precision || reference.relationship_precision || '';
   return {
     reference: select(reference),
@@ -79,4 +79,12 @@ export function receivingWaterView(rows, target, selectionFor) {
     previous_review_id: null,
     pendingSave: null
   };
+}
+
+/** Invalidate the native catalog when a receiving operation finishes. */
+export function receivingWaterStateSignature(state) {
+  const data = state?.data || {};
+  const water = data.receiving_waters || data;
+  return ['receiving_water_plans', 'receiving_water_analyses'].map(name =>
+    (water[name] || []).map(row => [row.id, row.state]));
 }
