@@ -178,6 +178,10 @@ METHODS = [
         ],
     },
 ]
+from source_tools.high_quality_water_preparation import BUILTINS as WATER_BUILTINS, METHOD as WATER_METHOD
+
+BUILTINS.update(WATER_BUILTINS)
+METHODS.append(WATER_METHOD)
 BY_METHOD = {item["id"]: item for item in METHODS}
 
 
@@ -542,7 +546,7 @@ class SourcePreparation:
         if destination.stat().st_size != item["bytes"] or file_digest(destination) != item["sha256"]:
             raise ValueError("A source preparation view differs from its retained original")
 
-    def _snapshot(self, workspace, task_id, name, selector, native, *, metadata_manifest=False):
+    def _snapshot(self, workspace, task_id, name, selector, native, *, metadata_manifest=False, reference_kind=None):
         record_path = self._record_path(workspace, task_id).parent / "inputs" / (name + ".json")
         if record_path.exists():
             record = read_json(record_path)
@@ -550,6 +554,10 @@ class SourcePreparation:
                 raise ValueError("The same task input belongs to a different source selection")
         else:
             resolved = self._resolve(workspace, selector)
+            if reference_kind:
+                from source_tools.high_quality_water_preparation import retain_references
+                resolved = retain_references(resolved, reference_kind,
+                                             uploaded=bool(selector.get("upload_id")))
             if metadata_manifest:
                 main = next(item for item in resolved["members"] if item["path"] == resolved["main"])
                 manifest = read_json(main["source"])
@@ -760,6 +768,9 @@ class SourcePreparation:
         if set(supplied) - allowed:
             self._fail("SOURCE_INPUTS", "The selected method contains an unsupported input.")
         options = self._options(method, value.get("options", {}))
+        if method_id == "classified-waters":
+            from source_tools.high_quality_water_preparation import prepare_workbench
+            return prepare_workbench(self, workspace, task, native, record, method, options)
         mode = options.get("source_mode", "received")
         if mode == "download" and supplied.get("archive"):
             self._fail("SOURCE_MODE", "Use the existing-archive mode for selected source files.")
