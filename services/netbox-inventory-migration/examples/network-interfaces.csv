@@ -1,5 +1,0 @@
-source_key,match_id,name,device_key,type,enabled,mgmt_only,mode,vrf_key,untagged_vlan_key,tagged_vlans_keys,description
-switch-mgmt,,eth0,new-switch,1000base-t,true,true,access,prod,mgmt,,Production management
-switch-uplink,,eth1,new-switch,1000base-t,true,false,tagged,,mgmt,apps;guest,Tagged uplink to chassis
-chassis-uplink,,eth1,existing-chassis,1000base-t,true,false,tagged,,mgmt,apps;guest,Tagged uplink to switch
-switch-guest,,eth2,new-switch,1000base-t,true,false,access,guest,guest,,Guest access interface

@@ -1,7 +1,0 @@
-node_modules/
-*.tgz
-.env
-.env.*
-!.env.example
-.disburselens/
-demo-observations/

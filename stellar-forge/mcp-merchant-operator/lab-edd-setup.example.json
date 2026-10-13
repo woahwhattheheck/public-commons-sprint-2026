@@ -1,6 +1,0 @@
-{
-  "directory": "/srv/starforge/lab-operator",
-  "connection": "/srv/starforge/lab-workspaces.json",
-  "merchantConnection": "/srv/starforge/original-paid-workspaces.json",
-  "name": "Laboratory EDD operator"
-}

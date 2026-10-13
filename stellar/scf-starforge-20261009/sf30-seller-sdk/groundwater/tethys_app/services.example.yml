@@ -1,7 +1,0 @@
-# Explicit example for the existing portal's application settings.
-# Do not apply this file over an existing reviewed app configuration silently.
-custom_settings:
-  portal_configuration:
-    workspace_scope: user
-    default_slot: workspace
-    max_request_bytes: 33554432

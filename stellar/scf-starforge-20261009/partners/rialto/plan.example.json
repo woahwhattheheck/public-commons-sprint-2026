@@ -1,7 +1,0 @@
-{
-  "discovery": "https://rialto-production-97c9.up.railway.app",
-  "facilitator": "https://facilitator-production-0beb.up.railway.app",
-  "network": "stellar:testnet",
-  "scheme": "exact",
-  "limit": 100
-}

@@ -1,4 +1,0 @@
-representation,longitude,latitude,comid,reachcode,measure,separation_from_original_m,source_path,source_sha256
-Original WQP station catalogue,-82.636966,34.704792,,,,0,source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv,c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c
-NLDI indexed WQP feature,-82.6369656,34.704794,11749277,,,0.225376129,source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json,19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68
-NLDI coordinate hydrolocation,-82.63727703166195,34.70460483592276,11749277,03060101000028,80.38507527086269,35.235335875,source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json,e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db

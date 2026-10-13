@@ -1,2 +1,0 @@
-source_key,match_id,name,device_key,type,enabled,mgmt_only,description
-switch-eth0,,eth0,new-switch,1000base-t,true,true,Original management interface

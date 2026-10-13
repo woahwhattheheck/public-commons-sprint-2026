@@ -1,5 +1,0 @@
-source_key,match_id,address,interface_key,vrf_key,status,dns_name,primary
-prod-v4,,192.0.2.10/24,switch-mgmt,prod,active,switch.example.invalid,true
-prod-v6,,2001:db8::10/64,switch-mgmt,prod,active,switch.example.invalid,true
-guest-v4,,192.0.2.10/24,switch-guest,guest,active,guest.example.invalid,false
-guest-v6,,2001:db8:1::10/64,switch-guest,guest,active,guest.example.invalid,false
