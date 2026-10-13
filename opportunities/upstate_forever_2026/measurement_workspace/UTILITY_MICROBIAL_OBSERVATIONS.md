@@ -51,3 +51,15 @@ python -B -m measurement_workspace.utility_microbiology \
 The builder verifies the original manifest identity and every declared source hash before deriving the station table, explicit source index and coordinate groups. It preserves the original 63 result columns, the original 37 station columns, all six response counts, the full routine/replicate cohort and the exact 34/2 datum split. A repeated build accepts identical existing output files and rejects conflicting source bytes.
 
 The maintained PublishedStudyStore receives the complete companion, retains immutable version identity, registers source files and produces the ordinary selected reports and full-study ZIP. The same installed provider and native task queue handle all operations.
+
+## Original temporal and same-station flow context
+
+The maintained temporal explorer joins this same study when its complete application source is installed through `microbial_temporal_observed_report.sources.json`. The normal installer retains that manifest, the full original analytical edition, the maintained explorer and its three original inputs. The primary 730-record study remains available in applications carrying the earlier original-data edition.
+
+Open the temporal explorer from the study's source reports. Its original station, method and calendar coverage, comment sensitivity, sampling intervals and same-station USGS flow interpretation remain the author's complete analysis. The calendar panel includes the retained common-month comparisons and their exact original-row memberships. It distinguishes the full observed-date summary from the same-station, same-method calendar comparison; these are separate sampling supports. Study filters continue to select the primary original observation rows; the related temporal report retains its own clearly identified full-source scope.
+
+The complete exported study preserves the original application layout below `application-context/microbial/`. That includes all original relative paths used by `reproduce.mjs`, the unchanged original report recipe and the original analysis/source manifests. The complete ZIP can be reopened through the same Published studies importer.
+
+A separate derived observed-report recipe prefixes the original source-view paths for this retained study. It records the unchanged original recipe hash, the source manifest and every path mapping. The native source collection exposes that recipe to the existing scientific delivery picker, where it can be selected with other observed reports in the desired order. Original recipe text, analytical values, source CSV/JSON bodies, source figures and original interpretation remain retained alongside it.
+
+Selected exports include the complete HTML/report companion tree, so original links and downloads resolve together. The original report document and the derived native recipe each retain all required source companions.

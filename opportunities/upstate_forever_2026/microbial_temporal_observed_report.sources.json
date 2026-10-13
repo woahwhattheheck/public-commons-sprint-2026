@@ -128,7 +128,9 @@
           "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
           "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
         }
-      ]
+      ],
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/f8cb3f69a12bbee022c88a0c710c1141e796d08c/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/observed-report.json",
+      "vintage": "2026-10-13"
     }
   ]
 }
