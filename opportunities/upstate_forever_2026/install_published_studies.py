@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 
 CODE_FILES = (
     "measurement_workspace/published_studies.py",
+    "measurement_workspace/study_context.py",
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
     "measurement_workspace/utility_microbiology.py",
@@ -65,6 +66,8 @@ def portable_source(source):
             "eighteenmile_stream_nutrient_analysis.sources.json",
         ),
     }
+    from measurement_workspace.study_context import manifest_names
+    additions["APPLICATION_FILES"] += manifest_names()
     lines = source.splitlines(keepends=True)
     offsets = [0]
     for line in lines:
@@ -155,30 +158,12 @@ def main():
                 parser.error("The original stream study source bytes changed: " + relative)
             data_files.append(str(path.relative_to(source)))
         data_files.append(str((stream_root / "study-files.json").relative_to(source)))
-    stream_manifest = source / "eighteenmile_stream_nutrient_analysis.sources.json"
-    if stream_manifest.is_file():
-        native = json.loads(stream_manifest.read_text(encoding="utf-8-sig"))
-        if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
-            parser.error("The stream analysis source manifest is incompatible.")
-        data_files.append(stream_manifest.name)
-        prefixes = (
-            "observations/eighteenmile_stream_nutrients_2020_2025/analysis/",
-            "source/eighteenmile-stream-nutrients-20261013/original/",
-        )
-        for entry in native["entries"]:
-            for item in [entry, *entry.get("companions", [])]:
-                relative = item["path"]
-                path = (source / relative).resolve(strict=True)
-                if (
-                    Path(relative).is_absolute() or "\\" in relative
-                    or ".." in Path(relative).parts or str(Path(relative)) != relative
-                    or not any(relative.startswith(prefix) for prefix in prefixes)
-                    or not path.is_relative_to(source)
-                ):
-                    parser.error("A stream analysis source points outside its declared original families.")
-                if not path.is_file() or path.stat().st_size != item.get("bytes") or digest(path) != item.get("sha256"):
-                    parser.error("The original stream analysis bytes changed: " + relative)
-                data_files.append(relative)
+    from measurement_workspace.study_context import manifest_names, source_files as context_source_files
+    for name in manifest_names():
+        manifest = source / name
+        if manifest.is_file():
+            originals = context_source_files(source, manifest)
+            data_files.extend(originals)
     from measurement_workspace import utility_microbiology as microbial
     microbial_root = source / microbial.SOURCE_DIRECTORY
     if microbial_root.is_dir():
