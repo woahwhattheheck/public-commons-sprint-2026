@@ -56,6 +56,9 @@ def _document(workspace, collection_id, source_id):
     if len(entries) != 1:
         raise ContractError("Choose an exact retained native evidence entry")
     entry = entries[0]
+    from . import conservation_sampling_evidence
+    if conservation_sampling_evidence.is_source(entry):
+        return conservation_sampling_evidence.document(workspace, collection, entry)
     if entry.get("kind") != "document" or entry.get("role") != "OBSERVED_CONTEXT":
         raise ContractError("Native evidence must be an original scientific report document")
     metadata = entry.get("metadata", {})
@@ -108,6 +111,9 @@ def _json(paths, name):
 
 
 def _native(workspace, entry, paths, family, native_id, recipe):
+    if family == "conservation_portfolio":
+        from .conservation_sampling_evidence import native
+        return native(workspace, entry, paths, native_id, recipe)
     metadata = entry["metadata"]
     project_id = metadata["project_id"]
     local = project_id == workspace.project["id"]
@@ -215,6 +221,7 @@ def describe(workspace, collection_id, source_id):
 
 
 def catalog(workspace):
+    from .conservation_sampling_evidence import is_source
     choices, issues = [], []
     for path in sorted((workspace.root / "sources").glob("*.json")):
         try:
@@ -225,7 +232,11 @@ def catalog(workspace):
         for entry in collection.get("entries", []):
             metadata = entry.get("metadata", {})
             if (entry.get("kind") != "document" or entry.get("role") != "OBSERVED_CONTEXT"
-                    or not isinstance(metadata, dict) or not any(k in metadata for k in FAMILIES)):
+                    or not isinstance(metadata, dict) or not (any(k in metadata for k in FAMILIES)
+                        or is_source(entry))):
+                continue
+            if (is_source(entry) and isinstance(metadata.get("origin"), dict)
+                    and metadata["origin"].get("mode") == "source_context"):
                 continue
             try:
                 value = describe(workspace, collection["id"], entry["id"])
@@ -317,7 +328,8 @@ def include(closure, proposal):
         collection_id, source_id = source["collection_id"], source["source_id"]
         closure.need("sources", collection_id, "Original sampling target native evidence")
         if value["native"]["project_id"] == closure.workspace.project["id"]:
-            kind = ("multivariate-control-outcomes" if value["native"]["family"] == "control_outcomes"
-                    else "terrain-conditioning-report-sources")
+            kind = {"control_outcomes": "multivariate-control-outcomes",
+                    "terrain_response": "terrain-conditioning-report-sources",
+                    "conservation_portfolio": "conservation-report-sources"}[value["native"]["family"]]
             closure.need(kind, value["native"]["id"],
                          "Complete original native evidence for an explicit sampling target")
