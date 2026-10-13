@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 
 FILES = (
     "model/gauge_support.py",
+    "model/gauge_report_context.py",
     "source_tools/receive_gauge_support.py",
     "operator/gauge_support.py",
     "operator/extensions/gauge-support.json",
@@ -23,6 +24,7 @@ FILES = (
 REQUIRES = (
     "model/station_geography.py", "model/station_assessment_context.py", "model/spatial_esri.py",
     "model/workspace.py", "model/portable.py", "model/watershed_context.py",
+    "model/observed_context.py", "model/scientific_report.py",
     "operator/extension_registry.py", "operator/web/extension_host.mjs",
     "operator/extensions/station-geography.json", "operator/extensions/watershed-context.json",
 )
