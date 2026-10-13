@@ -29,6 +29,7 @@ from .reuse import copy_verified
 
 SCHEMA = "upstate.parameter-experiment/v1"
 NATIVE_VERSION_EDITION = "parameter-study-native-versions/1"
+SUMMARY_EDITION = "parameter-study-summary/2"
 SELECTION_SCHEMA = "upstate.parameter-experiment-selection/v1"
 DESIGNS = ("one-at-a-time", "factorial")
 PARAMETERS = {
@@ -655,8 +656,9 @@ def _summarize(workspace, key, *, progress=None):
     ranges = []
     for area in areas:
         for pollutant in pollutants:
+            # The selected baseline is also one evaluated parameter combination.
             selected = [r for r in rows if r["area_id"] == area["id"] and r["pollutant"] == pollutant
-                        and r["case_id"] != "baseline" and r["case_mass"] is not None]
+                        and r["case_mass"] is not None]
             # Equal-support cases can be compared directly with one another.
             matched = [r for r in selected if not r["support_changed"]]
             if matched:
@@ -669,6 +671,7 @@ def _summarize(workspace, key, *, progress=None):
                                "support_changed_cases": len(selected) - len(matched)})
     aggregation = cache.finish()
     result = {"schema": "upstate.parameter-experiment-results/v1", "experiment_id": key,
+              "summary_edition": SUMMARY_EDITION,
               "aggregation": aggregation,
               "workspace_id": workspace.project["id"], "title": state["selection"]["title"],
               "purpose": state["selection"]["purpose"], "design": state["selection"]["design"],
@@ -692,8 +695,8 @@ def _summarize(workspace, key, *, progress=None):
               "aggregation_extent": "Original reporting mask; each selected polygon is intersected with that extent.",
               "comparison_basis": "Alternative minus baseline on the same valid pixel centres. "
                                   "Independent full totals and support counts remain in every row.",
-              "range_basis": "Minimum and maximum over the selected completed parameter cases with "
-                             "unchanged spatial support; the selection is an explicit parameter study.",
+              "range_basis": "Minimum and maximum over all selected completed parameter cases, including "
+                             "the baseline, with unchanged spatial support; this is an explicit parameter study.",
               "coefficient_source": {"profile_id": profile["id"], "references": profile["references"],
                                      "biophysical_source_id": profile["biophysical_source_id"],
                                      "source_collection_id": profile["source_collection_id"],
@@ -906,6 +909,7 @@ def _exports(workspace, state):
         artifacts["aggregation"] = describe_file(directory, directory / "aggregation.json")
     state["export_edition"] = EXPORT_EDITION
     state["native_version_edition"] = NATIVE_VERSION_EDITION
+    state["summary_edition"] = result["summary_edition"]
     return artifacts
 
 
@@ -925,7 +929,8 @@ def execute(workspace, key, *, progress=None):
         state = inspect(workspace, key)
         if state["state"] == "complete":
             if (state.get("export_edition") == EXPORT_EDITION
-                    and state.get("native_version_edition") == NATIVE_VERSION_EDITION):
+                    and state.get("native_version_edition") == NATIVE_VERSION_EDITION
+                    and state.get("summary_edition") == SUMMARY_EDITION):
                 for item in state["artifacts"].values():
                     verify_file(directory, item)
                 return {**state, "reused": True}
