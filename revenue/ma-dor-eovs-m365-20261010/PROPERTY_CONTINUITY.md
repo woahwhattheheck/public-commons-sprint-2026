@@ -108,7 +108,7 @@ A superseded review, control or contract cannot be selected as the current relea
 
 ## Complete receiving and cold reopen
 
-The full portable application profile is commons.migration-workbench-application/v3. It includes all 39 current files. Earlier 16-, 21-, 24- and 31-file deliveries retain their exact advertised profile compatibility. A later application delivery must include every dependency and its exact manifest.
+The current full portable application profile is commons.migration-workbench-application/v5. It includes all 56 application files. Earlier 16-, 21-, 24-, 31-, 39- and 48-file deliveries retain their exact advertised profile compatibility. The historical 39-file property edition keeps commons.migration-workbench-application/v3. A later application delivery must include every dependency and its exact manifest.
 
 Use the complete plan schema commons.property-receiving-plan/v1 with:
 

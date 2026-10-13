@@ -18,6 +18,7 @@ const FIELDS = [
   'targetDirectory', 'createdAt', 'contextDirectory', 'transferDirectory', 'containerDirectory',
   'reviewId', 'deploymentReviewId', 'phase', 'displayPhase', 'workerActive',
   'startedAt', 'updatedAt', 'completedAt', 'attempt', 'pythonStage', 'sourceBuildStage', 'resultSource',
+  'originalPhase', 'receivedHistory', 'receivingId',
 ];
 export const OPERATION_HISTORY_FILTERS = ['all', 'active', 'attention', 'completed'];
 function originalError(value) {

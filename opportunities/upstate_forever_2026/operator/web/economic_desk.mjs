@@ -34,7 +34,7 @@ export function attachEconomicDesk(host) {
   let rowFingerprint='',completedTask=null,worksheetPreview=null;
   let editionEpoch=0,implementationOptions=null,implementationRun='';
   let requestedEdition=null,mountReady=null;
-  let comparisonEditor=null,comparisonOpening=null;
+  let comparisonEditor=null,comparisonOpening=null,requestedComparison=null;
   let recoveryStore=null;
   let recoveryBlocked='',storageIssue='',lastReceipt=null,retiredRequest=null,taskTimer=null,taskReading=false,requestSending=false,mountTurn=0;
   const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
@@ -620,7 +620,7 @@ export function attachEconomicDesk(host) {
   async function openComparison(selection={}) {
     const selectedWorkspace=getState()?.workspace_key,selectedFrame=frame,turn=mountTurn;
     if(!selectedWorkspace||selection.workspace_key&&selection.workspace_key!==selectedWorkspace||!frame)throw Error('Open the original Economic desk before comparing its saved editions.');
-    if(comparisonEditor?.alive()){comparisonEditor.node.focus();return comparisonEditor;}
+    if(comparisonEditor?.alive()){if(selection.comparison_id){await comparisonEditor.openResult(selection.comparison_id);if(comparisonEditor.result?.id!==selection.comparison_id)throw Error('The requested comparison did not open.');}comparisonEditor.node.focus();return comparisonEditor;}
     if(comparisonOpening)return comparisonOpening;
     current();remember();
     const operation=(async()=>{
@@ -631,6 +631,29 @@ export function attachEconomicDesk(host) {
       });
     })();
     comparisonOpening=operation;try{return await operation;}finally{if(comparisonOpening===operation)comparisonOpening=null;}
+  }
+  async function consumeSavedComparison() {
+    const request=requestedComparison;if(!request||!frame||request.consuming)return;
+    request.consuming=true;const selectedFrame=frame;
+    try{
+      if(mountReady)await mountReady;
+      if(requestedComparison!==request)return;
+      if(frame!==selectedFrame){request.consuming=false;if(frame)consumeSavedComparison();return;}
+      if(workspace!==request.workspace_key||getState()?.workspace_key!==request.workspace_key)throw Error('Open the saved comparison in its original Workspace.');
+      const editor=await openComparison({workspace_key:request.workspace_key,comparison_id:request.id});
+      if(requestedComparison!==request)return;
+      if(!editor?.alive()||editor.result?.id!==request.id||getState()?.workspace_key!==request.workspace_key)throw Error(editor?.error||'Recover the retained comparison request before opening this saved comparison.');
+      requestedComparison=null;request.resolve({workspace_key:request.workspace_key,id:request.id});
+    }catch(error){if(requestedComparison===request){requestedComparison=null;request.reject(error);}}
+  }
+  async function openSavedComparison(selection) {
+    if(!selection||selection.workspace_key!==getState()?.workspace_key||!/^[a-f0-9]{64}$/.test(selection.id||''))throw Error('Choose the exact saved comparison in the current original Workspace.');
+    if(requestedComparison)throw Error('A saved comparison is already opening.');
+    return new Promise((resolve,reject)=>{
+      requestedComparison={workspace_key:selection.workspace_key,id:selection.id,resolve,reject,consuming:false};
+      try{if(typeof host.navigate!=='function')throw Error('The Economic desk navigation capability is unavailable.');host.navigate('economic-desk');if(frame)consumeSavedComparison();}
+      catch(error){if(requestedComparison){requestedComparison=null;reject(error);}}
+    });
   }
   async function onClick(event) {
     const target=event.target.closest('[data-econ]');
@@ -750,9 +773,10 @@ export function attachEconomicDesk(host) {
       else if(!pending&&!recoveryBlocked&&!requestedEdition&&openEditionId)await openEdition(openEditionId);
       renderRecovery();
     })();
-    mountReady.then(()=>consumeSavedEdition()).catch(error=>{message(error.message||String(error),true);rejectSavedEdition(error);});
+    mountReady.then(()=>{consumeSavedComparison();return consumeSavedEdition();}).catch(error=>{message(error.message||String(error),true);rejectSavedEdition(error);if(requestedComparison){const request=requestedComparison;requestedComparison=null;request.reject(error);}});
   }
   function detach() {
+    if(frame&&requestedComparison){const request=requestedComparison;requestedComparison=null;request.reject(Error('The Economic desk closed before the saved comparison opened.'));}
     comparisonEditor?.close();comparisonEditor=null;
     clearTimeout(taskTimer);mountTurn++;taskReading=false;requestSending=false;
     if(frame)rejectSavedEdition(Error('The Economic desk closed before the retained edition opened.'));
@@ -805,5 +829,5 @@ export function attachEconomicDesk(host) {
       }catch(error){rejectSavedEdition(error);}
     });
   }
-  return {mount,update,detach,openReport,openEdition,openSavedEdition,openComparison,loadSaved,prepareClientReport,prepareImplementation};
+  return {mount,update,detach,openReport,openEdition,openSavedEdition,openComparison,openSavedComparison,loadSaved,prepareClientReport,prepareImplementation};
 }

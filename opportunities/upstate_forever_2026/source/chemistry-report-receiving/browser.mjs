@@ -25,7 +25,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const option=(name,fallback)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1];};
 const has=name=>process.argv.includes(name);
 const usage='node browser.mjs --config selection.json --output /absolute/receiving [--url-file /private/operator-url.txt] [--cdp http://127.0.0.1:9222] [--playwright /absolute/playwright/index.mjs] [--headed]';
-if(has('--help')){console.log(usage);process.exit(0);}
+if(has('--help')){console.log(usage+'\nnode browser.mjs --from-native ACTUAL_OUTPUT --workspace-key ACTUAL_KEY --write-config NEW_SELECTION.json');process.exit(0);}
 if(has('--write-example')){
  const target=path.resolve(option('--write-example','chemistry-receiving.json'));
  await fs.writeFile(target,JSON.stringify({schema:SCHEMA,workspace_key:'REPLACE_WITH_REGISTERED_WORKSPACE_KEY',
@@ -33,6 +33,37 @@ if(has('--write-example')){
    runs:ORIGINAL_RUNS.map(run_id=>({run_id})),title:'Upper Savannah Chemistry — authored reference analyses',
    restore_study:true,task_timeout_seconds:1200},null,2)+'\n',{flag:'wx'});
  console.log(target);process.exit(0);
+}
+if(has('--from-native')){
+ const nativeRoot=path.resolve(option('--from-native')),workspaceKey=option('--workspace-key'),destination=option('--write-config');
+ check(workspaceKey&&destination,'Use --from-native ACTUAL_OUTPUT --workspace-key ACTUAL_KEY --write-config NEW_SELECTION.json');
+ const journalBytes=await fs.readFile(path.join(nativeRoot,'receiving.json'));
+ const previewBytes=await fs.readFile(path.join(nativeRoot,'scientific-preview.json'));
+ const native=JSON.parse(journalBytes),prepared=JSON.parse(previewBytes),summary=native.steps?.summary,completed=native.steps?.scientific_report;
+ check(summary?.complete===true&&completed&&summary.native_runs,'The original native course has no completed summary and scientific report receipt.');
+ const editionId=summary.scientific_report_edition_id;
+ check(/^[0-9a-f]{64}$/.test(editionId)&&completed.edition_id===editionId&&prepared.id===editionId,'Original native summary, scientific receipt and preview identify different editions.');
+ check(summary.project_id===native.request?.project_id&&summary.case_id===native.request?.case_id&&summary.case_id,'Original native project/case receipt is incomplete or mixed.');
+ const reportIds=summary.report_ids,sourceIds=summary.source_ids;
+ check(Array.isArray(reportIds)&&Array.isArray(sourceIds)&&sourceIds.length>0&&reportIds.length===sourceIds.length&&prepared.sources?.length===sourceIds.length,'Original ordered report/source receipt is incomplete.');
+ check(JSON.stringify(reportIds)===JSON.stringify(completed.report_ids)&&JSON.stringify(sourceIds)===JSON.stringify(completed.source_ids),'Original completed source order differs between summary and scientific receipt.');
+ const runs=sourceIds.map((sourceId,index)=>{
+  const matches=Object.entries(summary.native_runs).filter(([name])=>{
+   const original=native.steps['report-'+name];
+   return original?.source_id===sourceId&&original.report_id===reportIds[index];
+  });
+  check(matches.length===1,'Each original ordered report/source must identify exactly one completed native run.');
+  return {run_id:matches[0][1],report_id:reportIds[index],source_record_id:sourceId};
+ });
+ check(new Set(runs.map(row=>row.run_id)).size===runs.length,'Original completed run identities are repeated.');
+ const identity=prepared.render_identity;
+ check(identity&&identity.title===prepared.title&&identity.contact&&typeof identity.contact==='object'&&!Array.isArray(identity.contact),'Original preview title/contact identity is incomplete.');
+ const selected={schema:SCHEMA,workspace_key:workspaceKey,project_id:summary.project_id,case_id:summary.case_id,
+  runs,title:identity.title,contact:identity.contact,scientific_report_edition_id:editionId,restore_study:true,task_timeout_seconds:1200,
+  native_receiving:{journal_sha256:hash(journalBytes),preview_sha256:hash(previewBytes)}};
+ await fs.writeFile(path.resolve(destination),JSON.stringify(selected,null,2)+'\n',{flag:'wx'});
+ console.log(JSON.stringify({config:path.resolve(destination),scientific_report_edition_id:editionId,runs:runs.length}));
+ process.exit(0);
 }
 const configPath=option('--config'),outputArg=option('--output');
 check(configPath&&outputArg,usage);
@@ -42,6 +73,11 @@ check(typeof config.workspace_key==='string'&&config.workspace_key&&!config.work
 check(Array.isArray(config.runs)&&config.runs.length&&new Set(config.runs.map(r=>r.run_id)).size===config.runs.length,'Choose distinct actual completed run IDs.');
 for(const row of config.runs)for(const key of ['run_id','report_id','source_record_id'])if(row[key]!==undefined)check(/^[0-9a-f]{64}$/.test(row[key]),'Invalid '+key);
 check(config.restore_study===true||config.restore_study===false,'Choose restore_study explicitly.');
+if(config.contact!==undefined)check(config.contact&&typeof config.contact==='object'&&!Array.isArray(config.contact)&&Object.values(config.contact).every(value=>typeof value==='string'),'Use the original contact object with string values.');
+if(config.scientific_report_edition_id!==undefined){
+ check(/^[0-9a-f]{64}$/.test(config.scientific_report_edition_id),'Invalid saved scientific report edition ID.');
+ check(typeof config.title==='string'&&config.title.length>0&&config.contact!==undefined,'A saved scientific edition requires its original title and exact contact object, including an original empty object.');
+}
 const out=path.resolve(outputArg);
 await fs.mkdir(out,{recursive:true});
 for(const name of ['records','images','downloads','views'])await fs.mkdir(path.join(out,name),{recursive:true});
@@ -304,6 +340,19 @@ async function downloadReportFiles(value,label,container){
  for(let i=0;i<chosen.length;i++)result.push(await download({...chosen[i],filename:chosen[i].filename||path.basename(chosen[i].path)},container,label+'-'+i));
  return result;
 }
+const sourceKey=value=>JSON.stringify([value.source_collection_id,value.source_id,value.layer||null,value.where||null]);
+const exactContact=value=>JSON.stringify(Object.keys(value).sort().map(key=>[key,value[key]]));
+function verifyScientificEdition(value,id,sources){
+ const edition=value.edition,identity=edition?.render_identity;
+ check(value.workspace_key===workspace&&edition?.id===id&&edition.state==='complete','Saved scientific report identity, Workspace or completion state differs.');
+ if(config.project_id)check(edition.project_id===config.project_id,'Saved scientific report belongs to a different original project.');
+ check(Array.isArray(edition.sources)&&JSON.stringify(edition.sources.map(sourceKey))===JSON.stringify(sources.map(sourceKey)),'Saved scientific report has different original sources or ordering.');
+ if(config.scientific_report_edition_id){
+  check(identity&&edition.title===config.title&&identity.title===config.title,'Saved scientific report title differs from the original selection.');
+  check(identity.contact&&exactContact(identity.contact)===exactContact(config.contact),'Saved scientific report contact differs from the original exact contact object.');
+ }
+ return value;
+}
 async function openScientific(id){
  await closeDialogs();
  const value=await readAfter('/api/source-reports/scientific-edition',{id},()=>page.locator('[data-scientific-report-action="open"][data-id='+quote(id)+']').first().click());
@@ -405,48 +454,57 @@ async function course(){
   retained.completed_at=now();await checkpoint();
  }
  await page.locator('[data-scientific-report-field="title"]').fill(config.title||'Retained Chemistry analyses');
- if(config.contact)for(const key of ['name','organization','email'])if(config.contact[key]){
-  const name=key;
-  await page.locator('[data-scientific-report-field='+quote(name)+']').fill(config.contact[key]);
+ if(config.contact!==undefined)for(const key of ['name','organization','email']){
+  await page.locator('[data-scientific-report-field='+quote(key)+']').fill(config.contact[key]??'');
  }
  const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/source-reports/scientific-preview'&&r.request().method()==='POST');
  await page.locator('[data-scientific-report-action="preview"]').click();const previewResponse=await response;
  check(previewResponse.ok(),'The original scientific report preview failed.');
  const preview=await previewResponse.json();
- const key=s=>JSON.stringify([s.source_collection_id,s.source_id,s.layer||null,s.where||null]);
- check(preview.workspace_key===workspace&&JSON.stringify(preview.sources.map(key))===JSON.stringify(sources.map(key)),'The composer changed the original source order or source identities.');
+ check(preview.workspace_key===workspace&&JSON.stringify(preview.sources.map(sourceKey))===JSON.stringify(sources.map(sourceKey)),'The composer changed the original source order or source identities.');
  await record('scientific-preview',preview);await capture('combined-scientific-preview');
- journal.scientific_report_id=preview.id;await checkpoint();
- if(preview.existing){
-  await readAfter('/api/source-reports/scientific-edition',{id:preview.id},()=>page.locator('[data-scientific-report-action="render"]').click());
+ const scientificId=config.scientific_report_edition_id||preview.id;
+ journal.composer_preview_id=preview.id;
+ journal.scientific_report_id=scientificId;await checkpoint();
+ let scientific;
+ if(config.scientific_report_edition_id){
+  // Exercise the current composer, then reopen the retained edition through
+  // its actual visible control. Historical contact/producer identities stay exact.
+  await page.locator('[data-scientific-report-action="refresh"]').click();
+  scientific=verifyScientificEdition(await openScientific(scientificId),scientificId,sources);
+  await event('retained_scientific_edition',{edition_id:scientificId,composer_preview_id:preview.id,original_contact:scientific.edition.render_identity.contact});
  }else{
-  await action('scientific-'+preview.id,'source-reports.render',()=>page.locator('[data-scientific-report-action="render"]').click());
-  await closeDialogs();await page.locator('[data-scientific-report-action="refresh"]').click();
-  await openScientific(preview.id);
+  if(preview.existing){
+   await readAfter('/api/source-reports/scientific-edition',{id:scientificId},()=>page.locator('[data-scientific-report-action="render"]').click());
+  }else{
+   await action('scientific-'+scientificId,'source-reports.render',()=>page.locator('[data-scientific-report-action="render"]').click());
+   await closeDialogs();await page.locator('[data-scientific-report-action="refresh"]').click();
+   await openScientific(scientificId);
+  }
+  scientific=verifyScientificEdition(await api('/api/source-reports/scientific-edition',{id:scientificId}),scientificId,sources);
  }
- let scientific=await api('/api/source-reports/scientific-edition',{id:preview.id});
- check(scientific.edition?.id===preview.id&&scientific.workspace_key===workspace,'Prepared report differs from the original preview.');
  await capture('combined-scientific-report','[data-scientific-report-detail] iframe');
  await downloadReportFiles(scientific,'scientific',page.locator('[data-scientific-report-detail]'));
  if(!scientific.archive){
-  await action('scientific-archive-'+preview.id,'source-reports.export',()=>page.locator('[data-scientific-report-action="export"]').click());
-  await closeDialogs();await page.locator('[data-scientific-report-action="refresh"]').click();scientific=await openScientific(preview.id);
+  await action('scientific-archive-'+scientificId,'source-reports.export',()=>page.locator('[data-scientific-report-action="export"]').click());
+  await closeDialogs();await page.locator('[data-scientific-report-action="refresh"]').click();
+  scientific=verifyScientificEdition(await openScientific(scientificId),scientificId,sources);
  }
  check(scientific.archive,'The scientific report has no completed retained archive.');
  journal.scientific_archive=await download({...scientific.archive,filename:scientific.archive.filename||'scientific-report.zip'},page.locator('[data-scientific-report-detail]'),'scientific-complete');
  await navigate('study-transfer');
  await page.locator('[data-study-action="clear-all"]').waitFor();
  if(await page.locator('[data-study-action="clear-all"]').isEnabled())await page.locator('[data-study-action="clear-all"]').click();
- await navigate('sources');await page.locator('[data-scientific-report-action="refresh"]').click();await openScientific(preview.id);
+ await navigate('sources');await page.locator('[data-scientific-report-action="refresh"]').click();await openScientific(scientificId);
  await page.locator('[data-scientific-report-action="transfer"]').click();
  await page.locator('[data-study-action="preview"]').waitFor();
  const studyPreview=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/study-transfer/preview'&&r.request().method()==='POST');
  await page.locator('[data-study-action="preview"]').click();const sp=await studyPreview;check(sp.ok(),'Original Study preview failed.');
  const study=await sp.json();
  const selectedRootKeys=await page.locator('[data-study-root]:checked').evaluateAll(items=>items.map(x=>x.dataset.studyRoot));
- check(selectedRootKeys.length===1&&selectedRootKeys[0].includes(preview.id),'The Study desk contains an extra or different selected root.');
+ check(selectedRootKeys.length===1&&selectedRootKeys[0].includes(scientificId),'The Study desk contains an extra or different selected root.');
  await record('study-preview',study);await capture('selected-study-preview');
- const exported=await action('study-'+preview.id,'study.export',()=>page.locator('[data-study-action="export"]').click());
+ const exported=await action('study-'+scientificId,'study.export',()=>page.locator('[data-study-action="export"]').click());
  journal.study_task_id=exported.id;await checkpoint();
  await closeDialogs();await page.locator('[data-study-action="refresh-exports"]').click();
  const file=exported._downloads?.find(f=>/\.zip$/i.test(f.filename||''));
@@ -454,7 +512,7 @@ async function course(){
  journal.study_archive=await download(file,page.locator('[data-study-exports]'),'selected-study');
  await capture('selected-study-export');
  if(config.restore_study){
-  const restore=await action('study-restore-'+preview.id,'workspace.restore',async()=>{
+  const restore=await action('study-restore-'+scientificId,'workspace.restore',async()=>{
    await page.locator('[data-action="restore"]').click();
    await page.locator('#form-dialog[open] input[name="restore_file"]').setInputFiles(path.join(out,journal.study_archive.path));
    await page.locator('#form-submit').click();
@@ -469,7 +527,7 @@ async function course(){
    const source=await openChemistry('source',row.source_record_id);check(source.run_id===row.run_id,'The restored typed source lost its original run.');
   }
   await navigate('sources');await page.locator('[data-scientific-report-action="refresh"]').click();
-  await openScientific(journal.scientific_report_id);
+  verifyScientificEdition(await openScientific(journal.scientific_report_id),journal.scientific_report_id,sources);
   await capture('restored-scientific-report','[data-scientific-report-detail] iframe');
  }
  journal.state='browser_course_complete';journal.completed_at=now();delete journal.error;

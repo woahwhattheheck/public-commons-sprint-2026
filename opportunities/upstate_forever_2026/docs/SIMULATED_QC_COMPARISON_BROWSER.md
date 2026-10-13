@@ -70,6 +70,30 @@ One chapter can operate a page at a time. The parent must serialize the recordin
 
 Keep the native consumer and browser source in the same installed application. The additive component fragment includes the native model, this module and both operating guides. Shared driver and recorder changes remain with their current source owner.
 
+## Original receipt, receiving and recorder composition
+
+The original scientific driver retains the complete consumer result under `receipt.qc_comparison`, alongside its existing `fieldwork_operation_id` and `fieldwork_plan_id`. Create that result and call `attach_to_delivery` and `attach_to_archive` before the existing mapped-delivery and whole-project export. The model consumer remains the source of the actual operation/report IDs.
+
+The additive `source_tools/simulated_qc_comparison_recording.py` supplies:
+
+```python
+bind_comparison(workspace, original_receipt, recording_output)
+validate_choice(choice)
+verify_choice(workspace, recording_output, choice)
+```
+
+`bind_comparison` returns `None` when the original receipt has no comparison. When present, it inspects that exact completed native operation and checks its six browser identities, report source, archive selection, original field operation, plan and project against the driver receipt. It freezes the complete actual native inspection as `uploads/simulated-headwaters/qc-comparison-inspection.json`.
+
+The returned descriptor contains its relative path, byte count, SHA-256 and all six exact choice fields. `verify_choice` rejects aliases, checks the frozen bytes, reopens the same native operation and requires its complete canonical result to agree. It returns the verified absolute local path for the browser caller. This step creates no scientific run, field revision or report.
+
+The maintained receipt builder adds that descriptor as `qc_comparison_receiving`. Its ordinary receiving validator requires the same original field chapter and verifies matching field operation, plan and project. The receiving programme checks the frozen source again before starting the original Operator and passes its exact descriptor into the current browser input.
+
+The parent recorder binds those file bytes and six identities into its saved progress. After its original field/QC chapter and before customer handback, it verifies the frozen inspection, supplies the current sender workspace key and invokes the borrowed chapter. All returned public members enter the original final file closure; independent-browser screenshots enter the same actual capture inventory. Private task snapshots and recovered local drafts remain on the private recovery surface.
+
+Existing field, programme, customer, native transfer, narration and cutoff logic retain their source. The parent records comparison operation/report IDs in its interruption checkpoint. A previously started recording input without this comparison remains its original edition; build a new recording edition from the updated retained driver receipt to add the chapter. Reuse the existing scientific Workspace and completed original results.
+
+The complete source packet provides guarded literal joins and full candidate parent postimages. The current parent owner composes those joins on fresh maintained source, preserving any later native/course fixes, and publishes the shared receipt builder, receiving programme and recorder together with the additive binder, chapter and component closure.
+
 ## What the recorded course does
 
 ### Open the original retained comparison
@@ -118,9 +142,10 @@ The parent progress member uses schema `upstate.simulated-qc-comparison-browser/
 | --- | --- |
 | qc-comparison/native-comparison.json | Complete original saved comparison, source file inventory and current original plan digest. |
 | qc-comparison/attempt-N/ui-preview.json | Complete actual UI preview for that attempt. |
-| qc-comparison/attempt-N/native-task-export.json | Decorated original completed export task as observed in that attempt. |
-| qc-comparison/attempt-N/native-task-source.json | Decorated original completed scientific-source task as observed in that attempt. |
-| qc-comparison/attempt-N/draft-before-recovery.json | Intervening local draft preserved when an earlier stopped attempt left restoration pending. |
+| private/qc-comparison/attempt-N/native-task-export.json | Decorated original completed export task as observed in that attempt. |
+| private/qc-comparison/attempt-N/native-task-source.json | Decorated original completed scientific-source task as observed in that attempt. |
+| private/qc-comparison/attempt-N/original-draft.json | Exact original local draft, retained only on the private recovery surface. |
+| private/qc-comparison/attempt-N/draft-before-recovery.json | Intervening local draft preserved when an earlier stopped attempt left restoration pending. |
 | qc-comparison/attempt-N/fresh-native-comparison.png | Actual independent-browser view of the same retained comparison. |
 | qc-comparison/attempt-N/fresh-offline-report.png | Actual independent-browser view of the downloaded unchanged report. |
 | qc-comparison/report/ | Every original report member with its original filename, including both complete original review ZIPs. |
@@ -129,13 +154,13 @@ The parent progress member uses schema `upstate.simulated-qc-comparison-browser/
 
 Attempt numbers are decimal `1`, `2`, and so on. Each attempt keeps its own preview, decorated task snapshots and independent-browser screenshots. Native report files and the complete package retain their immutable original paths and hashes across retries.
 
-The result contains `status`, the exact choice fields, `files`, `screenshots`, `task_ids`, `report_source` and `visual_review`. The parent should carry all returned files into its ordinary recording delivery and preserve their source meaning.
+The result contains `status`, the exact choice fields, `files`, `screenshots`, `task_ids`, `report_source` and `visual_review`. The parent should carry all returned files into its ordinary recording delivery and preserve their source meaning. Native task snapshots and recovered pre-existing local drafts are retained separately under private/qc-comparison and are excluded from returned public files; their descriptors remain in progress.qc_comparison.private_files. A same-operation retry also separates those private records retained by an earlier interrupted source edition. Public progress contains only the private file descriptors; original draft text is never embedded in the browser-progress JSON. Precisely hash-verified legacy recovery/task members from an earlier interrupted edition are physically moved into private storage before completion, and legacy inline draft text is likewise replaced by its retained private descriptor. The parent must use the explicit returned file inventory, not recursively publish private directories.
 
 Private progress may contain native file tickets and an original local draft. Keep the complete receiving directory on the existing authorized internal surface. The module excludes the Operator token and origin from public error text and stores an origin digest in its choice binding. Do not publish private capability URLs.
 
 ## Interrupted recordings and local draft recovery
 
-Before the chapter changes the comparison editor's local storage, it checkpoints the original value under the exact workspace/plan key and marks restoration required. It temporarily uses its own local selection while preserving any existing user's draft and pending-task reference.
+Before the chapter changes the comparison editor's local storage, it writes the original value into its immutable private file under the exact workspace/plan key, checkpoints only that file's descriptor and marks restoration required. It temporarily uses its own local selection while preserving any existing user's draft and pending-task reference.
 
 Ordinary completion closes the comparison and QC editors before restoring that exact original value. This order prevents a closing editor from overwriting the restoration with the temporary teaching selection.
 
@@ -170,3 +195,53 @@ The existing native owner continues the same completed field operation. The shar
 - Current original Operator task and file-ticket interfaces remain authoritative.
 
 The repository's existing licence terms apply.
+
+## Complete current owner direction
+
+The following complete project brief is retained from `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, Git blob `8cd1c1f3d371a2fb75471813844e31f489aa8272` (4999 bytes; SHA-256 `57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9`). Carry it with this original receiving and recording course. The completed simulated square and its retained field/QC comparisons remain their existing source edition; the actual Upper Savannah geographic calculation uses its separate current source and native owners. Preserve completed calculations and their original outputs when continuing this chapter.
+
+> # Current owner direction: Ecosystem Sciences demonstration
+> 
+> Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+> 
+> ## Direct owner instructions
+> 
+> Execute the prepared simulated model.
+> 
+> Deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time.
+> 
+> Continue active work while checking progress.
+> 
+> Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
+> 
+> ## Build for an experienced scientific practice
+> 
+> Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+> 
+> Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+> 
+> ## Execute the prepared simulated case now
+> 
+> Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+> 
+> Demonstrate the scientific operation in the actual application:
+> 
+> 1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+> 2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+> 3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+> 4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+> 5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+> 
+> Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+> 
+> ## Present the real work and real speed
+> 
+> Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+> 
+> If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+> 
+> ## Carry this direction with the work
+> 
+> Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+> 
+> Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

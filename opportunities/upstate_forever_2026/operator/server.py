@@ -467,9 +467,29 @@ class Operator:
         request_sha = digest(request)
         key = digest({"workspace": workspace, "operation_id": operation_id})
         file = self.root / "tasks" / (key + ".json")
+        alias_file = self.root / "task-operation-aliases" / (key + ".json")
         with self.lock:
             if self.closing:
                 raise Fault("OPERATOR_DRAINING", "The operator is finishing its active task.", 409)
+            if alias_file.exists():
+                alias = read_json(alias_file)
+                if (alias.get("schema") != "upstate.operator-operation-alias/v1"
+                        or alias.get("workspace") != workspace
+                        or alias.get("operation_id") != operation_id):
+                    raise Fault("OPERATION_ALIAS_INVALID", "The retained original operation binding is incomplete.", 409)
+                if alias.get("request_sha256") != request_sha:
+                    raise Fault("OPERATION_REUSED", "That operation identity already belongs to a different selection.", 409)
+                if file.exists():
+                    raise Fault("OPERATION_ALIAS_CONFLICT", "The operation has both an original task and a retained task binding.", 409)
+                try:
+                    task = self.task(alias["task_id"])
+                except (FileNotFoundError, KeyError):
+                    raise Fault("OPERATION_ALIAS_MISSING", "The original task for this retained operation is unavailable.", 409)
+                if (task["workspace"] != workspace or task["request_sha256"] != request_sha
+                        or digest({"workspace": task["workspace"], "action": task["action"],
+                                   "payload": task["payload"]}) != request_sha):
+                    raise Fault("OPERATION_ALIAS_INVALID", "The retained task differs from the original operation.", 409)
+                return task
             if file.exists():
                 task = read_json(file)
                 if task["request_sha256"] != request_sha:
@@ -484,6 +504,15 @@ class Operator:
                     continue
                 if (task["workspace"] == workspace and task["state"] in ACTIVE
                         and task["request_sha256"] == request_sha):
+                    # Persist the accepted task before acknowledging the new
+                    # request. Its operation remains bound after completion or
+                    # interruption and never becomes an unintended new task.
+                    atomic_json(alias_file, {
+                        "schema": "upstate.operator-operation-alias/v1",
+                        "workspace": workspace, "operation_id": operation_id,
+                        "request_sha256": request_sha, "task_id": task["id"],
+                        "created_at": now(),
+                    }, immutable=True)
                     return task
             task = {"schema": "upstate.operator-task/v1", "id": key, "operation_id": operation_id,
                     **request, "request_sha256": request_sha, "created_at": now(),
@@ -1047,7 +1076,12 @@ class Operator:
         if task["action"] == "spatial.review.export" and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], "spatial_exports", result["id"])["_downloads"]
         if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):
-            if task["action"] == "parameter-study.source.prepare":
+            if task["action"] == "parameter-study.ensemble.continue":
+                prepared = self.parameter_studies.ensemble_studies(task["workspace"], result["id"])
+                task["result"] = {**result, **prepared}
+                task["_downloads"] = [item for row in prepared["studies"]
+                                      for item in (row.get("source") or {}).get("downloads", [])]
+            elif task["action"] == "parameter-study.source.prepare":
                 task["_item"] = {"kind": "parameter-studies", "id": result["experiment_id"]}
                 prepared = self.parameter_studies.read(task["workspace"], "scientific-source",
                     {"source_id": result["id"]})

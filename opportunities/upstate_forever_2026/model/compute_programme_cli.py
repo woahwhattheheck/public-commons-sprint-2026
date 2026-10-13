@@ -35,6 +35,21 @@ def parser():
     create.add_argument("selection", type=Path)
     create.add_argument("--source-reference",
                         help="The exact installed application revision; otherwise captured file hashes identify it")
+    source_catalog = commands.add_parser("source-update-catalog",
+        help="List saved refresh plans and source successors for one retained Programme")
+    source_catalog.add_argument("programme_id")
+    for name in ("source-update-preview", "source-update"):
+        command = commands.add_parser(name,
+            help="Review source replacements" if name.endswith("preview") else
+                 "Create or reopen the exact reviewed source-successor Programme")
+        command.add_argument("programme_id")
+        command.add_argument("refresh_plan_id")
+        command.add_argument("--title")
+        if name == "source-update":
+            command.add_argument("--expected-preview-id", required=True,
+                                 help="The exact source-update preview just inspected")
+            command.add_argument("--run", action="store_true",
+                                 help="Continue this successor with original stage reuse")
     for name in ("interaction-preview", "interaction-create"):
         command = commands.add_parser(name, help="Adopt an original conservation coalition study")
         command.add_argument("plan_id")
@@ -85,6 +100,23 @@ def _synchronize_completed(programmes, result):
 
 def perform(args):
     programmes = ComputeProgrammes(Workspace(args.workspace))
+    if args.command in ("source-update-catalog", "source-update-preview", "source-update"):
+        from . import programme_source_updates
+        if args.command == "source-update-catalog":
+            return programme_source_updates.catalog(programmes.workspace, args.programme_id)
+        if args.command == "source-update-preview":
+            return programme_source_updates.preview(programmes.workspace, args.programme_id,
+                                                    args.refresh_plan_id, title=args.title)
+        adopted = programme_source_updates.create(programmes.workspace, args.programme_id,
+            args.refresh_plan_id, expected_preview_id=args.expected_preview_id, title=args.title)
+        if not args.run:
+            return adopted
+        try:
+            status = _synchronize_completed(programmes, programmes.resume(adopted["programme_id"]))
+            return {**status, "source_update": adopted}
+        except Exception as exc:
+            exc.programme_id = adopted["programme_id"]
+            raise
     if args.command in ("interaction-preview", "interaction-create", "attach-interaction", "sync-interaction"):
         from . import programme_interactions
         if args.command == "interaction-preview":
@@ -151,7 +183,9 @@ def main(argv=None):
         result = perform(args)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False), flush=True)
         if (args.command in ("execute", "resume")
-                or (args.command == "pair-completion" and args.run)) and result["state"] != "complete":
+                or (args.command in ("pair-completion", "source-update") and args.run)) and result["state"] != "complete":
+            return 2
+        if args.command == "source-update-preview" and not result["ready"]:
             return 2
         return 0
     except (ValueError, OSError, KeyError, ImportError, RuntimeError) as exc:

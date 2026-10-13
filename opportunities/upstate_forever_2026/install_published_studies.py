@@ -12,6 +12,8 @@ import tempfile
 from datetime import datetime, timezone
 
 CODE_FILES = (
+    "AGENTS.md",
+    "CURRENT_OWNER_DIRECTION.md",
     "measurement_workspace/published_studies.py",
     "measurement_workspace/study_reviews.py",
     "measurement_workspace/geographic_study_selection.py",
@@ -29,10 +31,14 @@ CODE_FILES = (
     "measurement_workspace/wqp_profiles.py",
     "measurement_workspace/sv833_observations.py",
     "measurement_workspace/rl18151_observations.py",
+    "measurement_workspace/three_twenty_observations.py",
+    "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
     "measurement_workspace/RL18151_OBSERVATIONS.md",
     "source_tools/receive_original_study.py",
     "source_tools/continue_study_report.py",
     "source_tools/receive_rl18151_study.py",
+    "source_tools/receive_three_twenty_study.py",
+    "measurement_workspace/THREE_TWENTY_OBSERVATIONS.md",
     "source_tools/offline_handover/README.md",
     "source_tools/offline_handover/adapt_eighteenmile_retained.py",
     "source_tools/offline_handover/build_offline_handover.py",
@@ -52,6 +58,9 @@ CODE_FILES = (
     "operator/web/published_microbial_selection.mjs",
     "operator/web/published_review_reports.mjs",
     "model/received_published_reviews.py",
+    "model/published_review_admission.py",
+    "operator/published_review_admission.py",
+    "operator/extensions/received-published-review-admission.json",
     "operator/received_published_reviews.py",
     "operator/web/received_published_reviews.mjs",
     "operator/web/received_published_reviews.css",
@@ -98,6 +107,7 @@ def portable_source(source):
     additions = {
         "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations", "source", "source_tools"),
         "APPLICATION_FILES": (
+            "CURRENT_OWNER_DIRECTION.md", "AGENTS.md",
             "PUBLISHED_STUDIES.md", "published_studies_family.json", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
             "eighteenmile_chlorophyll_reconciled.sources.json",
@@ -170,7 +180,7 @@ def review_transfer_source(source):
     return result
 
 
-RECEIVING_HOOKS = json.loads(r'''{"model/study_receiving.py":[{"before":"from . import observed_landcover_receiving\n","after":"from . import observed_landcover_receiving\nfrom . import received_published_reviews\n"},{"before":"        **observed_landcover_receiving.summary(identity),\n","after":"        **observed_landcover_receiving.summary(identity),\n        **received_published_reviews.summary(identity),\n"},{"before":"    observed_landcover_receiving.augment(closure, retained, result)\n","after":"    observed_landcover_receiving.augment(closure, retained, result)\n    received_published_reviews.augment(closure, retained, result)\n"}],"operator/study_receiving.py":[{"before":"    result[\"workspace_key\"] = workspace_key\n","after":"    import received_published_reviews\n    received_published_reviews.decorate(operator, workspace_key, result)\n    result[\"workspace_key\"] = workspace_key\n"}],"operator/web/received_studies.mjs":[{"before":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\n","after":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\nimport {receivedPublishedReviewsHTML,openReceivedPublishedReview} from './received_published_reviews.mjs';\n"},{"before":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n","after":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n    html+=receivedPublishedReviewsHTML(value,!!disabled);\n"},{"before":"    if(action?.startsWith('cohort-')){\n","after":"    if(action?.startsWith('published-review-')){\n      const ws=workspace,e=epoch,value=opened;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      return await openReceivedPublishedReview(host,value,target,{\n        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,\n      });\n    }\n    if(action?.startsWith('cohort-')){\n"}]}''')
+RECEIVING_HOOKS = json.loads(r'''{"model/study_receiving.py":[{"before":"from . import observed_landcover_receiving\n","after":"from . import observed_landcover_receiving\nfrom . import received_published_reviews\n"},{"before":"        **observed_landcover_receiving.summary(identity),\n","after":"        **observed_landcover_receiving.summary(identity),\n        **received_published_reviews.summary(identity),\n"},{"before":"    observed_landcover_receiving.augment(closure, retained, result)\n","after":"    observed_landcover_receiving.augment(closure, retained, result)\n    received_published_reviews.augment(closure, retained, result)\n"}],"operator/study_receiving.py":[{"before":"    result[\"workspace_key\"] = workspace_key\n","after":"    import received_published_reviews\n    received_published_reviews.decorate(operator, workspace_key, result)\n    result[\"workspace_key\"] = workspace_key\n"}],"operator/web/received_studies.mjs":[{"before":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\n","after":"import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';\nimport {receivedPublishedReviewsHTML,openReceivedPublishedReview} from './received_published_reviews.mjs';\n"},{"before":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n","after":"    html+=receivedObservedLandcoverHTML(value,!!disabled);\n    html+=receivedPublishedReviewsHTML(value,!!disabled);\n"},{"before":"    if(action?.startsWith('cohort-')){\n","after":"    if(action?.startsWith('published-review-')){\n      const ws=workspace,e=epoch,value=opened;\n      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value?.id;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      try{\n        return await openReceivedPublishedReview(host,value,target,{workspace_key:ws,current:stillCurrent});\n      }catch(error){\n        if(!stillCurrent())return;\n        throw error;\n      }\n    }\n    if(action?.startsWith('cohort-')){\n","previous":"    if(action?.startsWith('published-review-')){\n      const ws=workspace,e=epoch,value=opened;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      return await openReceivedPublishedReview(host,value,target,{\n        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,\n      });\n    }\n    if(action?.startsWith('cohort-')){\n"},{"before":"    if(action?.startsWith('landcover-')){\n      const ws=workspace,e=epoch,value=opened;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      return await openReceivedObservedLandcover(host,value,target,{\n        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,\n      });\n    }\n","after":"    if(action?.startsWith('landcover-')){\n      const ws=workspace,e=epoch,value=opened;\n      if(!value||value.id!==selected||value.workspace_key!==ws)\n        throw Error('Reopen the original received Study.');\n      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value.id;\n      try{\n        return await openReceivedObservedLandcover(host,value,target,{workspace_key:ws,current:stillCurrent});\n      }catch(error){\n        if(!stillCurrent())return;\n        throw error;\n      }\n    }\n"}]}''')
 
 
 def review_receiving_sources(application):
@@ -184,6 +194,9 @@ def review_receiving_sources(application):
             before, after = change["before"], change["after"]
             if updated.count(after) == 1:
                 continue
+            previous = change.get("previous")
+            if previous is not None and updated.count(previous) == 1:
+                before = previous
             if after in updated or updated.count(before) != 1:
                 raise ValueError("The received-review join needs its maintained source anchor: " + relative)
             updated = updated.replace(before, after, 1)
@@ -363,7 +376,7 @@ def main():
         "extension": "published-studies", "view": "published-studies",
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
-        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []),
+        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []) + (["scdes-three-twenty-water-quality-2026"] if (source / "three_twenty_2026.sources.json").is_file() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in [
             *expected, "model/portable.py", "model/scientific_report_study_transfer.py",
             *(str(path.relative_to(application)) for path, _, _ in receiving_updates)]],

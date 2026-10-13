@@ -23,6 +23,56 @@ The authored requests are:
 
 The ready engineering edition records that those requests are addressed by selected evidence. Customer acceptance remains a separate customer response in the maintained application.
 
+## Carry a repaired presentation into the same recorded case
+
+A rendering repair can produce a new readable HTML edition while the original review, customer response and engineering handback remain unchanged. Existing completed exports are immutable: restarting their original export command intentionally reopens those same bytes. Use an explicit presentation edition when the repaired outgoing desk must replace the selected presentation in a new recording.
+
+After receiving the maintained renderer repair, first inspect the existing complete teaching export. Then create a fresh presentation directory outside the application, scientific Workspace and previous export:
+
+```bash
+"$PYTHON" -B -m model.simulated_customer_review \
+  --workspace "$WORKSPACE" export \
+  --operation "$CUSTOMER_OPERATION_ID" \
+  --previous "$ORIGINAL_CUSTOMER_EXPORT" \
+  --output "$NEW_PRESENTATION_DIRECTORY"
+```
+
+Here `CUSTOMER_OPERATION_ID` is the actual ready operation from the original completed field case. `ORIGINAL_CUSTOMER_EXPORT` is its complete case directory, including `case-manifest.json`, both native desks and ZIPs, original selection and complete worklist snapshot. A previous presentation edition is also accepted, retaining the complete chain. Preserve the exact command and source edition when resuming an interrupted export into the same destination.
+
+The command uses the existing native review and handback exporters to render new desks. It retains all six original customer identities, the scientific project and field binding, original response history, engineering history, source artifacts, and the source-dated worklist JSON/CSV. It does not record another customer response or imply acceptance. New native package hashes identify the current presentation.
+
+The full previous edition is copied under `previous-edition/`, including its original desks, ZIPs and earlier presentation history. `presentation.json` contains their complete byte identities and the source identities of the customer consumer, review exporter, handback exporter and original standalone review application. Current and previous review packets and linked engineering histories must match exactly. A different decision, artifact or response generation is rejected as a presentation-only change.
+
+The original case receipt remains unchanged. Bind the new presentation explicitly into a fresh recording input using the maintained parent command:
+
+```bash
+"$PYTHON" -B source_tools/simulated_headwaters_rehearsal.py \
+  --receipt "$ORIGINAL_DEMO_RECEIPT" \
+  --workspace "$WORKSPACE" \
+  --customer-case "$NEW_PRESENTATION_DIRECTORY" \
+  --output "$NEW_RECORDING_OUTPUT" \
+  --operation-id "$NEW_RECORDING_OPERATION_ID" \
+  --browser-config "$EXISTING_BROWSER_CONFIG"
+```
+
+Use a new recording output and operation identity because the selected manifest and displayed pixels changed. Keep the old recording, its original manifest and media available. This command prepares the original rehearsal input; its existing `--run` option continues that same configured receiving/recording course. The parent retains native model, field, QC, timing and narration ownership.
+
+The binder admits the explicit presentation only after validating its complete retained lineage back to the exact `customer_review_packages` value in the original demo receipt. Matching review IDs alone is insufficient. Relocated identical exports continue to work as before. Automatic default selection still chooses the original receipt's export; choosing a repaired presentation is explicit.
+
+On the restored original scientific project, the ordinary receive command also accepts the complete new edition:
+
+```bash
+"$PYTHON" -B -m model.simulated_customer_review \
+  --workspace "$RESTORED_WORKSPACE" receive \
+  --source "$NEW_PRESENTATION_DIRECTORY" \
+  --output "$NEW_RECEIVING_DIRECTORY"
+```
+
+Receiving verifies the complete current packages and presentation ancestry, preserves the same original review and handback records, and opens the current native local viewer. Keep the full presentation directory with its historical subdirectories when handing over editable files; sending only the two current ZIPs carries those native desks but not the complete presentation history.
+
+Personally open and VIEW the current handback at desktop and narrow widths. Operate table scrolling, all original/revised source links, response import and Undo, complete downloads and independent reopening. Open the earlier edition as well to verify that it remains readable under its original identity. View the actual final screenshots and watch/listen to the final recording and narration; the complete standing product/attachment rule below applies to this new selected edition too.
+
+
 ## Preconditions and selected original sources
 
 Use the application containing the completed [simulated field chapter](SIMULATED_FIELDWORK.md), Customer reviews workbench and native review-package receiver. Keep the existing case driver, original scientific Workspace and actual field operation ID.

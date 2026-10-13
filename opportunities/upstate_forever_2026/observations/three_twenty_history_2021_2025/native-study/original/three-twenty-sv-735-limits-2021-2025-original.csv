@@ -1,0 +1,252 @@
+OrganizationIdentifier,OrganizationFormalName,ActivityIdentifier,MonitoringLocationIdentifier,ResultIdentifier,CharacteristicName,DetectionQuantitationLimitTypeName,DetectionQuantitationLimitMeasure/MeasureValue,DetectionQuantitationLimitMeasure/MeasureUnitCode,ProviderName
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817875,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846371,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856531,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950047,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979177,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851048,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835427,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811683,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821658,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979176,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817870,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856527,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796492,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002339,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811685,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958396,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990914,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796487,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950049,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958380,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821650,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796491,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828758,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950040,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131990,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941525,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002344,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958376,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979183,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950028,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941533,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913214,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131981,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796484,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131992,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811688,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913218,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839827,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821652,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821657,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979179,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846370,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811686,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856532,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958383,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154560,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000154,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000148,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154557,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000151,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821651,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803952,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811687,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144356,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144352,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979180,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796490,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941530,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154556,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851046,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941529,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002338,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990906,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000153,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851050,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979175,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803946,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131979,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803950,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803955,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811691,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958391,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144369,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835434,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144365,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941524,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913216,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000149,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856528,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796485,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828754,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144350,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990909,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835429,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154554,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796488,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817878,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817873,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154564,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828755,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941532,Phosphorus,Lower Quantitation Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950030,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792656,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851045,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828762,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144371,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000156,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002340,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792659,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828761,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846364,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792654,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796482,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803949,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846369,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002337,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792663,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950043,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131995,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835436,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154558,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154550,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796489,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851047,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846362,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941528,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856535,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851043,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839835,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144354,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979185,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803953,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154553,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856529,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811682,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131978,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958378,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851049,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839829,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000155,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803948,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990915,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835428,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851044,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839831,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131988,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154562,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979181,Kjeldahl nitrogen,Lower Quantitation Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835430,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817879,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154552,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828763,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835437,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851051,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811690,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828760,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990907,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913220,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950038,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002345,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913221,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792662,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851042,Ammonia,Lower Quantitation Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846365,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913211,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990916,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821654,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839826,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950037,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144367,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990911,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000157,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002347,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828764,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE74663,21SC60WQ_WQX-SV-735,STORET-1102851052,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000152,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835435,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839833,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792658,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950034,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002346,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979178,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792655,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144357,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828757,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958385,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846368,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856534,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817880,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131985,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856536,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913212,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821660,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796483,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856537,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002342,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828756,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835431,Escherichia coli,Upper Quantitation Limit,4839.2,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144361,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839834,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817872,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE79618,21SC60WQ_WQX-SV-735,STORET-1103144358,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990912,Kjeldahl nitrogen,Lower Quantitation Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856533,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821653,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958394,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839830,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817874,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990913,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131983,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941534,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792664,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821655,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131997,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839828,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792657,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941526,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990910,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF00718,21SC60WQ_WQX-SV-735,STORET-1104000150,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835432,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958386,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817876,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846363,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811684,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979182,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002341,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839825,Ammonia,Lower Reporting Limit,0.050,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913213,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821656,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE72098,21SC60WQ_WQX-SV-735,STORET-1102839832,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941531,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE95770,21SC60WQ_WQX-SV-735,STORET-1103979184,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE75945,21SC60WQ_WQX-SV-735,STORET-1102856530,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950045,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE99263,21SC60WQ_WQX-SV-735,STORET-1103990908,Depth,Detection Limit,0,m,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811692,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803956,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846372,Turbidity,Lower Reporting Limit,0.50,NTU,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803951,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792660,Kjeldahl nitrogen,Lower Quantitation Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE77943,21SC60WQ_WQX-SV-735,STORET-1103131993,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE80968,21SC60WQ_WQX-SV-735,STORET-1103154551,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846366,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE94373,21SC60WQ_WQX-SV-735,STORET-1103958389,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE69337,21SC60WQ_WQX-SV-735,STORET-1102828759,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE64749,21SC60WQ_WQX-SV-735,STORET-1102811689,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803947,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817871,Conductivity,Detection Limit,0,umho/cm,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913217,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE62730,21SC60WQ_WQX-SV-735,STORET-1102803954,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE60936,21SC60WQ_WQX-SV-735,STORET-1102796486,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE91434,21SC60WQ_WQX-SV-735,STORET-1103941527,Dissolved oxygen (DO),Detection Limit,0,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE59964,21SC60WQ_WQX-SV-735,STORET-1102792661,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE67550,21SC60WQ_WQX-SV-735,STORET-1102821659,"Temperature, water",Detection Limit,0,deg C,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE73539,21SC60WQ_WQX-SV-735,STORET-1102846367,Nitrate + Nitrite,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913219,Phosphorus,Lower Reporting Limit,0.020,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AF01324,21SC60WQ_WQX-SV-735,STORET-1104002343,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE70819,21SC60WQ_WQX-SV-735,STORET-1102835433,Kjeldahl nitrogen,Lower Reporting Limit,0.10,mg/L,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE81988,21SC60WQ_WQX-SV-735,STORET-1103913215,Escherichia coli,Lower Reporting Limit,1,MPN/100mL,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE66443,21SC60WQ_WQX-SV-735,STORET-1102817877,pH,Detection Limit,0,None,STORET
+21SC60WQ_WQX,South Carolina Department of Environmental Services  (State),21SC60WQ_WQX-AE93426,21SC60WQ_WQX-SV-735,STORET-1103950032,Depth,Detection Limit,0,m,STORET

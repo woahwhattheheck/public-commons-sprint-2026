@@ -153,3 +153,20 @@
 .water-plan-comparison .rwpc-pair-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:.75rem;align-items:end;margin:1rem 0}
 .water-plan-comparison .rwpc-pair-controls label{display:grid;gap:.35rem;min-width:0}
 @media(max-width:650px){.water-plan-comparison .rwpc-pair-controls{grid-template-columns:1fr}}
+
+/* Same original model cohort on reporting and full-domain support. */
+.water-scope-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;margin:16px 0;}
+.water-scope-pair label{display:grid;gap:6px;min-width:0;}
+.water-scope-pair select{width:100%;max-width:100%;min-width:0;}
+.water-scope-area{border:1px solid currentColor;border-color:var(--border,#d1d5db);border-radius:3px;margin:16px 0;padding:14px;min-width:0;}
+.water-scope-area header h3{margin:0 0 6px;}
+.water-scope-area header p{margin:0 0 12px;overflow-wrap:anywhere;}
+.water-scope-area table{width:100%;}
+.water-scope-area caption{text-align:left;padding:0 0 10px;font-weight:600;}
+.water-scope-area .water-number{white-space:nowrap;word-break:normal;overflow-wrap:normal;font-variant-numeric:tabular-nums;}
+.water-scope-area .water-number small{display:block;}
+.water-scope-area td:last-child{min-width:150px;}
+[data-water-scope-comparison]{min-width:0;max-width:100%;}
+[data-water-scope-comparison] .water-table-scroll{max-width:100%;overflow-x:auto;}
+[data-water-scope-comparison] .water-actions button{min-height:42px;}
+@media(max-width:760px){.water-scope-pair{grid-template-columns:minmax(0,1fr);}.water-scope-area{padding:10px;}.water-scope-area th,.water-scope-area td{padding:8px;}}
