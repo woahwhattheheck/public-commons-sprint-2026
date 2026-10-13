@@ -59,6 +59,18 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    request:prior.request||{mode:'calibrate',parameters:[]}};
  }
  const groupKey=g=>canonical([g.characteristic||'',g.method||'',g.fraction||'']);
+ function mappingGroups(groups){
+  const merged=new Map();
+  for(const g of groups){
+   const key=groupKey(g);
+   if(!merged.has(key))merged.set(key,{...g,count:0,record_ids:[],stations:[],dates:[],censors:{},exclusions:{},source_cohorts:[]});
+   const row=merged.get(key);row.count+=g.count;row.record_ids.push(...g.record_ids);row.stations.push(...g.stations);row.dates.push(...g.dates);
+   row.source_cohorts.push({basis:g.basis,unit:g.unit,count:g.count});
+   for(const name of ['censors','exclusions'])for(const [kind,n] of Object.entries(g[name]||{}))row[name][kind]=(row[name][kind]||0)+n;
+  }
+  return [...merged.values()].map(g=>({...g,basis:[...new Set(g.source_cohorts.map(c=>c.basis||'unspecified'))].join(' / '),
+   unit:[...new Set(g.source_cohorts.map(c=>c.unit||'unspecified'))].join(' / '),stations:[...new Set(g.stations)],dates:[...new Set(g.dates)]}));
+ }
  function drawEditor(){
   if(!inspected)return;
   const value=draft,project=inspected.case.project,records=inspected.records||[],groups=inspected.groups||[];
@@ -73,7 +85,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    '<fieldset><legend>Measurement definitions</legend><p>Choose a measured quantity for each exact characteristic, method and fraction. Enter positive weights for the nonoverlapping modeled pools that represent it. All components must share the declared conserved basis. A total-N mapping must not count ammonia twice inside TKN.</p>'+groups.map((g,i)=>{
     const m=mapping.get(groupKey(g))||{},components=new Map((m.components||[]).map(c=>[c.species,c.weight]));
     return '<details data-group-index="'+i+'"><summary>'+esc(g.characteristic||'(no characteristic)')+' · '+esc(g.method||'method unspecified')+' · '+esc(g.fraction||'fraction unspecified')+' · '+g.count+' records</summary>'+
-     '<p>Retained basis '+esc(g.basis||'unspecified')+'; units '+esc(g.unit||'unspecified')+'. Censoring: '+esc(JSON.stringify(g.censors||{}))+'. Current eligibility reasons: '+esc(JSON.stringify(g.exclusions||{}))+'.</p>'+
+     '<p>Retained basis '+esc(g.basis||'unspecified')+'; units '+esc(g.unit||'unspecified')+'. Original basis/unit cohorts: '+esc(JSON.stringify(g.source_cohorts||[]))+'. Censoring: '+esc(JSON.stringify(g.censors||{}))+'. Current eligibility reasons: '+esc(JSON.stringify(g.exclusions||{}))+'.</p>'+
      '<label class="mb-check"><input name="include" type="checkbox" '+(m.measurement?'checked':'')+'>Include this measurement mapping</label>'+
      '<div class="mb-grid">'+select('measurement','Measured quantity',[['','Choose a quantity'],...(inspected.measurement_choices||catalog.measurement_choices).map(c=>[c.id,titleOf(c)])],m.measurement||'')+
      select('basis','Conserved mass basis',[['','Choose exact basis'],...[...new Set(species.map(s=>s.basis))].map(b=>[b,b])],m.basis||'')+'</div>'+
@@ -168,11 +180,12 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  async function inspectPopulation(){
   captured();const form=library.querySelector('form'),values=Object.fromEntries([...form.querySelectorAll('[name]')].map(input=>[input.name,input.value]));
   if(!values.case_id)throw Error('Choose the saved physical case.');
-  if(caseChoice!==values.case_id){rawDraft={};draft=null;}
-  caseChoice=values.case_id;filters=Object.fromEntries(Object.entries(values).filter(([k,v])=>k!=='case_id'&&v));
-  const version=++epoch,value=await call('inspect',{case_id:caseChoice,filters});
+  const chosenCase=values.case_id,chosenFilters=Object.fromEntries(Object.entries(values).filter(([k,v])=>k!=='case_id'&&v));
+  const version=++epoch,value=await call('inspect',{case_id:chosenCase,filters:chosenFilters});
   if(!active()||version!==epoch)return;
-  inspected=value;draft=initialDraft(value);selectedRow=0;persist();drawEditor();
+  if(caseChoice!==chosenCase){rawDraft={};draft=null;}
+  caseChoice=chosenCase;filters=chosenFilters;
+  inspected={...value,source_groups:value.groups,groups:mappingGroups(value.groups||[])};draft=initialDraft(value);selectedRow=0;persist();drawEditor();
   message('Original records loaded. Complete and review each mapping before saving the source-bound binding.');
  }
  function paintPrepared(value){
@@ -213,8 +226,8 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   catalog=value;renderLibrary();message('Saved physical cases and measured bindings are ready.');
  }
  let loaded=false;
- panel.addEventListener('toggle',()=>{if(panel.open&&!loaded){loaded=true;task(async()=>{
-  await loadCatalog();
+ panel.addEventListener('toggle',()=>{if(panel.open&&!loaded){task(async()=>{
+  await loadCatalog();if(active())loaded=true;
   if(preparedId&&active()){const value=await call('get',{binding_id:preparedId});if(active())paintPrepared(value);}
  });}},{signal:controller.signal});
  root.addEventListener('submit',event=>{
