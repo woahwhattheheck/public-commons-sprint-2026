@@ -54,6 +54,7 @@ PACKAGE_FILES = (
     "source/keowee-native-receiving-20261013/source-interval-journey.json",
     "source_tools/gura_setup_review.py", "source_tools/GURA_SETUP_REVIEW.md",
     "source/gura-scientific-setup-request.json", "source/gura-setup-integration-20261013.json",
+    "source_tools/receive_first_gura_case.py", "source_tools/FIRST_GURA_RECEIVING.md",
 )
 PROFILE_NAMES = (
     "lake-keowee-methodology.json", "keowee-evaluator.mjs", "keowee-evaluator.d.mts",
@@ -69,6 +70,7 @@ HOST_FILES = (
     "operator/server.py", "operator/extension_registry.py", "operator/web/app.mjs",
     "model/reviews.py", "model/model_selection.py", "model/scenario_footprint.py",
     "operator/customer_reviews.py", "source_tools/gura_comparison.py",
+    "source_tools/gura_workflow.py", "source_tools/receive_gura.py",
 )
 
 
@@ -275,7 +277,9 @@ def package(source_root):
             or setup_descriptor.get("assets") != ["scientific-setup.mjs", "scientific-setup.css"]
             or setup_descriptor.get("backend", {}).get("module") != "scientific_setup"
             or setup_descriptor.get("backend", {}).get("actions") != ["scientific.setup.create"]
-            or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]):
+            or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]
+            or setup_descriptor.get("client", {}).get("module") != "/web/scientific-setup.mjs"
+            or setup_descriptor.get("client", {}).get("styles") != ["/web/scientific-setup.css"]):
         raise ValueError("Expected the original scientific setup action and view registration")
     sources[MANIFEST] = raw
     return manifest, rows, profiles, recipes, sources
@@ -432,6 +436,11 @@ def install(application, source_root, *, dry_run=False):
                 "--output-dir /actual/owned/receiving/gura-catalog",
                 "cd " + shlex.quote(str(application))
                 + " && node source_tools/keowee_interval_receiving.mjs",
+                shlex.quote(sys.executable) + " -B "
+                + shlex.quote(str(application / "source_tools/receive_first_gura_case.py"))
+                + " --application " + shlex.quote(str(application))
+                + " --operation-root /actual/original-gura-operation"
+                + " --python " + shlex.quote(sys.executable),
             ],
         }
         if dry_run or not changed:
