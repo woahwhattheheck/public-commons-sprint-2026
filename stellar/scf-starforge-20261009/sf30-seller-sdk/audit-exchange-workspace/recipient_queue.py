@@ -95,7 +95,7 @@ def _queues(workspace, db, queue_id, local=False, origin=None):
             continue
         value = _value(workspace._bytes(db, record["sha256"]))
         require(value["queueId"] == queue_id, "recipient_queue_history", "The queue metadata and full body differ.")
-        if (not local or value["workspaceId"] == workspace._meta(db)["workspaceId"]) and (origin is None or value["workspaceId"] == origin):
+        if (not local or not record.get("receivedFrom") and value["workspaceId"] == workspace._meta(db)["workspaceId"]) and (origin is None or value["workspaceId"] == origin):
             values.append((record, value))
     values.sort(key=lambda pair: pair[1]["edition"])
     # Receiving the same complete archive can produce several native export IDs.
@@ -196,7 +196,8 @@ def _progress(workspace, db, record, manuscript):
                                "current-review-changed" if changed else "pending"})
     accepted_count = sum(row["status"] == "accepted" for row in rows)
     custody = [item for item in workspace._all(db, "export")
-               if item["kind"] == "recipient-custody" and item.get("returnSha256") == record["sha256"]]
+               if item["kind"] == "recipient-custody" and item.get("returnSha256") == record["sha256"]
+               and (inherited or not item.get("receivedFrom"))]
     return {"return": record, "manuscriptId": manuscript["manuscriptId"],
             "editionSha256": manuscript["editions"][-1]["sha256"],
             "authoredEditions": len(manuscript["editions"]), "reviews": rows,
@@ -221,7 +222,7 @@ def read(workspace, db, action, inputs):
         retained = _matching(workspace, db, item["returnSha256"], "recipient-return")
         entries.append({**item, "retainedReturnId": retained["id"]})
     return {"export": record, "queue": value, "entries": entries, "history": history,
-            "readOnly": value["workspaceId"] != workspace._meta(db)["workspaceId"]}
+            "readOnly": bool(record.get("receivedFrom")) or value["workspaceId"] != workspace._meta(db)["workspaceId"]}
 
 def _checked(workspace, db, inputs):
     _keys(inputs, {"queueId", "expectedQueueSha256", "title", "entries", "selectedReturnSha256", "actor", "note"})
