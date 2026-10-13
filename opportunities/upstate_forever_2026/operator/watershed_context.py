@@ -11,6 +11,7 @@ from model.common import atomic_bytes, atomic_json, describe_file, digest, held,
 from source_tools.watershed_source_entry import capture_source_entry, retain_source_entry
 from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
+from model import utility_observed_context as observed_model
 from model.watershed_brief import (
     BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
 )
@@ -285,6 +286,7 @@ class WatershedContextActions:
         return {
             **record, "report": report,
             "_utility_selections": self._utility_choices(report)[0],
+            "_observed_context": observed_model.catalog(Path(__file__).resolve().parents[1]),
             "_downloads": self._downloads(
                 workspace, directory, record, "operator-report.json", "Regional watershed source manifest",
             ),
@@ -600,6 +602,10 @@ class WatershedContextActions:
                 "sha256": utility["profile_source"]["sha256"],
                 "source_member": "original-utility-profile.json",
             })
+        observed_context, observed_bodies = (observed_model.load_for_utility(
+            Path(__file__).resolve().parents[1], utility) if utility is not None else (None, {}))
+        if observed_context is not None:
+            selection["observed_context"] = observed_context
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
@@ -607,6 +613,8 @@ class WatershedContextActions:
         }
         if utility is not None:
             identity["utility_selection_sha256"] = utility["key"]
+        if observed_context is not None:
+            identity["observed_context_sha256"] = digest(observed_context)
         if supporting_references:
             identity["brief_source_sha256"] = _hash(json.dumps(
                 supporting_references, sort_keys=True, separators=(",", ":"),
@@ -640,6 +648,8 @@ class WatershedContextActions:
                 atomic_bytes(target / "original-utility-profile.json", utility_body, immutable=True)
             atomic_json(target / "selected-watersheds.json", selection)
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
+            observed_files = (observed_model.retain(target, observed_context, observed_bodies)
+                              if observed_context is not None else {})
             brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
@@ -658,6 +668,14 @@ class WatershedContextActions:
                 result["files"]["original-utility-profile.json"] = describe_file(
                     target, target / "original-utility-profile.json")
             result["files"].update(brief_files)
+            result["files"].update(observed_files)
+            if observed_context is not None:
+                result["observed_context"] = {
+                    "source": observed_context["source"],
+                    "summary": observed_context["utility"]["summary"],
+                    "quantity": observed_context["utility"]["model_interpretation"],
+                }
+            result["files"]["utility-watershed-packet.zip"] = observed_model.write_packet(target, result["files"])
             atomic_json(path, result)
         return result
 

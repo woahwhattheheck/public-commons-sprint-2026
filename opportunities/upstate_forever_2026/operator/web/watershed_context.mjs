@@ -26,7 +26,7 @@ export function rfpFocusWatersheds(rows) {
 }
 
 
-export function utilityWatershedChoicesHtml(choices, busy = false) {
+export function utilityWatershedChoicesHtml(choices, busy = false, observed = null) {
   if (!list(choices).length) return '';
   return '<section class="wc-coverage"><h2>Utility contributing watersheds</h2>' +
     '<p class="wc-note">Choose a utility to save its original focus anchors and distinct upstream model-domain HUC12s. ' +
@@ -45,7 +45,15 @@ export function utilityWatershedChoicesHtml(choices, busy = false) {
           '</th><td>' + esc(number(row.state_row_count)) + '</td><td>' + esc(number(row.state_portion_acres, 2)) +
           (row.missing_area_count ? ' · ' + esc(number(row.missing_area_count)) + ' missing source areas' : '') + '</td></tr>').join('') +
         '</tbody></table></div>' : '<p class="wc-note">' + esc(choice.reason) + '</p>';
-      return '<section><h3>' + esc(choice.title || choice.utility_id) + '</h3>' + status +
+      const observations = observed?.profile_sha256 === choice.profile_source?.sha256
+        ? list(observed.utilities).find(row => row.utility_id === choice.utility_id &&
+          JSON.stringify([...list(row.huc12s)].sort()) === JSON.stringify([...list(choice.huc12s)].sort())) : null;
+      const observationHtml = observations ? '<h4>Original microbial sampling context</h4><p class="wc-note">' +
+        esc(number(observations.summary.records)) + ' E. coli records at ' + esc(number(observations.summary.stations)) +
+        ' stations on ' + esc(number(observations.summary.unique_dates)) + ' distinct dates; original MPN per 100 mL. ' +
+        esc(number(observations.summary.information_only_records)) + ' records carry the original Information Only comment. ' +
+        'The saved report includes station/year/method coverage, original source tables and separately located regional nutrient/flow context.</p>' : '';
+      return '<section><h3>' + esc(choice.title || choice.utility_id) + '</h3>' + status + observationHtml +
         '<p class="wc-note">Ground, Surface and Both retain the original programme labels. Feature counts use publisher HUC attributes; the SCDES jurisdiction is South Carolina.</p>' +
         '<button type="button" data-wc-utility="' + esc(choice.key) + '"' +
         (busy || !choice.available ? ' disabled' : '') + '>Save and export ' + esc(choice.utility_id) + ' contributing watersheds</button>' +
@@ -377,7 +385,7 @@ export function createWatershedContextDesk(host) {
         metric(number(all.filter(row => row.priority).length), 'NRCS priority watersheds') +
         metric(number(sum(all, 'selected_classification_count')), 'Selected-class source features') +
         '</section>' + coverageHtml(report) + completedConnectivityHtml() + networkHtml(report) +
-        utilityWatershedChoicesHtml(saved._utility_selections, busy) +
+        utilityWatershedChoicesHtml(saved._utility_selections, busy, saved._observed_context) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
         '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
         (rfpFocusWatersheds(all).length ? '<button type="button" data-wc-export-rfp>Export four RFP anchor watersheds</button>' : '') +
