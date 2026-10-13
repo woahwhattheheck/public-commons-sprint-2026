@@ -110,3 +110,5 @@ Unfinished groups are held in this session until their explicit recovery downloa
 Complete recovery files are limited to 256 MiB and each original CSV to 16 MiB. If a combined recovery is too large, save each listed group separately. Every such file includes its necessary original workspace edition, so it can be received independently.
 
 A retained mapped column that is absent from a newly selected export remains visible as “not present in selected export.” Its original name stays in recovery until you deliberately select a replacement. Review input problems before saving the corrected mapping.
+
+Continuing an interrupted saved operation preserves unfinished groups. Its earlier command may already have completed, while the fields currently on screen can be later work. Review or explicitly discard those retained groups after the continuation.
