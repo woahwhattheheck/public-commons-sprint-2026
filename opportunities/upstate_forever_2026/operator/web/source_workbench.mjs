@@ -447,11 +447,26 @@ export function createSourceWorkbench(host, configuration = {}) {
       ['Valid cells',native.valid_cells],['NoData cells',native.nodata_cells]]
       .filter(([,number]) => Number.isFinite(number))
       .map(([label,number]) => '<div><dt>' + escapeHTML(label) + '</dt><dd>' + escapeHTML(number.toLocaleString()) + '</dd></div>').join('');
-    const nativeProgress = hasTiles ? '<div class="sp-native-progress"><label for="sp-native-tiles">' +
+    const tileProgress = hasTiles ? '<div class="sp-native-progress"><label for="sp-native-tiles">' +
       escapeHTML(completed.toLocaleString()) + ' of ' + escapeHTML(total.toLocaleString()) + ' original tiles ' +
       (native.assembled_tiles != null ? 'assembled' : 'complete') + '</label><progress id="sp-native-tiles" max="' + total + '" value="' +
       Math.max(0,Math.min(total,completed)) + '"></progress><dl class="sp-native-stats">' + details +
       (Number.isFinite(native.received_bytes) ? '<div><dt>Original bytes received</dt><dd>' + escapeHTML(size(native.received_bytes)) + '</dd></div>' : '') + '</dl></div>' : '';
+    const ranges = native.schema === 'upstate.original-range-progress/v1';
+    const retained = native.retained_bytes, allowance = native.maximum_source_bytes;
+    const rangeBytes = [['New original bytes',native.received_bytes_this_invocation],
+      ['Reused reads',native.reused_bytes_this_invocation],['Original prefix reads',native.prefix_bytes_this_invocation]]
+      .filter(([,number]) => Number.isFinite(number))
+      .map(([label,number]) => '<div><dt>' + escapeHTML(label) + '</dt><dd>' + escapeHTML(size(number)) + '</dd></div>').join('');
+    const rangeCounts = [['Completed ranges',native.completed_ranges],['Provider requests',native.requests_this_invocation]]
+      .filter(([,number]) => Number.isFinite(number))
+      .map(([label,number]) => '<div><dt>' + escapeHTML(label) + '</dt><dd>' + escapeHTML(number.toLocaleString()) + '</dd></div>').join('');
+    const rangeProgress = ranges && Number.isFinite(retained) && Number.isFinite(allowance) && allowance > 0 ?
+      '<div class="sp-native-progress"><label for="sp-native-ranges">Original bytes retained: ' + escapeHTML(size(retained)) +
+      ' of ' + escapeHTML(size(allowance)) + ' receiving allowance</label><progress id="sp-native-ranges" max="' + allowance +
+      '" value="' + Math.max(0,Math.min(allowance,retained)) + '"></progress><p class="sp-help">This meter shows source storage use. Native preparation stages show completion.</p>' +
+      '<dl class="sp-native-stats">' + rangeBytes + rangeCounts + '</dl></div>' : '';
+    const nativeProgress = tileProgress + rangeProgress;
     target.innerHTML = '<header class="sp-progress-header"><div><h3>' + escapeHTML(task ? taskName(task) : 'Original source operation') + '</h3>' +
       '<p>' + escapeHTML(value.stage || value.phase || task?.state || 'Reading native progress…') +
       (elapsed != null ? ' · ' + escapeHTML(Number(elapsed).toLocaleString(undefined,{maximumFractionDigits:1})) + ' s elapsed' : '') + '</p></div>' +
