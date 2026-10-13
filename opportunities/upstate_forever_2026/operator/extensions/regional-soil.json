@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "regional-soil",
   "title": "Regional soil",
-  "version": "1",
+  "version": "2",
   "order": 21,
   "assets": [
     "source_workbench.mjs",
     "source_workbench.css",
-    "regional_soil.mjs"
+    "regional_soil.mjs",
+    "source_working_desk.mjs"
   ],
   "backend": {
     "module": "regional_soil",

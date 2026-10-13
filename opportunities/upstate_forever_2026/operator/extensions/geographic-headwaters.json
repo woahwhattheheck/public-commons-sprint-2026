@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "geographic-headwaters",
   "title": "Geographic model case",
-  "version": "4",
+  "version": "5",
   "order": 21,
   "requires_actions": [
     "source.prepare",
@@ -13,7 +13,8 @@
     "source_workbench.css",
     "geographic_workbench.mjs",
     "geographic_workbench.css",
-    "geographic_allocation.mjs"
+    "geographic_allocation.mjs",
+    "source_working_desk.mjs"
   ],
   "backend": {
     "module": "geographic_preparation",

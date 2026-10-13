@@ -1,0 +1,40 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "source-working-desk",
+  "extend_components": {
+    "source-preparation": {
+      "paths": [
+        "operator/web/source_working_desk.mjs",
+        "operator/web/source_workbench.mjs",
+        "operator/SOURCE_WORKING_DESK.md",
+        "operator/extensions/source-preparation.json"
+      ]
+    },
+    "regional-soil": {
+      "paths": [
+        "operator/web/source_working_desk.mjs",
+        "operator/extensions/regional-soil.json"
+      ]
+    },
+    "retained-application-source": {
+      "paths": [
+        "operator/web/source_working_desk.mjs"
+      ]
+    },
+    "geographic-operator": {
+      "paths": [
+        "operator/web/source_working_desk.mjs",
+        "operator/extensions/geographic-headwaters.json",
+        "operator/web/geographic_workbench.mjs"
+      ]
+    },
+    "geographic-handover-browser": {
+      "paths": [
+        "source_tools/source_working_desk_receiving.mjs",
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "operator/SOURCE_WORKING_DESK.md"
+      ]
+    }
+  },
+  "required_components": []
+}
