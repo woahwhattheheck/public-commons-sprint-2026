@@ -516,9 +516,82 @@ def _source_fingerprint(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
+def _installed_source_directories(root):
+    """Read the installed portable inventory as data, without importing the application."""
+    defaults = ("model", "operator", "source_tools", "source", "ecsa_runs",
+                "integration", "integrations", "tools", "receiving", "eco_intelligence",
+                "observations")
+    portable = root / "model" / "portable.py"
+    if (root / "model").is_symlink() or portable.is_symlink():
+        raise ValueError("Installed portable inventory contains a file alias")
+    if not portable.exists():
+        return defaults
+    fd = os.open(portable, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_BYTES:
+            raise ValueError("Installed portable inventory is not a regular source file")
+        body = stream.read(MAX_BYTES + 1)
+        if (len(body) != before.st_size or
+                _source_fingerprint(before) != _source_fingerprint(os.fstat(stream.fileno()))):
+            raise ValueError("Installed portable inventory changed during receiving")
+    tree = ast.parse(body, filename=str(portable))
+    declared = []
+
+    def sequence(node):
+        if isinstance(node, ast.Name) and node.id == "APPLICATION_DIRECTORIES":
+            return list(declared)
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            result = []
+            for item in node.elts:
+                if isinstance(item, ast.Starred):
+                    result.extend(sequence(item.value))
+                elif isinstance(item, ast.Constant) and isinstance(item.value, str):
+                    result.append(item.value)
+                else:
+                    raise ValueError("Portable source directories must contain literal names")
+            return result
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return sequence(node.left) + sequence(node.right)
+        if isinstance(node, ast.Call) and len(node.args) == 1 and not node.keywords:
+            constructor = (isinstance(node.func, ast.Name)
+                           and node.func.id in {"tuple", "list", "set"})
+            deduplicate = (isinstance(node.func, ast.Attribute)
+                           and node.func.attr == "fromkeys"
+                           and isinstance(node.func.value, ast.Name)
+                           and node.func.value.id == "dict")
+            if constructor or deduplicate:
+                return sequence(node.args[0])
+        raise ValueError("Cannot read the installed portable source-directory declaration")
+
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            targets, value = statement.targets, statement.value
+        elif isinstance(statement, ast.AnnAssign):
+            targets, value = [statement.target], statement.value
+        elif (isinstance(statement, ast.AugAssign)
+              and isinstance(statement.target, ast.Name)
+              and statement.target.id == "APPLICATION_DIRECTORIES"
+              and isinstance(statement.op, ast.Add)):
+            declared += sequence(statement.value)
+            continue
+        else:
+            continue
+        if any(isinstance(target, ast.Name) and target.id == "APPLICATION_DIRECTORIES"
+               for target in targets):
+            if value is not None:
+                declared = sequence(value)
+    roots = tuple(dict.fromkeys((*defaults, *declared)))
+    for name in roots:
+        path = member_name(name)
+        if len(path.parts) != 1:
+            raise ValueError("Portable source directory must be a top-level name: " + name)
+    return roots
+
+
 def _source_inventory(root):
-    roots = ("model", "operator", "source_tools", "source", "ecsa_runs",
-             "integration", "integrations", "tools", "receiving", "eco_intelligence")
+    roots = _installed_source_directories(root)
     skip = {"__pycache__", ".git", ".venv", "venv", "node_modules"}
     selected = {}
 
@@ -540,6 +613,8 @@ def _source_inventory(root):
         if path.is_file():
             add(path)
     for name in roots:
+        if name.startswith(".") or name in skip:
+            continue
         folder = root / name
         if not folder.exists():
             continue
