@@ -1,0 +1,94 @@
+{
+  "case_id": "TJL-SYNTHETIC-HEADWATERS-120X120-20261013",
+  "synthetic": true,
+  "rows": 120,
+  "cols": 120,
+  "pixel_m": 30,
+  "crs": "EPSG:32617",
+  "origin_x": 500000,
+  "origin_y": 3900000,
+  "cutoff_utc": "2026-10-13T14:00:00Z",
+  "terrain": {
+    "outlet_elevation_m": 100,
+    "valley_column": 60,
+    "longitudinal_slope": 0.025,
+    "cross_valley_slope": 0.06,
+    "cross_valley_curvature_per_m": 5e-06
+  },
+  "rainfall_mm_year": {
+    "south": 1100,
+    "north": 1300
+  },
+  "erosivity_MJ_mm_per_ha_hour_year": 4000,
+  "erodibility_metric_ton_ha_hour_per_ha_MJ_mm": 0.025,
+  "routing": {
+    "flow_dir_algorithm": "mfd",
+    "threshold_flow_accumulation": 100
+  },
+  "ndr": {
+    "k_param": 2.0,
+    "subsurface_critical_length_n": 150,
+    "subsurface_eff_n": 0.8
+  },
+  "sdr": {
+    "k_param": 2.0,
+    "sdr_max": 0.8,
+    "ic_0_param": 0.5,
+    "l_max": 122
+  },
+  "lulc_parameters": [
+    {
+      "lucode": 1,
+      "description": "Forest",
+      "load_n": 5,
+      "load_p": 0.4,
+      "eff_n": 0.8,
+      "eff_p": 0.8,
+      "crit_len_n": 150,
+      "crit_len_p": 150,
+      "proportion_subsurface_n": 0,
+      "usle_c": 0.003,
+      "usle_p": 1
+    },
+    {
+      "lucode": 2,
+      "description": "Pasture",
+      "load_n": 30,
+      "load_p": 3,
+      "eff_n": 0.5,
+      "eff_p": 0.5,
+      "crit_len_n": 150,
+      "crit_len_p": 150,
+      "proportion_subsurface_n": 0,
+      "usle_c": 0.02,
+      "usle_p": 1
+    },
+    {
+      "lucode": 3,
+      "description": "Crop",
+      "load_n": 100,
+      "load_p": 15,
+      "eff_n": 0.2,
+      "eff_p": 0.2,
+      "crit_len_n": 150,
+      "crit_len_p": 150,
+      "proportion_subsurface_n": 0,
+      "usle_c": 0.2,
+      "usle_p": 0.8
+    },
+    {
+      "lucode": 4,
+      "description": "Developed",
+      "load_n": 20,
+      "load_p": 2,
+      "eff_n": 0.1,
+      "eff_p": 0.1,
+      "crit_len_n": 150,
+      "crit_len_p": 150,
+      "proportion_subsurface_n": 0,
+      "usle_c": 0.1,
+      "usle_p": 1
+    }
+  ],
+  "parameter_basis": "Editable illustrative assumptions; no observed/calibrated parameter claim. Nutrient loads are application rates in kg/ha/year; native InVEST applies on-pixel retention. C/P and efficiencies are dimensionless; critical lengths are metres."
+}

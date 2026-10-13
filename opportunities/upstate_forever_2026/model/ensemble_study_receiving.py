@@ -35,6 +35,7 @@ def _member(closure, item, *, label=None):
         closure.read(path)
         actual = closure.files[path]
     return {"path": path, "bytes": actual["bytes"], "sha256": actual["sha256"],
+            "filename": item.get("filename") or PurePosixPath(label or path).name,
             "label": label or item.get("view_path") or item.get("filename")
                      or PurePosixPath(path).name}
 

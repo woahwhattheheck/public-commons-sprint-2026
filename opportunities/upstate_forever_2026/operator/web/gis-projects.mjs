@@ -2,6 +2,7 @@
 export function attachGISProjects({getState, api, refreshState, showTask, toast}) {
   let root=null, catalogue=null, controller=null, signature='', activeWorkspace=null;
   let pending=null, lastSelection=null, intakeVersion=0, intakeLoading=false, vectorReviewVersion=0;
+  let catalogueRequest=null;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const pretty=n=>Number(n||0).toLocaleString();
   const options=(rows,label)=>'<option value="">None selected</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(label(x))+'</option>').join('');
@@ -580,10 +581,13 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
   }
   async function load(force=false){
     if(!root||intakeLoading)return;const state=getState();const key=state?.workspace_key;if(!key)return;
+    if(!catalogue&&catalogueRequest?.workspace===key&&!catalogueRequest.signal.aborted)return catalogueRequest.promise;
     const next=stateSignature(state);if(!force&&signature===next)return;
     if(activeWorkspace!==key){activeWorkspace=key;lastSelection=null;pending=null;catalogue=null;}
     if(catalogue&&root.querySelector('[data-gis-export]')){try{lastSelection=formSelection(false);}catch{}}
     controller?.abort();const own=new AbortController();controller=own;
+    const request={workspace:key,signal:own.signal,promise:null};catalogueRequest=request;
+    request.promise=(async()=>{
     try{const data=await api('/api/gis/projects?'+new URLSearchParams({workspace:key}),{signal:own.signal});
       if(own.signal.aborted||getState()?.workspace_key!==key||!root)return;
       if(data.workspace_key!==key)throw new Error('GIS response belongs to a different workspace.');
@@ -592,6 +596,9 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       if(catalogue&&root.querySelector('[data-gis-export]'))lastSelection=formSelection(false);
       catalogue=data;signature=next;render();
     }catch(e){if(e.name!=='AbortError')error(e.message);}
+    finally{if(catalogueRequest===request)catalogueRequest=null;}
+    })();
+    return request.promise;
   }
   return {
     async mount(element,state){root=element;if(activeWorkspace!==state.workspace_key)signature='';

@@ -348,7 +348,14 @@ def receive(args):
         require(any(row["id"] == export_id and sorted(row["huc12s"]) == priorities
                     for row in saved_selections),
                 "The saved selection catalogue lost the original HUC12 membership.")
-        report_files = journey.download_item(original, "regional-report")
+        # Source import enriches retained operator metadata after the initial read.
+        # Resolve new tickets only after the source import and selection export.
+        refreshed_report = journey.regional(workspace, "report", report_id=report_id)
+        require(refreshed_report["id"] == report_id
+                and refreshed_report["report"] == report
+                and refreshed_report["source_fingerprint"] == original["source_fingerprint"],
+                "Source import/export changed the original report or scientific source identity.")
+        report_files = journey.download_item(refreshed_report, "regional-report")
         export_files = journey.download_item(selection, "priority-watersheds")
         selected = json.loads(export_files["selected-watersheds.json"].read_bytes())
         if evidence_choice is not None:
@@ -418,7 +425,7 @@ def receive(args):
         require(sorted(row["huc12"] for row in selected_csv) == priorities,
                 "The downloaded CSV selection differs from the saved HUC choice.")
         backup_task = journey.task(workspace, "workspace.backup",
-                                   {"include_intermediates": False})
+                                   {"include_intermediates": True})
         backup_tickets = backup_task.get("_downloads", [])
         require(len(backup_tickets) == 1, "Original workspace backup has no unique archive ticket.")
         archive = journey.download(backup_tickets[0], "workspace", filename="regional-workspace.zip")

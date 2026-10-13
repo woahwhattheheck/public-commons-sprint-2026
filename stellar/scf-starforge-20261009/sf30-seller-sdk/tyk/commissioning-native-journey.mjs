@@ -18,7 +18,7 @@ function targetUrl(value){
     'Declare the actual connected Gateway public URL without embedded credentials.');
   return url;
 }
-function probeHeaders(configuration){
+export function probeHeaders(configuration){
   const output={};const selected=configuration.probeHeaderEnv??{};
   need(selected&&typeof selected==='object'&&!Array.isArray(selected),'Declare native probe header environment references.');
   for(const [name,environmentName]of Object.entries(selected)){
@@ -31,7 +31,7 @@ function probeHeaders(configuration){
   }
   return output;
 }
-async function receiveProbe(fetch,url,{headers={},maximum=8*1024*1024,timeoutMs=120000}={}){
+export async function receiveProbe(fetch,url,{headers={},maximum=8*1024*1024,timeoutMs=120000}={}){
   const response=await fetch(url,{method:'GET',headers,redirect:'error',signal:AbortSignal.timeout(timeoutMs)});
   const parts=[];let bytes=0;
   need(response.body,'The original upstream probe returned no response stream.');
@@ -43,7 +43,7 @@ async function receiveProbe(fetch,url,{headers={},maximum=8*1024*1024,timeoutMs=
   return {url:String(url),method:'GET',status:response.status,ok:response.ok,
     contentType:response.headers.get('content-type'),bytes:body.length,sha256:hash(body),bodyBase64:body.toString('base64')};
 }
-async function originalAgentResult(agent,value){
+export async function originalAgentResult(agent,value){
   if(value?.state!=='COMPLETE_RESULT_RETAINED')return value;
   const manifest=await agent.call('merchant_tyk_export_manifest',{exportId:value.exportId});
   need(manifest.manifestSha256===value.manifestSha256&&manifest.files.length===1,'Read the exact full original MCP result manifest.');

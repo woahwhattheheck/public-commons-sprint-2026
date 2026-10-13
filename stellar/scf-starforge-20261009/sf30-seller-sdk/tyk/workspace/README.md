@@ -117,3 +117,7 @@ Read a saved definition review with `readReview({ id, revision, offset, limit })
 Native Dashboard dry runs supply the converted definitions. Stage-mode comparisons identify the Classic API and its actual staged copy. Complete current Gateway/Dashboard captures supply executed-request reviews. Missing preimages stay pending until a complete source is available; a recorded 404 identifies an absent API. JSON comparisons keep exact integer and decimal values and ignore equivalent notation or member ordering. YAML and ambiguous JSON remain complete text comparisons.
 
 The common HTTP client carries the original `requestId` and `outcomeUnknown: true` when a write or upload may have reached its owner but its reply is interrupted. Replay that same original request and input to recover the saved record. Its request URL accepts a native loopback listener on port 80 as well as other valid ports.
+
+## Complete two-Gateway course
+
+The gatewayCommissioning kind and five Gateway course actions bind complete create/import/update source to distinct staging and production Gateway records. Existing prepareRollout/dispatchRollout/reconcileRollout remain the only native controller. Native imports use actual provider IDs and explicit full-source transformation acceptance. Complete operating-plan revisions, local editable drafts, supporting files and cold receiving are described in [the installed guide](../../../../../products/tyk-merchant/GATEWAY_COMMISSIONING.md).

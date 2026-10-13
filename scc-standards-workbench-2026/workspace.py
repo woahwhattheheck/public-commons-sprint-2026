@@ -20,11 +20,12 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 if __package__:
-    from . import engine, source_intake, consultation
+    from . import engine, source_intake, consultation, ballot_exchange
 else:
     import engine
     import source_intake
     import consultation
+    import ballot_exchange
 
 SCHEMA="standards-workspace/v1"
 MAX_SOURCE_BYTES=32*1024*1024
@@ -232,7 +233,7 @@ class Workspace:
         result["preview_limit"]=200
         for name in engine.COLLECTIONS:
             result[name]=result.get(name,[])[:200]
-            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews","review_packets","review_responses","review_amendments","review_resolutions"):
+            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews","review_packets","review_responses","review_amendments","review_resolutions","ballot_packets","ballot_returns","ballot_adoptions"):
                 for r in result[name]:
                     for field in ("snapshot","input_snapshot","independence_snapshot","roster","response","comment_bindings"):
                         if field in r:
@@ -410,6 +411,32 @@ class Workspace:
                     if existing and (existing["source_file_id"]!=meta["id"] or existing["sha256"]!=meta["sha256"]):
                         raise ValueError("An existing source identity cannot be replaced with different original bytes; add a new version/source record.")
                     changes.append(self._put(state,"sources",metadata))
+                elif operation=="ballot.receive":
+                    consultation._object(payload,{"packet_id","filename","content_base64","receipt_note"},"Member return intake")
+                    name=filename(payload.get("filename"));encoded=payload.get("content_base64")
+                    if not isinstance(encoded,str) or len(encoded)>ballot_exchange.MAX_RETURN_BYTES*4//3+16:
+                        raise ValueError("Returned ballot exceeds 2 MiB.")
+                    raw=base64.b64decode(encoded,validate=True)
+                    meta=file_identity(name,raw)
+                    source_id="ballot-source-"+digest({"filename":name,"sha256":meta["sha256"]})[:32]
+                    value,preview=ballot_exchange.receive_return(state,raw,payload.get("packet_id"),source_id,name,payload.get("receipt_note",""))
+                    if not any(r["id"]==meta["id"] for r in state["files"]):state["files"].append(meta)
+                    db.execute("INSERT OR IGNORE INTO originals VALUES(?,?)",(meta["sha256"],raw))
+                    if not any(r["id"]==source_id for r in state["sources"]):
+                        changes.append(self._put(state,"sources",{
+                            "id":source_id,"title":"Returned member ballot "+preview["response"]["response_id"],
+                            "source_file_id":meta["id"],"sha256":meta["sha256"],"representation":"original_bytes",
+                            "citation_visibility":"internal","public_redistribution":False,
+                            "notes":"Original member declaration. Sender verification and vote adoption are separate recorded actions."}))
+                    if value is not None:
+                        changes.append(self._put(state,"ballot_returns",value))
+                    else:
+                        changes.append({"field":"received_duplicate","return_id":preview["duplicate_of"],
+                                        "source_id":source_id,"source_sha256":meta["sha256"],
+                                        "reason":"Exact original retained; recorded vote and correction history preserved."})
+                    operation_result={"return_id":value["id"] if value else preview["duplicate_of"],
+                                      "duplicate_of":preview["duplicate_of"],"source_id":source_id,
+                                      "source_sha256":meta["sha256"],"response_sha256":preview["response_sha256"]}
                 elif operation=="review.receive":
                     consultation._object(payload,{"packet_id","filename","content_base64","supersedes_id","receipt_note"},"Returned review intake")
                     name=filename(payload.get("filename"))
@@ -481,7 +508,14 @@ class Workspace:
                 else:
                     record_id=payload.get("id") or operation.split(".")[0]+"-"+uuid.uuid4().hex
                     engine.identity(record_id)
-                    if operation=="review.packet":
+                    if operation=="ballot.packet":
+                        collection="ballot_packets";value=ballot_exchange.freeze_packet(state,payload,record_id)
+                        operation_result={"packet_id":record_id,"packet_sha256":value["packet_sha256"]}
+                    elif operation=="ballot.adopt":
+                        collection="ballot_adoptions";value,vote=ballot_exchange.prepare_adoption(state,payload,record_id)
+                        changes.append(self._put(state,"votes",vote))
+                        operation_result={"adoption_id":record_id,"return_id":value["return_id"],"vote_id":vote["id"]}
+                    elif operation=="review.packet":
                         collection="review_packets";value=consultation.freeze_packet(state,payload,record_id)
                         operation_result={"packet_id":record_id,"packet_sha256":value["packet_sha256"]}
                     elif operation=="review.amend":
@@ -594,6 +628,7 @@ class Workspace:
             raw=originals[meta["id"]]
             if file_identity(meta["filename"],raw)!=meta:raise ValueError("Original file differs from its source identity.")
         consultation.validate_originals(state,originals)
+        ballot_exchange.validate_originals(state,originals)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             try:

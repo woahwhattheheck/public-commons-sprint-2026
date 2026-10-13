@@ -216,7 +216,10 @@ host.openExtension('receiving-waters', 'openSourceRevision', {
 The Receiving controller calls the service again and requires the same returned
 draft before passing the full selection to its existing plan/analysis form.
 Workspace, view, request generation and original record checks protect late
-responses. The component closure includes the maintained original controller
+responses. If revalidation or form loading fails after the explicit handoff has
+navigated to Receiving, the same workspace/current navigation shows a contextual
+error toast. A newer handoff, workspace or revision generation suppresses stale
+feedback; errors before navigation remain visible inside the original review. The component closure includes the maintained original controller
 and wrapper as well as the two new revision modules; no second study writer,
 global source catalog rewrite or automatic source/run migration is introduced.
 

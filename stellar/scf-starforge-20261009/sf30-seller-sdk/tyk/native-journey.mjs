@@ -6,6 +6,7 @@ import { resolve, join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { startTykWorkspaceServer } from './workspace/server.mjs';
 import { TykWorkspaceHttpClient } from './workspace/http-client.mjs';
+import { runTykGatewayCommissioningJourney, inspectTykGatewayCommissioningBrowser } from './gateway-commissioning-native-journey.mjs';
 import { runTykCommissioningJourney } from './commissioning-native-journey.mjs';
 import { normalizeTykConnection, readTykMigrationDefinitions } from './native.mjs';
 
@@ -19,7 +20,7 @@ function preciseJson(text){
 }
 function encoded(value){return JSON.stringify(value,null,2)+'\n';}
 function configCore(value){
-  const {scope:ignoredScope,dashboard:ignoredDashboard,...core}=value;
+  const {scope:ignoredScope,dashboard:ignoredDashboard,gatewayProduction:ignoredGatewayProduction,gatewayCommissioningApiCount:ignoredGatewayCount,...core}=value;
   const canonical=input=>Array.isArray(input)?input.map(canonical):input&&typeof input==='object'?
     Object.fromEntries(Object.keys(input).sort().map(key=>[key,canonical(input[key])])):input;
   return JSON.stringify(canonical(core));
@@ -77,6 +78,12 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
     publicUrl(selected.upstreamUrl);
     return normalizeTykConnection(selected.connection);
   });
+  if(config.gatewayProduction){
+    need(config.gatewayProduction.connection?.kind==='gateway'&&typeof config.gatewayProduction.classicSeedApiId==='string',
+      'Declare the second original Gateway connection and seed identity.');
+    publicUrl(config.gatewayProduction.publicBaseUrl);publicUrl(config.gatewayProduction.upstreamUrl);
+    declarations.push(normalizeTykConnection(config.gatewayProduction.connection));
+  }
   need(new Set(declarations.map(item=>item.id)).size===declarations.length,'Use distinct native target aliases.');
   publicUrl(config.gateway.publicBaseUrl);
   if(scope==='all'){
@@ -92,11 +99,18 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
     state=JSON.parse(await readFile(statePath,'utf8'));
     need(state.schema===SCHEMA&&state.operation===config.operation,'This directory belongs to another original native operation.');
     if(state.inputSha256!==inputSha256){
-      need(state.configuration?.scope==='gateway'&&scope==='all'&&state.completedScopes?.gateway&&
-        configCore(state.configuration)===configCore(config),
-        'Keep the same exact configuration; a completed Gateway operation permits only its explicit Dashboard addition.');
+      const prior=state.configuration;
+      const same=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+      const addedDashboard=prior?.scope==='gateway'&&scope==='all'&&state.completedScopes?.gateway&&!prior.dashboard&&config.dashboard;
+      const addedProduction=!prior?.gatewayProduction&&config.gatewayProduction;
+      need(prior&&configCore(prior)===configCore(config)&&
+        (prior.scope===scope||addedDashboard)&&
+        (same(prior.dashboard,config.dashboard)||addedDashboard)&&
+        (same(prior.gatewayProduction,config.gatewayProduction)&&same(prior.gatewayCommissioningApiCount,config.gatewayCommissioningApiCount)||addedProduction)&&
+        (addedDashboard||addedProduction),
+        'Keep every original target and source field; only explicit additive production Gateway or completed-Gateway Dashboard continuation is supported.');
       state.configurationHistory??=[];
-      state.configurationHistory.push({sha256:state.inputSha256,configuration:state.configuration,completedAt:state.completedScopes.gateway.completedAt});
+      state.configurationHistory.push({sha256:state.inputSha256,configuration:state.configuration,completedAt:state.completedScopes?.gateway?.completedAt??null});
       state.inputSha256=inputSha256;
     }
   }catch(error){if(error.code!=='ENOENT')throw error;state={schema:SCHEMA,operation:config.operation,inputSha256,
@@ -221,8 +235,9 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
   }
   try{
     await persist();sender=await openHost('sender');
-    const view=await call('view'),targets=Object.fromEntries(view.connections.map(item=>[item.connection.kind,item]));
-    need(selectedKinds.every(kind=>targets[kind]?.credentialAvailable),'The selected native target credential environment references must be available.');
+    const view=await call('view'),targets=Object.fromEntries([...selectedKinds,...(config.gatewayProduction?['gatewayProduction']:[])].map(name=>
+      [name,view.connections.find(item=>item.connection.id===config[name].connection.id)]));
+    need([...selectedKinds,...(config.gatewayProduction?['gatewayProduction']:[])].every(kind=>targets[kind]?.credentialAvailable),'The selected native target credential environment references must be available.');
     const initial=await step(scope==='gateway'?'complete-native-gateway-portfolio':'complete-native-portfolios',async()=>{
       const completedGateway=state.steps['complete-native-gateway-portfolio']?.value;
       const gateway=completedGateway?.gateway??await capture('initial-gateway',targets.gateway.id);
@@ -355,6 +370,9 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
     });
     const commissioning=scope==='all'?await runTykCommissioningJourney({
       config,initial,targets,root,call,current,rollout,capture,cohort,definition,retainReview,
+      freeze,step,requestId,apiId,prefix,cloneClassic,preciseJson,sender,fetch}):null;
+    const gatewayCommissioning=config.gatewayProduction?await runTykGatewayCommissioningJourney({
+      config,initial,targets,root,call,current,rollout,capture,definition,retainReview,
       freeze,step,requestId,apiId,prefix,cloneClassic,preciseJson,sender,fetch}):null;
     await step(receivingName('complete-native-history-export-and-cold-receiving'),async()=>{
       const firstInput=await freeze(receivingKey('first-export'),{requestId:requestId(receivingKey('first-export')),label:'Complete native Tyk receiving'});
@@ -564,8 +582,39 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
           receivingScreenshot:await hashFile(receivingScreenshot),pageErrors};
       });
     }
+    if(gatewayCommissioning){
+      if(config.chromiumExecutablePath)await step('gateway-course-browser-and-complete-source-downloads',()=>
+        inspectTykGatewayCommissioningBrowser({config,root,sender,call,course:gatewayCommissioning,hashFile}));
+      await step('complete-gateway-cohort-history-export-and-cold-receiving',async()=>{
+        const second=await call('exportWorkspace',await freeze('gateway-course:final-export',{
+          requestId:requestId('gateway-course:final-export'),label:'Complete two-Gateway course, original sources and native history'}));
+        const laterDownload=await sender.client.downloadDelivery(second.id,join(root,'downloads','gateway-course-final.ndjson'),
+          {expectedSha256:second.value.file.sha256,expectedBytes:second.value.file.bytes});
+        if(!receiver)receiver=await openHost('receiver');
+        const inspected=await receiver.client.inspectFile(laterDownload.path,{requestId:requestId('gateway-course:final-inspect'),
+          label:'Complete two-Gateway native course',expectedSha256:laterDownload.sha256});
+        const adopt=await freeze('gateway-course:final-adopt',{requestId:requestId('gateway-course:final-adopt'),
+          id:inspected.id,expectedRevision:inspected.revision,manifestSha256:inspected.value.manifestSha256});
+        const received=await receiver.client.action('adoptDelivery',adopt);need(received.value.state==='ADOPTED','Adopt every original Gateway course source and outcome.');
+        await closeHost(receiver);receiver=await openHost('receiver');
+        const repeated=await receiver.client.action('adoptDelivery',adopt),cold=await receiver.client.action('readGatewayCommissioning',{id:gatewayCommissioning.id});
+        const original=await call('readGatewayCommissioning',{id:gatewayCommissioning.id});
+        need(repeated.sha256===received.sha256&&cold.record.sha256===original.record.sha256&&
+          cold.progress.state==='COMPLETE'&&JSON.stringify(cold.plan)===JSON.stringify(original.plan)&&
+          JSON.stringify(cold.source)===JSON.stringify(original.source),'Cold receiving preserves full source, acceptance and operating-plan history.');
+        for(const [stepId,row]of Object.entries(original.rollouts)){
+          const selected=await receiver.client.action('getRecord',{kind:'rollout',id:row.id,revision:row.revision});
+          need(selected.sha256===row.sha256,'Cold receiving preserves original '+stepId+' native request and outcome.');
+        }
+        const owned=await sender.host.workspace.deliveryFile({id:second.id});await unlink(owned.path);
+        const reconstructed=await sender.host.workspace.deliveryFile({id:second.id}),file=await hashFile(reconstructed.path);
+        need(file.sha256===laterDownload.sha256&&file.bytes===laterDownload.bytes,'The same complete Gateway archive reconstructs exact bytes.');
+        return {second:ref(second),laterDownload,laterReceiving:ref(repeated),course:ref(cold.record),
+          manuscript:cold.record.value.manuscript,source:cold.record.value.source,steps:cold.progress.summary.completed};
+      });
+    }
     const final=await call('view');
-    const sourcePaths=['native.mjs','native-journey.mjs','commissioning-native-journey.mjs','workspace/commissioning.mjs','workspace/commissioning-model.mjs','workspace/commissioning-browser.mjs','workspace/model.mjs','workspace/store.mjs',
+    const sourcePaths=['native.mjs','native-journey.mjs','gateway-commissioning-native-journey.mjs','workspace/gateway-commissioning.mjs','workspace/gateway-commissioning-model.mjs','workspace/gateway-commissioning-browser.mjs','workspace/gateway-commissioning-drafts.mjs','commissioning-native-journey.mjs','workspace/commissioning.mjs','workspace/commissioning-model.mjs','workspace/commissioning-browser.mjs','workspace/model.mjs','workspace/store.mjs',
       'workspace/delivery.mjs','workspace/server.mjs','workspace/actions.mjs','workspace/http-client.mjs','workspace/review.mjs'];
     const source=[];
     for(const path of sourcePaths){const bytes=await readFile(new URL('./'+path,import.meta.url));source.push({path,bytes:bytes.length,sha256:sha(bytes)});}
@@ -579,7 +628,7 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
     state.completedScopes??={};state.completedScopes[scope]={completedAt:state.completedAt,inputSha256};
     state.summary={scope,executedTargets:selectedKinds,gatewayVersion:config.gateway.installedVersion,
       ...(scope==='all'?{dashboardVersion:config.dashboard.installedVersion,dashboardApiIds:[apiId('dashboard-stage'),apiId('dashboard-direct')],commissioning:{id:commissioning.id,apiIds:commissioning.apiIds,progress:commissioning.progress}}:{}),
-      gatewayApiId:lossId,generatedOpenApiId:imported.generatedId,
+      gatewayApiId:lossId,generatedOpenApiId:imported.generatedId,...(gatewayCommissioning?{gatewayCommissioning}:{}),
       originalWorkspaceId:final.workspaceId,records:final.counts,nativeRequests:state.nativeRequests.length,
       phases:Object.keys(state.steps),completeFieldReviews:Object.keys(state.reviews??{}).length,originalResponseLoss:state.lostResponse?.actualResponse};
     await persist();const result={schema:SCHEMA,operation:state.operation,state:state.state,completedAt:state.completedAt,

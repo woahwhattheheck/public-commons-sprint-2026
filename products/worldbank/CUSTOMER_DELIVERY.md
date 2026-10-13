@@ -101,6 +101,24 @@ The Merchant source adapter and the named programme adapter serve different stag
 
 A Console profile archive that contains file references is not the full customer transfer. Use its complete handover capture/receive to carry every retained file, then receive the native workspace ZIP through the original Analysis receiver. Follow the complete [Merchant programme guide](../../stellar-forge/mcp-merchant-operator/WORLDBANK_PROGRAMMES.md).
 
+## Approved source intake through the existing agent
+
+The installed `worldbank-programme-agent intake` command and typed `registerWorldBankSource` client operate the original running Analysis service through its existing Merchant connection. Select the actual declared workspace, approved handover and one stable intake ID. The full input and immutable local intent are saved before upload or registration. A private operation directory retains every complete observation and the source selection needed for the following report review.
+
+| Customer operation | Complete retained result |
+| --- | --- |
+| Begin and upload the approved ZIP | Original intake ID, filename, bytes, SHA-256 and complete local input |
+| Resume after connection loss or relocation | Same native intent; original chunks restored from verified available bytes |
+| Register through the current Analysis owner | Exact source name, revision and document ID, original review and typed columns |
+| Prepare an explicitly selected named programme | Original programme/revision and stable review request with that exact registered source |
+| Receive the registered source | Complete original ZIP, registration and intent plus verified content-derived manifest |
+
+Use the same operation directory and intake ID after an interruption. A native ERROR or INTERRUPTED registration requires explicit `--resume true`; a still-running registration is read under the same ID. Source registration leaves the current accepted customer outputs selected. The optional programme preparation creates the existing comparison and review; publish the accepted choice through its original reviewed workflow.
+
+The receiver distinguishes the SQL upload count from `available_bytes`, which describes the complete chunk prefix actually present on the current installation. After an unfinished workspace is restored, resend the original missing chunks under their retained offsets and hashes. After registration, the original download resolves the native document in that restored workspace and no longer depends on upload staging.
+
+The full [agent source-intake guide](../../stellar-forge/mcp-merchant-operator/WORLDBANK_SOURCE_INTAKE.md) provides the complete installed command, typed API, ten MCP controls and independent `intake-download` route. The latter receives every original file after the Analysis service closes. Include the retained operation and registered-source files with the existing customer workshare/Installation. Use the already selected native receiving course and exact approved source; the original report/workbook publication still requires its operator's reviewed choice.
+
 ## Deliver, receive and continue
 
 The full delivery includes HTML/JSON reports, section CSVs, Excel, the independent workbook handover, source comparison exports, retained selection, complete Analysis workspace/manifest and the original delivery ZIP. Transfer the files named by the actual completed manifest. Complete file length/hash validation and receiving belong to the original native download/archive engines.
