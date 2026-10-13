@@ -1,0 +1,45 @@
+{
+  "applicant": {
+    "name": "",
+    "description": "",
+    "policyContact": ""
+  },
+  "contact": {
+    "email": "",
+    "replyOwner": ""
+  },
+  "team": [],
+  "services": [],
+  "laborRates": [],
+  "supportServices": {
+    "assessment": "",
+    "coordination": "",
+    "outreach": "",
+    "reporting": ""
+  },
+  "qualifications": {
+    "community": "",
+    "outreach": "",
+    "capacity": "",
+    "response": "",
+    "governance": ""
+  },
+  "workExamples": [],
+  "languagesOtherThanEnglish": "",
+  "otherServices": "",
+  "proposalDataRestrictions": "",
+  "attestations": {
+    "authorizedSignatory": "",
+    "appendixAReviewedFrom": "",
+    "noSurveillanceBusiness": false,
+    "noExclusion": false,
+    "remitFits": false,
+    "independentAudits": false,
+    "acceptsAppendixA": false
+  },
+  "budget": {
+    "otherDirectCostsCategory": "",
+    "otherDirectCostsCents": null,
+    "requestedContractCeilingCents": null
+  }
+}
