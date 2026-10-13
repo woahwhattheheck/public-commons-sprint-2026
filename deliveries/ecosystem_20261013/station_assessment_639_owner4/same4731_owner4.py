@@ -2,9 +2,9 @@
 # Owner .4 renewal replaces historical cutoff prose; preserve existing issued processes.
 import base64, gzip, hashlib, json, os, pathlib, subprocess, sys, urllib.request
 repo = "woahwhattheheck/public-commons-sprint-2026"
-blob = "7e4631f8ea2a38b3a4b6c0eed2418892cd647041"
-expected_gzip = "fbd1275ebe2014cdee13e24d06bf1ca5209ed8aba6a401460f8ef35f31ed12a1"
-expected_json = "09cbc69421f4417116476112c82de313e236e930b99ec7154231ee108bcd7247"
+blob = "150be32272000e2e4c54e22d987380b78dc51c47"
+expected_gzip = "f433982abe03678d613862d42ffcc1acd6bbeb3d7ec540038dc65d0b6a33ddbf"
+expected_json = "51de897cb0c6156b57dda1cdcfa5c5a66d924a96ec8d6c85afb50fd880c884c8"
 assert os.environ.get("ECO_APP"), "Set ECO_APP to the existing receiving application"
 app = pathlib.Path(os.environ["ECO_APP"]).resolve()
 root = app.parent / "eco-assessment-family-owner4"
@@ -20,9 +20,9 @@ else:
         original = json.load(response)
     assert original["sha"] == blob and original["encoding"] == "base64"
     packed = base64.b64decode(original["content"])
-assert len(packed) == 3219578 and hashlib.sha256(packed).hexdigest() == expected_gzip
+assert len(packed) == 3097779 and hashlib.sha256(packed).hexdigest() == expected_gzip
 raw = gzip.decompress(packed)
-assert len(raw) == 22265924 and hashlib.sha256(raw).hexdigest() == expected_json
+assert len(raw) == 22265384 and hashlib.sha256(raw).hexdigest() == expected_json
 bank = json.loads(raw)
 assert bank["schema"] == "commons.source-map/1" and len(bank["files"]) == 639
 pending = {}
@@ -56,7 +56,7 @@ changes = plan["changed"]
 # Upgrade the known predecessor directions; preserve any unrecognized newer edition.
 known_previous = {
     "AGENTS.md": {"46be323017be913780d0d2850b7658861744508d", "150e2d55f9cce9e7a9458aae895cec54ebb09255"},
-    "CURRENT_OWNER_DIRECTION.md": {"8cd1c1f3d371a2fb75471813844e31f489aa8272"},
+    "CURRENT_OWNER_DIRECTION.md": {"1ef42bc0be0cc027ffa302f564e7ea551d5475ac"},
 }
 for name, allowed in known_previous.items():
     current = app / name

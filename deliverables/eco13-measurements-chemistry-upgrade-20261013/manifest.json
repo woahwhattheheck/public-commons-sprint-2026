@@ -11,8 +11,8 @@
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 285214,
-      "sha256": "5819d2963e1d0ebc6e17cef316b943312bec79fc4b5167045f2e1f0a3c583f25",
+      "bytes": 285066,
+      "sha256": "2b6a21497703e43e8451950ee6fb9889c07a1de71831b6e47d0298bae3163f5a",
       "members": 22,
       "source_bytes": 210306
     },
@@ -40,8 +40,8 @@
     },
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 4999,
-      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+      "bytes": 4889,
+      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8",
       "role": "installed_component"
     },
     {
@@ -323,8 +323,8 @@
   },
   "owner_direction": {
     "path": "CURRENT_OWNER_DIRECTION.md",
-    "bytes": 4999,
-    "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+    "bytes": 4889,
+    "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8",
     "version": "2026-10-13.3",
     "source_path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
     "source_commit": "e7325cdf"

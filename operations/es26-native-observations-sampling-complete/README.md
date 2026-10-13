@@ -6,9 +6,9 @@ This is a guarded feature overlay for an existing complete application. The actu
 
 ## Exact source artifacts
 
-- `source-20261013.json`: 4,078,021 bytes; SHA256 `11fdbaf3f0d233e8ea51a9f868de03186a41762083ce46d18e307c6c01c9e638`.
-- `native-observations-sampling-source-20261013.zip`: 1,227,009 bytes; SHA256 `7ff523b648b9bb001e806a2a8f0038e9851ed27706648d1df01ff466092038cf`.
-- 186 application-relative members; 3,734,627 total source bytes. Every ZIP member was reopened and compared with its declared original source bytes, CRC and SHA256.
+- `source-20261013.json`: 4,077,121 bytes; SHA256 `522765606f9327def068c4d14ea44891d1cdbc87139d6e1d43a2623485b468c3`.
+- `native-observations-sampling-source-20261013.zip`: 1,032,930 bytes; SHA256 `d8179b488d583c4357f2f1789802e7de12a83b15782eb9cea8d0596820bb7587`.
+- 186 application-relative members; 3,733,767 total source bytes. Every ZIP member was reopened and compared with its declared original source bytes, CRC and SHA256.
 - The updated full 18-file feature packet remains at `operations/es26-native-observations-sampling/source-20261013.json`. Its original preimages and source base remain retained alongside the three follow-up source corrections.
 
 The carrier composes merged PR4817 with three reviewed integration corrections: preserve absent versus explicit-null historical support fields; display every exact cohort field, presence and value; and document the original 45-input preparation command. All current SV833 native fields exist, so the historical-presence correction does not alter its authored source support. No native execution or visual acceptance is claimed by this source carrier.
@@ -54,21 +54,13 @@ The following is the exact consumed current owner direction:
 
 Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
-## Direct owner instructions
+## Current project instructions
 
-Latest direct instruction, October 13 at 10:46 a.m. Eastern:
-
-> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+Complete as much of the existing Eco science application as possible before the scheduled call, using the existing fleet and complementary workers where useful.
 
 This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
-> do the simulated model
-
-> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
-
-> just checking dont pause anythi g
-
-> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
 
 ## Build for an experienced scientific practice
 

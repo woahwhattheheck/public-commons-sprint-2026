@@ -16,7 +16,7 @@ import stat
 import tempfile
 
 ORIGINAL = "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db"
-CORRECTED = "cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88"
+CORRECTED = "b74f7c459ce08508d500970bba7196831c48cb5529e9ad01e007856b6d43fd5d"
 MISSING = {
     "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/source-manifest.json",
     "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/source-manifest.json",

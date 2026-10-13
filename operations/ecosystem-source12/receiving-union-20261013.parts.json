@@ -1,35 +1,35 @@
 {
   "schema": "commons.ordered-source-envelope/v1",
   "source_path": "operations/ecosystem-source12/receiving-union-20261013.source.json",
-  "source_git_blob": "4bbeb227bdace88befa881e5403d0cac91347d62",
+  "source_git_blob": "b877a99e558d1852cea2a84cecdcb6827ba0f2c5",
   "encoding": "utf-8",
-  "bytes": 8895721,
-  "sha256": "bfc0d06aa5930c828f803de71b381ac4a61963b0ad6610da6de57987630b7837",
+  "bytes": 7282057,
+  "sha256": "95876402663cd63b0db784922f240d5e9338cf00c65e06e466cbff8ebddfe44e",
   "join": "Concatenate the four complete UTF-8 text parts in this order without inserting separators, then parse the resulting original artifact-base64 JSON envelope.",
   "parts": [
     {
       "path": "operations/ecosystem-source12/receiving-union-20261013.part1.txt",
-      "git_blob": "e78e0257f0f98ce5f6079c217b0955fe02bd81b1",
+      "git_blob": "ad85e56e3cf4bda267c0f21c0429a638f06ce01f",
       "bytes": 2250002,
-      "sha256": "ef1f96b338473c06873f4ee210dce0fb1faaec1b59f97d9bebbf7850f1faa068"
+      "sha256": "66ecf20b30a76dac74684f08e18b8981bb8caa5280cefb49b84df783ff577aba"
     },
     {
       "path": "operations/ecosystem-source12/receiving-union-20261013.part2.txt",
-      "git_blob": "3fa3006b3dee3641ec88207eaee7ed39ff0c7c9f",
+      "git_blob": "1d4903208fc8307165a4b4ed09ed40a1a917c9ff",
       "bytes": 2250000,
-      "sha256": "42511b514878b9a98c95a1a01e4c933aa0f036087c8fa7a6b65f5b8f43b5a80b"
+      "sha256": "d09260df388de73977e92383d06f4152e7688dd9f8e30a1ce37e2e2e0e6396d3"
     },
     {
       "path": "operations/ecosystem-source12/receiving-union-20261013.part3.txt",
-      "git_blob": "400f04e68c7ac5d53431c67a278ad675ded59d58",
+      "git_blob": "e59208cf05481840b02223fd449cea145cb8d3e9",
       "bytes": 2250000,
-      "sha256": "ebd8ed134dc2f70b257f1dfb50e2604772676c9b1cfa5e8ac2655aaf3a48af33"
+      "sha256": "b840e6e647bbdccee80ca26e8033c8ac887bcaaff8f94980d999270c8679d179"
     },
     {
       "path": "operations/ecosystem-source12/receiving-union-20261013.part4.txt",
-      "git_blob": "9fb27335a1160e2f6563675a23ca9ed8102ec87a",
-      "bytes": 2145719,
-      "sha256": "cfa635e03906f92ae134fb23ecebf6568d73642d3115e85cfdaafa4970962dad"
+      "git_blob": "87730f7aecff528974779a348d777004f0ec9c31",
+      "bytes": 532055,
+      "sha256": "5860d520b6905af9c1537905c301281e11a9a885699614bc4a74259ea9cdcce2"
     }
   ]
 }

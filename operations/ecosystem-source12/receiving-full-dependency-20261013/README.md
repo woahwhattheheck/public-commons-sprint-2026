@@ -1,12 +1,12 @@
 # Receiving, Monitoring and Published studies source closure
 
-This is the complete maintained source cohort for original receiving operation **7E42 / plan536**. It joins the current Receiving-waters, Monitoring, receiving-water reports, study transfer, Published-studies and scenario-analysis source families into their existing server/browser dependencies. All 570 complete source bodies come from public commit `60d028318626c091a126ab8708f380021a7e257a`. The original 18-file map package is retained as its historical additive package; this current cohort supplies the surrounding files it expected.
+This is the complete maintained source cohort for original receiving operation **7E42 / plan536**. It joins the current Receiving-waters, Monitoring, receiving-water reports, study transfer, Published-studies and scenario-analysis source families into their existing server/browser dependencies. Base source provenance: public commit `60d028318626c091a126ab8708f380021a7e257a`. The original 18-file map package is retained as its historical additive package; this current cohort supplies the surrounding files it expected.
 
 ## Exact downloads and identities
 
-- `application-source.json.gz`: 3806053 bytes, SHA-256 `b64241f89b4284e1156095fdd51b870d4e12b574daf1734e93e8e17f828decf2`.
-- Decoded `commons.source-map/1`: 13485181 bytes, SHA-256 `1827cecd39b28a11298ee085449ed884f3337f13cc33dcedd621fc54cf1db300`.
-- 570 source files, 12776062 decoded source bytes. Every member declares its original Git blob, byte length, SHA-256 and mode.
+- `application-source.json.gz`: 3168260 bytes, SHA-256 `bbd13bdbee5354d9dcd22b4d31f58e452ff49c6caef6386d840bbeda7763e358`.
+- Decoded `commons.source-map/1`: 13517151 bytes, SHA-256 `79c8e4cddb33e0ed371647dc96d36a07b8a21353e71299794d540fe734869cc2`.
+- 570 source files, 12775447 decoded source bytes. Every member declares its Git blob, byte length, SHA-256 and mode.
 - `receive_application_source.py` is the unchanged maintained receiver from the same commit (Git blob `b1a311f1882b9bd292e06181cca37f3bf6a309c5`).
 
 ## Receive in a fresh directory

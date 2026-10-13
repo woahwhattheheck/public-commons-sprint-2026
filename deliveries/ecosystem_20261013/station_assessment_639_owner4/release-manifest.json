@@ -4,12 +4,12 @@
   "edition": "639-owner-direction-2026-10-13.4",
   "members": 639,
   "installed_members": 636,
-  "decoded_bytes": 22265924,
-  "decoded_sha256": "09cbc69421f4417116476112c82de313e236e930b99ec7154231ee108bcd7247",
-  "gzip_bytes": 3219578,
-  "gzip_sha256": "fbd1275ebe2014cdee13e24d06bf1ca5209ed8aba6a401460f8ef35f31ed12a1",
-  "base64_bytes": 4292773,
-  "base64_sha256": "8a9bbd62bcd492ffdb5f945ab42f24502e9ee3c4357e01c59fab650c0230d9d7",
+  "decoded_bytes": 22265384,
+  "decoded_sha256": "51de897cb0c6156b57dda1cdcfa5c5a66d924a96ec8d6c85afb50fd880c884c8",
+  "gzip_bytes": 3097779,
+  "gzip_sha256": "f433982abe03678d613862d42ffcc1acd6bbeb3d7ec540038dc65d0b6a33ddbf",
+  "base64_bytes": 4130373,
+  "base64_sha256": "3ee94426bcf71e179ab9065b5a723aea912432da703802dd6983725bbb9f393e",
   "predecessor": {
     "commit": "21266d348e9f92eddbdc729fa8e5adef1ad9b483",
     "decoded_bytes": 22261414,
@@ -23,8 +23,8 @@
     },
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "git_blob": "bf68e73cc2819cfc807c40d3015644f3b8699e38",
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
+      "git_blob": "5b056567a896277fdff362a1b6785673317f6a65",
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c"
     },
     {
       "path": "operator/ASSESSMENT_CONTEXT.md",
@@ -38,13 +38,13 @@
     },
     {
       "path": "operator/OBSERVED_STATION_STUDIES.md",
-      "git_blob": "81ac60b042a60113fbe110fb363caf3f1799b8e6",
-      "sha256": "254a6f030e1d0e5c70d52bd8eae6631ae1168b9f70319e6dc076b972d36fd636"
+      "git_blob": "c511e31b41c6c02f4b31cc04ae120bd023d7fb90",
+      "sha256": "050b24da2ee6c45c4e69a425539e1cfbfde0baf566b17f46e63a02dfdfb6d25f"
     },
     {
       "path": "operator/SOURCE_REPORTS.md",
-      "git_blob": "e0c6d9e21282ca00fd8cbbf90a0722f187656e7f",
-      "sha256": "4eaa4f8d1e6a06eaa8ec6bc6b37c25ea66d0c1fc2f9aba06e64c6249e1cae565"
+      "git_blob": "30b75b9ca2e183a66c974e120bbd65ef212cc000",
+      "sha256": "912a5abee76a5e4f4623ef9116095f329effccefc0744308f02dcfd76422095c"
     },
     {
       "path": "source/observed-report-20261013/ASSESSMENT_BROWSER.md",
@@ -53,9 +53,9 @@
     }
   ],
   "unchanged_members": 632,
-  "owner_direction_git_blob": "bf68e73cc2819cfc807c40d3015644f3b8699e38",
-  "binary_git_blob": "7e4631f8ea2a38b3a4b6c0eed2418892cd647041",
-  "base64_git_blob": "a548adc62c7d14bbafdcae8059182d41aab25e16",
+  "owner_direction_git_blob": "5b056567a896277fdff362a1b6785673317f6a65",
+  "binary_git_blob": "150be32272000e2e4c54e22d987380b78dc51c47",
+  "base64_git_blob": "7920d96c7e11c4704514ebaec719feb6b3978a41",
   "bootstrap_bytes": 7596,
-  "bootstrap_sha256": "9e70990376b7fbbab14db1fb8f67749388e8707ff7b81b86c03ea56b8e2dffaa"
+  "bootstrap_sha256": "ae0e55339b2ba506ea46c7444fd4c79ba38715028112f85a099be5e53a9458d8"
 }

@@ -6,8 +6,8 @@ The original native design, experiment and report implementations remain authori
 
 ## Exact artifacts
 
-- `source-20261013.json`: 929145 bytes; SHA256 `69bab02de7fcd3ea203147177046dc00e630375be7cc83e48b8143cf68f40a71`. All46 complete literal source bodies, per-file hashes and known preimages, source provenance and original receiving course.
-- `matched-control-outcomes-source-20261013.zip`: 290197 bytes; SHA256 `0ecab9be3b35c8d01248fe5426fa8d069b10b3c9e926c09c38ca09f0d22b1df5`. All46 members at application-relative paths. Every compressed member was reopened and compared with the JSON inventory; the exact published Git blob identity was independently computed.
+- `source-20261013.json`: 929145 bytes; SHA256 `828cdebd9a6c8e4b0ebf86229f31783edc6868359e7a2452d4eafb4d1eb253eb`. All46 complete literal source bodies, per-file hashes and known preimages, source provenance and original receiving course.
+- `matched-control-outcomes-source-20261013.zip`: 290197 bytes; SHA256 `358d97264f7c2b53063b27549fc2821acbcaa2c50945242c60f91d33406cb095`. All46 members at application-relative paths. Every compressed member was reopened and compared with the JSON inventory; the exact published Git blob identity was independently computed.
 - Native outcomes: merged PR4703 and neutral map successor PR4718.
 - Outcome desk/API: merged PR4701.
 - Complete native Study/browser receiving and conditional installation: merged PR4719.

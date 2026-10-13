@@ -12,9 +12,9 @@ parts.sort(key=lambda x:x["index"])
 for x in parts:
     if x["schema"]!="upstate.original-source-part/v1" or x["source_id"]!="utility-class-attribution-20261013" or x["total"]!=2:raise ValueError("Source-part identity differs")
 data=base64.b64decode("".join(x["content_base64"] for x in parts),validate=True)
-if len(data)!=819292 or sha(data)!="c259fcb9a5dfd6b3b55455729446061e813b7c9dca70b22278882ebff7af637d":raise ValueError("Original compressed body differs")
+if len(data)!=621467 or sha(data)!="b4d9b11ae06eb59d45b32b77551f29c136806fcafda68b74be3b66c55b458204":raise ValueError("Original compressed body differs")
 raw=gzip.decompress(data)
-if len(raw)!=5994521 or sha(raw)!="860bf11cc0bd79620afd94f22864d69629ce40a39d195a4046c4af36b98a1352":raise ValueError("Original complete bank differs")
+if len(raw)!=5993646 or sha(raw)!="577822f2c7cc1ecf07851cc26c362b1b1d19cef65b5af74167a5e02d713441a4":raise ValueError("Original complete bank differs")
 bank=json.loads(raw)
 if bank["schema"]!="commons.source-bank/v1" or len(bank["files"])!=20:raise ValueError("Complete original20-member bank is required")
 files={}

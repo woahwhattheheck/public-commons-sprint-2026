@@ -8,8 +8,8 @@ It is a feature overlay for the existing complete application. It contains no sc
 
 ## Exact payloads
 
-- `source-20261013.json`: 1473235 UTF-8 bytes; SHA256 `24593ebfb33c92a42cafc75bb8c2c0d5e2f055ab20706174b77f12c146ebbf9a`. Full `files` plus byte/SHA and recognized original preimage metadata.
-- `terrain-report-source-20261013.zip`: 437780 bytes; SHA256 `3a955784d27c332fba63b83beb79b466d1e36c10271cd78eae0706c2113a0afc`. All 66 members reopened and their complete byte/CRC/SHA identities verified before publication.
+- `source-20261013.json`: 1473235 UTF-8 bytes; SHA256 `5674009a24c4000b74e5156c67179efe68b5416dceadab8a05d26eeb25b0c502`. Full `files` plus byte/SHA and recognized original preimage metadata.
+- `terrain-report-source-20261013.zip`: 437780 bytes; SHA256 `7262eb73ee3bed8008e4560abdf62fb804e143d8acf577ad1651f7690212ca73`. All 66 members reopened and their complete byte/CRC/SHA identities verified before publication.
 
 The immutable payload records application-source provenance at merge `642a5380002faf899e73ef36cf1015e625bc77e1`. The installer receives a final optional-membership successor in this commit so every file in this exact complete carrier is admitted. The original 15 required core files and all source-conflict rules are preserved.
 

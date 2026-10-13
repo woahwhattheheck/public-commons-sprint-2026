@@ -5,10 +5,10 @@
   "source_commit": "594447fdcd25b0244e01451ae702b089fc52c7fd",
   "source_path": "operations/ecosystem-source12/receiving-union-20261013.source.json",
   "application_prefix": "opportunities/upstate_forever_2026",
-  "decoded_source_bytes": 39613656,
-  "decoded_source_sha256": "033fcffac32373204ba397e6f11b598ffd20c1b4d8b389c0372d879e02845458",
+  "decoded_source_bytes": 39613079,
+  "decoded_source_sha256": "a0154e014c9d5915de986b853a6288154244a110d6f3479df821a65105a91aae",
   "file_count": 976,
-  "source_bytes": 36757660,
+  "source_bytes": 36757107,
   "path_basis": "Each path is relative to the original application root. Match exact original bytes and SHA256; another archived or currently installed source edition remains separate.",
   "receiving": "SOURCEPATH13 actual1791893434.860609 requested this metadata-only inventory for matching against its physically retained original selected Study application. Existing89FA full-source2178 remains one original operation; no scientific task is requested.",
   "files": [
@@ -19,8 +19,8 @@
     },
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 4999,
-      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+      "bytes": 4889,
+      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8"
     },
     {
       "path": "docs/SCIENTIFIC_REPORT_CHANGES.md",
@@ -389,8 +389,8 @@
     },
     {
       "path": "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
-      "bytes": 12117,
-      "sha256": "6030f6e935bc93fab1a846bed85e39028377600aa654a64987b90dee0de6d59b"
+      "bytes": 12007,
+      "sha256": "0dc8ad82c9ee557af56ee587595c28a449ab440d8a111a4c66d647546d947c88"
     },
     {
       "path": "measurement_workspace/published_studies.py",
@@ -424,8 +424,8 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 31586,
-      "sha256": "e0c7edf073554e26b22a3b057e639b103e7430f46b25275b7219020a6d646599"
+      "bytes": 31476,
+      "sha256": "6f97806d4539b1c0f82eafb4bdc0922c782e414203b68c888159a8fa0c9eb78d"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
@@ -3199,8 +3199,8 @@
     },
     {
       "path": "operator/RECEIVED_PUBLISHED_REVIEWS.md",
-      "bytes": 19930,
-      "sha256": "55d7ea7011c86b3888cff737102a2cfbd028f8c1a3778bb576780da3691a9ad6"
+      "bytes": 19820,
+      "sha256": "b778f1189cc6b914ec0a1a7486cfd134596a1baa61ab81ad1cbe1e6d74d61dea"
     },
     {
       "path": "operator/received_published_reviews.py",
@@ -3279,8 +3279,8 @@
     },
     {
       "path": "operator/SELECTED_MICROBIAL_STUDY.md",
-      "bytes": 13702,
-      "sha256": "792b0767a9dd673e5909c44e7310bf3615b02e06854bb142a383e956672bbce8"
+      "bytes": 13589,
+      "sha256": "2d6b6a387e9c7cf6f29a7125fa5d0de5a96cdd807dd148212d82f7221a1521fa"
     },
     {
       "path": "operator/server.py",

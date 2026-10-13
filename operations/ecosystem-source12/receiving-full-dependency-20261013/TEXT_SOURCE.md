@@ -7,21 +7,21 @@ This is the full retained 570-file source package from application commit
 
 | Layer | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Text companion | 5,075,365 | e0b0a6bf0640eb42dd2b2f9b3f475d9fc6bbca436d64c9b1596d4a39b3bed79b |
-| Original gzip | 3,806,053 | b64241f89b4284e1156095fdd51b870d4e12b574daf1734e93e8e17f828decf2 |
-| Complete decoded source map | 13,485,181 | 1827cecd39b28a11298ee085449ed884f3337f13cc33dcedd621fc54cf1db300 |
+| Text companion | 4,224,973 | c20332ff03837e12eac7bc08800bf8b2992e74690572173399d22801b7797f5a |
+| Gzip source map | 3,168,260 | bbd13bdbee5354d9dcd22b4d31f58e452ff49c6caef6386d840bbeda7763e358 |
+| Complete decoded source map | 13,517,151 | 79c8e4cddb33e0ed371647dc96d36a07b8a21353e71299794d540fe734869cc2 |
 
-The source map retains all 570 full member bodies and their original per-file byte counts, SHA-256 hashes, modes and Git blobs. Its 570 source bodies total 12,776,062 UTF-8 bytes. Later published Community context/receiving helpers are a separate maintained overlay; presence is determined by this map's actual file keys.
+The source map contains all 570 full member bodies with per-file byte counts, SHA-256 hashes, modes and Git blobs. Its 570 source bodies total 12,775,447 UTF-8 bytes. Later published Community context/receiving helpers are a separate maintained overlay; presence is determined by this map's actual file keys.
 
 ## Read through connected tools
 
-Use an ordinary Git file/blob read of `application-source.text.json`. Parse the JSON, base64-decode `content_base64`, verify `gzip_bytes`/`gzip_sha256`, then gunzip and verify `decoded_bytes`/`decoded_sha256`. Parse that decoded UTF-8 JSON; the original complete source is in `files` and member identities in `file_metadata`.
+Use an ordinary Git file/blob read of `application-source.text.json`. Parse the JSON, base64-decode `content_base64`, verify `gzip_bytes`/`gzip_sha256`, then gunzip and verify `decoded_bytes`/`decoded_sha256`. Parse that decoded UTF-8 JSON; the complete source is in `files` and member identities in `file_metadata`.
 
-The text Git blob is `29db1ea6ff92e7397707d13d28fdf2753443d7f1`. The unchanged gzip Git blob is `2701164b9551244d0b9416be29d825fc2c308a79`.
+The text Git blob is `3fad1a55d0769ac1889f552585094a2a92d18f10`. The gzip Git blob is `42568994b9c86747c449c730b59b7160c9c8b03a`.
 
-## Restore the original gzip with Python 3
+## Restore the gzip source map with Python 3
 
-Run the following in a new receiving directory beside the downloaded text companion. It reuses only an identical existing output and otherwise atomically creates the original gzip without replacing a different file.
+Run the following in a new receiving directory beside the downloaded text companion. It reuses only an identical existing output and otherwise atomically creates the gzip source map without replacing a different file.
 
 ```python
 import base64, gzip, hashlib, json, os, tempfile

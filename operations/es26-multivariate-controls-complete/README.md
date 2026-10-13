@@ -6,7 +6,7 @@ This directory carries the complete 24-file WO-19 product: numerical design, nat
 - matched-control-source-20261013.zip contains the same 24 application-relative source files.
 - The normal consumed guide is source_tools/MULTIVARIATE_CONTROL_RECEIVING.md inside both deliverables. It includes the complete current owner brief and 52 work orders. operator/MULTIVARIATE_CONTROL.md explains ordinary source/choice/result operation.
 
-The source ZIP is 145,221 bytes, SHA256 ecd6287032daf726a3cec64bfffafdc44fb5496fcdd43b45b509ee99f96d495e. All 24 ZIP members were independently reopened and matched to their complete source bodies. The JSON is 507,540 UTF-8 bytes, SHA256 b55ed4b8445d6f75414d6fdc9f6ca815bbd2364820a473092514e267bef151da.
+The source ZIP is 145,221 bytes, SHA256 a799cc1a8432271bd611d1972437220b9a974215ae8ddf46509561727750abad. All 24 ZIP members were independently reopened and matched to their complete source bodies. The JSON is 507,540 UTF-8 bytes, SHA256 b15fc3fb0182e16c772865c6e36733100dc05baf4cc53f290d7637438dd6efd5.
 
 ## Installation and continuation
 

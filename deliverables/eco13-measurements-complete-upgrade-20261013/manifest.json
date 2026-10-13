@@ -11,8 +11,8 @@
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 305034,
-      "sha256": "1cccfca3a3edd636ec49f869cfc78a0419a8e37d16dabe6d73adee05ce226d78",
+      "bytes": 305539,
+      "sha256": "3fefc4c983dbea4a97914a3aedf2794882c91644514861bc35f80345f34df221",
       "members": 22,
       "source_bytes": 225944
     },
@@ -32,8 +32,8 @@
     },
     {
       "path": "source-04.json",
-      "bytes": 136039,
-      "sha256": "6c8da5da43ee6d01f0d4a9128a04f586ddc86c961b9c0b540ab07da640a95e8c",
+      "bytes": 136100,
+      "sha256": "27aea01074794aeb462fa05027156dcf3e6b1058a0d81884b6e0d86865ffaa62",
       "members": 6,
       "source_bytes": 101127
     },
@@ -54,8 +54,8 @@
     },
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6093,
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609",
+      "bytes": 5921,
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
       "role": "installed_component"
     },
     {
@@ -78,8 +78,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 23552,
-      "sha256": "d59ebeb7d3bbd30d6ab20fd74c8b513d6310b21649f5dd0665ff45a5732922e5",
+      "bytes": 23380,
+      "sha256": "276a43506947bff8fb0d5d57f7d0a6852b4b3d21d5a803de88a798455b15d10f",
       "role": "installed_component"
     },
     {
@@ -384,8 +384,8 @@
     },
     {
       "path": "model/MEASUREMENTS_PORTABLE.md",
-      "bytes": 10829,
-      "sha256": "d3d21072dce0e4ed2fc548c704cf83e8b40a39d14da4c77458affcb26efd8ebe",
+      "bytes": 10657,
+      "sha256": "33e7bca612d33142692325e5995ecb1121885ea24f56878341fb45f2392ee39d",
       "role": "installed_component"
     },
     {
@@ -559,8 +559,8 @@
   },
   "owner_direction": {
     "path": "CURRENT_OWNER_DIRECTION.md",
-    "bytes": 6093,
-    "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609",
+    "bytes": 5921,
+    "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
     "version": "2026-10-13.4",
     "source_path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
     "source_commit": "11ca2f61b8207c0309fa85ce8d336661226fb2e7"

@@ -216,13 +216,13 @@ The following complete project brief is retained from `CURRENT_OWNER_DIRECTION.m
 > 
 > ## Direct owner instructions
 > 
-> > do the simulated model
+> Execute the prepared simulated model.
 > 
-> > just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+> Deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time.
 > 
-> > just checking dont pause anythi g
+> Continue active work while checking progress.
 > 
-> > and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+> Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
 > 
 > ## Build for an experienced scientific practice
 > 

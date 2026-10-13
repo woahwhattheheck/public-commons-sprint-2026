@@ -217,17 +217,17 @@ Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper
 
 Latest direct instruction, October 13 at 10:46 a.m. Eastern:
 
-> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+Complete as much of the existing Eco science application as possible before the scheduled call, using the existing fleet and complementary workers where useful.
 
 This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
-> do the simulated model
+Execute the prepared simulated model.
 
-> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+Deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time.
 
-> just checking dont pause anythi g
+Continue active work while checking progress.
 
-> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
 
 ### Build for an experienced scientific practice
 

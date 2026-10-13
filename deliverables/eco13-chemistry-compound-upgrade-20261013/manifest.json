@@ -20,8 +20,8 @@
     },
     {
       "path": "source-02.json",
-      "bytes": 360945,
-      "sha256": "572d039a3323a1ce8eaa1d557bb3b2128a9b900d7f0d092a89a8ce3993bf0b19",
+      "bytes": 361553,
+      "sha256": "9b6829a147eb14363faf275663141b3e11d3ebde91a03a1615366d65d7705f50",
       "members": 15,
       "source_bytes": 267954
     },
@@ -41,22 +41,22 @@
     },
     {
       "path": "source-05.json",
-      "bytes": 240896,
-      "sha256": "6023f08b3c22c67c28a422c77a47d4b94b65e28c0b305fd85542d0ba0cf71782",
+      "bytes": 241326,
+      "sha256": "00de30e9b3e2ed8d4d7f9f5d0a5052bef469e76159b96283830cdb33d7cec608",
       "members": 14,
       "source_bytes": 178448
     },
     {
       "path": "source-06.json",
-      "bytes": 649408,
-      "sha256": "8828616f7293f6070dfdfdc9eaf931267d7cef61c911eb246ba6ad90798fc5e0",
+      "bytes": 650225,
+      "sha256": "8a5d43ff6bac3afeb74b05dde22acc24e6d205aeeb4fd49836ce2d02edaa9922",
       "members": 24,
       "source_bytes": 483782
     },
     {
       "path": "source-07.json",
-      "bytes": 166324,
-      "sha256": "329575cc37957742e1223b9720677e62d9b85c5664c901b70a6b60dd23079020",
+      "bytes": 166589,
+      "sha256": "ece35b44b58dc7efb17004d2c414d819520ed22c6853e549da89803b3f01132e",
       "members": 11,
       "source_bytes": 123163
     }
@@ -490,8 +490,8 @@
     },
     {
       "path": "source/chemistry-report-receiving/README.md",
-      "bytes": 28419,
-      "sha256": "70ced0b119fec20b03992aa108d4a3aab43a36457c576b7453d8b8105644faa3",
+      "bytes": 28247,
+      "sha256": "347ee81ff9c0e51b24670b15f58c9bc1faff2b1504c388f570be4ac1273997af",
       "role": "receiving_driver",
       "previous_source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0",
@@ -524,8 +524,8 @@
     },
     {
       "path": "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6093,
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609",
+      "bytes": 5921,
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
       "role": "installed_component",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0",
       "previous_source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
@@ -612,8 +612,8 @@
     },
     {
       "path": "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6093,
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609",
+      "bytes": 5921,
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
       "role": "installed_component",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0",
       "previous_source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
@@ -637,7 +637,7 @@
     {
       "path": "source/monitoring-field-study/source-manifest.json",
       "bytes": 130698,
-      "sha256": "cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88",
+      "sha256": "b74f7c459ce08508d500970bba7196831c48cb5529e9ad01e007856b6d43fd5d",
       "role": "installed_component",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0"
     },
@@ -672,7 +672,7 @@
     {
       "path": "source/monitoring-field-study/source/prepare_field_package_edition.py",
       "bytes": 8089,
-      "sha256": "bfa6a314eb25ef05b41a6fb6ce7b44ab36fc596cc66af5f086508d0ac0d4a4ef",
+      "sha256": "2f2f72a28ba43e58c77e7ef502adcd7c5d87f639fd3a0ef32ad811926a7c306e",
       "role": "installed_component",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0"
     },
@@ -685,8 +685,8 @@
     },
     {
       "path": "source/monitoring_field_assignment/RECEIVING.md",
-      "bytes": 22115,
-      "sha256": "a88a2a2ecdec3d4feca0f943ea0373503d06d9c593ee9e1c33161442c9ea857e",
+      "bytes": 21943,
+      "sha256": "1809c132223358e1acb16a666cf598b2a312fc1c47b6271cfe4d41c51b2d1af6",
       "role": "installed_component",
       "source_commit": "3136f75b8956a3bf410c4572a0dcbb045a6fc6d0",
       "previous_source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
@@ -892,7 +892,7 @@
     "corrected_scientific_manifest": {
       "path": "source/monitoring-field-study/source-manifest.json",
       "bytes": 130698,
-      "sha256": "cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88",
+      "sha256": "b74f7c459ce08508d500970bba7196831c48cb5529e9ad01e007856b6d43fd5d",
       "previous_collection": "371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3",
       "companions_per_entry": 226
     },
@@ -904,8 +904,8 @@
   },
   "current_owner_direction": {
     "version": "2026-10-13.4",
-    "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609",
-    "bytes": 6093,
+    "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c",
+    "bytes": 5921,
     "paths": [
       "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md",
       "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md"
