@@ -105,3 +105,17 @@ stage execution, observed run fallback and a requested legacy declaration.
 The complete [native-version and handoff guide](../model/PARAMETER_NATIVE_VERSIONS.md#continue-completed-cases-into-annual-load-calibration)
 describes original identity preservation, physical units, objective-specific
 version compatibility and the `model.parameter_calibration.candidates` API.
+
+## Keep the original form active while checking a design
+
+A preview and its retained parameter catalog belong to the open study form that
+requested them. Closing the form, opening another form, or changing the
+Workspace prevents a delayed response from saving the old draft. Reopen the
+study form and preview its current selection before saving. Editing the draft
+during a preview also requires a fresh preview of the changed selection.
+
+The completed-case calibration selector follows the same rule. Its request
+cannot replace a newer form, and its submit action reads only the original
+visible candidate controls. The selected run identifiers and the existing
+calibration desk callback remain unchanged. Accepted native tasks continue
+through their original queue after the form closes.

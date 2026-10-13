@@ -129,6 +129,7 @@ export function attachParameterStudies(host) {
   let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0};
   let caseFilter = '', caseOffset = 0, draftCatalog = null, draftRoot = null;
   let catalogSequence = 0, previewSequence = 0, resultSequence = 0, confirmedSelection = null;
+  let formSequence = 0, activeForm = null, draftSession = null;
   const state = () => host.getState();
   const data = () => state()?.data || {};
   const workspace = () => state()?.workspace_key;
@@ -148,8 +149,58 @@ export function attachParameterStudies(host) {
     ['Requested InVEST', selection?.invest_version || '—']
   ].map(([name, value]) => '<div><dt>' + name + '</dt><dd>' + escapeHTML(value) + '</dd></div>').join('');
 
+  function formRequest() {
+    const selectedWorkspace = workspace(), sequence = ++formSequence;
+    const body = document.querySelector('#form-body'), anchor = body?.firstChild;
+    const dialog = document.querySelector('#operation-form')?.closest('dialog'), wasOpen = dialog?.open;
+    return {workspace: selectedWorkspace, current: () => workspace() === selectedWorkspace &&
+      sequence === formSequence && document.querySelector('#form-body') === body &&
+      body?.firstChild === anchor && dialog?.open === wasOpen};
+  }
+
+  function formSession(selector, selectedWorkspace) {
+    activeForm?.release();
+    const form = document.querySelector('#operation-form'), anchor = form?.querySelector(selector);
+    const dialog = form?.closest('dialog'), listeners = [];
+    if (!form || !anchor || !dialog) throw new Error('Reopen the original parameter-study form.');
+    let released = false;
+    const session = {
+      anchor,
+      current() {
+        const current = !released && activeForm === session && workspace() === selectedWorkspace &&
+          form.isConnected && anchor.isConnected && document.querySelector('#operation-form') === form &&
+          dialog.open && form.querySelector(selector) === anchor;
+        if (!current) session.release();
+        return current;
+      },
+      ensure() {
+        if (!session.current()) throw new Error('The original parameter-study form changed or closed. Reopen it before continuing.');
+      },
+      listen(node, event, callback) {
+        const guarded = value => { if (session.current()) return callback(value); };
+        node.addEventListener(event, guarded); listeners.push([node, event, guarded]);
+      },
+      release() {
+        if (released) return;
+        released = true;
+        for (const [node, event, callback] of listeners) node.removeEventListener(event, callback);
+        dialog.removeEventListener('close', onClose);
+        if (activeForm === session) activeForm = null;
+        if (draftSession === session) {
+          draftSession = null; draftRoot = null; draftCatalog = null; confirmedSelection = null;
+          catalogSequence++; previewSequence++;
+        }
+      }
+    };
+    const onClose = () => { if (!dialog.open) session.release(); };
+    dialog.addEventListener('close', onClose);
+    activeForm = session;
+    return session;
+  }
+
   function render() {
     if (currentWorkspace !== workspace()) {
+      activeForm?.current();
       currentWorkspace = workspace(); selected = null; study = null; results = null;
       if (pendingOpen?.workspace !== currentWorkspace) pendingOpen = null;
       resultFilters = {area_id: '', pollutant: '', offset: 0}; caseFilter = ''; caseOffset = 0;
@@ -369,26 +420,29 @@ export function attachParameterStudies(host) {
   }
 
   async function loadCatalog() {
-    const current = draftRoot, sequence = ++catalogSequence, selectedWorkspace = workspace();
+    const session = draftSession;
+    if (!session?.current()) return;
+    const current = session.anchor, sequence = ++catalogSequence, selectedWorkspace = workspace();
     draftCatalog = null; invalidatePreview();
     const baseline = current.querySelector('[name="baseline_run_id"]').value;
     if (!baseline) { current.querySelector('[data-baseline-description]').textContent = 'Choose a retained native run.'; return; }
     current.querySelector('[data-baseline-description]').textContent = 'Reading the retained baseline parameters…';
     try {
       const result = await host.api(requested('/api/parameter-studies/catalog', {baseline_run_id: baseline}));
-      if (current !== draftRoot || sequence !== catalogSequence || selectedWorkspace !== workspace()) return;
+      if (!session.current() || current !== draftRoot || sequence !== catalogSequence || selectedWorkspace !== workspace()) return;
       draftCatalog = result;
       current.querySelector('[data-baseline-description]').innerHTML = '<dl class="parameter-study-provenance">' +
         provenance(result.selection) + '</dl>' + baselineExecution(result) + '<p class="note">Baseline ' + escapeHTML(result.baseline_state) + ' · ' +
         escapeHTML(result.profile_title) + ' · ' + (result.pollutants || []).map(value => escapeHTML(label(value))).join(', ') + '</p>';
       current.querySelectorAll('.parameter-study-axis').forEach(fillParameters);
     } catch (error) {
-      if (current === draftRoot && sequence === catalogSequence && selectedWorkspace === workspace()) current.querySelector('[data-baseline-description]').textContent = error.message;
+      if (session.current() && current === draftRoot && sequence === catalogSequence && selectedWorkspace === workspace()) current.querySelector('[data-baseline-description]').textContent = error.message;
     }
   }
 
   function selectionFromForm() {
-    if (!draftRoot || !draftCatalog) throw new Error('Select a baseline and wait for its parameter catalog to load.');
+    draftSession?.ensure();
+    if (!draftSession || !draftRoot || !draftCatalog) throw new Error('Select a baseline and wait for its parameter catalog to load.');
     const value = name => draftRoot.querySelector('[name="' + name + '"]').value.trim();
     const selection = {title: value('experiment_title'), purpose: value('experiment_purpose'),
       baseline_run_id: value('baseline_run_id'), design: value('experiment_design'),
@@ -412,12 +466,13 @@ export function attachParameterStudies(host) {
   }
 
   async function previewDesign() {
-    const current = draftRoot, selection = selectionFromForm(), sequence = ++previewSequence, selectedWorkspace = workspace();
+    const selection = selectionFromForm(), session = draftSession, current = session.anchor;
+    const sequence = ++previewSequence, selectedWorkspace = workspace();
     const panel = current.querySelector('[data-parameter-study-preview]');
     panel.innerHTML = '<p class="note">Calculating the selected case design…</p>';
     try {
       const result = await host.api('/api/parameter-studies/preview', {method: 'POST', body: {workspace: workspace(), selection}});
-      if (current !== draftRoot || sequence !== previewSequence || selectedWorkspace !== workspace()) return null;
+      if (!session.current() || current !== draftRoot || sequence !== previewSequence || selectedWorkspace !== workspace()) return null;
       confirmedSelection = {input: JSON.stringify(selection), selection: result.selection};
       panel.innerHTML = '<div class="notice"><strong>' + format(result.case_count) + ' native cases · ' +
         format(result.alternatives) + ' parameter alternatives plus the baseline</strong>' + escapeHTML(label(result.design)) +
@@ -430,17 +485,18 @@ export function attachParameterStudies(host) {
             escapeHTML(pretty(row.overrides)) + '</td></tr>')) + '</details>' : '');
       return result;
     } catch (error) {
-      if (current === draftRoot && sequence === previewSequence && selectedWorkspace === workspace()) panel.innerHTML = '<div class="notice error" role="alert">' + escapeHTML(error.message) + '</div>';
+      if (!session.current() || current !== draftRoot || sequence !== previewSequence || selectedWorkspace !== workspace()) return null;
+      panel.innerHTML = '<div class="notice error" role="alert">' + escapeHTML(error.message) + '</div>';
       throw error;
     }
   }
 
   async function newStudy(id, baselineId) {
     if (!(data().runs || []).length) throw new Error('Prepare a native run before creating a parameter study.');
-    const originalWorkspace = workspace();
-    let initial = {};
+    const opening = formRequest(), originalWorkspace = opening.workspace;
+    let initial = {}, editor = null;
     if (id) initial = (await host.api(requested('/api/item', {kind: 'parameter-studies', id}))).selection;
-    if (workspace() !== originalWorkspace) return;
+    if (!opening.current()) return;
     draftCatalog = null; confirmedSelection = null;
     const html = '<div class="parameter-study-draft"><div class="form-grid">' +
       field('experiment_title', 'Study title', initial.title ? initial.title + ' — revision' : '', 'required') +
@@ -462,17 +518,22 @@ export function attachParameterStudies(host) {
       button('preview', 'Preview case design') + '</div><div data-parameter-study-preview></div></div>';
     host.openForm('New parameter study', 'Choose explicit values and supporting references. A saved study retains its baseline, axes, geographic reporting areas, and native case identities.',
       html, 'Save study', async () => {
-        if (workspace() !== originalWorkspace) throw new Error('Reopen this study draft in its original workspace.');
+        editor.ensure();
         const selection = selectionFromForm();
         if (!confirmedSelection || confirmedSelection.input !== JSON.stringify(selection)) {
           const preview = await previewDesign();
           if (!preview) throw new Error('The selection changed while the preview was loading. Preview the current design.');
         }
+        editor.ensure();
+        if (!confirmedSelection || confirmedSelection.input !== JSON.stringify(selectionFromForm())) {
+          throw new Error('The selection changed while the preview was loading. Preview the current design.');
+        }
         await host.submitAction('parameter-study.prepare', confirmedSelection.selection);
       }, () => {
-        draftRoot = document.querySelector('#form-body .parameter-study-draft');
-        draftRoot.addEventListener('input', invalidatePreview);
-        draftRoot.addEventListener('change', event => {
+        editor = formSession('.parameter-study-draft', originalWorkspace);
+        draftSession = editor; draftRoot = editor.anchor;
+        editor.listen(draftRoot, 'input', invalidatePreview);
+        editor.listen(draftRoot, 'change', event => {
           invalidatePreview();
           if (event.target.name === 'baseline_run_id') loadCatalog();
           if (event.target.name === 'axis_parameters') describeAxis(event.target.closest('.parameter-study-axis'));
@@ -484,9 +545,10 @@ export function attachParameterStudies(host) {
   }
 
   async function openCalibration(id) {
-    const originalWorkspace = workspace();
+    const opening = formRequest(), originalWorkspace = opening.workspace;
     const packet = await host.api(requested('/api/parameter-studies/calibration', {id}));
-    if (workspace() !== originalWorkspace) throw new Error('Reopen the parameter study in its original workspace.');
+    if (!opening.current()) return;
+    let editor = null;
     const eligible = packet.eligible || [], excluded = packet.excluded || [];
     const rows = eligible.map(row => '<tr><td><input type="checkbox" name="parameter_study_calibration_run" value="' +
       escapeHTML(row.run_id) + '" checked aria-label="Use ' + escapeHTML(row.labels.join(', ')) + '"></td><td><strong>' +
@@ -509,13 +571,14 @@ export function attachParameterStudies(host) {
         gridTable(['Case', 'State', 'Reason', 'Retained execution'], excludedRows) + '</details>' : '') +
       '<p class="note">Continue preserves your saved observation and catchment draft. The next form reviews objective weights, observed annual loads and the spatial validation split.</p></div>';
     host.openForm('Calibrate completed study cases', packet.title, body, 'Open calibration selection', async () => {
-      if (workspace() !== originalWorkspace) throw new Error('Reopen this candidate selection in its original workspace.');
-      const ids = [...document.querySelectorAll('#operation-form [name="parameter_study_calibration_run"]:checked')].map(node => node.value);
+      editor.ensure();
+      const ids = [...editor.anchor.querySelectorAll('[name="parameter_study_calibration_run"]:checked')].map(node => node.value);
       if (!ids.length) throw new Error('Choose at least one completed original baseline run.');
       if (typeof host.openExtension !== 'function') throw new Error('Open this source edition with its registered calibration desk.');
       return host.openExtension('calibration', 'openForCandidates', {
         workspace_key: originalWorkspace, study_id: id, candidate_run_ids: ids});
     }, () => {
+      editor = formSession('.parameter-study-calibration', originalWorkspace);
       const submit = document.getElementById('form-submit');
       if (submit) submit.disabled = !eligible.length;
     });
@@ -538,6 +601,9 @@ export function attachParameterStudies(host) {
     }
     if (action === 'run' || action === 'summarize') return host.executeAction('parameter-study.' + action, {experiment_id: id});
     if (action === 'calibration') return openCalibration(id);
+    if (['preview', 'axis-add', 'axis-remove', 'area-add', 'area-remove'].includes(action)) {
+      if (!draftSession?.current() || !draftRoot.contains(node)) return;
+    }
     if (action === 'preview') return previewDesign();
     if (action === 'axis-add') {
       draftRoot.querySelector('[data-parameter-study-axes]').insertAdjacentHTML('beforeend', axisEditor());
