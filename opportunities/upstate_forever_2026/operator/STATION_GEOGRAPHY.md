@@ -86,7 +86,13 @@ GET/POST reads are /api/station-geography/catalog, /edition and /verify. Edition
 
 ## Inspect and revise
 
-The saved edition presents the map, station table, original location candidates, native identifiers, coordinate references, source attributes, observation links and all polygon memberships. Search and status filters affect the view; exports retain the complete selection.
+The saved edition presents the map, station table, original location candidates, native identifiers, coordinate references, source attributes, observation links and all polygon memberships. Publisher source, assessment edition, cause, designated use, support and publication-state filters match the same original record. Location and geometry-derived watershed filters combine with this assessment selection. The station table and map use the matching station set; the detail panel shows the matching record count and keeps every original record available under its complete-source section.
+
+Use labels remain literal: selecting REC does not silently include a source record labeled AL, REC. Select **Not recorded** to review records whose original support or publication field is empty. Filter choices report distinct stations and original records after the other assessment filters are applied; an incompatible combination stays visible with zero matches. Returning to a saved study restores these workspace-specific selections.
+
+**Download station CSV** exports one row per matching station with only its matching assessment references. **Download assessment records CSV** exports one row per matching original record, including the original source ID and publisher hash, imported-body hash, native record ID or JSON pointer, cause, use, support, publication state, coordinates, mapped and publisher HUCs, and the unchanged original row. The selected filters accompany both downloads. Whole-edition files and the watershed-coverage table retain the complete saved study.
+
+For a concrete original-source check, SV-206 has a 2024 BIO / AL / not_supported record and a separate July 2026 ECOLI / REC / fully_supported record. Selecting BIO together with fully_supported yields no matching record at that station; selecting the July recreation record preserves its own source identity. The five July fully-supported recreation records are SV-206, SV-015, SV-139, SV-073 and SV-352.
 
 Missing and invalid coordinates remain in station GeoJSON with null geometry. Different original locations remain explicit candidates. Identical transformed coordinates preserve every coincident source record. Watershed membership uses polygon covers in the original coordinate reference and retains boundaries and overlaps together. The crosswalk computes membership from point and polygon geometry while preserving the source's own watershed attributes.
 
