@@ -14,14 +14,18 @@
         "operator/web/climate_management.css",
         "operator/CLIMATE_MANAGEMENT.md",
         "model/climate_management_figures.py",
-        "operator/web/climate_management_explorer.mjs"
+        "operator/web/climate_management_explorer.mjs",
+        "source_tools/receive_climate_management.py",
+        "source_tools/CLIMATE_MANAGEMENT_RECEIVING.md",
+        "source_tools/compose.py"
       ],
       "requires": [
         "core",
         "climate-forcing",
         "study-transfer",
         "extension-startup",
-        "gis-projects"
+        "gis-projects",
+        "scientific-report-review"
       ],
       "import_roots": [
         "operator"
