@@ -79,7 +79,7 @@ def main():
                     if not record or record["role"]!="operator":return self.send(401,{"error":"Operator session required"})
                     resource=path.removeprefix("/api/outreach/files/").split("/")
                     if resource==["project.zip"]:
-                        with tempfile.TemporaryDirectory(prefix="outreach-project-",dir=workspace.directory) as temporary:
+                        with tempfile.TemporaryDirectory(prefix="outreach-project-",dir=workspace.directory.parent) as temporary:
                             result=workspace.outreach.op_export_project({"path":str(Path(temporary)/"ATSSC_Complete_Project.zip")})
                             raw=Path(result["path"]).read_bytes()
                         filename,mime="ATSSC_Complete_Project.zip","application/zip"
