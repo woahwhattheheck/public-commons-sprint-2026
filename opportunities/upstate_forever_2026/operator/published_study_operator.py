@@ -18,7 +18,7 @@ from measurement_workspace.published_studies import PublishedStudyStore, TABLE_T
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
            "published-study.review.save", "published-study.review.export", "published-study.review.import",
-           "published-study.review.prepare-source")
+           "published-study.review.prepare-source", "published-study.microbial-selection.prepare")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
 BUILTIN_DIRECTORIES = {
     BUILTIN_ID: "eighteenmile_2023",
@@ -269,6 +269,10 @@ class PublishedStudyProvider:
             self._fail("STUDY_REQUEST", "Study request must be an object.")
         ws, store = self._store(workspace_key)
         try:
+            if operation in ("microbial-selection-catalog", "microbial-selection-preview"):
+                from measurement_workspace import microbial_selection
+                return (microbial_selection.catalog(ws) if operation == "microbial-selection-catalog"
+                        else microbial_selection.preview(ws, payload))
             if operation == "catalog":
                 builtin = []
                 for builtin_id, directory in BUILTIN_DIRECTORIES.items():
@@ -336,6 +340,9 @@ class PublishedStudyProvider:
         if not isinstance(payload, dict):
             self._fail("STUDY_REQUEST", "Study task payload must be an object.")
         try:
+            if action == "published-study.microbial-selection.prepare":
+                from measurement_workspace import microbial_selection
+                return microbial_selection.prepare(ws, store, payload, operation_id=task["operation_id"])
             if action == "published-study.import":
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
