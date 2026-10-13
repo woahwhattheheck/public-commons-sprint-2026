@@ -113,6 +113,16 @@ The course then uses the real original mapping/approval/release, separate owned 
 
 Its result `NDTMS_NATIVE.json` retains all original source/analysis/correction/contract/target IDs, actual artifact paths, complete backup and original independent receiving. On replay it validates original request receipts and artifacts, uses the same original backup and preserves later source/target/recipient descendants. It does not generate a new backup into the original receiving destination after browser edits. Missing selected artifacts can be restored create-only from their full original immutable objects; changed bytes are preserved and rejected.
 
+The optional original browser join is executable in the same command:
+
+```sh
+python ABS_EXECUTING_APPLICATION/native/ndtms_receiving.py --work ABS_ORIGINAL_PROGRAMME_DIRECTORY --operation-id ORIGINAL_NDTMS_RECEIVING_OPERATION --node ABS_EXISTING_NODE --playwright ABS_EXISTING_PLAYWRIGHT_MODULE_FILE --chromium ABS_EXISTING_CHROMIUM --attachments ABS_OUTGOING_SELECTION_JSON --application-archive ABS_EXACT_OUTGOING_APPLICATION_ZIP
+```
+
+All three runtime flags are supplied together. The optional attachment JSON is an array of exact absolute `{path,bytes,sha256}` identities. The named application archive must be one of those attachments; its complete root-level file inventory and embedded APPLICATION.json must match the actual executing source. Run this command from the application unpacked from that exact outgoing ZIP. Every selected file and the original manifest are retained before browser dispatch. Missing original staging can reopen from those bytes; changed input or runtime rejects.
+
+The browser owner reuses the original maintained process/listener lifecycle. It operates the source workspace, retains its first complete backup and receives its actual destination, then starts the same original application there for independent browser reopening. Full native/browser IDs, inputs, phase results, screenshots, draft sidecars and every recovery branch remain under the original programme directory. No manually authored session JSON is required. The full operator and browser guide is [NDTMS_OPERATOR_GUIDE.md](NDTMS_OPERATOR_GUIDE.md).
+
 A native `CORE_COMPLETE` result is separate from rendered delivery. Use the same existing operator/browser owner to open the source workspace and independent receiver, operate source findings/corrections/analysis/publication/mapping, inspect full reports and open complete downloaded archives. View desktop 1440 and narrow 390 widths, and personally LOOK at actual screenshots. Open every outgoing attachment and every applicable report/PDF page, use the important controls, download and reopen the exact result. Source review, parsing, metadata or another peer's approval does not satisfy this requirement. Retain precise actual gaps rather than claiming an unexecuted runtime.
 
 ## Limits and interpretation

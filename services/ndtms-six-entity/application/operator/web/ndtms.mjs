@@ -118,7 +118,11 @@ export function createNdtmsView(c) {
   });
   async function recoverDraft(useCurrent) {
     if(saving)throw new Error("Wait for the current browser draft write to finish.");
-    const current=clone(draft),saved=await draftRead(draftOwner);
+    const owner=draftOwner,current=clone(draft),inputIdentity=JSON.stringify(draft),saved=await draftRead(owner);
+    if(owner!==draftOwner||inputIdentity!==JSON.stringify(draft)){
+      saveJSON({workspaceId:owner,requested:current,current:clone(draft),saved},"NDTMS_Changed_Draft_Recovery.json");
+      throw new Error("The input changed while its saved copy was read. All versions were downloaded; choose recovery again with the current writing.");
+    }
     saveJSON({workspaceId:draftOwner,current,saved},"NDTMS_Input_Draft_Recovery.json");
     if(!confirm(useCurrent?"The complete saved and current drafts have been downloaded. Replace the saved draft with the current input?":"The complete saved and current drafts have been downloaded. Open the saved draft in these controls?"))return;
     if(!useCurrent){
@@ -126,6 +130,23 @@ export function createNdtmsView(c) {
       draft=clone(saved.value);draft.scope.priorSubmission||={editionId:"",reference:"",note:""};savedRevision=saved.revision;conflict=null;draftError="";savePending=false;await render();return;
     }
     savedRevision=saved?.revision||0;conflict=null;draftError="";draft= current;savePending=true;await persistDraft();await render();
+  }
+  async function openPortableDraft() {
+    const picker=document.querySelector("#ndtms-portable-draft");
+    const file=picker?.files?.[0];if(!file)throw new Error("Choose the complete portable input draft.");
+    if(file.size>8*1024*1024)throw new Error("This input draft exceeds the 8 MiB portable input limit.");
+    const owner=draftOwner,inputIdentity=JSON.stringify(draft),originalFile=file,raw=await file.text();
+    if(document.querySelector("#ndtms-portable-draft")?.files?.[0]!==originalFile)throw new Error("The selected input file changed while opening; choose the current file again.");
+    const incoming=JSON.parse(raw);
+    if(owner!==draftOwner||inputIdentity!==JSON.stringify(draft)){
+      saveJSON({workspaceId:owner,current:clone(draft),incoming},"NDTMS_Changed_Input_Reopen.json");
+      throw new Error("The current writing changed while this file opened. Both complete versions were downloaded; open it again after reviewing the current input.");
+    }
+    if(incoming.workspaceId!==draftOwner||!validDraft(incoming.value))throw new Error("This portable input belongs to another workspace or has an unsupported structure. The current draft remains here.");
+    const current=clone(draft),value=clone(incoming.value);value.scope.priorSubmission||={editionId:"",reference:"",note:""};
+    saveJSON({workspaceId:draftOwner,current,incoming:JSON.parse(raw)},"NDTMS_Before_Input_Reopen.json");
+    if(!confirm("Open the complete input draft from "+file.name+"? The current writing and incoming original have been downloaded together."))return;
+    draft=value;draftGeneration++;savePending=true;await persistDraft();await render();
   }
   async function profile() {
     if(!cataloguePromise)cataloguePromise=api("/api/ndtms-profile").catch(error=>{cataloguePromise=null;throw error;});
@@ -158,6 +179,7 @@ export function createNdtmsView(c) {
   function inputRecovery() {
     return '<div class="callout"><p id="ndtms-draft-status">'+esc(statusText())+'</p><div class="actions">'
       +button("Download current input draft",()=>saveJSON({workspaceId:draftOwner,value:clone(draft)},"NDTMS_Current_Input_Draft.json"),"small")
+      +'<label>Portable input draft<input id="ndtms-portable-draft" type="file" accept=".json,application/json"></label>'+button("Open selected input draft",openPortableDraft,"small")
       +'<span id="ndtms-recovery-controls"'+(conflict||draftError?"":" hidden")+'>'+button("Download both & use current",()=>recoverDraft(true),"small")+button("Download both & open saved",()=>recoverDraft(false),"small")+"</span>"
       +"</div></div>";
   }
@@ -184,7 +206,7 @@ export function createNdtmsView(c) {
         {value:"mixed",label:"Mixed declared population"},{value:"secure-setting",label:"Secure setting (specify adult / young people below)"},
         {value:"other-declared",label:"Other explicitly declared population"}],draft.cohort,null)
       +select("Extract scope","scope_kind",[{value:"full",label:"Declared complete history"},{value:"reporting",label:"Declared reporting-period extract"},{value:"changed-since-prior-submission",label:"Declared changed-since-prior-submission extract"}],draft.scope.kind,null)
-      +field("Exact originating agency code","scope_agency",draft.scope.agency,{required:true})
+      +field("Exact agency code (blank for the declared multi-agency population)","scope_agency",draft.scope.agency)
       +field("Declared extraction from date","scope_from",draft.scope.from,{type:"date"})
       +field("Declared extraction to date","scope_to",draft.scope.to,{type:"date"})+"</div>"
       +field("Source scope / published cohort / previous submission / authority","scope_note",draft.scope.note,{type:"textarea",required:true,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Continue the original programme with labelled authored NDTMS data and owned receiving."""
 from __future__ import annotations
-import argparse, io, json, os, signal, sqlite3, sys, threading
+import argparse, io, json, os, signal, sqlite3, sys, threading, zipfile
 from pathlib import Path
 APPLICATION=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(APPLICATION))
@@ -11,6 +11,7 @@ from nelc.ndtms import profile_document, PROFILE_ID, PROFILE_SHA256, KEYS, SCOPE
 from nelc.portable import application_files,backup
 from receive_workspace import receive_archive
 from ndtms_cli import retained_request
+from native.receiving import Programme as OriginalProgramme
 
 ACTOR={"id":"ndtms-authored-receiving","name":"Authored NDTMS receiving operator"}
 def fixture():
@@ -34,9 +35,9 @@ def fixture():
     ]
     return csv_bytes(headers,records),headers
 
-class Course:
+class Course(OriginalProgramme):
     def __init__(self,args,stop):
-        self.args=args;self.stop=stop;self.root=Path(args.work).absolute()
+        self.args=args;self.stop=stop;self.children=[];self.child_logs=[];self.root=Path(args.work).absolute()
         self.root.mkdir(parents=True,exist_ok=True)
         require(self.root.is_dir() and not self.root.is_symlink(),"NATIVE_ROOT","Use the same ordinary programme work directory.")
         lock=self.root/"ndtms-owner.sqlite";require(not lock.is_symlink(),"NATIVE_ROOT","The native owner file is not ordinary.")
@@ -68,7 +69,7 @@ class Course:
         except BaseException:
             self.owner.close();raise
     def close(self):
-        self.owner.close()
+        super().close()
     def save(self):
         atomic_bytes(self.path,(canonical(self.state)+"\n").encode("utf-8"))
     def open(self,name):
@@ -201,7 +202,7 @@ class Course:
                   "currentTarget":self.target.metadata(),"currentRecipient":cold.metadata(),
                   "receivedOriginalArchive":received,
                   "replayMeaning":"Original completed course retained; later native source, target and recipient operations are preserved, not rerun or represented as the original target state."}
-        print(json.dumps(observed,ensure_ascii=False,indent=2));return observed
+        return observed
 
     def run(self):
         completed=self.completed()
@@ -326,16 +327,220 @@ class Course:
                 "restoredComparison":restored,"artifacts":artifacts,"backup":archive,"received":received_workspace,
                 "sourceVerification":source_check,"targetVerification":target_check,
                 "renderedStatus":"PENDING: original operator/browser owner must open/use/look at exact application, all reports and attachments at desktop and narrow widths."}
-        self.state["result"]=result;self.save();print(json.dumps(result,ensure_ascii=False,indent=2));return result
+        self.state["result"]=result;self.save();return result
+
+    def browser_inputs(self):
+        """Freeze original executable selections and complete outgoing input bytes."""
+        root=self.root/"browser-inputs";root.mkdir(exist_ok=True)
+        require(root.is_dir() and not root.is_symlink(),"NATIVE_BROWSER_INPUT","Use the original ordinary input directory.")
+        def identity(path):
+            path=Path(path)
+            require(path.is_absolute() and path.is_file() and not path.is_symlink(),
+                    "NATIVE_BROWSER_INPUT","Select a complete ordinary absolute input file.",str(path))
+            sha,size=file_hash(path,self.stop);return {"path":str(path),"sha256":sha,"bytes":size}
+        def publish(path,source,expected):
+            if path.exists() or path.is_symlink():
+                actual=identity(path)
+                require(all(actual[k]==expected[k] for k in ("sha256","bytes")),
+                        "NATIVE_BROWSER_INPUT","Preserve the differing retained original input.",str(path));return
+            require(source is not None,"NATIVE_BROWSER_INPUT","The original and retained input are both absent.",str(path))
+            fd,temporary=tempfile.mkstemp(prefix=".ndtms-input-",dir=root)
+            try:
+                with Path(source).open("rb") as inp,os.fdopen(fd,"wb") as out:
+                    while True:
+                        check_stop(self.stop);chunk=inp.read(1024*1024)
+                        if not chunk:break
+                        out.write(chunk)
+                    out.flush();os.fsync(out.fileno())
+                require(file_hash(temporary,self.stop)==(expected["sha256"],expected["bytes"]),
+                        "NATIVE_BROWSER_INPUT","The selected input changed while being retained.")
+                try:os.link(temporary,path)
+                except FileExistsError:
+                    actual=identity(path);require(all(actual[k]==expected[k] for k in ("sha256","bytes")),
+                        "NATIVE_BROWSER_INPUT","A differing input appeared during publication.")
+                directory=os.open(root,os.O_RDONLY)
+                try:os.fsync(directory)
+                finally:os.close(directory)
+            finally:
+                try:os.unlink(temporary)
+                except FileNotFoundError:pass
+        runtime={}
+        for name in ("node","playwright","chromium"):
+            chosen=Path(getattr(self.args,name))
+            require(chosen.is_absolute(),"NATIVE_RUNTIME","Use an absolute existing runtime path.",name)
+            actual=identity(chosen.resolve(strict=True));runtime[name]={"selectedPath":str(chosen),**actual}
+        require(not self.args.attachments or Path(self.args.attachments).is_absolute(),
+                "NATIVE_ATTACHMENTS","Use an absolute original attachment selection path.")
+        manifest_path=str(Path(self.args.attachments).absolute()) if self.args.attachments else None
+        archive_path=str(Path(self.args.application_archive).absolute()) if self.args.application_archive else None
+        require(not self.args.application_archive or Path(self.args.application_archive).is_absolute(),
+                "NATIVE_APPLICATION_ARCHIVE","Select the absolute exact outgoing application ZIP.")
+        saved=self.state.get("browserInputs")
+        if saved is None:
+            manifest=None;attachments=[]
+            if manifest_path is not None:
+                manifest=identity(manifest_path)
+                require(manifest["bytes"]<=1024*1024,"NATIVE_ATTACHMENTS","The attachment selection exceeds 1 MiB.")
+                manifest_raw=Path(manifest_path).read_bytes()
+                require((len(manifest_raw),hashlib.sha256(manifest_raw).hexdigest())==(manifest["bytes"],manifest["sha256"]),
+                        "NATIVE_ATTACHMENTS","The original attachment selection changed while being read.")
+                rows=json.loads(manifest_raw.decode("utf-8"))
+                require(isinstance(rows,list) and len(rows)<=64,"NATIVE_ATTACHMENTS","Select at most 64 complete attachment identities.")
+                seen=set()
+                for index,row in enumerate(rows):
+                    require(isinstance(row,dict) and isinstance(row.get("path"),str),"NATIVE_ATTACHMENTS","Use complete path/bytes/sha256 rows.")
+                    actual=identity(row["path"])
+                    require(actual["path"] not in seen and all(actual[k]==row.get(k) for k in ("bytes","sha256")),
+                            "NATIVE_ATTACHMENTS","Select each complete exact outgoing file once.",row["path"]);seen.add(actual["path"])
+                    target=root/("attachment-"+str(index+1).zfill(2)+"-"+Path(actual["path"]).name)
+                    attachments.append({**actual,"originalPath":actual["path"],"path":str(target)})
+                manifest={**manifest,"retainedPath":str(root/"Attachment_Selection.json")}
+            saved={"schema":"nelc.ndtms-browser-inputs/v1","runtime":runtime,
+                   "manifestPath":manifest_path,"manifest":manifest,"applicationArchivePath":archive_path,"attachments":attachments}
+            self.state["browserInputs"]=saved;self.save()
+        require(saved["runtime"]==runtime and saved["manifestPath"]==manifest_path
+                and saved.get("applicationArchivePath")==archive_path,
+                "NATIVE_BROWSER_SELECTION","Continue the original runtime and outgoing attachment selection.")
+        selected=([{"originalPath":saved["manifest"]["path"],"path":saved["manifest"]["retainedPath"],
+                    "sha256":saved["manifest"]["sha256"],"bytes":saved["manifest"]["bytes"]}] if saved["manifest"] else [])+saved["attachments"]
+        for row in selected:
+            original=Path(row["originalPath"])
+            if original.exists() or original.is_symlink():
+                actual=identity(original)
+                require(all(actual[k]==row[k] for k in ("sha256","bytes")),
+                        "NATIVE_BROWSER_INPUT","The original selected input now differs.",str(original))
+                source=original
+            else:source=None
+            publish(Path(row["path"]),source,row)
+        if archive_path is not None:
+            matches=[row for row in saved["attachments"] if row["originalPath"]==archive_path]
+            require(len(matches)==1,"NATIVE_APPLICATION_ARCHIVE","Include the exact application ZIP in the frozen outgoing attachment selection.")
+            self.check_application_archive(matches[0])
+        return saved
+
+
+    def check_application_archive(self,selection):
+        """Bind the actually running application to every member of its outgoing ZIP."""
+        manifest_raw=(APPLICATION/"APPLICATION.json").read_bytes()
+        require(hashlib.sha256(manifest_raw).hexdigest()==self.state["selection"]["applicationSha256"],
+                "NATIVE_APPLICATION_ARCHIVE","The executing source manifest changed.")
+        manifest=json.loads(manifest_raw)
+        expected={row["path"]:row for row in manifest["files"]}
+        require(len(expected)==len(manifest["files"]) and "APPLICATION.json" not in expected,
+                "NATIVE_APPLICATION_ARCHIVE","The complete selected application manifest repeats a member.")
+        expected["APPLICATION.json"]={"sha256":hashlib.sha256(manifest_raw).hexdigest(),"bytes":len(manifest_raw)}
+        path=Path(selection["path"])
+        require(file_hash(path,self.stop)==(selection["sha256"],selection["bytes"]),
+                "NATIVE_APPLICATION_ARCHIVE","The complete retained outgoing ZIP differs.")
+        with zipfile.ZipFile(path) as archive:
+            members=archive.infolist()
+            require(len(members)==len(expected) and len({row.filename for row in members})==len(members)
+                    and {row.filename for row in members}==set(expected),
+                    "NATIVE_APPLICATION_ARCHIVE","The outgoing ZIP must contain APPLICATION.json and only its exact complete file inventory at the root.")
+            for member in members:
+                check_stop(self.stop)
+                require(not member.is_dir() and not member.flag_bits&1
+                        and ((member.external_attr>>16)&0o170000) in (0,0o100000)
+                        and member.file_size==expected[member.filename]["bytes"],
+                        "NATIVE_APPLICATION_ARCHIVE","An outgoing member differs from its regular complete source selection.",member.filename)
+                h=hashlib.sha256();size=0
+                with archive.open(member) as inp:
+                    while True:
+                        check_stop(self.stop);chunk=inp.read(1024*1024)
+                        if not chunk:break
+                        size+=len(chunk);require(size<=member.file_size,"NATIVE_APPLICATION_ARCHIVE","An outgoing member exceeds its declared size.")
+                        h.update(chunk)
+                require((h.hexdigest(),size)==(expected[member.filename]["sha256"],expected[member.filename]["bytes"]),
+                        "NATIVE_APPLICATION_ARCHIVE","An outgoing application member differs from the exact executing source.",member.filename)
+        require(file_hash(path,self.stop)==(selection["sha256"],selection["bytes"]),
+                "NATIVE_APPLICATION_ARCHIVE","The selected outgoing ZIP changed while being read.")
+
+    def browser_phase(self,phase,application,workspace,core,source=None):
+        inputs=self.browser_inputs();label="ndtms-browser-"+phase
+        output=self.output/label;output.mkdir(exist_ok=True)
+        require(output.is_dir() and not output.is_symlink(),"NATIVE_BROWSER_OUTPUT","Use the original browser output directory.")
+        process,ready=self.operator(application,workspace,"ndtms-operator-"+phase)
+        try:
+            require(ready["workspaceId"]==core["sourceWorkspaceId"],"NATIVE_BROWSER_WORKSPACE","The actual listener opened another workspace.")
+            config={"schema":"nelc.ndtms-browser-receiving/v1","phase":phase,"operationId":self.args.operation_id,
+                    "workspaceId":ready["workspaceId"],"baseUrl":ready["baseUrl"],"sessionUrl":ready["url"],
+                    "output":str(output),"playwright":inputs["runtime"]["playwright"]["path"],
+                    "chromium":inputs["runtime"]["chromium"]["path"],
+                    "receiveName":"original-ndtms-"+digest(self.args.operation_id)[:16],
+                    "nativeResult":core,"attachments":[{k:row[k] for k in ("path","bytes","sha256")} for row in inputs["attachments"]]}
+            if source is not None:config["sourceBrowserResult"]=source["course"]
+            result=self.command([inputs["runtime"]["node"]["path"],str(application/"native/browser.mjs")],label,
+                                stdin=(canonical(config)+"\n").encode("utf-8"))
+            expected="nelc.ndtms-browser-course/v1" if phase=="source" else "nelc.ndtms-browser-independent/v1"
+            require(result.get("schema")=="nelc.ndtms-browser-result/v1" and result.get("status")=="COMPLETE"
+                    and result.get("phase")==phase and result.get("course",{}).get("schema")==expected
+                    and result["course"].get("state")=="COMPLETE" and result["course"].get("workspaceId")==ready["workspaceId"],
+                    "NATIVE_BROWSER_RESULT","The original browser phase did not complete its exact workspace.")
+            previous=self.state.setdefault("browser",{}).get(phase)
+            require(previous is None or previous==result,"NATIVE_BROWSER_RESULT","Preserve the original complete browser result.")
+            self.state["browser"][phase]=result;self.save()
+            return result
+        finally:self.close_child(process)
+
+    def operate_browser(self):
+        # Keep the original frozen core result in the browser selection. Reopening
+        # observations contain current descendant heads and must not replace it.
+        core=self.state["result"];self.browser_inputs()
+        source=self.browser_phase("source",APPLICATION,self.sender.root,core)
+        portable=source["course"]["portable"];receipt=portable["receiving"]
+        require(receipt.get("schema")=="nelc.receiving-receipt/v1"
+                and receipt["archiveSha256"]==portable["backup"]["sha256"]
+                and receipt["originalWorkspace"]["id"]==core["sourceWorkspaceId"],
+                "NATIVE_BROWSER_RECEIVING","The actual browser returned another archive or workspace.")
+        archive=Path(portable["backupPath"])
+        require(archive.is_file() and not archive.is_symlink()
+                and file_hash(archive,self.stop)==(portable["backup"]["sha256"],portable["backup"]["bytes"]),
+                "NATIVE_BROWSER_BACKUP","Retain the full original browser backup.")
+        destination=Path(receipt["destination"])
+        require(destination.is_absolute() and destination.is_dir() and not destination.is_symlink(),
+                "NATIVE_BROWSER_RECEIVING","Use the actual original independent receiving destination.")
+        received=receive_archive(archive,destination,receipt["archiveSha256"],signal=self.stop)
+        application=destination/"application";workspace=destination/"workspace"
+        require(application_files(application,self.stop)[0]==core["selection"]["applicationSha256"],
+                "NATIVE_BROWSER_APPLICATION","The independent application differs from the full selected source.")
+        independent=self.browser_phase("received",application,workspace,core,source)
+        current=Workspace(workspace)
+        verification=current.verify(True,self.stop)
+        replay=receive_archive(archive,destination,receipt["archiveSha256"],signal=self.stop)
+        require(replay["alreadyReceived"] and replay["currentWorkspace"]["revision"]>=receipt["originalWorkspace"]["revision"],
+                "NATIVE_BROWSER_REPLAY","The original receiving replay did not preserve recipient history.")
+        require(application_files(APPLICATION,self.stop)[0]==core["selection"]["applicationSha256"],
+                "NATIVE_BROWSER_APPLICATION","The original application changed during receiving.")
+        self.browser_inputs()
+        result={"schema":"nelc.ndtms-complete-receiving/v1","state":"RECEIVING_COMPLETE",
+                "operationId":self.args.operation_id,"native":core,"browserInputs":self.state["browserInputs"],
+                "sourceBrowser":source,"receivedBrowser":independent,"receivingReplay":replay,
+                "receivedVerification":verification,"currentSource":self.sender.metadata(),"currentRecipient":current.metadata(),
+                "renderedStatus":"BROWSER_COURSE_COMPLETE; producer must personally open and inspect the actual retained images and exact selected outgoing files before declaring their visible presentation ready."}
+        self.state["browserResult"]=result;self.save();return result
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--work",required=True);parser.add_argument("--operation-id",required=True)
-    args=parser.parse_args();stop=threading.Event()
+    parser.add_argument("--node");parser.add_argument("--playwright");parser.add_argument("--chromium")
+    parser.add_argument("--application-archive",help="The exact selected outgoing ZIP, also present in --attachments; its complete members must match this executing application.")
+    parser.add_argument("--attachments",help="Absolute JSON array of exact outgoing attachment {path,bytes,sha256} identities.")
+    args=parser.parse_args()
+    selected=[bool(args.node),bool(args.playwright),bool(args.chromium)]
+    require(not any(selected) or all(selected),"NATIVE_RUNTIME","Provide --node, --playwright and --chromium together.")
+    require(not args.attachments or all(selected),"NATIVE_ATTACHMENTS","Outgoing attachment inspection requires the complete browser runtime selection.")
+    require(not args.application_archive or (args.attachments and all(selected)),
+            "NATIVE_APPLICATION_ARCHIVE","The exact outgoing application ZIP requires its attachment selection and original browser runtime.")
+    stop=threading.Event()
     for sig in (signal.SIGTERM,signal.SIGINT):signal.signal(sig,lambda *unused:stop.set())
     course=None
-    try:course=Course(args,stop);course.run()
+    try:
+        course=Course(args,stop)
+        if all(selected):course.browser_inputs()
+        result=course.run()
+        if all(selected):result=course.operate_browser()
     finally:
         if course:course.close()
+    print(json.dumps(result,ensure_ascii=False,indent=2))
 if __name__=="__main__":
     try:main()
     except Problem as error:

@@ -33,6 +33,8 @@ def main(argv=None):
     packet=json.loads(overlay_raw)
     need(packet.get("schema")=="nelc.ndtms-application-overlay/v1","Choose the complete source overlay.")
     original_manifest=read(source,"APPLICATION.json")
+    need(digest(original_manifest)==packet.get("base",{}).get("applicationSha256"),
+         "Select the exact original application edition declared by this overlay.")
     original=json.loads(original_manifest)
     need(original.get("schema")=="nelc.application-source/v1","Choose the actual complete original application.")
     bodies={}
