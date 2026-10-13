@@ -45,6 +45,81 @@ def _item_metrics(item):
     return _metric_names(item.get("outputs", {}))
 
 
+def _pollutants(value):
+    """Validate an explicit nonempty set of original physical output roles."""
+    if (not isinstance(value, list) or not value
+            or any(not isinstance(name, str) or name not in METRICS for name in value)
+            or len(set(value)) != len(value)):
+        raise DecisionError("pollutants must select distinct nitrogen_export, phosphorus_export or sediment_export roles")
+    return tuple(name for name in METRICS if name in value)
+
+
+def comparison_metrics(comparison, base, alternatives):
+    """Read the original comparison's completed common output scope."""
+    common = set(_metric_names(base.get("artifacts", {})))
+    declared = comparison.get("common_artifacts")
+    if declared is not None:
+        common &= set(_pollutants(declared))
+    scopes = comparison.get("model_scopes", {})
+    for run in [base] + [item["run"] for item in alternatives]:
+        common &= set(_metric_names(run.get("artifacts", {})))
+        scope = scopes.get(run["id"])
+        if isinstance(scope, dict) and "expected_artifacts" in scope:
+            common &= set(scope["expected_artifacts"])
+    for item in alternatives:
+        common &= set(_metric_names(item["original"].get("artifacts", {})))
+    return tuple(name for name in METRICS if name in common)
+
+
+def _workspace_metrics(selection, groups):
+    available = [comparison_metrics(original, base, alternatives)
+                 for original, base, _, alternatives, _ in groups]
+    common = set.intersection(*(set(names) for names in available)) if available else set()
+    chosen = _pollutants(selection["pollutants"]) if "pollutants" in selection else tuple(
+        name for name in METRICS if name in common)
+    if not chosen:
+        raise DecisionError("The original comparisons share no completed pollutant output; select a compatible cohort")
+    missing = [{"comparison_id": group[0]["id"],
+                "unavailable_pollutants": [name for name in chosen if name not in names]}
+               for group, names in zip(groups, available) if set(chosen) - set(names)]
+    if missing:
+        raise DecisionError("Selected pollutants require a retained native output in every comparison: " +
+                            json.dumps(missing, sort_keys=True))
+    return chosen, {
+        "selected": list(chosen), "requested": selection.get("pollutants"),
+        "available_by_comparison": {group[0]["id"]: list(names)
+                                    for group, names in zip(groups, available)},
+        "omitted": [name for name in METRICS if name not in chosen],
+        "method": "Original comparison common_artifacts, completed run scopes and retained artifact intersection; explicit selection may narrow this scope.",
+    }
+
+
+def _scoped_packet(packet, selection):
+    """Project an explicit pollutant selection without changing the source packet."""
+    if "pollutants" not in selection:
+        return packet
+    chosen = _pollutants(selection["pollutants"])
+    result = json.loads(_canonical(packet))
+    available = {}
+    for group in result.get("comparisons", []):
+        members = [group["baseline"]] + group.get("alternatives", [])
+        common = set.intersection(*(set(_item_metrics(item)) for item in members))
+        if set(chosen) - common:
+            raise DecisionError("The original physical packet lacks selected outputs in comparison " + group["id"])
+        available[group["id"]] = [name for name in METRICS if name in common]
+        for item in members:
+            item["outputs"] = {name: item["outputs"][name] for name in chosen}
+    prior = result.get("pollutant_selection")
+    result["pollutant_selection"] = {
+        "selected": list(chosen), "requested": list(chosen),
+        "available_by_comparison": available,
+        "omitted": [name for name in METRICS if name not in chosen],
+        "method": "Explicit subset of retained original physical outputs; source packet and physical-source provenance preserved.",
+        "source_selection": prior,
+    }
+    return result
+
+
 def _canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True,
                       separators=(",", ":"), allow_nan=False).encode("utf-8")
@@ -272,10 +347,10 @@ def _raster_header(source, artifact, metric):
     return (source.count, source.width, source.height, source.crs, source.transform), area, conversion
 
 
-def _available_alternatives(reader, comparison, base, alternatives, *, summary_only):
+def _available_alternatives(reader, comparison, base, alternatives, *, summary_only, metrics=None):
     """Resolve candidate files before forming the common support of available runs."""
     available, unavailable = [], []
-    metrics = _metric_names(base["artifacts"])
+    metrics = comparison_metrics(comparison, base, alternatives) if metrics is None else tuple(metrics)
     if not metrics:
         raise DecisionError("The baseline has no completed supported pollutant exports")
     if not summary_only:
@@ -307,7 +382,7 @@ def _available_alternatives(reader, comparison, base, alternatives, *, summary_o
     return available, unavailable
 
 
-def _raster_group(reader, comparison, base, alternatives):
+def _raster_group(reader, comparison, base, alternatives, *, metrics=None):
     try:
         import numpy as np
         import rasterio
@@ -316,7 +391,8 @@ def _raster_group(reader, comparison, base, alternatives):
         raise DecisionError("Use the existing Rasterio/NumPy GIS runtime for same-cell analysis, or select --summary-only for the original recorded summaries") from error
     runs = [base] + [item["run"] for item in alternatives]
     baseline_outputs, all_outputs = {}, {run["id"]: {} for run in runs[1:]}
-    for metric in _metric_names(base["artifacts"]):
+    selected = comparison_metrics(comparison, base, alternatives) if metrics is None else tuple(metrics)
+    for metric in selected:
         originals = [reader.raster(run, metric) for run in runs]
         with ExitStack() as stack:
             datasets = [stack.enter_context(rasterio.open(path)) for path, _ in originals]
@@ -387,8 +463,8 @@ def _raster_group(reader, comparison, base, alternatives):
     return baseline_outputs, all_outputs
 
 
-def _summary_group(comparison, base, alternatives):
-    metrics = _metric_names(base["artifacts"])
+def _summary_group(comparison, base, alternatives, *, metrics=None):
+    metrics = comparison_metrics(comparison, base, alternatives) if metrics is None else tuple(metrics)
     baseline_outputs = {metric: _summary(base["artifacts"][metric], metric) for metric in metrics}
     outputs = {}
     for item in alternatives:
@@ -415,16 +491,17 @@ def workspace_packet(workspace, selection, *, summary_only=False):
     ids = [selection["comparison_id"]] + list(selection.get("sensitivity_comparison_ids", []))
     if len(set(ids)) != len(ids):
         raise DecisionError("Select each original comparison once")
+    resolved = [_original_group(reader, key) for key in ids]
+    metrics, pollutant_selection = _workspace_metrics(selection, resolved)
     groups, unavailable = [], []
-    for key in ids:
-        original, base, scenario, alternatives, missing = _original_group(reader, key)
+    for original, base, scenario, alternatives, missing in resolved:
         unavailable.extend(missing)
         alternatives, missing = _available_alternatives(reader, original, base, alternatives,
-                                                        summary_only=summary_only)
+                                                        summary_only=summary_only, metrics=metrics)
         unavailable.extend(missing)
-        base_outputs, outputs = (_summary_group(original, base, alternatives) if summary_only or not alternatives
-                                 else _raster_group(reader, original, base, alternatives))
-        groups.append({"id": key,
+        base_outputs, outputs = (_summary_group(original, base, alternatives, metrics=metrics) if summary_only or not alternatives
+                                 else _raster_group(reader, original, base, alternatives, metrics=metrics))
+        groups.append({"id": original["id"],
             "baseline": {"run_id": base["id"], "scenario_id": scenario["id"],
                 "scenario_key": _scenario_key(scenario), "title": scenario["title"],
                 "profile_id": base["selection"]["profile_id"], "grid_id": base["selection"]["grid_id"],
@@ -437,7 +514,8 @@ def workspace_packet(workspace, selection, *, summary_only=False):
                 "scenario_definition": item["scenario"]}
                 for item in alternatives]})
     packet = {"schema": INPUT_SCHEMA, "project": reader.project, "comparisons": groups,
-              "sources": list(reader.sources.values()), "unavailable_alternatives": unavailable}
+              "sources": list(reader.sources.values()), "unavailable_alternatives": unavailable,
+              "pollutant_selection": pollutant_selection}
     if selection.get("delivery_id"):
         packet["parcel_inventory"] = _parcel_input(reader, selection["delivery_id"], groups[0])
         packet["sources"] = list(reader.sources.values())
@@ -1038,6 +1116,7 @@ def _parcels(inventory, run_id, top_n, metrics=METRICS):
 
 def analyze_packet(packet, selection):
     """Turn source-bound physical results into economics and scenario choices."""
+    packet = _scoped_packet(packet, selection)
     groups = _validate_packet(packet, selection)
     primary = groups[0]
     metrics = _item_metrics(primary["baseline"])
@@ -1108,6 +1187,8 @@ def analyze_packet(packet, selection):
             "Native overlapping parcel records stay independent, with their original coverage and conservation context."
         ],
         "notes": list(selection.get("notes", []))}
+    if packet.get("pollutant_selection"):
+        report["scope"]["pollutant_selection"] = packet["pollutant_selection"]
     if packet.get("physical_source"):
         report["physical_source"] = packet["physical_source"]
         report["scope"]["reporting_unit"] = packet["physical_source"]["zone"]
@@ -1292,6 +1373,8 @@ def inspect_workspace(workspace):
             choices.append({"comparison_id": comparison["id"], "baseline_run_id": base["id"],
                             "grid_id": base["selection"]["grid_id"],
                             "profile_id": base["selection"]["profile_id"],
+                            "available_pollutants": list(comparison_metrics(comparison, base, resolved)),
+                            "original_common_artifacts": comparison.get("common_artifacts"),
                             "alternatives": alternatives, "unavailable_alternatives": unavailable})
         except (DecisionError, OSError, KeyError, TypeError, ValueError) as error:
             unavailable_comparisons.append({"comparison_id": key, "reason": str(error),
