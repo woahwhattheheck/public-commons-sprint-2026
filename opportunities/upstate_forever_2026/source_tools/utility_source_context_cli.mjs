@@ -4,7 +4,7 @@ import {readFileSync,mkdirSync,writeFileSync,renameSync} from "node:fs";
 import {createHash} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {resolve,dirname} from "node:path";
-import {buildUtilitySourceContext,utilityContextCsv,utilityContextHtml} from "./utility_source_context.mjs";
+import {buildUtilitySourceContext,utilityContextCsv,utilityContextHtml,utilityContextExplorer,PRESENTATION_VERSION} from "./utility_source_context.mjs";
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const argv=process.argv.slice(2);
@@ -29,10 +29,28 @@ for(const name of ["topology","context","coverage","network"]){
   inputs[name]=JSON.parse(bytes.toString("utf8"));identities[name]={...entry};
 }
 const result=buildUtilitySourceContext({...inputs,identities});
+// The optional offline navigation member must contain this exact topology edition.
+const explorerPath=resolve(root,"source/utility-source-context/20261013/source-explorer.html");
+let sourceExplorer=null,sourceExplorerStatus="unavailable";
+try {
+  const body=readFileSync(explorerPath,"utf8");
+  const match=body.match(/<script type="application\/json" id="source-bank">([\s\S]*?)<\/script>/);
+  const bank=match?JSON.parse(match[1]):null;
+  const matched=bank && ["topology","network"].every(name=>{
+    const entry=identities[name],original=bank.files?.[entry.path];
+    return typeof original==="string" && Buffer.byteLength(original,"utf8")===entry.bytes && sha(Buffer.from(original,"utf8"))===entry.sha256;
+  });
+  if(matched){sourceExplorer=body;sourceExplorerStatus="same_original_topology";}
+  else sourceExplorerStatus="different_original_topology";
+} catch(error) {
+  if(error.code!=="ENOENT")throw error;
+}
 const bodies={
   "utility-source-context.json":JSON.stringify(result,null,2)+"\n",
   "utility-state-context.csv":utilityContextCsv(result),
-  "utility-source-context.html":utilityContextHtml(result)
+  "utility-source-context.html":utilityContextHtml(result),
+  "explorer.html":utilityContextExplorer(result,{sourceExplorerHref:sourceExplorer?"./source-explorer.html":null}),
+  ...(sourceExplorer?{"source-explorer.html":sourceExplorer}:{})
 };
 const output=resolve(options["--out"]||resolve(root,"outputs/utility-source-context"));
 mkdirSync(output,{recursive:true});
@@ -43,5 +61,5 @@ for(const [name,body]of Object.entries(bodies)){
   const bytes=readFileSync(target);files[name]={path:target,bytes:bytes.length,sha256:sha(bytes)};
 }
 process.stdout.write(JSON.stringify({schema:"upstate.utility-source-context-receiving/v1",
-  operation_id:result.operation_id,input_manifest:inputPath,output_directory:output,
+  operation_id:result.operation_id,presentation_version:PRESENTATION_VERSION,source_explorer_status:sourceExplorerStatus,input_manifest:inputPath,output_directory:output,
   utilities:result.utilities.map(area=>({id:area.id,summary:area.summary})),files},null,2)+"\n");
