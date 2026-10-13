@@ -4,9 +4,9 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 6 source parts contain **81 complete UTF-8 files / 1,594,702 source bytes**:
+The 7 source parts contain **92 complete UTF-8 files / 1,724,379 source bytes**:
 
-- All **75** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
+- All **86** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files and 1 complete shared-source reference body are staged beside the complete component. The guarded installer composes only its explicit field-selection hook in the receiver's current Monitoring module; it preserves all other current Monitoring source.
 - The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 74 other installed paths in the maintained 0.3 source edition.
 
@@ -14,7 +14,7 @@ The separate bootstrap directory contains the complete unchanged original applic
 
 The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
-Complete field-study source pin: `e230bbfe1e2ad71110de96e01ff26ebb6232d52e`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
+Complete field-study source pin: `f676748904c780c344e7a07f44d5bfa2db5ae4e8`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
 
 ## Complete saved Monitoring and Chemistry study
 
@@ -230,3 +230,22 @@ If producing video, record the actual working application and use available natu
 Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+
+## Continue a retained field selection into an editable assignment
+
+The complete original ten-file Field assignments component (PR4349/4406/4451, source8b97244c) is included in this same guarded installation. Its separate registered **Field assignments** view previews the retained source/selection, saves an editable native Implementation plan, retains all explicit unassigned areas and selected rounds, and reopens the original report and portable project. Use `source/monitoring_field_assignment/RECEIVING.md` and the included original native/browser receiving commands. Original selection JSON, assignment engine and source semantics are unchanged; observation points are not silently converted into campaign stations.
+
+The existing registered application must include its original Implementation core (`model/implementation.py`, `model/implementation_schema.py`, `model/portable_implementation.py`); this installer checks and preserves those shared modules. Start the original operator normally on the independently installed application copy so its new descriptor loads. Preserve an already admitted operation and current scientific Workspace.
+
+The retained field-support source manifest now contains the producer's exact corrected descriptors: three formerly omitted nested manifests are included in every entry, raising each companion list from223 to226. The old collection371fca0c remains a historical edition and is not relabelled or rewritten. Import the corrected complete original scientific package through the original source importer to create its own native collection identity. Existing scientific selection/support/frontier/plan IDs and body hashes are unchanged. The earlier delivered eight-file source/manifest identity remains historical provenance; the corrected source-manifest SHA is cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88.
+
+Prepare the corrected independent package, then use the original receiving command:
+
+```sh
+
+python -B STAGE/source/monitoring-field-study/source/prepare_field_package_edition.py --package ORIGINAL_EXTRACTED_239_PACKAGE --manifest STAGE/source/monitoring-field-study/source-manifest.json --output INDEPENDENT_CORRECTED_PACKAGE
+python -B STAGE/source/monitoring-field-study/source/prepare_field_package_edition.py --package ORIGINAL_EXTRACTED_239_PACKAGE --manifest STAGE/source/monitoring-field-study/source-manifest.json --output INDEPENDENT_CORRECTED_PACKAGE
+python -B STAGE/source/monitoring-field-study/source/receive_field_support.py --application APP --workspace WORKSPACE --package INDEPENDENT_CORRECTED_PACKAGE --output FIELD_SOURCE_OPENING_JSON
+```
+
+The preparer validates the exact original and corrected manifests, all original bodies and companion bytes, copies the complete original package independently, and changes only its root manifest. It never rewrites the historical source collection or original extracted directory. Use the actual new source collection ID returned by the existing importer for subsequent field-selection/assignment operations. Its complete unchanged data still carries the original geographic, station and plan identities.
