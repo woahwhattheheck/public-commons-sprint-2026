@@ -19,6 +19,7 @@ from urllib.parse import quote
 import zipfile
 
 from model.common import atomic_json, digest, file_digest, read_json
+from source_report_editions import ScientificReportEditions
 
 
 def member_name(value):
@@ -151,6 +152,7 @@ def manifest_readiness(path, value):
 class SourceReports:
     def __init__(self, operator, fault, source_roots=()):
         self.operator, self.Fault = operator, fault
+        self.scientific = ScientificReportEditions(operator, fault)
         self._archive_lock = threading.RLock()
         self._source_roots = tuple(source_roots)
         self._managed_registered_ids = set()
@@ -468,6 +470,8 @@ class SourceReports:
                 "download": self.operator._ticket(workspace, destination, record, "Report and complete original source edition")}
 
     def read(self, workspace, operation, payload):
+        if operation.startswith("scientific-"):
+            return self.scientific.read(workspace, operation, payload)
         if operation == "catalog":
             return self.catalog(workspace, refresh=str(payload.get("refresh", "")).lower() in {"1", "true"})
         if operation == "detail":
@@ -475,3 +479,20 @@ class SourceReports:
         if operation == "archive":
             return self.archive(workspace, payload)
         raise self.Fault("SOURCE_REPORT_OPERATION", "Choose an original source report operation.", 404)
+
+    def invoke(self, task):
+        return self.scientific.invoke(task)
+
+    def state(self, workspace):
+        return self.scientific.state(workspace)
+
+    def verify_workspace(self, workspace):
+        return self.scientific.verify_workspace(workspace)
+
+    def decorate_task(self, task):
+        return self.scientific.decorate_task(task)
+
+    def scientific_member(self, workspace, key, name):
+        ticket, path = self.scientific.member(workspace, key, name)
+        policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
+        return ticket, policy

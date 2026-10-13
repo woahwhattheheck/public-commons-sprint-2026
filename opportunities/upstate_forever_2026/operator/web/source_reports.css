@@ -32,3 +32,14 @@
 .source-report-editions ul { margin: .5rem 0; padding-left: 1.25rem; }
 .source-report-editions li + li { margin-top: .4rem; }
 .source-report-editions .inline-actions { align-items: flex-start; flex-direction: column; }
+
+.scientific-report-editions{margin-top:2rem;padding-top:1.5rem;border-top:2px solid #555}
+.scientific-report-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.scientific-report-fields label{display:flex;flex-direction:column;gap:.4rem}
+.scientific-report-fields input{width:100%;box-sizing:border-box}
+.scientific-report-order{padding-left:1.5rem}
+.scientific-report-order li{padding:.8rem .4rem;border-bottom:1px solid #ccc}
+.scientific-report-order .inline-actions{margin-top:.5rem}
+.scientific-report-preview{padding:1rem;margin:1rem 0;border:1px solid #aaa;background:#f6f6f6}
+.scientific-report-editions [data-scientific-report-detail]{margin-top:1.5rem;padding-top:1rem;border-top:2px solid #555}
+@media(max-width:700px){.scientific-report-fields{grid-template-columns:1fr}.scientific-report-order .inline-actions{gap:.5rem}}
