@@ -42,7 +42,7 @@ The original domain archive is also accepted. Its unique model-domain.esri.json.
 
 Without --workspace, the command finishes the ordinary model-sources.json collection and selection first. That complete prepared source can enter A73C's existing regional receiver through --context-manifest /actual/output/model-sources.json. Running the same command with --workspace also creates the three dated observation editions and records their actual IDs in workspace-import.json.
 
-Repeat the same command after an interrupted step. Retained input/output bytes must agree; original acquisition is never repeated. An existing output directory is bound to its original source and domain selection. Choose a distinct output directory for another scope.
+Repeat the same command after an interrupted step. Retained input/output bytes must agree; original acquisition is never repeated. Each source entry retains its main file once: the original coverage CSV is the coverage entry's body and remains a companion of the other entries. If an earlier prepared manifest repeated that body as its own companion, the receiver preserves that exact prior manifest under preparation-history/ and migrates only this known duplicate-body shape. The migrated history travels with the report source and working archive. An existing output directory is bound to its original source and domain selection. Choose a distinct output directory for another scope.
 
 ## Geographic selection
 
@@ -113,6 +113,10 @@ The receiver verifies the original OBSERVED_CONTEXT document through the existin
 The returned delivery-selection.json preserves every unrelated field of the supplied selection, replaces only source_roles.OBSERVED_CONTEXT with the composed document, and records the binding obtained from the actual imported source. Reusing that generated selection reconnects the same discharge composition instead of appending the identical discharge sections again. An explicitly different original observed-water source or discharge footprint produces its own report edition.
 
 If no delivery selection is supplied, the returned JSON contains only the source role and its binding; it is a source-choice overlay for the existing operator's actual delivery selection. It does not invent model run, grid, study, receptor or publication IDs. With an existing full selection, use the returned full selection for the same native delivery operation.
+
+### Select the report in the existing operator
+
+In the existing complete map delivery form, choose the imported document in **Observed science context**. Its source entry carries the maintained metadata.report_schema tag used by that picker. The label names either the selected original daily-discharge report or the composed original observed-water context and discharge edition. Saving the delivery retains the same source collection/source IDs and the existing collector verifies its binding. The returned delivery-selection.json is also available to the native receiving command.
 
 ### Delivery and restore continuity
 
