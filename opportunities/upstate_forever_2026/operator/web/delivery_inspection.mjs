@@ -86,7 +86,7 @@ export function attachDeliveryInspection(host){
   const identity=expectedWorkspace+':'+record.id;
   const files=deliveryFileRows(packet.files),saved=remembered.get(identity)||{query:'',group:'',page:0,pageSize:50};
   active={record,packet,error,workspace:expectedWorkspace,identity,files,byPath:new Map(files.map(row=>[row.key,row])),display:{...saved},previewHistory:[],previewPath:null};
-  return {record,html:render()};
+  return {record,files,html:render()};
  }
  async function load(id,expectedWorkspace=workspace()){
   if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an original retained delivery.');
