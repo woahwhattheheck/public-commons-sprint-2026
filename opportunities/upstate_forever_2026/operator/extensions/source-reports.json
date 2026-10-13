@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
@@ -97,6 +97,32 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/scientific-briefing-preview",
+        "operation": "scientific-briefing-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/scientific-briefing",
+        "operation": "scientific-briefing",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "file_routes": [
@@ -120,11 +146,22 @@
           "route.edition_id",
           "route.member"
         ]
+      },
+      {
+        "path": "/api/file/scientific-briefings/{workspace_key}/{briefing_id}/{member...}",
+        "response": "ticket_policy_pair",
+        "handler": "briefing_member",
+        "args": [
+          "route.workspace_key",
+          "route.briefing_id",
+          "route.member"
+        ]
       }
     ],
     "actions": [
       "source-reports.render",
-      "source-reports.export"
+      "source-reports.export",
+      "source-reports.briefing"
     ],
     "invoke": {
       "handler": "invoke",

@@ -21,6 +21,7 @@ export function attachScientificReportEditions(host) {
   let panel=null,workspace=null,generation=0,revision=0,detailGeneration=0,active=false;
   let sources=[],editions=[],selected=[],title='',contact={name:'Upper Savannah project team',organization:'Internal scientific review',email:''};
   let preview=null,opened=null,busy=false,error='',pending=null;
+  let briefingPreview=null,briefingOpened=null;
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   const request=(path,values={})=>host.api(host.endpoint(path,values));
   const payload=()=>({sources:selected.map(choice),...(title.trim()?{title:title.trim()}:{}),contact:{...contact}});
@@ -122,6 +123,7 @@ export function attachScientificReportEditions(host) {
     const result=await request('/api/source-reports/scientific-edition',{id});
     if(!valid(ws,turn)||ticket!==detailGeneration)return;
     if(result.workspace_key!==ws||result.edition?.id!==id)throw Error('The saved report differs from the chosen edition.');
+    if(opened?.edition.id!==id){briefingPreview=null;briefingOpened=null;}
     opened=result;error='';render();
     panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});
   }
@@ -135,12 +137,44 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. The Workspace backup also keeps the original editable studies and source editions.</p>'+
+      briefingHTML()+
       (opened.viewer_url?'<div class="source-report-frame-shell"><iframe title="'+esc(row.title)+
         '" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'')+
       '<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
   }
+
+  function briefingHTML(){
+    const row=opened.edition;
+    return '<section class="scientific-report-preview"><h4>Discuss this saved scientific report</h4>'+
+      '<p>Present the complete original tables and figures, record questions and actions against their report pages, and receive selected follow-up in Implementation &amp; fieldwork.</p>'+
+      '<div class="inline-actions"><button type="button" data-scientific-report-action="briefing-preview"'+(busy?' disabled':'')+'>Preview discussion package</button>'+
+      '<button type="button" data-scientific-report-action="briefing-prepare"'+(!briefingPreview||busy?' disabled':'')+'>Prepare briefing and complete ZIP</button></div>'+
+      (briefingPreview?'<p>'+briefingPreview.page_count+' briefing pages · '+briefingPreview.source_count+' original studies · '+briefingPreview.figure_count+' figures. Original report files and source data travel in the same package.</p>':'')+
+      (opened.briefings?.length?'<ul>'+opened.briefings.map(item=>'<li>'+item.page_count+' pages · <button type="button" data-scientific-report-action="briefing-open" data-id="'+esc(item.id)+'">Open saved briefing</button></li>').join('')+'</ul>':'')+
+      (briefingOpened?'<div class="inline-actions">'+(briefingOpened.archive?link(briefingOpened.archive.url,'Download complete discussion package'):'')+
+        link(briefingOpened.viewer_url,'Download briefing HTML')+'</div><p class="note">Extract the complete ZIP for the meeting. Export actual meeting notes from the briefing, then choose this saved briefing in Implementation &amp; fieldwork → Receive briefing follow-up.</p>'+
+        '<div class="source-report-frame-shell"><iframe title="'+esc(briefingOpened.briefing.title)+' — meeting briefing" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" src="'+esc(briefingOpened.viewer_url)+'"></iframe></div>':'')+'</section>';
+  }
+  async function previewBriefing(){
+    if(!opened)throw Error('Open the saved scientific report first.');
+    const ws=workspace,turn=generation,ticket=detailGeneration,id=opened.edition.id;
+    const result=await host.api(host.endpoint('/api/source-reports/scientific-briefing-preview'),{method:'POST',body:{id}});
+    if(!valid(ws,turn)||ticket!==detailGeneration||opened?.edition.id!==id)return;
+    if(result.workspace_key!==ws||result.source_edition_id!==id)throw Error('The briefing preview belongs to another saved report.');
+    briefingPreview=result;error='';render();
+  }
+  async function openBriefing(id){
+    if(!opened)throw Error('Open the original report for this briefing.');
+    const ws=workspace,turn=generation,ticket=detailGeneration,edition=opened.edition.id;
+    const result=await request('/api/source-reports/scientific-briefing',{id});
+    if(!valid(ws,turn)||ticket!==detailGeneration||opened?.edition.id!==edition)return;
+    if(result.workspace_key!==ws||result.briefing?.id!==id||result.briefing.source_edition_id!==edition)
+      throw Error('The saved briefing belongs to another scientific report.');
+    briefingOpened=result;error='';render();
+  }
+
   async function submit(action,body){
     if(busy)return;
     const ws=workspace,turn=generation;
@@ -174,6 +208,14 @@ export function attachScientificReportEditions(host) {
       else {const next=index+(action==='up'?-1:1);if(next<0||next>=selected.length)return;[selected[index],selected[next]]=[selected[next],selected[index]];}
       changed();render();return;
     }
+    if(action==='briefing-preview')return previewBriefing();
+    if(action==='briefing-open')return openBriefing(button.dataset.id);
+    if(action==='briefing-prepare'){
+      if(!opened||!briefingPreview||briefingPreview.source_edition_id!==opened.edition.id)
+        throw Error('Preview this exact saved report before preparing its discussion package.');
+      if(briefingPreview.existing)return openBriefing(briefingPreview.id);
+      return submit('source-reports.briefing',{id:opened.edition.id,preview_id:briefingPreview.id});
+    }
     if(action==='preview')return preparePreview();
     if(action==='render'){
       if(!preview)throw Error('Preview the current ordered selection first.');
@@ -181,7 +223,7 @@ export function attachScientificReportEditions(host) {
       return submit('source-reports.render',{...payload(),preview_id:preview.id});
     }
     if(action==='open')return open(button.dataset.id);
-    if(action==='close'){detailGeneration++;opened=null;render();return;}
+    if(action==='close'){detailGeneration++;opened=null;briefingPreview=null;briefingOpened=null;render();return;}
     if(action==='revise'&&opened){
       const identity=opened.edition.render_identity,selection=identity.selection;
       selected=(selection.observed_context_sources||[selection.source_roles.OBSERVED_CONTEXT]).map(choice);
@@ -218,7 +260,7 @@ export function attachScientificReportEditions(host) {
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
     contact={name:'Upper Savannah project team',organization:'Internal scientific review',email:''};
-    preview=null;opened=null;busy=false;pending=null;error='';active=false;
+    preview=null;opened=null;briefingPreview=null;briefingOpened=null;busy=false;pending=null;error='';active=false;
   }
   return {mount,detach,reset,refresh,openForSources};
 }

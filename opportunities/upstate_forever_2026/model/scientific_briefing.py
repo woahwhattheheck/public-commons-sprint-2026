@@ -1,6 +1,7 @@
 """Present an exact saved scientific report and retain its complete offline edition."""
 from __future__ import annotations
 import copy
+import base64
 import hashlib
 import json
 import os
@@ -9,7 +10,7 @@ import tempfile
 import zipfile
 from .common import (atomic_bytes, atomic_json, describe_file, digest, held,
                      identifier, read_json, relative_file, verify_file)
-from . import observed_context, client_briefing
+from . import client_briefing
 
 SCHEMA = "upstate.scientific-briefing-report/v1"
 RECORD = "upstate.scientific-briefing-edition/v1"
@@ -39,6 +40,7 @@ def _directory(workspace, kind, key):
 
 def original(workspace, edition_id):
     """Open the original saved report through its existing edition contract."""
+    from . import observed_context
     directory = _directory(workspace, "scientific-report-editions", edition_id)
     record = read_json(directory / "edition.json")
     identity = record.get("render_identity")
@@ -129,7 +131,8 @@ def _build(workspace, edition_id):
         raise ValueError("The saved report data differs from its original ordered source selection")
     identity = {"edition": EDITION, "source_edition_id": edition_id,
                 "project_id": workspace.project["id"], "report_data": originals["report_data"],
-                "renderer_sha256": _sha(Path(client_briefing.__file__).read_bytes())}
+                "renderer_sha256": _sha(Path(client_briefing.__file__).read_bytes()),
+                "adapter_sha256": _sha(Path(__file__).read_bytes())}
     key = digest(identity)
     source = {"edition_id": edition_id, "briefing_id": key, "project_id": workspace.project["id"],
               "report_data": originals["report_data"],
@@ -210,9 +213,13 @@ def create(workspace, edition_id, *, expected_id):
             saved, _ = inspect(workspace, key)
             return saved
         model_body = (_json(report) + "\n").encode("utf-8")
+        figure_images = {figure["path"]: "data:image/svg+xml;base64," + base64.b64encode(
+            verify_file(original_root, next(item for item in originals.values()
+                if item["path"] == figure["path"])).read_bytes()).decode("ascii")
+            for section in report["sections"] for figure in section.get("figures", [])}
         document, index = client_briefing.render(
             report, report_href=originals["report_html"]["path"],
-            model_href=FILES["model"], report_model_bytes=model_body)
+            model_href=FILES["model"], report_model_bytes=model_body, figure_images=figure_images)
         bodies = {"model": model_body, "html": document.encode("utf-8"),
                   "index": (_json(index) + "\n").encode("utf-8")}
         if set(FILES.values()) & {row["path"] for row in originals.values()}:
@@ -311,7 +318,15 @@ def export(workspace, key):
                                 or any(getattr(before, field) != getattr(after, field) for field in
                                        ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns"))):
                             raise ValueError("An original report member changed: " + name)
+                with temporary.open("rb") as completed:
+                    os.fsync(completed.fileno())
                 os.replace(temporary, archive)
+                if os.name != "nt":
+                    descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
                 atomic_json(receipt, {"members": inventory,
                                      "file": describe_file(directory, archive)}, immutable=True)
             finally:
