@@ -16,6 +16,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, held, identifier, read_json, verify_file)
 from .reuse import copy_verified
 from . import observed_context
+from . import observed_landcover_report
 
 KIND = "observed-landcover-selections"
 SCHEMA = "upstate.observed-landcover-selection/v1"
@@ -410,6 +411,9 @@ def report_sections(report):
                     ("Independent annual and paired class margins", "huc-classes.csv"),
                     ("Original support and watershed attributes", "huc-summary.csv"),
                     ("Full selected directional matrix", "selected-transitions.csv"),
+                    ("Complete union and watershed group values", "landcover-groups.csv"),
+                    ("Original group values and support", observed_landcover_report.DATA),
+                    ("Retained group figure specification", observed_landcover_report.SPEC),
                     ("Original source bindings", "original-inputs.json"),
                     ("Readable offline report", "report.html"),
                 )]},
@@ -417,24 +421,41 @@ def report_sections(report):
     ]
 
 
-def _html(report):
+def _html(report, figure_product=None):
     def escaped(value):
-        return html.escape(str(value), quote=True)
+        return html.escape("Not available" if value is None else str(value), quote=True)
     chunks = ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
               "<title>" + escaped(report["title"]) + "</title>",
-              "<style>body{font:15px system-ui;max-width:1200px;margin:32px auto;padding:0 24px;color:#202020;background:#fff}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #ccc;padding:6px;text-align:right}th:first-child,td:first-child{text-align:left}section{margin:28px 0}.scroll{overflow:auto}h1{font-size:28px}a{color:inherit}p{line-height:1.5}</style>",
-              "<h1>" + escaped(report["title"]) + "</h1>"]
+              "<style>body{font:16px system-ui;max-width:1200px;margin:32px auto;padding:0 24px;color:#202020;background:#fff}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #ccc;padding:8px;text-align:right}th:first-child,td:first-child{text-align:left}section{margin:28px 0}.scroll{overflow:auto}.scroll:focus{outline:2px solid #333;outline-offset:3px}h1{font-size:28px}a{color:inherit;overflow-wrap:anywhere}li a{display:inline-block;min-height:28px;padding:8px 0}p{line-height:1.5}figure{margin:24px 0}figure svg{display:block;width:100%;min-width:840px;height:auto}figcaption{line-height:1.5;margin:12px 0}caption{text-align:left;padding:8px 0}table th{font-weight:600}@media(max-width:700px){body{margin:16px auto;padding:0 12px}h1{font-size:24px}table{min-width:620px}}@media print{body{max-width:none;padding:0;margin:0;font-size:10pt}.scroll{overflow:visible}figure svg{min-width:0;width:100%;break-inside:avoid}thead{display:table-header-group}th,td{padding:4px;overflow-wrap:anywhere}table{min-width:0;font-size:8pt}h2,h3{break-after:avoid}}</style>",
+              "<h1>" + escaped(report["title"]) + "</h1>",
+              "<p>" + escaped(report["interpretation"]) + "</p>",
+              "<p>Figures are embedded in this file. Extract selected-huc-landcover.zip to use every linked original data file.</p>"]
+    def table(block):
+        return ('<div class="scroll" tabindex="0" role="region" aria-label="Original data table; scroll horizontally"><table>' +
+                ("<caption>" + escaped(block["caption"]) + "</caption>" if block.get("caption") else "") +
+                "<thead><tr>" + "".join('<th scope="col">' + escaped(x) + "</th>" for x in block["columns"]) +
+                "</tr></thead><tbody>" + "".join("<tr>" + "".join(
+                    ("<th scope=\"row\">" + escaped(x) + "</th>") if index == 0 else "<td>" + escaped(x) + "</td>"
+                    for index, x in enumerate(row)) + "</tr>" for row in block["rows"]) + "</tbody></table></div>")
+    if figure_product:
+        indexed = {row["id"]: row for row in figure_product["spec"]["figures"]}
+        chunks.append("<section><h2>Selected watershed group figures</h2>")
+        for choice in figure_product["figures"]:
+            figure = indexed[choice["id"]]
+            chunks.append("<figure><h3>" + escaped(figure["title"]) + "</h3>" +
+                '<div class="scroll" tabindex="0" role="region" aria-label="Original group figure; scroll horizontally">' +
+                '<div role="img" aria-label="' + escaped(figure["caption"]) + '">' +
+                "<svg" + figure_product["svg"][choice["id"]].split("<svg", 1)[1] + "</div></div>" +
+                "<figcaption>" + escaped(figure["caption"]) + "</figcaption></figure>")
+            chunks.extend(table(block) for block in figure.get("detail_tables", []))
+        chunks.append("</section>")
     for heading, blocks in report_sections(report):
         chunks.append("<section><h2>" + escaped(heading) + "</h2>")
         for block in blocks:
             if isinstance(block, str):
                 chunks.append("<p>" + escaped(block) + "</p>")
             elif block["kind"] == "table":
-                chunks.append('<div class="scroll"><table><thead><tr>' +
-                              "".join("<th>" + escaped(x) + "</th>" for x in block["columns"]) +
-                              "</tr></thead><tbody>" +
-                              "".join("<tr>" + "".join("<td>" + escaped(x) + "</td>" for x in row) +
-                                      "</tr>" for row in block["rows"]) + "</tbody></table></div>")
+                chunks.append(table(block))
             else:
                 chunks.append("<ul>" + "".join('<li><a href="' + escaped(x["path"]) + '">' +
                               escaped(x["title"]) + "</a></li>" for x in block["items"]) + "</ul>")
@@ -442,10 +463,11 @@ def _html(report):
     return ("\n".join(chunks) + "</html>\n").encode("utf-8")
 
 
-def _write_outputs(directory, report):
+def _write_outputs(directory, report, report_implementation):
     atomic_json(directory / "selection.json", report, immutable=True)
     atomic_json(directory / "original-inputs.json", report["binding"], immutable=True)
-    atomic_bytes(directory / "report.html", _html(report), immutable=True)
+    figure_product = observed_landcover_report.prepare(directory, report, report_implementation)
+    atomic_bytes(directory / "report.html", _html(report, figure_product), immutable=True)
     rows = report["watersheds"]
     atomic_bytes(directory / "huc-summary.csv", _csv(
         ["huc12", "name", "states", *SUPPORT, "paired_valid_area_ha", "changed_area_ha",
@@ -461,15 +483,19 @@ def _write_outputs(directory, report):
         [[row["huc12"], *[item[key] for key in transition_fields]] for row in rows for item in row["transitions"]]), immutable=True)
     atomic_bytes(directory / "selected-transitions.csv", _csv(transition_fields,
         [[item[key] for key in transition_fields] for item in report["summary"]["transitions"]]), immutable=True)
-    return {name: describe_file(directory, directory / name) for name in
+    files = {name: describe_file(directory, directory / name) for name in
             ("selection.json", "original-inputs.json", "report.html", "huc-summary.csv",
              "huc-classes.csv", "huc-transitions.csv", "selected-transitions.csv")}
+    files.update(figure_product["files"])
+    return files, figure_product
 
 
 def build(workspace, selection):
     inputs = load_inputs(workspace, selection)
     report = summarize(inputs, selection)
+    report_implementation = observed_landcover_report.implementation()
     identity = {"edition": EDITION, "producer_sha256": file_digest(__file__),
+                "report_implementation": report_implementation,
                 "project_id": workspace.project["id"], "title": report["title"],
                 "selection": report["selection"], "binding": report["binding"]}
     key = digest(identity)
@@ -477,7 +503,7 @@ def build(workspace, selection):
     with held(directory / ".build.lock", blocking=False):
         if (directory / "receipt.json").exists():
             return inspect(workspace, key)["edition"]
-        files = _write_outputs(directory, report)
+        files, figure_product = _write_outputs(directory, report, report_implementation)
         for index, original in enumerate(inputs["originals"]):
             for body in [original["entry"]["body"], *original["entry"].get("companions", [])]:
                 name = "originals/" + str(index) + "/" + _relative(body.get("view_path", body["filename"]))
@@ -492,6 +518,7 @@ def build(workspace, selection):
                              "area_method": "original_native_cell_centre"},
                   "inputs": [files[name] for name in sorted(files)],
                   "sections": report_sections(report),
+                  "figure_spec": figure_product["figure_spec"], "figures": figure_product["figures"],
                   "source_links": sorted(name for name in files if name.startswith("originals/"))}
         atomic_json(directory / "observed-report.json", recipe, immutable=True)
         recipe_file = describe_file(directory, directory / "observed-report.json")
