@@ -171,11 +171,12 @@ async function receiveZipArchive({archive:filename,directory,expectedSha256,...s
  const intent=Buffer.from(JSON.stringify({schema:SCHEMA,archiveSha256:digest,archiveBytes:bytes.length,limits:options})+'\n');
  if(!created&&!await exists(path.join(root,'intent.json'))){
   // Only an explicitly selected empty private directory, or exact original
-  // completed intent temporaries, can finish an interrupted first publication.
+  // exact intent prefixes left by a partial write, can finish first publication.
   for(const name of await fs.readdir(root)){
    need(/^\.zip-receive-[a-f0-9-]{36}\.part$/.test(name),'Existing destination has no original receiving intent');
    const st=await fs.lstat(path.join(root,name));need(st.isFile()&&!st.isSymbolicLink()&&st.nlink===1,'Invalid original intent temporary');
-   await exactFile(path.join(root,name),intent);
+   const residue=await readOriginal(path.join(root,name),intent.length);
+   need(intent.subarray(0,residue.length).equals(residue),'Retained partial intent differs from the selected original receiving operation');
   }
  }
  await publishFile(root,'intent.json',intent);

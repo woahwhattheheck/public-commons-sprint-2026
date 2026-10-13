@@ -24,13 +24,13 @@
     },
     {
       "path": "host/connected_zip_receive.cjs",
-      "bytes": 15338,
-      "sha256": "ab79864038e1c415d4baed8f6b63b599ddda016149832c8937a10ea6bcce2623"
+      "bytes": 15505,
+      "sha256": "b40c8c1687875822add97306ff3a3b6612036f517818fc6b77520c063e694234"
     },
     {
       "path": "host/CONNECTED_ZIP_ARCHIVE.md",
-      "bytes": 17641,
-      "sha256": "dd2d4fe7386a5ac76a83f81df0ad2840fcb6ec1b691be0bb2e7b48144adfea21"
+      "bytes": 17757,
+      "sha256": "7bf51fee9fc7e20d79960a5f8245353f8131954bef3b1ccc0d72a40fb478de25"
     },
     {
       "path": "host/fixtures/zip-archive/upstream-fixtures.json",
