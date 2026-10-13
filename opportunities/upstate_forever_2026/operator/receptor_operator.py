@@ -12,6 +12,8 @@ import posixpath
 from urllib.parse import urlsplit
 import zipfile
 
+from delivery_preview import HTML_LIMIT, embed_images, image_policy
+
 from model.common import (atomic_bytes, atomic_json, canonical, describe_file,
                           digest, held, identifier, read_json,
                           relative_file, verify_file)
@@ -22,6 +24,9 @@ POLLUTANTS = ("nitrogen_export", "phosphorus_export", "sediment_export")
 FOLDERS = {"network": "receptor-networks", "inventory": "receptor-inventories",
            "comparison": "receptor-experiments", "source-areas": "receptor-scenario-areas",
            "programme": "receptor-programmes", "report-source": "receptor-report-sources"}
+PREVIEW_POLICY = image_policy(
+    "sandbox allow-downloads; default-src 'none'; style-src 'unsafe-inline'; "
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'self'")
 
 
 def _folder(kind):
@@ -387,6 +392,26 @@ class _ReportLinks(HTMLParser):
         self.parts.append("<!" + decl + ">")
 
 
+def preview_file(operator, workspace_key, ticket_id):
+    """Serve only this desk's retained derived preview through normal tickets."""
+    operator.ws(workspace_key)
+    key = identifier(ticket_id)
+    with operator.lock:
+        retained = operator.downloads.get(key)
+        ticket = dict(retained) if retained else None
+    if not ticket or ticket.get("workspace") != workspace_key:
+        raise ValueError("Reopen the source-water report in its original Workspace")
+    path = Path(ticket["path"]).resolve()
+    parent = (operator.root / "previews" / "receptors").resolve()
+    if (path.parent != parent or path.suffix != ".html" or
+            ticket.get("filename") != "source-water-report.html"):
+        raise ValueError("Choose a retained Source-water printable preview")
+    identifier(path.stem)
+    # The registry checks Workspace identity; send_file uses open_download to
+    # verify the retained byte count and SHA before serving this exact ticket.
+    return {name: value for name, value in ticket.items() if name != "path"}, PREVIEW_POLICY
+
+
 def _decorate(operator, workspace_key, kind, original):
     workspace = operator.ws(workspace_key)
     result = deepcopy(original)
@@ -394,12 +419,25 @@ def _decorate(operator, workspace_key, kind, original):
     links = {}
     for path, item in members.items():
         links[path] = operator._ticket(workspace_key, workspace.root / path, item, path)
+    def read_member(name, limit):
+        item = members[name]
+        if item["bytes"] > limit:
+            raise ValueError("The printable preview exceeds its capacity; open the complete offline report")
+        stream, _ = operator.open_download(links[name]["id"])
+        with stream:
+            body = stream.read(limit + 1)
+        if len(body) != item["bytes"] or hashlib.sha256(body).hexdigest() != item["sha256"]:
+            raise ValueError("The original report member changed while opening its bytes")
+        return body
+
     previews, view_links = {}, dict(links)
     for path, item in sorted(members.items(), key=lambda pair: (pair[0].startswith("receptor-experiments/"), pair[0])):
         if not path.endswith("/index.html"):
             continue
+        source = read_member(path, HTML_LIMIT).decode("utf-8")
+        source, _ = embed_images(source, path, members, read_member)
         parser = _ReportLinks(path, view_links)
-        parser.feed((workspace.root / path).read_text(encoding="utf-8"))
+        parser.feed(source)
         parser.close()
         content = "".join(parser.parts).encode("utf-8")
         key = digest({"workspace_key": workspace_key, "path": path, "html_sha256": hashlib.sha256(content).hexdigest()})
@@ -408,6 +446,7 @@ def _decorate(operator, workspace_key, kind, original):
         ticket = operator._ticket(workspace_key, preview,
             describe_file(preview.parent, preview, filename="source-water-report.html"),
             "Printable source-water report")
+        ticket["url"] = "/api/file/receptor-preview/" + workspace_key + "/" + ticket["id"]
         previews[path] = ticket
         view_links[path] = ticket
     folder = _folder(kind)

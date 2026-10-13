@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": 10,
+  "version": 11,
   "order": 65,
   "assets": [
     "receptors.mjs",
@@ -260,7 +260,19 @@
       "args": [
         "workspace"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/receptor-preview/{workspace_key}/{ticket_id}",
+        "handler": "preview_file",
+        "args": [
+          "operator",
+          "route.workspace_key",
+          "route.ticket_id"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   },
   "client": {
     "module": "/web/receptors.mjs",
