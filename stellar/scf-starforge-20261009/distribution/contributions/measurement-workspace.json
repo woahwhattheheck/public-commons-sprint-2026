@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "measurement-workspace",
-  "description": "Complete original Measurements scientific workspace, managed Applications, configured Merchant agents, resumable full original-file and edition transfer, Installation and independent whole-project receiving.",
+  "description": "Complete original Measurements scientific workspace: observation editions, sediment studies/comparisons, flow and Chiques sources, exact original artifacts, managed Applications, configured Merchant agents, complete file transfer and independent receiving.",
   "commands": {
     "measurement-workspace-native": "opportunities/upstate_forever_2026/measurement_workspace/engine/cli.mjs",
     "measurement-workspace-managed": "products/measurement-workspace/managed.mjs",
@@ -9,7 +9,10 @@
     "measurement-workspace-offline-review": "opportunities/upstate_forever_2026/measurement_workspace/engine/offline_review_cli.mjs",
     "measurement-workspace-returned-review": "opportunities/upstate_forever_2026/measurement_workspace/engine/returned_review_cli.mjs",
     "measurement-workspace-intake-receive": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake-receiving.mjs",
-    "measurement-workspace-source-receive": "opportunities/upstate_forever_2026/measurement_workspace/engine/reconciliation-receiving.mjs"
+    "measurement-workspace-source-receive": "opportunities/upstate_forever_2026/measurement_workspace/engine/reconciliation-receiving.mjs",
+    "measurement-workspace-flow-product": "opportunities/upstate_forever_2026/source_tools/flow_editions.mjs",
+    "measurement-workspace-flow-comparison-product": "opportunities/upstate_forever_2026/source_tools/flow_comparisons.mjs",
+    "measurement-workspace-load-comparison-product": "opportunities/upstate_forever_2026/source_tools/flow_load_comparisons.mjs"
   },
   "commandDescriptions": {
     "measurement-workspace-native": "Operate the original scientific source, mapping, flow, benchmark and complete native receiving commands (use help)",
@@ -18,7 +21,10 @@
     "measurement-workspace-offline-review": "Export original editable offline review, inspect returned changes and receive into an independent workspace",
     "measurement-workspace-returned-review": "Compare sent, returned and current full archives and apply explicitly reviewed changes into a new project",
     "measurement-workspace-intake-receive": "Continue the original public station source intake and independent native/browser receiving course",
-    "measurement-workspace-source-receive": "Continue the original full source-version reconciliation and independent editable receiving course"
+    "measurement-workspace-source-receive": "Continue the original full source-version reconciliation and independent editable receiving course",
+    "measurement-workspace-flow-product": "Rebuild a full original daily-flow file product from its complete retained input",
+    "measurement-workspace-flow-comparison-product": "Reopen both complete original flow studies and rebuild their independent comparison product",
+    "measurement-workspace-load-comparison-product": "Reopen both complete original load results and parents, preserving sources, contracts and complete comparison outputs"
   },
   "exports": {
     "./measurement-workspace/connection": "./source/products/measurement-workspace/connection.mjs",
@@ -31,7 +37,8 @@
     "./measurement-workspace/large-receiving": "./source/opportunities/upstate_forever_2026/measurement_workspace/engine/large_delivery.mjs",
     "./measurement-workspace/offline-review": "./source/opportunities/upstate_forever_2026/measurement_workspace/engine/offline_review.mjs",
     "./measurement-workspace/returned-review": "./source/opportunities/upstate_forever_2026/measurement_workspace/engine/returned_reviews.mjs",
-    "./measurement-workspace/transfers": "./source/products/measurement-workspace/transfers.mjs"
+    "./measurement-workspace/transfers": "./source/products/measurement-workspace/transfers.mjs",
+    "./measurement-workspace/scientific-files": "./source/products/measurement-workspace/scientific-files.mjs"
   },
   "applicationProviders": {
     "measurement-workspace": "products/measurement-workspace/application-provider.mjs"
@@ -169,6 +176,43 @@
     "opportunities/upstate_forever_2026/measurement_workspace/web/intake_comparison.mjs",
     "opportunities/upstate_forever_2026/operator/web/intake_comparison.mjs",
     "opportunities/upstate_forever_2026/operator/web/measured_intake.mjs",
-    "opportunities/upstate_forever_2026/measurement_workspace/engine/observation-edition-receiving.mjs"
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/observation-edition-receiving.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrient_cli.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrient_reports.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrient_workspace.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrients.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/flow_load_comparison.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/large_collections.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/sediment_comparison_reports.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/sediment_comparison_workspace.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/sediment_comparison.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/source_workbook_append.py",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/source_workbook_browser.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/source_workbook_course.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/source_workbook_returns.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/FLOW_LOAD_COMPARISONS.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/NATIVE_SEDIMENT_COMPARISON_RECEIVING.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/NATIVE_SEDIMENT_REFERENCE_RECEIVING.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/receive-sediment-comparison.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/receive-sediment-reference.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/run-chiques-nutrients.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/run-chiques-nutrients.py",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/run-sediment-comparison.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/reference/sediment_comparison_reference.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/SAVED_RESULT_SOURCE_RETURNS.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/SEDIMENT_COMPARISON_WORKSPACE.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/SEDIMENT_COMPARISON.md",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/chiques_nutrients.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/collection_transfer.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/collection_working.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/flow_load_comparison_ui.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/sediment_comparisons.mjs",
+    "products/measurement-workspace/scientific-files.mjs",
+    "products/measurement-workspace/SCIENTIFIC_OPERATIONS.md",
+    "opportunities/upstate_forever_2026/source_tools/flow_comparisons.mjs",
+    "opportunities/upstate_forever_2026/source_tools/flow_editions.mjs",
+    "opportunities/upstate_forever_2026/source_tools/flow_load_comparisons.mjs"
   ]
 }
