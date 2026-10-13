@@ -10,6 +10,17 @@ python -B source/run_chemistry_compound_receiving.py \
   --output /actual/chemistry-compound-course
 ```
 
+If this script is read directly from the closed source bank rather than installed under the complete application, use its explicit application option:
+
+```sh
+python -B /actual/source-bank/source/run_chemistry_compound_receiving.py \
+  --application /actual/complete-installed-application \
+  --workspace /actual/restored/workspace \
+  --output /actual/chemistry-compound-course
+```
+
+The application is resolved before native model imports. Its resolved path and the original inference, reporting, rendering and portable implementation hashes are retained with the request so a resume cannot silently adopt another installed engine.
+
 The output directory must be outside the Workspace. Run one owner through this course and coordinate its full-Workspace capture with other writers. Restart the exact same command after an interrupted process: each original native request selects the same immutable run, source, report and rendered edition; the receiving journal retains the original input identity. A completed native analysis is reopened rather than calculated again.
 
 ## Exact original selections

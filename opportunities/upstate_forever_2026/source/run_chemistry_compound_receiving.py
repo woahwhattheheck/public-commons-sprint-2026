@@ -10,7 +10,10 @@ import math
 from pathlib import Path
 import sys
 
-APP = Path(__file__).resolve().parents[1]
+_bootstrap = argparse.ArgumentParser(add_help=False)
+_bootstrap.add_argument("--application", type=Path)
+_bootstrap_args, _bootstrap_unused = _bootstrap.parse_known_args()
+APP = (_bootstrap_args.application or Path(__file__).resolve().parents[1]).resolve(strict=True)
 sys.path.insert(0, str(APP))
 import numpy as np
 
@@ -23,6 +26,14 @@ from model.reach_chemistry.model import Project
 from model.reach_chemistry.inference import Parameters, tangent_predictions, observation_key
 
 SCHEMA = "upstate.chemistry-compound-receiving/v1"
+IMPLEMENTATION_FILES = (
+    "model/chemistry.py", "model/chemistry_reports.py", "model/chemistry_report_source.py",
+    "model/reach_chemistry/inference.py", "model/reach_chemistry/model.py",
+    "model/reach_chemistry/solver.py", "model/reach_chemistry/service.py",
+    "model/reach_chemistry/io.py", "model/reach_chemistry/reporting.py",
+    "model/scientific_report_editions.py", "model/observed_report_render.py",
+    "model/scientific_figures.py", "model/portable.py",
+)
 CASE = "ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb"
 CALIBRATION = "6742a178dfe5c7dc69ea3c7b9cebfb1477bb3074db98f1c8990c5686569bc58d"
 ENSEMBLE = "2296638a0531acf18d172955d3da5e7845dc71ccaf76189b36b0217565c40a5a"
@@ -166,7 +177,8 @@ def run_course(args):
     request = {"schema": SCHEMA, "workspace": str(workspace.root), "project_id": workspace.project["id"],
                "case_id": case["id"], "original_run_ids": original_ids, "engine_version": ENGINE_VERSION,
                "source_records": {run["id"]: digest(run) for run in (original_cal, original_ensemble, original_monitor)},
-               "script_sha256": file_digest(Path(__file__))}
+               "script_sha256": file_digest(Path(__file__)), "application": str(APP),
+               "implementation": {name: file_digest(APP / name) for name in IMPLEMENTATION_FILES}}
     state_path = output / "receiving.json"
     state = read_json(state_path) if state_path.exists() else {"request": request, "steps": {}}
     require(state["request"] == request, "Resume this receiving directory with its original inputs and installed script")
@@ -447,6 +459,8 @@ def run_course(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", type=Path, default=APP,
+                        help="Complete installed native application; defaults to this script's application")
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--case-id", default=CASE)
