@@ -84,6 +84,8 @@ APPLICATION_FILES = (
     "science_catalog_delivery.py",
     "SCIENTIFIC_CATALOG.md",
     "install_intelligence_operator.py",
+    "open_profile_desk.py",
+    "install_profile_workbench.py",
 )
 APPLICATION_DIRECTORIES = (
     "assessment",
