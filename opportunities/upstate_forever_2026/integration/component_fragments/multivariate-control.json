@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "multivariate-control",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/4650",
+  "components": {
+    "multivariate-control": {
+      "title": "Editable matched-control design and original native experiment",
+      "paths": [
+        "operator/multivariate_control_operator.py",
+        "operator/extensions/multivariate-control.json",
+        "operator/web/multivariate_control_core.mjs",
+        "operator/web/multivariate_control.mjs",
+        "operator/web/multivariate_control.css",
+        "operator/MULTIVARIATE_CONTROL.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_cli.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "source_tools/precipitation_matching.py",
+        "source/MULTIVARIATE_CONTROLS.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "core",
+        "study-transfer",
+        "extension-startup"
+      ]
+    }
+  },
+  "required_components": [
+    "multivariate-control"
+  ]
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Staff · Grant Operations</title>
+  <link rel="stylesheet" href="/staff.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to workspace</a>
+  <header><div><p class="eyebrow">Grant Operations</p><h1>Staff workspace</h1></div>
+    <nav aria-label="Workspace"><a href="/">Planning &amp; Operations</a><button id="sign-out" hidden>Sign out</button></nav>
+  </header>
+  <div id="message" role="status" aria-live="polite"></div>
+  <main id="main" tabindex="-1">
+    <section id="sign-in" class="panel">
+      <h2>Sign in</h2><p>Use the staff ID and access code issued for this installation.</p>
+      <form id="login-form" class="form">
+        <label>Staff ID<input name="staffId" autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"></label>
+        <label>Access code<input name="accessCode" type="password" autocomplete="current-password" required maxlength="128"></label>
+        <div><button type="submit" class="primary">Open workspace</button></div>
+      </form>
+      <p class="muted">The installation owner can issue a replacement code. The private owner link opens the administration desk.</p>
+      <details><summary>Installation owner</summary>
+        <form id="owner-form" class="form">
+          <label>Private owner key<input name="ownerKey" type="password" autocomplete="off" required></label>
+          <div><button type="submit">Open owner access</button></div>
+        </form>
+      </details>
+    </section>
+    <section id="signed-in" hidden>
+      <div class="identity panel"><div><h2 id="person-name"></h2><p id="person-role"></p></div><p id="expiry" class="muted"></p></div>
+      <section id="operator-link" class="panel" hidden><h2>Continue the operating case</h2>
+        <p id="role-description"></p><a class="button primary" href="/">Open Planning &amp; Operations</a>
+      </section>
+      <section id="staff-admin" hidden>
+        <div class="section-heading"><div><h2>Staff and case access</h2><p class="muted">Profiles use the existing operating cases and contributor records.</p></div>
+          <div class="actions"><button id="new-profile">Add staff</button><button id="backup">Download full installation</button><button id="refresh-staff">Refresh</button></div></div>
+        <div id="credential" class="panel" hidden></div>
+        <div id="profile-editor" class="panel" hidden></div>
+        <div id="profiles" class="panel"></div>
+        <details class="panel"><summary>Access history</summary><div class="actions"><button id="load-events">Load events</button></div><div id="events"></div></details>
+      </section>
+      <section id="contributor" hidden>
+        <div class="section-heading"><div><h2>My completed work</h2><p class="muted">Record work, retain its source and submit it for review in the original case.</p></div>
+          <div class="actions"><button id="refresh-work">Refresh</button><button id="download-work">Download my records</button></div></div>
+        <label class="case-select">Operating case<select id="work-case"></select></label>
+        <div id="work-board"></div>
+        <div id="work-editor" class="panel" hidden></div>
+      </section>
+    </section>
+  </main>
+  <footer>Private installation · Named staff access · Original case records</footer>
+  <script type="module" src="/staff.mjs"></script>
+</body>
+</html>

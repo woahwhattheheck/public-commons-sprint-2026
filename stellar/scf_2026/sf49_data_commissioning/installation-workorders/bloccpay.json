@@ -1,0 +1,113 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "bloccpay",
+  "title": "Bloccpay — payroll, invoice and treasury reconciliation",
+  "task": {
+    "name": "Commission the complete original payroll, invoice and treasury workspace",
+    "purpose": "Connect the selected existing payroll and invoice ledger to its original SDP, Horizon and Bridge observations, resolve discrepancies explicitly, and deliver the complete editable workspace and retained application/runtime to an independent operator.",
+    "request": "Receive the existing customer ledger, exact source and account selections, programme mapping and original commercial Workshare. Retain the full payroll CSV/JSON and each original provider page. Prepare SDP instructions from the selected observed wallet, asset and batch; use the existing transaction owner for any separately approved provider operation. Review authenticated events and their original native readbacks, match explicit payroll and treasury identities, retain corrections and render the complete period report. Export the same source, runtime, workspace, request history and original files; receive them in a fresh private destination and reopen the existing programme and reports.",
+    "completeOutput": "The selected period's complete payroll/invoice/treasury report, original source and transaction links, separately denominated amounts and fees, current exceptions and immutable decisions, complete operating instructions, and an independently received editable workspace with original source/runtime and request identities. Record actual acceptance against the original Installation criteria.",
+    "repeatTrigger": "A selected customer has a later payroll period, invoice settlement, treasury transfer, provider event or correction requiring a new useful review. Continue an uncertain request under its existing identity; preserve earlier editions and their original sources.",
+    "pricedUnit": "Use the original commissioning Workshare and the customer's agreed ongoing reconciliation/reporting unit. Bind any Stellar payment price, account authority and whole-task budget from the actual existing case."
+  },
+  "source": {
+    "reference": "Complete selected Bloccpay workspace and its existing payroll programme, private configuration and retained SDP/Horizon/Bridge sources. The installed application is stellar/scf-starforge-20261009/bloccpay/source; its unchanged source-files.json identifies the complete original application.",
+    "mode": "LIVE",
+    "population": "Every selected original payroll row and complete retained provider page, original response body and cursor, signed event and required resource readback, explicit invoice link and treasury resource version. Record actual capture coverage and the observation interval; retain incomplete coverage as such.",
+    "meaning": "Keep native request IDs, resource versions, payment references, exact decimal spelling, asset and issuer, network, sender, destination, memo, selected wallet and period. SDP execution outcomes, Horizon settlement, Bridge processed amounts, delivered amounts and fees remain separately identified. Match explicit original identities and retain ambiguity for operator review.",
+    "changePolicy": "New payroll files, mappings, source pages and observations append editions. The original command writer retains prepared and dispatched attempts and corrections. Refresh the actual source contract and review changed account or settlement scope explicitly. Received work reopens under its original identity with separately selected machine-local configuration."
+  },
+  "receiving": {
+    "application": "Installed Bloccpay application and customer-agent interface, complete original company source and invoice SDP adapter, joined to existing Applications and SF47 Customer installations. The original application and retained runtime require Node.js 24 on a compatible Linux host.",
+    "acceptanceRule": "The customer-selected records reopen with the same programme, payroll, original provider resources, requests, reports and corrections. Selected actual provider actions have their retained native result. The full source/runtime/private workspace export is independently inspected and received in a fresh destination; the receiving operator can open and continue the original work without creating a replacement ledger. Record each completed commercial phase in the same Installation.",
+    "changeAndWithdraw": "The original account owner retains creator/approver credentials, endpoint keys, source rights and payment authority. Retain customer configuration privately. Automatic collections and event projection follow the selected configuration; explicitly choose later network activity and changed mappings. Preserve previous records and source editions when changing or withdrawing service.",
+    "recovery": "Use the same durable original command/request IDs after an uncertain reply. Inspect retained provider attempts and reconcile their actual original resource before another action. Native delivery receive keeps its request ID and selected manifest; reopening uses the returned destination and runtime. Resume interrupted source/archive receiving from its original input and result, preserving both producer and receiver history.",
+    "maintenance": "Name the customer ledger owner, SDP creator/approver, Bridge/Horizon account authority, installation engineer and receiving operator. Keep the exact installed source edition, account configuration references, source update procedure, operating cadence, support responsibility and any provider/hosting costs in the original commercial case."
+  },
+  "steps": [
+    {
+      "title": "Select the original case and complete customer requirement",
+      "result": "Use the retained Workshare, original funded and commercial assignments, existing ledger and actual receiving host. Select payroll/invoice/treasury scope and the complete useful output. Preserve every original Installation phase and criterion."
+    },
+    {
+      "title": "Install the selected complete application source",
+      "result": "Receive the Bloccpay product selection with its original 61-file company application, source manifest, current invoice SDP capability, managed provider and customer-agent entrypoints. Select Node 24 and retain the actual runtime required by the original workspace."
+    },
+    {
+      "title": "Bind private configuration and exact account scope",
+      "result": "Keep the complete connection file outside the source tree. Select existing tenant, source wallet, asset/network, creator/approver roles, Bridge customer, endpoint verification material and local operating identity. Open the original workspace or an explicitly new commissioning workspace; preserve its returned ID."
+    },
+    {
+      "title": "Map and retain the complete original payroll programme",
+      "result": "Save the selected programme edition with actual source mapping, period and asset. Import full original CSV/JSON under its retained request. Keep original values and row identifiers, including payment references, memos and all rejected or incomplete observations."
+    },
+    {
+      "title": "Capture and compare original native resources",
+      "result": "Use the original paginated SDP, Horizon and Bridge readers or retained original response files. Preserve source bytes, HTTP outcomes, cursor coverage and resource versions. Select the actual wallet, capabilities, batches, operations, transfers and deposit activity required by this programme."
+    },
+    {
+      "title": "Operate selected instruction and event workflows",
+      "result": "Prepare original SDP CSV and exact operation evidence. The original company writer performs separately approved create/upload/status actions, including invoice SDK delegation. Retain signed raw events and native resource readbacks before projection; explicitly recover original uncertain operations."
+    },
+    {
+      "title": "Resolve payroll and treasury discrepancies",
+      "result": "Review complete reconciliation, separately denominated totals, unmatched and ambiguous resources. Use the Horizon payroll companion and Bridge/SDP desks to retain explicit source-linked decisions through the same original command writer. Append corrections and preserve every earlier version."
+    },
+    {
+      "title": "Prepare and save the original Installation",
+      "result": "Use the fresh native Workshare/Installation seed, this installed profile and actual bindings. Preview the complete document against the original case version, then save through the existing native Installation writer with its original request ID. Keep all previous commercial and funding fields."
+    },
+    {
+      "title": "Export and independently receive the whole application",
+      "result": "Export the complete private workspace together with original source and retained runtime. Inspect and archive with the existing company CLI; receive with the same original receive request into a fresh private directory. Use the returned workspace/runtime identities to open Applications and the same complete operator."
+    },
+    {
+      "title": "Close actual acceptance and continue the original service",
+      "result": "The receiving operator reopens original records, reports and source files and records the real result of every agreed phase. Retain the complete archive, Installation history, operating guide and selected local configuration references. Later periods create new useful editions within that same customer relationship."
+    }
+  ],
+  "inputs": [
+    "Original Workshare/commercial case, exact agreed scope and milestones, current SF47 case/version and fresh Installation seed",
+    "Full original customer payroll/invoice source, programme mapping, exact reporting period, account/network/asset identities and useful-output requirement",
+    "Selected existing workspace ID or explicit new-installation decision, private workspace destination and customer-authorized connection configuration",
+    "Existing SDP tenant/source wallet and original creator/approver account selection; actual Bridge customer and Horizon network",
+    "Complete retained provider observations, signed event bytes/headers and source IDs, or explicit authorized original provider-read selections",
+    "Actual native merchant/buyer deployment IDs and source attachment IDs selected in the original operating case",
+    "Selected compatible Linux receiving host and Node24 runtime, original source/runtime manifests and whole archive/receive request identity",
+    "Named customer, account, acceptance and receiving owners; actual provider/hosting costs and approved payment terms"
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/README.md",
+      "blob": "3f0613baa6ae99bff9ddec22145b157aea27d798"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/OPERATIONS.md",
+      "blob": "8165642fac8aa00eb95c367a3c8498884ec44624"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/docs/payroll-semantics.md",
+      "blob": "a335a20c51d14ff50671d0b8d987eeccf5bccf8f"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/docs/invoice-sdp-integration.md",
+      "blob": "261f8228dfb9f1bab4a892674a0e7f9505f25e7f"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/docs/sdp-events-inbox.md",
+      "blob": "f75ded969681fa08791b97018528c51035fc583d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/docs/bridge-intake.md",
+      "blob": "a2066ce9952d5f27d19ab6d3f4acb2dd623758c4"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/lib/receiving.mjs",
+      "blob": "e0c02e56bfbde84970cf3487d8ccc8e69b2e6f76"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/bloccpay/source/source-files.json",
+      "blob": "7d35437f83b8c34f60866c0d14063052b891f15d"
+    }
+  ]
+}

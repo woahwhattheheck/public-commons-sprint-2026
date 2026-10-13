@@ -1,0 +1,7 @@
+.statement-desk .statement-batch{border:1px solid #aeb1b4;background:#f7f7f6;padding:1rem;margin:1rem 0}
+.statement-desk .statement-batch h5{font-size:1rem;margin:0 0 .6rem}
+.statement-desk .statement-batch .statement-fields{margin-top:1rem}
+.statement-desk .statement-batch-detail{font-size:.9rem;color:#50545a}
+.statement-desk .statement-batch-proposal{border-top:1px solid #aeb1b4;margin-top:1rem;padding-top:1rem}
+.statement-desk .statement-batch-check{flex-direction:row;align-items:center;gap:.5rem;font-weight:400}
+@media(max-width:640px){.statement-desk .statement-batch{padding:.7rem}.statement-desk .statement-batch-proposal th,.statement-desk .statement-batch-proposal td{max-width:18rem}}

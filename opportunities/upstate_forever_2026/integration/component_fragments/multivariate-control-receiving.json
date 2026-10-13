@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "multivariate-control-receiving",
+  "extend_components": {
+    "multivariate-control": {
+      "paths": [
+        "source_tools/multivariate_control_receiving.py",
+        "source_tools/multivariate_control_browser.mjs",
+        "source_tools/MULTIVARIATE_CONTROL_RECEIVING.md",
+        "source_tools/receive_geographic_headwaters.py",
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/simulated_headwaters_receiving.py",
+        "source_tools/demo_deadline.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "integration/component_fragments/multivariate-control-receiving.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "source_tools/multivariate_control_receiving.py",
+        "source_tools/multivariate_control_browser.mjs",
+        "source_tools/MULTIVARIATE_CONTROL_RECEIVING.md",
+        "source_tools/receive_geographic_headwaters.py",
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/simulated_headwaters_receiving.py",
+        "source_tools/demo_deadline.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "integration/component_fragments/multivariate-control-receiving.json"
+      ]
+    }
+  },
+  "required_components": []
+}

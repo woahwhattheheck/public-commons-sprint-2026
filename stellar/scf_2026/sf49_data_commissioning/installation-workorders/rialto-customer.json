@@ -1,0 +1,101 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "rialto-customer",
+  "title": "Rialto — one paid HTTP service and complete customer receiving",
+  "task": {
+    "name": "Complete one useful Rialto-discovered customer request and independent receiving",
+    "purpose": "Connect one existing paid HTTP service to its actual customer task, reviewed original terms and complete receiving operation, so another operator can reopen and continue the same useful work.",
+    "request": "Receive the complete original Rialto catalogue and exact selected HTTP row, payment alternative and customer intent. Enter the concrete method, query, published path values, body and ordinary headers. Retain the actual unsigned merchant challenge and select its exact option through the maintained SF88 buyer; the original buyer controls approval, spending, execution and recovery.",
+    "completeOutput": "The customer receives the complete original useful response with its selected request, source pages, actual challenge, original buyer operation and available result/history. Deliver the operator guide, complete private receiving package, original native handoff, one catalogue refresh comparison and an independently reopened installation in the original case.",
+    "repeatTrigger": "The same customer actually needs a later service result, reporting period or query. Preserve each distinct useful request and its original intent; recovery, retransmission and reopening continue their existing request.",
+    "pricedUnit": "The selected merchant’s original paid HTTP request or advertised response unit, using the actual integer atomic amount and customer whole-task budget. The separately proposed USD 1,500 implementation covers service/request integration USD 450, buyer/receiving integration USD 650 and handover/change handling USD 400."
+  },
+  "source": {
+    "reference": "Complete retained original Rialto catalogue and customer request under the installed stellar/scf-starforge-20261009/partners/rialto workflow. Use the original selection.json, source/catalogue.json, every captured HTTP page and the actual service documentation.",
+    "mode": "LIVE",
+    "population": "Every returned discovery offset through its reported total is retained with the observation interval; the customer request selects one original HTTP resource and exact payment alternative. Complete responses and native attempts retain their own selected task and source identity.",
+    "meaning": "Preserve original resource/tool identity, payment amounts as atomic strings, source provenance, reported totals, original field types/nulls and query/body meaning. A sequential catalogue read retains its observation interval and findings; it has no provider snapshot token. Explicit path values bind the original route; concrete advertised segments remain fixed.",
+    "changePolicy": "A refreshed complete catalogue is a new retained edition with a full original comparison. A changed service or payment identity is selected explicitly from its actual source. Continue interrupted merchant requests with their original capture and intent; retain previous reports, requests and source."
+  },
+  "receiving": {
+    "application": "Installed Rialto customer receiving and the original SF88 buyer, joined to maintained SF47 Customer installations. Node.js 22+, Linux flock and the original buyer and SF47 runtime/dependencies.",
+    "acceptanceRule": "The selected real task maps to its original service and actual merchant challenge; the original buyer produces the complete useful output or records its actual unresolved result. A second operator receives the full private package, imports the original buyer handoff into a new native directory, reviews the same request/terms, and reopens the corresponding saved Installation and case history. Record each actual commercial acceptance against its original criterion.",
+    "changeAndWithdraw": "The original merchant and customer retain source, deployment, account and spending authority. Review changed source/payment terms explicitly. Select a new useful customer request or preparation edition when needed, while preserving the prior native operation and saved Installation.",
+    "recovery": "Retain the original unsigned-request attempt before dispatch. An interrupted capture reuses its original attempt record; a distinct reattempt has an explicit new capture ID. Native buyer execution/reconciliation uses its original intent and receipt. Installation save recovery uses the original case/request journal, and complete private receiving restores all retained source and history.",
+    "maintenance": "Name the service owner, payment/account authority, installation engineer, acceptance owner and receiving operator. Retain the exact source/dependency edition, original configuration references, customer correction scope and support responsibility. Keep service fees, hosting and any extra production scope assigned to their actual owner."
+  },
+  "steps": [
+    {
+      "title": "Bind the real customer task and original workshare",
+      "result": "Continue the current relationship and source-backed commercial case. Select the actual service, useful-output requirement, source rights, customer operating owner, agreed implementation scope and receiving host. Preserve the original price/schedule and all native commercial phases."
+    },
+    {
+      "title": "Receive and review the complete original catalogue",
+      "result": "Run the existing complete Rialto capture, retain /supported, peers and every advertised resource offset, and inspect its reported population and observation interval. Select the exact original HTTP row and payment option; retain the entire catalogue alongside the selected customer request."
+    },
+    {
+      "title": "Prepare the exact request and published path inputs",
+      "result": "Use the offline grayscale editor or original typed helpers to supply customer values, method/query/body/headers, useful output and explicit cap. Bind published path parameters through the maintained route helper. Save the original customer intent and preserve the complete source row."
+    },
+    {
+      "title": "Receive the actual challenge and original buyer operation",
+      "result": "Capture the real merchant challenge through the original durable attempt, inspect its complete terms and choose the exact native option. Use the existing SF88 prepare/review, account authority and customer output path. Operate and recover that original request under its actual approval."
+    },
+    {
+      "title": "Prepare the complete original Installation from the retained request",
+      "result": "Use the current original Workshare/Installation seed and selected case bindings. The Rialto installation bridge snapshots the whole request with its source/history, verifies it using the original request verifier and writes the original native Installation document, preview envelope and full workorder. Original funding, phases and acceptance observations remain intact."
+    },
+    {
+      "title": "Preview and save in the existing operating case",
+      "result": "Load the prepared full document in Customer installations or use the native preview/save commands with the original case version and request ID. Retain the returned Installation ID/revision and recover an uncertain save through the original request journal. Continue later edits in that same saved installation."
+    },
+    {
+      "title": "Deliver complete receiving and change handling",
+      "result": "Export the whole private Rialto preparation/request packet and the original native buyer operation. Receive the complete packet, reopen its original workorder/request, import the buyer handoff to reconstruct machine-local paths, and review with the new explicit response output. Retain one complete catalogue refresh comparison and the actual recovery result."
+    },
+    {
+      "title": "Close the agreed handover and continue useful customer work",
+      "result": "The accountable customer/receiving operator records the actual acceptance of the original service, buyer/receiving and handover deliverables. Export and independently reopen the native SF47 case/Installation with all sources and history. Later useful tasks retain original source/intent and commercial allocation."
+    }
+  ],
+  "inputs": [
+    "Original customer commercial case, source-backed Workshare plan/commissioning packet, price status, schedule and acceptance criteria",
+    "Original SF47 case/version and fresh selected Workshare/Installation seed; continue an existing saved installation through its native draft",
+    "Complete original Rialto catalogue and selected customer request directory, including every source page, explicit method/query/path/body/header input and original intent",
+    "Actual service documentation, permitted use and customer useful-output requirement retrieved from the original public and authorized sources",
+    "Current actual merchant challenge and native buyer operation/result, including its account authority, integer atomic price, whole-task cap and original recovery identity",
+    "Actual merchant/buyer deployment IDs, source attachment IDs and receiving application source IDs from the original SF47 case",
+    "Selected host, receiving engineer, original account/configuration references and service/hosting/fee responsibility",
+    "Actual engineering phase effort and original payment milestones from the native commercial plan; the component price split does not infer hours or invoice triggers"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/rialto/README.md",
+      "blob": "05e4053e59b39fb3615347cdee18c22f1ab4d14d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/WORKSHARE.md",
+      "blob": "59d04d47b769199e0c645ea4bb88071e0dda722c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/OPERATING.md",
+      "blob": "3d7394cd7d10f81e2cafe1b5a6cbded98a4b3c97"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/core.mjs",
+      "blob": "3f07d60f4e4d459305a4cda9b28a512a451029ae"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/customer.mjs",
+      "blob": "71cb1f95cbbc804083108234c123e2ce2ed76b5e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/io.mjs",
+      "blob": "4ed9068b884d04d246d40d1cd168cbae487fff1a"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/rialto/SOURCE_CONTRACT.md",
+      "blob": "847e3840466c0a5b4423d0b3f0d80b7231481dec"
+    }
+  ]
+}

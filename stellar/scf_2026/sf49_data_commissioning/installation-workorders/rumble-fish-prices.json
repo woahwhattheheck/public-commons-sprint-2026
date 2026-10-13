@@ -1,0 +1,77 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "rumble-fish-prices",
+  "title": "Rumble Fish Prices customer snapshots",
+  "task": {
+    "name": "Complete Prices snapshot for one wallet or analytics consumer",
+    "purpose": "Give the selected consumer an inspectable opening and closing view of its approved instrument universe, with source timestamps, units and prior-edition comparison kept with each result.",
+    "request": "Save the actual Prices asset universe using the native catalog identities: native XLM, exact CODE:ISSUER for classic assets, and contract addresses for Soroban tokens. At each selected review, use the existing POST /v1/prices/batch operation for the complete saved universe (up to 100 identifiers per provider request), with retained GET /v1/assets metadata and explicitly planned history/oracle reads when the consumer needs them. Preserve every not_found/unpriced member, source as_of, snapshot updated_at and exact decimal strings. Deliver the agreed whole mapped result and prior-edition comparison.",
+    "completeOutput": "All selected instruments, exact original price and unit representations, original and acquisition timestamps, complete response and mapping source, useful customer view, and Node/Python receiving files for the saved edition. The named analyst or application owner can reopen and compare the result in its existing workflow.",
+    "repeatTrigger": "A separately required opening or closing snapshot with a fresh original source observation. The proposed calendar has two useful reviews per business day; original-result reopen and delivery recovery keep their existing purchase.",
+    "pricedUnit": "One complete approved Prices snapshot for the selected instrument universe. Page count and file transport do not redefine the customer's complete result."
+  },
+  "source": {
+    "mode": "LIVE",
+    "reference": "https://prices-api.sorobanscan.rumblefish.dev · captured OpenAPI3.1.0 / provider version0.1.0, SHA256 d13b6d1296442d92991cf3323b23aa1b432549f0e49f57fcdcf7711fe22f7378; original customer workbench selection.",
+    "population": "The complete agreed instrument universe for one wallet, analytics or developer-support consumer in one environment; every original response member and unavailable/stale result stays attributable.",
+    "meaning": "Use native or exact classic CODE:ISSUER/Soroban contract identity. Preserve price decimal strings, as_of price-observation time, updated_at snapshot-refresh time, price_status(priced/carried/unpriced/unspecified), method, original sources and volume_24h_usd. History retains original null OHLC, trade counts, method/quality/derived/divergent fields; consumer display symbols never replace full asset identities.",
+    "authority": "Rumble Fish or an expressly authorized customer supplies the original approved source and its permitted consumer/audience and retention terms.",
+    "changePolicy": "Save the changed source/schema or instrument selection as a reviewed edition, compare the complete result, and retain previous purchased editions. The original operator can withdraw later publication without rewriting earlier customer output."
+  },
+  "receiving": {
+    "application": "Original Rumble Fish Prices Node workbench, saved browser/CLI workspace and selected downstream consumer. The funded native merchant/SF88 buyer integration carries its complete exported result into the agreed consumer.",
+    "host": "",
+    "operator": "",
+    "acceptanceRule": "The receiving engineer opens the entire saved snapshot, reconciles the full selected universe with original source, explains units and observation time, completes one later source edition and reopens its prior result.",
+    "changeAndWithdraw": "A second engineer reviews and applies one source/schema or terms change using original version/release controls, then exercises the agreed later-publication withdrawal.",
+    "recovery": "Recover the existing buyer intent and saved response after interruption, reopen the complete source and customer workspace, and restore the accepted release through the existing controller.",
+    "maintenance": "Preserve the review rounds, handoff, correction window and continuing-operation responsibilities in the complete original selected Workshare. Record the actual accepted trigger and source account, host and maintenance owners."
+  },
+  "steps": [
+    {
+      "title": "Select the whole consumer task",
+      "result": "Retain the complete original commercial case, approved source/schema, consumer, source rights, exact output and named receiving operator."
+    },
+    {
+      "title": "Install and bind the original source",
+      "result": "Use the existing Prices workbench in one authorized environment, preserve full original responses and implement the selected mapping."
+    },
+    {
+      "title": "Complete native paid receiving",
+      "result": "Publish the reviewed complete result, approve the original Stellar offer and deliver every required customer file through the existing buyer."
+    },
+    {
+      "title": "Operate successive snapshots",
+      "result": "Run the selected opening and closing observations, keep each source/intent/result identity, and consume the useful changed result."
+    },
+    {
+      "title": "Perform change and recovery",
+      "result": "A second engineer performs the agreed source/terms change, restores the original release and recovers an interrupted original operation."
+    },
+    {
+      "title": "Transfer and accept",
+      "result": "Deliver complete editable source, configuration, response history, customer examples, operating guide and every phase of the original selected Workshare."
+    }
+  ],
+  "inputs": [
+    "Complete original Rumble Fish commissioning source and matching receiving packet.",
+    "Approved instrument/schema and consumer selection, source audience and retention rights.",
+    "Existing merchant/buyer deployment IDs and actual selected native payment terms.",
+    "Actual source host, receiving host and named engineer.",
+    "Customer's ordinary opening/closing calendar and freshness acceptance."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+      "blob": "e23a23ad1a68fc826ca6282a8582434b0ce3ec92"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATIONS.md",
+      "blob": "0ef16af94159e5a8dd8752f1630d9d046352310f"
+    },
+    {
+      "path": "products/grant-operations/OPERATING.md",
+      "blob": "a7215b05079ed36f5f9298ab712f9666b4e94848"
+    }
+  ]
+}

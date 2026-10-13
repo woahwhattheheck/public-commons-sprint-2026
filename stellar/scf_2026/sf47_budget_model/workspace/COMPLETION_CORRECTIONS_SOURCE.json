@@ -1,0 +1,60 @@
+{
+  "schema": "sf47.completion-corrections.source-check.v1",
+  "sourceBasis": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "6cca3bf0d102d347581aba3a2fb510a2bc631254"
+  },
+  "feature": "Original issuer correction findings, immutable saved editions, linked re-preparation/resubmission, full case receiving",
+  "checks": [
+    {
+      "file": "operations_completion_corrections.mjs",
+      "scope": "V8 parse of complete production body with static import/export syntax removed",
+      "status": "PASS"
+    },
+    {
+      "file": "operations_completion.mjs",
+      "scope": "V8 parse of complete production body with static import/export syntax removed",
+      "status": "PASS"
+    },
+    {
+      "file": "agent-contracts.mjs",
+      "scope": "V8 parse of complete production body with static import/export syntax removed",
+      "status": "PASS"
+    }
+  ],
+  "additionalObservedChecks": [
+    {
+      "scope": "Editable correction draft structure",
+      "result": "PASS",
+      "cases": 3
+    },
+    {
+      "scope": "Typed-client production request construction",
+      "result": "PASS",
+      "cases": 7,
+      "source": "e91cbd9af1cd87761b16ec9e48d34eb5931f504c"
+    }
+  ],
+  "native": {
+    "attempt": "functions3210",
+    "status": "CLOSED_BEFORE_CREATEPROCESS",
+    "error": "environment registry 409 environment_offline",
+    "process": null,
+    "acceptedFiles": 0,
+    "caseEffects": false,
+    "pythonExecuted": false,
+    "browserExecuted": false
+  },
+  "programme": {
+    "path": "completion-corrections-receiving.py",
+    "status": "PREPARED_NOT_EXECUTED",
+    "scope": "Original SQLite APIs: explicit synthetic WALKTHROUGH, two correction rounds, three correction editions, original replay, stale-head refusal, nested export, independent import, cold reopen, intentional received edition, second-generation import"
+  },
+  "independentReviews": [
+    "Root initial full core dispatch/source/history/export review: no definite defect",
+    "Actions complete client/CLI source and seven actual request-construction V8 cases",
+    "Scanner complete operating guide and packaging-source inventory"
+  ],
+  "actualGrantMutation": false,
+  "remaining": "Run the complete original-engine receiving programme on the existing equipped receiving host; preserve actual outcomes."
+}

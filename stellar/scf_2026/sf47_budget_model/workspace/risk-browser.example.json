@@ -1,0 +1,33 @@
+{
+  "schema": "stellar-forge.sf47-delivery-risks-browser.v1.input",
+  "repositoryRoot": "/absolute/original/repository",
+  "sourceManifest": {
+    "path": "/absolute/private/risk-course-source-selection.json",
+    "bytes": 0,
+    "sha256": "REPLACE_WITH_ACTUAL_SHA256"
+  },
+  "native": {
+    "path": "/absolute/private/risk-course-browser.json",
+    "bytes": 0,
+    "sha256": "REPLACE_WITH_ACTUAL_SHA256"
+  },
+  "outputDirectory": "/absolute/private/risk-browser",
+  "ownerKeyFile": "/absolute/original/workspace/access.key",
+  "node": {
+    "path": "/absolute/original/node",
+    "bytes": 0,
+    "sha256": "REPLACE_WITH_ACTUAL_SHA256"
+  },
+  "browser": {
+    "playwrightModule": "/absolute/original/playwright/index.mjs",
+    "playwrightSha256": "REPLACE_WITH_ACTUAL_SHA256",
+    "executablePath": "/absolute/original/chrome-headless-shell",
+    "executableSha256": "REPLACE_WITH_ACTUAL_SHA256"
+  },
+  "parentGuard": {
+    "path": "/absolute/private/original-course.lock",
+    "fd": 3,
+    "device": "REPLACE_WITH_ACTUAL_DEVICE",
+    "inode": "REPLACE_WITH_ACTUAL_INODE"
+  }
+}

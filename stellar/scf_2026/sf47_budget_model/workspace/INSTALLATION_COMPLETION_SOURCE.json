@@ -1,0 +1,186 @@
+{
+  "schema": "commons.installation-completion-source-status.v1",
+  "operation": "SCF-INSTALLATION-TO-COMPLETION-26B1-20261013",
+  "base_commit": "f694c3a9e3cd2a9199c548d581d5f11ca9fc460d",
+  "source_files": [
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion_installations.py",
+      "bytes": 20681,
+      "sha256": "146c690c2db4582d6d82a9c4d18892c03c83f98c5028e4a78ff17eb2f347f230",
+      "git_blob": "9861297cd6bd6ea85b73a48fca73243c6ccf2ec3",
+      "before": null
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion_installations.mjs",
+      "bytes": 16100,
+      "sha256": "fc5d4c44869f06c8a21dfce9dc1b392e5a6a9e27026b743612cd37618d78ce7e",
+      "git_blob": "dfb38170a86e9b90155f7119c735317659768dfc",
+      "before": null
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion.py",
+      "bytes": 59475,
+      "sha256": "34c82c614f4baed5048ff74fb668ad2da364f02f7d8bf8a024821070178d8002",
+      "git_blob": "2e448a8d3d0213326a2df18e524d62dd5a373354",
+      "before": "3aa5530aa3eb66d3dadb82ad3e43dcc27741499d"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion.mjs",
+      "bytes": 46999,
+      "sha256": "bd5e0493fb1b1ffa24a7c3981876e1d1ef43ceb3fcd40a7b77eed91be062485d",
+      "git_blob": "a689335cc7a091f93d6a7eb2f7258155ca430310",
+      "before": "d2ac4fbab37353dd1edb9cc65cb1bbdb1e6eeed7"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations.py",
+      "bytes": 134616,
+      "sha256": "4e933e322325628fdd76cc4c8029f6150a0906bf071999a0fae89e68d3addf67",
+      "git_blob": "5ab451d2cccd501b1c23f071d864d102d48a9b2d",
+      "before": "c7eb7091d85221379c5765e5926a322df32888eb"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_http.py",
+      "bytes": 39069,
+      "sha256": "0840cd0c9e8ef32353cb50868a0e32d3b8ab51e69efab7ebe0893aa60a46845d",
+      "git_blob": "8aec5f35017aa803c9aae3c3c3feba30aa872e5a",
+      "before": "7abc330e72ee17048b53e546122534cd5dcef893"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/staff_http.py",
+      "bytes": 18798,
+      "sha256": "165321024ecf96335905d2f914c0c9a4e1df78aac8fb02c2dbcfa42048079f26",
+      "git_blob": "7be903f79464a114cce962de50db38e3ac3570e9",
+      "before": "6f8493c1fc6c419d476e91a34779d0cb5d4a8c7d"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/launch.mjs",
+      "bytes": 25406,
+      "sha256": "3f66ad4b98c32dcf44317eec1218e55623a5e89064269807433e34ebb633ef39",
+      "git_blob": "3da8cb6aa9e7a2091f578d4ac1ed3b2d314d2e57",
+      "before": "d7bf38440fa54496f6a2d9cbbc3f5393e960ac0d"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/managed_launch.py",
+      "bytes": 22711,
+      "sha256": "37f89e15fe73c0b3409e42a1db65ecaee23f65605f68d915da4583d43960dc66",
+      "git_blob": "29de35c5aae74b64b7de01017292719eba524f41",
+      "before": "0de47225a391b07216d328c0d526c943089fcd30"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/installation-completion-receiving.py",
+      "bytes": 16088,
+      "sha256": "0803e952525a25dce5752547e953250898917e6de6cc093c66297cce602ab01a",
+      "git_blob": "3c10099332b3ef906b6ef429c307675ee64bb96d",
+      "before": null
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs",
+      "bytes": 124621,
+      "sha256": "21c3230d145b92e31f1cd76ee46e2dd9c59e798ef25eb87dfcb607e18516dee7",
+      "git_blob": "6543adc9cf7c0be88dddb56733bf195d098ede56",
+      "before": "f21a78123ef1d5201e0c73c55286850bc8d91c78"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/agent-client.d.mts",
+      "bytes": 182191,
+      "sha256": "874279e4e6c070fb339e634567193e7066aa3fd6b58c729bb768154fbf18f087",
+      "git_blob": "3f01a2011905a0b27bde695bdb99c0956e4408a4",
+      "before": "77c8380aea9a467bd338a73ba6d2c507e77f9d99"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_cli.py",
+      "bytes": 102716,
+      "sha256": "1555c5bb2dc60c7aa0d026125fb7a9ae340b60aeb049cef029957551850ce836",
+      "git_blob": "7d1adf9e5aa2068000b432a745c77a3137682d18",
+      "before": "13bd6e2a446c9048ac7fa747b34bf0f5647e8699"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATION_COMPLETION.md",
+      "bytes": 22130,
+      "sha256": "1e3eb3a35854590f209ac99112b1d561ff4b33e185e1f8f0cf71b8e64f744fb0",
+      "git_blob": "5795a152f2deb19d6ffab03cdabac38d8ed3d7e9",
+      "before": null
+    }
+  ],
+  "native": {
+    "cell_id": "3276",
+    "state": "CLOSED_BEFORE_CREATE_PROCESS",
+    "error": "environment registry 409 environment_offline",
+    "session": null,
+    "sourceFed": false,
+    "nativeEffects": false
+  },
+  "validation": {
+    "status": "PASS",
+    "scope": "Exact production functions in V8 with source-only plain-object host; not native/browser execution",
+    "results": [
+      "changed cutoff rejects stale observed-result application and preserves draft",
+      "explicit observed-result choice retains original scalar fields and full earlier draft",
+      "changed edited input rejects earlier proposed links",
+      "unrenderable imported assignment rejected before replacement"
+    ],
+    "managedLaunch": {
+      "files": 373,
+      "identical": true,
+      "duplicateFree": true
+    },
+    "sourceReadback": {
+      "carrier": "ad669d71e04c6823b02b7741cb1744990e689647",
+      "bytes": 421059,
+      "sha256": "c5370149138e3cb7fef37b79d1be0bb32d8a7ed49c900de173ec07001fe5b05c",
+      "fullExact": true
+    },
+    "currentSourceComposition": {
+      "baseCommit": "f694c3a9e3cd2a9199c548d581d5f11ca9fc460d",
+      "baseTree": "a6b07bd45db009e5354bc767529ff81d6b67728a",
+      "workspaceMembers": 356,
+      "preserved": [
+        "statement profiles dispatch/import/static/staff",
+        "SourceDesk full installation/recurring managed launch",
+        "original Source Tables and correction workflow",
+        "later SourceDesk native agent/types/guide managed-launch closure"
+      ],
+      "allFourteenTargetPreimagesMatched": true
+    },
+    "client": {
+      "carrier": "2c0ad3cbb0188919d715a94ef67e49e8655cdfbf",
+      "bytes": 421667,
+      "sha256": "977c97b53208a83cfebfe813cea0b27de817fa68adbb2790f927f99704da714a",
+      "fullReadbackExact": true,
+      "fullJavascriptSyntax": "PASS in V8; no native execution",
+      "integration": "Complete native catalogue/transfer result types; original save command unchanged; current statement/SourceDesk client additions preserved; candidate routes are a later separate edition."
+    },
+    "guide": {
+      "git_blob": "5795a152f2deb19d6ffab03cdabac38d8ed3d7e9",
+      "bytes": 22130,
+      "sha256": "1e3eb3a35854590f209ac99112b1d561ff4b33e185e1f8f0cf71b8e64f744fb0",
+      "fullReadbackExact": true
+    }
+  },
+  "receiving": {
+    "programme": "installation-completion-receiving.py",
+    "command": "python3 installation-completion-receiving.py --source-root /ABS/checkout/stellar/scf_2026/sf47_budget_model --output /ABS/owned/installation-completion-receiving",
+    "classification": "Explicit synthetic WALKTHROUGH; source programme prepared; native execution not observed",
+    "scope": [
+      "two exact original Installation editions",
+      "explicit useful paid transaction requirement",
+      "one retained transaction across multiple checks counted once",
+      "draft scalar preservation and reviewed native link transfer",
+      "new source edition blocks new preparation",
+      "historical prepared bytes unchanged",
+      "same original command replay",
+      "complete prepared and editable case export",
+      "independent import, cold reopen, edit and second-generation receiving"
+    ]
+  },
+  "owner": {
+    "channel": "C0BTB4SUCP9",
+    "parent": "1791730668.369819",
+    "claim": "1791878750.110849"
+  },
+  "notes": [
+    "No actual customer, payment, issuer, award or submission mutation.",
+    "Final source hashes are calculated over UTF-8 bytes; earlier initial source carrier hash metadata was corrected before any native transfer.",
+    "Current statement-profile and SourceDesk commissioning/recurring changes are preserved in the shared Operations/HTTP/staff/managed-launch postimages."
+  ]
+}

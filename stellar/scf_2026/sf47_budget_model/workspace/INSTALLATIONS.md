@@ -1,8 +1,26 @@
 # Customer installation operations
 
+For the complete receiver-to-owner workflow, open **Delivery operations → Receiving returns** and follow [Installation receiving returns](INSTALLATION_RETURNS.md). It records named observations against one exact saved edition, returns every original file, compares the owner's current definition, and stages explicit choices before the original Installation save.
+
 The **Customer installations** desk completes the commissioning-to-receiving workflow inside the existing SF47 operating case. An installation describes the customer's whole task, original source and commercial terms, selected merchant and buyer deployments, receiving application, maintainer and assigned funded work. Its acceptance steps select the existing work, purchase, outcome and source records.
 
 Each save appends an immutable edition. A later source observation or installation edit leaves earlier editions readable. The complete original Operations ZIP carries every saved edition, the native planner history, the case event history and all retained attachments. **Export complete handover** also includes a selected-edition marker and a readable offline installation document. Importing that ZIP opens the selected edition in the receiving case.
+
+## Delivery assignments and queue
+
+Each saved installation may carry `document.coordination`: its delivery assignee, target date, priority and note, plus per-check overrides and prerequisites. This metadata travels with the complete installation document through the existing preview/save and receiving workflow. [Installation delivery queue](DELIVERY_QUEUE.md) explains the fields, current-edition work view, typed client, CLI, MCP and complete dated handover.
+
+## Review phase effort and support
+
+Prepare an effort review for the current saved Installation and an explicit as-of date. The complete `document.effort` retains original Work allocations, reviewed remaining hours and source-referenced support windows. The existing Installation preview/save appends the reviewed edition; its complete source and earlier editions travel in the same handover. [Installation effort and support](INSTALLATION_EFFORT.md) covers original work intake, typed SDK and CLI editing, support terms, saved-hour selection for Forecast and complete receiving.
+
+## Allocate installation phases in Portfolio
+
+Open **Delivery and cash operations → Portfolio**, choose the original saved Forecast and select **Use installation phases**. Select the exact saved Installation edition for its matching commercial task. The original phase owners, dependencies, quoted effort, delivery terms and support terms remain visible with their source.
+
+Enter explicit remaining phase work and resource availability, then review the delivery boundary. The boundary phases and their ancestors determine the commercial work dates; later support still consumes the same shared resources. Recorded check acceptance and remaining effort stay separate. Preview the complete allocation and cash, save the reviewed Portfolio, and use **Open dated cash forecast draft** to open the original Forecast draft.
+
+The [Portfolio guide](PORTFOLIO.md#allocate-saved-installation-phases) covers the full operator workflow. The original Portfolio seed API, CLI and SDK accept optional exact edition selections and a complete existing draft. Saved phase allocations retain their source editions and travel with the full original case export, so a receiving operator can reopen both the installation history and its allocation.
 
 ## Operate the complete workflow
 
@@ -253,3 +271,7 @@ The operation binds the original 647,130-byte case SHA `c71303844660d5a859d3936a
 The selected-edition archive is then received into a separate original workspace with every prior edition, all original records, complete sources and plan history. The command reopens both editions, recovers the same native save and import request IDs, compares the complete original source, and reads/exports the second edition through the original CLI. Its delivery directory contains both source editions, the independently received edition, the CLI export, readable opening instructions and the original CLI records. `result.json` names the retained workspaces, installation, source identity and whole-file downloads.
 
 Keep the same `--work` directory to continue after an interrupted response. Each native phase records its exact original request before dispatch and retains the returned snapshot and complete bytes before advancing. A later source correction records its current native binding alongside the original binding; the original scenario, case bytes and phase request identities remain fixed. Inspect a retained interrupted native phase and continue the same command against the corrected source. The operating case remains available through the standard browser, CLI and MCP controls.
+
+## Saved customer-use calendar
+
+The optional `document.useCalendar` records complete useful tasks, dated uses, separate DIRECT/PREPAID funding groups and original buyer receipt associations in the same immutable Installation history. The **Customer use** tab reads exact saved reports alongside current receipt/source changes, expands explicit working dates into an editable draft, exports JSON/CSV/ICS, and stages the original Cohort inputs while preserving an existing edited draft. See [Customer-use calendar](CUSTOMER_USE_CALENDAR.md) for the full document, CLI, typed client, MCP and independent receiving workflow.

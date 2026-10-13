@@ -279,6 +279,79 @@ export function forkOperatingPlan(plan, { id, title, savedAt = new Date().toISOS
     baseRevision: forked.revisions.length,
     content: { ...copy(content), ...(title !== undefined ? { title } : {}) } }, { savedAt });
 }
+
+/** Prepare another period from one saved revision while retaining every original revision. */
+export function previewOperatingPlanCycle(plan, options = {}) {
+  const original = inspectOperatingPlan(plan);
+  need(!original.revisions.some(revision => revision.steps.some(step => step.id === 'grant-tracker')),
+    'PLAN_CYCLE_NATIVE_PREPARATION', 'Prepare a new managed Grant tracker through its original application; preserve the programme decisions and required source files.');
+  only(options, ['revision', 'title', 'period', 'datePolicy', 'shiftFrom', 'shiftTo', 'referenceFiles'], 'Cycle preparation');
+  const selected = operatingPlanRevision(original, options.revision);
+  text(options.title, 'New cycle title', 300, true);
+  text(options.period, 'New cycle period', 1000, true);
+  const datePolicy = options.datePolicy ?? 'clear';
+  need(['clear', 'keep', 'shift'].includes(datePolicy), 'PLAN_CYCLE_DATES_INVALID',
+    'Choose whether to clear, retain or shift the original due dates.');
+  let shiftDays = 0;
+  if (datePolicy === 'shift') {
+    date(options.shiftFrom); date(options.shiftTo);
+    need(options.shiftFrom && options.shiftTo, 'PLAN_CYCLE_ANCHORS_REQUIRED',
+      'Choose the original and next cycle anchor dates before shifting due dates.');
+    shiftDays = (Date.parse(options.shiftTo + 'T00:00:00Z') - Date.parse(options.shiftFrom + 'T00:00:00Z')) / 86400000;
+  } else need(options.shiftFrom === undefined && options.shiftTo === undefined,
+    'PLAN_CYCLE_ANCHORS_UNUSED', 'Anchor dates apply only to the shift policy.');
+  const references = options.referenceFiles ?? [];
+  need(Array.isArray(references) && references.length <= 1000000,
+    'PLAN_CYCLE_FILES_INVALID', 'Select original files by their step and file IDs.');
+  const referenceIds = new Set();
+  const sourceFiles = new Set(selected.steps.flatMap(step => (step.files ?? []).map(file => JSON.stringify([step.id, file.id]))));
+  for (const reference of references) {
+    only(reference, ['stepId', 'fileId'], 'Cycle reference file');
+    identity(reference.stepId, 'Reference step ID'); identity(reference.fileId, 'Reference file ID');
+    const key = JSON.stringify([reference.stepId, reference.fileId]);
+    need(!referenceIds.has(key), 'PLAN_CYCLE_FILE_REPEATED', 'Select each reference file once.');
+    need(sourceFiles.has(key), 'PLAN_CYCLE_FILE_MISSING',
+      'A selected reference file is unavailable in the chosen source revision.');
+    referenceIds.add(key);
+  }
+  const content = bodyFromRevision(selected);
+  content.title = options.title; content.period = options.period;
+  const steps = content.steps.map(step => {
+    const previousDue = step.due, previousStatus = step.status;
+    const originalFiles = step.files ?? [];
+    step.status = 'planned'; step.recordedResult = '';
+    if (datePolicy === 'clear') step.due = '';
+    if (datePolicy === 'shift' && step.due) {
+      const next = new Date(Date.parse(step.due + 'T00:00:00Z') + shiftDays * 86400000);
+      need(Number.isFinite(next.getTime()), 'PLAN_CYCLE_DATE_RANGE', 'The shifted due date is outside the calendar range.');
+      step.due = next.toISOString().slice(0, 10); date(step.due);
+    }
+    const kept = originalFiles.filter(file => referenceIds.has(JSON.stringify([step.id, file.id])));
+    if (kept.length) step.files = kept;
+    else delete step.files;
+    return { id: step.id, title: step.title, owner: step.owner, previousStatus,
+      previousDue, due: step.due, originalFiles: originalFiles.map(operatingFileSummary),
+      referenceFiles: kept.map(operatingFileSummary) };
+  });
+  validateBody(content);
+  return {
+    source: { id: original.id, revision: selected.revision, historyRevisions: original.revisions.length,
+      createdAt: original.createdAt, title: selected.title, period: selected.period },
+    datePolicy, shiftDays,
+    ...(datePolicy === 'shift' ? { shiftFrom: options.shiftFrom, shiftTo: options.shiftTo } : {}),
+    content, steps,
+  };
+}
+export function createOperatingPlanCycle(plan, { id, savedAt = new Date().toISOString(), ...options } = {}) {
+  const original = inspectOperatingPlan(plan), preview = previewOperatingPlanCycle(original, options);
+  identity(id, 'New cycle plan ID'); time(savedAt, 'New cycle save time');
+  need(id !== original.id, 'PLAN_COPY_ID_REQUIRED', 'A new cycle needs its own plan ID.');
+  // A cycle always has an explicit new saved revision, including an identical empty procedure.
+  return inspectOperatingPlan({ ...original, id,
+    origin: { id: original.id, revision: preview.source.revision, createdAt: original.createdAt },
+    revisions: [...original.revisions, { revision: original.revisions.length + 1, savedAt, ...preview.content }] });
+}
+
 /** Extend an existing history only when every shared revision is identical. */
 export function receiveOperatingPlan(incoming, existing = null) {
   const received = inspectOperatingPlan(incoming);
@@ -388,4 +461,117 @@ export function renderOperatingPlanHTML(plan, { revision } = {}) {
     steps + (!steps ? '<p>No operating steps have been recorded.</p>' : '') +
     '<footer><p>Plan ' + html(saved.id) + ' · Created ' + html(saved.createdAt) +
     ' · Complete editable JSON retains ' + saved.revisions.length + ' saved revisions.</p></footer></body></html>\n';
+}
+
+
+export const OPERATING_WORK_SCHEMA = 'stellar-forge.operating-work-selection.v1';
+export const OPERATING_WORK_MAX_BYTES = 32 * 1024 * 1024;
+const WORK_DUE = ['all', 'overdue', 'today', 'future', 'undated'];
+const lexical = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+function workOptions(value) {
+  only(value, ['asOf', 'owner', 'customer', 'search', 'status', 'due', 'assignment'], 'Work selection');
+  const options = { asOf: value.asOf, owner: value.owner ?? '', customer: value.customer ?? '',
+    search: value.search ?? '', status: value.status ?? 'unfinished', due: value.due ?? 'all',
+    assignment: value.assignment ?? 'all' };
+  date(options.asOf);
+  need(Boolean(options.asOf), 'WORK_DATE_REQUIRED', 'Choose the explicit calendar date for this work selection.');
+  for (const field of ['owner', 'customer', 'search']) text(options[field], 'Work ' + field + ' filter', 1000);
+  need(['all', 'unfinished', ...STEP_STATES].includes(options.status), 'WORK_STATUS_INVALID', 'Choose an original recorded work status.');
+  need(WORK_DUE.includes(options.due), 'WORK_DUE_INVALID', 'Choose all, overdue, today, future or undated work.');
+  need(['all', 'assigned', 'unassigned'].includes(options.assignment), 'WORK_ASSIGNMENT_INVALID', 'Choose an owner assignment filter.');
+  return options;
+}
+function workProjection(plans, options) {
+  const ids = new Set(), rows = [], sources = [];
+  const includes = (value, query) => value.toLowerCase().includes(query.trim().toLowerCase());
+  for (const plan of plans) {
+    need(!ids.has(plan.id), 'WORK_SOURCE_DUPLICATE', 'Keep one complete selected history for each plan ID; reconcile different copies first.');
+    ids.add(plan.id);
+    const revision = plan.revisions.at(-1);
+    sources.push({ id: plan.id, revision: revision.revision, savedAt: revision.savedAt,
+      title: revision.title, steps: revision.steps.length });
+    revision.steps.forEach((step, index) => {
+      const owner = step.owner.trim() ? step.owner : revision.owner;
+      const due = !step.due ? 'undated' : step.due < options.asOf ? 'overdue'
+        : step.due === options.asOf ? 'today' : 'future';
+      if (options.status === 'unfinished' && !['planned', 'in-progress'].includes(step.status)) return;
+      if (!['all', 'unfinished'].includes(options.status) && step.status !== options.status) return;
+      if (options.due !== 'all' && due !== options.due) return;
+      if (options.assignment === 'assigned' && !owner.trim() || options.assignment === 'unassigned' && owner.trim()) return;
+      if (!includes(owner, options.owner) || !includes(revision.customer, options.customer)) return;
+      const searchable = [revision.title, revision.customer, revision.period, revision.owner, step.title, step.owner,
+        step.instruction, step.inputs, step.expectedResult, step.recordedResult, ...step.argv,
+        ...(step.files ?? []).flatMap(file => [file.name, file.note])].join('\n');
+      if (!includes(searchable, options.search)) return;
+      rows.push({ planId: plan.id, revision: revision.revision, savedAt: revision.savedAt,
+        stepId: step.id, position: index + 1, title: step.title, planTitle: revision.title,
+        customer: revision.customer, period: revision.period, owner, stepOwner: step.owner,
+        planOwner: revision.owner, status: step.status, due: step.due, dueState: due,
+        files: (step.files ?? []).map(file => ({ id: file.id, name: file.name, bytes: file.bytes, mediaType: file.mediaType })) });
+    });
+  }
+  const rank = { overdue: 0, today: 1, future: 2, undated: 3 };
+  rows.sort((a, b) => rank[a.dueState] - rank[b.dueState] || lexical(a.due, b.due) ||
+    lexical(a.planId, b.planId) || a.position - b.position);
+  sources.sort((a, b) => lexical(a.id, b.id));
+  return { asOf: options.asOf, filters: copy(options), sources, rows,
+    counts: { plans: sources.length, matchedPlans: new Set(rows.map(row => row.planId)).size, work: rows.length,
+      due: Object.fromEntries(WORK_DUE.slice(1).map(state => [state, rows.filter(row => row.dueState === state).length])),
+      status: Object.fromEntries(STEP_STATES.map(state => [state, rows.filter(row => row.status === state).length])) } };
+}
+export function projectOperatingWork(plans, options) {
+  need(Array.isArray(plans), 'WORK_PLANS_REQUIRED', 'Read the complete saved operating plans.');
+  return workProjection(plans.map(inspectOperatingPlan), workOptions(options));
+}
+/** A portable selection carries complete histories only for plans with matching work. */
+export function createOperatingWorkSelection(plans, options) {
+  need(Array.isArray(plans), 'WORK_PLANS_REQUIRED', 'Read the complete saved operating plans.');
+  const saved = plans.map(inspectOperatingPlan), selected = workOptions(options), projection = workProjection(saved, selected);
+  const matched = new Set(projection.rows.map(row => row.planId));
+  const value = { schema: OPERATING_WORK_SCHEMA, options: selected,
+    plans: saved.filter(plan => matched.has(plan.id)).sort((a, b) => lexical(a.id, b.id)) };
+  serializeOperatingWorkSelection(value);
+  return value;
+}
+export function inspectOperatingWorkSelection(value) {
+  only(value, ['schema', 'options', 'plans'], 'Portable work selection');
+  need(value.schema === OPERATING_WORK_SCHEMA && Array.isArray(value.plans),
+    'WORK_SCHEMA_INVALID', 'Choose the complete Operating Plans work-selection JSON.');
+  const plans = value.plans.map(inspectOperatingPlan), options = workOptions(value.options);
+  workProjection(plans, options);
+  return { schema: OPERATING_WORK_SCHEMA, options, plans };
+}
+export function serializeOperatingWorkSelection(value) {
+  const selected = inspectOperatingWorkSelection(value), result = JSON.stringify(selected, null, 2) + '\n';
+  need(new TextEncoder().encode(result).length <= OPERATING_WORK_MAX_BYTES,
+    'WORK_SELECTION_TOO_LARGE', 'Keep the complete selected plan histories within 32 MiB. Refine the work filters or export original plans separately.');
+  return result;
+}
+export function renderOperatingWorkHTML(value) {
+  const selected = inspectOperatingWorkSelection(value), complete = serializeOperatingWorkSelection(selected);
+  const report = workProjection(selected.plans, selected.options), byId = new Map(selected.plans.map(plan => [plan.id, plan]));
+  const articles = report.rows.map(row => {
+    const step = byId.get(row.planId).revisions.at(-1).steps.find(item => item.id === row.stepId);
+    return '<article><h2>' + html(row.title) + '</h2><p>' + html(row.planTitle) + ' · revision ' + row.revision +
+      ' · step ' + row.position + '</p><dl><dt>Customer / period</dt><dd>' + html(row.customer + ' / ' + row.period) +
+      '</dd><dt>Owner</dt><dd>' + html(row.owner || 'Unassigned') + '</dd><dt>Status</dt><dd>' + html(row.status) +
+      '</dd><dt>Due</dt><dd>' + html(row.due || 'Undated') + ' · ' + html(row.dueState) + '</dd></dl>' +
+      [['instruction', 'Work'], ['inputs', 'Inputs'], ['expectedResult', 'Expected result'], ['recordedResult', 'Recorded result']]
+        .map(([key, label]) => '<h3>' + label + '</h3><p class="text">' + html(step[key] || '—') + '</p>').join('') +
+      (step.argv.length ? '<h3>Original command</h3><pre>' + html(operatingStepCommand(step)) + '</pre>' : '') +
+      (step.selection ? '<details><summary>Original registration</summary><pre>' + html(JSON.stringify(step.selection, null, 2)) + '</pre></details>' : '') +
+      '<ul>' + (step.files ?? []).map(file => '<li><a download="' + html(file.name) +
+        '" href="data:application/octet-stream;base64,' + file.content + '">' + html(file.name) +
+        '</a> · ' + file.bytes + ' bytes<p class="text">' + html(file.note) + '</p></li>').join('') + '</ul>' +
+      '<p class="identity">' + html(row.planId) + ' / ' + html(row.stepId) + ' · saved ' + html(row.savedAt) + '</p></article>';
+  }).join('');
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>Operating work · ' + html(report.asOf) + '</title><style>body{font:15px/1.55 Arial,sans-serif;max-width:1040px;margin:auto;padding:2rem;color:#202326;background:white}article{border:1px solid #bbb;padding:1rem;margin:1rem 0}h1{font-size:1.6rem}h2{font-size:1.2rem}h3{font-size:1rem}pre,.text{white-space:pre-wrap;overflow-wrap:anywhere}a,.identity{overflow-wrap:anywhere}dl{display:grid;grid-template-columns:10rem 1fr;gap:.3rem}dd{margin:0}@media(max-width:600px){body{padding:1rem}dl{grid-template-columns:1fr}}@media print{details>pre{display:block}}</style></head><body>' +
+    '<header><p>STARFORGE · OPERATING WORK</p><h1>Work as of ' + html(report.asOf) + '</h1><p>' +
+    report.rows.length + ' matching saved steps in ' + selected.plans.length + ' complete source plans.</p>' +
+    '<p>Dates are recorded calendar days. Undated work stays separate. Unfinished browser drafts are not saved results.</p>' +
+    '<a download="operating-work-' + report.asOf + '.json" href="data:application/json;charset=utf-8,' + encodeURIComponent(complete) +
+    '">Download the complete editable selection and source histories</a><details><summary>Exact selection filters</summary><pre>' +
+    html(JSON.stringify(selected.options, null, 2)) + '</pre></details></header>' + (articles || '<p>No saved steps match this selection.</p>') +
+    '<footer><p>Open the complete selection in Operating Plans. Receive its original plans through their existing history comparison before continuing work.</p></footer></body></html>\n';
 }

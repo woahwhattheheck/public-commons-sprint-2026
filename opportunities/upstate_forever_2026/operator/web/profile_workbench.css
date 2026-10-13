@@ -11,3 +11,11 @@
 .profile-workbench .be-coefficients td:nth-child(5) { min-width: 15rem; overflow-wrap: anywhere; }
 .profile-workbench .be-coefficients td:nth-child(6) { min-width: 12rem; }
 .profile-workbench .be-scenario { display: flex; align-items: center; gap: .5rem; margin: .5rem 0; }
+
+/* The evidence authoring controls share the original scientific workbench. */
+.profile-workbench [data-ba-panel] .mono{overflow-wrap:anywhere}
+.profile-workbench [data-ba-panel] .pw-table td{overflow-wrap:anywhere;vertical-align:top}
+.profile-workbench .ba-coefficients td{min-width:8rem;max-width:28rem}
+.profile-workbench .ba-coefficients td:first-child{min-width:4rem}
+.profile-workbench .ba-coefficients td:last-child{min-width:5rem}
+.profile-workbench .ba-coefficients td small{display:block;margin-top:.3rem;color:var(--pw-muted)}

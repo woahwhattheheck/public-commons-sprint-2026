@@ -1,0 +1,74 @@
+{
+  "asOfDate": "2026-10-13",
+  "status": "CASH_COST_INPUTS_REQUIRED",
+  "templateRows": [
+    {
+      "sourceUrl": "",
+      "sourceIds": [],
+      "stage": "QUOTED",
+      "selected": false,
+      "paymentMode": "accrual",
+      "cashIds": [],
+      "invoiceIds": [],
+      "directCashIds": [],
+      "id": "cocart-implementation-planning",
+      "title": "Proposed direct-customer implementation",
+      "caseRef": "Original CoCart October 12 implementation proposal; customer selection and acceptance remain open.",
+      "priceUsd": "7200.00",
+      "totalDeliveryCostUsd": null,
+      "remainingHours": "60",
+      "startDate": "2027-01-04",
+      "endDate": "2027-01-22",
+      "receipts": [
+        {
+          "id": "implementation-start",
+          "label": "Conditional first half",
+          "amountUsd": "3600.00",
+          "date": "2027-01-04"
+        },
+        {
+          "id": "implementation-handover",
+          "label": "Conditional accepted handover",
+          "amountUsd": "3600.00",
+          "date": "2027-01-25"
+        }
+      ],
+      "scope": "Original proposed 60-hour / 15-business-day implementation and 5% referral on collected initial implementation fees.",
+      "note": "Unselected dated planning scenario. These dates are not an agreement or collection. Enter the full actual cash-cost estimate, including any agreed contributor payments, the proposed referral and other cash obligations. The $95 economic planning valuation is not automatically a cash wage."
+    },
+    {
+      "sourceUrl": "",
+      "sourceIds": [],
+      "stage": "QUOTED",
+      "selected": false,
+      "paymentMode": "accrual",
+      "cashIds": [],
+      "invoiceIds": [],
+      "directCashIds": [],
+      "id": "cocart-care-planning",
+      "title": "Proposed optional monthly care",
+      "caseRef": "Original CoCart October 12 optional $600/month care proposal; no accepted care subscription.",
+      "priceUsd": "600.00",
+      "totalDeliveryCostUsd": null,
+      "remainingHours": "5",
+      "startDate": "2027-02-01",
+      "endDate": "2027-02-28",
+      "receipts": [
+        {
+          "id": "care-month",
+          "label": "Conditional full monthly care receipt",
+          "amountUsd": "600.00",
+          "date": "2027-02-01"
+        }
+      ],
+      "scope": "Original optional monthly care for up to five hours; actual support and hosting responsibility require agreement.",
+      "note": "Unselected dated planning scenario. Full monthly receipt is $600; the separate 14/30 service allocation does not change invoice cash timing. Enter actual cash costs. Do not assume the implementation referral applies to care."
+    }
+  ],
+  "readyCommercialRows": [],
+  "missingCashCostRowIds": [
+    "cocart-implementation-planning",
+    "cocart-care-planning"
+  ],
+  "use": "Merge reviewed readyCommercialRows into the current case's existing Forecast input; preserve original package, opening cash, grant timing and peer commercial rows. Re-select dates, source attachments and actual cash costs, then use original forecast-preview and its reviewed save. No native Forecast validation, case save or cash transaction is represented by this caller."
+}

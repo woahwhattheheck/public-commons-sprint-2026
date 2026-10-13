@@ -67,6 +67,7 @@ the original `0.1.0-source.g0123456789ab` version form.
 | `water-operations` | USGS observations, editions, Water workspace, merchant and complete customer files | Water, Buyer, merchant console | [Operating guide](selections/WATER_OPERATIONS.md) |
 | `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console | [Operating guide](selections/WOO_MERCHANT.md) |
 | `openapi-merchant` | OpenAPI/Postman/HAR authoring, route worksheets, policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console | [Operating guide](selections/OPENAPI_MERCHANT.md) |
+| `grant-operations` | Customer adoption and cost plans, issuer terms, account/work records, saved operating procedures, period reporting and complete case/Application handover | Grant planning and delivery; Runtime management | [Complete public installation, operating programme and independent receiving](../../../products/grant-operations/OPERATING.md) |
 | `grant-reviewer` | Retained purchase/source review, complete native Buyer results and closed receiving handover | Grant purchase reviewer | [Operating guide](selections/GRANT_REVIEWER.md) |
 | `iati-operator` | IATI aid-finance source intake, review, native editions and complete operator exports | IATI aid finance | [Operating guide](selections/IATI_OPERATOR.md) |
 | `redis-applications` | Redis/Valkey commissioning, native products, customer clients, complete exports and cutover comparison | Redis, Buyer, merchant console | [Operating guide](selections/REDIS_APPLICATIONS.md) |
@@ -125,6 +126,7 @@ its dependency profile from the complete installed workflow linked above:
 | `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant`, `eurostat`, `coastal-operations`, `dbnomics` | `--native --feature schema --feature openapi --feature mcp --operator` |
 | `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
 | `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
+| `grant-operations` | `--operator --feature mcp`; preserve the selected profile and supply original optional native inputs for buyer/support receiving |
 | `grant-reviewer` | `--native --feature mcp --operator` |
 | `publisher-360giving` | `--feature mcp --operator` |
 | `iati-operator` | `--operator` |
@@ -189,6 +191,8 @@ unrelated base executables are not inherited. If the base has no repository
 override, the maintained package default remains in effect. This keeps a
 standalone product's source identity without bringing other products' bins
 into its selected archive.
+
+Optional `managedSourceManifests` selects original JSON source inventories beside their source. The builder retains each selected manifest and every original file it declares. Installed declaration reading checks that complete inventory against the original package entries; it does not substitute the receiving workspace's current files or silently omit an absent declared path.
 
 Explicit support-file declarations retain the complete original file regardless
 of extension, including publisher TeX, native input/reference formats and opaque

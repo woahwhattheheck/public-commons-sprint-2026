@@ -6,6 +6,8 @@
   <title>SCF delivery planning</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/operations.css">
+  <link rel="stylesheet" href="/operations_task_outcomes.css">
+  <link rel="stylesheet" href="/operations_funding.css">
   <link rel="stylesheet" href="/operations_buyer.css">
   <script type="module" src="/app.mjs"></script>
 </head>
@@ -13,12 +15,12 @@
 <a class="skip" href="#main-content">Skip to planning workspace</a>
 <header class="masthead">
   <div><p class="eyebrow">Stellar Forge · Grant operations</p><h1>SCF delivery planning</h1></div>
-  <div class="masthead-status"><span class="tag">Local planning</span><button id="sign-out" type="button" hidden>Close access</button></div>
+  <div class="masthead-status"><span class="tag" id="staff-identity">Grant workspace</span><a class="tag" href="/team">Team workspace</a><button id="sign-out" type="button" hidden>Sign out</button></div>
 </header>
 <div id="message" role="status" aria-live="polite"></div>
 <section id="access-panel" class="access-panel" hidden>
-  <h2>Open your retained workspace</h2>
-  <p>Use the private link in <code>open-workspace.html</code>, or enter the access key from the same private workspace directory.</p>
+  <h2>Sign in to Grant Operations</h2>
+  <p><a href="/team">Staff sign-in</a> opens your assigned cases. The installation owner can open the private <code>open-workspace.html</code> link or enter the owner key below.</p>
   <form id="access-form"><label for="access-key">Workspace access key</label><input id="access-key" type="password" autocomplete="off" required><button type="submit" class="primary">Open workspace</button></form>
 </section>
 <div id="workbench" hidden aria-busy="false">

@@ -1,0 +1,54 @@
+{
+  "schema": "stellar-forge.sf47-supplier-engine-origin.v1",
+  "description": "Unchanged original supplier-statement reconciliation engine.",
+  "files": [
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/engine.mjs",
+      "bytes": 9750,
+      "sha256": "9177566131464a718ed80d489bdf1b0d8e88f83dca2780c6f149d95b254edff3",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/engine.mjs",
+      "gitBlob": "de9bea0645c179c1e8bd15fc4b5150bac2904f4b"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/reconcile.mjs",
+      "bytes": 7872,
+      "sha256": "b0a32a2fd247ecc24ffafd35f31c0e33dfbd39f0e0c8ae28743819de94e523b3",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/reconcile.mjs",
+      "gitBlob": "750cd21ab64a254ef78c92ba002a3690c7d6b4c2"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/validation.mjs",
+      "bytes": 8463,
+      "sha256": "c55e1464fb5e72847728379877eb43aa5cdeaa84bcc1658562c62116881df14d",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/validation.mjs",
+      "gitBlob": "876f307fe3ebfcade15b73f6b407f08401d10fdf"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/guards.mjs",
+      "bytes": 5072,
+      "sha256": "faf27c2fa64a99c237f580db0b9262dcfa5f4ecef6b54d70565ba65c1fd7c6f7",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/guards.mjs",
+      "gitBlob": "864815e4559d004c7d1d54561c7bda7b9a41e1cf"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/json.mjs",
+      "bytes": 4430,
+      "sha256": "0c8fc1dae1b331f4e1af72fb1bd62bdfa9b73d4af2ad3407261bbe1458d21305",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/json.mjs",
+      "gitBlob": "14da7535611646d9727df4fc75b18b1cb3565534"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/supplier_statement_engine/clock.mjs",
+      "bytes": 1395,
+      "sha256": "d123eb8d58e41bd58e60408ea4a9729465bca1f050c32f1aea6f77cb58bd6f1d",
+      "sourceRepository": "woahwhattheheck/smb-showcase-inventory",
+      "sourcePath": "apps/supplier_statement_reconciliation/clock.mjs",
+      "gitBlob": "aa7c1a581d4be6363a940a649bd6675da99cb5ea"
+    }
+  ]
+}
