@@ -16,6 +16,14 @@ export interface BackupReview {
   files:number;directories:number;links:number;bytes:number;inventorySha256:Sha256;
   externalBindings:ExternalBinding[];externalBindingDiscovery?:{parsedJsonFiles:number;unscannedJsonFiles:Array<{path:string;bytes:number;reason:string}>;externalTreesCopied:false};excluded:Array<{path:string;reason:string}>;
 }
+/** Application-level reads in this successful export invocation; OS cache behavior is separate.
+ * A resumed completed archive has zero source/copy work and is fully verified again.
+ * Retained interrupted archives contribute to archiveHashFiles/archiveHashBytes. */
+export interface BackupReadWork {
+  inventoryPasses:number;sourceHashFiles:number;sourceHashBytes:number;sourceDigestReuses:number;
+  copiedFiles:number;copiedBytes:number;archiveHashFiles:number;archiveHashBytes:number;
+  archiveMemberPasses:number;archiveMemberBytes:number;
+}
 export interface BackupInspection {
   archiveId:Sha256;sha256:Sha256;bytes:number;manifestSha256:Sha256;
   archivePath:string;review:BackupReview;inspectedAt:string;
@@ -38,7 +46,7 @@ export interface BackupOperation {
   observation?:{status:'UNAVAILABLE';error:{code:string;message:string}};
   error?:{code:string;message:string}|null;
   receiving?:{available:boolean;phase?:'RESTORING'|'BINDINGS_REVIEW_REQUIRED'|'BINDINGS_REVIEWED';directory?:string;workspaceId?:string;status?:'MISSING'|'UNAVAILABLE';error?:{code:string;message:string}};
-  result?:ReceivingResult|(BackupInspection&{filename:string});
+  result?:ReceivingResult|(BackupInspection&{filename:string;readWork?:BackupReadWork});
 }
 export interface BackupUpload {
   uploadId:RequestId;requestId:RequestId;sha256:Sha256;bytes:number;receivedBytes:number;
