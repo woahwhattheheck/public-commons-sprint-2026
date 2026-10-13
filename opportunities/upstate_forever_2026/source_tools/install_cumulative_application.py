@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import traceback
 import zipfile
 
 OPERATION = "UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012"
@@ -180,8 +181,9 @@ def shared_lifecycle(root):
     write(index, html)
 
 
-def compose(root):
-    records = []
+def compose(root, records=None):
+    if records is None:
+        records = []
     diagnostic_join(root, records)
     experiments = module(root, "install_experiments.py")
     apply_function(root, [
@@ -228,7 +230,118 @@ def compose(root):
             ("operator/server.py", refresh["compose_server"]),
             ("operator/web/index.html", refresh["compose_index"]),
         ], "Original-source refresh", records)
+    guided_join(root, records)
+    if (root / "source_tools/operator_session_composition.py").is_file():
+        session = module(root, "source_tools/operator_session_composition.py")
+        apply_function(root, [
+            ("operator/server.py", session["patch_server"]),
+            ("operator/web/app.mjs", session["patch_app"]),
+            ("operator/web/index.html", session["patch_index"]),
+            ("install_extensions.py", session["patch_extensions"]),
+        ], "Native saved operating view and revision notes", records)
+    if (root / "source_tools/investigations_composition.py").is_file():
+        investigations = module(root, "source_tools/investigations_composition.py")
+        apply_function(root, [
+            ("operator/web/app.mjs", investigations["patch_app"]),
+        ], "Native Investigations and scientific interpretation", records)
+    registered_desks_join(root, records)
     return records
+
+
+def registered_desks_join(root, records):
+    """Apply each received component's maintained installer before source capture."""
+    def complete(label, paths):
+        present = [(root / name).is_file() for name in paths]
+        if not any(present):
+            return False
+        missing = [name for name, exists in zip(paths, present) if not exists]
+        if missing:
+            raise ValueError(label + " source cohort is incomplete: " + ", ".join(missing))
+        return True
+
+    gis = ("install_gis_projects.py", "model/gis_project.py", "model/gis_workspace.py",
+           "model/gis_project_cli.py", "model/gis_project_native.py",
+           "model/gis_project_view.html", "model/GIS_PROJECTS.md",
+           "model/requirements-gis.txt", "operator/gis_projects.py",
+           "operator/web/gis-projects.mjs", "operator/web/gis-projects.css",
+           "operator/extensions/gis-projects.json")
+    if complete("Editable GIS projects", gis):
+        result = module(root, gis[0])["install"](root, root)
+        records.append({"component": "Editable GIS projects", "result": result})
+
+    calibration = ("operator/install_calibration.py", "source_tools/calibration_assembly.py",
+                   "model/calibration.py", "model/CALIBRATION.md",
+                   "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
+                   "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
+                   "operator/calibration.py", "operator/CALIBRATION.md",
+                   "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
+                   "operator/web/calibration.css", "operator/extensions/calibration.json")
+    if complete("Calibration, source uncertainty and residual maps", calibration):
+        result = module(root, calibration[0])["install"](root, root)
+        records.append({"component": "Calibration, source uncertainty and residual maps",
+                        "result": result})
+
+    water = ("source_tools/install_water_context.py", "model/water_context.py",
+             "model/WATER_CONTEXT.md", "operator/water_context_service.py",
+             "operator/WATER_CONTEXT_SERVICE.md", "operator/web/water_context.mjs",
+             "operator/web/water_context_map.mjs", "operator/web/water_context.css",
+             "operator/extensions/water-context.json", "water_context_cli.py",
+             "WATER_CONTEXT_OPERATOR.md")
+    if complete("Water and Habitat Context", water):
+        result = module(root, water[0])["install"](root)
+        records.append({"component": "Water and Habitat Context", "result": result})
+
+    parcels = ("operator/install_parcel_source_desk.py", "model/parcel_source_desk.py",
+               "model/parcel_source_cli.py", "operator/parcel_source_desk.py",
+               "operator/extensions/parcel-sources.json",
+               "operator/web/parcel_source_desk.mjs", "operator/web/parcel_source_desk.css",
+               "operator/parcel_source_receiving.py", "operator/PARCEL_SOURCE_DESK.md")
+    if complete("Parcel Source Desk", parcels):
+        result = module(root, parcels[0])["run"](root, root)
+        records.append({"component": "Parcel Source Desk", "result": result})
+
+    annual = ("operator/annual_reference.py", "operator/ANNUAL_REFERENCES.md",
+              "operator/extensions/annual-reference.json",
+              "operator/web/annual_reference.mjs", "operator/web/annual_reference.css",
+              "source_tools/usgs_annual.py", "source_tools/USGS_ANNUAL.md",
+              "source/usgs-annual2012-20261013/F7DN436B-original-metadata.xml")
+    if complete("Original annual references", annual):
+        descriptor = json.loads((root / annual[2]).read_text("utf-8"))
+        if (descriptor.get("schema") != "upstate.operator-extension/v1"
+                or descriptor.get("id") != "annual-reference"):
+            raise ValueError("Select the original annual-reference descriptor")
+        # The maintained registry discovers this received descriptor. Its provider
+        # uses the original queue, SourcePreparation roots, uploads and file tickets.
+        records.append({"component": "Original annual references",
+                        "registration": "maintained extension registry",
+                        "paths": list(annual)})
+
+
+def guided_join(root, records):
+    """Compose the author's full verified component in this fresh staging tree."""
+    path = root / "operator/install_guided_journey.py"
+    if not path.is_file():
+        return
+    package = module(root, "operator/install_guided_journey.py")
+    manifest, files, integration = package["read_component"](root)
+    original, proposed, modes = package["prepare"](root, files, integration)
+    changes = []
+    for name, body in proposed.items():
+        if name.endswith(".py"):
+            ast.parse(body.decode("utf-8"), filename=name)
+        if name.endswith(".json"):
+            json.loads(body)
+        if original[name] != body:
+            changes.append({"path": name,
+                            "before": sha(original[name]) if original[name] is not None else None,
+                            "after": sha(body)})
+    for name, body in proposed.items():
+        if original[name] != body:
+            target = root / name
+            write(target, body)
+            target.chmod(modes[name])
+    records.append({"component": "Guided journey",
+                    "operation_id": manifest["operation_id"], "changes": changes})
 
 
 def check_sources(root):
@@ -297,13 +410,20 @@ def install(source, output, archive):
         if archive:
             result["archive"] = archive_application(output, archive)
         return result
-    with tempfile.TemporaryDirectory(prefix=".cumulative-application-", dir=output.parent) as temporary:
-        root = Path(temporary) / "application"
+    staging = Path(tempfile.mkdtemp(prefix=".cumulative-application-", dir=output.parent))
+    root = staging / "application"
+    steps = []
+    phase = "copy_source"
+    completed = False
+    try:
         shutil.copytree(source, root, ignore=shutil.ignore_patterns(
             "__pycache__", ".git", ".venv", "venv", "node_modules", "*.pyc", "*.pyo", "*.lock"))
         sys.path[:0] = [str(root / "operator"), str(root)]
-        steps = compose(root)
+        phase = "compose_application"
+        compose(root, steps)
+        phase = "restore_original_inputs"
         inputs = restore_inputs(root)
+        phase = "check_application_sources"
         validation = check_sources(root)
         if owned_inventory(source) != original:
             raise ValueError("The retained input source changed during installation")
@@ -311,8 +431,41 @@ def install(source, output, archive):
                   "source_sha256": source_identity, "steps": steps, "restored_inputs": inputs,
                   "validation": validation, "installed_files": owned_inventory(root)}
         write(root / RECORD, json.dumps(record, ensure_ascii=False, indent=2) + "\n")
+        phase = "publish_application"
         from source_tools.application_assembly import _rename_directory_new
         _rename_directory_new(root, output)
+        completed = True
+    except Exception as error:
+        details = {"schema": "upstate.cumulative-installation-failure/v1",
+                   "operation_id": OPERATION, "state": "error", "phase": phase,
+                   "error": type(error).__name__, "message": str(error),
+                   "source": str(source), "source_sha256": source_identity,
+                   "requested_output": str(output),
+                   "retained_stage": str(staging),
+                   "retained_application": str(root) if root.is_dir() else None,
+                   "completed_steps": steps, "traceback": traceback.format_exc()}
+        try:
+            retained = owned_inventory(root) if root.is_dir() else {}
+            details["changed_files"] = [
+                {"path": name, "before": original.get(name), "after": retained.get(name)}
+                for name in sorted(original.keys() | retained.keys())
+                if original.get(name) != retained.get(name)]
+        except Exception as inspection_error:
+            details["inventory_error"] = str(inspection_error)
+        failure_path = staging / "CUMULATIVE_INSTALLATION_FAILURE.json"
+        try:
+            write(failure_path, json.dumps(details, ensure_ascii=False, indent=2) + "\n")
+            details["failure_record"] = str(failure_path)
+        except Exception as recording_error:
+            details["recording_error"] = str(recording_error)
+        failure = RuntimeError("Cumulative installation failed; staged source retained at " + str(staging))
+        failure.receiving_details = details
+        raise failure from error
+    finally:
+        # A failed attempt keeps its exact partial postimages and original source
+        # for diagnosis. Only a successfully published staging directory is removed.
+        if completed:
+            shutil.rmtree(staging, ignore_errors=True)
     result = {"state": "installed", "application": str(output), "source_sha256": source_identity,
               "source_files": len(original), "installed_files": len(record["installed_files"]),
               "validation": validation, "entrypoint": str(output / "operator/server.py")}
@@ -331,8 +484,11 @@ def main(argv=None):
         print(json.dumps(install(args.source, args.output, args.archive), indent=2, ensure_ascii=False))
         return 0
     except Exception as error:
-        print(json.dumps({"state": "error", "error": type(error).__name__, "message": str(error)}),
-              file=sys.stderr)
+        details = getattr(error, "receiving_details", None)
+        if details is None:
+            details = {"state": "error", "error": type(error).__name__,
+                       "message": str(error), "traceback": traceback.format_exc()}
+        print(json.dumps(details, ensure_ascii=False), file=sys.stderr)
         return 1
 
 

@@ -140,3 +140,20 @@ Use an actual saved analysis and its programme, including a completed native run
 For the browser, exercise selection across two catalog pages, search, the selected-only view, queued export progress, the original download and the existing receiving form. Check the desk in the actual 390-pixel application viewport. Use the existing project transfer continuation route for the resulting archive when joining transport.
 
 Source references: original model/workspace.py, model/portable.py, model/model_selection.py, model/experiments.py, model/experiment_diagnostics.py and operator/extension_registry.py in opportunities/upstate_forever_2026; existing project transfer source at commit a4be1cce327bbf648d5a2652df2c49c929800d5a.
+
+
+## Transfer a Decision study with its original scientific work
+
+Choose **Decision studies** in the Study transfer selector, or choose **Transfer editable study** from a saved Decision study. Several selected decisions can share one capture with diagnostic analyses, experiment programmes and native runs.
+
+For a decision prepared from this scientific workspace, the dependency preview follows every saved revision. It retains the original experiment programme, prepared grid, physical parameter profiles, land-cover scenarios, baseline and alternative runs, comparisons and their original inputs and outputs. It uses the native bridge's declared references; arbitrary source notes remain ordinary retained data. Historical experiment-summary hashes remain creation-time provenance while the original programme can continue accumulating completed cases.
+
+The archive captures a single consistent SQLite generation before resolving the decision dependencies, then retains only the selected studies and their complete revision, calculation, import-provenance and operation histories. Original study and calculation IDs remain unchanged. Retained operation receipts, HTML/CSV reports, implementation selections and decision-project exports travel with the selected study. The receiving Decision studies desk can reopen these downloads through its normal authenticated transport after restart or restore.
+
+The contents preview reports the retained scientific files and lists the selected decision-history counts. The selected database's exact captured size is added to the completed archive. Its frozen bytes are passed to the original portable writer unchanged; ordinary full-workspace backups capture the live decision database through SQLite online backup.
+
+After restore, the original study can gain revisions and calculations. Immutable input revisions and completed answers retain their captured identities. A captured running calculation can enter the original completion or interruption states. A retry can bind its original operation to a new matching calculation attempt after the old attempt fails or is interrupted. Earlier attempts remain in history.
+
+A decision received independently through **Receive project JSON** keeps the donor workspace's scientific references and retained numerical gains. The preview lists those original-workspace references separately. Its complete decision history remains editable and recalculable using the saved gains; open the original scientific workspace for ecological model runs associated with those references. Whole-workspace restore retains the original project identity and provides the full local scientific dependency closure.
+
+The existing **Complete project JSON** export and receive workflow remains available for an independent decision study. **Transfer editable study** uses the original workspace archive and preserves the selected study's original identities.

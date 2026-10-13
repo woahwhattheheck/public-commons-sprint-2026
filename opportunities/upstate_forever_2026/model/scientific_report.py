@@ -8,11 +8,12 @@ from __future__ import annotations
 from html import escape as html_escape
 import math
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v6"
+REPORT_VERSION = "upstate.scientific-report/v8"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -88,9 +89,36 @@ def _percent(value):
     return _number(100 * value) + "%" if _finite(value) else "Unavailable"
 
 
+def link(title, target):
+    """Retain a readable label and exact safe original/reference target."""
+    label, href = str(title), str(target or "")
+    if not href or "\\" in href or any(ord(char) < 32 or ord(char) == 127 for char in href):
+        return label
+    try:
+        parsed = urlsplit(href)
+    except ValueError:
+        return label
+    if parsed.scheme:
+        if parsed.scheme.lower() not in ("http", "https") or not parsed.netloc:
+            return label
+    else:
+        decoded = unquote(parsed.path)
+        if (parsed.netloc or not decoded or decoded.startswith(("/", "\\"))
+                or "\\" in decoded or any(ord(char) < 32 or ord(char) == 127 for char in decoded)
+                or any(part == ".." for part in decoded.split("/"))):
+            return label
+    return {"kind": "link", "label": label, "href": href}
+
+
+def _cell(value):
+    if isinstance(value, dict) and value.get("kind") == "link":
+        return link(value.get("label", value.get("href", "")), value.get("href"))
+    return str(value)
+
+
 def _table(columns, rows, *, widths=None, caption=None):
     columns = [str(value) for value in columns]
-    normalized = [[str(value) for value in row] for row in rows]
+    normalized = [[_cell(value) for value in row] for row in rows]
     if any(len(row) != len(columns) for row in normalized):
         raise ValueError("Scientific report table row does not match its columns")
     if widths is not None and (len(widths) != len(columns) or any(not _finite(v) or v <= 0 for v in widths)):
@@ -486,6 +514,19 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
             ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
             rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8], caption=caption,
         ))
+        if changes:
+            blocks.append(_table(
+                ["Pollutant", "Baseline on paired cells", "Alternative on paired cells",
+                 "Unit", "Paired cells", "Coverage"],
+                [[_label(key), _quantity(value, "baseline_sum_on_common_cells"),
+                  _quantity(value, "alternative_sum_on_common_cells"), _mass_units(key, value),
+                  _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
+                 for key, value in changes.items()],
+                widths=[1.0, 1.3, 1.3, 1.2, .8, .8],
+                caption="Native run " + str(run_id) + ". These retained annual totals use "
+                        "the same valid baseline and alternative cells as the paired change. "
+                        "An absent or zero valid-cell count means an unavailable quantity.",
+            ))
     return blocks
 
 
@@ -496,10 +537,25 @@ def receiving_sections(product):
     inventory = product["inventory"]
     measurement = inventory.get("measurement", {})
     blocks = ["Receiving-water quantity scope: " + inventory["quantity_scope"].replace("_", " ") + ".",
-              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap")
+              *[str(measurement[key]) for key in ("physical", "coverage", "scenario_delta", "overlap", "relationship")
                 if measurement.get(key)]]
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
+    retained_settings = [[_label(key), _plain(value)] for key, value in normalization.items()
+                         if key not in ("caps", "weights", "cap_units")]
+    if retained_settings:
+        blocks.append(_table(
+            ["Original normalization setting", "Retained value"], retained_settings,
+            widths=[1.6, 4.4],
+            caption="Original settings for the dimensionless priority maps. "
+                    "The physical annual quantities below keep their own units.",
+        ))
+    if inventory.get("identity"):
+        blocks.append(_table(
+            ["Receiving-water identity", "Retained value"],
+            [[_label(key), _plain(value)] for key, value in inventory["identity"].items()],
+            widths=[1.6, 4.4],
+        ))
     for family, union in inventory.get("families", {}).items():
         blocks.append("Unduplicated family union: " + str(union.get("title", family)) + ".")
         blocks.append("Each contributing cell is counted once within this family. "
@@ -521,21 +577,151 @@ def receiving_sections(product):
                       + " ha; area within the selected quantity scope: "
                       + _number(receptor.get("area_in_quantity_scope_ha")) + " ha.")
         metrics = receptor["metrics"]
+        blocks.append(_table(
+            ["Contributing-footprint support", "Recorded value"],
+            [["Selected grid cells", _count(metrics.get("selected_cells"))],
+             ["Selected pixel area (ha)", _number(metrics.get("selected_pixel_area_ha"))]],
+            widths=[2.6, 3.4],
+            caption="Pixel selection and geometry areas retain their original distinct definitions.",
+        ))
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
         if receptor.get("source"):
-            blocks.append("Original receiving-water source: " + _plain(receptor["source"]))
+            blocks.append(_table(
+                ["Original receiving-water source", "Retained value"],
+                [[_label(key), link("Open original source", value) if key == "uri" else _plain(value)]
+                 for key, value in receptor["source"].items()],
+                widths=[1.6, 4.4],
+                caption="Original source identifiers, editions and selected feature IDs are retained.",
+            ))
     return [("Receiving-water quantities and priorities", blocks)]
 
 
 def _source_block(source_records):
-    return _table(
-        ["Source", "Edition", "Original reference"],
-        [[str(source.get("title", source["id"])) + "\n" + str(source["id"]),
-          str(source["vintage"]), str(source["uri"])] for source in source_records],
-        widths=[2.0, 1.0, 3.0],
-    )
+    rows = []
+    for source in source_records:
+        identity = [str(source.get("title") or source["id"]),
+                    "Role: " + str(source["id"])]
+        if source.get("source_id"):
+            identity.append("Retained source: " + str(source["source_id"]))
+        edition = [str(source["vintage"])]
+        for field, label in (("data_status", "Publisher data status"),
+                             ("legal_edition_status", "Legal edition")):
+            if source.get(field):
+                edition.append(label + ": " + str(source[field]))
+        uri = str(source["uri"])
+        try:
+            host = urlsplit(uri).netloc
+        except ValueError:
+            host = ""
+        reference = link("Open original source" + (" — " + host if host else ""), uri)
+        # A non-web publisher identifier remains visible rather than an inactive "Open" action.
+        if not isinstance(reference, dict):
+            reference = uri
+        rows.append(["\n".join(identity), "\n".join(edition), reference])
+    return _table(["Source and retained identity", "Edition", "Original reference"],
+                  rows, widths=[2.6, 1.3, 2.1],
+                  caption="Links retain the original publisher reference. Complete source IDs, "
+                          "URIs and body hashes are also retained in report-data.json.")
+
+
+
+
+def economic_coverage_sections(value):
+    """Expose original economic-zone coverage and estimate completeness."""
+    if value is None:
+        return [("Economic analysis status", [
+            "This delivery contains physical model results and scenario comparisons. "
+            "An economic decision edition has not been selected for this delivery."
+        ])]
+    report, binding = value["report"], value["binding"]
+    alternatives = report["alternatives"]
+    scope = report["scope"]
+    zone = report.get("physical_source", {}).get("zone", {})
+    costed = sum(item.get("cost") is not None for item in alternatives)
+    rows = [
+        ["Selected economic reporting zone", str(binding["zone_title"])],
+        ["Original zone ID", str(binding["zone_id"])],
+        ["Economic decision edition", str(binding["edition_id"])],
+        ["Available alternatives with estimates", str(costed) + " of " + str(len(alternatives))],
+        ["Unavailable original alternatives", str(len(report.get("unavailable_alternatives") or []))],
+        ["Modeled responses", ", ".join(_label(key) for key in scope.get("modeled_metrics", [])) or "None"],
+        ["Unmodeled responses", ", ".join(_label(key) for key in scope.get("unmodeled_metrics", [])) or "None"],
+    ]
+    if zone.get("scope") is not None:
+        rows.append(["Original zone scope", _plain(zone["scope"])])
+    for key, title in (("area_ha", "Recorded zone area (ha)"),
+                       ("original_area_ha", "Recorded original geometry area (ha)")):
+        if zone.get(key) is not None:
+            rows.append([title, _number(zone[key])])
+    coverage, estimate_rows = [], []
+    for item in alternatives:
+        label = str(item.get("label") or item["run_id"])
+        for metric, output in item.get("outputs", {}).items():
+            support = output.get("support", {})
+            coverage.append([label, _label(metric), _number(support.get("area_ha")),
+                             _percent(support.get("baseline_fraction")),
+                             _percent(support.get("alternative_fraction")),
+                             _plain(support.get("status"))])
+        cost = item.get("cost")
+        if cost is None:
+            estimate_rows.append([label, "Unentered", "", ""])
+        else:
+            source = cost.get("source") or {}
+            estimate_rows.append([label, str(cost["currency"]),
+                                  str(source.get("as_of") or "Unspecified"),
+                                  link(str(source.get("title") or "Original estimate"), source.get("uri"))])
+    blocks = [
+        "The economic zone is the original selected reporting unit. Its footprint and "
+        "common modeled support remain distinct from the complete regional model domain.",
+        _table(["Selected scope", "Recorded value"], rows, widths=[2.2, 3.8]),
+        "The coverage percentages are the original all-run common cells divided by each run's "
+        "own valid modeled cells for that pollutant. They do not represent a percentage of the "
+        "whole watershed. Unmodeled responses remain absent rather than zero.",
+    ]
+    if coverage:
+        blocks.append(_table(
+            ["Alternative", "Pollutant", "Common ha", "Baseline valid-cell coverage",
+             "Alternative valid-cell coverage", "Support"],
+            coverage, widths=[1.4, .9, .8, 1.1, 1.1, .8]))
+    blocks.extend([
+        "Capital and present value are in the recorded currency. Operating and annualized costs "
+        "are in that currency per year; the retained discount rate is a real annual rate. "
+        "The model annualizes implementation costs and does not monetize environmental benefits.",
+        "Unentered estimates are excluded from cost-per-mass calculations. Frontier comparisons "
+        "use annualized costs only for candidates with complete estimates in a common currency; "
+        "the recorded decision tables retain their actual budget and target outcomes.",
+        _table(["Alternative", "Estimate currency / status", "Estimate as of", "Original estimate"],
+               estimate_rows, widths=[1.6, 1.3, 1.1, 2.0]),
+    ])
+    return [("Economic scope and source coverage", blocks)]
+
+
+def delivery_sections(state):
+    """Link only files actually retained before report composition."""
+    blocks = []
+    asset_rows = []
+    for key, title in (("map_atlas", "Complete publication map atlas"),
+                       ("map_atlas_index", "Publication map index"),
+                       ("source_report_html", "Original watershed report"),
+                       ("source_report_json", "Original watershed report data"),
+                       ("working_archive", "Complete scientific workspace"),
+                       ("display_scales", "Map scale definitions"),
+                       ("receptor_inventory", "Source-water contributing areas"),
+                       ("receiving_water_index", "Receiving-water source inventory")):
+        item = state.get("files", {}).get(key)
+        if item and item.get("path"):
+            asset_rows.append([title, link("Open retained file", item["path"]), item["path"]])
+    if asset_rows:
+        blocks.append(_table(["Working material", "Retained file", "Package path"],
+                             asset_rows, widths=[2.1, 1.1, 2.8]))
+    if not blocks:
+        return []
+    blocks.insert(0, "Open this report inside the extracted delivery folder to follow the retained "
+                     "map and working-material links. Preserve the folder structure when sharing it. "
+                     "The scientific workspace archive contains the original inputs and native model outputs.")
+    return [("Working materials and source reports", blocks)]
 
 
 def _relative_link(value):
@@ -548,13 +734,39 @@ def _relative_link(value):
     return normalized
 
 
+def _figure(block, root=None):
+    """Bind a readable figure to its retained SVG and original numeric specification."""
+    relative = _relative_link(block.get("path"))
+    if Path(relative).suffix.lower() != ".svg":
+        raise ValueError("Scientific figures require their retained original SVG")
+    for name in ("alt", "caption"):
+        if not isinstance(block.get(name), str) or not block[name].strip():
+            raise ValueError("Scientific figures require nonempty " + name)
+    if not isinstance(block.get("spec"), dict):
+        raise ValueError("Scientific figures require the original numeric specification")
+    size, sha = block.get("bytes"), block.get("sha256")
+    if (not isinstance(size, int) or isinstance(size, bool) or size <= 0
+            or not isinstance(sha, str) or len(sha) != 64
+            or any(value not in "0123456789abcdef" for value in sha)):
+        raise ValueError("Scientific figures require the retained SVG length and SHA256")
+    if root is not None:
+        directory = Path(root).resolve(strict=True)
+        source = (directory / relative).resolve(strict=True)
+        if not source.is_relative_to(directory):
+            raise ValueError("Scientific figure is outside the original delivery")
+        actual = describe_file(directory, source)
+        if actual["bytes"] != size or actual["sha256"] != sha:
+            raise ValueError("Scientific figure differs from its retained original SVG")
+    return {**block, "path": relative}
+
+
 def report_pdf(path, title, sections, *, contact, source_records):
     """Render the original report content with repeating, page-aware data tables."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
     from xml.sax.saxutils import escape
 
     styles = getSampleStyleSheet()
@@ -565,10 +777,29 @@ def report_pdf(path, title, sections, *, contact, source_records):
     story = [Paragraph(escape(str(title)), styles["Title"]), Spacer(1, .15 * inch)]
 
     def paragraph(value, style=None):
-        return Paragraph(escape(str(value)).replace("\n", "<br/>"), style or styles["BodyText"])
+        value = _cell(value)
+        if isinstance(value, dict):
+            href = escape(value["href"], {'"': "&quot;"})
+            body = '<link href="' + href + '">' + escape(value["label"]).replace("\n", "<br/>") + "</link>"
+        else:
+            body = escape(value).replace("\n", "<br/>")
+        return Paragraph(body, style or styles["BodyText"])
 
     def append(block):
-        if isinstance(block, dict) and block.get("kind") == "links":
+        if isinstance(block, dict) and block.get("kind") == "figure":
+            from .scientific_figures import panel_drawings
+            figure = _figure(block, Path(path).parent)
+            if figure.get("title"):
+                story.append(paragraph(figure["title"], styles["Heading3"]))
+            drawings = list(panel_drawings(figure["spec"], 7.1 * inch))
+            if not drawings:
+                raise ValueError("Scientific figure contains no native report panels")
+            for drawing in drawings[:-1]:
+                story.extend([drawing, Spacer(1, .08 * inch)])
+            story.append(KeepTogether([
+                drawings[-1], Spacer(1, .05 * inch), paragraph(figure["caption"]),
+            ]))
+        elif isinstance(block, dict) and block.get("kind") == "links":
             for item in block["items"]:
                 relative = _relative_link(item["path"])
                 story.append(Paragraph('<link href="' + html_escape(relative, quote=True) + '">' +
@@ -621,7 +852,18 @@ def report_pdf(path, title, sections, *, contact, source_records):
 
 def _html_block(block):
     def cell(value):
-        return html_escape(str(value)).replace("\n", "<br>")
+        value = _cell(value)
+        if isinstance(value, dict):
+            return '<a href="' + html_escape(value["href"], quote=True) + '">' + html_escape(value["label"]).replace("\n", "<br>") + "</a>"
+        return html_escape(value).replace("\n", "<br>")
+    if isinstance(block, dict) and block.get("kind") == "figure":
+        figure = _figure(block)
+        title = ("<strong>" + cell(figure["title"]) + "</strong> "
+                 if figure.get("title") else "")
+        return ('<figure class="scientific-figure"><img src="' +
+                html_escape(figure["path"], quote=True) + '" alt="' +
+                html_escape(figure["alt"], quote=True) + '"><figcaption>' +
+                title + cell(figure["caption"]) + "</figcaption></figure>")
     if isinstance(block, dict) and block.get("kind") == "links":
         return "<ul>" + "".join(
             '<li><a href="' + html_escape(_relative_link(item["path"]), quote=True) + '">' +
@@ -635,30 +877,47 @@ def _html_block(block):
     return "<div class=\"table-wrap\"><table>" + caption + "<thead><tr>" + head + "</tr></thead><tbody>" + rows + "</tbody></table></div>"
 
 
+def _markdown_cell(value):
+    def plain(text):
+        return (str(text).replace("\\", "\\\\").replace("|", "\\|")
+                .replace("[", "\\[").replace("]", "\\]")
+                .replace("*", "\\*").replace("_", "\\_")
+                .replace("`", "\\`").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\r", "").replace("\n", "<br>"))
+    value = _cell(value)
+    if isinstance(value, dict):
+        href = value["href"].replace("<", "%3C").replace(">", "%3E").replace(" ", "%20").replace("|", "%7C")
+        return "[" + plain(value["label"]) + "](<" + href + ">)"
+    return plain(value)
+
+
 def _markdown_report(title, sections, prepared):
-    def cell(value):
-        return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
-    lines = ["# " + str(title), ""]
+    lines = ["# " + _markdown_cell(title), ""]
     for heading, blocks in sections:
-        lines.extend(["## " + str(heading), ""])
+        lines.extend(["## " + _markdown_cell(heading), ""])
         for block in blocks:
-            if isinstance(block, dict) and block.get("kind") == "table":
+            if isinstance(block, dict) and block.get("kind") == "figure":
+                figure = _figure(block)
+                target = figure["path"].replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+                alt = figure["alt"].replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("\n", " ")
+                lines.extend(["![" + alt + "](" + target + ")", ""])
+                if figure.get("title"):
+                    lines.extend([str(figure["title"]), ""])
+                lines.extend([figure["caption"], ""])
+            elif isinstance(block, dict) and block.get("kind") == "table":
                 if block.get("caption"):
-                    lines.extend([str(block["caption"]), ""])
-                lines.append("| " + " | ".join(cell(value) for value in block["columns"]) + " |")
+                    lines.extend([_markdown_cell(block["caption"]), ""])
+                lines.append("| " + " | ".join(_markdown_cell(v) for v in block["columns"]) + " |")
                 lines.append("| " + " | ".join("---" for _ in block["columns"]) + " |")
-                lines.extend("| " + " | ".join(cell(value) for value in row) + " |" for row in block["rows"])
+                lines.extend("| " + " | ".join(_markdown_cell(v) for v in row) + " |" for row in block["rows"])
                 lines.append("")
             elif isinstance(block, dict) and block.get("kind") == "links":
                 for item in block["items"]:
-                    relative = _relative_link(item["path"])
-                    target = relative.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
-                    label = str(item["title"]).replace("[", "\\[").replace("]", "\\]")
-                    lines.append("- [" + label + "](" + target + ")")
+                    lines.append("- " + _markdown_cell(link(item["title"], _relative_link(item["path"]))))
                 lines.append("")
             else:
-                lines.extend([str(block), ""])
-    lines.extend([prepared, ""])
+                lines.extend([_markdown_cell(block), ""])
+    lines.extend([_markdown_cell(prepared), ""])
     return "\n".join(lines)
 
 
@@ -667,6 +926,10 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     all_sections = list(sections) + [("Source editions", [_source_block(source_records)])]
+    for _, blocks in all_sections:
+        for block in blocks:
+            if isinstance(block, dict) and block.get("kind") == "figure":
+                _figure(block, directory)
     headings = "".join("<li><a href=\"#section-" + str(index) + "\">" + html_escape(str(heading))
                        + "</a></li>" for index, (heading, _) in enumerate(all_sections))
     content = "".join("<section id=\"section-" + str(index) + "\"><h2>"
@@ -686,7 +949,10 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;margin:16px 0}"
         "table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;"
         "padding:8px;border-bottom:1px solid #ccc;overflow-wrap:anywhere}th{background:#eee;border-bottom:1px solid #444}"
-        "caption{text-align:left;margin-bottom:8px}footer{border-top:1px solid #777;margin-top:32px;padding-top:16px}"
+        "caption{text-align:left;margin-bottom:8px}.scientific-figure{margin:20px 0}"
+        ".scientific-figure img{display:block;max-width:100%;height:auto}"
+        ".scientific-figure figcaption{margin-top:8px;font-size:13px;max-width:95ch}"
+        "footer{border-top:1px solid #777;margin-top:32px;padding-top:16px}"
         "@media(max-width:620px){main{padding:16px}nav ol{columns:1}h1{font-size:25px}}"
         "@media print{main{max-width:none;padding:0}nav{display:none}.table-wrap{overflow:visible}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}body{font-size:10pt}"

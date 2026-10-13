@@ -227,6 +227,10 @@ def sync_completed(workspace, programme):
     # The experiment executor retains the actual matched metrics and summary;
     # completed_only prevents native calculation if a run changes meanwhile.
     result = engine.execute(workspace, key, completed_only=True)
+    # Both the native programme and experiment summary locks are released.
+    # An existing study keeps its original source/spatial context when reopened.
+    from .study_report import refresh_existing
+    refresh_existing(workspace, key)
     return {"experiment_id": key, "state": result["state"],
             "source_programme_id": source_programme_id,
             "completed_programme_id": programme.get("programme_id", programme.get("id")),

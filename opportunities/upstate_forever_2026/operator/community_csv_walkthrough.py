@@ -27,6 +27,7 @@ INTERVENTION = "ARJWS-L620-RIPARIAN-REVIEW"
 TABLE_SOURCE = "RFP_COMMUNITIES_2024_ACS"
 TABLE_SHA = "377d4f860fb545215534070309b67e1d26135cdab1ee03a70c657107692b06e4"
 WBD_SOURCE = "usgs-wbd-focus-huc12-20261012"
+DOMAIN_SOURCE = "upstate-wbd-upstream-domain-20261012"
 WBD_SHA = "c5e0af7bd6fb8aa72ebb7283ceae6bb694bc203ce98ef0a0e33ce200800c6806"
 
 
@@ -43,12 +44,41 @@ def retained_source(workspace, source_id, checksum, manifest):
     return collection, path, entry
 
 
+def retained_geometry(workspace, manifest=None):
+    """Reuse this Workspace's original upstream domain or focus-feature edition."""
+    collections = workspace.sources()
+    if manifest is not None:
+        selected = workspace.import_sources(manifest)
+        collections = [selected]
+    else:
+        collections = sorted(collections, key=lambda row: (
+            str(row.get("captured_at") or ""), row["id"]), reverse=True)
+    for source_id in (DOMAIN_SOURCE, WBD_SOURCE):
+        for collection in collections:
+            for entry in collection["entries"]:
+                if entry["id"] != source_id:
+                    continue
+                if (entry["kind"] != "vector" or entry.get("encoding") != "gzip"
+                        or entry.get("source_format") != "Esri JSON"
+                        or not entry.get("decoded_sha256") or not entry.get("source_crs")):
+                    raise ValueError("The original WBD source needs its native format, CRS and decoded hash")
+                if source_id == WBD_SOURCE and entry["body"]["sha256"] != WBD_SHA:
+                    continue
+                path, entry = workspace.source_file(collection["id"], source_id)
+                return collection, path, entry
+    if manifest is not None:
+        raise ValueError("The geometry manifest needs the original upstream-domain or four-focus WBD entry")
+    return retained_source(workspace, WBD_SOURCE, WBD_SHA, APPLICATION / "source/sources.json")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path,
                         help="Existing retained Upper Savannah Workspace")
     parser.add_argument("--output", required=True, type=Path,
                         help="Directory for actual plan, CSV, geometry and report exports")
+    parser.add_argument("--geometry-manifest", type=Path,
+                        help="Original retained domain sources.json when its collection is not yet in this Workspace")
     parser.add_argument("--baseline-run", help="An actual retained baseline to bind to this programme")
     parser.add_argument("--scenario-run", action="append", default=[],
                         help="An actual compatible alternative; repeat for several alternatives")
@@ -60,17 +90,19 @@ def main(argv=None):
     table_collection, original_table_path, _ = retained_source(
         workspace, TABLE_SOURCE, TABLE_SHA,
         APPLICATION / "source/communities-rfp-20261012/source-manifest.json")
-    geometry_collection, geometry_path, geometry_entry = retained_source(
-        workspace, WBD_SOURCE, WBD_SHA, APPLICATION / "source/sources.json")
+    geometry_collection, geometry_path, geometry_entry = retained_geometry(
+        workspace, args.geometry_manifest)
     geometry_body = geometry_path.read_bytes()
     decoded = gzip.decompress(geometry_body)
     if hashlib.sha256(decoded).hexdigest() != geometry_entry["decoded_sha256"]:
         raise ValueError("The original WBD decoded source differs")
     geometry = json.loads(decoded)
+    huc_field = geometry_entry.get("metadata", {}).get("native_huc12_field")
     features = [
         feature for feature in geometry["features"]
-        if any(str(value) == HUC12 for name, value in feature["attributes"].items()
-               if name.lower() == "huc12")
+        if (str(feature["attributes"].get(huc_field)) == HUC12 if huc_field else
+            any(str(value) == HUC12 for name, value in feature["attributes"].items()
+                if name.lower() == "huc12"))
     ]
     if len(features) != 1 or not features[0].get("geometry"):
         raise ValueError("Select the single original Lower Six and Twenty Creek WBD geometry")
@@ -112,7 +144,7 @@ def main(argv=None):
                      "whole-block-group basis of the original demographic source.",
         }],
         "notes": [
-            "Original WBD source: " + WBD_SOURCE + "; HUC12 " + HUC12
+            "Original WBD source: " + geometry_entry["id"] + "; HUC12 " + HUC12
             + "; source CRS " + geometry_entry["source_crs"] + ".",
             "Interventions are proposed planning work; costs remain unspecified until scoped.",
         ],
@@ -179,6 +211,7 @@ def main(argv=None):
     emit("original-community-source.csv", original_table_path.read_bytes())
     emit("original-interventions.csv", original_csv)
     emit("selected-watershed.esri.json", selected_geometry)
+    emit("original-wbd-source.esri.json.gz", geometry_body)
     emit("revised-interventions.csv", verify_file(
         workspace.root, revised_report["files"]["interventions.csv"]).read_bytes())
     emit("received-interventions.csv", verify_file(
@@ -194,6 +227,10 @@ def main(argv=None):
         "revised_plan_id": revised["id"], "original_report_id": original_report["id"],
         "revised_report_id": revised_report["id"], "huc12": HUC12,
         "utility_id": UTILITY, "source_crs": geometry_entry["source_crs"],
+        "geometry_source_id": geometry_entry["id"],
+        "geometry_source_collection_id": geometry_collection["id"],
+        "geometry_source_sha256": geometry_entry["body"]["sha256"],
+        "geometry_decoded_sha256": geometry_entry["decoded_sha256"],
         "selected_wbd_attributes": features[0]["attributes"],
         "community_summary": plan["summaries"]["all"],
         "import_summary": comparison, "artifacts": artifacts,
