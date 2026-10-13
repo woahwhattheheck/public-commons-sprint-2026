@@ -1,4 +1,5 @@
 import {createObservedLandcoverSelectionContract} from "./observed_landcover_selection.mjs";
+import {renderOriginalLandcoverGroups} from "./observed_landcover_groups.mjs";
 /** Original completed NLCD matrices, selected HUC support, and retained scientific reports. */
 const rows=value=>Array.isArray(value)?value:[];
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -8,7 +9,7 @@ const choiceKey=value=>JSON.stringify([value.source_collection_id,value.analysis
 const number=(value,digits=3)=>value===null||value===undefined?'Not available':Number(value).toLocaleString(undefined,{maximumFractionDigits:digits});
 const changedShare=(value,paired)=>value===null||value===undefined?'Changed share unavailable · '+number(paired,0)+' paired-valid cells':number(value)+'% of paired-valid cells changed class';
 const cell=value=>'<td title="'+esc(value??'Not available')+'">'+esc(number(value))+'</td>';
-const table=(columns,body)=>'<div class="olc-scroll"><table><thead><tr>'+columns.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+const table=(columns,body)=>'<div class="olc-scroll" tabindex="0" role="region" aria-label="Original comparison table, scroll horizontally"><table><thead><tr>'+columns.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
 const action=(id,title,extra='')=>'<button type="button" data-lc-action="'+esc(id)+'" '+extra+'>'+esc(title)+'</button>';
 const options=(values,current,label)=>'<option value="">'+esc(label)+'</option>'+values.map(row=>'<option value="'+esc(row.value)+'"'+(row.value===current?' selected':'')+'>'+esc(row.label)+'</option>').join('');
 
@@ -28,6 +29,7 @@ export function renderObservedLandcover(report,{huc='',unit='ha'}={}){
     ' · '+esc(number(view.changed_area_ha))+' ha.</p>'+
     '<div class="olc-metrics">'+support.map(([label,value])=>'<div><span>'+esc(label)+'</span><strong>'+esc(number(value,0))+'</strong></div>').join('')+'</div>'+
     '<p class="olc-note">'+esc(report.interpretation)+'</p>'+
+    renderOriginalLandcoverGroups(view,report.binding.method.cell_area_m2,{before,after,label:huc?(huc+' · '+(view.properties?.name||'')):'Selected watershed union'})+
     '<h3>Full directional matrix · '+esc(unitLabel)+'</h3><p>Rows are '+esc(before)+', columns are '+esc(after)+
     '. The diagonal is unchanged class. Percentages use each earlier class’s paired-valid cells; empty earlier classes remain Not available.</p>'+
     table([before+' / '+after,...classes.map(row=>row.code)],classes.map(left=>'<tr><th scope="row">'+esc(left.code+' '+left.label)+'</th>'+
@@ -155,10 +157,10 @@ export function attachObservedLandcover(host){
     find('[data-lc-result-tools]').innerHTML='<section class="olc-panel"><div class="olc-toolbar"><label>Reporting area<select name="view_huc">'+
       '<option value="">All selected watersheds · unique union</option>'+rows(report.watersheds).map(row=>'<option value="'+esc(row.huc12)+'">'+esc(row.huc12+' · '+row.properties?.name)+'</option>').join('')+
       '</select></label><label>Matrix quantity<select name="unit">'+[['ha','Hectares'],['cells','Cells'],['percent','% of earlier paired class']].map(([value,title])=>'<option value="'+value+'"'+(c.draft.unit===value?' selected':'')+'>'+esc(title)+'</option>').join('')+'</select></label>'+
-      (opened?action('compose','Open in Scientific Reports'):'')+'</div><div class="olc-downloads">'+rows(downloads).map(row=>{
+      (opened?action('compose-replace','Open this report only')+action('compose-append','Add to current report'):'')+'</div><div class="olc-downloads">'+rows(downloads).map(row=>{
         if(typeof row.url!=='string'||!/^\/api\/file\//.test(row.url))throw Error('An original download ticket is missing.');
         return '<a href="'+esc(row.url+(row.url.includes('?')?'&':'?')+'download=1')+'">'+esc(row.label||row.filename)+'</a>';
-      }).join('')+'</div></section>';
+      }).join('')+'</div>'+(opened?'<p class="olc-note">To send an editable study, prepare and save the scientific report, then choose <strong>Transfer this report and its studies</strong>. The original watershed selection, complete source files and analysis collections travel with that saved report.</p>':'')+'</section>';
     renderValues(report);
   }
   function renderValues(report=opened?.report||preview?.report){
@@ -203,11 +205,18 @@ export function attachObservedLandcover(host){
         return result;
       });
   }
-  async function compose(){
+  async function compose(selectionMode){
     if(!opened)throw Error('Open a saved comparison before creating its scientific report.');
-    const w=workspace,source=clone(opened.edition.source),title=opened.edition.title;
-    if(state()!==w)throw Error('Open this report in its original Workspace.');
-    return openScientificReport({workspace_key:w,sources:[source],title});
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose how to open the original report source.');
+    const w=workspace,g=epoch,original=opened,id=original.edition.id;
+    if(!alive(w,g))throw Error('Open this report in its original Workspace.');
+    const result=await api(endpoint('/api/observed-landcover/edition',{workspace:w,id}));
+    if(!alive(w,g)||opened!==original)return;
+    if(result.edition?.id!==id||result.edition.project_id!==getState()?.data?.project?.id||
+       result.edition.state!=='complete'||JSON.stringify(result.edition.source)!==JSON.stringify(original.edition.source))
+      throw Error('Reopen the original complete comparison before choosing its report source.');
+    const source=clone(result.edition.source),title=result.edition.title;
+    return openScientificReport({workspace_key:w,sources:[source],title,selection_mode:selectionMode});
   }
   async function click(actionName,button){
     if(actionName==='refresh')return refresh({load:!opened&&!preview});
@@ -215,7 +224,8 @@ export function attachObservedLandcover(host){
     if(actionName==='preview')return readPreview();
     if(actionName==='save')return saveSelection();
     if(actionName==='open')return openSaved(field('edition').value);
-    if(actionName==='compose')return compose();
+    if(actionName==='compose-replace')return compose('replace');
+    if(actionName==='compose-append')return compose('append');
     const c=context(workspace);
     if(actionName==='select-visible')c.draft.huc12s=[...new Set([...c.draft.huc12s,...filtered().map(row=>row.huc12)])].sort();
     else if(actionName==='clear')c.draft.huc12s=[];
