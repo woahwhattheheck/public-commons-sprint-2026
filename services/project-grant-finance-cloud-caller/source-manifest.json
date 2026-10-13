@@ -1,0 +1,80 @@
+{
+  "schema": "commons.pmrs-cloud-source-manifest.v1",
+  "files": [
+    {
+      "path": "pmrs_cloud_gateway.py",
+      "bytes": 27750,
+      "sha256": "9a6ca36f8714b36141ebe1c397420bc87d1ec064ff7be2488a4990d18a086b3a"
+    },
+    {
+      "path": "connector/apiDefinition.swagger.json",
+      "bytes": 14252,
+      "sha256": "ae77e8a5b4390d0d7ce5c3380c51ef45622b89082d76918b02bd417cc466d444"
+    },
+    {
+      "path": "connector/apiProperties.json",
+      "bytes": 2254,
+      "sha256": "54579e1f3e83c93f44a2c462b7c3d31f1cd2756571e03ba0e2489caee398c761"
+    },
+    {
+      "path": "flows/capture.clientdata.json",
+      "bytes": 8896,
+      "sha256": "eed4be355f3108d69497966ad78d12fe974f0064034e6e74b5a2229950fbf432"
+    },
+    {
+      "path": "flows/prepare.clientdata.json",
+      "bytes": 8896,
+      "sha256": "8dfd5af97d8f9f07bedd15d850a07ddb018b622426b5655e7d603ec69d37db1c"
+    },
+    {
+      "path": "flows/delivery.clientdata.json",
+      "bytes": 8897,
+      "sha256": "725ca18570e10783f34bdbc2f77f371c4e8f20b524ff532140caa2dd6d26a2af"
+    },
+    {
+      "path": "pmrs_cloud_deploy.py",
+      "bytes": 25861,
+      "sha256": "806c927765fd559fe17bd3c3a1b641f4b99ea5e1cc38367344f77e44d9882b9e"
+    },
+    {
+      "path": "pmrs_cloud_client.py",
+      "bytes": 9619,
+      "sha256": "35f5202729309091200e503b3b3cf3b6af0d4b31165df9ca6962a15cf97dfac2"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4402,
+      "sha256": "b08f0bbcb966b8476312549637d03f1e352262d9cf4c913028b9c953d911cc0b"
+    },
+    {
+      "path": "bindings.example.json",
+      "bytes": 924,
+      "sha256": "db3a50a0574fb261728282178d9cfb7723ddc8622b2dc98c30bdf4454bca54f8"
+    },
+    {
+      "path": "DEPLOYMENT.md",
+      "bytes": 9483,
+      "sha256": "054d0eba5b5a54aef78901cd859e6c32543c93362125d1d5b4df36e0230dabe0"
+    },
+    {
+      "path": "OPERATIONS.md",
+      "bytes": 7672,
+      "sha256": "98a732a4a5594f37692a23972dbb909abe05296864367abeca26d70f5f89b3fe"
+    },
+    {
+      "path": "RECEIVING.md",
+      "bytes": 5364,
+      "sha256": "36e8f141e76bc173b2b0b7b7107e4d5c7f0b8257debeae80614c40f41738269f"
+    },
+    {
+      "path": "native-contract.json",
+      "bytes": 1798,
+      "sha256": "a95be149487ae70635d1f2d6bbc9b4824c6fd6a26a1d204f82cfba8c3e269f96"
+    },
+    {
+      "path": "sources.json",
+      "bytes": 2080,
+      "sha256": "9b020a88f98c0ddc5437e6e2a487fedb92ead579002a51d5967af8862c19841c"
+    }
+  ]
+}

@@ -1,0 +1,302 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "pmrs_original": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "name": "__CONNECTION_ID__",
+          "connectionReferenceLogicalName": "__CONNECTION_REFERENCE_LOGICAL_NAME__"
+        },
+        "api": {
+          "name": "__CONNECTOR_API_NAME__"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "command_json": {
+                  "type": "string",
+                  "title": "Original complete command JSON",
+                  "x-ms-content-hint": "TEXT",
+                  "description": "Retain the original UUIDv4 and exact arguments."
+                },
+                "resume_interrupted": {
+                  "type": "boolean",
+                  "title": "Resume the identical interrupted command",
+                  "default": false,
+                  "x-ms-content-hint": "BOOLEAN"
+                }
+              },
+              "required": [
+                "command_json",
+                "resume_interrupted"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Submit_original": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Verify_workspace": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/__CONNECTOR_API_NAME__",
+              "connectionName": "pmrs_original",
+              "operationId": "SubmitPrepare"
+            },
+            "parameters": {
+              "body/command_json": "@triggerBody()?['command_json']",
+              "body/resume_interrupted": "@triggerBody()?['resume_interrupted']"
+            },
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "none"
+            }
+          }
+        },
+        "Retain_current": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Submit_original": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "original_result",
+                "type": "object",
+                "value": "@body('Submit_original')"
+              }
+            ]
+          }
+        },
+        "Wait_if_running": {
+          "type": "If",
+          "runAfter": {
+            "Retain_current": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@variables('original_result')?['stop_polling']",
+              false
+            ]
+          },
+          "actions": {
+            "Poll_original": {
+              "type": "Until",
+              "expression": "@equals(variables('original_result')?['stop_polling'], true)",
+              "limit": {
+                "count": 360,
+                "timeout": "PT1H"
+              },
+              "actions": {
+                "Wait": {
+                  "type": "Wait",
+                  "runAfter": {},
+                  "inputs": {
+                    "interval": {
+                      "count": 10,
+                      "unit": "Second"
+                    }
+                  }
+                },
+                "Read_original": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {
+                    "Wait": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/__CONNECTOR_API_NAME__",
+                      "connectionName": "pmrs_original",
+                      "operationId": "ReadCommand"
+                    },
+                    "parameters": {
+                      "command_id": "@variables('original_result')?['command_id']"
+                    },
+                    "authentication": "@parameters('$authentication')",
+                    "retryPolicy": {
+                      "type": "none"
+                    }
+                  }
+                },
+                "Retain_status": {
+                  "type": "SetVariable",
+                  "runAfter": {
+                    "Read_original": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "name": "original_result",
+                    "value": "@body('Read_original')"
+                  }
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Original_outcome": {
+          "type": "Compose",
+          "runAfter": {
+            "Stop_if_still_running": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@variables('original_result')"
+        },
+        "Fail_for_original_failure": {
+          "type": "If",
+          "runAfter": {
+            "Original_outcome": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@variables('original_result')?['state']",
+                  "FAILED"
+                ]
+              },
+              {
+                "equals": [
+                  "@variables('original_result')?['state']",
+                  "CANCELLED"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Original_failed": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "PMRS_ORIGINAL_COMMAND_FAILED",
+                  "message": "The original command failed or was cancelled. Inspect Original_outcome and retain this command ID."
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Stop_if_still_running": {
+          "type": "If",
+          "runAfter": {
+            "Wait_if_running": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@variables('original_result')?['stop_polling']",
+              false
+            ]
+          },
+          "actions": {
+            "Retain_for_later": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "PMRS_POLL_WINDOW_ENDED",
+                  "message": "The original command remains active. Read the same UUID; do not submit a replacement command."
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Read_workspace": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/__CONNECTOR_API_NAME__",
+              "connectionName": "pmrs_original",
+              "operationId": "ReadHealth"
+            },
+            "parameters": {},
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "none"
+            }
+          }
+        },
+        "Verify_workspace": {
+          "type": "If",
+          "runAfter": {
+            "Read_workspace": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@body('Read_workspace')?['workspace_id']",
+              "__WORKSPACE_ID__"
+            ]
+          },
+          "actions": {},
+          "else": {
+            "actions": {
+              "Wrong_workspace": {
+                "type": "Terminate",
+                "runAfter": {},
+                "inputs": {
+                  "runStatus": "Failed",
+                  "runError": {
+                    "code": "PMRS_WORKSPACE_CHANGED",
+                    "message": "The selected connection belongs to another original workspace. Restore the correct connection reference."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
