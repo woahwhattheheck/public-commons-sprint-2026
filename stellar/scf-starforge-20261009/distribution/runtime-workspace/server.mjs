@@ -48,6 +48,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
     ['/workbook-results.mjs', 'workbook-results.mjs', 'text/javascript; charset=utf-8'],
     ['/application-library.mjs', 'application-library.mjs', 'text/javascript; charset=utf-8'],
+    ['/application-inputs.mjs', 'application-inputs.mjs', 'text/javascript; charset=utf-8'],
     ['/application-drafts.mjs', 'application-drafts.mjs', 'text/javascript; charset=utf-8'],
     ['/application-review.mjs', 'application-review.mjs', 'text/javascript; charset=utf-8'],
     ['/openapi-application.mjs', 'openapi-application.mjs', 'text/javascript; charset=utf-8'],
@@ -83,6 +84,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   assets.set('/runtime-procedures-guide',{bytes:await readFile(new URL('./RUNTIME_PROCEDURES.md',import.meta.url)),type:'text/markdown; charset=utf-8'});
   let origin, host, closing = false;
   const workspaceBackupDownloads = new Map();
+  const applicationInputDownloads = new Map();
   const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map(), sourceBuildDownloads = new Map(), workbookDownloads = new Map();
   const server = createServer(async (req, res) => {
     const reply = (status, type, bytes, headers = {}) => {
@@ -176,6 +178,19 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         } finally { file.stream.destroy(); }
         return;
       }
+      if (req.method === 'GET' && /^\/application-input-download\/[a-f0-9]{64}$/.test(url.pathname) && !url.search) {
+        const key=url.pathname.split('/').at(-1),selected=applicationInputDownloads.get(key);
+        applicationInputDownloads.delete(key);
+        need(selected && selected.expires>Date.now(),'APPLICATION_INPUT_DOWNLOAD_EXPIRED','Request the original file again.',410);
+        const file=await model.applicationInputDownload(selected.input);
+        try {
+          res.writeHead(200,{...security,'content-type':'application/octet-stream',
+            'content-length':file.bytes,'content-disposition':'attachment; filename="'+file.filename+'"',
+            'x-content-sha256':file.sha256});
+          await pipeline(file.stream,res);
+        } finally {file.stream.destroy();await file.close();}
+        return;
+      }
       const supplied = Buffer.from(typeof req.headers['x-runtime-workspace-token'] === 'string' ? req.headers['x-runtime-workspace-token'] : '');
       need(supplied.length === tokenBytes.length && timingSafeEqual(supplied, tokenBytes),
         'RUNTIME_WORKSPACE_CAPABILITY_REQUIRED', 'Open the current private URL printed by the workspace command', 401);
@@ -246,6 +261,19 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       if (req.method === 'GET' && url.pathname === '/api/handoff') {
         const value = params(url, ['runtimeId']); return send(200, await model.handoff(value.runtimeId));
       }
+      if (req.method === 'GET' && url.pathname === '/api/application-inputs') {
+        const value=params(url,['query','offset','limit','workingOffset','workingLimit']);
+        for(const name of ['offset','limit','workingOffset','workingLimit']) if(value[name]!==undefined) {
+          need(/^(0|[1-9][0-9]*)$/.test(value[name]) && Number.isSafeInteger(Number(value[name])),
+            'APPLICATION_INPUT_PAGE_INVALID');
+          value[name]=Number(value[name]);
+        }
+        return send(200,await model.applicationInputsState(value));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/application-inputs/inspect')
+        return send(200,await model.applicationInputInspect(params(url,['uploadId'])));
+      if (req.method === 'GET' && url.pathname === '/api/application-inputs/selection')
+        return send(200,await model.applicationInputSelection(params(url,['requestId'])));
       if (req.method === 'GET' && url.pathname === '/api/applications/state') {
         const value = params(url, ['historyLimit']);
         if (value.historyLimit !== undefined) {
@@ -435,6 +463,28 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         workbookDownloads.set(key, { input, expires: Date.now() + 60000 });
         return send(200, { url: origin + '/workbook-download/' + key, file: file.file, bytes: file.bytes, sha256: file.sha256 });
       }
+      if (url.pathname === '/api/application-inputs/begin')
+        return send(200,await model.applicationInputBegin(await body(req,['manifest'],16384)));
+      if (url.pathname === '/api/application-inputs/chunk') {
+        need((req.headers['content-type']??'').split(';')[0].trim()==='application/octet-stream',
+          'APPLICATION_INPUT_CHUNK_TYPE_REQUIRED',undefined,415);
+        const value=params(url,['uploadId','index']);
+        need(/^(0|[1-9][0-9]*)$/.test(value.index??''),'APPLICATION_INPUT_CHUNK_INDEX_INVALID');
+        return send(200,await model.applicationInputChunk({...value,index:Number(value.index),body:req}));
+      }
+      if (url.pathname === '/api/application-inputs/complete')
+        return send(200,await model.applicationInputComplete(await body(req,['uploadId'],4096)));
+      if (url.pathname === '/api/application-inputs/prepare')
+        return send(200,await model.applicationInputPrepare(await body(req,['requestId','uploadId','kind','field'],4096)));
+      if (url.pathname === '/api/application-inputs/download') {
+        const input=await body(req,['uploadId'],4096),file=await model.applicationInputDownload(input);
+        file.stream.destroy();await file.close();
+        for(const [key,value] of applicationInputDownloads)if(value.expires<=Date.now())applicationInputDownloads.delete(key);
+        need(applicationInputDownloads.size<256,'APPLICATION_INPUT_DOWNLOAD_LIMIT',undefined,429);
+        const key=randomBytes(32).toString('hex');
+        applicationInputDownloads.set(key,{input,expires:Date.now()+60000});
+        return send(200,{url:origin+'/application-input-download/'+key,filename:file.filename,bytes:file.bytes,sha256:file.sha256});
+      }
       if (url.pathname === '/api/applications/review')
         return send(200, await model.applicationsReview(await body(req, ['runtimeId', 'kind', 'settings', 'label', 'applicationId', 'expectedRevision', 'homeId', 'providerId'])));
       if (url.pathname === '/api/applications/save')
@@ -479,7 +529,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
-      closing = true; workspaceBackupDownloads.clear(); imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear(); sourceBuildDownloads.clear(); workbookDownloads.clear();
+      closing = true; applicationInputDownloads.clear(); workspaceBackupDownloads.clear(); imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear(); sourceBuildDownloads.clear(); workbookDownloads.clear();
       const stopped = new Promise(done => server.close(done));
       await model.close(); server.closeIdleConnections();
       for (const socket of sockets) socket.destroy();
