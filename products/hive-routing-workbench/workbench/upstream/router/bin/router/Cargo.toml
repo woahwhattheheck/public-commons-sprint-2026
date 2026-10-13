@@ -1,0 +1,211 @@
+[package]
+name = "hive-router"
+version = "0.3.4"
+edition = "2021"
+description = "GraphQL router for Federation, part of the Hive platform"
+license = "MIT"
+publish = true
+authors = ["The Guild"]
+repository = "https://github.com/graphql-hive/router"
+homepage = "https://the-guild.dev/graphql/hive/docs/router"
+readme = "README.crate.md"
+exclude = ["node_modules"]
+default-run = "hive_router"
+
+[lib]
+
+[[bin]]
+name = "hive_router"
+path = "src/main.rs"
+
+[[bin]]
+name = "config_schema_generator"
+path = "src/config/config_schema_generator.rs"
+
+[features]
+noop_otlp_exporter = []
+testing = []
+graphiql = []
+
+[[bench]]
+name = "persisted_documents_matcher_benches"
+harness = false
+
+[[bench]]
+name = "router_benches"
+harness = false
+required-features = ["testing"]
+
+[[bench]]
+name = "qp_benches"
+harness = false
+
+[[bench]]
+name = "executor_benches"
+harness = false
+
+[[bench]]
+name = "demand_control_benches"
+harness = false
+
+[[bench]]
+name = "coprocessor_benches"
+harness = false
+
+
+[dependencies]
+hive-console-sdk = { path = "../../lib/hive-console-sdk", version = "0.3.23" }
+graphql-tools =  { path = "../../lib/graphql-tools", version = "0.5.9" }
+
+tokio = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+reqwest = { workspace = true }
+sonic-rs = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+hyper = { workspace = true, features = ["server", "http1", "client"] }
+http = { workspace = true }
+http-body-util = { workspace = true }
+http-serde = { workspace = true }
+prometheus = { workspace = true }
+thiserror = { workspace = true }
+lazy_static = { workspace = true }
+async-trait = { workspace = true }
+xxhash-rust = { workspace = true }
+blake3 = "1"
+rand = { workspace = true }
+ntex = { workspace = true }
+ntex-http = { workspace = true }
+ntex-codec = { workspace = true }
+ntex-io = { workspace = true }
+ntex-net = { workspace = true }
+ntex-router = { workspace = true }
+ntex-bytes = { workspace = true }
+ntex-dispatcher = { workspace = true }
+ntex-error = { workspace = true }
+ntex-h2 = { workspace = true }
+ntex-rt = { workspace = true }
+ntex-httparse = { workspace = true }
+ntex-macros = { workspace = true }
+ntex-server = { workspace = true }
+ntex-service = { workspace = true }
+ntex-tls = { workspace = true }
+ntex-util = { workspace = true }
+jsonwebtoken = { workspace = true }
+retry-policies = { workspace = true}
+reqwest-retry = { workspace = true }
+reqwest-middleware = { workspace = true }
+vrl = { workspace = true }
+serde_json = { workspace = true }
+regex-automata = { workspace = true }
+ahash = { workspace = true }
+rustls = { workspace = true, features = ["aws-lc-rs"] }
+hyper-rustls = { workspace = true, features = ["aws-lc-rs"]}
+dashmap = { workspace = true }
+notify = { workspace = true }
+memchr = "2.8.1"
+percent-encoding = "2.3.2"
+matchit = "0.9.2"
+
+moka = { workspace = true }
+ulid = { workspace = true }
+uuid = { workspace = true, features = ["v4", "v7", "fast-rng"] }
+tokio-util = { workspace = true }
+tokio-stream = "0.1.18"
+cookie = "0.18.1"
+arc-swap = { workspace = true }
+anyhow = { workspace = true }
+combine = { workspace = true }
+strum = { workspace = true }
+insta = { workspace = true }
+ipnet = { workspace = true }
+tonic = { workspace = true }
+humantime = { workspace = true }
+recloser = { workspace = true }
+
+mimalloc = { version = "0.1.48", features = ["v3"] }
+mediatype = "0.21.0"
+headers-accept = "0.3.0"
+async-stream = "0.3.6"
+futures-util = "0.3.31"
+futures-timer = "3.0.4"
+const-str = "1.0.0"
+md5 = "0.8.0"
+bytes = { workspace = true }
+object_store = { workspace = true }
+
+# query-planner
+petgraph = "0.8.2"
+bitflags = "2.12.1"
+lazy-init = "0.5.1"
+rustc-hash = "2.1.1"
+
+# executor
+hyperlocal = "0.9.1"
+brotli = "9.0.0"
+flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] } # Use zlib-rs for performance
+zstd = "0.14.0"
+hyper-util = { version = "0.1.16", features = [
+  "client",
+  "client-legacy",
+  "http1",
+  "http2",
+  "tokio",
+] }
+itoa = "1.0.15"
+ryu = "1.0.20"
+indexmap = "2.10.0"
+bumpalo = { version = "3.20.3", features = ["collections"] }
+sonic-simd = "0.1.2"
+
+# internal
+lasso2 = "0.8.2"
+datadog-opentelemetry.workspace = true
+chrono = "0.4.45"
+opentelemetry = { workspace = true, features = ["trace"] }
+opentelemetry-appender-tracing = { workspace = true }
+opentelemetry-otlp = { workspace = true, features = [
+    "grpc-tonic",
+    "http-proto",
+    "logs",
+    "tls",
+    "tonic",
+    "trace",
+    "metrics",
+] }
+opentelemetry-stdout = { workspace = true, features = [
+    "trace",
+    "metrics",
+    "logs",
+] }
+opentelemetry_sdk = { workspace = true, features = [
+    "rt-tokio-current-thread",
+    "logs",
+    "spec_unstable_metrics_views",
+    "experimental_metrics_periodicreader_with_async_runtime",
+    "experimental_trace_batch_span_processor_with_async_runtime"
+] }
+opentelemetry-prometheus = { workspace = true }
+opentelemetry-jaeger-propagator = { workspace = true }
+opentelemetry-zipkin = { workspace = true }
+tracing-opentelemetry.workspace = true
+
+# config
+once_cell = "1.21.3"
+schemars = { version = "1.0.4", features = ["url2"] }
+url = { version = "2.5.8", features = ["serde"] }
+humantime-serde = "1.1.1"
+human-size = { version = "0.4.3" ,features = ["serde"] }
+config_rs = { package = "config", version = "0.15.23", features = ["yaml", "json", "json5"] }
+envconfig = "0.11.0"
+
+[dev-dependencies]
+criterion = { workspace = true }
+insta = { workspace = true }
+mockito = { workspace = true }
+tracing-tree = { workspace = true }
+subgraphs = { path = "../../bench/subgraphs" }
+graphql-differential = { path = "../differential" }
+opentelemetry_sdk = { workspace = true, features = ["testing"] }

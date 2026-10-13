@@ -1,0 +1,119 @@
+[workspace]
+members = [
+  "lib/node-addon",
+  "lib/graphql-tools",
+  "lib/hive-console-sdk",
+  "bin/dev-cli",
+  "bin/router",
+  "bin/differential",
+  "e2e",
+  "plugin_examples/plugin_template",
+  "bench/coprocessor",
+  "bench/subgraphs",
+]
+resolver = "2"
+default-members = ["bin/router"]
+
+[profile.dev]
+debug = 2
+
+# See PROFILING.md
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[workspace.dependencies]
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.150"
+sonic-rs = "0.5.3"
+insta = { version = "1.42.1", features= ["filters", "json", "redactions"] }
+criterion = { version = "0.8", features = ["html_reports", "async_tokio"] }
+lazy_static = "1.5.0"
+dashmap = { version = "6.2.1" }
+async-trait = "0.1.88"
+futures = "0.3.31"
+humantime = "2.3.0"
+http = "1.5.0"
+http-serde = "2.1.1"
+http-body-util = "0.1.3"
+hyper = { version = "1.10.1" }
+thiserror = "2.0.14"
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+tokio = { version = "1.52.3", features = ["full"] }
+tokio-util = { version = "0.7.16" }
+tokio-stream = { version = "0.1.17" }
+rand = "0.10.1"
+jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
+ntex = { version = "=3.12.3", features = ["tokio", "rustls", "compress"] }
+ntex-http = { version = "=1.2.0"}
+ntex-codec = { version = "=1.2.1"}
+ntex-io = { version = "=4.0.1"}
+ntex-net = { version = "=4.0.1"}
+ntex-router = { version = "=1.1.0"}
+ntex-bytes = { version = "=1.9.0"}
+ntex-dispatcher = { version = "=4.0.1"}
+ntex-error = { version = "=2.6.0" }
+ntex-h2 = { version = "=4.0.1" }
+ntex-rt = { version = "=3.17.3" }
+ntex-macros = { version = "=4.0.0" }
+ntex-httparse = { version = "=2.2.0" }
+ntex-server = { version = "=4.1.1" }
+ntex-service = { version = "=5.1.0" }
+ntex-tls = { version = "=4.0.0" }
+ntex-util = { version = "=4.1.0" }
+tonic = { version = "0.14.6", features = ["tls-aws-lc"] }
+reqwest = { version = "0.12.23", default-features = false, features = ["http2", "rustls-tls"] }
+reqwest-retry = "0.8.0"
+reqwest-middleware = "0.4.2"
+rustls = { version = "0.23.40", default-features = false }
+retry-policies = "0.5.2"
+vrl = { version = "0.33.1", features = ["compiler", "parser", "value", "diagnostic", "stdlib", "core"] }
+regex-automata = "0.4.10"
+bytes = "1.11.1"
+ahash = "0.8.12"
+arc-swap = "1.7.1"
+anyhow = "1.0.100"
+moka = { version = "0.12.11", features = ["future", "sync"] }
+hyper-rustls = { version = "0.27.7", features = ["http1", "http2"] }
+combine = "4.6.6"
+strum = { version = "0.28.0", features = ["derive"] }
+mockito = "1.7.0"
+futures-util = "0.3.31"
+axum = "0.8.9"
+recloser = "1.3.1"
+notify = "8.2.0"
+ipnet = "2.12.0"
+ulid = "3.0.0"
+uuid = { version = "1.24.0" }
+
+# Telemetry
+datadog-opentelemetry = { version = "0.5.2", default-features = false }
+opentelemetry = "0.32.0"
+opentelemetry_sdk = "0.32.1"
+opentelemetry-prometheus = "0.32.0"
+prometheus = "0.14.0"
+opentelemetry-http = { version = "0.31.0", default-features = false, features = ["internal-logs", "reqwest", "reqwest-rustls"]}
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["reqwest-client", "reqwest-rustls", "http-proto", "internal-logs", "logs", "metrics", "trace"] }
+opentelemetry-proto = "0.32.0"
+prost = "0.14.2"
+opentelemetry-stdout = "0.32.0"
+opentelemetry-appender-tracing = "0.32.0"
+opentelemetry-jaeger-propagator = "0.32.0"
+opentelemetry-zipkin = { version = "0.32.0", default-features = false, features=["reqwest-rustls", "reqwest-client"] }
+tracing = { version = "0.1.44", features = ["release_max_level_debug", "max_level_trace"] }
+tracing-opentelemetry = "0.33.0"
+tracing-subscriber = { version = "0.3.22", features = [
+  "env-filter",
+  "time",
+  "json",
+] }
+tracing-tree = "0.4.0"
+tracing-appender = "0.2.5"
+
+# Storage
+object_store = { version = "0.13.2", features = ["aws"] }
