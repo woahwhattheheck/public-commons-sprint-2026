@@ -427,3 +427,10 @@ The assessment selector uses the producer’s explicit geographic source type to
 Opening **Use saved study in assessment context** always adopts that exact saved study in its original Workspace. When an observed-station study contains geographic context only, its original geographic sources are displayed and the assessment build action stays disabled. Choose a saved assessment study or use **Open Station geography** to prepare the assessment study from its original sources. Saved assessment results and their report, parcel and portable receiving controls remain available below the form.
 
 The complete standalone installation also retains the current native assessment review provider, client and guide, so the maintained station desk can accept its original source-bound station selection without a missing module or browser asset.
+
+
+### Open the exact prepared scientific source selection
+
+**Open scientific report** restores the prepared report's complete source list in its saved reading order and sets its prepared title. It replaces the current composer draft's source selection; the same operator's contact details remain available. Ordinary additions from Sources continue to append a selected study to the existing draft. Pending report operations must complete or be recovered before either action changes a selection.
+
+This family includes and installs the maintained Scientific reports composer with its `replace-v1` prepared-source contract in `operator/web/source_report_editions.mjs`. Before any writes, the station installer checks the exact staged composer together with the existing complete application's callback and Sources bridge. It preserves the original destination bytes in the installation receipt and rechecks them before replacement. An existing composer without the new selection mode upgrades in this same installation; backups and concurrent-source checks apply to the composer as to every changed family member.
