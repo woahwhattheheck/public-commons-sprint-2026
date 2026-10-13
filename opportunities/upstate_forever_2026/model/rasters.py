@@ -87,59 +87,92 @@ def write_geometry(path, geometry, crs, *, layer, title):
                     crs_wkt=crs.to_wkt(), layer=layer) as out:
         out.write({"geometry": mapping(geometry), "properties": {"id": 1, "title": title}})
 
-def grid_definition(reference, model_geometry, *, resolution=RESOLUTION):
+def grid_definition(reference, model_geometry, *, resolution=None):
+    """Retain the reference lattice, including native grids other than 30 metres.
+
+    An explicit resolution is a compatibility assertion about the source, not
+    permission to resample it to a different scientific grid. The established
+    nominal-30-metre normalization remains unchanged for the Upstate sources.
+    """
     import rasterio
     from pyproj import CRS
     from rasterio.transform import Affine
-    resolution = finite(resolution, "model grid resolution", positive=True)
+    requested = None if resolution is None else finite(
+        resolution, "model grid resolution", positive=True)
     with rasterio.open(reference) as ref:
         crs = CRS.from_user_input(ref.crs)
         if not crs.is_projected or any(abs(axis.unit_conversion_factor - 1) > 1e-12 for axis in crs.axis_info[:2]):
             raise ValueError("Select a projected reference grid in metres")
         observed = ref.transform
         if (not all(math.isfinite(value) for value in list(observed)[:6])
-                or abs(observed.b) > 1e-12 or abs(observed.d) > 1e-12
+                or observed.b != 0 or observed.d != 0
                 or observed.a <= 0 or observed.e >= 0):
             raise ValueError("Reference grid must be finite, north-up and unrotated")
-        if (not math.isclose(observed.a, resolution, rel_tol=1e-9, abs_tol=1e-12)
-                or not math.isclose(-observed.e, resolution, rel_tol=1e-9, abs_tol=1e-12)):
-            raise ValueError(f"Select the original nominal {resolution:g}-metre reference land-cover grid")
-        # Native coverage descriptions can round their nominal pixel coefficients.
-        # Keep their upper-left corner, then declare one exact model grid before
-        # the original source aligner resamples into it. Source bytes stay intact.
-        anchor = Affine(resolution, 0, observed.c, 0, -resolution, observed.f)
+        source_x, source_y = observed.a, -observed.e
+        if not math.isclose(source_x, source_y, rel_tol=1e-9, abs_tol=1e-12):
+            raise ValueError("Select the original nominally square reference grid")
+        if requested is not None and (
+                not math.isclose(source_x, requested, rel_tol=1e-9, abs_tol=1e-12)
+                or not math.isclose(source_y, requested, rel_tol=1e-9, abs_tol=1e-12)):
+            raise ValueError("Requested resolution differs from the original reference grid")
+        nominal_30 = (
+            math.isclose(source_x, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12)
+            and math.isclose(source_y, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12))
+        if nominal_30:
+            # Preserve the established Upstate grid, its provenance and cache key.
+            # Published coverage coefficients can round nominal 30 m spacing.
+            anchor = Affine(RESOLUTION, 0, observed.c, 0, -RESOLUTION, observed.f)
+            method = "Exact 30-metre cells anchored at the original reference upper-left corner"
+        else:
+            anchor = observed
+            method = "Original reference cell sizes and upper-left corner preserved"
+        pixel_x, pixel_y = anchor.a, -anchor.e
         left, bottom, right, top = model_geometry.bounds
-        c0 = math.floor((left - anchor.c) / resolution)
-        c1 = math.ceil((right - anchor.c) / resolution)
-        r0 = math.floor((anchor.f - top) / resolution)
-        r1 = math.ceil((anchor.f - bottom) / resolution)
+        if (not all(math.isfinite(v) for v in (left, bottom, right, top))
+                or left >= right or bottom >= top):
+            raise ValueError("The selected model extent is empty or nonfinite")
+        def edge(value):
+            # A source footprint reconstructed through vector coordinates can
+            # land a few floating-point units from its original integer edge.
+            # Use an absolute cell tolerance; distant offsets get no extra slack.
+            nearest = round(value)
+            if not nominal_30 and math.isclose(value, nearest, rel_tol=0, abs_tol=1e-7):
+                return nearest
+            return value
+        c0 = math.floor(edge((left - anchor.c) / pixel_x))
+        c1 = math.ceil(edge((right - anchor.c) / pixel_x))
+        r0 = math.floor(edge((anchor.f - top) / pixel_y))
+        r1 = math.ceil(edge((anchor.f - bottom) / pixel_y))
         transform = anchor * Affine.translation(c0, r0)
         width, height = c1 - c0, r1 - r0
         corner_shifts = []
         for col, row in ((c0, r0), (c1, r0), (c0, r1), (c1, r1)):
-            source_x, source_y = observed * (col, row)
+            source_corner_x, source_corner_y = observed * (col, row)
             model_x, model_y = anchor * (col, row)
-            corner_shifts.append(math.hypot(model_x - source_x, model_y - source_y))
+            corner_shifts.append(math.hypot(model_x - source_corner_x, model_y - source_corner_y))
         normalization = {
             "source_transform": list(observed)[:6],
             "source_width": ref.width, "source_height": ref.height,
-            "source_pixel_size_m": [observed.a, -observed.e],
+            "source_pixel_size_m": [source_x, source_y],
             "model_anchor_transform": list(anchor)[:6],
             "changed": observed != anchor,
             "maximum_reference_corner_shift_m": max(corner_shifts),
             "model_window": {"col_off": c0, "row_off": r0, "width": width, "height": height},
-            "method": f"Exact {resolution:g}-metre cells anchored at the original reference upper-left corner",
+            "method": method,
             "source_alignment": "Original source alignment policy; nearest-neighbor for land-cover codes",
         }
     if width <= 0 or height <= 0:
         raise ValueError("The selected model extent is empty")
+    area = abs(transform.a * transform.e - transform.b * transform.d) / 10000.0
+    if not math.isfinite(area) or area <= 0:
+        raise ValueError("Reference grid must have a finite positive pixel area")
     return {"crs": crs.to_wkt(), "crs_name": crs.to_string(),
             "transform": list(transform)[:6], "width": width, "height": height,
-            "resolution_m": resolution, "pixel_area_ha": resolution * resolution / 10000,
+            "resolution_m": pixel_x, "pixel_area_ha": area,
             "reference_alignment": normalization["method"],
             "reference_normalization": normalization,
-            "bounds": [transform.c, transform.f - height * resolution,
-                       transform.c + width * resolution, transform.f]}
+            "bounds": [transform.c, transform.f + height * transform.e,
+                       transform.c + width * transform.a, transform.f]}
 
 def output_profile(grid, *, categorical=False):
     from rasterio.transform import Affine
@@ -350,83 +383,10 @@ def write_mask(destination, grid, geometry):
         out.update_tags(cell_selection="pixel centre within reporting polygon")
 
 def make_scenario(baseline, destination, grid, patches, *, source_loader, allowed_codes):
-    """Apply retained polygon or aligned binary-raster masks in declared order."""
-    from contextlib import ExitStack
-    import numpy as np
-    import rasterio
-    from rasterio.features import rasterize
-    from pyproj import CRS
-    from shapely.geometry import mapping
-    profile = output_profile(grid, categorical=True)
-    expected_crs = CRS.from_user_input(grid["crs"])
-
-    def require_grid(dataset, label):
-        if (dataset.count != 1 or dataset.width != grid["width"]
-                or dataset.height != grid["height"]
-                or dataset.transform != profile["transform"]
-                or dataset.crs is None
-                or CRS.from_user_input(dataset.crs) != expected_crs):
-            raise ValueError(label + " must use the exact retained single-band model grid")
-
-    with ExitStack() as stack:
-        src = stack.enter_context(rasterio.open(baseline))
-        require_grid(src, "Baseline land cover")
-        prepared, opened_masks = [], {}
-        for patch in patches:
-            if patch["to_code"] not in allowed_codes:
-                raise ValueError("Scenario destination code lacks a biophysical table row")
-            source, entry = source_loader(patch["mask_source_id"])
-            kind = entry["kind"]
-            if kind == "vector":
-                rows, _ = vector_geometry(
-                    source, layer=patch.get("layer") or entry.get("layer"),
-                    where=patch.get("where"), target_crs=grid["crs"])
-                prepared.append((patch, kind, mapping(polygon_union(rows))))
-            elif kind == "raster":
-                if patch.get("layer") or patch.get("where"):
-                    raise ValueError("Raster scenario masks select band 1; layer and where apply to vectors")
-                key = str(source)
-                if key not in opened_masks:
-                    mask_source = stack.enter_context(rasterio.open(source))
-                    require_grid(mask_source, "Raster scenario mask")
-                    if np.dtype(mask_source.dtypes[0]).kind not in ("b", "u", "i", "f"):
-                        raise ValueError("Raster scenario masks require numeric zero and one values")
-                    opened_masks[key] = mask_source
-                prepared.append((patch, kind, key))
-            else:
-                raise ValueError("Scenario masks require retained vector or binary raster sources")
-        counts = [0] * len(prepared)
-        out = stack.enter_context(rasterio.open(destination, "w", **profile))
-        for _, window in out.block_windows(1):
-            data = src.read(1, window=window, masked=True)
-            invalid = np.ma.getmaskarray(data)
-            values = np.ma.getdata(data).copy()
-            window_masks = {}
-            for i, (patch, kind, selection) in enumerate(prepared):
-                if kind == "vector":
-                    mask = rasterize(
-                        [(selection, 1)], out_shape=values.shape,
-                        transform=src.window_transform(window),
-                        fill=0, dtype="uint8").astype(bool)
-                else:
-                    if selection not in window_masks:
-                        selected_mask = opened_masks[selection].read(1, window=window, masked=True)
-                        mask_values = np.ma.getdata(selected_mask)
-                        mask_valid = ~np.ma.getmaskarray(selected_mask)
-                        if np.any(mask_valid & ~np.isin(mask_values, (0, 1))):
-                            raise ValueError("Raster scenario mask contains valid values other than zero and one")
-                        window_masks[selection] = mask_valid & (mask_values == 1)
-                    mask = window_masks[selection]
-                selected = mask & ~invalid & np.isin(values, patch["from_codes"])
-                counts[i] += int(selected.sum())
-                values[selected] = patch["to_code"]
-            values[invalid] = profile["nodata"]
-            out.write(values.astype("int32"), 1, window=window)
-        out.update_tags(scenario_edit_order="declared patch order",
-                        nodata_policy="original nodata retained")
-    return [{"index": i, "changed_cells": count,
-             "changed_hectares": count * grid["pixel_area_ha"],
-             "patch": prepared[i][0]} for i, count in enumerate(counts)]
+    """Apply ordered native edits and count actual value changes."""
+    from .scenario_footprint import make_scenario as apply_footprint
+    return apply_footprint(baseline, destination, grid, patches,
+                           source_loader=source_loader, allowed_codes=allowed_codes)
 
 def check_same_grid(a, b):
     if a.crs != b.crs or a.width != b.width or a.height != b.height or not a.transform.almost_equals(b.transform, precision=1e-9):
@@ -445,6 +405,7 @@ def rate_to_mass(source, destination, grid, *, reporting_mask, pollutant):
         target = profile["transform"]
         if (not all(math.isfinite(value) for value in list(t)[:6] + list(target)[:6])
                 or target.a <= 0 or target.e >= 0 or target.b or target.d
+                or t.a <= 0 or t.e >= 0
                 or not math.isclose(target.a, -target.e, rel_tol=1e-9, abs_tol=1e-12)):
             raise ValueError("Selected model grid must retain finite north-up square cells")
         if (not target_crs.is_projected
@@ -457,11 +418,18 @@ def rate_to_mass(source, destination, grid, *, reporting_mask, pollutant):
         if (mask.transform != target or mask.width != profile["width"]
                 or mask.height != profile["height"]):
             raise ValueError("Reporting mask differs from the selected model grid")
-        dx, dy = (target.c - t.c) / target.a, (t.f - target.f) / (-target.e)
+        # Native watershed crops keep the reference lattice; offsets use the
+        # actual native cell sizes and the retained original origin.
+        dx, dy = (target.c - t.c) / t.a, (target.f - t.f) / t.e
         if (not math.isclose(dx, round(dx), rel_tol=0, abs_tol=1e-7)
                 or not math.isclose(dy, round(dy), rel_tol=0, abs_tol=1e-7)):
             raise ValueError("Native model output has shifted pixel centres")
+        if (abs((target.a - t.a) / t.a) * max(src.width, grid["width"]) > 1e-7
+                or abs((target.e - t.e) / t.e) * max(src.height, grid["height"]) > 1e-7):
+            raise ValueError("Native model output accumulates a pixel alignment shift across the retained extent")
         area = abs(t.a * t.e - t.b * t.d) / 10000.0
+        if not math.isfinite(area) or area <= 0:
+            raise ValueError("Native model output must have a finite positive pixel area")
         with rasterio.open(destination, "w", **profile) as out:
             for _, window in out.block_windows(1):
                 native_window = Window(window.col_off + round(dx), window.row_off + round(dy),
@@ -475,6 +443,8 @@ def rate_to_mass(source, destination, grid, *, reporting_mask, pollutant):
                 result = raw * area
                 result[invalid] = profile["nodata"]
                 converted = result.astype("float32")
+                if np.any(~np.isfinite(converted[~invalid])):
+                    raise ValueError("Native annual export exceeds the retained raster value range")
                 total += float(converted[~invalid].sum(dtype="float64"))
                 count += int((~invalid).sum())
                 out.write(converted, 1, window=window)

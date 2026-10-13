@@ -100,3 +100,20 @@ The reader accepts original multipart application gzip carriers, the separately 
 The original JavaScript composer and this revision were executed in V8 with the retained 252-file `F0C8JNZTURK` application (decoded SHA256 `49d32e6b7f5c3a764054076c65059cc6856f33d7b7cef5d6408adbd0de7d5c67`) and actual `F0C8Q6C81U2` component (decoded SHA256 `f53449e76a78c4d851bb44c6e0b03f917a9d9f1ffa36b818b4145b8ee2c91f22`). Both versions correctly reject the unmodified component's declared app predecessor against the pinned newer host.
 
 A separate interface exercise translates that same declared predecessor value into `before.sha256`, retaining the exact original source body. The old reader ignores the spelling and replaces the newer app; this reader recognizes it and reports the actual source conflict. The explicit pinned-current host join preserves all other 251 members, and an identical replay succeeds. The real three-file ECSA1.2.3 carrier `F0C8K105GUV` also retains its existing flat `before_sha256` values and per-file `base_ref` through normalization.
+
+## Receive an exact external source member
+
+When an original code file is declared in `external_sources`, `complete_external_source.py` first checks selected existing application directories. With `--allow-download`, it can receive the same original file from the declared HTTPS source URI. Both byte count and SHA256 must match. It then composes the actual body into the source map and checks local imports before writing the new application directory, source map or archive.
+
+Run from the received application source tools directory:
+
+```sh
+python -B complete_external_source.py ORIGINAL_CARRIER.md \
+  --member model/spatial_regions.py \
+  --source-root EXISTING_APPLICATION \
+  --allow-download \
+  --edition upper-savannah-current-with-original-dependencies \
+  --output NEW_COMPLETE_APPLICATION
+```
+
+Each selected member must already have an exact original identity and source URI in the carrier. An already embedded member is reused. The command does not replace the selected original application or its scientific Workspace. It can also publish `--source-map` and `--zip` outputs for the same completed edition.

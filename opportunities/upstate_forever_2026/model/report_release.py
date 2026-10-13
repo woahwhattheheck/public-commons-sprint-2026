@@ -141,6 +141,11 @@ def describe(workspace, report_id, *, packet=None):
     """Read saved products and original selections; never rerun a calculation."""
     _, binding, selection, cases, issues = _cohort(workspace, report_id, packet=packet)
     releases, release_issues = _releases(workspace, binding["report_id"], binding["report_sha256"])
+    from .client_economics import catalog
+    economics = catalog(workspace, source_report_id=binding["report_id"],
+                        source_report_sha256=binding["report_sha256"],
+                        baseline_run_id=binding["baseline_run_id"],
+                        scenario_run_ids=binding["scenario_run_ids"])
     return {
         "schema": SCHEMA,
         "source_report": binding,
@@ -150,10 +155,13 @@ def describe(workspace, report_id, *, packet=None):
         "issues": issues,
         "releases": releases,
         "release_issues": release_issues,
+        "economic_editions": economics["editions"],
+        "economic_issues": economics["issues"],
         "remaining_choices": [
             "Original source-water and high-quality-water overlays",
             "Responsible GIS metadata contact",
             "Map layout and any explicit priority settings",
+            "Optional completed economic edition for this exact cohort",
         ],
     }
 
