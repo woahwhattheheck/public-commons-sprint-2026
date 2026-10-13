@@ -7,11 +7,11 @@ import {bundleDataDesk} from './bundle.mjs';
 const here=dirname(fileURLToPath(import.meta.url));
 export async function buildDataDesk({outputDirectory,config={}}){
  if(!outputDirectory)throw Error('Choose an output directory.');
- const [coreSource,controller,style]=await Promise.all(['data_readiness.mjs','data_desk.mjs','data_desk.css'].map(name=>readFile(join(here,name),'utf8')));
+ const [coreSource,comparisonSource,controller,style]=await Promise.all(['data_readiness.mjs','data_comparison.mjs','data_desk.mjs','data_desk.css'].map(name=>readFile(join(here,name),'utf8')));
  const title=String(config.title||'Manufacturing data preparation');
- const html=bundleDataDesk({coreSource,controllerSource:controller,style,config,base64Utf8:source=>Buffer.from(source,'utf8').toString('base64')});
+ const html=bundleDataDesk({coreSource,comparisonSource,controllerSource:controller,style,config,base64Utf8:source=>Buffer.from(source,'utf8').toString('base64')});
  const files=[{path:'data-desk.html',content:html},...Object.keys(core.FIELD_DEFINITIONS).map(kind=>({path:kind+'-template.csv',content:core.templateCSV(kind)}))];
- const source=[['data_readiness.mjs',coreSource],['data_desk.mjs',controller],['data_desk.css',style]];
+ const source=[['data_readiness.mjs',coreSource],['data_comparison.mjs',comparisonSource],['data_desk.mjs',controller],['data_desk.css',style]];
  const identity=(path,content)=>({path,bytes:Buffer.byteLength(content),sha256:createHash('sha256').update(content).digest('hex')});
  const manifest={schema:'manufacturing-data-desk-build.v1',title,createdAt:new Date().toISOString(),source:source.map(([path,content])=>identity(path,content)),files:files.map(x=>identity(x.path,x.content)),config};
  const output=resolve(outputDirectory);await mkdir(output,{recursive:true});

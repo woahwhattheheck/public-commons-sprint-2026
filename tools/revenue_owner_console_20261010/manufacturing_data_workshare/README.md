@@ -2,6 +2,24 @@
 
 A complete offline operator for original item, revision-qualified BOM, inventory and open purchase-order exports. It retains every source edition, operator-selected column maps, explicit unit conversions, row-level exceptions and review decisions. The current source selection remains separate from newly opened files.
 
+## Compare complete source and returned editions
+
+The same desk can retain a baseline and one or more returned workspace editions beside its current editor. It opens complete workspace JSON, the existing handover JSON, or a complete working desk. Importing a comparison source keeps its exact UTF-8 text and original filename; it does not replace the active sources, mappings, notes or unfinished CSV editor.
+
+1. Open or prepare the approved original four-family workspace and choose **Retain current edition**.
+2. Import the complete returned edition in **Compare complete source editions**. Its sources must have been mapped explicitly through the same four-family core. Select the baseline and returned edition independently.
+3. Review added, missing, changed and ambiguous identities. The display pages thirty differences and limits its on-screen source-issue excerpt; complete exports retain every issue, row reference and value.
+4. Record a status and note against the exact source pair and difference. Review notes do not remove source exceptions or change readiness. Switching to another pair keeps the earlier review history without applying its decisions to that new comparison.
+5. Download the complete comparison JSON, differences CSV and HTML report. Download **Complete working file** to retain both exact input files, current selectors, unfinished review text and full review history. Open that working file through the existing staged adoption flow; the displaced desk remains available.
+
+Item identity is item/revision. Inventory adds site/location/lot; purchase orders use order/line. BOM identity uses parent/revision/explicit line ID when present and otherwise the explicit parent/component revision pair. Duplicate or blank primary identities are retained as ambiguous, without invented pairing. Blank revision is an explicitly accepted revision value. An absent, malformed or unmappable source makes its family incomparable; the report does not turn that failure into a mass deletion.
+
+Quantities use exact decimal arithmetic, with the returned quantity minus the original quantity. A delta is produced only when item, revision and unit basis remain valid and identical. A changed unit or referenced item is called out and has no inferred conversion. Different decimal spellings can remain a visible source change with an exact zero delta and a numeric-equivalence note. This comparison concerns the admitted canonical representations; the implementation lead must approve any target-system extraction, entity mapping, variant/effectivity rules, stock valuation and cutover decisions.
+
+The reusable comparator is `data_comparison.mjs`, importing the maintained core. It exports `compareWorkspaces`, `exportComparisonJSON`, `exportComparisonCSV` and `reportHTML`. Descriptors carry a sorted-key hash of the complete admitted workspace; retained original files separately carry their exact text hash. Those identities have different purposes and should not be substituted for one another.
+
+The source exercise uses the existing explicitly labeled mechanical workspace and its actual four-family successor. It covers exact decimal differences, a changed unit, duplicate master rows, incomplete-family handling, review history and complete JSON reopening. It contains no customer operational records. Native receiving extends the original course and browser operation; use the complete original source pair supplied in its private input.
+
 ## Build and use
 
 Run Node 20 or later:
