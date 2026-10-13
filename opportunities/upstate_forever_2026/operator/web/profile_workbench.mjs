@@ -207,7 +207,28 @@ export function createProfileWorkbench(host) {
     if(diff?.table?.order_changed)out.push({field:'Source row order',before:'Original order',after:'Changed'});
     if(!out.length)out.push(...fallback.map(row=>({field:'Code '+row.lucode+' · '+row.column,before:row.before,after:row.after})));return out;
   }
-  function diffHTML(diff,fallback=[]){const rows=diffRows(diff,fallback);return rows.length?'<div class="pw-table-scroll"><table><thead><tr><th>Changed field</th><th>Reference</th><th>Revision</th></tr></thead><tbody>'+rows.map(row=>'<tr><th scope="row">'+esc(row.field)+'</th><td>'+esc(valueText(row.before)||'—')+'</td><td>'+esc(valueText(row.after)||'—')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="pw-note">No coefficient or native parameter values differ.</p>';}
+  function diffLabel(path){
+    const [model,name]=text(path).split('.');
+    if(['ndr','sdr'].includes(model))return name?(parameters(model).find(field=>field.name===name)?.label||model.toUpperCase()+' '+human(name)):model.toUpperCase()+' parameters';
+    return ({models:'Native models',model_period:'Model period',references:'Scientific references',notes:'Profile notes',title:'Profile title'})[path]||human(path);
+  }
+  function diffValue(value,path){
+    if(value===undefined||value===null)return '—';
+    if(Array.isArray(value))return value.length?'<ul class="pw-reference-list">'+value.map(item=>'<li>'+diffValue(item,path)+'</li>').join('')+'</ul>':'None supplied';
+    if(value&&typeof value==='object')return '<dl class="pw-metadata">'+Object.entries(value).map(([name,item])=>'<dt>'+esc(diffLabel(path+'.'+name))+'</dt><dd>'+diffValue(item,path+'.'+name)+'</dd>').join('')+'</dl>';
+    return value===''?'Not supplied':esc(path==='models'?text(value).toUpperCase():value);
+  }
+  function diffHTML(diff,fallback=[]){
+    const rows=[];const expand=row=>{
+      const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
+      if((object(row.before)&&(object(row.after)||row.after===undefined))||
+         (object(row.after)&&row.before===undefined)){
+        for(const name of new Set([...Object.keys(object(row.before)?row.before:{}),...Object.keys(object(row.after)?row.after:{})]))
+          expand({field:row.field+'.'+name,before:object(row.before)?row.before[name]:undefined,after:object(row.after)?row.after[name]:undefined});
+      }else rows.push(row);
+    };diffRows(diff,fallback).forEach(expand);
+    return rows.length?'<div class="pw-table-scroll" tabindex="0" aria-label="Scientific parameter changes"><table><thead><tr><th>Changed field</th><th>Reference</th><th>Revision</th></tr></thead><tbody>'+rows.map(row=>'<tr><th scope="row">'+esc(diffLabel(row.field))+'</th><td>'+diffValue(row.before,row.field)+'</td><td>'+diffValue(row.after,row.field)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="pw-note">No coefficient or native parameter values differ.</p>';
+  }
   function coverageHTML(coverage){
     const grids=list(coverage.grids),scenarios=list(coverage.scenarios),codes=list(coverage.lucodes);
     const missing=values=>list(values).length?list(values).map(esc).join(', '):'None';
@@ -260,10 +281,42 @@ export function createProfileWorkbench(host) {
       profile_id:id,profile_set_id:saved.profile_set_id,table_sha256:table});
     }catch(error){if(same())setMessage(error.message||String(error),true);throw error;}
   }
+  async function openSource(value){
+    assertWorkspace();
+    if(disposed||!root||value?.workspace_key!==workspace)
+      throw Error('Open this source table in its original workspace.');
+    persist();const token=++epoch,origin=workspace,generation=lifecycle;
+    const context=()=>canonical({editor,mode,draftKey,opened:profileId(opened)}),before=context();
+    const same=()=>activeScope(origin,generation)&&token===epoch;
+    try{
+      const source={source_collection_id:value.source_collection_id,
+        biophysical_source_id:value.biophysical_source_id};
+      const result=await read('table',source),table=result.table||result;
+      if(!same()||context()!==before)return null;
+      const choice=table.source?.client_source?.selection,active=choice?.models;
+      if(table.source_collection_id!==source.source_collection_id||
+         table.biophysical_source_id!==source.biophysical_source_id||
+         table.sha256!==value.expected_table_sha256||table.source?.role!=='BIOPHYSICAL'||
+         choice?.confirmed!==true||!Array.isArray(active)||!active.length||
+         new Set(active).size!==active.length||active.some(name=>!['ndr','sdr'].includes(name)))
+        throw Error('Reopen the exact reviewed biophysical table from Open my data.');
+      for(const name of active)if(!table.validation?.[name]?.valid)
+        throw Error(name.toUpperCase()+': '+(table.validation?.[name]?.message||'Review the required native coefficient columns.'));
+      source.models=[...active];
+      const key='new:'+canonical(source),retained=Boolean(memory.drafts[key]);
+      startDraft({table,profile:{models:[...active],title:(table.source.title||'Source table')+' · working profile',
+        model_period:choice.period||'',references:[choice.reference,table.source.uri].filter(Boolean),
+        notes:choice.notes?[choice.notes]:[]}},key);
+      setMessage(retained?'Your unfinished profile for this exact table is reopened with all its choices.':
+        'The reviewed source table and native models are selected. Enter the scientific parameters, then review and save a working profile.');
+      return {source_collection_id:source.source_collection_id,biophysical_source_id:source.biophysical_source_id,
+        table_sha256:table.sha256,models:[...active],draft_reopened:retained};
+    }catch(error){if(!same())return null;setMessage(error.message||String(error),true);throw error;}
+  }
   function startDraft(record,key,baseId=null){
     persist();draftKey=key;
     if(memory.drafts[key])editor=copy(memory.drafts[key]);else{
-      const table=copy(record.table),profile=copy(record.profile||{});profile.title=profile.title?profile.title+' · revision':'';profile.models=models(profile);profile.references||=[];profile.notes||=[];profile.ndr||={};profile.sdr||={};
+      const table=copy(record.table),profile=copy(record.profile||{});profile.title=profile.title?(baseId?profile.title+' · revision':profile.title):'';profile.models=models(profile);profile.references||=[];profile.notes||=[];profile.ndr||={};profile.sdr||={};
       editor={base_profile_id:baseId,source_collection_id:table.source_collection_id,biophysical_source_id:table.biophysical_source_id,expected_table_sha256:table.sha256,profile,table:{columns:copy(table.columns),rows:copy(table.rows)},original_table:copy(table),revision:{author:'',reason:'',title:table.source?.title||'',vintage:table.source?.vintage||''}};
     }
     mode='editor';tableSearch='';tableGroup='all';preview=null;persist();paintLibrary();paintEditor();setMessage();
@@ -393,5 +446,5 @@ export function createProfileWorkbench(host) {
     const signature=canonical(tasks().map(task=>[task.id,task.state]));if(signature!==taskSignature){taskSignature=signature;paintTasks();const origin=workspace,generation=lifecycle;receiveCompleted().catch(error=>{if(activeScope(origin,generation))setMessage(error.message,true);});}
   }
   function detach(){customerReview.detach();biophysicalEvidence.detach();managementCases.detach();persist();disposed=true;epoch++;lifecycle++;busy=false;events?.abort();events=null;root?.classList.remove('profile-workbench');root=null;}
-  return {mount,update,detach,open:openProfile,openSavedManagementDesign};
+  return {mount,update,detach,openSource,open:openProfile,openSavedManagementDesign};
 }
