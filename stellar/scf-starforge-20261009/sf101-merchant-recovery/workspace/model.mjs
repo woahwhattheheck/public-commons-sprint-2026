@@ -9,6 +9,11 @@ import { inspectLocalCapture, readCapturedBundle, runLocalCapture, runLocalVerif
   inspectLocalPublisherRestore, runLocalPublisherPreparation, RETIRED_CAPTURE_PREFIX } from './local.mjs';
 import { acquireDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 import { inspectLocalFleetRestore, runLocalFleetPreparation } from './fleet.mjs';
+import { compileObjectSessions, createObjectRecoveryAdapter } from './object-sessions.mjs';
+import { createRecoverySupport } from './recovery-support.mjs';
+import {compileObjectBundleArchives,createObjectBundleAdapter,objectBundleCommand,comparisonBundlePair} from './object-bundles.mjs';
+
+import {createObjectComparisonAdapter} from './object-comparisons.mjs';
 
 export const HOST_SCHEMA = 'stellar-forge.recovery-workspace.v1';
 const STATE_SCHEMA = 'stellar-forge.recovery-workspace-state.v1';
@@ -23,7 +28,9 @@ const stamp = () => new Date().toISOString();
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
-const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare', 'fleet-prepare'].includes(command);
+const objectCommand = command => ['object-snapshot','object-verify','object-restore'].includes(command);
+const comparisonCommand=command=>command==='object-compare';
+const localCommand = command => comparisonCommand(command) || objectCommand(command) || objectBundleCommand(command) || ['snapshot', 'local-verify', 'publisher-prepare', 'fleet-prepare'].includes(command);
 const inside = (parent, child) => parent === child || child.startsWith(parent + sep);
 
 function need(ok, code, message = code, status = 400) {
@@ -103,7 +110,7 @@ function compileHost(value) {
     value.profiles.length > 0 && value.profiles.length <= 32, 'WORKSPACE_HOST_CONFIG_INVALID');
   const seen = new Set();
   const profiles = value.profiles.map(input => {
-    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans', 'publisherRestores', 'fleetRestores', 'fleetTargets'], 'profile');
+    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans', 'publisherRestores', 'fleetRestores', 'fleetTargets', 'objectSessions', 'objectBundleArchives', 'casesDirectory', 'caseSourceDirectory'], 'profile');
     const id = identifier(input.id, 'profile ID');
     need(!seen.has(id), 'WORKSPACE_DUPLICATE_PROFILE'); seen.add(id);
     need(PASS_ENV.test(input.passEnv ?? ''), 'WORKSPACE_PASSPHRASE_NAME_INVALID');
@@ -179,10 +186,16 @@ function compileHost(value) {
         operationDirectory: absolute(target.operationDirectory, 'Original fleet receiving operation') };
     });
     need(fleetTargets.length <= 32, 'WORKSPACE_FLEET_TARGETS_INVALID');
+    const objectSessions = compileObjectSessions(input.objectSessions ?? [], {bundleRoots,downloadRoot,
+      controls:[absolute(input.operations, 'Original operations directory')]});
+    const objectBundleArchives=compileObjectBundleArchives(input.objectBundleArchives,{downloadRoot,objectSessions,
+      controls:[absolute(input.operations,'Original operations directory'),...['casesDirectory','caseSourceDirectory'].filter(key=>input[key]).map(key=>absolute(input[key],key))]});
     return { id, label: label(input.label, id),
       storeConfig: input.storeConfig == null ? null : absolute(input.storeConfig, 'S3 configuration'),
       operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots,
-      capturePlans, publisherRestores, fleetRestores, fleetTargets, downloadRoot, restoreRoot };
+      capturePlans, publisherRestores, fleetRestores, fleetTargets, objectSessions, objectBundleArchives, downloadRoot, restoreRoot,
+      ...(input.casesDirectory===undefined?{}:{casesDirectory:absolute(input.casesDirectory,'Support cases')}),
+      ...(input.caseSourceDirectory===undefined?{}:{caseSourceDirectory:absolute(input.caseSourceDirectory,'Original case source delivery')}) };
   });
   return { schema: HOST_SCHEMA, title: label(value.title, 'Merchant recovery'), profiles };
 }
@@ -234,6 +247,22 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       need(!inside(directory, root) && !inside(root, directory), 'WORKSPACE_SOURCE_DIRECTORY_OVERLAP');
       await privateDirectory(root);
     }
+    for(const archive of profile.objectBundleArchives)
+      for(const control of [directory,...host.profiles.map(row=>row.operations)])
+        need(!inside(control,archive.path)&&!inside(archive.path,control),'WORKSPACE_BUNDLE_ARCHIVE_OVERLAP');
+    for (const declaration of profile.objectSessions)
+      for (const path of [declaration.stateRoot,declaration.bundle])
+        for (const control of [directory,...host.profiles.map(row=>row.operations)])
+          need(!inside(path,control)&&!inside(control,path),'WORKSPACE_OBJECT_CONTROL_OVERLAP');
+    for(const path of [profile.casesDirectory,profile.caseSourceDirectory].filter(Boolean)) {
+      need(!inside(directory,path)&&!inside(path,directory),'WORKSPACE_SUPPORT_CONTROL_OVERLAP');
+      for(const other of [profile.operations,...profile.objectSessions.flatMap(row=>[row.stateRoot,row.bundle])])
+        need(!inside(other,path)&&!inside(path,other),'WORKSPACE_SUPPORT_SOURCE_OVERLAP');
+      await privateDirectory(path);
+    }
+    need(!profile.caseSourceDirectory||profile.casesDirectory,'WORKSPACE_SUPPORT_CASES_REQUIRED');
+    if(profile.casesDirectory&&profile.caseSourceDirectory)need(!inside(profile.casesDirectory,profile.caseSourceDirectory)&&
+      !inside(profile.caseSourceDirectory,profile.casesDirectory),'WORKSPACE_SUPPORT_SOURCE_OVERLAP');
     if (profile.storeConfig !== null) await privateBytes(profile.storeConfig);
     // Original plan files are read for fresh capture review. Retained operations can reopen after source removal.
     if (await exists(profile.operations)) await privateDirectory(profile.operations);
@@ -259,6 +288,143 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       await atomicJSON(statePath, workspaceState);
     }
   } catch (error) { await lease?.release(); throw error; }
+
+  const objectAdapter = createObjectRecoveryAdapter({directory,environment:process.env,
+    isClosing:()=>closing||closed,readOnly});
+  const comparisonAdapter=createObjectComparisonAdapter({directory,environment:process.env,
+    isClosing:()=>closing||closed,readOnly});
+  async function originalRequestBytes(profileId,id){
+    selectedProfile(profileId);identifier(id,'operation ID');
+    const raw=await privateBytes(requestPath(profileId,id)),saved=JSON.parse(raw.toString('utf8'));
+    need(saved.schema===REQUEST_SCHEMA&&saved.review?.profileId===profileId&&saved.review?.operationId===id,
+      'WORKSPACE_REQUEST_IDENTITY_INVALID');return raw;
+  }
+  async function originalEvidenceBytes(sha256){
+    const found=await objectAdapter.evidence(sha256),raw=Buffer.from(JSON.stringify(found.evidence)+'\n');
+    need(raw.length===found.bytes&&hash(raw)===sha256,'WORKSPACE_OBJECT_EVIDENCE_CHANGED');return raw;
+  }
+  async function originalComparisonArtifactBytes(ref){
+    const artifact=await comparisonAdapter.artifact(ref.sha256);
+    need(artifact.bytes===ref.bytes&&artifact.mediaType===ref.mediaType,'WORKSPACE_COMPARISON_ARTIFACT_CHANGED');
+    const raw=Buffer.from(artifact.text,'utf8');
+    need(raw.length===ref.bytes&&hash(raw)===ref.sha256,'WORKSPACE_COMPARISON_ARTIFACT_CHANGED');return raw;
+  }
+  const bundleAdapter=createObjectBundleAdapter({directory,workspaceId:workspaceState.id,
+    readRequestBytes:originalRequestBytes,readEvidenceBytes:originalEvidenceBytes,readComparisonArtifactBytes:originalComparisonArtifactBytes});
+  const support = createRecoverySupport({directory,workspaceId:workspaceState.id,profiles:host.profiles,currentHost,
+    readRequestBytes:originalRequestBytes,readEvidenceBytes:originalEvidenceBytes,
+    readComparisonArtifactBytes:originalComparisonArtifactBytes,
+    isActive:(profileId,id)=>active?.key===requestPath(profileId,id),isClosing:()=>closing||closed,readOnly});
+  async function bundlePairSelected(profileId,beforeId,afterId){
+    await currentHost();selectedProfile(profileId);identifier(beforeId,'before original export');identifier(afterId,'after original export');
+    const entries={};
+    for(const [side,id]of Object.entries({before:beforeId,after:afterId})){
+      const request=await readRequest(profileId,id);
+      need(request?.review.command==='object-bundle-export'&&request.result?.status==='COMPLETE','WORKSPACE_BUNDLE_EXPORT_REQUIRED');
+      entries[side]={archive:await bundleAdapter.artifact(profileId,id),
+        transport:{...request.result,workspaceOperationId:id}};
+    }
+    return {entries,pair:comparisonBundlePair(entries.before,entries.after)};
+  }
+  const objectReviews = join(directory,'object-reviews');
+  function declaredObject(profile,id) {
+    identifier(id,'Object-session declaration');
+    const declaration=profile.objectSessions.find(row=>row.id===id);
+    need(declaration,'WORKSPACE_OBJECT_SESSION_NOT_DECLARED','Select an original host-declared Object session',404);
+    return declaration;
+  }
+  async function objectSession(profileId,id) {
+    need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');
+    need(!active,'WORKSPACE_EXECUTION_ACTIVE','Read the saved result while an original execution is active',409);
+    await currentHost();
+    return objectAdapter.inspect(declaredObject(selectedProfile(profileId),id));
+  }
+  async function objectEvidence(sha256) {
+    need(!closed,'WORKSPACE_CLOSED');await currentHost();return objectAdapter.evidence(sha256);
+  }
+  async function preparedObject(input,expectedReviewHash) {
+    await currentHost();
+    const reviewed=await privateJSON(join(objectReviews,expectedReviewHash+'.json'));
+    need((objectCommand(reviewed.command)||objectBundleCommand(reviewed.command)||comparisonCommand(reviewed.command))&&reviewed.reviewHash===expectedReviewHash&&
+      JSON.stringify(reviewed.intent)===JSON.stringify(input)&&
+      finishReview(reviewed,reviewed.intent).reviewHash===expectedReviewHash,
+      'WORKSPACE_OBJECT_PREPARED_REVIEW_CHANGED','Select the exact original saved Object review',409);
+    localPathBindings(selectedProfile(reviewed.profileId),reviewed);
+    return reviewed;
+  }
+  async function objectSelection(profile,input) {
+    exact(input,['profileId','action','id','objectSessionId','expectedRecordSha256','quiesced'],'Object selection');
+    const declaration=declaredObject(profile,input.objectSessionId);
+    const saved=await readRequest(profile.id,input.id);
+    if(saved){
+      need(objectCommand(saved.review.command)&&JSON.stringify(saved.review.intent)===JSON.stringify(input),
+        'WORKSPACE_REQUEST_SELECTION_CHANGED','Keep this original Object request with its complete saved selection',409);
+      localPathBindings(profile,saved.review);return clone(saved.review);
+    }
+    need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');
+    need(!active,'WORKSPACE_EXECUTION_ACTIVE','Finish the current original execution before preparing another review',409);
+    const native=await objectAdapter.review(declaration,{action:input.action,
+      expectedRecordSha256:input.expectedRecordSha256,quiesced:input.quiesced,passEnv:profile.passEnv});
+    const reviewed=finishReview({profileId:profile.id,command:input.action,operationId:input.id,
+      store:null,snapshotId:native.expectedRecordSha256??null,source:declaration.directory,
+      destination:input.action==='object-snapshot'?declaration.bundle:input.action==='object-restore'?declaration.stateRoot:null,
+      objectDeclaration:clone(declaration),objectRecovery:native,
+      options:{command:input.action,id:input.id,passEnv:profile.passEnv,objectSessionId:declaration.id,objectRecovery:native}},input);
+    localPathBindings(profile,reviewed);await privateDirectory(objectReviews,true);
+    const file=join(objectReviews,reviewed.reviewHash+'.json');
+    if(await exists(file))need(JSON.stringify(await privateJSON(file))===JSON.stringify(reviewed),
+      'WORKSPACE_OBJECT_PREPARED_REVIEW_CHANGED');
+    else await atomicJSON(file,reviewed);
+    return reviewed;
+  }
+
+  async function comparisonSelection(profile,input){
+    exact(input,['profileId','action','id','beforeObjectSessionId','afterObjectSessionId',
+      'beforeExpectedRecordSha256','afterExpectedRecordSha256'],'Object comparison');
+    const saved=await readRequest(profile.id,input.id);
+    if(saved){
+      need(comparisonCommand(saved.review.command)&&JSON.stringify(saved.review.intent)===JSON.stringify(input),
+        'WORKSPACE_REQUEST_SELECTION_CHANGED');
+      localPathBindings(profile,saved.review);return clone(saved.review);
+    }
+    need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');need(!active,'WORKSPACE_EXECUTION_ACTIVE');
+    const selected=await comparisonAdapter.review(profile,input);
+    const reviewed=finishReview({profileId:profile.id,command:'object-compare',operationId:input.id,
+      store:null,snapshotId:null,source:selected.before.bundle,destination:null,
+      objectComparison:selected,options:{command:'object-compare',id:input.id,passEnv:profile.passEnv,
+        objectComparison:selected}},input);
+    localPathBindings(profile,reviewed);await privateDirectory(objectReviews,true);
+    const file=join(objectReviews,reviewed.reviewHash+'.json');
+    if(await exists(file))need(JSON.stringify(await privateJSON(file))===JSON.stringify(reviewed),
+      'WORKSPACE_OBJECT_PREPARED_REVIEW_CHANGED');
+    else await atomicJSON(file,reviewed);return reviewed;
+  }
+
+  async function bundleSelection(profile,input){
+    const saved=await readRequest(profile.id,input.id);
+    if(saved){
+      need(objectBundleCommand(saved.review.command)&&JSON.stringify(saved.review.intent)===JSON.stringify(input),
+        'WORKSPACE_REQUEST_SELECTION_CHANGED');
+      localPathBindings(profile,saved.review);return clone(saved.review);
+    }
+    need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');
+    need(!active,'WORKSPACE_EXECUTION_ACTIVE');
+    const selected=await bundleAdapter.review(profile,input);
+    const reviewed=finishReview({profileId:profile.id,command:input.action,operationId:input.id,
+      store:null,snapshotId:selected.recordSha256,
+      source:input.action==='object-bundle-export'?selected.objectDeclaration.bundle:selected.archiveDeclaration.path,
+      destination:input.action==='object-bundle-export'?null:selected.objectDeclaration.bundle,
+      objectBundle:selected,options:{command:input.action,id:input.id,passEnv:profile.passEnv,objectBundle:selected}},input);
+    localPathBindings(profile,reviewed);await privateDirectory(objectReviews,true);
+    const file=join(objectReviews,reviewed.reviewHash+'.json');
+    if(await exists(file))need(JSON.stringify(await privateJSON(file))===JSON.stringify(reviewed),
+      'WORKSPACE_BUNDLE_PREPARED_REVIEW_CHANGED');
+    else await atomicJSON(file,reviewed);return reviewed;
+  }
+  async function bundleInspection(profileId,archiveId){
+    need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');need(!active,'WORKSPACE_EXECUTION_ACTIVE');
+    await currentHost();return bundleAdapter.inspection(selectedProfile(profileId),archiveId);
+  }
 
   function selectedProfile(id) {
     need(!closed, 'WORKSPACE_CLOSED', 'The recovery workspace is closed', 409);
@@ -469,7 +635,23 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     const options = review.options;
     need(options.id === review.operationId && options.passEnv === profile.passEnv &&
       options.command === review.command, 'WORKSPACE_PROFILE_SELECTION_CHANGED');
-    if (review.command === 'snapshot') {
+    if(comparisonCommand(review.command)){
+      need(JSON.stringify(options.objectComparison)===JSON.stringify(review.objectComparison),
+        'WORKSPACE_COMPARISON_REVIEW_CHANGED');
+      comparisonAdapter.binding(profile,review.objectComparison);return;
+    }
+    if(objectBundleCommand(review.command)){
+      need(JSON.stringify(options.objectBundle)===JSON.stringify(review.objectBundle),'WORKSPACE_BUNDLE_REVIEW_CHANGED');
+      bundleAdapter.binding(profile,review.objectBundle);return;
+    }
+    if (objectCommand(review.command)) {
+      const declaration=declaredObject(profile,options.objectSessionId);
+      need(JSON.stringify(declaration)===JSON.stringify(review.objectDeclaration)&&
+        JSON.stringify(options.objectRecovery)===JSON.stringify(review.objectRecovery)&&
+        review.objectRecovery.command===review.command&&review.objectRecovery.objectSessionId===declaration.id,
+        'WORKSPACE_OBJECT_DECLARATION_CHANGED','Restore the exact original Object declaration before continuation',409);
+      return;
+    } else if (review.command === 'snapshot') {
       const plan = profile.capturePlans.find(item => item.id === review.capturePlan?.id);
       const root = profile.bundleRoots.find(item => item.id === plan?.bundleRootId);
       need(plan && root && JSON.stringify(plan) === JSON.stringify(review.capturePlan) &&
@@ -547,6 +729,9 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     if (!saved) need(!await exists(join(profile.operations, input.id, 'operation.json')),
       'WORKSPACE_OPERATION_ID_USED', 'Select a new local operation ID; this ID already belongs to an original transfer');
     let review;
+    if(comparisonCommand(input.action))return comparisonSelection(profile,input);
+    if(objectCommand(input.action))return objectSelection(profile,input);
+    if(objectBundleCommand(input.action))return bundleSelection(profile,input);
     if (input.action === 'snapshot') {
       need(input.bundleId === undefined && input.snapshotId === undefined && input.restoreId === undefined &&
         input.publisherRestoreId === undefined && input.quiesced === true,
@@ -639,15 +824,22 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   }
   async function selection(input) {
     exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-      'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'], 'recovery selection');
+      'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId',
+      'objectSessionId','expectedRecordSha256','archiveId','sourceRequestId','sourceReviewHash','sourceAttempt','sourceSide',
+      'beforeObjectSessionId','afterObjectSessionId','beforeExpectedRecordSha256','afterExpectedRecordSha256'], 'recovery selection');
+    if(!comparisonCommand(input.action))need(['beforeObjectSessionId','afterObjectSessionId','beforeExpectedRecordSha256','afterExpectedRecordSha256'].every(key=>input[key]===undefined),'WORKSPACE_COMPARISON_SELECTION_NOT_APPLICABLE');
+    if(!objectBundleCommand(input.action))need(['archiveId','sourceRequestId','sourceReviewHash','sourceAttempt','sourceSide'].every(key=>input[key]===undefined),
+      'WORKSPACE_BUNDLE_SELECTION_NOT_APPLICABLE');
+    if(!objectCommand(input.action)&&!objectBundleCommand(input.action))need(input.objectSessionId===undefined&&input.expectedRecordSha256===undefined,
+      'WORKSPACE_OBJECT_SELECTION_NOT_APPLICABLE');
     if (input.action !== 'fleet-prepare') need(input.fleetRestoreId === undefined && input.fleetTargetId === undefined,
       'WORKSPACE_FLEET_SELECTION_NOT_APPLICABLE', 'Fleet selectors belong to the fleet preparation action');
     const profile = selectedProfile(input.profileId);
     identifier(input.id, 'original operation ID');
-    need(['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
+    need(comparisonCommand(input.action)||objectCommand(input.action)||objectBundleCommand(input.action)||['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
       'WORKSPACE_ACTION_INVALID');
     await currentHost();
-    if (['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare'].includes(input.action)) return localSelection(profile, input);
+    if (comparisonCommand(input.action)||objectCommand(input.action)||objectBundleCommand(input.action)||['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare'].includes(input.action)) return localSelection(profile, input);
     requireRemoteStore(profile);
     need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined &&
       input.publisherRestoreId === undefined,
@@ -783,7 +975,14 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         const localOptions = { options: request.review.options, state: request.local,
           save: async () => { request.updatedAt = stamp(); await atomicJSON(job.key, request); },
           cancelled: () => job.cancelRequested };
-        result = request.review.command === 'snapshot' ?
+        result = comparisonCommand(request.review.command)?await comparisonAdapter.run({
+          profile,id:request.review.operationId,review:request.review.objectComparison,state:request.local,
+          save:async local=>{request.local=local;await localOptions.save();},signal:job.controller.signal,cancelled:localOptions.cancelled}):objectBundleCommand(request.review.command)?await bundleAdapter.run({profile,id:request.review.operationId,
+          review:request.review.objectBundle,state:request.local,save:localOptions.save,signal:job.controller.signal,
+          cancelled:localOptions.cancelled}):objectCommand(request.review.command) ? await objectAdapter.run({
+          declaration:declaredObject(profile,request.review.options.objectSessionId),review:request.review.objectRecovery,
+          state:request.local,save:localOptions.save,cancelled:localOptions.cancelled,signal:job.controller.signal,passEnv:profile.passEnv}) :
+          request.review.command === 'snapshot' ?
           await runLocalCapture({ ...localOptions, allowCapture: job.allowCapture === true }) :
           request.review.command === 'publisher-prepare' ? await runLocalPublisherPreparation(localOptions) :
           request.review.command === 'fleet-prepare' ? await runLocalFleetPreparation(localOptions) :
@@ -802,6 +1001,10 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       request.result = result; request.updatedAt = stamp(); delete request.error;
       await atomicJSON(job.key, request);
     } catch (error) {
+      if(comparisonCommand(request.review.command)&&error.objectComparisonResult)
+        request.result=clone(error.objectComparisonResult);
+      if(objectCommand(request.review.command)&&error.objectRecoveryResult)
+        request.result=clone(error.objectRecoveryResult);
       request.phase = job.cancelRequested ? 'INTERRUPTED' : 'FAILED';
       request.error = publicError(error); request.updatedAt = stamp();
       await atomicJSON(job.key, request).catch(() => {});
@@ -813,12 +1016,13 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   async function start({ selection: input, expectedReviewHash } = {}) {
     need(!readOnly && !closing, 'WORKSPACE_READ_ONLY', 'This workspace is closing or was opened for reading', 409);
     need(HEX.test(expectedReviewHash ?? ''), 'WORKSPACE_REVIEW_REQUIRED', 'Review the exact selection before starting');
-    const reviewed = await selection(input);
+    const reviewed = (objectCommand(input?.action)||objectBundleCommand(input?.action)||comparisonCommand(input?.action)) ? await preparedObject(input,expectedReviewHash) : await selection(input);
     need(!closing, 'WORKSPACE_CLOSING', 'The workspace is closing', 409);
     need(reviewed.reviewHash === expectedReviewHash, 'WORKSPACE_REVIEW_CHANGED',
       'The selection changed. Review it again before starting.', 409);
     const key = requestPath(reviewed.profileId, reviewed.operationId);
     let request = await readRequest(reviewed.profileId, reviewed.operationId);
+    const retainedRequest = Boolean(request);
     if (active) need(active.key === key, 'WORKSPACE_EXECUTION_ACTIVE', 'Finish or cancel the active recovery execution first', 409);
     if (request) {
       need(request.review.snapshotId === reviewed.snapshotId &&
@@ -830,19 +1034,30 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         createdAt: stamp(), updatedAt: stamp() };
       await atomicJSON(key, request);
     }
+    if ((objectCommand(reviewed.command)||objectBundleCommand(reviewed.command)||comparisonCommand(reviewed.command))&&retainedRequest) return requestView(request);
     if (active) {
       need(active.key === key, 'WORKSPACE_EXECUTION_ACTIVE', 'Finish or cancel the active recovery execution first', 409);
       return requestView(request);
     }
     const job = { key, profileId: reviewed.profileId, operationId: reviewed.operationId,
-      store: null, cancelRequested: false, allowCapture: reviewed.command === 'snapshot', promise: null };
+      store: null, controller:new AbortController(), cancelRequested: false, allowCapture: reviewed.command === 'snapshot', promise: null };
     active = job; job.promise = execute(request, job);
     return requestView(request);
   }
-  async function resume(profileId, id) {
+  async function resume(profileId, id, continuation = {}) {
     need(!readOnly && !closing, 'WORKSPACE_READ_ONLY'); selectedProfile(profileId); identifier(id, 'operation ID');
     const request = await readRequest(profileId, id);
     need(request, 'WORKSPACE_REQUEST_NOT_FOUND', 'Review this original operation before adopting it into the workspace', 404);
+    if(objectCommand(request.review.command)||objectBundleCommand(request.review.command)||comparisonCommand(request.review.command)) {
+      exact(continuation,['expectedReviewHash','afterAttempt','quiesced'],'Object continuation');
+      need(continuation.expectedReviewHash===request.review.reviewHash&&Number.isSafeInteger(continuation.afterAttempt)&&
+        continuation.afterAttempt>=0&&continuation.afterAttempt<=request.attempts,
+        'WORKSPACE_OBJECT_CONTINUATION_SELECTION_CHANGED','Read and explicitly select this original saved attempt',409);
+      if(continuation.afterAttempt<request.attempts||request.result?.status==='COMPLETE')return requestView(request);
+      if(request.review.command==='object-snapshot')need(continuation.quiesced===true,
+        'WORKSPACE_OBJECT_QUIESCENCE_REQUIRED','Confirm current original writer shutdown before continuing this backup',409);
+      else need(continuation.quiesced===undefined,'WORKSPACE_OBJECT_QUIESCENCE_NOT_APPLICABLE');
+    } else need(Object.keys(continuation).length===0,'WORKSPACE_OBJECT_CONTINUATION_NOT_APPLICABLE');
     if (active) {
       need(active.key === requestPath(profileId, id), 'WORKSPACE_EXECUTION_ACTIVE',
         'Finish or cancel the active recovery execution first', 409);
@@ -868,7 +1083,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         request.review.options.passEnv === profile.passEnv, 'WORKSPACE_PROFILE_SELECTION_CHANGED');
     }
     const job = { key: requestPath(profileId, id), profileId, operationId: id,
-      store: null, cancelRequested: false, allowCapture: false, promise: null };
+      store: null, controller:new AbortController(), cancelRequested: false, allowCapture: false, promise: null };
     active = job; job.promise = execute(request, job);
     return requestView(request);
   }
@@ -878,7 +1093,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     const request = await readRequest(profileId, id);
     need(request, 'WORKSPACE_REQUEST_NOT_FOUND', 'Unknown workspace recovery request', 404);
     if (active?.key === requestPath(profileId, id)) {
-      active.cancelRequested = true; active.store?.close();
+      active.cancelRequested = true; active.controller.abort(); active.store?.close();
     }
     return requestView(request);
   }
@@ -888,7 +1103,9 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       store: await storeHint(profile), remoteConfigured: profile.storeConfig !== null, operations: profile.operations,
       bundleRoots: clone(profile.bundleRoots), capturePlans: clone(profile.capturePlans),
       publisherRestores: clone(profile.publisherRestores), fleetRestores: clone(profile.fleetRestores),
-      fleetTargets: clone(profile.fleetTargets),
+      fleetTargets: clone(profile.fleetTargets), objectSessions:clone(profile.objectSessions),
+      objectBundleArchives:clone(profile.objectBundleArchives),
+      supportConfigured:!!profile.casesDirectory,caseSourceConfigured:!!profile.caseSourceDirectory,
       downloadRoot: profile.downloadRoot, restoreRoot: profile.restoreRoot,
       passEnv: profile.passEnv, passphraseAvailable: typeof process.env[profile.passEnv] === 'string' && process.env[profile.passEnv].length > 0 });
     const page = await requests();
@@ -904,10 +1121,13 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   async function close({ cancelActive = false } = {}) {
     if (closed) return;
     closing = true;
+    let supportError;
+    const supportClosed=support.close().catch(error=>{supportError=error;});
     await mutations;
-    if (cancelActive && active) { active.cancelRequested = true; active.store?.close(); }
+    await supportClosed;
+    if (cancelActive && active) { active.cancelRequested = true; active.controller.abort(); active.store?.close(); }
     await active?.promise;
-    closed = true; await lease?.release();
+    try { await Promise.all([objectAdapter.close(),comparisonAdapter.close()]); if(supportError)throw supportError; } finally { closed = true; await lease?.release(); }
   }
   async function identity() {
     need(!closed, 'WORKSPACE_CLOSED', 'The recovery workspace is closed', 409);
@@ -915,8 +1135,51 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     return { schema: 'stellar-forge.recovery-workspace-identity.v1', workspaceId: workspaceState.id,
       directory, configFile, configurationSha256: configHash };
   }
-  return { state, identity, localBundles, operations, operation, inventory, requests, request, review: selection,
+  return { state, identity, localBundles, operations, operation, inventory, requests, request, objectSession, objectEvidence, review:input=>transition(()=>selection(input)),
+    comparisonArtifact:async(profileId,id,kind,expectedSha256)=>{
+      await currentHost();selectedProfile(profileId);identifier(id,'comparison request');
+      need(['result','html','markdown'].includes(kind)&&HEX.test(expectedSha256??''),'WORKSPACE_COMPARISON_ARTIFACT_INVALID');
+      const saved=await readRequest(profileId,id);
+      need(saved&&comparisonCommand(saved.review.command),'WORKSPACE_COMPARISON_REQUEST_INVALID');
+      const identity=saved.result?.artifacts?.[kind]??saved.local?.objectComparisonLastResult?.artifacts?.[kind];
+      need(identity?.sha256===expectedSha256,'WORKSPACE_COMPARISON_ARTIFACT_CHANGED');
+      const artifact=await comparisonAdapter.artifact(expectedSha256);
+      need(artifact.bytes===identity.bytes&&artifact.mediaType===identity.mediaType,'WORKSPACE_COMPARISON_ARTIFACT_CHANGED');
+      return artifact;
+    },
+    bundleInspection:(profileId,archiveId)=>transition(()=>bundleInspection(profileId,archiveId)),
+    bundleReport:async(profileId,id,kind)=>{await currentHost();selectedProfile(profileId);const request=await readRequest(profileId,id);need(request&&objectBundleCommand(request.review.command),'WORKSPACE_BUNDLE_REQUEST_INVALID');
+      return bundleAdapter.report(profileId,id,kind,request.result);},
+    bundleArtifact:async(profileId,id)=>{await currentHost();selectedProfile(profileId);return bundleAdapter.artifact(profileId,id);},
+    bundleAttach:input=>transition(async()=>{
+      exact(input,['profileId','id','transferId','expectedReviewSha256','expectedRevision','actor'],'encrypted bundle attachment');
+      need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');need(!active,'WORKSPACE_EXECUTION_ACTIVE');
+      await currentHost();selectedProfile(input.profileId);identifier(input.id,'original bundle export request');
+      const request=await readRequest(input.profileId,input.id);
+      need(request?.review.command==='object-bundle-export'&&request.result?.status==='COMPLETE',
+        'WORKSPACE_BUNDLE_EXPORT_REQUIRED');
+      const archive=await bundleAdapter.artifact(input.profileId,input.id),{id,...selected}=input;
+      return support.attachArchive({...selected,archive,transport:{...request.result,workspaceOperationId:id}});
+    }),
+    bundlePair:async(profileId,beforeId,afterId)=>(await bundlePairSelected(profileId,beforeId,afterId)).pair,
+    bundlePairAttach:input=>transition(async()=>{
+      exact(input,['profileId','beforeId','afterId','transferId','expectedReviewSha256','expectedRevision','actor','expectedPairSha256'],'comparison bundle attachment');
+      need(!readOnly&&!closing,'WORKSPACE_READ_ONLY');need(!active,'WORKSPACE_EXECUTION_ACTIVE');
+      const {entries,pair}=await bundlePairSelected(input.profileId,input.beforeId,input.afterId);
+      need(pair.pairSha256===input.expectedPairSha256,'WORKSPACE_BUNDLE_COMPARISON_PAIR_CHANGED');
+      const {beforeId,afterId,...selected}=input;return support.attachComparison({...selected,...entries});
+    }),
+    bundleAttachment:input=>transition(()=>support.attachment(input)),
+    bundleCaseExport:input=>transition(()=>support.exportAttached(input)),
+    supportCases:(profileId,query)=>transition(()=>support.cases(profileId,query)),
+    supportTransfers:profileId=>transition(()=>support.list(profileId)),
+    supportTransfer:(profileId,id)=>transition(()=>support.read(profileId,id)),
+    supportReview:input=>transition(()=>support.prepare(input)),
+    supportSave:input=>transition(()=>support.save(input)),
+    supportHandoff:(profileId,id)=>transition(()=>support.handoff(profileId,id)),
+    supportExport:input=>transition(()=>support.export(input)),
+    supportPackage:(profileId,id)=>transition(()=>support.inspectPackage(profileId,id)),
     start: input => transition(() => start(input)),
-    resume: (profileId, id) => transition(() => resume(profileId, id)),
+    resume: (profileId, id, continuation) => transition(() => resume(profileId, id, continuation)),
     cancel: (profileId, id) => transition(() => cancel(profileId, id)), close };
 }
