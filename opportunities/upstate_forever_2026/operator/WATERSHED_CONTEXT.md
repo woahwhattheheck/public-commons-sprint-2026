@@ -707,3 +707,92 @@ The PRWD anchors `030601020502` and `030601020507` give two selected and 32
 distinct contributing polygons. Open the saved export and its original geometry
 downloads, then reopen the transferred Workspace and operate that same map.
 Inspect the exact outgoing brief HTML/PDF and source downloads before delivery.
+
+## Receive the complete original map into an existing project
+
+The source continuation includes the geographic desk, the earlier observed
+evidence, the source-explorer review intake and all small original overlay
+companions. Keep these bodies together in a fresh prepared source directory.
+The complete original application and its Workspace remain the receiving
+target.
+
+Prepare the map from the original data already retained on the receiving host:
+
+```sh
+python -B PREPARED_SOURCE/source_tools/prepare_watershed_map_context.py \
+  --application ACTUAL_APPLICATION \
+  --source-root PREPARED_SOURCE \
+  --search-root ACTUAL_ORIGINAL_WORKSPACE \
+  --install
+```
+
+Use actual local paths. `--original-domain ACTUAL_FILE` selects a known
+unchanged original JSON or gzip directly; `--search-root` may repeat for
+other deliberately supplied retained roots. The helper reads original
+Workspace source records and immutable objects, including objects without
+filename extensions, before considering named JSON/gzip source files.
+It accepts only the complete 11,220,042-byte original domain whose SHA-256
+is `2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af`.
+
+The helper reuses the exact existing map or invokes the unchanged maintained
+Node overlay builder. It preserves all 273,049 original vertices, all 217
+HUC12s, the profile CSV, canonical directory relationships and the original
+profile parser. The result must equal the retained 9,713,953-byte GeoJSON
+with SHA-256
+`4050c8d1ee36d8608437f496995f46fb5ee94dd6f4d3ea5368cc2c57fdb04b42`.
+The complete ten-body source closure is checked before the existing regional
+installer runs. Different files in the prepared source directory are
+preserved and reported for explicit composition.
+
+Continue the same original-project course with the installed driver:
+
+```sh
+python -B ACTUAL_APPLICATION/integration/run_watershed_context_operator.py \
+  --application ACTUAL_APPLICATION \
+  --workspace ACTUAL_ORIGINAL_WORKSPACE \
+  --source-dir ACTUAL_ORIGINAL_WATER_CONTEXT_DIRECTORY \
+  --source-manifest ACTUAL_ORIGINAL_WATER_CONTEXT_MANIFEST \
+  --include-observed-evidence --include-original-map \
+  --output NEW_OWNED_OUTPUT_DIRECTORY
+```
+
+Changing a report or saved map source clears the previous geographic view
+while its replacement loads. Fit and geographic export become available
+after the complete workspace/report/export/source identity is loaded.
+An archive upload, export or navigation that began in another workspace
+keeps its original project identity through asynchronous completion.
+
+Open and LOOK at the populated operator at the presentation width and at a
+narrow width. Operate the ARJWS two-anchor/four-union and PRWD
+two-anchor/32-union selections, numeric themes, pan/zoom/fit, keyboard
+selection, refresh, downloads and saved export reopening. Open the actual
+outgoing GeoJSON, HTML brief, CSV/JSON and complete restored project.
+Repair any observed layout or operating defect in this same course before
+presenting the finished product. The owner cutoff remains 14:00 UTC on
+October 13, 2026.
+
+### Current owner direction for the Upper Savannah demonstration
+
+Bryce's October 13 update is retained in the existing
+[project coordination message](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359).
+Center the partner demonstration on the Upper Savannah RFP and a production
+workshare for Tim's existing scientific practice. Keep the original geographic
+shapes, 30 m regional grid, upstream model domain, South Carolina reporting
+mask and utility focus distinct. The original model operation owns the actual
+baseline, restoration and matched-control runs with realistic, explicitly
+simulated inputs. Preserve its completed cases and source selections.
+
+Connect this original geographic and observed-source review to that working
+case: choose inputs and assumptions, run the native models, inspect the
+differences, revise the choices and reopen the transferred project. Native
+annual nitrogen/phosphorus mass is reported in kg/year and sediment mass in
+tonnes/year reaching the modeled stream. Retain the original constituent,
+period and spatial-support definitions alongside observations. Show actual
+outputs and elapsed history. Tim's team retains scientific direction,
+method choices, interpretation and client review.
+
+Continue accepted calculations and complementary source/product work.
+Use the existing writers and receiving operations; the project cutoff
+remains 14:00 UTC on October 13. Open, LOOK at and operate the final
+populated product and every outgoing attachment, fixing observed defects
+in the maintained implementation.
