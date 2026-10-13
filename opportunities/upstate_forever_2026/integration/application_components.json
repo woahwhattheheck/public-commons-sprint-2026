@@ -3520,6 +3520,7 @@
         "model/client_economics.py",
         "model/client_report.py",
         "model/delivery_archive.py",
+        "model/native_process_figures.py",
         "model/native_process_report.py",
         "model/native_versions.py",
         "model/observations.py",

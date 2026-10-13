@@ -10,11 +10,11 @@ const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},workspace:{type:'string'},
  'context-id':{type:'string'},output:{type:'string'},
  resume:{type:'boolean',default:false},video:{type:'boolean',default:false},
- headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},
+ headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE --opening MONITORING_OPENING.json --receiving RECEIVING.json --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--resume]');
+ console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE --opening MONITORING_OPENING.json --receiving RECEIVING.json --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','monitoring-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -46,6 +46,9 @@ function redact(value){
 async function writeJournal(){
  if(journalWritable)await atomicText(join(output,'journey.json'),redact(JSON.stringify(journal,null,2))+'\n');
 }
+async function stage(name){
+ journal.current_step=name;await writeJournal();
+}
 async function record(name,details={}){
  journal.steps.push({name,completed_at:new Date().toISOString(),...details});await writeJournal();
 }
@@ -55,9 +58,11 @@ async function shot(name){
 }
 function browserRuntime(){
  required(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ const rendererLimit=args['browser-renderer-limit']===undefined?null:Number(args['browser-renderer-limit']);
+ required(rendererLimit===null||(/^[1-9][0-9]*$/.test(args['browser-renderer-limit'])&&Number.isSafeInteger(rendererLimit)&&rendererLimit<=32),'Choose a browser renderer limit between 1 and 32.');
  return{kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
   executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
-  channel:args['browser-channel']||null,headless:!args.headed};
+  channel:args['browser-channel']||null,headless:!args.headed,renderer_process_limit:rendererLimit};
 }
 async function initializeContinuation(){
  browserRuntime();
@@ -266,6 +271,7 @@ async function taskDownload(task,suffix,name){
  const result=await saveDownload(links.nth(index),name,ticket);await closeDetail();return result;
 }
 async function exportCampaign(format){
+ await stage('export-campaign-'+format);
  await idle();await expandFor('[data-export="'+format+'"]');
  const expected={campaign_id:selection.campaign_id,expected_revision_id:baseline.campaign.revision.id,format};
  if(selection.context_id)expected.context_id=selection.context_id;
@@ -335,17 +341,21 @@ async function main(){
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original HTTP/HTTPS operator URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
  required(capability,'Use the original startup URL containing its capability fragment.');
+ await stage('launch-browser');
  browser=await chromium.launch({headless:!args.headed,
   ...(args['browser-channel']?{channel:args['browser-channel']}:{}),
-  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{})});
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{}),
+  ...(args['browser-renderer-limit']?{args:['--renderer-process-limit='+browserRuntime().renderer_process_limit]}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
+ await stage('open-original-workspace');
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(selection.workspace_key);await openDesk();
  baseline=await readSelection();
  required(canonical(baseline.network.source_bindings)===canonical(receiving.summary.original_source_bindings),'The network differs from the original receiving source bindings.');
  const selected=identity(baseline);
  if(requestState.selection)required(canonical(requestState.selection)===canonical(selected),'The original campaign advanced after this browser operation. Continue that retained selection or choose a new output for the new revision.');
  else{requestState.selection=selected;await persistRequests();}
+ await stage('open-saved-network');
  const nativeSource=opening.selection?.network;
  required(nativeSource?.domain_collection_id&&nativeSource?.domain_source_id,'The opening omits its retained original domain selection.');
  const catalog=await monitoring('source.catalog');
@@ -359,17 +369,21 @@ async function main(){
  await page.locator(desk('#map path')).first().focus();
  await shot('01-original-source-network');
  await record('Opened the actual original source-bound network',{network_id:baseline.network.id,summary:baseline.network.summary,source_bindings:baseline.network.source_bindings,map_selection:await page.locator(desk('#map-selection')).textContent()});
+ await stage('open-saved-campaign-calendar');
  await choosePlan();await chooseCampaign();await verifyRendered(baseline);
  await shot('02-saved-campaign-calendar');
  await record('Opened the saved design and complete campaign calendar',{...selected,cost:baseline.plan.cost,coverage:baseline.plan.coverage,visit_count:baseline.campaign.calendar.length,configuration:baseline.plan.configuration});
+ await stage('working-draft-and-invalid-input');
  await inspectDraftAndCorrection();
+ await stage('open-selected-observed-context');
  const observed=await openObservedContext();
  if(observed){await shot('04-original-observed-support');await record('Opened exact retained observational support',{context_id:observed.id,summary:observed.summary,sha256:requestState.context_sha256});}
  await exportCampaign('html');await exportCampaign('bundle');
  const archive=await exportCampaign('workspace');await shot('05-campaign-exports');
- await freshBrowser();await transferWorkspace(archive);
+ await stage('fresh-browser-reopen');await freshBrowser();
+ await stage('receive-native-workspace');await transferWorkspace(archive);
  required(!journal.browser_errors.length,'Browser exception: '+journal.browser_errors.join('; '));
- journal.status='complete';journal.network_id=selection.network_id;journal.plan_id=selection.plan_id;journal.campaign_id=selection.campaign_id;
+ journal.current_step='complete';journal.status='complete';journal.network_id=selection.network_id;journal.plan_id=selection.plan_id;journal.campaign_id=selection.campaign_id;
 }
 try{await main();}catch(error){
  journal.status='failed';journal.error=redact(error.stack||error.message);process.exitCode=1;
