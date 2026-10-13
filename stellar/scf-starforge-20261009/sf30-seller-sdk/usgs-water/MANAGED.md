@@ -68,3 +68,16 @@ If a saved input changes before Start, review it again. If a fixed port is occup
 ## Distribution
 
 The original `contributions/usgs-water.json` owns the Water command, merchant customer CLI and exported interfaces. `./seller/usgs-water/managed` exports this lifecycle. The maintained Git builder, runtime installer and source manifest carry the same Water implementation and browser assets. No additional scheduler or dependency installer is introduced by this application.
+
+## Supply the watershed migration runtime
+
+The **Watershed migration** tab uses the same private Water project and managed listener. Its source capture, reference review, native inspection, conversion and complete receiving actions are documented in [WATERSHED.md](WATERSHED.md). Applications Review binds the complete watershed Node, Python and browser implementation, its process owner, both migration guides and the application-level AGENTS.md alongside the existing Water sources. Review and save again after updating those installed files so the original Start operation selects their current bytes.
+
+For migration, select an existing private JSON **Environment file** in Applications. The existing environment reader verifies its exact bytes and owner-only file permissions before Start. Supply these two string values using the actual host installation:
+
+- `USGS_WATERSHED_PYTHON`: the absolute path to the Python 3 interpreter for the retained migration controller.
+- `USGS_DSS_LEGACY_COMMAND`: a string containing a JSON array of the compatible HEC-DSSVue/HEC-RTS native launcher and its fixed arguments. The controller appends the original Jython driver, request file, result file and request identity as separate arguments.
+
+The launcher must expose the official compatible Heclib conversion API described in WATERSHED.md. The Python 3 controller and HEC Jython environment are separate runtimes. The existing **HEC-DSS Python executable** field continues to select `USGS_HECDSS_PYTHON` for the original USGS-to-DSS7 export; it does not select the legacy conversion launcher. Explicitly set `USGS_WATERSHED_PYTHON` for migration so that the controller does not inherit a different interpreter selected for that original export.
+
+Applications passes the reviewed environment through the existing managed worker and Water workspace. A changed environment file requires the existing Review/Save flow. Runtime executables and credentials stay on the selected host; the source package contains the complete application and operating guides. Use the Linux managed browser workspace. The standalone Windows controller can produce the same complete handover for receiving in that workspace.

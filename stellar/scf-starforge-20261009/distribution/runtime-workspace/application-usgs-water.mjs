@@ -40,7 +40,9 @@ export async function prepareUsgsWaterApplication(settings, { inputPath, selecte
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false });
   for (const name of ['cli.mjs', 'managed.mjs', 'workspace.mjs', 'project.mjs', 'provider.mjs',
     'analysis.mjs', 'merchant.mjs', 'dss.mjs', 'dss_archive.py', 'hecdss_bridge.py',
-    'ui/index.html', 'ui/app.mjs', 'ui/dss.mjs', 'ui/style.css'])
+    'ui/index.html', 'ui/app.mjs', 'ui/dss.mjs', 'ui/style.css',
+    'watershed.mjs', 'watershed.py', 'watershed_native.py', 'watershed_process.py',
+    'ui/watershed.mjs', 'WATERSHED.md', 'WATERSHED_PROCESS.md', 'AGENTS.md'])
     inputs.push(await inputPath(join(runtime.sourceRoot, SOURCE, name), 'file'));
   if (selected.project) inputs.push(await inputPath(selected.project.path, 'file'));
   if (selected.buyer) inputs.push(await inputPath(selected.buyer.path, 'file'));
