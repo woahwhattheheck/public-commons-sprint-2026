@@ -4,7 +4,7 @@
 
 ## Decision and scope
 
-In the original completed 1,296 ha simulated teaching case, corridor restoration reduces modeled stream export more than the matched off-corridor control for nitrogen, phosphorus and sediment under all four retained profiles. Both alternatives change the same 635 original cells (57.15 ha), with the same pasture/crop counts and closely matched precipitation. The ranking holds within each profile's exact common support.
+In the original completed 1,296 ha simulated teaching case, corridor restoration reduces modeled stream export more than the matched off-corridor control for nitrogen, phosphorus and sediment under all four retained profiles. Each alternative changes 635 original cells (57.15 ha), with the same pasture/crop counts and closely matched precipitation. The ranking holds within each profile's exact common support.
 
 This report joins the completed twelve original InVEST 3.20.0 runs to the independently replayed input chapter. It retains the original generated square, assumed physical/biophysical inputs, exact run/profile IDs and full numerical source. The Upper Savannah geographic edition is a separate case.
 
@@ -13,7 +13,7 @@ This report joins the completed twelve original InVEST 3.20.0 runs to the indepe
 | Native course | 12/12 complete |
 | Grid | 120 × 120; 30 m; EPSG:26917; 1,296 ha |
 | Each changed layout | 635 cells; 57.15 ha |
-| Profiles | MFD / D8 × SDR Lmax 122 / 333 |
+| Profiles | MFD / D8 × dimensionless SDR maximum-L 122 / 333 |
 | N and P units | kg/year delivered to modeled streams |
 | Sediment units | metric tonnes/year delivered to modeled streams |
 
@@ -40,7 +40,7 @@ Native stream-export reductions therefore differ substantially despite nearly ba
 | D8/333 | Phosphorus (kg/year) | 215.194 | 81.271 | 133.923 | 2.6479 |
 | D8/333 | Sediment (t/year) | 396.860 | 201.005 | 195.855 | 1.9744 |
 
-The ratio compares two positive modeled reductions on identical cells within one profile. It is not a quoted price or a financial return. Full-grid assumed input loads and valid native export masks have different coverage; this report does not divide one by the other to infer a delivery fraction.
+The ratio compares two positive modeled reductions on the same valid comparison support within one profile. It is not a quoted price or a financial return. Full-grid assumed input loads and valid native export masks have different coverage; this report does not divide one by the other to infer a delivery fraction.
 
 ## Native baseline, restoration and matched control
 
@@ -118,7 +118,7 @@ Changing SDR Lmax from 122 to 333 produces identical saved sums and byte-identic
 | D8 | control | Phosphorus | true | true |
 | D8 | control | Sediment | true | true |
 
-This is a no-response result for the two tested cap values in this retained case. It does not establish a universal lack of sediment sensitivity or infer an unexamined LS-factor distribution. The two routing choices remain materially different. All twelve retained SDR stages record their correct routing and Lmax in the original execution-input signature and were executed without stage reuse. NDR does not use the SDR cap; six equivalent NDR stages were retained through the original reuse mechanism.
+For this simulated terrain, three scenarios and two tested dimensionless SDR maximum-L settings (122 and 333), the retained outputs are identical within each routing family. This finite tested-setting result does not show that maximum-L is generally unimportant or prove that the cap never bound. The four profiles produce two distinct observed output families; they are not independent probabilistic realizations. The two routing choices remain materially different. All twelve retained SDR stages record their correct routing and Lmax in the original execution-input signature and were executed without stage reuse. NDR does not use the SDR cap; six equivalent NDR stages were retained through the original reuse mechanism.
 
 ## Recorded execution and source identities
 
