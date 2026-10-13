@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "published-study-report-receiving",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/ecsa/saved-study-report-receiving-20261013",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "source_tools/continue_study_report.py"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "source_tools/continue_study_report.py",
+        "source_tools/receive_original_study.py",
+        "source_tools/receive_sv833_study.py",
+        "source_tools/receive_rl18151_study.py",
+        "measurement_workspace/STUDY_REVIEWS.md"
+      ],
+      "requires": [
+        "published-studies",
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": []
+}
