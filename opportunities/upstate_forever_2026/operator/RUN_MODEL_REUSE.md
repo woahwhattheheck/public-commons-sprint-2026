@@ -29,7 +29,7 @@ ORIGINAL_RUN_CAPABILITIES = {"run.start": {"source_runs": True}}
 
 The read-only `operator/run_assembly_operations.py` catalogue requires that declaration and uses the helper's existing `integrate_operator(..., write=False)` function to confirm the installed original `Operator._invoke` run.start branch is already joined. It exposes no new queued action.
 
-The ECSA descriptor `operator/extensions/native-run-assembly.json` registers the catalogue and a form-only `attachRunAssembly` controller. The run desk opens it using the existing extension host's `openExtension` capability. The normal `run.prepare`, `run.start` and original task recovery remain in use.
+The ECSA descriptor `operator/extensions/native-run-assembly.json` registers the catalogue and the picker module as an allowed browser asset. The run desk imports `attachRunAssembly` and opens its form with the existing host's `openForm`, `submitAction` and `openItem` capabilities. The normal `run.prepare`, `run.start` and original task recovery remain in use.
 
 The complete source bank retains the current A73C / ECO-DELIVERY13-UI programme editor, including its native-model controls, and composes the capability declaration into 70CB's current queue helper with native-directory preservation. Apply the exact helper edit to current source; keep a compatible newer programme editor. The Git release preserves the already-merged editor unchanged. Full replacement of an existing owned run desk must match one of the recorded exact predecessors. The operations receiver composes all requested postimages, recognizes already-applied edits and keeps its original backup/journal behavior.
 
