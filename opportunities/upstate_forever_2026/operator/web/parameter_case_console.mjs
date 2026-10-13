@@ -11,14 +11,6 @@ const bytes = value => {
   while (amount >= 1024 && index < units.length - 1) { amount /= 1024; index++; }
   return amount.toLocaleString(undefined, {maximumFractionDigits: index ? 1 : 0}) + ' ' + units[index];
 };
-const attemptState = value => {
-  const state = value.state === 'interrupted_after_completion'
-    ? 'Interrupted after result completion' : value.state;
-  return state + (value.state === 'interrupted_after_completion' && value.completed_result_retained
-    ? ' · completed result retained' : '') +
-    (value.state === 'interrupted_after_completion' && value.latest_supervision_state === 'complete'
-      ? ' · latest verification complete' : '');
-};
 const action = (name, label, disabled = false) =>
   '<button type="button" data-case-console="' + name + '"' + (disabled ? ' disabled' : '') + '>' + esc(label) + '</button>';
 const metric = (label, value) => '<dl><dt>' + esc(label) + '</dt><dd>' + esc(value) + '</dd></dl>';
@@ -91,7 +83,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
   function paint(value) {
     snapshot = value;
     const native = value.native, attempt = value.attempt;
-    const ownerActive = value.programme_active === true;
+    const ownerActive = value.programme_active === true || value.programme_native_active === true;
     panel.querySelector('[data-case-heading]').textContent =
       value.case_bindings.map(row => row.label || row.id).join(' / ');
     const phase = native.execution?.phase;
@@ -100,6 +92,8 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
       (native.execution?.model ? ' · ' + native.execution.model.toUpperCase() : '');
     panel.querySelector('[data-case-live]').textContent = native.active
       ? 'This original native run currently holds its execution lock.'
+      : value.programme_native_active && !value.programme_active
+      ? 'Another original native run in this programme currently holds its execution lock.'
       : ownerActive
       ? 'The original programme is active · ' + String(value.programme?.phase || '').replaceAll('_', ' ') + '.'
       : value.coordinator_active
@@ -151,7 +145,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
       : 'This case has no retained isolated-process receipt. Its original native journal and model log remain available.';
     panel.querySelector('[data-case-history]').innerHTML = history.rows.map(row =>
       '<tr><td>' + (row.kind === 'gura_isolated' ? 'Original Gura CLI' : 'Operator worker') +
-      '</td><td>' + esc(when(row.created_at)) + '</td><td>' + esc(attemptState(row)) +
+      '</td><td>' + esc(when(row.created_at)) + '</td><td>' + esc(row.state) +
       '</td><td>' + (Number.isInteger(row.return_code) ? esc(row.return_code) : '—') +
       '</td><td>' + esc(row.pid ?? '—') + '</td><td><button type="button" data-case-console="attempt" data-attempt-id="' +
       esc(row.id) + '"' + (row.state === 'unavailable' ? ' disabled' : '') + '>' +
@@ -162,7 +156,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
     panel.querySelector('[data-case-console="next"]').disabled = history.offset + history.rows.length >= history.total;
     panel.querySelector('[data-case-selected-attempt]').textContent = attempt
       ? (attempt.kind === 'gura_isolated' ? 'Original Gura CLI' : 'Operator worker') + ' · ' +
-        when(attempt.created_at) + ' · ' + attemptState(attempt) +
+        when(attempt.created_at) + ' · ' + attempt.state +
         (Number.isInteger(attempt.return_code) ? ' · exit ' + attempt.return_code : '')
       : 'Original run log';
     const resources = panel.querySelector('[data-case-resources]');
@@ -234,7 +228,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
     if (name === 'native') { const id = runId; detach(); return host.openItem('runs', id); }
     if (name === 'task') { const id = node.dataset.taskId; detach(); return host.openItem('tasks', id); }
     if (name === 'resume') {
-      if (!snapshot || snapshot.native.active || snapshot.coordinator_active || snapshot.programme_active)
+      if (!snapshot || snapshot.native.active || snapshot.coordinator_active || snapshot.programme_active || snapshot.programme_native_active)
         throw new Error('Follow the original active calculation before continuing this saved ' + settings.noun + '.');
       node.disabled = true;
       const payload = {[settings.payloadId]: studyId};
@@ -289,8 +283,7 @@ export function attachNativeCaseConsole(host, family = 'parameter-study') {
     panel.querySelector('[data-case-follow]').addEventListener('change', event => {
       follow = event.target.checked; clearTimeout(timer); if (follow) update();
     }, {signal: listeners.signal});
-    const dialog = document.querySelector('#detail-dialog');
-    dialog?.addEventListener('close', () => { if (!dialog.open) detach(); }, {signal: listeners.signal});
+    document.querySelector('#detail-dialog')?.addEventListener('close', detach, {signal: listeners.signal});
     await update();
   }
 
