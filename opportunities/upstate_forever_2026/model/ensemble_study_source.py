@@ -391,11 +391,68 @@ def _figures(directory, content):
     return {"figure_spec": SPEC, "figures": choices, "coverage": spec["coverage"]}
 
 
+
+def _alternative_sections(content):
+    """Carry the release's same-support scalar comparison into ordinary reports."""
+    rows = content.get("alternative_comparisons", [])
+    if not rows:
+        return []
+    reference_word = "Reference" if content.get("report", {}).get("scenario_reference") else "Baseline"
+    keyed = [("AC" + format(index + 1, "04d"), row) for index, row in enumerate(rows)]
+    eligible = [(key, row) for key, row in keyed if row["comparison_status"] == "comparable"]
+    unavailable = [(key, row) for key, row in keyed if row["comparison_status"] != "comparable"]
+    blocks = [
+        "Compare the named A and B alternatives within each original parameter case. "
+        "Every numerical row below has the same retained reference run, pollutant, annual unit, "
+        "nonempty exact common-valid mask, cell count and common reference mass. "
+        "The annual B-minus-A difference uses those original saved totals directly. "
+        "A negative difference means B has lower modeled export than A. "
+        "B-versus-A percentage divides by A's mass on the same cells and is undefined at zero.",
+        "The reduction ratio is (" + reference_word.lower() + " minus B) / ("
+        + reference_word.lower() + " minus A). It is shown only when A has a positive "
+        "reduction and B has a nonnegative reduction. It compares annual physical mass, without "
+        "cost assumptions. Matching support does not establish complete reporting-area coverage; "
+        "different routing supports stay separate. Original native direct-comparison maps and "
+        "the saved runs remain unchanged.",
+        _table(["Case", "Parameter profile", "Alternative A", "Alternative B"],
+               [[key, row["member_label"], row["alternative_a_label"],
+                 row["alternative_b_label"]] for key, row in keyed]),
+    ]
+    if eligible:
+        blocks.extend([
+            _table(["Case", "Constituent / annual unit", reference_word, "A", "B", "Common cells"],
+                   [[key, POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"],
+                     row["reference_common"], row["alternative_a_common"],
+                     row["alternative_b_common"], row["common_cells"]] for key, row in eligible]),
+            _table(["Case", "B minus A", "B vs A (%)", reference_word + " minus A",
+                    reference_word + " minus B", "B/A reduction ratio"],
+                   [[key, row["b_minus_a"], row["b_vs_a_percent"],
+                     row["reduction_a"], row["reduction_b"], row["reduction_b_over_a"]]
+                    for key, row in eligible]),
+            _table(["Case", "Reduction-ratio meaning"],
+                   [[key, row["ratio_status"]] for key, row in eligible]),
+        ])
+    if unavailable:
+        blocks.append(_table(["Case", "Reason alternatives remain separate"],
+                             [[key, row["reason"]] for key, row in unavailable]))
+    blocks.extend([
+        "The AC key identifies this retained alternative-comparison row. Full-precision values, "
+        "each original run/profile/scenario/comparison identity, complete support SHA256 and "
+        "unavailable-case reasons remain in the following original numeric companions.",
+        {"kind": "links", "items": [
+            {"title": "Same-support alternatives: full-precision CSV", "path": "numeric/alternatives.csv"},
+            {"title": "Complete retained comparison JSON", "path": "numeric/report.json"}]},
+    ])
+    return [["Alternatives on identical geographic support", blocks]]
+
+
 def _sections(plan, content, profiles, scenarios, scope=None):
     report = content["report"]
     if report.get("scenario_reference"):
         from .ensemble_scenario_contrasts import sections
-        return sections(plan, content, profiles, scenarios, scope)
+        result = sections(plan, content, profiles, scenarios, scope)
+        result[1:1] = _alternative_sections(content)
+        return result
     progress = report.get("progress", {})
     model_scope = report.get("model_scope", {})
     sections = [
@@ -428,6 +485,7 @@ def _sections(plan, content, profiles, scenarios, scope=None):
     ]
     scope_sections = source_scope.sections(scope) if scope is not None else []
     sections[1:1] = scope_sections[:1]
+    sections.extend(_alternative_sections(content))
     for field, heading in (("paired_rows", "Land-cover contrasts on common valid cells"),
                            ("parameter_rows", "Parameter sensitivity with land cover held fixed")):
         rows = list(enumerate(content[field]))
