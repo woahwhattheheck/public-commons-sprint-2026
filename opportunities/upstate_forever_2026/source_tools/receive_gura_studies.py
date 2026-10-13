@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
+
 import stat
 import subprocess
 import time
@@ -222,14 +223,9 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
 @contextlib.contextmanager
 def _native_batch_lock(path):
     """Keep the existing batch lease in both parent and its active native child."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    from model.native_execution import native_batch_lease
+    with native_batch_lease(path) as fd:
         yield fd
-    finally:
-        os.close(fd)
 
 
 def _supervisor_custody(workspace_root):
@@ -277,8 +273,10 @@ print(json.dumps({"run_id": result["id"], "state": result["state"]}), flush=True
 
 def _isolated_process(application, workspace, receiving, run_id, donors, custody_fds, observe):
     """Execute one unchanged Workspace run; release its process memory on return."""
-    from model.common import atomic_json, now
+    from model.common import atomic_json, file_digest, now
     from model.model_selection import validate_completed_run
+    from model.native_execution import (NativeProcessInterrupted, process_failure,
+                                        record_process_interruption, resource_status)
     directory = receiving / "native-case-processes" / run_id / uuid.uuid4().hex
     directory.mkdir(parents=True, exist_ok=False)
     request = {
@@ -291,6 +289,7 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
     atomic_json(request_path, request, immutable=True)
     process = None
     started = now()
+    resources_before = resource_status()
     try:
         with (directory / "stdout.log").open("xb") as stdout, (directory / "stderr.log").open("xb") as stderr:
             process = subprocess.Popen(
@@ -298,7 +297,9 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
                 cwd=application, env=dict(os.environ), stdin=subprocess.DEVNULL,
                 stdout=stdout, stderr=stderr, pass_fds=tuple(custody_fds))
             observation = {"run_id": run_id, "pid": process.pid,
-                           "process_directory": str(directory), "started_at": started}
+                           "process_directory": str(directory), "started_at": started,
+                           "request_path": request_path.relative_to(workspace.root).as_posix(),
+                           "request_sha256": file_digest(request_path), "python": sys.executable}
             atomic_json(directory / "process.json", observation, immutable=True)
             observe({**observation, "state": "running"})
             while True:
@@ -309,14 +310,39 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
                     # The child's ordinary run.json/native.log remain the native
                     # journals. This small operation observation keeps the caller live.
                     observe({**observation, "state": "running", "observed_at": now()})
-        atomic_json(directory / "return.json", {
-            **observation, "state": "returned", "return_code": code, "returned_at": now()})
+        resources_after = resource_status()
+        returned = {**observation, "state": "returned", "return_code": code, "returned_at": now(),
+                    "resources_before": resources_before, "resources_after": resources_after}
     except BaseException:
         if process is not None and process.poll() is None:
             process.terminate()
             process.wait()
         raise
     result = workspace.inspect_run(run_id)
+    signal_failure = process_failure(code, run_id=run_id, process=observation,
+                                     before=resources_before, after=resources_after,
+                                     native_state=result)
+    if signal_failure is not None:
+        # A complete original run remains complete even if its process received
+        # a signal while exiting. Stop this attempt before another case starts.
+        if result.get("state") == "complete":
+            validate_completed_run(result)
+        failure = NativeProcessInterrupted(signal_failure)
+        recording_error = None
+        try:
+            record_process_interruption(workspace, run_id, signal_failure, pid=process.pid)
+            atomic_json(directory / "return.json", returned)
+            atomic_json(directory / "interruption.json", signal_failure, immutable=True)
+            observe({**observation, "state": "interrupted", "return_code": code,
+                     "error": signal_failure, "returned_at": now()})
+        except (OSError, ValueError) as error:
+            recording_error = error
+            failure.native_failure["publication_error"] = {
+                "type": type(error).__name__, "message": str(error)}
+        if recording_error is not None:
+            raise failure from recording_error
+        raise failure
+    atomic_json(directory / "return.json", returned)
     if result.get("state") == "complete":
         validate_completed_run(result)
         observe({**observation, "state": "complete", "return_code": code, "completed_at": now()})
@@ -345,7 +371,7 @@ def main(argv=None):
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
-    from model.native_execution import storage_exhausted
+    from model.native_execution import process_interrupted, storage_exhausted
     from model.parameter_suite_exports import SuiteExports
 
     root = args.workspace.resolve()
@@ -492,6 +518,21 @@ def main(argv=None):
                 "python": sys.executable, "driver_sha256": receiver.sha(Path(__file__)),
                 "case_order": "NDR-only, SDR-only, then combined; original run IDs and scientific selections",
             }
+            # Use resolved original targets, not a later mutable planning-state
+            # pointer, so an explicit continuation reopens the same suite.
+            continuation = [sys.executable, "-B", str(Path(__file__).resolve()),
+                            "--application", str(application), "--workspace", str(root),
+                            "--inputs", str(inputs), "--baseline-run-id", baseline["id"],
+                            "--scopes", *scopes, "--design", args.design]
+            for target in targets[1:]:
+                continuation.extend(["--evaluation-run-id", target["id"]])
+            if args.difference_maps:
+                continuation.append("--difference-maps")
+            if args.isolate_native_cases:
+                continuation.append("--isolate-native-cases")
+            if args.archive:
+                continuation.extend(["--archive", str(args.archive.resolve())])
+            state["continue_argv"] = continuation
             exports = SuiteExports(workspace, directory, suite_id)
             for item in state["studies"]:
                 if item.get("study_id"):
@@ -543,7 +584,7 @@ def main(argv=None):
                             "type": type(error).__name__, "message": str(error),
                             "traceback": traceback.format_exc()})
                         failures.append(item_key)
-                        if storage_exhausted(error):
+                        if storage_exhausted(error) or process_interrupted(error):
                             raise
                         logging.exception("Gura parameter study needs recovery: %s", item_key)
                     # Keep the completed reports usable while remaining native cases continue.
@@ -573,7 +614,8 @@ def main(argv=None):
             return 0 if complete else 1
         except Exception as error:
             try:
-                checkpoint("error", state="error", error={
+                checkpoint("interrupted" if process_interrupted(error) else "error",
+                           state="partial" if process_interrupted(error) else "error", error={
                     **(getattr(error, "native_failure", None) or {}),
                     "type": type(error).__name__, "message": str(error),
                     "traceback": traceback.format_exc()})
