@@ -86,6 +86,48 @@ Omitting `--monitoring-receiving` retains the original selection-only receiver o
 
 The Monitoring browser's original action bodies and task identities remain in its private `request-state.json`. Interrupted runs use `--resume` only when that original state exists. A finished child journal is adopted only after its exact opening/receiver hashes and original project, workspace, network, plan and campaign identities match.
 
+## Continue a campaign from a received full Workspace
+
+A complete editable Workspace carries the original Monitoring network, plans, campaign revisions, calendars and source editions. A receiving operator registers its actual local Workspace directory under a new operator key. Use the retained scientific IDs directly when the earlier host's sibling preparation journals are unavailable.
+
+Create a selection JSON outside the scientific Workspace. This is the exact completed Upper Savannah campaign included in the frontier archive:
+
+```json
+{
+  "schema": "upstate.monitoring-browser-selection/v1",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "network_id": "c0a17fe2d060fba0eb650779ee1d2297f25277d8416ac20f7e8fbb58440e01eb",
+  "plan_id": "a3df4ded1ad5c71a062f03cdf6801b9fe8fa6800c4001ea058b812b65cd52b73",
+  "campaign_id": "237d5dd35b7811a9f2d1d069760953e163effa8c8c8ba29f0be3d6a6df7cf1df"
+}
+```
+
+The retained full Workspace archive is `upper-savannah-regional-monitoring-frontier-20261013.zip`, 45,027,826 bytes, SHA256 `be799c9f0db7cd8d15c1aa912ea21207b537e212a63f796307611da8ac0a2ece`. Its campaign selects six source catchments and schedules 18 visits under the named USD 4,800 planning scenario. Its original frontier also retains the USD 9,000 and 13,200 alternatives. Restore that original archive with the existing native receiving service before continuing the received Workspace.
+
+Add this argument to the regional progression's original command, using a new progression output directory for this receiving host:
+
+```text
+--monitoring-restored-selection ACTUAL_SELECTION.json
+```
+
+This mode is mutually exclusive with `--monitoring-selection`, `--monitoring-opening` and `--monitoring-receiving`. The progression freezes the selected file, verifies the actual project and native network/plan/campaign relationships, checks the original retained source bytes, and records the campaign revision and complete native record fingerprints. Its outcome is `retained_campaign` with `campaign_created: false`. The same existing network and campaign continue through the browser; no design or campaign creation is queued by this adoption.
+
+The Monitoring browser receives the actual registered Workspace key from this progression. Its new `restored-native` input pins the selected file SHA, actual operator key, native project/network/plan/campaign IDs and optional `context_id`. It uses the original source catalogue and full native record fingerprints, operates the report/field/full-Workspace exports, and restores the same scientific campaign independently. A finished child journey is reusable only when all those input fields match. Later resumes reject an advanced campaign revision in that same output directory; a deliberately updated revision starts a new receiving operation.
+
+For a direct campaign browser continuation on an already running original operator, use the same selection file with the maintained browser driver:
+
+```bash
+node source/run_monitoring_browser.mjs \
+  --url-file PRIVATE_URL_FILE \
+  --workspace ACTUAL_RECEIVING_OPERATOR_KEY \
+  --restored-selection ACTUAL_SELECTION.json \
+  --output ACTUAL_BROWSER_OUTPUT \
+  --browser-executable /tmp/chromium \
+  --browser-renderer-limit 2
+```
+
+Use `--resume` on this direct browser command only when that same output retains its original `request-state.json`. The earlier host's browser journal remains attached to its original operator key. This receiving operation starts with the actual received directory and keeps the original scientific IDs.
+
 ## Use an installed browser
 
 `--browser-executable /absolute/path/to/chromium` selects an existing Chromium executable for the original Profile, Source updates, Chemistry, Monitoring and saved-view browser drivers. Use the current application containing the matching option in each driver. It is an execution setting and does not change the retained scientific request or selection fingerprint. The existing `--browser-channel`, `--headed` and `--video` options remain available.
