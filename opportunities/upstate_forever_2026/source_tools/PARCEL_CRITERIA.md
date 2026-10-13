@@ -237,3 +237,44 @@ The exact original source and model definitions are available to the operator's 
 4. [USFWS NWI original layer metadata](https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/0?f=pjson) and [official wetlands map-code diagram](https://www.fws.gov/sites/default/files/documents/wetlands-and-deepwater-map-code-diagram.pdf).
 5. [MRLC NLCD class definitions](https://www.mrlc.gov/data/legends/national-land-cover-database-class-legend-and-description) and [Annual NLCD legend](https://www.mrlc.gov/data/legends/annual-nlcd-land-cover-legend).
 6. [SC DES active classified-reach source](https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2) and the retained original source editions selected by this workspace.
+
+## Freshwater physical-domain source editions
+
+The maintained water-context intake publishes the freshwater class scope
+explicitly under `metadata.parcel_criteria`. Its generic
+`WATER_CLASSIFICATION` role is accepted for the `classifications` criterion only
+when the original entry also declares `metadata.classification: "FW"`.
+The complete physical-domain edition with its retained coverage binding has
+priority over the publisher-HUC-only freshwater variant. The source profile
+excludes freshwater-only roles/metadata from the high-quality class matcher,
+even though those source families share the same official layer URI.
+
+A coverage source stored in the same source edition may omit
+`source_collection_id` from `metadata.criteria_coverage.source`. The resolver
+fills the actual containing collection ID after import. An explicit original
+cross-collection binding is preserved. The original domain source, HUC12 field
+and exact selected HUC IDs remain in the coverage selection.
+
+The ordinary water-context importer also returns a complete explicit override:
+
+~~~python
+bindings = bind_workspace(workspace, source_edition)
+criterion_source = bindings["parcel_criteria_sources"]["classifications"]
+selection["sources"]["classifications"] = criterion_source
+~~~
+
+Continue the existing `parcel_criteria.prepare` workflow with that selection.
+It retains the existing positive/negative/unknown calculation for the selected
+regulatory classification inventory: positive native FW intersections remain
+positive; no matching retained FW feature inside complete captured geometry can
+be negative; absence beyond that geometry remains unknown. The source is the
+SCDES classification inventory. Its negative result does not establish absence
+of ecological freshwater in another state's missing inventory.
+
+The actual criteria are `stream_fw_with_listed_impairment` and
+`stream_fw_without_listed_impairment`. Per-row JSON evidence records requested
+classes, selected class scope, source filter, reference, meaning and the
+classification result. The exported table also preserves the complete original
+source/coverage bindings and native body hashes. A broader freshwater criterion
+requires its own geographic inventory coverage and keeps cross-state missing
+inventory unknown. Original criterion definitions and scoring are unchanged.

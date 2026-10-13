@@ -7,6 +7,7 @@ Requires rasterio and pyproj, installed in the reviewing environment.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -82,6 +83,11 @@ def _retained_grid(data, model, child, add, summary):
             raise ValueError('The retained original grid must be complete')
         if not isinstance(record.get('spec'), dict):
             raise ValueError('The retained original grid selection must be an object')
+        original = json.dumps({'spec': record['spec'], 'grid': record.get('grid')},
+                              sort_keys=True, ensure_ascii=False,
+                              separators=(',', ':'), allow_nan=False).encode('utf-8')
+        if hashlib.sha256(original).hexdigest() != grid_id:
+            raise ValueError('Original grid specification and geometry differ from the retained grid ID')
         geometry = retained_grid_geometry(record.get('grid'))
         recorded_buffer = record['spec'].get('upstream_buffer_m')
         declared_buffer = model.get('upstream_buffer_m')

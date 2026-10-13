@@ -1,3 +1,4 @@
+import { managedResult } from './managed-result.mjs';
 // MIT. Customer workspace over the original runtime installer and profile authority.
 import { constants } from 'node:fs';
 import { mkdir, readdir, open, unlink } from 'node:fs/promises';
@@ -136,6 +137,8 @@ async function jobView(root, id) {
   const state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
   const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
   const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
+  const outcome = request.operation === 'managed-run' ?
+    managedResult(state, await readJSON(join(directory, 'command-result.json'), true)) : {};
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
     homeId: request.homeId ?? null, applicationId: request.applicationId ?? null, terminal: request.terminal === true, commandActive,
     ...(Object.hasOwn(pythonOperationFields, request.operation) ? { python: request.python,
@@ -148,7 +151,7 @@ async function jobView(root, id) {
     contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
     containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
     deploymentReviewId: request.deploymentReviewId ?? null,
-    ...state, workerActive: active,
+    ...state, ...outcome, workerActive: active,
     displayPhase: state.phase === 'RUNNING' && !active && !commandActive ? 'INTERRUPTED' : state.phase };
 }
 async function spawnWorker(root, id) {

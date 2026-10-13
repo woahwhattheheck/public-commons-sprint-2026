@@ -207,7 +207,8 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
                 "overlap_handling": "Each covered area is counted once in this footprint"}
     return {"schema": "upstate.parcel-priorities/v1", "source": {
                 "uri": entry["uri"], "vintage": entry["vintage"], "sha256": entry["body"]["sha256"],
-                "selection": selection, "scope": entry.get("scope")},
+                "selection": ({**selection, "id_field": id_field} if id_field else dict(selection)),
+                "scope": entry.get("scope")},
             "features": len(outputs), "features_without_valid_pixels": no_pixels,
             "parcel_coverage": coverage, "processing": processing,
             "selection": "Original feature identity; per-parcel reporting-area intersection; pixel-centre aggregation",

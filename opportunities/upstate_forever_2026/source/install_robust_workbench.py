@@ -1,0 +1,352 @@
+#!/usr/bin/env python3
+"""Install exact Decision studies source packets into a complete native application.
+
+Packets are explicit layers in command-line order. An existing identical file is
+reused. Any other existing file must match a declared original preimage or a
+verified earlier layer for that same path. All conflicts are reported before
+replacement, preserving newer work for composition.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import base64
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import stat
+import tempfile
+
+ALLOWED = frozenset({
+    "model/robust_decisions/eco_robust/store.py",
+    "model/robust_decisions/eco_robust/operations.py",
+    "model/robust_decisions/eco_robust/integration.py",
+    "model/robust_decisions/SOURCE_MANIFEST.json",
+    "operator/robust_workbench.py",
+    "operator/extensions/robust-workbench.json",
+    "operator/web/robust_workbench.mjs",
+    "operator/web/robust_workbench.css",
+    "operator/ROBUST_WORKBENCH.md",
+    "operator/ROBUST_WORKBENCH_UI.md",
+    "source/run_robust_workspace_transfer.py",
+    "source/run_robust_workbench_browser.mjs",
+    "source/install_robust_workbench.py",
+    "source/ROBUST_RECEIVING.md",
+})
+REQUIRED = ALLOWED - {
+    "source/install_robust_workbench.py",
+    "source/ROBUST_RECEIVING.md",
+}
+HASH = re.compile(r"[0-9a-f]{64}")
+PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
+PACKAGE_ROOT = "model/robust_decisions/"
+LEGACY = "operator/extensions/robust-decisions.json"
+LEGACY_SHA = "8c5dfebfddd81df683a4b40fd8e8b893ec7940acf807575edaa0d35cbc8fcd13"
+RETIRED = LEGACY + ".retired-ECO13-ROBUST-DD6B"
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def checked_hash(value, label):
+    if not isinstance(value, str) or HASH.fullmatch(value) is None:
+        raise ValueError(label + ": expected a lowercase SHA-256")
+    return value
+
+
+def checked_name(value):
+    if not isinstance(value, str) or value not in ALLOWED:
+        raise ValueError("Unexpected Decision studies source path: " + repr(value))
+    return value
+
+
+def records(document, label):
+    if not isinstance(document, dict):
+        raise ValueError(label + ": expected a source packet object")
+    files = document.get("files")
+    if isinstance(files, list):
+        result = files
+    elif isinstance(files, dict):
+        metadata = document.get("file_metadata", {})
+        if not isinstance(metadata, dict):
+            raise ValueError(label + ": malformed file_metadata")
+        result = []
+        for name, item in files.items():
+            if isinstance(item, str):
+                meta = metadata.get(name, {})
+                if not isinstance(meta, dict):
+                    raise ValueError(label + ": malformed metadata for " + name)
+                result.append(dict(meta, path=name, content=item))
+            elif isinstance(item, dict):
+                if "path" in item and item["path"] != name:
+                    raise ValueError(label + ": conflicting path for " + name)
+                result.append(dict(item, path=name))
+            else:
+                raise ValueError(label + ": malformed file record")
+    else:
+        raise ValueError(label + ": missing files")
+    if not result:
+        raise ValueError(label + ": empty source packet")
+    return result
+
+
+
+def transport_document(text):
+    # Canvas may insert NBSP indentation. Preserve quoted source strings here;
+    # repair any affected source body only under its declared hash below.
+    normalized, quoted, escaped = [], False, False
+    for char in text:
+        if quoted:
+            normalized.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        else:
+            normalized.append(" " if char == "\u00a0" else char)
+            if char == '"':
+                quoted = True
+    return json.loads("".join(normalized))
+
+
+def read_layers(paths):
+    final, allowed, origins = {}, {}, {}
+    for path in paths:
+        packet_path = Path(path).resolve(strict=True)
+        document = transport_document(packet_path.read_text(encoding="utf-8-sig"))
+        seen = set()
+        for item in records(document, str(packet_path)):
+            if not isinstance(item, dict):
+                raise ValueError(str(packet_path) + ": malformed file record")
+            name = checked_name(item.get("path"))
+            if name in seen:
+                raise ValueError(str(packet_path) + ": duplicate file " + name)
+            seen.add(name)
+            expected = checked_hash(item.get("sha256"), name)
+            size = item.get("bytes")
+            if type(size) is not int or size < 0:
+                raise ValueError(name + ": expected an exact nonnegative byte length")
+            if "content_base64" in item:
+                if "content" in item or not isinstance(item["content_base64"], str):
+                    raise ValueError(name + ": select one full source encoding")
+                data = base64.b64decode(item["content_base64"], validate=True)
+                content = data.decode("utf-8")
+            else:
+                content = item.get("content")
+                if not isinstance(content, str):
+                    raise ValueError(name + ": full UTF-8 content is required")
+                data = content.encode("utf-8")
+                if len(data) != size or sha(data) != expected:
+                    candidate = content.replace("\u00a0", " ").encode("utf-8")
+                    if len(candidate) == size and sha(candidate) == expected:
+                        data, content = candidate, candidate.decode("utf-8")
+            if len(data) != size or sha(data) != expected:
+                raise ValueError(name + ": incoming byte length or SHA-256 differs")
+            if name.endswith(".py"):
+                ast.parse(content, filename=name)
+            elif name.endswith(".json"):
+                json.loads(content)
+            previous = allowed.setdefault(name, set())
+            if name in final:
+                previous.add(sha(final[name]))
+            for key in PREIMAGE_KEYS:
+                value = item.get(key)
+                if value is not None:
+                    previous.add(checked_hash(value, name + " " + key))
+            final[name], origins[name] = data, str(packet_path)
+    return final, allowed, origins
+
+
+def target_path(application, name):
+    # Reject symlink components, including links that currently point inside
+    # the application: an authored source leaf must have one stable location.
+    current = application
+    for component in PurePosixPath(name).parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError("Preserve and reconcile source symlink: " + name)
+    if current.exists() and not current.is_file():
+        raise ValueError("Expected regular source file: " + name)
+    return current
+
+
+def read_existing(application, name):
+    path = target_path(application, name)
+    return path.read_bytes() if path.exists() else None
+
+
+def assembled_data(application, pending, name):
+    if name in pending:
+        return pending[name]
+    data = read_existing(application, name)
+    if data is None:
+        raise ValueError("Receive the complete application/component first; missing " + name)
+    return data
+
+
+def verify_composition(application, pending):
+    for name in REQUIRED:
+        assembled_data(application, pending, name)
+    for name in ("model/workspace.py", "model/experiments.py",
+                 "model/experiment_profiles.py", "operator/server.py",
+                 "operator/extension_registry.py", "operator/web/app.mjs",
+                 "operator/web/extension_host.mjs"):
+        assembled_data(application, pending, name)
+    server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
+    client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
+    if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:
+        raise ValueError("Compose the original extension installer into the current server/app first")
+    manifest = json.loads(assembled_data(application, pending, PACKAGE_ROOT + "SOURCE_MANIFEST.json"))
+    entries = manifest.get("files")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("Original native package manifest is missing its file inventory")
+    seen = set()
+    for entry in entries:
+        name = entry.get("path")
+        if (not isinstance(name, str) or "\\" in name or
+                PurePosixPath(name).is_absolute() or
+                any(part in ("", ".", "..") for part in name.split("/")) or name in seen):
+            raise ValueError("Malformed or duplicate native package manifest path")
+        seen.add(name)
+        data = assembled_data(application, pending, PACKAGE_ROOT + name)
+        if (type(entry.get("bytes")) is not int or len(data) != entry["bytes"] or
+                sha(data) != checked_hash(entry.get("sha256"), name)):
+            raise ValueError("Compose the newer native package source and its manifest before installation: " + name)
+    descriptor = json.loads(assembled_data(application, pending, "operator/extensions/robust-workbench.json"))
+    if descriptor.get("schema") != "upstate.operator-extension/v1" or descriptor.get("id") != "robust-workbench":
+        raise ValueError("Unexpected native Decision studies descriptor")
+    if descriptor.get("backend", {}).get("module") != "robust_workbench":
+        raise ValueError("Unexpected Decision studies provider module")
+    if descriptor.get("client", {}).get("module") != "/web/robust_workbench.mjs":
+        raise ValueError("Unexpected Decision studies client module")
+    for asset in descriptor.get("assets", []):
+        if asset not in ("robust_workbench.mjs", "robust_workbench.css"):
+            raise ValueError("Unexpected Decision studies asset")
+        assembled_data(application, pending, "operator/web/" + asset)
+
+
+
+def prepare_legacy_retirement(application, pending):
+    old = read_existing(application, LEGACY)
+    backup = read_existing(application, RETIRED)
+    if old is not None and (len(old) != 757 or sha(old) != LEGACY_SHA):
+        raise ValueError("Preserve and compose the newer legacy decision registration: " + LEGACY)
+    if backup is not None and (len(backup) != 757 or sha(backup) != LEGACY_SHA):
+        raise ValueError("Preserve the existing decision-registration retirement record: " + RETIRED)
+    descriptor = json.loads(assembled_data(application, pending, "operator/extensions/robust-workbench.json"))
+    ours = set(descriptor.get("backend", {}).get("actions", []))
+    directory = target_path(application, "operator/extensions/robust-workbench.json").parent
+    for path in sorted(directory.glob("*.json")):
+        relative = path.relative_to(application).as_posix()
+        if relative in (LEGACY, "operator/extensions/robust-workbench.json"):
+            continue
+        content = read_existing(application, relative)
+        registration = json.loads(content)
+        shared = ours & set(registration.get("backend", {}).get("actions", []))
+        if shared:
+            raise ValueError("Compose the existing action owner before installation: " +
+                             relative + " (" + ", ".join(sorted(shared)) + ")")
+    return old, backup
+
+
+def run(application, packet_paths, *, dry_run=False):
+    application = Path(application).resolve(strict=True)
+    if not application.is_dir():
+        raise ValueError("Application must be a directory")
+    pending, allowed, origins = read_layers(packet_paths)
+    lock_root = application / ".locks"
+    if lock_root.is_symlink():
+        raise ValueError("Preserve and reconcile the application's .locks symlink")
+    lock_root.mkdir(exist_ok=True)
+    lock_path = lock_root / "extension-install.lock"
+    if lock_path.is_symlink():
+        raise ValueError("Preserve and reconcile the extension installer lock symlink")
+    with lock_path.open("a+") as lock:
+        # Share the original extension installer's lock; do not create a
+        # competing independent lock for modifications to the same application.
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        originals, modes, conflicts = {}, {}, []
+        for name, data in pending.items():
+            path = target_path(application, name)
+            before = path.read_bytes() if path.exists() else None
+            originals[name] = before
+            modes[name] = stat.S_IMODE(path.stat().st_mode) if before is not None else 0o644
+            if before is not None and before != data and sha(before) not in allowed[name]:
+                conflicts.append({"path": name, "actual_sha256": sha(before),
+                                  "incoming_sha256": sha(data),
+                                  "allowed_preimages": sorted(allowed[name])})
+        if conflicts:
+            raise ValueError("Newer or unrecognized authored files preserved; compose these exact sources first:\n" +
+                             json.dumps(conflicts, indent=2, sort_keys=True))
+        verify_composition(application, pending)
+        legacy, retired = prepare_legacy_retirement(application, pending)
+        # Publish the new registration only after its provider and assets exist.
+        changed = sorted((name for name in pending if originals[name] != pending[name]),
+                         key=lambda name: (name == "operator/extensions/robust-workbench.json", name))
+        receipt = {
+            "schema": "upstate.robust-workbench-install/v1",
+            "application": str(application), "dry_run": dry_run,
+            "changed": changed,
+            "retired_registration": {"path": LEGACY, "retained_as": RETIRED,
+                                     "sha256": LEGACY_SHA} if legacy is not None else None,
+            "files": [{"path": name, "bytes": len(data), "sha256": sha(data),
+                       "previous_sha256": sha(originals[name]) if originals[name] is not None else None,
+                       "packet": origins[name]} for name, data in sorted(pending.items())],
+        }
+        if dry_run or (not changed and legacy is None):
+            return receipt
+        with tempfile.TemporaryDirectory(prefix=".robust-install-", dir=application) as temporary:
+            staging = Path(temporary)
+            for name in changed:
+                staged = staging / name
+                staged.parent.mkdir(parents=True, exist_ok=True)
+                with staged.open("wb") as stream:
+                    stream.write(pending[name])
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                staged.chmod(modes[name])
+            # Reconcile all inputs once more before the first replacement.
+            for name in pending:
+                if read_existing(application, name) != originals[name]:
+                    raise RuntimeError("Concurrent authored change preserved at " + name)
+            if (read_existing(application, LEGACY) != legacy or
+                    read_existing(application, RETIRED) != retired):
+                raise RuntimeError("Concurrent legacy registration changes preserved")
+            if legacy is not None:
+                # The known old descriptor owns the same twelve actions. Retain
+                # its exact bytes outside *.json so the registry has one owner.
+                os.replace(target_path(application, LEGACY), target_path(application, RETIRED))
+            for name in changed:
+                target = target_path(application, name)
+                if read_existing(application, name) != originals[name]:
+                    raise RuntimeError("Concurrent authored change preserved at " + name +
+                                       "; compose current source and rerun the same packets")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(staging / name, target)
+        # An interrupted install is restartable because incoming-identical
+        # files are accepted and all remaining replacements retain preimages.
+        for name, data in pending.items():
+            if read_existing(application, name) != data:
+                raise RuntimeError("Installed source changed during readback: " + name)
+        return receipt
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", required=True)
+    parser.add_argument("--packet", action="append", required=True,
+                        help="Decoded source JSON packet; repeat in explicit layer order")
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args(argv)
+    print(json.dumps(run(args.application, args.packet, dry_run=args.dry_run),
+                     indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

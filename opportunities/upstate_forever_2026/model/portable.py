@@ -15,6 +15,7 @@ from .portable_databases import snapshot_databases, without_database_files, veri
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
     "README.md",
+    "PACKAGING_LIMITS.md",
     "audit.py",
     "raster_checks.py",
     "package_delivery.py",
@@ -38,6 +39,7 @@ APPLICATION_FILES = (
     "requirements-paired-ensemble.txt",
     "PUBLISHED_STUDIES.md",
     "eighteenmile_chlorophyll_reconciled.sources.json",
+    "eighteenmile_point_source_context.sources.json",
     "eighteenmile_lake_observation_report.sources.json",
     "eighteenmile_lake_paired_analysis.sources.json",
     "install_published_studies.py",
@@ -47,6 +49,7 @@ APPLICATION_FILES = (
     "DECISION_CONTEXT.md",
     "GIS_SOURCE.json",
     "GURA_NATIVE_WORKFLOW.md",
+    "NLCD_NATIVE_WPS.md",
     "LANDCOVER_LEDGER.md",
     "README_RECEIVING.md",
     "RFP_RESPONSE_MAP.md",
@@ -75,6 +78,7 @@ APPLICATION_FILES = (
     "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
+    "scenario-design",
     "model",
     "operator",
     "source_tools",
@@ -242,7 +246,15 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 archive.writestr("ARCHIVE.json", canonical(manifest) + b"\n")
             with pending.open("rb") as file:
                 os.fsync(file.fileno())
-            inspect_archive(pending, verify=True)
+                before = _archive_identity(file)
+                with zipfile.ZipFile(file) as archive:
+                    _inspect_archive(archive, verify=True)
+                archive_sha256 = _archive_digest(file, before)
+                archive_bytes = before[2]
+            result = {"schema": FORMAT, "project_id": workspace.project["id"],
+                      "path": str(destination), "bytes": archive_bytes,
+                      "sha256": archive_sha256, "members": len(records),
+                      "selection": selection, "database_snapshots": databases}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -251,76 +263,106 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 os.fsync(fd)
             finally:
                 os.close(fd)
-        return {"schema": FORMAT, "project_id": workspace.project["id"], "path": str(destination),
-                "bytes": destination.stat().st_size, "sha256": file_digest(destination),
-                "members": len(records), "selection": selection,
-                "database_snapshots": databases}
+        return result
     finally:
         pending.unlink(missing_ok=True)
 
+def _archive_identity(source):
+    value = os.fstat(source.fileno())
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError("Select a retained regular archive file")
+    return (value.st_dev, value.st_ino, value.st_size,
+            value.st_mtime_ns, value.st_ctime_ns)
+
+
+def _archive_digest(source, before):
+    """Identify the opened archive before publishing any receiving result."""
+    if _archive_identity(source) != before:
+        raise ValueError("Archive changed during receiving")
+    source.seek(0)
+    digest = hashlib.sha256()
+    for block in iter(lambda: source.read(1024 * 1024), b""):
+        digest.update(block)
+    if _archive_identity(source) != before:
+        raise ValueError("Archive changed while its identity was recorded")
+    return digest.hexdigest()
+
+
 def inspect_archive(path, *, verify=True):
     with zipfile.ZipFile(path) as archive:
-        entries = archive.infolist()
-        names = [entry.filename for entry in entries]
-        if len(names) != len(set(names)) or "ARCHIVE.json" not in names:
-            raise ValueError("Archive has duplicate names or lacks its original manifest")
-        for entry in entries:
-            member_name(entry.filename)
-            mode = entry.external_attr >> 16
-            if entry.is_dir() or stat.S_ISLNK(mode) or entry.flag_bits & 1:
-                raise ValueError("Archive members must be unencrypted regular files")
-        info = archive.getinfo("ARCHIVE.json")
-        if info.file_size > MAX_MANIFEST:
-            raise ValueError("Archive manifest is too large")
-        manifest = json.loads(archive.read(info))
-        if manifest.get("schema") != FORMAT or manifest.get("project", {}).get("schema") != SCHEMA:
-            raise ValueError("Select an original scientific workspace archive")
-        declared = manifest.get("members")
-        if not isinstance(declared, dict) or set(names) != set(declared) | {"ARCHIVE.json"}:
-            raise ValueError("Archive content differs from its declared file inventory")
-        if "workspace/workspace.json" not in declared:
-            raise ValueError("Archive lacks the original project identity")
-        for name, record in declared.items():
-            member_name(name)
-            if not name.startswith(("workspace/", "application/")):
-                raise ValueError("Unexpected archive member namespace")
-            info = archive.getinfo(name)
-            if info.file_size != record["bytes"]:
-                raise ValueError("Archived file length differs: " + name)
-            if verify:
-                h = hashlib.sha256()
-                with archive.open(name) as source:
-                    for block in iter(lambda: source.read(1024 * 1024), b""):
-                        h.update(block)
-                if h.hexdigest() != record["sha256"]:
-                    raise ValueError("Archived file bytes differ: " + name)
-        project = json.loads(archive.read("workspace/workspace.json"))
-        if project != manifest["project"]:
-            raise ValueError("Archived project identity differs")
+        return _inspect_archive(archive, verify=verify)
+
+
+def _inspect_archive(archive, *, verify):
+    entries = archive.infolist()
+    names = [entry.filename for entry in entries]
+    if len(names) != len(set(names)) or "ARCHIVE.json" not in names:
+        raise ValueError("Archive has duplicate names or lacks its original manifest")
+    for entry in entries:
+        member_name(entry.filename)
+        mode = entry.external_attr >> 16
+        if entry.is_dir() or stat.S_ISLNK(mode) or entry.flag_bits & 1:
+            raise ValueError("Archive members must be unencrypted regular files")
+    info = archive.getinfo("ARCHIVE.json")
+    if info.file_size > MAX_MANIFEST:
+        raise ValueError("Archive manifest is too large")
+    manifest = json.loads(archive.read(info))
+    if manifest.get("schema") != FORMAT or manifest.get("project", {}).get("schema") != SCHEMA:
+        raise ValueError("Select an original scientific workspace archive")
+    declared = manifest.get("members")
+    if not isinstance(declared, dict) or set(names) != set(declared) | {"ARCHIVE.json"}:
+        raise ValueError("Archive content differs from its declared file inventory")
+    if "workspace/workspace.json" not in declared:
+        raise ValueError("Archive lacks the original project identity")
+    for name, record in declared.items():
+        member_name(name)
+        if not name.startswith(("workspace/", "application/")):
+            raise ValueError("Unexpected archive member namespace")
+        info = archive.getinfo(name)
+        if info.file_size != record["bytes"]:
+            raise ValueError("Archived file length differs: " + name)
+        if verify:
+            h = hashlib.sha256()
+            with archive.open(name) as source:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    h.update(block)
+            if h.hexdigest() != record["sha256"]:
+                raise ValueError("Archived file bytes differ: " + name)
+    project = json.loads(archive.read("workspace/workspace.json"))
+    if project != manifest["project"]:
+        raise ValueError("Archived project identity differs")
     return manifest
 
 def restore(archive_path, destination):
-    from .workspace import Workspace
     destination = Path(destination).absolute()
     if destination.exists():
         raise ValueError("Restore into a new directory so existing work is preserved")
-    manifest = inspect_archive(archive_path, verify=True)
+    # Metadata and extraction use one opened edition. Each payload is verified
+    # during extraction rather than decompressed once just to inspect it first.
+    with Path(archive_path).open("rb") as source:
+        before = _archive_identity(source)
+        with zipfile.ZipFile(source) as archive:
+            manifest = _inspect_archive(archive, verify=False)
+            return _restore_archive(archive, source, before, manifest, destination)
+
+
+def _restore_archive(archive, archive_source, before, manifest, destination):
+    from .workspace import Workspace
     destination.parent.mkdir(parents=True, exist_ok=True)
     pending = Path(tempfile.mkdtemp(prefix=".receive-", dir=destination.parent))
     try:
-        with zipfile.ZipFile(archive_path) as archive:
-            for name, expected in manifest["members"].items():
-                target = pending.joinpath(*member_name(name).parts)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                h = hashlib.sha256()
-                with archive.open(name) as source, target.open("xb") as output:
-                    for block in iter(lambda: source.read(1024 * 1024), b""):
-                        output.write(block)
-                        h.update(block)
-                    output.flush()
-                    os.fsync(output.fileno())
-                if h.hexdigest() != expected["sha256"] or target.stat().st_size != expected["bytes"]:
-                    raise ValueError("Receiving file differs: " + name)
+        for name, expected in manifest["members"].items():
+            target = pending.joinpath(*member_name(name).parts)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            h = hashlib.sha256()
+            with archive.open(name) as source, target.open("xb") as output:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    output.write(block)
+                    h.update(block)
+                output.flush()
+                os.fsync(output.fileno())
+            if h.hexdigest() != expected["sha256"] or target.stat().st_size != expected["bytes"]:
+                raise ValueError("Receiving file differs: " + name)
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
@@ -361,7 +403,7 @@ def restore(archive_path, destination):
                 exporter.inspect(value["id"], verified_members=manifest["members"])
         if restored._list("reviews"):
             from .reviews import validate_workspace
-            # The archive inspection and extraction already checked every byte.
+            # Extraction already checked every retained member against its SHA-256.
             validate_workspace(restored)
         community_tables = restored._list("community-tables")
         community_plans = restored._list("community-plans")
@@ -393,20 +435,27 @@ def restore(archive_path, destination):
             original = restored.inspect_run(run["id"])
             if original["state"] == "complete":
                 for artifact in original["artifacts"].values():
-                    verify = pending / "workspace" / "runs" / original["id"] / artifact["path"]
-                    if file_digest(verify) != artifact["sha256"]:
+                    relative = member_name(artifact["path"]).as_posix()
+                    name = member_name("workspace/runs/" + original["id"] + "/" + relative).as_posix()
+                    retained = manifest["members"].get(name)
+                    if (retained is None or retained["sha256"] != artifact["sha256"]
+                            or ("bytes" in artifact and retained["bytes"] != artifact["bytes"])):
                         raise ValueError("Receiving changed a completed native result")
+        # Finish identity reads and response construction before publication.
+        # The retained descriptor stays bound to the same opened archive edition.
+        archive_sha256 = _archive_digest(archive_source, before)
+        result = {"schema": "upstate.scientific-workspace-receiving/v1", "project": manifest["project"],
+                  "directory": str(destination), "workspace": str(destination / "workspace"),
+                  "application": str(destination / "application"),
+                  "archive_sha256": archive_sha256, "members": len(manifest["members"]),
+                  "selection": manifest["selection"], "identity": "MATCH",
+                  "database_snapshots": manifest.get("database_snapshots", {})}
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
             raise ValueError("Receiving destination appeared during capture")
         os.rename(pending, destination)
         pending = None
-        return {"schema": "upstate.scientific-workspace-receiving/v1", "project": manifest["project"],
-                "directory": str(destination), "workspace": str(destination / "workspace"),
-                "application": str(destination / "application"),
-                "archive_sha256": file_digest(archive_path), "members": len(manifest["members"]),
-                "selection": manifest["selection"], "identity": "MATCH",
-                "database_snapshots": manifest.get("database_snapshots", {})}
+        return result
     finally:
         if pending is not None:
             shutil.rmtree(pending)
