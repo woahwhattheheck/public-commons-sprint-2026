@@ -32,7 +32,7 @@ function browserRuntime(){
   executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
   channel:args['browser-channel']||null,headless:!args.headed};
 }
-let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='',selectedPlan=null,reportReceipt=null,reportEditionId=null,reportFileIdentities=null;
+let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='',selectedPlan=null,reportReceipt=null,reportEditionId=null,reportFileIdentities=null,reportViewerURL=null;
 function redact(value){
  let result=String(value);
  for(const value of [privateURL,origin,capability].filter(Boolean))result=result.split(value).join('[private operator]');
@@ -299,6 +299,8 @@ async function inspectScientificView(name,width){
  const frameElement=target.locator('iframe').first();await frameElement.waitFor();
  const handle=await frameElement.elementHandle(),frame=await handle.contentFrame();
  required(frame,'The actual saved report viewer did not open.');
+ required(reportViewerURL,'The selected report viewer has no retained URL.');
+ await frame.waitForURL(new URL(reportViewerURL,origin).href,{waitUntil:'domcontentloaded'});
  await frame.waitForLoadState('domcontentloaded');
  await frame.waitForFunction(()=>document.body&&document.body.innerText.trim().length>0);
  const reportLayout=await frame.locator('body').evaluate(body=>({
@@ -316,6 +318,14 @@ async function inspectScientificView(name,width){
  await record('Captured actual scientific report and operator for visual review at '+width+' pixels',{
   workspace_key:currentWorkspace,edition_id:reportEditionId,layout,report_layout:reportLayout});
 }
+async function refreshScientificCatalog(){
+ const close=page.locator('[data-scientific-report-action="close"]');
+ if(await close.isVisible())await close.click();
+ const pending=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/source-reports/scientific-catalog');
+ await page.locator('[data-scientific-report-action="refresh"]').click();
+ const result=await json(await pending,'Refreshed original scientific report catalogue');
+ required(result.workspace_key===currentWorkspace,'The saved report catalogue belongs to another workspace.');
+}
 async function openScientificEdition(id){
  const pending=page.waitForResponse(response=>{
   const url=new URL(response.url());return url.pathname==='/api/source-reports/scientific-edition'&&url.searchParams.get('id')===id;
@@ -325,6 +335,7 @@ async function openScientificEdition(id){
  required(result.workspace_key===currentWorkspace&&result.edition?.id===id&&result.edition.state==='complete',
   'The report viewer selected another retained edition.');
  required(result.viewer_url,'The saved scientific edition has no original report viewer.');
+ reportViewerURL=result.viewer_url;
  await page.waitForFunction(url=>{
   const frame=document.querySelector('[data-scientific-report-detail] iframe');
   return frame&&new URL(frame.getAttribute('src'),location.href).href===new URL(url,location.href).href;
@@ -389,7 +400,7 @@ async function scientificReportCourse(){
   await queue('[data-scientific-report-action="render"]','source-reports.render');
   await closeDetail();
  }
- await page.locator('[data-scientific-report-action="refresh"]').click();
+ await refreshScientificCatalog();
  reportEditionId=preview.id;
  let opened=await openScientificEdition(reportEditionId);
  await inspectScientificView('16-scientific-report-desktop',1440);
@@ -405,7 +416,7 @@ async function scientificReportCourse(){
   required(saved.bytes===item.bytes&&saved.sha256===item.sha256,'A downloaded scientific report member changed: '+item.path);
  }
  await queue('[data-scientific-report-action="export"]','source-reports.export');await closeDetail();
- await page.locator('[data-scientific-report-action="refresh"]').click();opened=await openScientificEdition(reportEditionId);
+ await refreshScientificCatalog();opened=await openScientificEdition(reportEditionId);
  required(opened.archive?.url,'The completed report has no original ZIP download.');
  const archive=opened.archive;
  const archiveLink=page.locator('[data-scientific-report-detail] a[download][href='+JSON.stringify(reportHref(archive.url))+']');
@@ -444,7 +455,7 @@ async function receivingArchive(){
  if(reportReceipt){
   const sourceButton=page.locator('.source-refresh-desk [data-report-source="'+reportReceipt.id+'"][data-selection-mode="replace"]');
   await sourceButton.waitFor();await sourceButton.click();
-  await page.locator('[data-scientific-report-field="title"]').waitFor();
+  await waitForComposerDraft([reportReceipt.source],reportReceipt.selection.selection.title);
   const reopened=await openScientificEdition(reportEditionId);
   required(canonical(reopened.files.map(({path,bytes,sha256})=>({path,bytes,sha256})))===canonical(reportFileIdentities),
    'Cold receiving changed the actual rendered report members.');
