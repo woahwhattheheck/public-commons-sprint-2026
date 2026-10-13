@@ -2,10 +2,11 @@
   "schema": "upstate.operator-extension/v1",
   "id": "gis-projects",
   "title": "Editable GIS projects",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "order": 75,
   "assets": [
     "gis-projects.mjs",
+    "gis-working-selection.mjs",
     "gis-projects.css"
   ],
   "backend": {
