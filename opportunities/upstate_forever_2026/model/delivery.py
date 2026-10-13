@@ -2,6 +2,7 @@
 from __future__ import annotations
 import importlib.util
 import json
+import math
 from pathlib import Path
 import shutil
 import sys
@@ -71,8 +72,22 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
 
+def _grid_measurements(grid):
+    """Describe the actual retained pixel geometry and physical area."""
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    width, height = math.hypot(a, d), math.hypot(b, e)
+    hectares = abs(a * e - b * d) / 10000.0
+    if not all(math.isfinite(value) and value > 0 for value in (width, height, hectares)):
+        raise ValueError("Delivery requires a finite, nondegenerate projected grid")
+    width_text, height_text, area_text = (format(value, ".12g") for value in (width, height, hectares))
+    pixels = width_text + " x " + height_text
+    resolution = width_text + " m" if width == height else pixels + " m"
+    return {"width": width_text, "height": height_text, "hectares": area_text,
+            "pixels": pixels, "resolution": resolution}
+
 def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact):
     from pyproj import CRS, Transformer
+    cells = _grid_measurements(grid)
     crs = CRS.from_user_input(grid["grid"]["crs"])
     transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
     west, south, east, north = transformer.transform_bounds(*grid["grid"]["bounds"], densify_pts=21)
@@ -89,11 +104,11 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("idinfo/citation/citeinfo/title", title)
     add("idinfo/citation/citeinfo/geoform", "raster digital data")
     add("idinfo/descript/abstract", title + " modeled with original InVEST " + INVEST_VERSION +
-        " NDR/SDR engines. Values are " + unit + " at actual 30 x 30 metre pixels; native rates "
-        "are multiplied by 0.09 hectares. The selected SC reporting mask preserves original NoData. "
+        " NDR/SDR engines. Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
+        "are multiplied by " + cells["hectares"] + " hectares. The selected reporting mask preserves original NoData. "
         "Original run: " + selection["baseline_run_id"] + ". Parameter profile: " + profile["id"] + ".")
-    add("idinfo/descript/purpose", "Upper Savannah source-water and land-conservation analysis using "
-        "the retained source editions, annual N/P/sediment model outputs and explicit reviewed scenarios.")
+    add("idinfo/descript/purpose", selection.get("title", "Watershed source-water and land-conservation analysis") +
+        ": retained source editions, annual N/P/sediment model outputs and explicit reviewed scenarios.")
     add("idinfo/timeperd/timeinfo/sngdate/caldate", day)
     add("idinfo/timeperd/current", "Model derivation date; input observation and publication editions are retained in lineage.")
     add("idinfo/status/progress", "Complete")
@@ -101,15 +116,15 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     for name, value in (("westbc", west), ("eastbc", east), ("northbc", north), ("southbc", south)):
         add("idinfo/spdom/bounding/" + name, value)
     add("idinfo/keywords/theme/themekt", "None")
-    for word in ("watershed", "annual pollutant export", "source water", "Upper Savannah"):
+    for word in ("watershed", "annual pollutant export", "source water", selection.get("title", title)):
         ET.SubElement(root.find("idinfo/keywords/theme"), "themekey").text = word
     add("idinfo/accconst", "Project delivery and original source access conditions apply.")
     add("idinfo/useconst", "Interpret with the delivered source vintages, profile, model assumptions, "
         "observation comparisons and scenario definitions. Quantitative export estimates describe the "
         "selected model; conservation priorities combine explicitly declared normalization and weights.")
     add("dataqual/attracc/attraccr", "The original per-hectare export rate is converted using the actual "
-        "0.09-ha pixel area. Original quantitative values and source bytes remain in the working archive.")
-    add("dataqual/logic", "Native rasters share the selected original 30 m reference pixel alignment. "
+        + cells["hectares"] + "-ha pixel area. Original quantitative values and source bytes remain in the working archive.")
+    add("dataqual/logic", "Native rasters share the selected original " + cells["resolution"] + " reference pixel alignment. "
         "N/P/sediment physical units remain separate; NoData cells retain their native meaning.")
     add("dataqual/complete", "Reporting extent and upstream model-domain context are retained as original "
         "polygon layers; source currency and observations are listed in the accompanying report.")
@@ -124,10 +139,10 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         ET.SubElement(node, "srccontr").text = "Original source SHA256 " + source["sha256"]
     step = ET.SubElement(lineage, "procstep")
     ET.SubElement(step, "procdesc").text = (
-        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, 30 m grid "
+        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, " + cells["resolution"] + " grid "
         "alignment, biophysical parameters, explicit land-cover changes and model settings are retained "
         "in the native working archive. Per-hectare rates converted to " + unit +
-        " by multiplication by 0.09. Reporting-mask pixel-centre selection; no interpolated output values.")
+        " by multiplication by " + cells["hectares"] + ". Reporting-mask pixel-centre selection; no interpolated output values.")
     ET.SubElement(step, "procdate").text = day
     add("spdoinfo/direct", "Raster")
     add("spdoinfo/rastinfo/rasttype", "Grid Cell")
@@ -153,8 +168,8 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     else:
         add("spref/horizsys/planar/mapproj/otherprj", crs.to_wkt())
     add("spref/horizsys/planar/planci/plance", "row and column")
-    add("spref/horizsys/planar/planci/coordrep/absres", 30)
-    add("spref/horizsys/planar/planci/coordrep/ordres", 30)
+    add("spref/horizsys/planar/planci/coordrep/absres", cells["width"])
+    add("spref/horizsys/planar/planci/coordrep/ordres", cells["height"])
     add("spref/horizsys/planar/planci/plandu", "meters")
     add("spref/horizsys/geodetic/horizdn", crs.datum.name)
     add("spref/horizsys/geodetic/ellips", crs.ellipsoid.name)
@@ -227,6 +242,7 @@ def build(workspace, selection):
         if workspace._get("scenarios", run["selection"]["scenario_id"])["kind"] != "landcover":
             raise ValueError("Future map alternatives must contain explicit source-bound land-cover changes")
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
+    cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
     key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
                   "map_renderer": cartography.MAP_RENDERER_VERSION})
@@ -413,7 +429,7 @@ def build(workspace, selection):
                     all_specs[map_key] = ([selected_panels[n] for n in names],
                                          [overlays["drinking_water"]])
                     future_maps.setdefault(family, []).append(map_key)
-            footer = ("Native InVEST " + INVEST_VERSION + "; original 30 m grid; baseline " + baseline["id"][:12] +
+            footer = ("Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
             for map_key, (panels, selected_overlays) in all_specs.items():
                 if map_key in state["maps"]:
@@ -456,12 +472,12 @@ def build(workspace, selection):
                      "The reporting polygon is retained separately from the model domain and its " +
                      str(grid["spec"]["upstream_buffer_m"]) + " metre context buffer. "
                      "Model outputs and the explicit current-versus-future scenarios use the same original "
-                     "30 m land-cover reference alignment."]),
+                     + cells["resolution"] + " land-cover reference alignment."]),
                     ("Model and units", [
                      "The original InVEST " + INVEST_VERSION + " Nutrient Delivery Ratio and Sediment Delivery Ratio "
                      "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
                      "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
-                     "Native per-hectare rates are multiplied by the actual 0.09-ha cell area.",
+                     "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
                      "NDR guide: " + NDR_GUIDE, "SDR guide: " + SDR_GUIDE]),
                     ("Selected parameter profile", [profile["title"],
                      json.dumps({"ndr": profile["ndr"], "sdr": profile["sdr"]}, sort_keys=True),
