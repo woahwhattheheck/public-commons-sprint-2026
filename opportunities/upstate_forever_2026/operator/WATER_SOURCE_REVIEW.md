@@ -161,8 +161,52 @@ The native filter and export logic was exercised against the entire original 1,8
 
 ## Complete selected-class domain inventory
 
-Import sources-classified-domain217-20261013.json from the retained native source page. Its source entry scdes-schydroclass-domain217-inventory-20261013 has role WATER_CLASSIFICATION_DOMAIN_INVENTORY and body schema upstate.classified-water-domain-completeness/v1. The report's source_id, layer_id and layer_url select the matching captured layer; the report's original geometry hash is compared with its retained original capture pages.
+Import source/high_quality_waters/sources-classified-domain217-20261013.json from this project's retained native source directory. Its source entry scdes-schydroclass-domain217-inventory-20261013 has role WATER_CLASSIFICATION_DOMAIN_INVENTORY and body schema upstate.classified-water-domain-completeness/v1. The report's source_id, layer_id and layer_url select the matching captured layer; the report's original geometry hash is compared with its retained original capture pages.
 
 The desk shows the observed 217-HUC inventory, unchanged 1,886 native IDs/classes/publisher HUCs, zero additional selected-class features in the remaining 92 HUC12s, every queried HUC12 including zero counts, original geometry date, class selection and original downloads. Source coverage and analytical polygon intersection retain separate meanings.
 
-Actual retained report: scdes-schydroclass-20261013.domain-completeness.json, 44,775 bytes, SHA256 b9c7d3bca8b8bc28d502c2c46f87008286da1b40cf11b2061aad4fd052d7e9ea. Manifest: 11,987 bytes, SHA256 ba43c51824446bda30076065c283a97ad2bad11fe67625fc8be4c17ad535c7e3. Retain both with the original official service responses from https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2 .
+Current public report: source/high_quality_waters/scdes-schydroclass-20261013.domain-completeness.json, 44,275 bytes, SHA256 0f1fec60f437c021bc0cd75ad3f0e67a701c3100acbb77ef7a2089fb676b2e15. Its manifest is source/high_quality_waters/sources-classified-domain217-20261013.json, 11,987 bytes, SHA256 3c4e00ab3048955943916046f9290e98d1118fa32b75eacc345f33bd3749206d. The public report preserves all original official response identities and removes internal transport locators. Retain both with the original official service responses from https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2 .
+
+## Current saved-designation receiving contract
+
+The water-designations desk's r2.1 controller copies the complete source-review input into source_context. Its draft and selection functions retain that object; the model normalizer writes it into the saved selection, selected-identities.json and imported source scope. Reopening restores the same context. The related-source panel reads both a legacy legal-record array and the current legal_record_context.records wrapper, and keeps candidate, partial and coextensive association labels. Its Source review JSON export contains the complete original input.
+
+The 1.3.0 caller supplies source_feature_refs with typed feature_id values, explicit id_field/native_oid_field/class_field, expected_source_sha256, the original rule_reference and the full legal context. The desk accepts both the top-level and nested rule reference. Positive measured HUC12s, the original native field/value references and the source coverage scope remain available in source_context throughout the saved workflow.
+
+## Open a completed source-workbench result
+
+Extension version 1.4.0 exposes a whole-source receiving method in addition to
+`openRecord`. The maintained source workbench can open its completed import:
+
+```javascript
+await context.openExtension('water-source-review', 'openSource', {
+  workspace_key: currentWorkspace,
+  collection_id: result.source_collection_id,
+  source_id: 'classified-water-crosswalk',
+  load_native: true
+});
+```
+
+The current source preparation method supplies the actual imported collection
+ID. The original crosswalk source entry is `classified-water-crosswalk`.
+The review uses that entry for its complete retained legal register and native
+geometry context, refreshes the imported-source catalogue, and loads the complete
+captured-feature browser when `load_native` is true. A newer source-opening
+intent or a project change supersedes an older pending navigation. Existing
+`openRecord` callers retain their record and edition selection behavior.
+
+The controller also accepts `source_collection_id` as the collection-key alias.
+When invoked before the view mounts, it retains the selected source for the next
+mount. Hosts exposing only `navigate` can open the same existing view and use its
+normal source selectors. The original designation handoff remains
+`water-designations.openSelection`.
+
+The source-workbench method builds the geographic crosswalk before import.
+A standalone legal registry remains readable independently; the complete native
+browser uses the crosswalk's original captures and geographic associations.
+Crosswalk version 1.2.0 accepts `planning_path` and `focus_path` returned by
+`Workspace.source_file`, with `project_source=None`. The original planning SHP
+and sidecars, original four-focus response, full native network selection and
+its referenced pages remain part of the retained source snapshot. The
+[crosswalk guide](../source_tools/HIGH_QUALITY_WATER_CROSSWALK.md) documents the
+same API and standalone CLI.
