@@ -1,6 +1,6 @@
 {
   "schema": "upstate.programme-native-reuse-patch/v1",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "shared": {
     "model/compute_programme.py": [
       {
@@ -121,15 +121,18 @@
     "operator/programme_native_reuse_patch.json": [
       "eb9b62dd1be0beb00c61f6adbe50567794991d2c4f0ce64c4d3e793460cc8f64",
       "20e3e0185f72ba9e3b1a6ba5fbc6291c74636b6ea1c4fdfaaaae5fd1615c61b0",
-      "ff0123b220b2971467e362797685df0dcc30c3d55ea8d3160d70285c3ce2f0ce"
+      "ff0123b220b2971467e362797685df0dcc30c3d55ea8d3160d70285c3ce2f0ce",
+      "f4b8f4867f21f3366ec1fa7b13faed6190f08f628952537133e208d77603da38"
     ],
     "operator/install_programme_reuse.py": [
       "a565a35bf72dbb508e58f5b58f63cd9784667ca47e053ec240578ed1469cbcf3",
-      "05590c3ca80ce56fa4fd0de7e4fc8b3444be975e3c263a340a1d04342e77988c"
+      "05590c3ca80ce56fa4fd0de7e4fc8b3444be975e3c263a340a1d04342e77988c",
+      "d7791f34bab98e4600a5c841366aeeac96eb37da3593a5aa322cb7041b60eb85"
     ],
     "integration/component_fragments/programme-native-reuse.json": [
       "a5ac1093936e72a481ba697988a487ca8a1d503545679fe8f85683daa6cb5efb",
-      "aa36153f00e106559504210592bbc187d4096c6d068b545446207fc476a591da"
+      "aa36153f00e106559504210592bbc187d4096c6d068b545446207fc476a591da",
+      "28c44584a73bc2fb27d2d34f5d1d36106de17b5b80271c0b0a5cc3ee227df513"
     ]
   }
 }
