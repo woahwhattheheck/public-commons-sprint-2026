@@ -2,7 +2,7 @@
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
-import { renderNativeAssessmentReviewer } from "./native_assessment_reviewer.mjs";
+import { renderNativeAssessmentReviewer, annualReferenceInterpretation, annualReferenceCsv } from "./native_assessment_reviewer.mjs";
 import { bindNativeMicrobiology, renderNativeMicrobiology } from "./native_assessment_microbiology.mjs";
 import { NATIVE_CONTEXT_SCHEMA, bindNativeAssessmentGeography } from "./native_assessment_geography.mjs";
 
@@ -231,7 +231,13 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
   files["watershed-membership-comparison.csv"] = csv(watershedRows, ["huc12","name","priority_states","assessment_records",
     "assessment_stations","station_exact_records","station_exact_stations","assessment_record_ids","station_record_ids","state_rows"]);
   files["assessment-edition-summary.csv"] = csv(editions, Object.keys(editions[0]));
-  if (nativeAnnual) files["inputs/annual-reference-assessment-summary.json"] = nativeAnnualContext;
+  if (nativeAnnual) {
+    files["inputs/annual-reference-assessment-summary.json"] = nativeAnnualContext;
+    const annualYields=annualReferenceInterpretation(nativeAnnual);
+    files["annual-reference-yields.json"]=json(annualYields);
+    files["annual-reference-yields.csv"]=annualReferenceCsv(annualYields);
+    files["annual-reference-relations.csv"]=annualReferenceCsv(annualYields,true);
+  }
   const reviewHtml = renderAssociationReviewer(result, renderAssociationReport(result));
   files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
     renderNativeAssessmentReviewer({result,context:parse(geography,"completed native geography"),annual:nativeAnnual,html:reviewHtml}) : reviewHtml;
