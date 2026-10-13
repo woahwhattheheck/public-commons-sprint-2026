@@ -24,7 +24,11 @@
         "model/climate_management_working_transfer.py",
         "operator/web/climate_management_working.mjs",
         "operator/CLIMATE_MANAGEMENT_WORKING.md",
-        "source_tools/climate_management_working.py"
+        "source_tools/climate_management_working.py",
+        "model/climate_management_working_comparison.py",
+        "model/climate_management_working_comparison_transfer.py",
+        "operator/web/climate_management_working_comparison.mjs",
+        "operator/CLIMATE_MANAGEMENT_DESIGN_COMPARISON.md"
       ],
       "requires": [
         "core",
@@ -45,6 +49,7 @@
   "source_reference": {
     "edition": "climate-management-exploration-20261013",
     "basis": "Original completed forcing cases, shared finite support and original scientific study delivery",
-    "working_designs": "Original attributed immutable revisions with exact source-bound scenario-role mappings, explicit forks and editable Study delivery before report completion"
+    "working_designs": "Original attributed immutable revisions with exact source-bound scenario-role mappings, explicit forks and editable Study delivery before report completion",
+    "working_design_comparison": "Exact before/after raw revision choices, readable complete handover and editable original source dependencies without scientific recomputation"
   }
 }

@@ -1,3 +1,4 @@
+import {createManagementDesignComparison,DESIGN_COMPARE_ACTION} from './climate_management_working_comparison.mjs';
 import {createManagementWorking,validateManagementDraft} from './climate_management_working.mjs';
 import {managementResultsMarkup,reconcileManagementView,managementGISRequest} from './climate_management_explorer.mjs';
 /* TokenJunkieLabs. Native management responses across explicitly mapped forcing periods. */
@@ -7,7 +8,7 @@ const fmt=v=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString(undefined,
 const opt=(v,t,s)=>'<option value="'+esc(v)+'"'+(v===s?' selected':'')+'>'+esc(t)+'</option>';
 const btn=(a,t,extra='')=>'<button type="button" data-cm="'+a+'" '+extra+'>'+esc(t)+'</button>';
 const detail=(t,v)=>'<details><summary>'+esc(t)+'</summary><pre>'+esc(JSON.stringify(v,null,2))+'</pre></details>';
-const ACTIONS=new Set(['climate-management.build','climate-management.working.save','climate-management.working.export']);
+const ACTIONS=new Set(['climate-management.build','climate-management.working.save','climate-management.working.export',DESIGN_COMPARE_ACTION]);
 const done=s=>['complete','failed','cancelled','interrupted'].includes(s);
 const pairKey=v=>v?.study_id&&v?.case_id?JSON.stringify([v.study_id,v.case_id]):'';
 const emptyPeriod=n=>({id:'period-'+n,label:'Period '+n,reference:{study_id:'',case_id:''},treatment:{study_id:'',case_id:''}});
@@ -25,7 +26,7 @@ export function createClimateManagement(context){
   const storageKey=()=> 'upstate.climate-management.v1:'+workspace;
   const url=(op,values={})=>'/api/climate-management/'+op+'?'+new URLSearchParams({workspace,...values});
   function persist(){
-    try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,control,selectedId,pending,tasks,resultView,working:working.snapshot()}));storageNotice='';}
+    try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,control,selectedId,pending,tasks,resultView,working:working.snapshot(),designComparison:designComparison.snapshot()}));storageNotice='';}
     catch(_){storageNotice='Browser draft storage is unavailable. Keep this view open until pending operations are acknowledged; the operator retains submitted tasks.';}
   }
   function restore(){
@@ -38,6 +39,7 @@ export function createClimateManagement(context){
       pending=Array.isArray(x.pending)?x.pending.filter(t=>t?.workspace===workspace&&ACTIONS.has(t.action)&&t.operation_id&&t.payload):[];
       tasks=Array.isArray(x.tasks)?x.tasks.filter(t=>t?.id&&(!t.workspace||t.workspace===workspace)&&ACTIONS.has(t.action)):[];
       if(x.working)working.restore(x.working);
+      if(x.designComparison)designComparison.restore(x.designComparison);
     }catch(_){storageNotice='The browser draft could not be read. Open a retained report or prepare a new comparison.';}
   }
   async function request(path,options={}){
@@ -53,6 +55,24 @@ export function createClimateManagement(context){
     submit:async(action,payload)=>{const submission={workspace,action,payload,operation_id:crypto.randomUUID()};pending.push(submission);persist();return send(submission);},
     openStudy:row=>context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[row]})
   });
+  const designComparison=createManagementDesignComparison({
+    workspace:()=>workspace,projectId:()=>catalog?.workspace_id,token:()=>[workspace,epoch],current:token=>current(...token),
+    persist,render,read:(op,args)=>request(url(op,args)),
+    preview:selection=>request(url('working-comparison-preview'),{method:'POST',body:{workspace,selection}}),
+    submit:async(action,payload)=>{if(pending.length)throw Error('Reconcile the original pending request before saving another handover.');const submission={workspace,action,payload,operation_id:crypto.randomUUID()};pending.push(submission);persist();return send(submission);},
+    openStudy:row=>context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[row]})
+  });
+  async function openWorkingComparison(value){
+    if(busy)throw Error('Wait for the current Management action before opening a design handover.');
+    if(!root||value?.workspace_key!==workspace||getState()?.workspace_key!==workspace)
+      throw Error('Open the original receiving workspace before its saved-design comparison.');
+    const w=workspace,e=epoch;busy=true;render();
+    try{
+      if(!catalog)await refresh();
+      if(!current(w,e))return null;
+      return await designComparison.open(value.report_id);
+    }finally{if(current(w,e)){busy=false;render();schedule();}}
+  }
   async function openWorkingRevision(value){
     if(busy)throw Error('Wait for the current Management action before opening another working design.');
     if(!root||value?.workspace_key!==workspace||getState()?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(value?.revision_id||''))
@@ -125,13 +145,13 @@ export function createClimateManagement(context){
       '<section><div class="cm-columns"><label>Saved comparison<select data-saved>'+opt('','Choose a saved comparison',selectedId)+
       (catalog?.reports||[]).map(r=>opt(r.id,r.title||r.id,selectedId)).join('')+'</select></label><div class="cm-actions">'+
       btn('open','Open saved comparison',busy?'disabled':'')+btn('new','New comparison',busy?'disabled':'')+btn('refresh','Refresh',busy?'disabled':'')+'</div></div></section>'+
-      working.markup()+(catalog?form():'<p>Loading original studies and cases…</p>')+previewMarkup()+reportMarkup()+operations()+
+      working.markup()+designComparison.markup()+(catalog?form():'<p>Loading original studies and cases…</p>')+previewMarkup()+reportMarkup()+operations()+
       '<footer>TokenJunkieLabs · Ecosystem Sciences</footer>';
     if(focus){const next=$$('input,textarea,select').find(e=>e.tagName===focus.tag&&JSON.stringify({...e.dataset})===focus.data);if(next){next.focus({preventScroll:true});if(typeof focus.start==='number'&&next.setSelectionRange)try{next.setSelectionRange(focus.start,focus.end);}catch(_){}}}
   }
   function changed(event){
     const el=event.target;
-    if(working.changed(el))return;
+    if(working.changed(el)||designComparison.changed(el))return;
     if(el.matches('[data-working-import]')){if(!busy&&el.files?.[0]){const w=workspace,e=epoch;busy=true;working.importFile(el.files[0]).catch(cause=>{if(current(w,e))error=cause.message||String(cause);}).finally(()=>{if(current(w,e)){busy=false;render();}});}return;}
     if(el.matches('[data-cm-view]')){
       if(!report||!['area_id','pollutant'].includes(el.dataset.cmView))return;
@@ -160,7 +180,9 @@ export function createClimateManagement(context){
     const w=workspace,e=epoch,n=++serial;
     const c=await request(url('catalog'));
     if(!current(w,e)||n!==serial)return;
-    catalog=c;working.catalogue(c.working_designs||[]);
+    catalog=c;working.catalogue(c.working_designs||[]);designComparison.catalogue(c);
+    await designComparison.refresh();
+    if(!current(w,e)||n!==serial)return;
     if(selectedId){
       const key=selectedId,r=await request(url('report',{id:key}));
       if(!current(w,e)||n!==serial||selectedId!==key)return;
@@ -209,7 +231,7 @@ export function createClimateManagement(context){
     const t=remember(response,submission);
     if(t.state==='complete'){
       if(t.action==='climate-management.build'&&t.result?.id)selectedId=t.result.id;
-      working.settle(t);persist();await refresh();
+      working.settle(t);designComparison.settle(t);persist();await refresh();
     }
     return t;
   }
@@ -219,6 +241,7 @@ export function createClimateManagement(context){
     const w=workspace,e=epoch;busy=true;error='';notice='';render();
     try{
       if(action.startsWith('working-')){await working.action(action,el);}
+      else if(action.startsWith('designcompare-')){await designComparison.action(action);}
       else if(action==='preview'){
         const v=revision,selection=clone(draft),origin=working.origin();if(origin)selection.working_origin=origin;
         const p=await request(url('preview'),{method:'POST',body:{workspace,selection}});
@@ -261,7 +284,7 @@ export function createClimateManagement(context){
         const t=value?.task||value;
         if(t.id!==old.id||(t.workspace&&t.workspace!==w)||(t.action&&t.action!==old.action))throw Error('The returned task differs from this retained comparison.');
         const i=tasks.findIndex(x=>x.id===old.id);if(i>=0)tasks[i]={...old,...t};
-        if(t.state==='complete'){const full={...old,...t};if(full.action==='climate-management.build'&&full.result?.id)selectedId=full.result.id;working.settle(full);changed=true;}
+        if(t.state==='complete'){const full={...old,...t};if(full.action==='climate-management.build'&&full.result?.id)selectedId=full.result.id;working.settle(full);designComparison.settle(full);changed=true;}
       }
       if(!current(w,e))return;persist();if(changed)await refresh();else render();
     }catch(cause){if(current(w,e)&&cause.name!=='AbortError'){error=cause.message||String(cause);render();}}
@@ -273,7 +296,7 @@ export function createClimateManagement(context){
     detach();root=node;workspace=(state||getState())?.workspace_key;
     catalog=null;draft=fresh();control=false;preview=null;report=null;selectedId='';pending=[];tasks=[];error='';notice='';storageNotice='';resultView={};revision++;
     if(!workspace){root.textContent='Open a workspace to compare management responses.';return;}
-    working.clear();restore();listener=new AbortController();
+    working.clear();designComparison.clear();restore();listener=new AbortController();
     root.addEventListener('click',event=>{const el=event.target.closest('[data-cm]');if(el&&root.contains(el)){event.preventDefault();act(el.dataset.cm,el);}},{signal:listener.signal});
     root.addEventListener('input',event=>{if(!event.target.matches('select,input[type="checkbox"]'))changed(event);},{signal:listener.signal});
     root.addEventListener('change',changed,{signal:listener.signal});
@@ -285,5 +308,5 @@ export function createClimateManagement(context){
     const byId=new Map((Array.isArray(state.tasks)?state.tasks:[]).map(t=>[t.id,t]));
     tasks=tasks.map(t=>{const n=byId.get(t.id);return n&&!done(n.state)&&(!n.workspace||n.workspace===workspace)?{...t,...n}:t;});persist();schedule();
   }
-  return {mount,update,detach,openSavedReport,openForStudy,openWorkingRevision};
+  return {mount,update,detach,openSavedReport,openForStudy,openWorkingRevision,openWorkingComparison};
 }
