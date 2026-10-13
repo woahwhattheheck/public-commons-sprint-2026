@@ -6,10 +6,14 @@ Run from the complete product root:
     --domain-manifest ORIGINAL_DOMAIN/sources.json \
     --geography-manifest ORIGINAL_GEOGRAPHY/sources.json
 
-Already imported originals are reused. The geography argument is optional when
+Already imported originals are reused by exact original byte identity, preserving
+their actual received source collection and source ID. The geography argument is optional when
 its real entries are already imported. Missing reporting files are received from
 the exact pinned public source after the upstream journey. A four-HUC companion can supply
-the exact original utility-focus source. The South Carolina reporting study
+the exact original utility-focus source. If that separate capture is absent, the
+same four unchanged HUC12 features are selected from the verified original domain
+under a distinct derived source identity with its full original parent retained.
+The South Carolina reporting study
 uses the original PlanningBasins2023 feature when available. The complete
 upstream-domain journey runs first and is retained independently.
 
@@ -38,6 +42,7 @@ one-at-a-time or factorial axes are passed to the maintained experiment engine.
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import math
@@ -62,6 +67,9 @@ ORIGINALS = {
     "domain": {
         "id": "upstate-wbd-upstream-domain-20261012",
         "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+        "bytes": 3732669,
+        "decoded_bytes": 11220042,
+        "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
         "label": "Retained upstream model domain: 217 WBD HUC12 units",
     },
     "reporting": {
@@ -173,32 +181,80 @@ class Receiving:
 
 
 def resolve_original(workspace, name, collection_id=None):
+    """Resolve exact original bytes while preserving the received source identity."""
     expected = ORIGINALS[name]
     matches = []
     for collection in workspace.sources():
         if collection_id is not None and str(collection["id"]) != str(collection_id):
             continue
         for entry in collection.get("entries", []):
-            if entry.get("id") == expected["id"] and entry.get("body", {}).get("sha256") == expected["sha256"]:
+            if (entry.get("kind") == "vector"
+                    and entry.get("body", {}).get("sha256") == expected["sha256"]):
                 matches.append((str(collection["id"]), entry))
     if not matches:
         return None
-    collection_id, _ = sorted(matches, key=lambda row: row[0])[0]
-    path, entry = workspace.source_file(collection_id, expected["id"])
+    # Prefer the original declared ID when present, then choose deterministically.
+    # The receiving source may legitimately have another ID for identical bytes.
+    collection_id, retained = sorted(
+        matches, key=lambda row: (
+            row[1].get("id") != expected["id"], row[0], str(row[1].get("id")),
+        ),
+    )[0]
+    source_id = retained["id"]
+    path, entry = workspace.source_file(collection_id, source_id)
     actual = file_fact(path)
     if actual["sha256"] != expected["sha256"]:
-        raise ValueError("Original source hash mismatch for " + expected["id"])
+        raise ValueError("Original source hash mismatch for " + str(source_id))
     if expected.get("bytes") is not None and actual["bytes"] != expected["bytes"]:
-        raise ValueError("Original source byte length mismatch for " + expected["id"])
-    return {
+        raise ValueError("Original source byte length mismatch for " + str(source_id))
+    result = {
         "source_collection_id": collection_id,
-        "source_id": expected["id"],
+        "source_id": source_id,
         "path": str(path),
         "body": actual,
         "label": expected["label"],
+        "original_declared_source_id": expected["id"],
         "equivalent_collection_ids": sorted({row[0] for row in matches}),
+        "equivalent_sources": sorted(
+            [{"source_collection_id": row[0], "source_id": row[1]["id"]}
+             for row in matches],
+            key=lambda row: (row["source_collection_id"], row["source_id"]),
+        ),
         "entry": entry,
     }
+    if name == "domain":
+        original_domain_document(result)
+    return result
+
+
+def original_domain_document(domain):
+    """Read the byte-pinned original domain and validate its native feature keys."""
+    expected = ORIGINALS["domain"]
+    path = Path(domain["path"])
+    stored = path.read_bytes()
+    if (len(stored) != expected["bytes"]
+            or hashlib.sha256(stored).hexdigest() != expected["sha256"]):
+        raise ValueError("The retained original domain bytes changed")
+    decoded = gzip.decompress(stored)
+    if (len(decoded) != expected["decoded_bytes"]
+            or hashlib.sha256(decoded).hexdigest() != expected["decoded_sha256"]):
+        raise ValueError("The original decoded domain identity changed")
+    document = json.loads(decoded.decode("utf-8-sig"))
+    reference = document.get("spatialReference") or {}
+    features = document.get("features")
+    if (document.get("geometryType") != "esriGeometryPolygon"
+            or not isinstance(features, list) or len(features) != 217
+            or (reference.get("latestWkid") or reference.get("wkid")) not in (3857, 102100, 102113)):
+        raise ValueError("Retain the original 217 polygon features and native domain CRS")
+    ids = [feature.get("attributes", {}).get("huc12") for feature in features]
+    if (any(not isinstance(value, str) or len(value) != 12 or not value.isdigit() for value in ids)
+            or len(set(ids)) != 217):
+        raise ValueError("The original domain needs 217 unique native huc12 identifiers")
+    if any(not (feature.get("geometry") or {}).get("rings") for feature in features):
+        raise ValueError("Retain the complete original domain polygon rings")
+    if not set(FOCUS_IDS).issubset(ids):
+        raise ValueError("The original domain must contain all four selected utility-focus HUC12s")
+    return document
 
 
 def resolve_public_water(workspace, preparation=None):
@@ -273,6 +329,72 @@ def resolve_public_water(workspace, preparation=None):
 
 def selection(binding):
     return {key: binding[key] for key in ("source_collection_id", "source_id")}
+
+
+def derive_original_focus(workspace, domain):
+    """Select four unchanged native features when no standalone focus is retained."""
+    document = original_domain_document(domain)
+    selected = [
+        (index, feature) for index, feature in enumerate(document["features"])
+        if feature["attributes"]["huc12"] in FOCUS_IDS
+    ]
+    if len(selected) != 4:
+        raise ValueError("Select exactly four original domain features for geographic focus")
+    # Keep original feature order and every publisher coordinate/property/type.
+    derived = {**document, "features": [feature for _, feature in selected]}
+    body = (json.dumps(derived, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    fact = {"bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
+    source_id = "upstate-domain-focus-huc12-" + fact["sha256"][:20]
+    origin = {
+        **selection(domain),
+        "body": domain["body"],
+        "source_feature_indices": [index for index, _ in selected],
+        "selected_huc12": [feature["attributes"]["huc12"] for _, feature in selected],
+        "method": "Select unchanged features from the verified original 217-HUC document in original order.",
+    }
+    reference = domain["entry"].get("uri") or (
+        "workspace-source:" + domain["source_collection_id"] + "/" + domain["source_id"]
+    )
+    meaning = "Four utility-focus HUC12 features selected from the original 217-HUC domain"
+    destination = workspace.root / "conservation-receiving" / "domain-focus" / fact["sha256"]
+    destination.mkdir(parents=True, exist_ok=True)
+    derived_path = destination / "selected-domain-focus.esri.json"
+    if not derived_path.is_file() or file_fact(derived_path) != fact:
+        derived_path.write_bytes(body)
+    parent_path = destination / "original-model-domain.esri.json.gz"
+    parent_fact = {"bytes": ORIGINALS["domain"]["bytes"], "sha256": ORIGINALS["domain"]["sha256"]}
+    if not parent_path.is_file() or file_fact(parent_path) != parent_fact:
+        shutil.copyfile(domain["path"], parent_path)
+    if file_fact(parent_path) != parent_fact:
+        raise ValueError("The retained focus parent differs from the original domain")
+    manifest = {
+        "schema": "upstate.sources/v1",
+        "title": meaning,
+        "entries": [{
+            "id": source_id, "title": meaning, "kind": "vector",
+            "path": derived_path.name, **fact,
+            "uri": reference, "vintage": domain["entry"]["vintage"],
+            "source_format": "Esri JSON", "source_crs": "EPSG:3857",
+            "id_field": "huc12", "role": "FOCUS_CATCHMENTS",
+            "selected_huc12": list(FOCUS_IDS), "retained_origin": origin,
+            "metadata": {"derivation": origin, "source_meaning": meaning},
+            "scope": "Geographic subset of the retained original domain; full selected features are unchanged.",
+            "companions": [{"path": parent_path.name, **parent_fact}],
+        }],
+    }
+    manifest_path = destination / "sources.json"
+    save_json(manifest_path, manifest)
+    collection = workspace.import_sources(manifest_path)
+    path, entry = workspace.source_file(collection["id"], source_id)
+    if file_fact(path) != fact:
+        raise ValueError("The received focus subset differs from its original feature selection")
+    return {
+        "source_collection_id": collection["id"], "source_id": source_id,
+        "path": str(path), "body": fact, "label": meaning,
+        "reference": reference, "meaning": meaning, "retained_origin": origin,
+        "relation": "Polygon intersection with four unchanged utility-focus HUC12 features selected from the original domain.",
+        "entry": entry,
+    }
 
 
 def promote_original_focus(workspace, domain):
@@ -462,9 +584,9 @@ def study_spec(kind, domain, focus, reporting=None):
         "contexts": {
             "drinking_water": {
                 **selection(focus),
-                "relation": "Polygon intersection with the four original utility-focus HUC12 watersheds",
-                "meaning": "Utility-focus watershed geographic context",
-                "reference": FOCUS_URI,
+                "relation": focus.get("relation", "Polygon intersection with the four original utility-focus HUC12 watersheds"),
+                "meaning": focus.get("meaning", "Utility-focus watershed geographic context"),
+                "reference": focus.get("reference", FOCUS_URI),
             }
         },
         "rules": {
@@ -979,7 +1101,7 @@ def main(argv=None):
         if focus is None:
             focus = receiving.run("receive_retained_focus", lambda: promote_original_focus(workspace, domain))
         if focus is None:
-            raise ValueError("Import the retained original geography sources.json with --geography-manifest")
+            focus = receiving.run("select_original_domain_focus", lambda: derive_original_focus(workspace, domain))
         reporting = receiving.run("resolve_reporting", lambda: resolve_original(workspace, "reporting"))
         receiving.result["sources"] = {
             name: {key: value for key, value in binding.items() if key != "entry"}
