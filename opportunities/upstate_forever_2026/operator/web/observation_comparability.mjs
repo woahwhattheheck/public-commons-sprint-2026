@@ -80,11 +80,11 @@ export function attachObservationComparability(host){
     const native=value.native_origin,foreign=value.relationship==='external_project';
     return (foreign?'<p>'+(opened?'This local comparison uses an original cohort received from another project.':'Saving retains a comparison in this Workspace with your selected years. The received report and original cohort remain unchanged.')+'</p>':'')+
       '<details><summary>Original cohort source</summary><dl>'+
-      '<dt>Source title</dt><dd>'+esc(value.title)+'</dd>'+
-      '<dt>Source collection</dt><dd><code>'+esc(value.source.source_collection_id)+'</code></dd>'+
-      '<dt>Source</dt><dd>'+esc(value.source.source_id)+'</dd>'+
-      '<dt>Original recipe SHA256</dt><dd><code>'+esc(value.source.source_sha256)+'</code></dd>'+
-      (native?'<dt>Original project</dt><dd>'+esc(native.project_id)+'</dd><dt>Original saved comparison</dt><dd><code>'+esc(native.selection_id)+'</code></dd>':'')+
+      '<dt>Source title</dt><dd class="oc-raw">'+esc(value.title)+'</dd>'+
+      '<dt>Source collection</dt><dd class="oc-raw"><code>'+esc(value.source.source_collection_id)+'</code></dd>'+
+      '<dt>Source</dt><dd class="oc-raw">'+esc(value.source.source_id)+'</dd>'+
+      '<dt>Original recipe SHA256</dt><dd class="oc-raw"><code>'+esc(value.source.source_sha256)+'</code></dd>'+
+      (native?'<dt>Original project</dt><dd class="oc-raw">'+esc(native.project_id)+'</dd><dt>Original saved comparison</dt><dd class="oc-raw"><code>'+esc(native.selection_id)+'</code></dd>':'')+
       '</dl></details>';
   }
   function display(){
