@@ -341,6 +341,7 @@ run <- function() {
           if (performance$outcome$ok) {
             retain_object(performance$value, file.path(directory, "performance"))
             performance_stats <- retain_statistics(performance$value, file.path(directory, "performance"))
+            result$performanceStatistics <- performance_stats$outcome
             if (stats$outcome$ok && performance_stats$outcome$ok) {
               normalized <- capture_call(function() nmecr::calculate_norm_savings_and_uncertainty(
                 baseline_model = object, baseline_stats = stats$value,
@@ -366,6 +367,7 @@ run <- function() {
         if (!stats$outcome$ok || (!is.null(result$prediction) && !result$prediction$ok) ||
             (!is.null(result$savings) && !result$savings$ok) ||
             (!is.null(result$performanceFit) && !result$performanceFit$ok) ||
+            (!is.null(result$performanceStatistics) && !result$performanceStatistics$ok) ||
             (!is.null(result$normalizedSavings) && !result$normalizedSavings$ok) ||
             !plot$outcome$ok)
           result$status <- "partial"
