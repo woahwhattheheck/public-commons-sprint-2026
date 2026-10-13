@@ -1051,6 +1051,7 @@ def verify_received_studies(workspace):
                            report_source_keys={(row["source_collection_id"], row["source_id"])
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
+        parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
